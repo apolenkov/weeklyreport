@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { safeText } from "../primitives/report-primitives.schema";
+import { safeText } from "../primitives/report-primitives.schema.js";
 
 /** Maximum length accepted for a review comment. */
 export const REVIEW_COMMENT_MAX_LENGTH = 2000;

@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { type Role } from "../schemas/auth/auth";
+import { type Role } from "../schemas/auth/auth.js";
 
 /**
  * Strict Keycloak SAML profile with nameID, email, and optional displayName;

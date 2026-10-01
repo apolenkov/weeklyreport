@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { roleSchema } from "../auth/auth";
+import { roleSchema } from "../auth/auth.js";
 
 /** Fixed tRPC classifications that may cross the durable audit boundary. */
 export const actionLogFailureReasonSchema = z.enum([

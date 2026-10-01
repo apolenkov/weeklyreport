@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   REPORT_ASSISTANT_RESOURCE_RETRY_MAX_SECONDS,
   reportAssistantOutcomeSchema,
-} from "./report-assistant";
+} from "./report-assistant.js";
 
 describe("reportAssistantOutcomeSchema", () => {
   it("accepts the temporary provider-unavailable outcome", () => {

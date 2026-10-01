@@ -5,8 +5,8 @@ import {
   reportSectionStatusSchema,
   reportStatusSchema,
   trafficLightStatusSchema,
-} from "../primitives/report-primitives.schema";
-import { assembledReportSchema } from "../report/report.schema";
+} from "../primitives/report-primitives.schema.js";
+import { assembledReportSchema } from "../report/report.schema.js";
 
 const MAX_PAGE_SIZE = 100;
 

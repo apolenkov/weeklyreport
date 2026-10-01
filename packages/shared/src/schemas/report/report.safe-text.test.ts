@@ -7,7 +7,7 @@ import {
   itemInputSchema,
   riskInputSchema,
   riskSeveritySchema,
-} from "../report";
+} from "../report.js";
 
 // Fixtures
 

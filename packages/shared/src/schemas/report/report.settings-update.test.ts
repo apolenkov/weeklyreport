@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { appSettingsUpdateSchema } from "../report";
+import { appSettingsUpdateSchema } from "../report.js";
 
 describe("appSettingsUpdateSchema", () => {
   it("accepts partial and empty updates", () => {

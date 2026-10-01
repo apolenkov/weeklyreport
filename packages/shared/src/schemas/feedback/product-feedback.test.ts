@@ -5,7 +5,7 @@ import {
   MAX_FEEDBACK_ANNOTATIONS,
   MAX_FEEDBACK_PAGE_SCOPE_LENGTH,
   normalizeFeedbackPath,
-} from "./product-feedback";
+} from "./product-feedback.js";
 
 const responseAnnotation = {
   cssSelector: "[data-feedback-anchor='summary']",

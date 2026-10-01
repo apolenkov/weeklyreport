@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { trafficLightStatusSchema } from "../primitives/report-primitives.schema";
-import { submitSectionSchema } from "../report";
+import { trafficLightStatusSchema } from "../primitives/report-primitives.schema.js";
+import { submitSectionSchema } from "../report.js";
 
 const uuid = () => randomUUID();
 const projectId = uuid();

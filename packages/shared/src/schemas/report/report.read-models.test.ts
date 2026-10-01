@@ -11,7 +11,7 @@ import {
   portfolioOverviewSchema,
   projectStatusInputSchema,
   reportPeriodSchema,
-} from "../report";
+} from "../report.js";
 
 // Fixtures
 

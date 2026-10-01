@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { currentPeriodLifecycleSchema } from "./period-lifecycle.schema";
+import { currentPeriodLifecycleSchema } from "./period-lifecycle.schema.js";
 
 const PUBLISHED_AT = new Date("2026-07-24T18:00:00.000Z");
 const REOPENED_AT = new Date("2026-07-25T09:00:00.000Z");

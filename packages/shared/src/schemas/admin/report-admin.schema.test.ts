@@ -7,7 +7,7 @@ import {
   pdfRecoveryJobSchema,
   pdfRecoveryRetryInputSchema,
   pdfRecoveryRetryResultSchema,
-} from "./report-admin.schema";
+} from "./report-admin.schema.js";
 
 const USER_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const GROUP_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";

@@ -1,7 +1,7 @@
 import {
   type PublishedReportSnapshot,
   publishedReportSnapshotSchema,
-} from "./report.schema";
+} from "./report.schema.js";
 
 /** Immutable authorization scope row derived from a published report snapshot. */
 interface PublishedSectionScopeProjection {

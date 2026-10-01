@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { searchQueryInputSchema } from "./search";
+import { searchQueryInputSchema } from "./search.js";
 
 const NULL_BYTE = String.fromCharCode(0);
 const ZERO_WIDTH = String.fromCharCode(0x20_0b);

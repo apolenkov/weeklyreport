@@ -6,7 +6,7 @@ import {
   periodComparisonOutputSchema,
   trafficLightHistoryInputSchema,
   trafficLightHistoryOutputSchema,
-} from "./analytics";
+} from "./analytics.js";
 
 // The ISO date rule is unexported; exercise it through every public alias that
 // uses it, including both dates in response periods.

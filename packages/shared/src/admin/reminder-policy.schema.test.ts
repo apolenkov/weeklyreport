@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { reminderPolicySchema } from "./reminder-policy.schema";
+import { reminderPolicySchema } from "./reminder-policy.schema.js";
 
 const validPolicy = {
   id: "fe24a020-2071-4b24-a26b-dd01292c9123",

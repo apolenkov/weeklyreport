@@ -15,7 +15,7 @@ import type {
   aiProviderProfileSchema,
   aiProviderReasoningModeSchema,
   aiProviderRevisionInputSchema,
-} from "./ai-provider-configuration";
+} from "./ai-provider-configuration.js";
 
 /** Public shared type contract for ai provider profile. */
 export type AiProviderProfile = z.infer<typeof aiProviderProfileSchema>;
