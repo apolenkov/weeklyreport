@@ -105,4 +105,12 @@ describe("ReopenRequestRow response focus", () => {
     expect(onApprove).not.toHaveBeenCalled();
     expect(onReject).not.toHaveBeenCalled();
   });
+
+  it("gives Respond the mobile touch-target minimum", () => {
+    render(<FocusHarness onApprove={vi.fn()} onReject={vi.fn()} />);
+
+    for (const button of screen.getAllByRole("button", { name: "Respond" })) {
+      expect(button).toHaveClass("max-md:min-h-[var(--touch-target-min)]");
+    }
+  });
 });

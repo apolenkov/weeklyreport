@@ -165,9 +165,8 @@ const envObjectSchema = z.object({
   PDF_OUTPUT_DIR: z.string().refine((value) => value.trim().length > 0, {
     message: "PDF_OUTPUT_DIR must not be blank",
   }),
-  // Short-lived JWT signed at /trpc entry and injected as cookie into the
-  // headless browser so PDF rendering can authenticate against
-  // /weekly-report/* routes. Min 32 chars also enforced in the service.
+  // Short-lived JWT sent as a cookie to the internal renderer so it can open
+  // the /print route. Min 32 chars also enforced in the service.
   PDF_EXPORT_JWT_SECRET: z.string().min(MIN_JWT_SECRET_LENGTH),
 
   // Heap threshold (bytes) for the /health/ready memory check. Required, no

@@ -41,6 +41,7 @@ registerE2eHooks();
 
 const AVAILABILITY_ROUTE = "**/trpc/*ai.availability*";
 const SINGLE_AVAILABILITY_ROUTE = "**/trpc/ai.availability?*";
+const OPEN_WORK_ROUTE = "**/trpc/*leadForm.openWork*";
 const ASSISTANT_ROUTE = "**/trpc/*leadForm.assistant*";
 const DRAFT_ROUTE = "**/trpc/*reports.saveDraft*";
 const FILL_ROUTE = "**/trpc/*leadForm.fillFrom*";
@@ -170,27 +171,22 @@ async function availabilityFailed(): Promise<void> {
   await requests();
   await command(["network", "route", ASSISTANT_ROUTE, "--abort"]);
   await command(["network", "route", AVAILABILITY_ROUTE, "--abort"]);
+  // Both reads use httpBatchLink, so whether availability shares a batch with
+  // the open-work read depends on render timing. Abort the open-work read too
+  // so its failure is always driven, never inherited from a sibling batch.
+  await command(["network", "route", OPEN_WORK_ROUTE, "--abort"]);
   await openLeadReport();
   await waitButton("Retry report chat availability check");
+  await waitButton("Retry open work");
   await findRole("button", "Retry report chat availability check", "text");
   const unavailable = await refFor("button", "Report chat unavailable");
   assert.equal(await getAttr(unavailable, "aria-disabled"), "true");
+  await refFor("button", "Retry open work");
   await command(["network", "unroute", AVAILABILITY_ROUTE]);
-  // An availability transport failure may abort a sibling supporting read.
-  // Retry it through the UI; no fake report response is used by the chat stub.
-  await command([
-    "wait",
-    "--fn",
-    "document.body.innerText.includes('E2E paused work') || Array.from(document.getElementsByTagName('button')).some(button => button.getClientRects().length > 0 && (button.getAttribute('aria-label') ?? button.innerText.trim()) === 'Retry open work')",
-  ]);
-  const data = await snapshot();
-  const retry = refsByRole(data, "button", "Retry open work");
-  if (retry.length > 0) {
-    assert.equal(retry.length, 1);
-    const ref = retry.at(0);
-    assert(ref);
-    await command(["click", ref]);
-  }
+  await command(["network", "unroute", OPEN_WORK_ROUTE]);
+  // Recover the open-work register through its own UI retry; no fake report
+  // response is used by the chat stub.
+  await findRole("button", "Retry open work", "click");
   await waitText("E2E paused work");
   await waitText(LEAD_FORM_FIXTURE.currentText);
 }

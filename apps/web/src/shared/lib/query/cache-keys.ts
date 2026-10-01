@@ -57,6 +57,9 @@ export function invalidatePeriodLifecycle(
   invalidate(qc, trpc.reports.compiledHistory.pathFilter());
   invalidate(qc, trpc.admin.listPeriodsByState.pathFilter());
   invalidate(qc, trpc.admin.snapshot.pathFilter());
+  // A period reopen closes the pending section-reopen requests of its sections.
+  invalidate(qc, trpc.admin.listReopenRequests.pathFilter());
+  invalidate(qc, trpc.admin.pendingReopenCount.pathFilter());
 }
 
 // Submission revocation changes both report projections and the live activity

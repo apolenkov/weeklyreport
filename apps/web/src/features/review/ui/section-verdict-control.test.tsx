@@ -3,7 +3,7 @@ import "@testing-library/jest-dom/vitest";
 
 import type { SectionReviewView } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -42,6 +42,7 @@ function makeQueryClient() {
 
 function renderControl(options: {
   readonly canReview: boolean;
+  readonly subjectName?: string;
   readonly onMutated?: () => void;
 }) {
   const onMutated = options.onMutated ?? vi.fn<() => void>();
@@ -65,6 +66,7 @@ function renderControl(options: {
       version={VERSION}
       reviews={[]}
       canReview={options.canReview}
+      subjectName={options.subjectName}
       onMutated={onMutated}
     />,
     { wrapper: Wrapper },
@@ -162,6 +164,20 @@ describe("SectionVerdictControl — verdict buttons", () => {
     ).toHaveAttribute("data-interaction-effect", "mutation-required");
   });
 
+  it("names the verdict buttons and the reason dialog after the section owner", async () => {
+    renderControl({ canReview: true, subjectName: "Ada Lovelace" });
+
+    expect(
+      screen.getByRole("button", { name: "Approve Ada Lovelace" }),
+    ).toHaveTextContent("Approve");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Request changes for Ada Lovelace" }),
+    );
+    expect(
+      screen.getByRole("dialog", { name: "Request changes from Ada Lovelace" }),
+    ).toBeInTheDocument();
+  });
+
   it("Approve submits approved+version, toasts, invalidates review cache, and notifies parent", async () => {
     const { captured, onMutated } = renderControl({ canReview: true });
     const mutationFn = expectDefined(captured["review.verdict"]).mutationFn;
@@ -186,6 +202,64 @@ describe("SectionVerdictControl — verdict buttons", () => {
     });
     expect(invalidateReviewMock).toHaveBeenCalledTimes(1);
     expect(onMutated).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps focus on Approve while the verdict saves and ignores repeat clicks", async () => {
+    const { captured } = renderControl({ canReview: true });
+    const mutationFn = expectDefined(captured["review.verdict"]).mutationFn;
+    mutationFn.mockReturnValue(new Promise(() => undefined));
+
+    const approve = screen.getByRole("button", { name: "Approve" });
+    await userEvent.click(approve);
+
+    await waitFor(() => {
+      expect(approve).toHaveAttribute("aria-disabled", "true");
+    });
+    // A natively disabled button would drop focus to <body>.
+    expect(document.activeElement).toBe(approve);
+    await userEvent.click(approve);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Request changes" }),
+    );
+    expect(mutationFn).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("sends one verdict when Approve is activated twice before the pending state renders", async () => {
+    const { captured } = renderControl({ canReview: true });
+    const mutationFn = expectDefined(captured["review.verdict"]).mutationFn;
+    mutationFn.mockReturnValue(new Promise(() => undefined));
+    const approve = screen.getByRole("button", { name: "Approve" });
+
+    act(() => {
+      approve.click();
+      approve.click();
+    });
+
+    await waitFor(() => {
+      expect(approve).toHaveAttribute("aria-disabled", "true");
+    });
+    expect(mutationFn).toHaveBeenCalledTimes(1);
+  });
+
+  it("renames Approve to match its Saving text while the verdict saves", async () => {
+    const { captured } = renderControl({
+      canReview: true,
+      subjectName: "Ada Lovelace",
+    });
+    expectDefined(captured["review.verdict"]).mutationFn.mockReturnValue(
+      new Promise(() => undefined),
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Approve Ada Lovelace" }),
+    );
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Saving verdict for Ada Lovelace",
+      }),
+    ).toHaveTextContent("Saving…");
   });
 
   it("Request changes only opens the reason dialog and sends nothing", async () => {

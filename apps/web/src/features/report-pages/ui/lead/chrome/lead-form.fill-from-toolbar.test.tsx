@@ -447,12 +447,25 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
 
     const toolbar = screen.getByTestId("report-toolbar");
     expect(screen.getAllByTestId("report-toolbar")).toHaveLength(1);
-    const mobileRows = Array.from(toolbar.children).filter((child) =>
+    // One wrapping row keeps both clusters inside the card from 640 to 1023px;
+    // the shared toolbar row stops wrapping at md, too early for Slides.
+    const [clusterRow, ...otherRows] = Array.from(toolbar.children);
+    expect(otherRows).toHaveLength(0);
+    expect(clusterRow).toHaveClass(
+      "min-w-0",
+      "basis-full",
+      "flex-wrap",
+      "lg:flex-nowrap",
+    );
+    const mobileRows = Array.from(clusterRow?.children ?? []).filter((child) =>
       child.className.includes("basis-full"),
     );
     expect(mobileRows).toHaveLength(2);
     expect(mobileRows.every((row) => row.className.includes("min-w-0"))).toBe(
       true,
+    );
+    expect(mobileRows.every((row) => row.className.includes("md:"))).toBe(
+      false,
     );
   });
 

@@ -35,16 +35,16 @@ The lead history summary rail MUST compute its aggregate figures — the
 traffic-light totals, average items, and total risks — only from
 completed periods (a period submitted by the lead, or published, or
 archived). A draft period is provisional and MUST be excluded from these
-aggregates. The exclusion MUST be disclosed in plain text beside the
-figures (e.g. "N draft not included in aggregates") whenever at least one
-draft exists.
+aggregates, as is a reopened period. The exclusion MUST be disclosed in
+neutral plain text beside the figures (e.g. "N week not included in
+aggregates") whenever at least one period is excluded.
 
 #### Scenario: A draft period does not inflate the aggregates
 
 - **WHEN** a lead has completed periods plus one draft period
 - **THEN** the traffic-light totals, average items, and total risks count
   only the completed periods
-- **AND** a note discloses that the draft is not included
+- **AND** a note discloses that the excluded week is not included
 
 ### Requirement: Aggregate footer denominator matches what it counts
 
@@ -61,6 +61,20 @@ set.
 - **THEN** the traffic-light footer reads "across 2 periods" (the
   completed set), not "across 3 periods"
 - **AND** the separate draft note still discloses the excluded draft
+
+### Requirement: History traffic-light totals match the report's effective status
+
+Each personal history entry's traffic-light totals MUST count every owned
+product by the same effective status the report shows for it, including the
+floor from covering risks (a Blocked risk covering a product's stage makes
+that product red even when its stored status is green). Totals MUST NOT be
+counted from the raw stored product status rows.
+
+#### Scenario: A blocked risk turns the card red
+
+- **WHEN** a live section's product has a stored green status and a Blocked
+  risk covering one of its owned stages
+- **THEN** the history card counts that product as red, not green
 
 ### Requirement: The reports history page carries no tab state
 
@@ -84,6 +98,20 @@ that reach it depend on a tab state.
 
 - **WHEN** the NavBar renders the History link for a lead, head, or viewer
 - **THEN** the link's href is `/reports` with no `tab` query parameter
+
+### Requirement: A reopened week keeps its last publication time under a matching label
+
+The lead's own history read model (`reports.myHistory`) MUST expose whether the
+entry's period is currently reopened, as compiled history does. A reopened
+period's draft section MUST read "Reopened" (not "Draft"), and any publication
+time shown for a reopened period MUST be labelled "Last published", including
+when the lead has already resubmitted the section.
+
+#### Scenario: A reopened week is not shown as a draft published moments ago
+
+- **WHEN** a lead opens `/reports` and a period was published and then reopened
+- **THEN** its draft section shows the "Reopened" badge
+- **AND** its publication time is labelled "Last published"
 
 ### Requirement: Compiled history does not invent lead submission state
 
@@ -131,6 +159,14 @@ next publish replaces the snapshot.
 - **WHEN** a head or lead reads compiled history
 - **THEN** the entry is derived from the last published scoped sections only
 - **AND** the new live section appears only after the report is published again
+
+#### Scenario: A reopened period is not presented as currently published
+
+- **GIVEN** a published report has been reopened and is live again
+- **WHEN** a head reads compiled history
+- **THEN** the entry carries `reopened: true` and the card shows a Reopened badge instead of Published
+- **AND** its publication time is labelled as the last publication
+- **AND** the entry does not count toward the published aggregates or streak
 
 ### Requirement: Personal history uses the immutable publication snapshot
 

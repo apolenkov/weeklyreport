@@ -50,6 +50,20 @@ controls MUST never be clipped.
 - **THEN** it uses stacked/compact responsive rows with no horizontal scrollbar
 - **AND** action controls remain fully visible and keyboard reachable
 
+### Requirement: Repeated controls carry unique accessible names
+
+Controls repeated per lead or per record MUST have unique accessible names that
+begin with the visible text (WCAG 2.5.3): the Period Summary expansion control
+("Details for <lead>" / "Less details for <lead>"), its "Request changes from
+<lead>" action, and each record's review-comment submit button ("Comment on
+<record excerpt>").
+
+#### Scenario: Two leads and two records are distinguishable by name
+
+- **WHEN** the Period Summary lists two leads or a review page lists two records
+  with comment composers
+- **THEN** no two of these buttons share an accessible name
+
 ### Requirement: Every content-bearing Period Summary row drills into the focused report
 
 The head dashboard Period Summary queue MUST expose its current Open or Review
@@ -223,7 +237,8 @@ The head dashboard SHALL only render loading affordances and KPI values that
 correspond to real, currently-queryable state; any client-side script or
 component that relies on a DOM marker MUST query a marker that some
 component actually renders, and any metric with no backing data source MUST
-be presented as explicitly unavailable rather than as a fabricated number.
+be omitted rather than presented as a fabricated number or a constant
+placeholder.
 
 #### Scenario: bfcache-recovery script detects a real loading marker
 
@@ -241,9 +256,10 @@ be presented as explicitly unavailable rather than as a fabricated number.
 - **THEN** no loading marker is present in the DOM
 - **AND** the bfcache-recovery script does not reload the page
 
-#### Scenario: last-week submission comparison renders as unavailable, not zero
+#### Scenario: no last-week submission comparison without backing data
 
 - **WHEN** the dashboard KPI strip is built from a `WeeklyReportReadModel`
   that has no prior-period submission data
 - **THEN** the KPI card does not render a numeric "Last week 0/0" comparison
-- **AND** it instead renders an explicit not-available presentation
+- **AND** it renders no last-week text at all, neither a number nor a
+  placeholder constant

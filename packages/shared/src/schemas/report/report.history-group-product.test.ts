@@ -100,6 +100,7 @@ describe("compiledHistoryEntrySchema", () => {
     periodEnd: "2026-04-12T23:59:59.000Z",
     publishedAt: "2026-04-13T09:00:00.000Z",
     archived: true,
+    reopened: false,
     publishedByName: "Head User",
     trafficLights: { green: 3, yellow: 1, red: 0 },
     itemCount: 4,
@@ -115,6 +116,13 @@ describe("compiledHistoryEntrySchema", () => {
     expect(parsed.publishedAt).toBeInstanceOf(Date);
     expect(parsed.archived).toBe(true);
     expect(parsed.trafficLights.yellow).toBe(1);
+  });
+
+  it("requires the reopened flag", () => {
+    const { reopened: _reopened, ...withoutFlag } = validEntry();
+    expect(compiledHistoryEntrySchema.safeParse(withoutFlag).success).toBe(
+      false,
+    );
   });
 
   it("rejects a negative aggregate count", () => {

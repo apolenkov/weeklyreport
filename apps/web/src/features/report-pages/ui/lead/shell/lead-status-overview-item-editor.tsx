@@ -30,6 +30,9 @@ interface OverviewItemSubmission {
   readonly saveReceiptSequenceBefore: number;
   readonly saveArmed: boolean;
   readonly activityObserved: boolean;
+  // The edited row as it was before the first Save applied it, so abandoning a
+  // failed save can put the board back. Null when there is no row to restore.
+  readonly restore: DraftPatch | null;
 }
 
 interface OverviewEditDialogState extends OverviewComposerState {

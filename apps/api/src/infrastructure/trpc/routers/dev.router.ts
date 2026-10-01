@@ -128,6 +128,25 @@ export function createDevRouter(deps: DevRouterDeps) {
       return users;
     }),
 
+    // Lets the E2E setup observe what this process is actually connected to:
+    // the database name comes from the live connection, and every Redis client
+    // reads REDIS_DB through buildRedisConnectionOptions. No host or credentials.
+    // ponytail: config-level Redis signal; upgrade to CLIENT INFO if insufficient.
+    runtimeTarget: publicProcedure.query(async () => {
+      assertDevMode(deps.env);
+      const rows = await deps.prisma.$queryRaw<
+        { database: string }[]
+      >`SELECT current_database() AS database`;
+      const database = rows[0]?.database;
+      if (database === undefined) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database did not report its name",
+        });
+      }
+      return { database, redisDb: deps.env.REDIS_DB };
+    }),
+
     // Dev-only test affordance guarded by AUTH_DEV_MODE at execution. Variant
     // is required because a wipe is too destructive to run on an implicit
     // default an operator did not choose.

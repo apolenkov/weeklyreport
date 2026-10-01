@@ -1,11 +1,14 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import Link from "next/link";
 import { useContext } from "react";
 
 import { useQueryErrorHandler } from "../../../../../shared/hooks/query/use-query-error-handler";
 import { SessionContext } from "../../../../../shared/lib/auth/session-provider";
+import { formatClientErrorMessage } from "../../../../../shared/lib/errors/client-error-reporting";
 import { useTRPC } from "../../../../../shared/lib/trpc/trpc-context";
+import { LEAD_REPORT_ROUTE } from "../../../../../shared/ui/navigation/nav-links";
 import { LeadFormEmptyState } from "./lead-form-empty-state";
 import { LeadFormLoadError } from "./lead-form-load-error";
 import { LeadStatusOverviewContent } from "./lead-status-overview-content";
@@ -19,6 +22,8 @@ import {
 } from "./use-lead-form-editor";
 
 export { buildStatusOverviewDetailsHref } from "./lead-status-overview-content";
+
+const OVERVIEW_LOAD_FAILURE = "Failed to load status overview";
 
 interface LeadStatusOverviewProps {
   readonly reportId?: string | undefined;
@@ -42,6 +47,33 @@ function OverviewSkeleton() {
         />
       ))}
     </div>
+  );
+}
+
+function OverviewUnavailable({
+  message,
+  onRetry,
+}: {
+  readonly message: string | null;
+  readonly onRetry: () => void;
+}) {
+  const action =
+    "btn-press rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] px-4 py-2 text-sm font-semibold";
+  return (
+    <section className="card-surface space-y-3 p-6" role="alert">
+      <h1 className="text-xl font-semibold text-[var(--color-primary)]">
+        Status overview unavailable
+      </h1>
+      {message ? <p className="text-sm">{message}</p> : null}
+      <div className="flex flex-wrap gap-3">
+        <button type="button" className={action} onClick={onRetry}>
+          Try again
+        </button>
+        <Link href={LEAD_REPORT_ROUTE} className={action}>
+          Go to the current report
+        </Link>
+      </div>
+    </section>
   );
 }
 
@@ -110,7 +142,7 @@ export function LeadStatusOverview({
     component: "LeadStatusOverview",
     procedure: "leadForm.statusOverview",
     context: { reportId: targetReportId },
-    toastPrefix: "Failed to load status overview",
+    toastPrefix: OVERVIEW_LOAD_FAILURE,
   });
 
   if (session?.isLoading || shouldRouteAway) return <OverviewSkeleton />;
@@ -126,18 +158,14 @@ export function LeadStatusOverview({
   }
   if (!overviewQ.data) {
     return (
-      <section className="card-surface space-y-3 p-6" role="alert">
-        <h1 className="text-xl font-semibold text-[var(--color-primary)]">
-          Status overview unavailable
-        </h1>
-        <button
-          type="button"
-          className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] px-4 py-2 text-sm font-semibold"
-          onClick={() => void overviewQ.refetch()}
-        >
-          Try again
-        </button>
-      </section>
+      <OverviewUnavailable
+        message={
+          overviewQ.isError
+            ? formatClientErrorMessage(OVERVIEW_LOAD_FAILURE, overviewQ.error)
+            : null
+        }
+        onRetry={() => void overviewQ.refetch()}
+      />
     );
   }
 

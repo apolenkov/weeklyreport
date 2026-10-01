@@ -119,6 +119,11 @@ expression never hold, so the conversion times out and the attempt fails —
 the "never capture a spinner/error page" invariant is preserved by the gate,
 not by post-hoc inspection.
 
+The print route renders the worker-token view on the server
+(`apps/web/src/app/print/[reportId]/page.tsx` via `getPdfExportRender`), so the
+readiness marker is present in the server markup and the gate does not depend
+on client hydration inside the renderer's Chromium.
+
 Accepted simplification: the failure reason no longer distinguishes
 "error marker" from "never ready" (both surface as a bounded wait timeout).
 The durable contract — job fails, no artifact — is unchanged; the failure

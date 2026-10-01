@@ -1,5 +1,6 @@
 "use client";
 
+import { useFocusAfterRowRemoved } from "../../../shared/hooks/browser/use-focus-after-row-removed";
 import { formatClientErrorMessage } from "../../../shared/lib/errors/client-error-reporting";
 import type { ReopenDecision } from "../../../shared/ui/forms/reopen-respond-form";
 import { TabHeader, TabSearch } from "../../../shared/ui/tabs/tab-header";
@@ -152,6 +153,13 @@ export function ReopenTab() {
     cancelRespond,
     respond,
   } = useReopenTabState();
+  // A decision removes the form (and, under the Pending filter, the row) that
+  // held focus. The results region outlives both and holds the empty state once
+  // the last row is gone, so it is the stable, visible place to land. The open
+  // form counts as one removable row.
+  const resultsRef = useFocusAfterRowRemoved<HTMLDivElement>(
+    requests.length + (respondingId === null ? 0 : 1),
+  );
 
   return (
     <div className="space-y-4">
@@ -167,35 +175,43 @@ export function ReopenTab() {
         setSearch={setSearch}
       />
 
-      <ReopenListStatus
-        isPending={listQuery.isPending}
-        errorMessage={
-          listQuery.isError && requests.length === 0
-            ? formatClientErrorMessage(
-                "Failed to load requests",
-                listQuery.error,
-              )
-            : null
-        }
-        isEmpty={requests.length === 0}
-        hasSearch={search.trim().length > 0}
-        filter={filter}
-        onRetry={() => {
-          void listQuery.refetch({ cancelRefetch: false });
-        }}
-      />
+      <div
+        ref={resultsRef}
+        tabIndex={-1}
+        role="region"
+        aria-label="Reopen requests"
+        className="space-y-4 rounded-[var(--radius)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2"
+      >
+        <ReopenListStatus
+          isPending={listQuery.isPending}
+          errorMessage={
+            listQuery.isError && requests.length === 0
+              ? formatClientErrorMessage(
+                  "Failed to load requests",
+                  listQuery.error,
+                )
+              : null
+          }
+          isEmpty={requests.length === 0}
+          hasSearch={search.trim().length > 0}
+          filter={filter}
+          onRetry={() => {
+            void listQuery.refetch({ cancelRefetch: false });
+          }}
+        />
 
-      <ReopenRequestList
-        requests={requests}
-        respondingId={respondingId}
-        note={note}
-        isSaving={isSaving}
-        pendingDecision={pendingDecision}
-        onNoteChange={onNoteChange}
-        startRespond={startRespond}
-        cancelRespond={cancelRespond}
-        respond={respond}
-      />
+        <ReopenRequestList
+          requests={requests}
+          respondingId={respondingId}
+          note={note}
+          isSaving={isSaving}
+          pendingDecision={pendingDecision}
+          onNoteChange={onNoteChange}
+          startRespond={startRespond}
+          cancelRespond={cancelRespond}
+          respond={respond}
+        />
+      </div>
 
       {listQuery.isError && requests.length > 0 ? (
         <ReopenNextPageIssue

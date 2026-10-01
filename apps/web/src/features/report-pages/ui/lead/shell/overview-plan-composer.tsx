@@ -2,16 +2,19 @@
 
 import { type KeyboardEvent, useEffect, useId, useRef } from "react";
 
+import { useDiscardGuard } from "../../../../../shared/ui/dialogs/use-discard-guard";
 import {
   ownedStagesForProject,
   ParentPicker,
   StageStep,
 } from "../../../../report-sections";
 import { useInlineEditUnloadGuard } from "../../../../report-sections/client";
-import type {
-  OverviewPlanFields,
-  OverviewPlanState,
-  PlanOutcome,
+import {
+  isPlanInputEdited,
+  nextPlanHint,
+  type OverviewPlanFields,
+  type OverviewPlanState,
+  type PlanOutcome,
 } from "./overview-plan-command";
 
 const MAX_OUTCOME_TEXT = 500;
@@ -80,12 +83,6 @@ function OutcomeDetails({
       </div>
     </details>
   );
-}
-
-function nextPlanHint(state: OverviewPlanState): string {
-  return state.source.kind === "current" && state.item.source === "current"
-    ? "The current result stays unchanged. This is a separate commitment."
-    : "This commitment will be planned for next week. The previous report stays unchanged.";
 }
 
 function OutcomeFields({
@@ -164,13 +161,14 @@ function OutcomeFields({
 
 function handleComposerKey(
   event: KeyboardEvent<HTMLFormElement>,
-  { pending, onSubmit, onCancel }: ComposerProps,
+  { pending, onSubmit }: ComposerProps,
+  requestClose: () => void,
   canSubmit: boolean,
 ) {
   if (event.key === "Escape" && !pending) {
     event.preventDefault();
     event.stopPropagation();
-    onCancel();
+    requestClose();
   }
   if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
     event.preventDefault();
@@ -212,88 +210,98 @@ export function OverviewPlanComposer(props: ComposerProps) {
     onSubmit,
     onCancel,
   } = props;
+  const { requestClose, discardDialog } = useDiscardGuard(
+    isPlanInputEdited(state),
+    onCancel,
+    pending,
+  );
   const restore = state.mode === "restore";
   const title = restore ? "Restore plan" : "Resolve plan";
   const canSubmit = !pending && !blockedReason && !recoveryReason;
   const choices = state.unitKey === null ? CHOICES : ACTIVE_ITEM_CHOICES;
   return (
-    <form
-      aria-label={title}
-      className="min-w-0 space-y-3 rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] p-3"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (canSubmit) onSubmit();
-      }}
-      onKeyDown={(event) => handleComposerKey(event, props, canSubmit)}
-    >
-      <p className="break-words text-sm font-semibold">{title}</p>
-      <p className="break-words text-sm [overflow-wrap:anywhere]">
-        {state.item.text}
-      </p>
-      <fieldset
-        disabled={pending || recoveryReason !== null}
-        className="min-w-0 space-y-3"
+    <>
+      <form
+        aria-label={title}
+        className="min-w-0 space-y-3 rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] p-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (canSubmit) onSubmit();
+        }}
+        onKeyDown={(event) =>
+          handleComposerKey(event, props, requestClose, canSubmit)
+        }
       >
-        {!restore ? (
-          <>
-            <div
-              role="group"
-              aria-label="Plan outcome"
-              className="flex flex-wrap gap-2"
-            >
-              {choices.map((choice, index) => (
-                <button
-                  key={choice.value}
-                  ref={index === 0 ? firstChoice : undefined}
-                  type="button"
-                  aria-pressed={state.fields.outcome === choice.value}
-                  className={`${BUTTON} border border-[var(--color-border-strong)] aria-pressed:bg-[var(--color-surface-hover)]`}
-                  onClick={() => onChoose(choice.value)}
-                >
-                  {choice.label}
-                </button>
-              ))}
-            </div>
-            <OutcomeFields state={state} onChange={props.onChange} />
-          </>
-        ) : (
-          <p className="text-sm">
-            Restore the state before cancellation. The audit history is
-            retained.
+        <p className="break-words text-sm font-semibold">{title}</p>
+        <p className="break-words text-sm [overflow-wrap:anywhere]">
+          {state.item.text}
+        </p>
+        <fieldset
+          disabled={pending || recoveryReason !== null}
+          className="min-w-0 space-y-3"
+        >
+          {!restore ? (
+            <>
+              <div
+                role="group"
+                aria-label="Plan outcome"
+                className="flex flex-wrap gap-2"
+              >
+                {choices.map((choice, index) => (
+                  <button
+                    key={choice.value}
+                    ref={index === 0 ? firstChoice : undefined}
+                    type="button"
+                    aria-pressed={state.fields.outcome === choice.value}
+                    className={`${BUTTON} border border-[var(--color-border-strong)] aria-pressed:bg-[var(--color-surface-hover)]`}
+                    onClick={() => onChoose(choice.value)}
+                  >
+                    {choice.label}
+                  </button>
+                ))}
+              </div>
+              <OutcomeFields state={state} onChange={props.onChange} />
+            </>
+          ) : (
+            <p className="text-sm">
+              Restore the state before cancellation. The audit history is
+              retained.
+            </p>
+          )}
+        </fieldset>
+        {error || recoveryReason ? (
+          <p
+            role="alert"
+            className="break-words text-sm text-[var(--color-destructive)]"
+          >
+            {error ?? recoveryReason}
           </p>
-        )}
-      </fieldset>
-      {error || recoveryReason ? (
-        <p
-          role="alert"
-          className="break-words text-sm text-[var(--color-destructive)]"
-        >
-          {error ?? recoveryReason}
-        </p>
-      ) : null}
-      {blockedReason && !recoveryReason ? (
-        <p
-          role="status"
-          className="text-sm text-[var(--color-muted-foreground)]"
-        >
-          {blockedReason}
-        </p>
-      ) : null}
-      <div className="flex flex-wrap gap-2">
-        <OutcomeSaveButton
-          state={state}
-          pending={pending}
-          disabled={!canSubmit}
-        />
-        <button
-          type="button"
-          disabled={pending}
-          className={BUTTON}
-          onClick={onCancel}
-        >
-          Cancel
-        </button>
-      </div>
-    </form>
+        ) : null}
+        {blockedReason && !recoveryReason ? (
+          <p
+            role="status"
+            className="text-sm text-[var(--color-muted-foreground)]"
+          >
+            {blockedReason}
+          </p>
+        ) : null}
+        <div className="flex flex-wrap gap-2">
+          <OutcomeSaveButton
+            state={state}
+            pending={pending}
+            disabled={!canSubmit}
+          />
+          <button
+            type="button"
+            disabled={pending}
+            className={BUTTON}
+            onClick={requestClose}
+          >
+            Cancel
+          </button>
+        </div>
+      </form>
+      {discardDialog}
+    </>
   );
 }

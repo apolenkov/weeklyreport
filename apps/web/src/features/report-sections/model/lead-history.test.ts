@@ -128,6 +128,38 @@ describe("mapHistoryEntries", () => {
     expect(result[0]?.publishedAt).toBe("1 min ago");
   });
 
+  it("shows a draft section of a reopened period as Reopened, keeping the last publication", () => {
+    const published = new Date(now.getTime() - 8 * 60 * 1000);
+    const [entry] = mapHistoryEntries(
+      [
+        baseEntry({
+          sectionStatus: "draft",
+          reopened: true,
+          publishedAt: published,
+        }),
+      ],
+      now,
+    );
+    expect(entry?.status).toBe("reopened");
+    expect(entry?.reopened).toBe(true);
+    expect(entry?.publishedAt).toBe("8 min ago");
+  });
+
+  it("keeps Submitted for a section the lead resubmitted in a reopened period", () => {
+    const [entry] = mapHistoryEntries(
+      [
+        baseEntry({
+          sectionStatus: "submitted",
+          submittedAt: new Date(now.getTime() - 60 * 1000),
+          reopened: true,
+        }),
+      ],
+      now,
+    );
+    expect(entry?.status).toBe("submitted");
+    expect(entry?.reopened).toBe(true);
+  });
+
   it("computes dateRange 'Apr 14–20, 2026' for a same-month period", () => {
     const result = mapHistoryEntries(
       [
@@ -232,6 +264,7 @@ describe("mapCompiledHistoryEntries", () => {
     periodEnd: new Date("2026-05-10T23:59:59.000Z"),
     publishedAt: new Date("2026-05-11T09:00:00.000Z"),
     archived: false,
+    reopened: false,
     publishedByName: "Head User",
     trafficLights: { green: 2, yellow: 1, red: 0 },
     itemCount: 3,
@@ -275,5 +308,16 @@ describe("mapCompiledHistoryEntries", () => {
     expect(result[0]?.status).toBe("archived");
     expect(result[0]?.archived).toBe(true);
     expect(result[0]?.submissionState).toBe("unavailable");
+  });
+
+  it("marks a compiled report whose period was reopened as reopened", () => {
+    const result = mapCompiledHistoryEntries(
+      [compiledEntry({ reopened: true })],
+      now,
+    );
+
+    expect(result[0]?.status).toBe("reopened");
+    expect(result[0]?.reopened).toBe(true);
+    expect(result[0]?.archived).toBe(false);
   });
 });

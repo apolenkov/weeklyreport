@@ -88,6 +88,7 @@ function unifiedViewModel(readOnly: boolean): LeadFormLoadedViewModel {
     risks: [],
     unifiedEntries: [],
     canRequestReopen: false,
+    hasPendingReopen: false,
     hasArchivedPeriods: false,
     archivedHidden: false,
     visiblePeriods: [],

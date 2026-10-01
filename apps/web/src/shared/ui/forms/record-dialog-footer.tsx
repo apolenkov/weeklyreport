@@ -19,11 +19,13 @@ export function RecordDialogFooter({
   savePending = false,
   sticky = false,
 }: RecordDialogFooterProps) {
+  // Sticky offsets measure from the padding edge, so -bottom-* cancels the
+  // surface's p-4 / md:p-6 and the bar ends flush with the dialog bottom.
   return (
     <div
       className={
         sticky
-          ? "sticky bottom-0 -mx-4 -mb-4 mt-5 flex flex-wrap justify-end gap-3 border-t bg-[var(--color-popover)] px-4 pb-4 pt-3 md:-mx-6 md:-mb-6 md:px-6 md:pb-6"
+          ? "sticky -bottom-4 -mx-4 -mb-4 mt-5 flex flex-wrap justify-end gap-3 border-t bg-[var(--color-popover)] px-4 pb-4 pt-3 md:-bottom-6 md:-mx-6 md:-mb-6 md:px-6 md:pb-6"
           : "mt-5 flex flex-wrap justify-end gap-3"
       }
     >

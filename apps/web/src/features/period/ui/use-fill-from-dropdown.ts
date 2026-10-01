@@ -4,15 +4,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useDismissOnOutsidePointer } from "../../../shared/hooks/browser/use-dismiss-on-outside-pointer";
 import {
-  ANCHORED_PANEL_GAP_PX,
+  rightAlignedClampedPosition,
   useAnchoredPanelPosition,
 } from "../model/use-anchored-panel-position";
 
-// Right-anchored so the panel grows leftward and never overflows the viewport.
-const rightAnchoredPosition = (rect: DOMRect) => ({
-  top: rect.bottom + ANCHORED_PANEL_GAP_PX,
-  right: window.innerWidth - rect.right,
-});
+const PANEL_WIDTH_PX = 340;
+
+const fillPanelPosition = (rect: DOMRect) =>
+  rightAlignedClampedPosition(rect, window.innerWidth, PANEL_WIDTH_PX);
 
 function useCloseOnEscape(open: boolean, close: () => void) {
   useEffect(() => {
@@ -30,7 +29,7 @@ export function useFillFromDropdown() {
   const wrapRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const pos = useAnchoredPanelPosition(open, triggerRef, rightAnchoredPosition);
+  const pos = useAnchoredPanelPosition(open, triggerRef, fillPanelPosition);
 
   // Every close path clears the leftover query too, so reopening always starts
   // unfiltered rather than pre-filtered by whatever was typed before.

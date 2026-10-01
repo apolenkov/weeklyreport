@@ -1,6 +1,7 @@
 import type {
   MyHistoryEntry,
   PublishedLineage,
+  ReopenBlockedReason,
   ReportSectionReadModel,
 } from "@customreport/shared";
 
@@ -17,8 +18,12 @@ interface LeadFormByPeriodLoaded {
   readonly section: ReportSectionReadModel;
   readonly readOnly: boolean;
   readonly canRequestReopen: boolean;
+  readonly reopenBlockedReason?: ReopenBlockedReason | null | undefined;
   readonly publishedLineage: PublishedLineage;
 }
+
+const PENDING_REOPEN_REASON =
+  "pending_request_exists" satisfies ReopenBlockedReason;
 
 export interface LeadFormLoadingState {
   readonly isLoading: boolean;
@@ -88,6 +93,8 @@ export function leadFormViewModelInput(
     draftSection: loaded.draftSection,
     serverReadOnly: loaded.byPeriodData.readOnly,
     canRequestReopen: loaded.byPeriodData.canRequestReopen,
+    hasPendingReopen:
+      loaded.byPeriodData.reopenBlockedReason === PENDING_REOPEN_REASON,
     publishedLineage: loaded.byPeriodData.publishedLineage,
     history: loaded.historyData,
     crossAuthors: data.crossAuthors,

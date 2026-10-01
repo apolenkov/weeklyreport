@@ -62,7 +62,7 @@ function IdentitySlot({
   if (userName === null) return null;
   return (
     <div className={USER_IDENTITY_SLOT_CLASS} data-testid="nav-identity">
-      <span className="min-w-0 max-w-full text-[13px] leading-4 text-[var(--color-foreground)] [overflow-wrap:anywhere]">
+      <span className="min-w-0 max-w-full text-[13px] leading-4 text-[var(--color-foreground)] [overflow-wrap:anywhere] sm:truncate">
         <span className="font-semibold">{userName}</span>
       </span>
       {role && (
@@ -92,8 +92,10 @@ export function NavBrand({
   readonly identityMeta: string;
   readonly sessionLoading: boolean;
 }) {
+  // Stretches to its grid column (no justify-self-start) so min-w-0 can shrink
+  // the identity instead of letting it overflow under the nav pills.
   return (
-    <div className="flex min-w-0 items-center gap-3 justify-self-start">
+    <div className="flex min-w-0 items-center gap-3">
       <BrandMark
         role={role}
         homeLabel={homeLabel}

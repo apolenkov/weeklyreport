@@ -1,8 +1,13 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type {
+  ReopenBlockedReason,
+  ReportSectionReadModel,
+} from "@customreport/shared";
 import { describe, expect, it } from "vitest";
 
+import { expectDefined } from "../../../../../test-utils/expect-defined";
 import {
   type LeadFormLoadingState,
+  leadFormViewModelInput,
   resolveLeadFormLoaded,
 } from "./lead-form-loaded-inputs";
 
@@ -51,5 +56,44 @@ describe("resolveLeadFormLoaded generation gate", () => {
         serverSection,
       ),
     ).toBeNull();
+  });
+});
+
+describe("leadFormViewModelInput pending reopen", () => {
+  const data = {
+    crossAuthors: [],
+    foreignContent: undefined,
+    isEveryone: false,
+    visibilityHydrated: true,
+    isForeignSlidesDeck: false,
+  };
+  const presentation = {
+    isSubmitted: true,
+    selectedPeriodId: null,
+    showArchivePeriods: false,
+  };
+  const inputFor = (reopenBlockedReason: ReopenBlockedReason | null) => {
+    const serverSection = section("report-a", "section-a");
+    const state = loadedState(serverSection);
+    const bundle = resolveLeadFormLoaded(
+      {
+        ...state,
+        byPeriodData: {
+          section: serverSection,
+          readOnly: false,
+          canRequestReopen: false,
+          reopenBlockedReason,
+          publishedLineage: { itemStableIds: [], decisionStableIds: [] },
+        },
+      },
+      serverSection,
+    );
+    return leadFormViewModelInput(data, expectDefined(bundle), presentation);
+  };
+
+  it("flags a pending request only for the pending_request_exists reason", () => {
+    expect(inputFor("pending_request_exists").hasPendingReopen).toBe(true);
+    expect(inputFor("period_closed").hasPendingReopen).toBe(false);
+    expect(inputFor(null).hasPendingReopen).toBe(false);
   });
 });

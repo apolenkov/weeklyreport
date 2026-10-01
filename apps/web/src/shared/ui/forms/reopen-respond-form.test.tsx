@@ -54,6 +54,16 @@ describe("ReopenRespondForm", () => {
     );
   });
 
+  it("gives every action the mobile touch-target minimum", () => {
+    renderForm();
+
+    for (const name of ["Cancel", "Reject", "Approve"]) {
+      expect(screen.getByRole("button", { name })).toHaveClass(
+        "max-md:min-h-[var(--touch-target-min)]",
+      );
+    }
+  });
+
   it.each([
     ["approved", "Reject"],
     ["rejected", "Approve"],

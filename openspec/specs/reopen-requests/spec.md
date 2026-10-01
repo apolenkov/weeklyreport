@@ -141,7 +141,9 @@ allowed; `published` and `archived` periods are forbidden. The server
 it MUST expose a server-computed `canRequestReopen` flag (with a reason when
 false) on the lead-form read so the lead's Request reopen control is hidden
 exactly when the server would reject the call — the web client MUST NOT
-reconstruct the policy itself. `canRequestReopen` MUST be true only when the
+reconstruct the policy itself. When the reason is an existing pending request
+(`pending_request_exists`), the lead form MUST show a "Reopen requested" status
+in place of the hidden control, so the lead sees the request is waiting. `canRequestReopen` MUST be true only when the
 section is `submitted`, the period is `open` or `reopened`, AND no pending reopen
 request already exists for that section; it MUST be false in every other case and
 MUST refresh after a successful request so the control does not invite a
@@ -187,6 +189,12 @@ after publish or archive commits.
 - **WHEN** publish commits after the lead starts `requestReopen` but before its
   transaction locks the parent report
 - **THEN** request creation fails closed and no pending row is inserted
+
+#### Scenario: Pending request shows a status, not a control
+
+- **WHEN** a lead's submitted section has a pending reopen request
+- **THEN** the lead form shows a "Reopen requested" status and no Request
+  reopen control
 
 #### Scenario: An existing pending request hides the control
 
@@ -255,6 +263,47 @@ nor rejection may mutate a closed report.
   transaction locks the parent report
 - **THEN** approval fails closed, the request stays pending, and the section
   stays submitted
+
+### Requirement: A period reopen closes the pending section requests it supersedes
+
+The period-level reopen resets every submitted section of the period to `draft`
+in its own transaction. In that same transaction it MUST close every `pending`
+reopen request of the period's sections as `rejected` (with a review note
+stating the period was reopened, no reviewer, and no funnel metric), so the
+pending list and count never keep a request whose section has nothing left to
+reopen. A refused or rolled-back reopen MUST leave those requests pending.
+
+The system writes its two auto-close review notes
+(`REOPEN_AUTO_CLOSE_NOTES` in `packages/shared`: the period reopen above, and a
+stale approval of an already-reopened section) from one shared constant, and
+`isReopenAutoCloseNote` recognises them by their exact text, so a head's own
+note that merely starts with the same words stays a head rejection. The reviewer
+cannot be the marker: the period reopen records none, a stale approval records
+the deciding head, and deleting a user nulls the reviewer of a genuine decision.
+No extra status exists. The Reopen Requests tab MUST present a `rejected`
+request with an auto-close note using a neutral "Auto-closed" badge, not the red
+"Rejected" badge, and MUST label its note "System Note" rather than "Head
+Comment".
+
+#### Scenario: Period reopen supersedes a pending section request
+
+- **WHEN** a lead's request is still pending after the period was published and
+  the head reopens the period
+- **THEN** the section is `draft`, the request is `rejected`, and the pending
+  list and count no longer include it
+
+#### Scenario: The tab labels a system-closed request
+
+- **WHEN** the Reopen Requests tab lists a `rejected` request carrying an
+  auto-close note
+- **THEN** it shows an "Auto-closed" badge and a "System Note" label
+- **AND** any other `rejected` request, including one whose reviewer was
+  deleted, keeps the "Rejected" badge and the "Head Comment" label
+
+#### Scenario: A refused period reopen keeps the request pending
+
+- **WHEN** the period reopen fails because the period changed or is archived
+- **THEN** the pending reopen request remains `pending`
 
 ### Requirement: A pending reopen response retains its draft owner
 
@@ -372,6 +421,27 @@ multiple requests are visible.
 - **THEN** no decision mutation is requested
 - **AND** the form closes
 - **AND** focus returns to that same row's Respond action
+
+### Requirement: Focus follows a removed reopen row only when it was lost there
+
+When a decision removes the row or form that held keyboard focus, the queue MUST
+hand focus to a stable, visible target: the queue container, or on the admin tab
+the results region that also holds the empty state once the last request is
+decided. Focus MUST move only when it was inside that container before the
+removal; a refetch that drops a row while the user is elsewhere on the page MUST
+leave focus untouched.
+
+#### Scenario: Deciding the last request lands on the empty state
+
+- **WHEN** an admin or head decides the only listed request from its form
+- **THEN** focus lands on the visible results region showing the empty state,
+  not on an empty invisible list
+
+#### Scenario: A foreign refetch does not pull focus
+
+- **GIVEN** focus was never inside the queue container
+- **WHEN** a background refetch removes a row
+- **THEN** focus is unchanged
 
 ### Requirement: Reopen decisions refresh dependent live report views
 

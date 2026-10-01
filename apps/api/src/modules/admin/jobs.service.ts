@@ -63,6 +63,14 @@ function assertQueueMatch(expected: QueueName, actual: QueueName): void {
   }
 }
 
+export interface FailedCounts {
+  readonly count: number;
+  readonly byQueue: readonly {
+    readonly queue: QueueName;
+    readonly count: number;
+  }[];
+}
+
 export class JobsService {
   private readonly logger: AppLogger;
 
@@ -78,11 +86,18 @@ export class JobsService {
     return this.queues.get(name);
   }
 
-  async countFailed(): Promise<number> {
-    const counts = await Promise.all(
-      this.queues.names.map((name) => this.queues.get(name).getFailedCount()),
+  // The per-queue split lets the Jobs tab open on a queue that has failures.
+  async countFailed(): Promise<FailedCounts> {
+    const byQueue = await Promise.all(
+      this.queues.names.map(async (queue) => ({
+        queue,
+        count: await this.queues.get(queue).getFailedCount(),
+      })),
     );
-    return counts.reduce((total, count) => total + count, 0);
+    return {
+      count: byQueue.reduce((total, entry) => total + entry.count, 0),
+      byQueue,
+    };
   }
 
   async listFailed(input: {

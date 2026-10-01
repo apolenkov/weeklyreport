@@ -105,7 +105,9 @@ export function useReopenTabState() {
     context: { status: filter, search: search.trim() || null },
   });
 
-  const respondMut = useRespondReopenMutation(draft.reset);
+  const respondMut = useRespondReopenMutation(() => {
+    draft.reset();
+  });
 
   const requests = useMemo(
     () => listQuery.data?.pages.flatMap((page) => page.items) ?? [],

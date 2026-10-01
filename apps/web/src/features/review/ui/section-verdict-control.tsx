@@ -2,7 +2,7 @@
 
 import type { ReviewVerdict, SectionReviewView } from "@customreport/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { invalidateReview } from "../../../shared/lib/query/cache-keys";
@@ -69,16 +69,22 @@ const errorToastMessage = (err: unknown): string =>
     : "Failed to record verdict";
 
 const APPROVE_BUTTON_CLASSNAME =
-  "btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-2.5 py-0.5 text-xs font-semibold text-[var(--color-success-foreground)] transition-colors hover:border-[var(--color-success)] disabled:cursor-not-allowed disabled:opacity-50";
+  "btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-2.5 py-0.5 text-xs font-semibold text-[var(--color-success-foreground)] transition-colors hover:border-[var(--color-success)] aria-disabled:cursor-not-allowed aria-disabled:opacity-50";
 
 const REQUEST_CHANGES_BUTTON_CLASSNAME =
-  "btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-2.5 py-0.5 text-xs font-semibold text-[var(--color-destructive)] transition-colors hover:border-[var(--color-destructive)] disabled:cursor-not-allowed disabled:opacity-50";
+  "btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-2.5 py-0.5 text-xs font-semibold text-[var(--color-destructive)] transition-colors hover:border-[var(--color-destructive)] aria-disabled:cursor-not-allowed aria-disabled:opacity-50";
 
+// Lists of leads repeat these buttons; the lead's name keeps each one unique
+// for assistive tech while the visible text stays short. The pending state uses
+// aria-disabled with a click guard: a natively disabled focused button drops
+// focus to <body>.
 function VerdictActions({
+  subjectName,
   disabled,
   onApprove,
   onRequestChanges,
 }: {
+  readonly subjectName: string | undefined;
   readonly disabled: boolean;
   readonly onApprove: () => void;
   readonly onRequestChanges: () => void;
@@ -89,8 +95,15 @@ function VerdictActions({
         type="button"
         data-interaction-effect="mutation-required"
         className={APPROVE_BUTTON_CLASSNAME}
-        onClick={onApprove}
-        disabled={disabled}
+        onClick={() => {
+          if (!disabled) onApprove();
+        }}
+        aria-disabled={disabled}
+        aria-label={
+          subjectName
+            ? `${disabled ? "Saving verdict for" : "Approve"} ${subjectName}`
+            : undefined
+        }
         aria-busy={disabled}
       >
         {disabled ? "Saving…" : "Approve"}
@@ -99,8 +112,13 @@ function VerdictActions({
         type="button"
         data-interaction-effect="mutation-required"
         className={REQUEST_CHANGES_BUTTON_CLASSNAME}
-        onClick={onRequestChanges}
-        disabled={disabled}
+        onClick={() => {
+          if (!disabled) onRequestChanges();
+        }}
+        aria-disabled={disabled}
+        aria-label={
+          subjectName ? `Request changes for ${subjectName}` : undefined
+        }
         aria-busy={disabled}
       >
         Request changes
@@ -114,6 +132,8 @@ interface SectionVerdictControlProps {
   readonly version: number;
   readonly reviews: readonly SectionReviewView[];
   readonly canReview: boolean;
+  /** Section owner; names the verdict buttons and the reason dialog. */
+  readonly subjectName?: string | undefined;
   readonly onMutated: () => void;
 }
 
@@ -124,6 +144,7 @@ export function SectionVerdictControl({
   version,
   reviews,
   canReview,
+  subjectName,
   onMutated,
 }: SectionVerdictControlProps) {
   const trpc = useTRPC();
@@ -141,6 +162,9 @@ export function SectionVerdictControl({
     onMutated();
   };
 
+  // Two keypresses can land before React re-renders the pending state, so the
+  // guard must flip synchronously; each would otherwise write a verdict.
+  const approveInFlight = useRef(false);
   const verdictMut = useMutation(
     trpc.review.verdict.mutationOptions({
       onSuccess: onVerdictRecorded,
@@ -163,14 +187,20 @@ export function SectionVerdictControl({
       </span>
       {canReview ? (
         <VerdictActions
+          subjectName={subjectName}
           disabled={verdictMut.isPending}
-          onApprove={() =>
-            verdictMut.mutate({
-              reportSectionId,
-              verdict: "approved",
-              version,
-            })
-          }
+          onApprove={() => {
+            if (approveInFlight.current) return;
+            approveInFlight.current = true;
+            verdictMut.mutate(
+              { reportSectionId, verdict: "approved", version },
+              {
+                onSettled: () => {
+                  approveInFlight.current = false;
+                },
+              },
+            );
+          }}
           onRequestChanges={() => setRequestingChanges(true)}
         />
       ) : null}
@@ -178,6 +208,7 @@ export function SectionVerdictControl({
         <RequestChangesDialog
           reportSectionId={reportSectionId}
           version={version}
+          subjectName={subjectName}
           onClose={() => setRequestingChanges(false)}
           onRequested={onVerdictRecorded}
         />

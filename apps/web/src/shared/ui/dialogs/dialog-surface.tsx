@@ -2,6 +2,8 @@
 
 import type { KeyboardEventHandler, ReactNode, RefObject } from "react";
 
+import { useBodyScrollLock } from "./use-body-scroll-lock";
+
 interface DialogSurfaceProps {
   readonly isPending?: boolean | undefined;
   readonly surfaceRef: RefObject<HTMLDivElement | null>;
@@ -21,7 +23,7 @@ interface DialogSurfaceProps {
 const DEFAULT_BACKDROP_CLASS =
   "fixed inset-0 z-[var(--layer-dialog)] flex items-center justify-center bg-[var(--color-overlay)]";
 
-// Owns modal backdrop dismissal and the target/currentTarget guard. Callers
+// Owns modal backdrop dismissal, page scroll lock and the target/currentTarget guard. Callers
 // provide layout and labelling while clicks inside never need propagation
 // handlers or accessibility suppressions.
 export function DialogSurface({
@@ -39,6 +41,7 @@ export function DialogSurface({
   mode,
   onBackdropKeyDown,
 }: DialogSurfaceProps) {
+  useBodyScrollLock();
   return (
     <div
       className={backdropClassName}

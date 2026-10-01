@@ -132,10 +132,9 @@ function createJobsRouter(deps: AdminOpsDeps) {
 export function createAdminOpsProcedures(deps: AdminOpsDeps) {
   return {
     dlqCount: adminProcedure.query(() =>
-      withDomainErrorMapping(async () => {
-        const count = await requireJobsService(deps.jobsService).countFailed();
-        return { count };
-      }),
+      withDomainErrorMapping(() =>
+        requireJobsService(deps.jobsService).countFailed(),
+      ),
     ),
     actionLog: createActionLogRouter(deps),
     jobs: createJobsRouter(deps),

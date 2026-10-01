@@ -30,6 +30,11 @@ function trpcResponse(data: unknown): Response {
   });
 }
 
+const DLQ_COUNT = {
+  count: 1,
+  byQueue: [{ queue: "email-reminder", count: 1 }],
+};
+
 function requestPath(input: RequestInfo | URL): string {
   const url =
     typeof input === "string"
@@ -43,32 +48,61 @@ function requestPath(input: RequestInfo | URL): string {
   );
 }
 
+// httpBatchLink merges same-tick queries into one request; answer each
+// procedure on its own and return them as one batched response.
+function batchAware(handler: (path: string) => Promise<Response> | Response) {
+  return async (input: RequestInfo | URL): Promise<Response> => {
+    const paths = requestPath(input).split(",");
+    const responses = await Promise.all(paths.map((path) => handler(path)));
+    const [only] = responses;
+    if (only && responses.length === 1) return only;
+    const bodies = await Promise.all(
+      responses.map(async (response) => {
+        const [body] = (await response.json()) as unknown[];
+        return body;
+      }),
+    );
+    return new Response(JSON.stringify(bodies), {
+      headers: { "content-type": "application/json" },
+      status: 200,
+    });
+  };
+}
+
 function renderWithRealTransport(action: "retry" | "remove") {
   const requestPaths: string[] = [];
   vi.stubGlobal(
     "fetch",
-    vi.fn((input: RequestInfo | URL) => {
-      const path = requestPath(input);
-      requestPaths.push(path);
-      if (path === "admin.jobs.listFailed") {
-        const listRequestCount = requestPaths.filter(
-          (item) => item === path,
-        ).length;
-        return Promise.resolve(
-          trpcResponse({
-            jobs: listRequestCount === 1 ? [JOB] : [],
-            nextCursor: null,
-          }),
-        );
-      }
-      if (path === "admin.jobs.retryFailed" && action === "retry") {
-        return Promise.resolve(trpcResponse({ retried: true, jobId: JOB.id }));
-      }
-      if (path === "admin.jobs.removeFailed" && action === "remove") {
-        return Promise.resolve(trpcResponse({ removed: true, jobId: JOB.id }));
-      }
-      throw new Error(`Unexpected tRPC request: ${path}`);
-    }),
+    vi.fn(
+      batchAware((path) => {
+        requestPaths.push(path);
+        if (path === "admin.dlqCount") {
+          return Promise.resolve(trpcResponse(DLQ_COUNT));
+        }
+        if (path === "admin.jobs.listFailed") {
+          const listRequestCount = requestPaths.filter(
+            (item) => item === path,
+          ).length;
+          return Promise.resolve(
+            trpcResponse({
+              jobs: listRequestCount === 1 ? [JOB] : [],
+              nextCursor: null,
+            }),
+          );
+        }
+        if (path === "admin.jobs.retryFailed" && action === "retry") {
+          return Promise.resolve(
+            trpcResponse({ retried: true, jobId: JOB.id }),
+          );
+        }
+        if (path === "admin.jobs.removeFailed" && action === "remove") {
+          return Promise.resolve(
+            trpcResponse({ removed: true, jobId: JOB.id }),
+          );
+        }
+        throw new Error(`Unexpected tRPC request: ${path}`);
+      }),
+    ),
   );
 
   const queryClient = new QueryClient({
@@ -142,17 +176,21 @@ describe("JobsTab failed-list refresh through the real tRPC transport", () => {
     const requestPaths: string[] = [];
     vi.stubGlobal(
       "fetch",
-      vi.fn((input: RequestInfo | URL) => {
-        const path = requestPath(input);
-        requestPaths.push(path);
-        if (path === "admin.jobs.listFailed") {
-          return Promise.resolve(
-            trpcResponse({ jobs: [JOB], nextCursor: null }),
-          );
-        }
-        if (path === "admin.jobs.retryFailed") return retryResponse.promise;
-        throw new Error(`Unexpected tRPC request: ${path}`);
-      }),
+      vi.fn(
+        batchAware((path) => {
+          requestPaths.push(path);
+          if (path === "admin.dlqCount") {
+            return Promise.resolve(trpcResponse(DLQ_COUNT));
+          }
+          if (path === "admin.jobs.listFailed") {
+            return Promise.resolve(
+              trpcResponse({ jobs: [JOB], nextCursor: null }),
+            );
+          }
+          if (path === "admin.jobs.retryFailed") return retryResponse.promise;
+          throw new Error(`Unexpected tRPC request: ${path}`);
+        }),
+      ),
     );
 
     const queryClient = new QueryClient({

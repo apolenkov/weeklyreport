@@ -295,7 +295,9 @@ describe("dashboard queue mutation transitions", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: "Request Changes" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Request changes from Alice Lead" }),
+    );
     expect(mutate).not.toHaveBeenCalled();
     const dialog = within(screen.getByRole("dialog"));
     fireEvent.click(dialog.getByRole("button", { name: "Request changes" }));

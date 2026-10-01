@@ -1,9 +1,10 @@
-import { isIP } from "node:net";
-
 import {
   assertE2eRuntimeDestructive,
+  E2E_DATABASE_NAME,
   E2E_DESTRUCTIVE_CONSENT,
+  E2E_REDIS_DB,
   parseE2eRuntimeDatabaseTarget,
+  parseE2eRuntimeRedisTarget,
   sameLocalPostgresDatabaseTarget,
 } from "../../prisma/guards/_destructive-guard.js";
 
@@ -12,59 +13,8 @@ export interface E2eRuntimeTarget {
   readonly e2eDatabaseUrl: string;
   readonly redisHost: string;
   readonly redisPort: number;
-  readonly redisDb: "15";
+  readonly redisDb: typeof E2E_REDIS_DB;
   readonly consentToken: string;
-}
-
-const E2E_DATABASE_NAME = "customreport_e2e";
-const E2E_REDIS_DB = "15";
-const MAX_TCP_PORT = 65_535;
-
-const IPV4_KIND = 4;
-const IPV6_KIND = 6;
-
-function isLoopbackHost(host: string): boolean {
-  const lower = host.toLowerCase();
-  if (lower === "localhost" || lower === "::1") return true;
-  const ipKind = isIP(host);
-  if (ipKind === IPV4_KIND) return lower.startsWith("127.");
-  if (ipKind === IPV6_KIND) return lower === "::1";
-  return false;
-}
-
-function validateRedis(
-  scriptName: string,
-  env: NodeJS.ProcessEnv,
-): { host: string; port: number } {
-  if (env.REDIS_DB !== E2E_REDIS_DB) {
-    throw new Error(
-      `[${scriptName}] REDIS_DB must be exactly ${E2E_REDIS_DB}.`,
-    );
-  }
-  const host = env.REDIS_HOST;
-  if (!host) {
-    throw new Error(`[${scriptName}] REDIS_HOST must be set.`);
-  }
-  if (!isLoopbackHost(host)) {
-    throw new Error(
-      `[${scriptName}] REDIS_HOST must be a loopback address: ${host}`,
-    );
-  }
-  const rawPort = env.REDIS_PORT;
-  if (!rawPort) {
-    throw new Error(`[${scriptName}] REDIS_PORT must be set.`);
-  }
-  const port = Number(rawPort);
-  if (
-    !/^[1-9]\d*$/u.test(rawPort) ||
-    !Number.isInteger(port) ||
-    port > MAX_TCP_PORT
-  ) {
-    throw new Error(
-      `[${scriptName}] REDIS_PORT must be a decimal TCP port: ${rawPort}`,
-    );
-  }
-  return { host, port };
 }
 
 /**
@@ -99,14 +49,14 @@ export function validateE2eRuntimeTarget(
   }
 
   assertE2eRuntimeDestructive(scriptName, env);
-  const redis = validateRedis(scriptName, env);
+  const redis = parseE2eRuntimeRedisTarget(scriptName, env);
 
   return {
     databaseUrl,
     e2eDatabaseUrl,
     redisHost: redis.host,
     redisPort: redis.port,
-    redisDb: E2E_REDIS_DB,
+    redisDb: redis.db,
     consentToken: E2E_DESTRUCTIVE_CONSENT,
   };
 }
