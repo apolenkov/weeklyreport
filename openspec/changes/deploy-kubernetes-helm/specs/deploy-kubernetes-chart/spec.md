@@ -7,11 +7,16 @@ input that `docker-compose.prod.yml` requires with `${VAR:?}` as a required
 key in `values.schema.json`, MUST set `additionalProperties: false`, and MUST
 give product configuration no default in `values.yaml`. Installing or
 templating with a required key absent MUST fail before any object is created.
+The only compose `${VAR:?}` inputs without a required chart value are those the
+chart derives or does not need: `HTTP_PORT`, `HTTPS_PORT`, `HTTPS_PORT_QUIC`,
+`CADDY_SITE_ADDRESS`, `CADDY_ACME_EMAIL`, `BACKUP_INTERVAL_SECONDS`,
+`PDF_BASE_URL`, `CHROMIUM_ALLOW_LIST`, `GOTENBERG_URL`, and
+`OTEL_SERVICE_VERSION`; the parity gate keeps this list.
 The database name MUST match letters, digits, and underscores. When the
 database password is supplied through values it MUST be checked at template
 time against the URL-safe unreserved character set; when it comes from an
-existing Secret the same check MUST run in a `config-guard` initContainer that
-precedes `migrate` and the api container.
+existing Secret the same check MUST be the first statement of the `migrate`
+initContainer command, before any database connection.
 
 #### Scenario: A required value is missing
 
@@ -23,7 +28,7 @@ precedes `migrate` and the api container.
 
 - **WHEN** the database password contains a character outside `A-Za-z0-9._~-`
 - **THEN** template rendering fails for a values-supplied password
-- **AND** the `config-guard` initContainer exits non-zero for an existing-Secret password without printing it
+- **AND** the `migrate` initContainer exits non-zero for an existing-Secret password without printing it
 
 #### Scenario: Dev login cannot be enabled
 
@@ -72,8 +77,9 @@ The Ingress MUST route all paths to Service `edge`, which runs Caddy over plain
 HTTP with the same Caddyfile compose uses. The Caddyfile MUST keep the route
 table, the enforcing security-header floor, and the `/metrics` 404. The chart
 MUST NOT expose any other workload through the Ingress. The Caddyfile MUST
-resolve the client address through a configured trusted-proxy list and forward
-exactly one `X-Forwarded-For` entry equal to the resolved client address, so the
+resolve the client address through a configured trusted-proxy list with
+`trusted_proxies_strict` (right-to-left walk) and forward exactly one
+`X-Forwarded-For` entry and one `X-Real-IP`, both equal to `{client_ip}`, so the
 api's `trust proxy: 1` receives the real client. The trusted-proxy list MUST be
 a required chart value.
 
@@ -89,6 +95,12 @@ a required chart value.
 - **WHEN** the request carries `X-Forwarded-For: 203.0.113.9`
 - **THEN** the api receives `X-Forwarded-For: 203.0.113.9` as its only entry
 
+#### Scenario: Forged forwarded address through a trusted peer
+
+- **GIVEN** the peer is in the trusted-proxy list
+- **WHEN** the request carries `X-Forwarded-For: 198.51.100.7, 203.0.113.9` and the right-most entry `203.0.113.9` is the real client appended by the trusted peer
+- **THEN** the api receives `203.0.113.9`, not the forged left-most `198.51.100.7`
+
 #### Scenario: Client address from an untrusted peer
 
 - **WHEN** a peer outside the trusted list sends a forged `X-Forwarded-For`
@@ -102,9 +114,8 @@ Service `web` and MUST render `CHROMIUM_ALLOW_LIST` from the same value, so the
 two cannot differ. The chart MUST keep `CHROMIUM_MAX_CONCURRENCY=1`,
 `CHROMIUM_CLEAR_COOKIES=true`, `CHROMIUM_CLEAR_STORAGE=true`,
 `CHROMIUM_CLEAR_CACHE=true`, `CHROMIUM_DENY_PRIVATE_IPS=true`,
-`CHROMIUM_DENY_PUBLIC_IPS=true`, and `API_TIMEOUT=150s`. A NetworkPolicy MUST
-admit gotenberg ingress only from api pods and gotenberg egress only to web pods
-and cluster DNS.
+`CHROMIUM_DENY_PUBLIC_IPS=true`, and `API_TIMEOUT=150s`. The cluster domain suffix MUST
+default to `cluster.local` and be overridable.
 
 #### Scenario: Print origin and allow-list agree
 
@@ -121,12 +132,15 @@ and cluster DNS.
 - **WHEN** the renderer converts the public page of the internal web origin
 - **THEN** it returns a PDF
 - **AND** converting `http://api:3001/health` is refused with 403
+- **AND** that print origin is admitted by the allow-list, which bypasses the IP-class denies for matching URLs
 
 ### Requirement: Secrets never enter the repository or a ConfigMap
 
 The chart MUST accept secrets only through `secrets.existingSecret` or through
 `secrets.create` with values supplied at install time, MUST fail when neither or
-both are chosen, and MUST NOT carry a default for any secret key. The secret
+both are chosen, and MUST NOT carry a default for any secret key. An optional `images.pullSecret` MUST
+name an existing Secret and render as `imagePullSecrets` on every pod; the chart
+MUST NOT create registry credentials. The secret
 keys are `DB_PASSWORD`, `AUTH_JWT_SECRET`, `PDF_EXPORT_JWT_SECRET`,
 `AI_PROVIDER_CONFIG_ENCRYPTION_KEY`, and the optional `SMTP_USER`, `SMTP_PASS`,
 and `SENTRY_DSN`. The assembled `DATABASE_URL` MUST be built in the pod from the
@@ -178,14 +192,12 @@ set only where it has been verified to run.
 
 ### Requirement: Observability is opt-in and ships no monitoring stack
 
-The chart MUST NOT install Prometheus, Grafana, or a ServiceMonitor. It MAY add
-scrape annotations to the api pod when `observability.scrapeAnnotations` is true.
-The public edge MUST NOT route `/metrics`.
+The chart MUST NOT install a monitoring stack. It MUST offer `api.podAnnotations`, default empty. The public edge MUST NOT route `/metrics`.
 
 #### Scenario: Default render
 
-- **WHEN** the chart is rendered with default observability values
-- **THEN** no scrape annotation and no monitoring object is emitted
+- **WHEN** the chart is rendered with default values
+- **THEN** the api pod has no extra annotation and no monitoring object is emitted
 
 ### Requirement: Chart images are pinned and come from CI
 
@@ -193,7 +205,8 @@ Third-party images in `values.yaml` MUST use an explicit tag and `@sha256:`
 digest, identical to the digests in `docker-compose.prod.yml` for the same
 service. Application images (`api`, `migrate`, `web`, `backup`) MUST be selected
 by a required `images.tag` and registry value, MUST NOT use `latest`, and MUST be
-the images built by the CI image job.
+the images built by the CI image job. The api `OTEL_SERVICE_VERSION` MUST be
+derived from `images.tag`, not supplied separately.
 
 #### Scenario: Image drift between compose and chart
 
@@ -203,9 +216,9 @@ the images built by the CI image job.
 ### Requirement: Chart behaviour is gate-enforced and compose is the parity reference
 
 `pnpm test` MUST run chart tests that lint and render the chart with a fixture
-values file, validate manifests with `kubeconform`, and compare the chart's
-rendered environment key sets, `CHROMIUM_*` values, image references, and secret
-keys against `docker-compose.prod.yml` and `production.env.example`. The
+values file, enforce the fixed `CHROMIUM_*` and literal-environment invariants,
+and compare only (a) third-party image digests and (b) the api environment key
+set against `docker-compose.prod.yml`, with the exception list kept in the test. The
 repository MUST keep `docker-compose.prod.yml` until a later change removes it
 after the first production deployment on the cluster.
 
@@ -217,4 +230,4 @@ after the first production deployment on the cluster.
 #### Scenario: Untested claims stay marked
 
 - **WHEN** the delivery report is written
-- **THEN** authenticated flows, real Ingress behaviour, NetworkPolicy enforcement, and the CI builder on the project runner are listed as NOT VERIFIED unless evidence exists
+- **THEN** authenticated flows, real Ingress behaviour, and the CI builder on the project runner are listed as NOT VERIFIED unless evidence exists

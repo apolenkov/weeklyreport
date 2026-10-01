@@ -74,7 +74,7 @@ credentials.
 
 A deploy job MAY exist only as `when: manual` on the default branch, MUST be
 defined only when a file-type `KUBECONFIG` variable is set, and MUST run
-`helm upgrade --install` with `--atomic --wait` and a values file supplied by CI
+`helm upgrade --install` with `--atomic` (which waits for readiness) and a values file supplied by CI
 variable. The repository MUST NOT contain cluster credentials, and MUST NOT
 assume Argo CD.
 
@@ -86,4 +86,4 @@ assume Argo CD.
 #### Scenario: Manual deploy
 
 - **WHEN** an operator starts the deploy job on the default branch
-- **THEN** it installs or upgrades the release with the commit-SHA image tag and rolls back on failure of `--wait`
+- **THEN** it installs or upgrades the release with the commit-SHA image tag and rolls back on failure
