@@ -32,9 +32,9 @@ pushes them tagged with the commit SHA to `$CI_REGISTRY_IMAGE`. `IMAGE_REGISTRY`
 credentials; the job fails in its first step when the resolved registry, user,
 or password is empty, or when a `WR_NEXT_PUBLIC_*` value that `Dockerfile.web`
 compiles in is unset. It runs automatically on the default branch and on tags
-once `WR_NEXT_PUBLIC_CLIENT_LOG_FORWARDING` and the other `WR_NEXT_PUBLIC_*`
-variables exist, and is a manual, non-blocking job otherwise and on merge
-requests. The digests are the artifact `image-digests.txt`. The job sets
+when the single CI variable `WR_NEXT_PUBLIC_CLIENT_LOG_FORWARDING` is set —
+the only variable the rule evaluates — and is a manual, non-blocking job
+otherwise and on merge requests. The digests are the artifact `image-digests.txt`. The job sets
 `BUILDKITD_FLAGS=--oci-worker-no-process-sandbox`, the job-side mitigation
 for a runner whose default seccomp/AppArmor profile denies rootless
 buildkitd its worker sandbox (`mount proc: operation not permitted`); the
