@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { riskCoversStage } from "./stage-names";
+import { riskCoversStage } from "./stage-names.js";
 
 describe("riskCoversStage", () => {
   it("matches only the exact canonical stage name", () => {

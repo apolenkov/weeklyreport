@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { sessionRoleSchema, userSessionSchema } from "./auth";
+import { sessionRoleSchema, userSessionSchema } from "./auth.js";
 
 const createValidSession = () => ({
   userId: randomUUID(),

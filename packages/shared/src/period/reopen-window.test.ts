@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { MS_PER_HOUR } from "../time";
+import { MS_PER_HOUR } from "../time.js";
 import {
   isWithinReopenWindow,
   MAX_REOPEN_REASON_LENGTH,
-} from "./reopen-window";
+} from "./reopen-window.js";
 
 const publishedAt = new Date("2026-05-11T09:00:00.000Z");
 const windowEnd = publishedAt.getTime() + 72 * MS_PER_HOUR;

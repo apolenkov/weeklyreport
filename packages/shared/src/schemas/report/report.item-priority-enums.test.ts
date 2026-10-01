@@ -10,7 +10,7 @@ import {
   reportSectionStatusSchema,
   reportStatusSchema,
   trafficLightStatusSchema,
-} from "../report";
+} from "../report.js";
 
 const validItem = () => ({
   projectId: randomUUID(),

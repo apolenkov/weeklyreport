@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { MAX_WEB_VITAL_VALUE, webVitalBeaconSchema } from "./web-vitals";
+import { MAX_WEB_VITAL_VALUE, webVitalBeaconSchema } from "./web-vitals.js";
 
 describe("webVitalBeaconSchema — value bounds", () => {
   it("rejects a value above the shared maximum", () => {

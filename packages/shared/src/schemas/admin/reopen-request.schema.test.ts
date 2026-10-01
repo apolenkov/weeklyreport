@@ -6,7 +6,7 @@ import {
   type ReopenRequestCursor,
   type ReopenRequestListInput,
   reopenRequestListInputSchema,
-} from "../../index";
+} from "../../index.js";
 
 const CURSOR = {
   id: "11111111-1111-4111-8111-111111111111",

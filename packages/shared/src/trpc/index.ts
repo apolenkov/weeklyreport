@@ -1,1 +1,1 @@
-export { assertRole } from "./middleware/role";
+export { assertRole } from "./middleware/role.js";

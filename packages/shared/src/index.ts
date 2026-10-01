@@ -2,35 +2,35 @@ export type {
   ReminderAudience,
   ReminderPolicy,
   ReminderPolicyKind,
-} from "./admin/reminder-policy.schema";
-export { reminderPolicySchema } from "./admin/reminder-policy.schema";
+} from "./admin/reminder-policy.schema.js";
+export { reminderPolicySchema } from "./admin/reminder-policy.schema.js";
 export {
   computeReminderFireAt,
   reminderPolicyAppliesTo,
-} from "./admin/reminder-policy-time";
-export * from "./auth";
-export * from "./auth/cookie-name";
-export * from "./constants";
+} from "./admin/reminder-policy-time.js";
+export * from "./auth/cookie-name.js";
+export * from "./auth/index.js";
+export * from "./constants.js";
 export {
   composeName,
   initials,
   initialsFromName,
   shortName,
   shortNameFromName,
-} from "./name/user-name";
-export { omitUndefinedProperties } from "./object/omit-undefined-properties";
-export * from "./organization/default-reporting-group";
-export * from "./period/reopen-window";
-export * from "./schemas/admin/action-log.schema";
+} from "./name/user-name.js";
+export { omitUndefinedProperties } from "./object/omit-undefined-properties.js";
+export * from "./organization/default-reporting-group.js";
+export * from "./period/reopen-window.js";
+export * from "./schemas/admin/action-log.schema.js";
 export {
   type ReminderDispatchResult,
   reminderDispatchResultSchema,
-} from "./schemas/admin/reminder-dispatch.schema";
-export type { ReminderRecoverySnapshot } from "./schemas/admin/reminder-recovery.validation";
-export * from "./schemas/admin/reopen-request.schema";
-export * from "./schemas/ai-prompt-management";
-export * from "./schemas/ai-provider-configuration";
-export * from "./schemas/ai-provider-test-execution";
+} from "./schemas/admin/reminder-dispatch.schema.js";
+export type { ReminderRecoverySnapshot } from "./schemas/admin/reminder-recovery.validation.js";
+export * from "./schemas/admin/reopen-request.schema.js";
+export * from "./schemas/ai-prompt-management.js";
+export * from "./schemas/ai-provider-configuration.js";
+export * from "./schemas/ai-provider-test-execution.js";
 export type {
   AnalyticsPeriod,
   LeadVelocityInput,
@@ -40,7 +40,7 @@ export type {
   TrafficLightCell,
   TrafficLightHistoryInput,
   TrafficLightHistoryOutput,
-} from "./schemas/analytics/analytics";
+} from "./schemas/analytics/analytics.js";
 export {
   analyticsPeriodSchema,
   leadVelocityInputSchema,
@@ -49,18 +49,18 @@ export {
   periodComparisonOutputSchema,
   trafficLightHistoryInputSchema,
   trafficLightHistoryOutputSchema,
-} from "./schemas/analytics/analytics";
-export * from "./schemas/auth/auth";
-export * from "./schemas/dev/dev";
-export * from "./schemas/feedback/agentation";
-export * from "./schemas/feedback/product-feedback";
+} from "./schemas/analytics/analytics.js";
+export * from "./schemas/auth/auth.js";
+export * from "./schemas/dev/dev.js";
+export * from "./schemas/feedback/agentation.js";
+export * from "./schemas/feedback/product-feedback.js";
 export {
   MAX_WEB_VITAL_VALUE,
   resolveNavigationType,
   webVitalBeaconSchema,
-} from "./schemas/observability/web-vitals";
-export * from "./schemas/organization/organization";
-export * from "./schemas/project-activity/project-activity.schema";
+} from "./schemas/observability/web-vitals.js";
+export * from "./schemas/organization/organization.js";
+export * from "./schemas/project-activity/project-activity.schema.js";
 export type {
   ActivityLiveResponse,
   ActivityLiveRow,
@@ -146,7 +146,7 @@ export type {
   WeeklyReportGetResponse,
   WeeklyReportReadModel,
   WorkingDays,
-} from "./schemas/report";
+} from "./schemas/report.js";
 export {
   activityLiveResponseSchema,
   adminCreatePeriodManualResultSchema,
@@ -239,41 +239,41 @@ export {
   validateSubmitInput,
   weeklyReportGetResponseSchema,
   weeklyReportReadModelSchema,
-} from "./schemas/report";
-export * from "./schemas/report/published-projections";
-export { buildEscalationsFromReadSections } from "./schemas/report/report-escalations";
-export { buildPortfolioProductsFromSnapshotSections } from "./schemas/report/report-portfolio-products";
+} from "./schemas/report.js";
+export * from "./schemas/report/published-projections.js";
+export { buildEscalationsFromReadSections } from "./schemas/report/report-escalations.js";
+export { buildPortfolioProductsFromSnapshotSections } from "./schemas/report/report-portfolio-products.js";
 export {
   computeReportProgress,
   type ReportProgress,
-} from "./schemas/report/report-progress";
-export * from "./schemas/report-assistant";
-export * from "./schemas/report-assistant-search-plan";
+} from "./schemas/report/report-progress.js";
+export * from "./schemas/report-assistant.js";
+export * from "./schemas/report-assistant-search-plan.js";
 export type {
   LeadOpenWorkHistoryInput,
   LeadOpenWorkHistoryOccurrence,
   LeadOpenWorkHistoryOutput,
-} from "./schemas/report-sections/open-work-history.schema";
+} from "./schemas/report-sections/open-work-history.schema.js";
 export {
   leadOpenWorkHistoryInputSchema,
   leadOpenWorkHistoryOccurrenceSchema,
   leadOpenWorkHistoryOutputSchema,
-} from "./schemas/report-sections/open-work-history.schema";
-export * from "./schemas/report-sections/status-overview.schema";
+} from "./schemas/report-sections/open-work-history.schema.js";
+export * from "./schemas/report-sections/status-overview.schema.js";
 export type {
   SearchHit,
   SearchQueryInput,
   SearchQueryOutput,
-} from "./schemas/search/search";
+} from "./schemas/search/search.js";
 export {
   searchQueryInputSchema,
   searchQueryOutputSchema,
-} from "./schemas/search/search";
-export type { StageName } from "./schemas/stages/stage-names";
-export { riskCoversStage, STAGE_NAMES } from "./schemas/stages/stage-names";
-export * from "./schemas/status/canonical-status";
-export * from "./schemas/telemetry/telemetry";
-export { deriveEffectiveProductStatus } from "./status/effective-product-status";
-export * from "./status/traffic-light-aggregation";
-export { sanitizeClientLogUrl } from "./telemetry/sanitize-client-log-url";
-export * from "./time";
+} from "./schemas/search/search.js";
+export type { StageName } from "./schemas/stages/stage-names.js";
+export { riskCoversStage, STAGE_NAMES } from "./schemas/stages/stage-names.js";
+export * from "./schemas/status/canonical-status.js";
+export * from "./schemas/telemetry/telemetry.js";
+export { deriveEffectiveProductStatus } from "./status/effective-product-status.js";
+export * from "./status/traffic-light-aggregation.js";
+export { sanitizeClientLogUrl } from "./telemetry/sanitize-client-log-url.js";
+export * from "./time.js";

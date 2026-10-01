@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { computeReportProgress } from "./report-progress";
+import { computeReportProgress } from "./report-progress.js";
 
 describe("computeReportProgress", () => {
   const sections = [

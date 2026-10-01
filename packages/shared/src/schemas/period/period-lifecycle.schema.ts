@@ -4,7 +4,7 @@ import {
   periodStateSchema,
   periodStatusSchema,
   reportStatusSchema,
-} from "../primitives/report-primitives.schema";
+} from "../primitives/report-primitives.schema.js";
 
 const lifecycleTupleKey = (value: {
   readonly periodState: string;

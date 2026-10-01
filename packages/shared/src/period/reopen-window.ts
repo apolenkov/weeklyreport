@@ -1,4 +1,4 @@
-import { MS_PER_HOUR } from "../time";
+import { MS_PER_HOUR } from "../time.js";
 
 /** Max length of a lead's reopen-request reason. */
 export const MAX_REOPEN_REASON_LENGTH = 500;

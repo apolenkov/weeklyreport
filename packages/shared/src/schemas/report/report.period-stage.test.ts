@@ -8,7 +8,7 @@ import {
   periodStateSchema,
   periodStatusSchema,
   reportPeriodSchema,
-} from "../report";
+} from "../report.js";
 describe("periodStatusSchema", () => {
   it('accepts "open"', () => {
     expect(periodStatusSchema.safeParse("open").success).toBe(true);

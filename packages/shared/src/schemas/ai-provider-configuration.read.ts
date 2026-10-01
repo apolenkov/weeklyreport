@@ -13,9 +13,9 @@ import {
   MAX_REVISIONS,
   modelIdentifierSchema,
   reasoningCustomValueSchema,
-} from "./ai-provider-configuration.base";
-import { aiProviderCapabilityTestResultSchema } from "./ai-provider-configuration-results";
-import { aiProviderTestExecutionReadSchema } from "./ai-provider-test-execution";
+} from "./ai-provider-configuration.base.js";
+import { aiProviderCapabilityTestResultSchema } from "./ai-provider-configuration-results.js";
+import { aiProviderTestExecutionReadSchema } from "./ai-provider-test-execution.js";
 
 const aiProviderGenerationReadSchema = z
   .object({

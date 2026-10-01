@@ -14,12 +14,12 @@ import {
   safeText,
   trafficLightStatusSchema,
   writeStageNamesField,
-} from "../primitives/report-primitives.schema";
-import { recordCommentViewSchema } from "../review/review.schema";
+} from "../primitives/report-primitives.schema.js";
+import { recordCommentViewSchema } from "../review/review.schema.js";
 import {
   itemOutcomeEventSchema,
   itemResolutionSchema,
-} from "./item-outcome.schema";
+} from "./item-outcome.schema.js";
 
 const ITEM_TAG_MAX_LENGTH = 50;
 const DECISION_OWNER_MAX_LENGTH = 200;

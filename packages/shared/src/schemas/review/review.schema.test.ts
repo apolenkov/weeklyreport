@@ -4,7 +4,7 @@ import {
   REVIEW_COMMENT_MAX_LENGTH,
   reviewVerdictInputSchema,
   sectionReviewViewSchema,
-} from "./review.schema";
+} from "./review.schema.js";
 
 const base = {
   reportSectionId: "6f1b0c5e-2f0a-4b53-9d43-0c2f4a1b7e11",
