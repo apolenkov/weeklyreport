@@ -12,16 +12,19 @@ export function useFocusAfterRowRemoved<T extends HTMLElement>(
   const previousCount = useRef(rowCount);
   const focusWasInside = useRef(false);
   useEffect(() => {
-    // ponytail: a blur to the page body without moving focus keeps the flag
-    // set; a later foreign removal then lands on the container. Harmless, and
-    // cheaper than telling that blur apart from the removal that also blurs.
-    const track = (event: FocusEvent) => {
+    // A click on empty page space blurs to body without a focusin, so the
+    // pointer also says where the user is; the removal itself fires neither.
+    const track = (event: Event) => {
       focusWasInside.current =
         event.target instanceof Node &&
         containerRef.current?.contains(event.target) === true;
     };
     document.addEventListener("focusin", track);
-    return () => document.removeEventListener("focusin", track);
+    document.addEventListener("pointerdown", track);
+    return () => {
+      document.removeEventListener("focusin", track);
+      document.removeEventListener("pointerdown", track);
+    };
   }, []);
   useEffect(() => {
     const active = document.activeElement;

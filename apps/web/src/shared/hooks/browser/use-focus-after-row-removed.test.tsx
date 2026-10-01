@@ -62,6 +62,29 @@ describe("useFocusAfterRowRemoved", () => {
     expect(document.body).toHaveFocus();
   });
 
+  it("leaves focus alone after the user clicked away from the list", async () => {
+    const { rerender } = render(
+      <>
+        <p>Page text</p>
+        <Rows rows={["Ada", "Grace"]} />
+      </>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Ada" }));
+    // A click on plain page text blurs to body without any focusin.
+    await userEvent.click(screen.getByText("Page text"));
+    screen.getByRole("button", { name: "Ada" }).blur();
+    expect(document.body).toHaveFocus();
+
+    rerender(
+      <>
+        <p>Page text</p>
+        <Rows rows={["Grace"]} />
+      </>,
+    );
+
+    expect(document.body).toHaveFocus();
+  });
+
   it("does not steal focus when a row is added", () => {
     const { rerender } = render(<Rows rows={["Ada"]} />);
 
