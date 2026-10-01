@@ -1,6 +1,8 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
 import {
+  isReopenAutoCloseNote,
+  REOPEN_AUTO_CLOSE_NOTES,
   type ReopenRequestCursor,
   type ReopenRequestListInput,
   reopenRequestListInputSchema,
@@ -53,5 +55,15 @@ describe("reopenRequestListInputSchema", () => {
     expect(reopenRequestListInputSchema.safeParse(candidate).success).toBe(
       false,
     );
+  });
+});
+
+describe("isReopenAutoCloseNote", () => {
+  it("recognises only the exact system notes", () => {
+    for (const note of Object.values(REOPEN_AUTO_CLOSE_NOTES)) {
+      expect(isReopenAutoCloseNote(note)).toBe(true);
+    }
+    expect(isReopenAutoCloseNote("Auto-closed: duplicate request")).toBe(false);
+    expect(isReopenAutoCloseNote(null)).toBe(false);
   });
 });

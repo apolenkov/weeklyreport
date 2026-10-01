@@ -15,7 +15,7 @@ const REOPEN_AUTO_CLOSE_PREFIX = "Auto-closed:";
 
 /**
  * Review notes the system writes when it closes a pending reopen request
- * itself; the UI recognises them by prefix, as the reviewer FK is nulled when
+ * itself; the UI recognises them by exact text, as the reviewer FK is nulled when
  * a user is deleted and cannot mark a system closure.
  */
 export const REOPEN_AUTO_CLOSE_NOTES = {
@@ -25,7 +25,10 @@ export const REOPEN_AUTO_CLOSE_NOTES = {
 
 /** True when a review note was written by a system auto-close. */
 export function isReopenAutoCloseNote(note: string | null): boolean {
-  return note?.startsWith(REOPEN_AUTO_CLOSE_PREFIX) === true;
+  return (
+    note !== null &&
+    (Object.values(REOPEN_AUTO_CLOSE_NOTES) as string[]).includes(note)
+  );
 }
 
 /** Filters supported by the admin reopen-request list endpoint. */

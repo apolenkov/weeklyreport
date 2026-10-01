@@ -276,7 +276,8 @@ reopen. A refused or rolled-back reopen MUST leave those requests pending.
 The system writes its two auto-close review notes
 (`REOPEN_AUTO_CLOSE_NOTES` in `packages/shared`: the period reopen above, and a
 stale approval of an already-reopened section) from one shared constant, and
-`isReopenAutoCloseNote` recognises them by their common prefix. The reviewer
+`isReopenAutoCloseNote` recognises them by their exact text, so a head's own
+note that merely starts with the same words stays a head rejection. The reviewer
 cannot be the marker: the period reopen records none, a stale approval records
 the deciding head, and deleting a user nulls the reviewer of a genuine decision.
 No extra status exists. The Reopen Requests tab MUST present a `rejected`
