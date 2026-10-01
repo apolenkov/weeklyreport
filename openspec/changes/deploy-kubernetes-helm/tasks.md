@@ -126,7 +126,7 @@
 
 ## 7. Specs
 
-- [ ] 7.1 Sync the change into `openspec/specs/` at archive time, add the
+- [x] 7.1 Sync the change into `openspec/specs/` at archive time, add the
       `deploy-kubernetes-chart` line to `openspec/specs/README.md`, and keep
       `openspec/changes/archive/` empty afterwards (cleanliness gate).
       Acceptance: `pnpm spec:check` and `pnpm lint:cleanliness` pass.
