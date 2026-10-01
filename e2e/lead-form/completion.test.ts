@@ -296,8 +296,8 @@ async function expandFilledProduct(): Promise<void> {
 
 async function createUnsavedRisk(): Promise<void> {
   await command(["network", "route", DRAFT_ROUTE, "--abort"]);
-  await findRole("button", "+ Add Risk", "click");
-  await waitScope({ role: "dialog", name: /^Add Risk — /u });
+  await findRole("button", "+ Add risk", "click");
+  await waitScope({ role: "dialog", name: /^Add risk — /u });
   await command([
     "select",
     await refFor("combobox", "Parent"),
@@ -314,7 +314,7 @@ async function createUnsavedRisk(): Promise<void> {
 
 async function requestOverwrite(): Promise<void> {
   const confirmation = await openFillConfirmation();
-  await clickScoped(confirmation, "button", "Replace & Fill");
+  await clickScoped(confirmation, "button", "Replace & fill");
   await waitScope({ role: "alertdialog", name: "Overwrite unsaved changes?" });
   await findRole("alertdialog", "Overwrite unsaved changes?", "text");
 }
@@ -434,7 +434,7 @@ void test("Fill from previous handles cancel and persists canonical replacement"
   );
   await assertNoReportWrites();
   const replacement = await openFillConfirmation();
-  await clickScoped(replacement, "button", "Replace & Fill");
+  await clickScoped(replacement, "button", "Replace & fill");
   await waitText("Form filled from selected period");
   await reload();
   await expandFilledProduct();
@@ -469,7 +469,7 @@ void test("Fill from previous handles cancel and persists canonical replacement"
   const edit = editRefs.at(0);
   assert(edit);
   await command(["click", edit]);
-  await waitScope({ role: "dialog", name: /^Edit Item — /u });
+  await waitScope({ role: "dialog", name: /^Edit item — /u });
   assert.equal(
     await valueOf(
       "combobox",
@@ -488,13 +488,13 @@ void test("Fill from pending replacement blocks dismissal and duplicate writes",
   const confirmation = await openFillConfirmation();
   await setOffline(true);
   try {
-    await clickScoped(confirmation, "button", "Replace & Fill");
-    await waitButton("Replace & Fill", { busy: true });
-    for (const name of ["Cancel", "Replace & Fill"]) {
+    await clickScoped(confirmation, "button", "Replace & fill");
+    await waitButton("Replace & fill", { busy: true });
+    for (const name of ["Cancel", "Replace & fill"]) {
       const ref = await scopedRef(confirmation, "button", name);
       assert.notEqual(await getAttr(ref, "disabled"), null);
     }
-    const confirm = await scopedRef(confirmation, "button", "Replace & Fill");
+    const confirm = await scopedRef(confirmation, "button", "Replace & fill");
     assert.equal(await getAttr(confirm, "aria-busy"), "true");
     await command(["press", "Escape"]);
     assert.equal(
@@ -564,7 +564,7 @@ void test("Fill from previous dirty overwrite retains input and recovers from fa
   await clickScoped(
     { role: "alertdialog", name: "Overwrite unsaved changes?" },
     "button",
-    "Overwrite & Fill",
+    "Overwrite & fill",
   );
   await waitText("E2E fill interrupted");
   assert.match((await snapshot()).snapshot, /E2E unsaved fill risk/u);
@@ -583,7 +583,7 @@ void test("Fill from previous dirty overwrite retains input and recovers from fa
   await clickScoped(
     { role: "alertdialog", name: "Overwrite unsaved changes?" },
     "button",
-    "Overwrite & Fill",
+    "Overwrite & fill",
   );
   await waitText("Form filled from selected period");
   await command(["network", "unroute", DRAFT_ROUTE]);

@@ -121,7 +121,7 @@ function renderTab(opts?: {
 }
 
 function openAddDialog() {
-  const addBtn = screen.getByRole("button", { name: "Add group" });
+  const addBtn = screen.getByRole("button", { name: "Add new group" });
   fireEvent.click(addBtn);
 }
 
@@ -181,7 +181,7 @@ describe("GroupsTab — a11y regression", () => {
 
     expect(
       within(screen.getByRole("dialog")).getByRole("button", {
-        name: "Add Group",
+        name: "Add group",
       }),
     ).toHaveAttribute("data-interaction-effect", "mutation-required");
   });
@@ -236,7 +236,7 @@ describe("GroupsTab — a11y regression", () => {
 
     openAddDialog();
     await user.type(screen.getByLabelText(/^name$/i), "Platform");
-    await user.click(screen.getByRole("button", { name: "Add Group" }));
+    await user.click(screen.getByRole("button", { name: "Add group" }));
 
     await screen.findByRole("button", { name: "Saving…" });
     expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
@@ -259,7 +259,7 @@ describe("GroupsTab — a11y regression", () => {
     openAddDialog();
     const name = screen.getByLabelText(/^name$/i);
     await user.type(name, "Platform");
-    await user.click(screen.getByRole("button", { name: "Add Group" }));
+    await user.click(screen.getByRole("button", { name: "Add group" }));
 
     await screen.findByRole("button", { name: "Saving…" });
     expect(name).toBeDisabled();
@@ -294,7 +294,7 @@ describe("GroupsTab — focus management", () => {
 
   it("focus returns to the trigger button after the dialog closes via Cancel", () => {
     renderTab();
-    const addBtn = screen.getByRole("button", { name: "Add group" });
+    const addBtn = screen.getByRole("button", { name: "Add new group" });
     addBtn.focus();
     fireEvent.click(addBtn);
 
@@ -308,7 +308,7 @@ describe("GroupsTab — focus management", () => {
 
   it("focus returns to the trigger button after the dialog closes via Escape", () => {
     renderTab();
-    const addBtn = screen.getByRole("button", { name: "Add group" });
+    const addBtn = screen.getByRole("button", { name: "Add new group" });
     addBtn.focus();
     fireEvent.click(addBtn);
 

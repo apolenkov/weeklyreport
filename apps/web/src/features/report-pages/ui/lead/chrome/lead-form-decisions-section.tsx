@@ -55,7 +55,7 @@ export function LeadFormDecisionsSection({
       actions={
         !isReadOnly ? (
           <LeadFormAddButton onClick={actions.addDecision}>
-            + Add Decision
+            + Add decision
           </LeadFormAddButton>
         ) : null
       }

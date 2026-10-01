@@ -784,8 +784,8 @@ void test("required Slides read failure recovers through Retry", async () => {
 });
 
 async function addRecoveryRisk(text: string): Promise<void> {
-  const dialog = { role: "dialog", name: /^Add Risk(?: — .+)?$/ };
-  await findRole("button", "+ Add Risk", "click");
+  const dialog = { role: "dialog", name: /^Add risk(?: — .+)?$/ };
+  await findRole("button", "+ Add risk", "click");
   await waitScope(dialog);
   await command([
     "select",
@@ -794,7 +794,7 @@ async function addRecoveryRisk(text: string): Promise<void> {
   ]);
   await waitScope({
     role: "dialog",
-    name: `Add Risk — ${LEAD_FORM_FIXTURE.activityName}`,
+    name: `Add risk — ${LEAD_FORM_FIXTURE.activityName}`,
   });
   await fill("Risk *", text);
   await fill("Impact *", "E2E editing recovery impact");
@@ -860,7 +860,7 @@ void test("Overview editing read failure preserves data and recovers through Ret
   } finally {
     await setOffline(false);
   }
-  await waitButton("+ Add Risk");
+  await waitButton("+ Add risk");
   await assertScope("region", "Status overview");
   assert.ok(
     await isVisible(
@@ -1072,8 +1072,8 @@ void test("Slides details disclose without writing and canonical edit stays expl
   assert.ok(baseline.total > 1, "Typing guard needs a navigable deck");
   const ownName = await rowName(LEAD_FORM_FIXTURE.currentText);
   await command(["dblclick", await roleRef("button", ownName)]);
-  await waitText(`Edit Item — ${LEAD_FORM_FIXTURE.productName}`);
-  await assertScope("dialog", `Edit Item — ${LEAD_FORM_FIXTURE.productName}`);
+  await waitText(`Edit item — ${LEAD_FORM_FIXTURE.productName}`);
+  await assertScope("dialog", `Edit item — ${LEAD_FORM_FIXTURE.productName}`);
   const description = await roleRef("textbox", "Description *");
   await command(["focus", description]);
   await command([
@@ -1146,8 +1146,8 @@ async function checkExplicitEdit(
   assert.ok(edit);
   await command(["focus", edit.ref]);
   await command(["press", key]);
-  await waitText(`Edit Item — ${LEAD_FORM_FIXTURE.productName}`);
-  await assertScope("dialog", `Edit Item — ${LEAD_FORM_FIXTURE.productName}`);
+  await waitText(`Edit item — ${LEAD_FORM_FIXTURE.productName}`);
+  await assertScope("dialog", `Edit item — ${LEAD_FORM_FIXTURE.productName}`);
   await findRole("button", "Cancel", "click");
   await assertNoEditors();
 }

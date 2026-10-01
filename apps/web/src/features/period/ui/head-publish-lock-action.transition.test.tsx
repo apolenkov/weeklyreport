@@ -56,7 +56,7 @@ vi.mock("../../report-sections", () => ({
 vi.mock("./publish-lock-button", () => ({
   PublishLockButton: ({ canPublish }: { readonly canPublish: boolean }) => (
     <button type="button" disabled={!canPublish}>
-      {canPublish ? "Publish & Lock" : "Nothing to publish"}
+      {canPublish ? "Publish & lock" : "Nothing to publish"}
     </button>
   ),
 }));
@@ -240,7 +240,7 @@ async function requiresExplicitRetryAfterTerminalError(): Promise<void> {
   await user.click(retry);
   await waitFor(() => {
     expect(
-      screen.getByRole("button", { name: "Publish & Lock" }),
+      screen.getByRole("button", { name: "Publish & lock" }),
     ).toBeEnabled();
     expect(queryByInput).toHaveBeenCalledTimes(2);
   });

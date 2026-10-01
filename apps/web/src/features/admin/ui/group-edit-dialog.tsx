@@ -208,7 +208,7 @@ export function GroupEditDialog(props: GroupEditDialogProps) {
         }}
       >
         <h3 className="shrink-0 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-          {editingGroup ? "Edit Group" : "Add Group"}
+          {editingGroup ? "Edit group" : "Add group"}
         </h3>
         <GroupFormFields
           form={props.form}
@@ -219,7 +219,7 @@ export function GroupEditDialog(props: GroupEditDialogProps) {
           isSaving={isSaving}
         />
         <AdminEntityDialogActions
-          saveLabel={editingGroup ? "Save Changes" : "Add Group"}
+          saveLabel={editingGroup ? "Save changes" : "Add group"}
           canSave={props.canSave}
           isSaving={isSaving}
           onClose={closeIfIdle}

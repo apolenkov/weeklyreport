@@ -41,7 +41,7 @@ function BulkRevokeSection({
             data-testid="revoke-all-button"
             className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[color-mix(in_srgb,var(--color-destructive)_40%,transparent)] px-4 text-sm font-semibold text-[var(--color-destructive)] hover:bg-[var(--color-status-blocked-bg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-destructive)] focus-visible:ring-offset-2 disabled:opacity-60"
           >
-            Revoke All ({submittedCount})
+            Revoke all ({submittedCount})
           </button>
         </div>
       </details>
@@ -75,9 +75,9 @@ export function DashboardRevokeAllControl({
           setOpen(false);
           onRevokeAll(report.reportId);
         }}
-        title="Revoke All Submissions?"
+        title="Revoke all submissions?"
         description={`Revoke all ${submittedCount} submitted lead${submittedCount === 1 ? "" : "s"}? Their forms return to Draft status.`}
-        confirmLabel={`Revoke ${submittedCount} Submission${submittedCount === 1 ? "" : "s"}`}
+        confirmLabel={`Revoke ${submittedCount} submission${submittedCount === 1 ? "" : "s"}`}
         variant="destructive"
       />
     </>

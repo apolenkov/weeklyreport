@@ -51,7 +51,7 @@ export function UserEditDialog({
   return (
     <UserEditDialogShell
       surfaceRef={surfaceRef}
-      title={editingUser ? "Edit User" : "Add User"}
+      title={editingUser ? "Edit user" : "Add user"}
       ariaLabel={editingUser ? "Edit user" : "Add user"}
       onClose={closeIfIdle}
     >
@@ -74,7 +74,7 @@ export function UserEditDialog({
         <AdminEntityDialogActions
           canSave={canSave}
           isSaving={isSaving}
-          saveLabel={editingUser ? "Save Changes" : "Add User"}
+          saveLabel={editingUser ? "Save changes" : "Add user"}
           onClose={closeIfIdle}
         />
       </form>
