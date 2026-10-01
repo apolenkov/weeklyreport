@@ -21,7 +21,7 @@ name this as BLOCKED).
 - Point Gotenberg at the internal `web` Service origin; no hairpin through the
   public edge.
 - GitLab CI: add a gated image-build job (rootless BuildKit, no Docker-in-Docker)
-  that pushes to a registry named by CI variables, and an optional manual
+  that pushes to the project registry (`$CI_REGISTRY_IMAGE`, overridable by CI variables), and an optional manual
   `helm upgrade --install` job gated on a DevOps-supplied `KUBECONFIG` variable.
   This reverses the 2026-09-28 "no image builds" decision for image builds
   only; Docker-in-Docker and operational smoke stay forbidden.

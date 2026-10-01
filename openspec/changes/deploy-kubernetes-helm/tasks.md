@@ -2,7 +2,8 @@
 
 - [ ] 0.1 Send the DevOps letter (open questions in the delivery report) and
       record the answers in the backlog. Real use of tasks 5 and 6 depends on
-      questions 1 (runner privileges), 2 (registry), and the Ingress facts.
+      question 1 (runner privileges) and the Ingress facts; the registry is
+      answered (enabled, private).
       Acceptance: each question has an answer or an explicit assumption in `docs/kubernetes.md`.
       Local acceptance (section 8) proceeds without these answers.
 
@@ -39,7 +40,8 @@
 - [x] 2.2 Add `servers { trusted_proxies static ...; trusted_proxies_strict }` from
       `CADDY_TRUSTED_PROXIES`, `header_up X-Forwarded-For {client_ip}` and
       `header_up X-Real-IP {client_ip}`; chart mode uses `http://:8080` and
-      `auto_https off`. Decide the `email` global for chart mode.
+      no `auto_https off` needed (explicit `http://` site; chart sets a fixed unused
+      `CADDY_ACME_EMAIL` because an empty `email` is a parse error).
       Acceptance: `caddy validate` passes for the compose and chart environments
       (local `caddy` binary, no container); the forged-`X-Forwarded-For` scenarios
       (direct, and through a trusted peer) are proven against a local Caddy;
@@ -90,7 +92,10 @@
 
 - [ ] 5.1 `build-images` job per the requirement (variables, fail-closed guard,
       branch/tag/MR rules, SHA tags, digest artifact, `resource_group`).
-      Acceptance: a job with `IMAGE_REGISTRY` unset fails at its first line and
+      Registry and credentials default to `$CI_REGISTRY_IMAGE`, `$CI_REGISTRY_USER`,
+      `$CI_REGISTRY_PASSWORD`, overridable by `IMAGE_REGISTRY*`; syntax stays within
+      GitLab 15.10.
+      Acceptance: a job whose resolved registry is empty fails at its first line and
       starts no build; `.gitlab-ci.yml` still passes `lint:runtime-node`.
 - [ ] 5.2 Update `prod-compose-gate.test.ts` (negative lock to "image build only
       in the gated job", reviewed external-image set, Caddyfile path),
