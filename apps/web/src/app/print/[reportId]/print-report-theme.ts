@@ -5,7 +5,7 @@ import type { CanonicalStatus } from "@customreport/shared";
 export const BORDER_LIGHT = "1px solid #e5e7eb";
 export const TEXT_SECONDARY = "rgba(0,0,0,0.58)";
 export const TEXT_PRIMARY = "rgba(0,0,0,0.87)";
-export const TEXT_TERTIARY = "rgba(0,0,0,0.38)";
+export const TEXT_TERTIARY = "rgba(0,0,0,0.5)";
 // Dark brand surface: portfolio header bar + avatar chip fill.
 export const BRAND_DARK_SURFACE = "#1E3932";
 // Text on the brand dark surface.
