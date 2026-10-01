@@ -510,6 +510,6 @@ deploy-production:
       when: manual
     - when: never
   script:
-    - : "${HELM_VALUES_FILE:?HELM_VALUES_FILE (file variable) is not set}"
-    - : "${HELM_NAMESPACE:?HELM_NAMESPACE is not set}"
+    - ': "${HELM_VALUES_FILE:?HELM_VALUES_FILE (file variable) is not set}"'
+    - ': "${HELM_NAMESPACE:?HELM_NAMESPACE is not set}"'
     - helm upgrade --install weeklyreport deploy/helm/weeklyreport --namespace "$HELM_NAMESPACE" -f "$HELM_VALUES_FILE" --set "images.tag=$CI_COMMIT_SHA" --atomic --timeout 10m
