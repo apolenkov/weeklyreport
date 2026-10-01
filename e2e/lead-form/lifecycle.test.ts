@@ -1373,6 +1373,12 @@ void test("weekly title and description limits disable invalid saves and persist
   await saveDraft();
   await reload();
   await waitScope(WEEKLY_FORM);
+  // The form renders before the saved values hydrate; wait for both.
+  await command([
+    "wait",
+    "--fn",
+    `[${MAX_ACTIVITY_NAME_LENGTH}, ${SAFE_TEXT_MAX_LENGTH}].every(length => Array.from(document.querySelectorAll('input, textarea')).some(field => field.value === 'x'.repeat(length)))`,
+  ]);
   assert.equal(
     await inputValue(WEEKLY_FORM, "Weekly title"),
     "x".repeat(MAX_ACTIVITY_NAME_LENGTH),
