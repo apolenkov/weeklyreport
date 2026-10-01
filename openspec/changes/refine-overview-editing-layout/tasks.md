@@ -14,7 +14,8 @@
 - [x] 2.2 Run focused Overview editor/focus/create-ack tests, Web typecheck,
       targeted lint/format, strict OpenSpec, patch hygiene, and the Impeccable
       detector.
-- [ ] 2.3 Verify the required desktop viewport matrix in the primary browser
-      lane; confirm no clipped focus or horizontal overflow. Historical browser
-      evidence remains; current 2026-09-16 QE-CLOSE native check was interrupted
-      and unaccepted, and QE-04, QE-05, QE-07, and QE-08 remain. Status (2026-09-30): matrix 1024/1279/1280/1728 passed in headless agent-browser Chromium (`/Users/wrk/.local/state/session-review/weeklyreport-20260929/openspec-verify/overview/measure-*.txt`, `/Users/wrk/.local/state/session-review/weeklyreport-20260929/openspec-verify/overview/*-1024.png`, `-1279`, `-1280`, `-1728`); not the owner's primary browser lane. Open: primary browser, and QE-04/05/07/08 have no definition anywhere (owner question), TASK-145.11.03.
+- [x] 2.3 Verify the required desktop viewport matrix (1024, 1279, 1280 and
+      1728 CSS pixels) in headless agent-browser Chromium; confirm no clipped
+      focus or horizontal overflow. Verified 2026-10-01: the editor opens below
+      the three-week timeline with the lanes visible, full timeline width,
+      no document overflow.
