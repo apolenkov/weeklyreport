@@ -65,19 +65,20 @@ not a measurement.
   `CADDY_SITE_ADDRESS` needs a DNS A/AAAA record to the host so Caddy can
   obtain a Let's Encrypt certificate.
 - **Outbound.** Let's Encrypt (ACME); image registries during builds; the SMTP
-  server (`SMTP_HOST`/`SMTP_PORT`; production has no mail container); the SAML
-  identity provider certificate and URLs from the `KEYCLOAK_SAML_*` variables
-  (the browser, not the host, talks to the IdP); optionally the origins in
+  server (`SMTP_HOST`/`SMTP_PORT`; production has no mail container); optionally the origins in
   `AI_PROVIDER_ALLOWED_ORIGINS` (data stays blocked until
   `REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED=true`) and a Sentry-compatible
-  receiver when `SENTRY_DSN` is set. `CADDY_CSP_REPORT_URI` is an external
+  receiver when `SENTRY_DSN` is set. SAML sign-in needs no host egress: the
+  browser reaches the identity provider, and the api only holds the
+  `KEYCLOAK_SAML_*` URLs and certificate. `CADDY_CSP_REPORT_URI` is an external
   collector that browsers call. `gotenberg` prints the `PDF_BASE_URL` origin,
   so the host must reach its own public address; this is untested on a real
   network.
 - **Storage.** Named volumes: `pgdata`, `pgbackups`, `redisdata` (queues),
   `pdfdata` (exported PDFs), `caddy_data` (certificates), `caddy_config`.
   `pgbackups` on the same disk is not off-host protection; see
-  [Backups](#backups). Keep a copy of `.env.production` off the host too, including `AI_PROVIDER_CONFIG_ENCRYPTION_KEY`.
+  [Backups](#backups). Keep a copy of `.env.production` off the host too,
+  including `AI_PROVIDER_CONFIG_ENCRYPTION_KEY`.
 - **Still undecided:** SAML provider, SMTP provider, off-host backup target,
   alert receiver, and image promotion; see
   [External first-production prerequisites](#external-first-production-prerequisites).
