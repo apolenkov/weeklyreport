@@ -115,7 +115,7 @@ function Harness({
         <h2>Risks</h2>
         {!readOnly && (
           <button type="button" onClick={() => setRisksAddSignal((v) => v + 1)}>
-            + Add Risk
+            + Add risk
           </button>
         )}
         {!readOnly && (
@@ -180,7 +180,7 @@ describe("LeadFormSyncBridge", () => {
       screen.getByRole("button", { name: /Quick-add Blocker/i }),
     );
 
-    await screen.findByRole("dialog", { name: /^Add Risk/ });
+    await screen.findByRole("dialog", { name: /^Add risk/ });
     expect(screen.getByRole("button", { name: /Blocked/i })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -204,17 +204,17 @@ describe("LeadFormSyncBridge", () => {
     await user.click(
       screen.getByRole("button", { name: /Quick-add Blocker/i }),
     );
-    await screen.findByRole("dialog", { name: /^Add Risk/ });
+    await screen.findByRole("dialog", { name: /^Add risk/ });
     // The prefill (signal 1) stays set in the persistent parent.
     await user.click(screen.getByRole("button", { name: /^Cancel$/i }));
     expect(
-      screen.queryByRole("dialog", { name: /^Add Risk/ }),
+      screen.queryByRole("dialog", { name: /^Add risk/ }),
     ).not.toBeInTheDocument();
 
     // Remount the bridge; the still-set prefill must NOT reopen the dialog.
     await user.click(screen.getByRole("button", { name: /Remount bridge/i }));
     expect(
-      screen.queryByRole("dialog", { name: /^Add Risk/ }),
+      screen.queryByRole("dialog", { name: /^Add risk/ }),
     ).not.toBeInTheDocument();
 
     // A genuine later quick-add still opens (guard advances on strict increase).
@@ -222,7 +222,7 @@ describe("LeadFormSyncBridge", () => {
       screen.getByRole("button", { name: /Quick-add Blocker/i }),
     );
     expect(
-      await screen.findByRole("dialog", { name: /^Add Risk/ }),
+      await screen.findByRole("dialog", { name: /^Add risk/ }),
     ).toBeInTheDocument();
   });
 
@@ -285,7 +285,7 @@ describe("LeadFormSyncBridge", () => {
     // Risk text rendered as plain preview, not a form control.
     expect(screen.getByText("existing")).toBeInTheDocument();
 
-    // Edit / Delete / + Add Risk controls are hidden in read-only mode.
+    // Edit / Delete / + Add risk controls are hidden in read-only mode.
     expect(
       screen.queryByRole("button", { name: /Edit risk/i }),
     ).not.toBeInTheDocument();
@@ -293,7 +293,7 @@ describe("LeadFormSyncBridge", () => {
       screen.queryByRole("button", { name: /Delete risk/i }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: /\+ Add Risk/i }),
+      screen.queryByRole("button", { name: /\+ Add risk/i }),
     ).not.toBeInTheDocument();
   });
 });
@@ -334,7 +334,7 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
       />,
     );
 
-    const addBtn = screen.getByRole("button", { name: /\+ Add Risk/i });
+    const addBtn = screen.getByRole("button", { name: /\+ Add risk/i });
     await user.click(addBtn);
 
     const blockedBtn = await screen.findByRole("button", { name: /Blocked/i });
@@ -392,7 +392,7 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
       />,
     );
 
-    const addBtn = screen.getByRole("button", { name: /\+ Add Risk/i });
+    const addBtn = screen.getByRole("button", { name: /\+ Add risk/i });
     await user.click(addBtn);
 
     await user.type(screen.getByLabelText(/^Risk \*/i), "Risk");
@@ -418,7 +418,7 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
   it("BLOCKER regression: adding a product-wide risk does NOT inflate the completeness pill (wiring junction)", async () => {
     // The live wiring is `products={flooredProducts}` +
     // `rawProducts={ctx.products}`. The pill must read RAW status, so a
-    // product-wide risk (the Add Risk dialog defaults all stages checked)
+    // product-wide risk (the Add risk dialog defaults all stages checked)
     // cannot flip empty owned stages to "filled".
     const user = userEvent.setup();
     const onProductsChangeSpy = vi.fn<(next: readonly Product[]) => void>();
@@ -459,7 +459,7 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
     expect(pillBefore?.dataset.complete).toBe("false");
 
     // Add a product-wide risk: every owned stage checked by default.
-    await user.click(screen.getByRole("button", { name: /\+ Add Risk/i }));
+    await user.click(screen.getByRole("button", { name: /\+ Add risk/i }));
     await user.type(screen.getByLabelText(/^Risk \*/i), "Product-wide risk");
     await user.type(screen.getByLabelText(/^Impact \*/i), "Broad impact");
     await user.type(screen.getByLabelText(/^Mitigation \*/i), "Escalate");
@@ -643,7 +643,7 @@ describe("LeadFormSyncBridge — severity floor and chip toggle", () => {
 
     // The toggle applies straight through — no menu, no risk dialog.
     expect(
-      screen.queryByRole("dialog", { name: /^Add Risk/ }),
+      screen.queryByRole("dialog", { name: /^Add risk/ }),
     ).not.toBeInTheDocument();
     expect(onProductsChangeSpy).toHaveBeenCalled();
     expect(

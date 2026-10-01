@@ -215,7 +215,7 @@ function ActivitiesTabHeader({
           aria-label="Add new activity"
         >
           <PlusIcon />
-          Add Activity
+          Add activity
         </button>
       }
     />

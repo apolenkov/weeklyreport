@@ -141,7 +141,7 @@ describe("DashboardPage progressive readiness", () => {
     expect(bulkActions).toBeInTheDocument();
     fireEvent.click(bulkActions);
     expect(
-      screen.getByRole("button", { name: "Revoke All (2)" }),
+      screen.getByRole("button", { name: "Revoke all (2)" }),
     ).toBeVisible();
     expect(screen.getByText("KPI")).toBeInTheDocument();
     expect(screen.getByText("Blocked")).toBeInTheDocument();

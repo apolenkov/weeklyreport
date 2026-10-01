@@ -93,7 +93,7 @@ export function FillFromConfirmDialog({
           Priorities will NOT be filled.
         </>
       }
-      confirmLabel="Replace & Fill"
+      confirmLabel="Replace & fill"
       isPending={pending}
       onConfirm={onConfirm}
       onClose={onClose}

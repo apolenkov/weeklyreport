@@ -16,18 +16,18 @@ counters in `lead-form.tsx`: current-week, next-week, risks, decisions)
 MUST NOT be re-interpreted by effects reacting to unrelated prop
 transitions, and all four MUST be reset when the surface enters a
 read-only view. This applies to every section dialog on the surface:
-Add Item, Add Risk, and Add Decision alike.
+Add item, Add risk, and Add decision alike.
 
 #### Scenario: returning from a snapshot
 
 - **WHEN** the lead clicks "Back to current" after previously using
-  "+ Add Item" in the session
+  "+ Add item" in the session
 - **THEN** the snapshot banner closes and the editable form renders
-- **AND** no Add Item dialog opens
+- **AND** no Add item dialog opens
 
-#### Scenario: returning from a snapshot after "+ Add Risk" or "+ Add Decision"
+#### Scenario: returning from a snapshot after "+ Add risk" or "+ Add decision"
 
-- **WHEN** the lead clicks "+ Add Risk" (or "+ Add Decision"), cancels
+- **WHEN** the lead clicks "+ Add risk" (or "+ Add decision"), cancels
   the dialog, views a snapshot version, and clicks "Back to current"
 - **THEN** the editable form renders
 - **AND** no Risk or Decision create dialog opens

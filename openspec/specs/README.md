@@ -43,6 +43,7 @@ This index maps every durable capability to one canonical home. Product capabili
 - [analytics-query-correctness](./analytics-query-correctness/spec.md) — Analytics results and cache keys stay correct under lead scoping, republished periods, and nested inputs. `[roles: Head, Admin]`
 - [pdf-export-integrity](./pdf-export-integrity/spec.md) — PDF workers capture only a successfully rendered report, and completed exports download without opening a blank tab. `[roles: Lead, Head, Viewer, Admin]`
 - [trends-query-window](./trends-query-window/spec.md) — Trends derives its date window from the current date and shows an explicit empty state when no results exist. `[roles: Head, Admin]`
+- [trends-chart-semantics](./trends-chart-semantics/spec.md) — Trends shows history, lead submissions and comparison as accessible tables with status badges, full period dates and keyboard-scrollable regions. `[roles: Head, Admin]`
 
 ### Lead
 
@@ -194,7 +195,9 @@ Authority model:
 ### Deployment and configuration
 
 - [deploy-caddy-config](./deploy-caddy-config/spec.md) — Defines the production proxy security headers and API routing behavior.
+- [deploy-kubernetes-chart](./deploy-kubernetes-chart/spec.md) — Defines the Helm chart for the Kubernetes deployment.
 - [deploy-healthchecks](./deploy-healthchecks/spec.md) — Exercises real PgBouncer and API dependency paths rather than process-only liveness.
+- [pdf-renderer-service](./pdf-renderer-service/spec.md) — Bounds the internal Gotenberg renderer: HTTP contract, readiness gating, credential transport, egress to the print origin, and deployment posture.
 - [env-schema-coverage](./env-schema-coverage/spec.md) — Declares every consumed environment variable, removes silent defaults, and fails boot when mandatory production config is missing.
 - [operations-local-readiness](./operations-local-readiness/spec.md) — Keeps repository-owned operations instructions executable and fails closed without external production read-back.
 - [redis-connection-config](./redis-connection-config/spec.md) — Routes all Redis consumers through one validated, fail-loud host and port builder.

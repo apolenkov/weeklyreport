@@ -206,6 +206,14 @@ export const publishedReportSnapshotSchema = assembledReportObjectSchema
     status: z.literal("published"),
     publishedAt: z.coerce.date(),
     sections: z.array(publishedReportSectionReadModelSchema).readonly(),
+    // Org-wide submission counts frozen into a Head/Admin PDF job, whose
+    // sections are scoped to the caller's groups (weekly-progress-denominator).
+    orgProgress: z
+      .object({
+        submitted: z.number().int().min(0),
+        total: z.number().int().min(0),
+      })
+      .optional(),
   })
   .superRefine(addReportIdentityIssues)
   .readonly();

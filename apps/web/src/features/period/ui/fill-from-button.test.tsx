@@ -414,7 +414,7 @@ describe("FillFromButton — icon triggers keep the fill flow", () => {
       "This will overwrite your current draft with data from Week 16 (Apr 14–20, 2026). Current Week items, Risks, and Decisions will be replaced. Priorities will NOT be filled.",
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /Replace & Fill/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Replace & fill/ }));
     expect(onFillFrom).toHaveBeenCalledOnce();
     expect(onFillFrom).toHaveBeenCalledWith("sec-W16");
   });
@@ -431,7 +431,7 @@ describe("FillFromButton — icon triggers keep the fill flow", () => {
         name: "Fill from most recent submitted period",
       }),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Replace & Fill" }));
+    fireEvent.click(screen.getByRole("button", { name: "Replace & fill" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Fill from failed. Try again.",
@@ -441,7 +441,7 @@ describe("FillFromButton — icon triggers keep the fill flow", () => {
     ).toBeInTheDocument();
     expect(onFillFrom).toHaveBeenNthCalledWith(1, "sec-W16");
 
-    fireEvent.click(screen.getByRole("button", { name: "Replace & Fill" }));
+    fireEvent.click(screen.getByRole("button", { name: "Replace & fill" }));
 
     await waitFor(() =>
       expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),

@@ -29,7 +29,7 @@ const productionPrometheus = read("deploy/prometheus-otel-lgtm.yml");
 const developmentPrometheus = read("deploy/prometheus-otel-lgtm.dev.yml");
 const localBootstrap = read("prisma/operations/bootstrap-local.ts");
 const apiBootstrap = read("apps/api/src/bootstrap/api-bootstrap.ts");
-const caddyReadme = read("deploy/caddy/README.md");
+const caddyReadme = read("deploy/helm/weeklyreport/README.md");
 const packageJson = JSON.parse(read("package.json")) as {
   readonly scripts: Readonly<Record<string, string | undefined>>;
 };
@@ -253,7 +253,7 @@ test("Mailpit is the one local SMTP service name", () => {
 });
 
 test("metrics documentation and edge config keep the endpoint internal", () => {
-  const caddy = read("deploy/caddy/Caddyfile");
+  const caddy = read("deploy/helm/weeklyreport/files/Caddyfile");
   const apiPathMatcher =
     caddy.split("\n").find((line) => line.trimStart().startsWith("path ")) ??
     "";
@@ -270,11 +270,25 @@ test("metrics documentation and edge config keep the endpoint internal", () => {
     operations,
     /`\/metrics`[\s\S]*internal-only|not\*\* routed through Caddy/,
   );
-  assert.match(read("deploy/caddy/README.md"), /`\/metrics` stays internal/);
+  assert.match(
+    read("deploy/helm/weeklyreport/README.md"),
+    /`\/metrics` stays internal/,
+  );
+});
+
+test("the edge forwards one client address resolved right to left", () => {
+  const caddy = read("deploy/helm/weeklyreport/files/Caddyfile");
+  assert.match(caddy, /trusted_proxies static \{\$CADDY_TRUSTED_PROXIES\}/);
+  assert.match(caddy, /trusted_proxies_strict/);
+  assert.doesNotMatch(caddy, /\{remote_host\}/);
+  const forwarded = caddy.match(
+    /header_up X-(?:Real-IP|Forwarded-For) \{client_ip\}/g,
+  );
+  assert.equal(forwarded?.length, 4, "api and web both set both headers");
 });
 
 test("the enforcing CSP policy reports violations to the required collector", () => {
-  const caddy = read("deploy/caddy/Caddyfile");
+  const caddy = read("deploy/helm/weeklyreport/files/Caddyfile");
   assert.match(
     caddy,
     /Content-Security-Policy[^\n]*report-uri \{\$CADDY_CSP_REPORT_URI\}/,
@@ -289,7 +303,7 @@ test("the enforcing CSP policy reports violations to the required collector", ()
 test("production Compose mounts the sole Caddy policy", () => {
   assert.match(
     prodCompose,
-    /- \.\/deploy\/caddy\/Caddyfile:\/etc\/caddy\/Caddyfile:ro/,
+    /- \.\/deploy\/helm\/weeklyreport\/files\/Caddyfile:\/etc\/caddy\/Caddyfile:ro/,
   );
 });
 
@@ -633,7 +647,11 @@ test("external production controls remain blocked until external read-back", () 
   );
   assert.match(
     operationsText,
-    /production image rollback is \*\*BLOCKED\*\*[\s\S]*no image-tag input/i,
+    /production image rollback is \*\*BLOCKED\*\*[\s\S]*builds from the checked-out\s+source/i,
+  );
+  assert.match(
+    operationsText,
+    /closes the\s+image-source blocker only after the first successful image push/i,
   );
   assert.doesNotMatch(operationsText, /redeploy the previous image tag/i);
 });

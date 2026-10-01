@@ -19,7 +19,7 @@ describe("ConfirmationDialog", () => {
         open={true}
         onClose={onClose}
         onConfirm={onConfirm}
-        title="Delete Item?"
+        title="Delete item?"
         description="Are you sure?"
       />,
     );
@@ -38,7 +38,7 @@ describe("ConfirmationDialog", () => {
         open={false}
         onClose={onClose}
         onConfirm={onConfirm}
-        title="Delete Item?"
+        title="Delete item?"
         description="Are you sure?"
       />,
     );
@@ -56,7 +56,7 @@ describe("ConfirmationDialog", () => {
         open={true}
         onClose={onClose}
         onConfirm={onConfirm}
-        title="Delete Item?"
+        title="Delete item?"
         description="Are you sure?"
       />,
     );
@@ -74,7 +74,7 @@ describe("ConfirmationDialog", () => {
         open={true}
         onClose={onClose}
         onConfirm={onConfirm}
-        title="Delete Item?"
+        title="Delete item?"
         description="Are you sure?"
       />,
     );
@@ -91,7 +91,7 @@ describe("ConfirmationDialog", () => {
         open={true}
         onClose={onClose}
         onConfirm={onConfirm}
-        title="Delete Item?"
+        title="Delete item?"
         description="Are you sure?"
       />,
     );
@@ -109,12 +109,12 @@ describe("ConfirmationDialog", () => {
         onConfirm={vi.fn()}
         title="Fill from Week 32?"
         description="This replaces the current draft."
-        confirmLabel="Replace & Fill"
+        confirmLabel="Replace & fill"
       />,
     );
 
     expect(
-      screen.getByRole("button", { name: "Replace & Fill" }),
+      screen.getByRole("button", { name: "Replace & fill" }),
     ).toHaveAttribute("data-interaction-effect", "mutation-required");
     expect(screen.getByRole("button", { name: "Cancel" })).not.toHaveAttribute(
       "data-interaction-effect",
@@ -129,7 +129,7 @@ describe("ConfirmationDialog", () => {
         open={true}
         onClose={onClose}
         onConfirm={onConfirm}
-        title="Delete Item?"
+        title="Delete item?"
         description="Are you sure?"
       />,
     );
@@ -146,14 +146,14 @@ describe("ConfirmationDialog", () => {
         open={true}
         onClose={onClose}
         onConfirm={onConfirm}
-        title="Publish Report"
+        title="Publish report"
         description="This will lock all edits."
       />,
     );
 
     const dialog = screen.getByRole("alertdialog");
     expect(dialog).toHaveAttribute("aria-modal", "true");
-    expect(dialog).toHaveAttribute("aria-label", "Publish Report");
+    expect(dialog).toHaveAttribute("aria-label", "Publish report");
   });
 
   it("connects the alertdialog to its visible description", () => {
@@ -162,7 +162,7 @@ describe("ConfirmationDialog", () => {
         open={true}
         onClose={vi.fn()}
         onConfirm={vi.fn()}
-        title="Publish Report"
+        title="Publish report"
         description="This will lock all edits."
       />,
     );
@@ -185,7 +185,7 @@ describe("ConfirmationDialog", () => {
         open={true}
         onClose={onClose}
         onConfirm={onConfirm}
-        title="Delete Item?"
+        title="Delete item?"
         description="Are you sure?"
       />,
     );
@@ -195,7 +195,7 @@ describe("ConfirmationDialog", () => {
         open={false}
         onClose={onClose}
         onConfirm={onConfirm}
-        title="Delete Item?"
+        title="Delete item?"
         description="Are you sure?"
       />,
     );
@@ -211,7 +211,7 @@ describe("ConfirmationDialog", () => {
         open={true}
         onClose={vi.fn()}
         onConfirm={vi.fn()}
-        title="Delete Item?"
+        title="Delete item?"
         description="Are you sure?"
       />,
     );
@@ -234,7 +234,7 @@ describe("ConfirmationDialog", () => {
             open={open}
             onClose={vi.fn()}
             onConfirm={vi.fn()}
-            title="Delete Item?"
+            title="Delete item?"
             description="Are you sure?"
           />
         </>

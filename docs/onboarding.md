@@ -112,7 +112,7 @@ pnpm dev:feedback
 
 Команда включает dev-only панель Agentation и переключатель в верхнем меню. Через него
 можно войти под любым сидированным Lead, Head, Admin или Viewer и выбрать
-`Wipe + Reseed` для профилей minimal, demo, full или stress. Сброс остаётся
+`Wipe + reseed` для профилей minimal, demo, full или stress. Сброс остаётся
 доступен только для точной одноразовой базы, принятой destructive guard;
 первичную базу подготовь штатной командой из следующего раздела.
 
@@ -158,8 +158,23 @@ PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' \
 
 Повторный `pnpm db:seed:profile full` сохраняет существующее состояние
 AI-провайдеров и промптов. Управляющая запись провайдера создаётся выключенной,
-только если её ещё нет. `Wipe + Reseed` сначала выполняет `prisma migrate reset`,
+только если её ещё нет. `Wipe + reseed` сначала выполняет `prisma migrate reset`,
 поэтому удаляет и это состояние перед заполнением выбранного профиля.
+
+По умолчанию ассистент в dev/e2e выключен: seed не создаёт конфигурацию
+провайдера. Включить её можно opt-in шагом `prisma/seed-ai-provider.ts`,
+который `db:seed:profile` запускает после writers любого профиля: если в
+незакоммиченном окружении задана `E2E_AI_PROVIDER_API_KEY`, шаг создаёт одну
+активную ревизию провайдера с ключом, зашифрованным штатным
+`AesGcmCredentialCodec` (`AI_PROVIDER_CONFIG_ENCRYPTION_KEY` /
+`AI_PROVIDER_CONFIG_KEY_VERSION`), и включает `AiProviderControl`. Тогда же
+обязательны `E2E_AI_PROVIDER_BASE_URL` (origin должен входить в
+`AI_PROVIDER_ALLOWED_ORIGINS`), `E2E_AI_PROVIDER_MODEL`,
+`E2E_AI_PROVIDER_EMBEDDING_MODEL` и `E2E_AI_PROVIDER_EMBEDDING_DIMENSIONS`.
+Без ключа шаг завершается без записей, и ассистент остаётся выключенным.
+Для реальных ответов дополнительно нужен
+`REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED=true` в окружении API. Значение ключа
+никуда не коммитится; в лог выводится только masked-суффикс.
 
 - Схема — `prisma/schema.prisma`. После init любые изменения оформляются
   отдельной forward-only additive Prisma migration и применяются через
@@ -269,7 +284,7 @@ workspace, Prisma-тесты и проверки repository cleanliness и opera
 обычная локальная разработка и последовательные тесты используют loopback-базу
 `customreport_e2e` —
 образец [`.env.test.example`](../.env.test.example) несёт только E2E-цель.
-Для TASK-133 базы `customreport_e2e_lane_a_test` и
+Для изолированных приёмочных запусков базы `customreport_e2e_lane_a_test` и
 `customreport_e2e_lane_b_test` уже существуют; пользоваться ими можно только
 после проверки владельца процесса и точного адреса. Остальные lane-базы не
 подготовлены и не должны создаваться без нового распоряжения владельца.

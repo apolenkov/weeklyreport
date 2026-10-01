@@ -1,4 +1,4 @@
-// Snapshot transitions must not reopen Add Decision: the addSignal effect
+// Snapshot transitions must not reopen Add decision: the addSignal effect
 // skips signals already consumed via lastHandledSignal, so
 // false→true→false must not re-fire.
 

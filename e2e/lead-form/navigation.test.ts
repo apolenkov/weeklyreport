@@ -281,6 +281,48 @@ void test("Report and Slides preserve the selected period and record visibility"
   await assertNoReportWrites();
 });
 
+void test("repeated archive toggles never raise a React update-depth error", async () => {
+  // TASK-145.29.01: one unreproduced "Maximum update depth exceeded" at
+  // use-lead-form-chrome.ts setShowArchivePeriods; no code loop was found.
+  await openReadOnlyReport();
+  await findRole("button", "Previous period", "click");
+  await command([
+    "wait",
+    "--url",
+    `**/lead/report/${LEAD_FORM_FIXTURE.previousReportId}?mode=overview`,
+  ]);
+  await waitText("Submitted");
+  await command([
+    "eval",
+    `(() => { window.__e2eErrors = []; const original = console.error; console.error = (...args) => { window.__e2eErrors.push(args.map(String).join(' ')); original(...args); }; window.addEventListener('error', event => window.__e2eErrors.push(String(event.message))); return true; })()`,
+  ]);
+  const archivedOptions = async () =>
+    namedRefs(await snapshot(), "option", (name) => name.includes("Archived"))
+      .length;
+  for (let round = 0; round < 6; round += 1) {
+    const on = round % 2 === 0;
+    await findRole("switch", ARCHIVE_NAME, "click");
+    await assertAttribute("switch", ARCHIVE_NAME, "aria-checked", String(on));
+    await openPeriodPicker();
+    assert.equal(await archivedOptions(), on ? 4 : 0);
+    await command(["press", "Escape"]);
+  }
+  // Toggle with the listbox open and no Escape: dismiss, focus and state race.
+  for (let round = 0; round < 4; round += 1) {
+    await openPeriodPicker();
+    await findRole("switch", ARCHIVE_NAME, "click");
+  }
+  await openPeriodPicker();
+  const observed = await command(["eval", "window.__e2eErrors"]);
+  assert.deepEqual(observed.result, []);
+  assert.equal(
+    (await snapshot()).snapshot.includes("Maximum update depth"),
+    false,
+  );
+  await command(["press", "Escape"]);
+  await assertNoReportWrites();
+});
+
 void test("period navigation and archive filters open read-only history", async () => {
   await openReadOnlyReport("slides");
   await assertAttribute("button", "Next period", "disabled", "");
@@ -742,8 +784,8 @@ void test("required Slides read failure recovers through Retry", async () => {
 });
 
 async function addRecoveryRisk(text: string): Promise<void> {
-  const dialog = { role: "dialog", name: /^Add Risk(?: — .+)?$/ };
-  await findRole("button", "+ Add Risk", "click");
+  const dialog = { role: "dialog", name: /^Add risk(?: — .+)?$/ };
+  await findRole("button", "+ Add risk", "click");
   await waitScope(dialog);
   await command([
     "select",
@@ -752,7 +794,7 @@ async function addRecoveryRisk(text: string): Promise<void> {
   ]);
   await waitScope({
     role: "dialog",
-    name: `Add Risk — ${LEAD_FORM_FIXTURE.activityName}`,
+    name: `Add risk — ${LEAD_FORM_FIXTURE.activityName}`,
   });
   await fill("Risk *", text);
   await fill("Impact *", "E2E editing recovery impact");
@@ -818,7 +860,7 @@ void test("Overview editing read failure preserves data and recovers through Ret
   } finally {
     await setOffline(false);
   }
-  await waitButton("+ Add Risk");
+  await waitButton("+ Add risk");
   await assertScope("region", "Status overview");
   assert.ok(
     await isVisible(
@@ -1030,8 +1072,8 @@ void test("Slides details disclose without writing and canonical edit stays expl
   assert.ok(baseline.total > 1, "Typing guard needs a navigable deck");
   const ownName = await rowName(LEAD_FORM_FIXTURE.currentText);
   await command(["dblclick", await roleRef("button", ownName)]);
-  await waitText(`Edit Item — ${LEAD_FORM_FIXTURE.productName}`);
-  await assertScope("dialog", `Edit Item — ${LEAD_FORM_FIXTURE.productName}`);
+  await waitText(`Edit item — ${LEAD_FORM_FIXTURE.productName}`);
+  await assertScope("dialog", `Edit item — ${LEAD_FORM_FIXTURE.productName}`);
   const description = await roleRef("textbox", "Description *");
   await command(["focus", description]);
   await command([
@@ -1104,8 +1146,8 @@ async function checkExplicitEdit(
   assert.ok(edit);
   await command(["focus", edit.ref]);
   await command(["press", key]);
-  await waitText(`Edit Item — ${LEAD_FORM_FIXTURE.productName}`);
-  await assertScope("dialog", `Edit Item — ${LEAD_FORM_FIXTURE.productName}`);
+  await waitText(`Edit item — ${LEAD_FORM_FIXTURE.productName}`);
+  await assertScope("dialog", `Edit item — ${LEAD_FORM_FIXTURE.productName}`);
   await findRole("button", "Cancel", "click");
   await assertNoEditors();
 }

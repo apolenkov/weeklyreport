@@ -117,7 +117,7 @@ function DecisionsList({
       <div className="rounded-lg border border-dashed border-[var(--color-border-strong)] bg-[var(--color-surface-empty)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
         {readOnly
           ? "No decisions reported."
-          : "No decisions yet. Use “+ Add Decision” to flag one for the head."}
+          : "No decisions yet. Use “+ Add decision” to flag one for the head."}
       </div>
     );
   }

@@ -65,3 +65,4 @@ apps/web/.tmp
 **/.env.local
 *.png
 **/*.png
+deploy/helm

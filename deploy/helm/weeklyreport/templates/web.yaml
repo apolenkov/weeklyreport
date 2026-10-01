@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  labels:
+    {{- include "wr.labels" (dict "root" . "component" "web") | nindent 4 }}
+spec:
+  selector:
+    {{- include "wr.selector" (dict "component" "web") | nindent 4 }}
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  labels:
+    {{- include "wr.labels" (dict "root" . "component" "web") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "wr.selector" (dict "component" "web") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "wr.labels" (dict "root" . "component" "web") | nindent 8 }}
+    spec:
+      {{- include "wr.podCommon" (dict "root" . "user" .Values.web.runAsUser) | nindent 6 }}
+      containers:
+        - name: web
+          image: {{ include "wr.image" (dict "root" . "name" "web") }}
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            # Must equal the origin compiled into the image (next.config rewrites).
+            - { name: API_URL, value: "http://api:3001" }
+            - name: FRONTEND_URL
+              value: {{ .Values.api.env.FRONTEND_URL | quote }}
+            - name: SENTRY_DSN
+              {{- include "wr.secretRef" (dict "root" . "key" "SENTRY_DSN" "optional" true) | nindent 14 }}
+          # Readiness fetches the api through /, liveness must not: an api
+          # outage would otherwise restart web.
+          readinessProbe:
+            httpGet: { path: /, port: http }
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket: { port: http }
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.web.resources | nindent 12 }}
+          {{- include "wr.containerSecurity" (dict) | nindent 10 }}

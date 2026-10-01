@@ -1,5 +1,3 @@
-/// <reference path="../tools/types/eslint-plugin-jsx-a11y.d.ts" />
-
 import vitest from "@vitest/eslint-plugin";
 import type { Linter } from "eslint";
 import jsxA11y from "eslint-plugin-jsx-a11y";

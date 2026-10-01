@@ -4,6 +4,7 @@ import {
   chmodSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -179,4 +180,52 @@ exit 0`,
   assert.deepEqual(calls.trim().split("\n"), ["pg_dump", "mv", "sleep"]);
   assert.match(result.stdout, /completed dump could not be published/);
   assert.doesNotMatch(result.stdout, /wrote|pruned/);
+});
+
+const dumpStub = (exitCode: number): string => `for argument in "$@"; do
+  case "$argument" in
+    --file=*) output_file="$(printf '%s' "$argument" | sed 's/^--file=//')"; : > "$output_file" ;;
+  esac
+done
+exit ${String(exitCode)}`;
+
+const oneShot = { BACKUP_RUN_ONCE: "true", BACKUP_INTERVAL_SECONDS: undefined };
+
+test("one-shot mode writes one dump, needs no interval, and never sleeps", () => {
+  const { calls, directory, result } = runBackup(oneShot, {
+    pgDump: dumpStub(0),
+    sleep: "exit 99",
+    timeoutMs: 10_000,
+  });
+
+  assert.equal(result.status, 0, result.stderr);
+  assert.doesNotMatch(calls, /sleep/);
+  const files = readdirSync(join(directory, "backups"));
+  assert.equal(files.length, 1);
+  assert.match(files[0] ?? "", /^customreport-.*\.dump$/);
+});
+
+test("one-shot mode exits non-zero on a failed dump and leaves no partial file", () => {
+  const { calls, directory, result } = runBackup(oneShot, {
+    pgDump: dumpStub(1),
+    sleep: "exit 99",
+    timeoutMs: 10_000,
+  });
+
+  assert.notEqual(result.status, 0);
+  assert.doesNotMatch(calls, /sleep/);
+  assert.match(result.stdout, /pg_dump did not complete/);
+  assert.doesNotMatch(result.stdout, /retrying after the interval/);
+  assert.deepEqual(readdirSync(join(directory, "backups")), []);
+});
+
+test("one-shot mode still requires retention and a boolean flag", () => {
+  const noRetention = runBackup({ ...oneShot, BACKUP_RETENTION_DAYS: "0" });
+  assert.notEqual(noRetention.result.status, 0);
+  assert.equal(noRetention.calls, "");
+
+  const badFlag = runBackup({ BACKUP_RUN_ONCE: "yes" });
+  assert.notEqual(badFlag.result.status, 0);
+  assert.match(badFlag.result.stderr, /BACKUP_RUN_ONCE must be true or false/);
+  assert.equal(badFlag.calls, "");
 });

@@ -284,7 +284,7 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
       name: /^Fill from Week \d+\?$/,
     });
     act(() => {
-      within(dialog).getByRole("button", { name: "Replace & Fill" }).click();
+      within(dialog).getByRole("button", { name: "Replace & fill" }).click();
     });
     await waitFor(() =>
       expect(toast.success).toHaveBeenCalledWith(
@@ -326,7 +326,7 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
       name: /^Fill from Week \d+\?$/,
     });
     act(() => {
-      within(dialog).getByRole("button", { name: "Replace & Fill" }).click();
+      within(dialog).getByRole("button", { name: "Replace & fill" }).click();
     });
 
     await waitFor(() =>
@@ -422,7 +422,7 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
       name: /^Fill from Week \d+\?$/,
     });
     act(() => {
-      within(dialog).getByRole("button", { name: "Replace & Fill" }).click();
+      within(dialog).getByRole("button", { name: "Replace & fill" }).click();
     });
 
     await waitFor(() => expect(fillFromEntry.mutationFn).toHaveBeenCalled());

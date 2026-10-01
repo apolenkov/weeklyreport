@@ -1,0 +1,524 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WeeklyReport chart values",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "images",
+    "postgres",
+    "pgbouncer",
+    "persistence",
+    "api",
+    "edge",
+    "backup"
+  ],
+  "properties": {
+    "global": {
+      "type": "object"
+    },
+    "clusterDomain": {
+      "type": "string",
+      "pattern": "^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$"
+    },
+    "images": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["registry", "tag"],
+      "properties": {
+        "registry": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9.:/_-]*[a-z0-9]$"
+        },
+        "tag": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$",
+          "not": {
+            "const": "latest"
+          }
+        },
+        "pullPolicy": {
+          "enum": ["Always", "IfNotPresent", "Never"]
+        },
+        "pullSecret": {
+          "type": "string"
+        },
+        "thirdParty": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "postgres": {
+              "type": "string",
+              "pattern": "@sha256:[0-9a-f]{64}$"
+            },
+            "pgbouncer": {
+              "type": "string",
+              "pattern": "@sha256:[0-9a-f]{64}$"
+            },
+            "redis": {
+              "type": "string",
+              "pattern": "@sha256:[0-9a-f]{64}$"
+            },
+            "caddy": {
+              "type": "string",
+              "pattern": "@sha256:[0-9a-f]{64}$"
+            },
+            "gotenberg": {
+              "type": "string",
+              "pattern": "@sha256:[0-9a-f]{64}$"
+            }
+          }
+        }
+      }
+    },
+    "secrets": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "existingSecret": {
+          "type": "string"
+        },
+        "create": {
+          "type": "boolean"
+        },
+        "values": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "DB_PASSWORD": {
+              "type": "string",
+              "minLength": 1
+            },
+            "AUTH_JWT_SECRET": {
+              "type": "string",
+              "minLength": 1
+            },
+            "PDF_EXPORT_JWT_SECRET": {
+              "type": "string",
+              "minLength": 1
+            },
+            "AI_PROVIDER_CONFIG_ENCRYPTION_KEY": {
+              "type": "string",
+              "minLength": 1
+            },
+            "SMTP_USER": {
+              "type": "string",
+              "minLength": 1
+            },
+            "SMTP_PASS": {
+              "type": "string",
+              "minLength": 1
+            },
+            "SENTRY_DSN": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    },
+    "persistence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "storageClass",
+        "postgresSize",
+        "redisSize",
+        "pdfSize",
+        "backupSize"
+      ],
+      "properties": {
+        "storageClass": {
+          "type": "string"
+        },
+        "postgresSize": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*(Mi|Gi|Ti)$"
+        },
+        "redisSize": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*(Mi|Gi|Ti)$"
+        },
+        "pdfSize": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*(Mi|Gi|Ti)$"
+        },
+        "backupSize": {
+          "type": "string",
+          "pattern": "^[1-9][0-9]*(Mi|Gi|Ti)$"
+        }
+      }
+    },
+    "postgres": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "runAsUser": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "resources": {
+          "type": "object"
+        },
+        "db": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_]+$"
+        }
+      },
+      "required": ["db"]
+    },
+    "pgbouncer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "runAsUser": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "resources": {
+          "type": "object"
+        },
+        "maxClientConn": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "poolSize": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "reservePoolSize": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": ["maxClientConn", "poolSize", "reservePoolSize"]
+    },
+    "redis": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "runAsUser": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "resources": {
+          "type": "object"
+        },
+        "maxmemoryMb": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "fsGroup": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "api": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "runAsUser": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "resources": {
+          "type": "object"
+        },
+        "podAnnotations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "migrateResources": {
+          "type": "object"
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "DB_POOL_MAX",
+            "DB_POOL_IDLE_TIMEOUT_MS",
+            "DB_POOL_CONNECTION_TIMEOUT_MS",
+            "REDIS_DB",
+            "AI_PROVIDER_CONFIG_KEY_VERSION",
+            "AI_PROVIDER_ALLOWED_ORIGINS",
+            "REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED",
+            "REPORT_ASSISTANT_INPUT_VERSION",
+            "REPORT_ASSISTANT_SIMILARITY_THRESHOLD",
+            "REPORT_ASSISTANT_CANDIDATE_LIMIT",
+            "REPORT_ASSISTANT_READ_THROUGH_LIMIT",
+            "REPORT_ASSISTANT_EXHAUSTIVE_LIMIT",
+            "REPORT_ASSISTANT_CONTEXT_TOKEN_BUDGET",
+            "REPORT_ASSISTANT_PROVIDER_TIMEOUT_MS",
+            "REPORT_ASSISTANT_PLANNER_MAX_TOKENS",
+            "REPORT_ASSISTANT_ANSWER_MAX_TOKENS",
+            "REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE",
+            "REPORT_ASSISTANT_EMBEDDING_TOKEN_BUDGET",
+            "FRONTEND_URL",
+            "APP_BASE_URL",
+            "LOG_LEVEL",
+            "OTEL_SDK_DISABLED",
+            "OTEL_TRACES_SAMPLER_ARG",
+            "HEAP_HEALTH_THRESHOLD_BYTES",
+            "SMTP_HOST",
+            "SMTP_PORT",
+            "SMTP_FROM",
+            "KEYCLOAK_SAML_CALLBACK_URL",
+            "KEYCLOAK_SAML_ENTRY_POINT",
+            "KEYCLOAK_SAML_ISSUER",
+            "KEYCLOAK_SAML_CERT",
+            "CLIENT_LOG_FORWARDING",
+            "PRODUCT_FEEDBACK_ENABLED"
+          ],
+          "properties": {
+            "DB_POOL_MAX": {
+              "type": "string",
+              "minLength": 1
+            },
+            "DB_POOL_IDLE_TIMEOUT_MS": {
+              "type": "string",
+              "minLength": 1
+            },
+            "DB_POOL_CONNECTION_TIMEOUT_MS": {
+              "type": "string",
+              "minLength": 1
+            },
+            "REDIS_DB": {
+              "type": "string",
+              "minLength": 1
+            },
+            "AI_PROVIDER_CONFIG_KEY_VERSION": {
+              "type": "string",
+              "minLength": 1
+            },
+            "AI_PROVIDER_ALLOWED_ORIGINS": {
+              "type": "string",
+              "minLength": 1
+            },
+            "REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED": {
+              "type": "string",
+              "minLength": 1
+            },
+            "REPORT_ASSISTANT_INPUT_VERSION": {
+              "type": "string",
+              "minLength": 1
+            },
+            "REPORT_ASSISTANT_SIMILARITY_THRESHOLD": {
+              "type": "string",
+              "minLength": 1
+            },
+            "REPORT_ASSISTANT_CANDIDATE_LIMIT": {
+              "type": "string",
+              "minLength": 1
+            },
+            "REPORT_ASSISTANT_READ_THROUGH_LIMIT": {
+              "type": "string",
+              "minLength": 1
+            },
+            "REPORT_ASSISTANT_EXHAUSTIVE_LIMIT": {
+              "type": "string",
+              "minLength": 1
+            },
+            "REPORT_ASSISTANT_CONTEXT_TOKEN_BUDGET": {
+              "type": "string",
+              "minLength": 1
+            },
+            "REPORT_ASSISTANT_PROVIDER_TIMEOUT_MS": {
+              "type": "string",
+              "minLength": 1
+            },
+            "REPORT_ASSISTANT_PLANNER_MAX_TOKENS": {
+              "type": "string",
+              "minLength": 1
+            },
+            "REPORT_ASSISTANT_ANSWER_MAX_TOKENS": {
+              "type": "string",
+              "minLength": 1
+            },
+            "REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE": {
+              "type": "string",
+              "minLength": 1
+            },
+            "REPORT_ASSISTANT_EMBEDDING_TOKEN_BUDGET": {
+              "type": "string",
+              "minLength": 1
+            },
+            "FRONTEND_URL": {
+              "type": "string",
+              "minLength": 1
+            },
+            "APP_BASE_URL": {
+              "type": "string",
+              "minLength": 1
+            },
+            "LOG_LEVEL": {
+              "type": "string",
+              "minLength": 1
+            },
+            "OTEL_SDK_DISABLED": {
+              "type": "string",
+              "minLength": 1
+            },
+            "OTEL_TRACES_SAMPLER_ARG": {
+              "type": "string",
+              "minLength": 1
+            },
+            "HEAP_HEALTH_THRESHOLD_BYTES": {
+              "type": "string",
+              "minLength": 1
+            },
+            "SMTP_HOST": {
+              "type": "string",
+              "minLength": 1
+            },
+            "SMTP_PORT": {
+              "type": "string",
+              "minLength": 1
+            },
+            "SMTP_FROM": {
+              "type": "string",
+              "minLength": 1
+            },
+            "KEYCLOAK_SAML_CALLBACK_URL": {
+              "type": "string",
+              "minLength": 1
+            },
+            "KEYCLOAK_SAML_ENTRY_POINT": {
+              "type": "string",
+              "minLength": 1
+            },
+            "KEYCLOAK_SAML_ISSUER": {
+              "type": "string",
+              "minLength": 1
+            },
+            "KEYCLOAK_SAML_CERT": {
+              "type": "string",
+              "minLength": 1
+            },
+            "CLIENT_LOG_FORWARDING": {
+              "type": "string",
+              "minLength": 1
+            },
+            "PRODUCT_FEEDBACK_ENABLED": {
+              "type": "string",
+              "minLength": 1
+            },
+            "FRONTEND_URLS": {
+              "type": "string"
+            },
+            "OTEL_EXPORTER_OTLP_ENDPOINT": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "required": ["env"]
+    },
+    "web": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "runAsUser": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "resources": {
+          "type": "object"
+        }
+      }
+    },
+    "gotenberg": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "runAsUser": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "resources": {
+          "type": "object"
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "runAsUser": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "resources": {
+          "type": "object"
+        },
+        "trustedProxies": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^[0-9a-fA-F:.]+(/[0-9]{1,3})?$"
+          }
+        },
+        "cspReportUri": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ingress": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["host"],
+          "properties": {
+            "host": {
+              "type": "string",
+              "pattern": "^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$"
+            },
+            "className": {
+              "type": "string"
+            },
+            "tlsSecretName": {
+              "type": "string"
+            },
+            "annotations": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "required": ["trustedProxies", "cspReportUri", "ingress"]
+    },
+    "backup": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "runAsUser": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "resources": {
+          "type": "object"
+        },
+        "schedule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "retentionDays": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "startingDeadlineSeconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "activeDeadlineSeconds": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": ["schedule", "retentionDays"]
+    }
+  }
+}
