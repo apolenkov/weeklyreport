@@ -1,0 +1,75 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: pgbouncer
+  labels:
+    {{- include "wr.labels" (dict "root" . "component" "pgbouncer") | nindent 4 }}
+spec:
+  selector:
+    {{- include "wr.selector" (dict "component" "pgbouncer") | nindent 4 }}
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pgbouncer
+  labels:
+    {{- include "wr.labels" (dict "root" . "component" "pgbouncer") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "wr.selector" (dict "component" "pgbouncer") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "wr.labels" (dict "root" . "component" "pgbouncer") | nindent 8 }}
+    spec:
+      {{- include "wr.podCommon" (dict "root" . "user" .Values.pgbouncer.runAsUser) | nindent 6 }}
+      containers:
+        - name: pgbouncer
+          image: {{ .Values.images.thirdParty.pgbouncer }}
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - { name: DB_USER, value: customreport }
+            - name: DB_PASSWORD
+              {{- include "wr.secretRef" (dict "root" . "key" "DB_PASSWORD") | nindent 14 }}
+            - { name: DB_HOST, value: postgres }
+            - { name: DB_PORT, value: "5432" }
+            - { name: DB_NAME, value: {{ .Values.postgres.db | quote }} }
+            - { name: POOL_MODE, value: transaction }
+            - { name: MAX_CLIENT_CONN, value: {{ .Values.pgbouncer.maxClientConn | quote }} }
+            - { name: DEFAULT_POOL_SIZE, value: {{ .Values.pgbouncer.poolSize | quote }} }
+            - { name: RESERVE_POOL_SIZE, value: {{ .Values.pgbouncer.reservePoolSize | quote }} }
+            - { name: AUTH_TYPE, value: scram-sha-256 }
+            - { name: SERVER_RESET_QUERY, value: DISCARD ALL }
+            - { name: LOG_CONNECTIONS, value: "0" }
+            - { name: LOG_DISCONNECTIONS, value: "0" }
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - PGPASSWORD="$DB_PASSWORD" psql -h 127.0.0.1 -p 5432 -U "$DB_USER" -d "$DB_NAME" -w -tAc 'SELECT 1' >/dev/null 2>&1 || exit 1
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - PGPASSWORD="$DB_PASSWORD" psql -h 127.0.0.1 -p 5432 -U "$DB_USER" -d "$DB_NAME" -w -tAc 'SELECT 1' >/dev/null 2>&1 || exit 1
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 5
+            initialDelaySeconds: 10
+          resources:
+            {{- toYaml .Values.pgbouncer.resources | nindent 12 }}
+          {{- include "wr.containerSecurity" (dict) | nindent 10 }}
