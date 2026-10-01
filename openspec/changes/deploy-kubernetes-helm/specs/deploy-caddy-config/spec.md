@@ -9,8 +9,9 @@ prefixes (`/api/web-vitals`, `/api/client-logs`, `/trpc`, `/auth`, `/health`,
 `api:3001`. The matcher MUST NOT claim frontend-owned Next.js routes. The
 public `/metrics` path MUST remain unavailable at the edge. The forwarded
 `X-Forwarded-For` MUST be the single resolved client address: the peer address
-when no trusted proxy is configured, otherwise the address obtained by skipping
-the configured trusted proxies from the right.
+when no trusted proxy is configured, otherwise the address obtained by walking `X-Forwarded-For` from the right past the
+configured trusted proxies (`trusted_proxies_strict`). `X-Real-IP` MUST carry the
+same resolved address.
 
 #### Scenario: An API request is proxied directly
 
@@ -28,6 +29,11 @@ the configured trusted proxies from the right.
 
 - **WHEN** a request reaches Caddy directly from a client with no trusted proxy configured
 - **THEN** the api receives that client's address as its only `X-Forwarded-For` entry
+
+#### Scenario: Forged forwarded address through a trusted peer
+
+- **WHEN** a trusted proxy forwards a request whose `X-Forwarded-For` is `198.51.100.7, 203.0.113.9`
+- **THEN** the api receives `203.0.113.9` as its only entry, not the left-most forged one
 
 #### Scenario: Caddyfile has one location
 

@@ -25,7 +25,8 @@ name this as BLOCKED).
   `helm upgrade --install` job gated on a DevOps-supplied `KUBECONFIG` variable.
   This reverses the 2026-09-28 "no image builds" decision for image builds
   only; Docker-in-Docker and operational smoke stay forbidden.
-- Add chart gates (lint, template, kubeconform, compose parity) to `quality`.
+- Add chart gates (`helm lint`, `helm template`, compose parity) to `quality`.
+  NetworkPolicy is a follow-up after DevOps answers about the CNI.
 - Keep `docker-compose.prod.yml` and its gate unchanged in behavior.
 
 ## Capabilities
