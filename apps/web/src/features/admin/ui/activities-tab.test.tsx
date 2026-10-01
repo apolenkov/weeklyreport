@@ -226,7 +226,7 @@ describe("ActivitiesTab — create", () => {
     await user.click(screen.getByLabelText("Link Checkout"));
     await user.type(screen.getByLabelText("Jira Accounts"), " ACME , PLAT ,");
 
-    await user.click(screen.getByRole("button", { name: "Add Activity" }));
+    await user.click(screen.getByRole("button", { name: "Add activity" }));
 
     await waitFor(() => {
       expect(captured["projectActivity.create"]?.calls).toEqual([
@@ -247,7 +247,7 @@ describe("ActivitiesTab — create", () => {
     await screen.findByText("Onboarding Revamp");
     await user.click(screen.getByRole("button", { name: "Add new activity" }));
 
-    const save = screen.getByRole("button", { name: "Add Activity" });
+    const save = screen.getByRole("button", { name: "Add activity" });
     // No silent preselection of the first group; both fields are explicit.
     expect(save).toBeDisabled();
 
@@ -275,7 +275,7 @@ describe("ActivitiesTab — create", () => {
       screen.getByLabelText("Reporting Group"),
       GROUP_ID,
     );
-    await user.click(screen.getByRole("button", { name: "Add Activity" }));
+    await user.click(screen.getByRole("button", { name: "Add activity" }));
 
     await screen.findByRole("button", { name: "Saving…" });
     expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
@@ -302,7 +302,7 @@ describe("ActivitiesTab — create", () => {
       screen.getByLabelText("Reporting Group"),
       GROUP_ID,
     );
-    await user.click(screen.getByRole("button", { name: "Add Activity" }));
+    await user.click(screen.getByRole("button", { name: "Add activity" }));
 
     await screen.findByRole("button", { name: "Saving…" });
     expect(name).toBeDisabled();
@@ -339,7 +339,7 @@ describe("ActivitiesTab — edit", () => {
 
     // Clearing every product link must reconcile to an empty set, not a no-op.
     await user.click(screen.getByLabelText("Link Checkout"));
-    await user.click(screen.getByRole("button", { name: "Save Changes" }));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(() => {
       expect(captured["projectActivity.update"]?.calls).toEqual([
@@ -410,7 +410,7 @@ describe("ActivitiesTab — edit", () => {
       }),
     ).toBeDisabled();
 
-    await user.click(screen.getByRole("button", { name: "Save Changes" }));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
 
     await waitFor(() => {
       expect(captured["projectActivity.update"]?.calls).toEqual([

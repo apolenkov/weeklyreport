@@ -60,7 +60,7 @@ they do not compete with that primary. The bordered context-control bar MUST NOT
 give any control a solid brand-accent fill; its segmented toggles use a neutral
 active-selection fill, not the brand accent.
 
-1. When a forward commit is available (Submit Section for lead, Publish & Lock
+1. When a forward commit is available (Submit Section for lead, Publish & lock
    for head) it MUST be the only control with the resting solid brand-accent
    fill; in states with no forward commit (submitted lead, published head) the
    header action group has no resting solid primary.
@@ -164,7 +164,7 @@ than lose meaningful names to truncation.
 The report surface MUST split its controls by one axis — operates on the report document vs changes which / how it is shown — placing the document actions on the page header line and the context controls in the single bordered toolbar bar below it. The Lead Save/Add/Submit cluster MAY hand off to the compact sticky action surface when its header leaves the viewport, as specified in `lead-completion-guidance`; both placements MUST share action state and handlers, and the context toolbar MUST NOT become a second action surface.
 
 1. A control that creates, persists, commits, or exports report content (Save,
-   Submit Section, Publish & Lock, Fill-From, PDF export, Move to archive) MUST
+   Submit Section, Publish & lock, Fill-From, PDF export, Move to archive) MUST
    render on the page header line, in a right-aligned action group beside the
    title/status block — NOT inside the bordered toolbar.
 2. A control that changes which report is shown or how it is presented (period

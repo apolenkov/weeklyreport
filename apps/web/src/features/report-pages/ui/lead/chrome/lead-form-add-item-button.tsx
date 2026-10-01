@@ -30,7 +30,7 @@ function AddItemButton({
           : NO_RECORD_PARENTS_MESSAGE
       }
     >
-      + Add Item
+      + Add item
     </LeadFormAddButton>
   );
 }

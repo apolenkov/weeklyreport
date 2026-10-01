@@ -34,7 +34,7 @@ At desktop width, Dashboard controls within the same action tier MUST use the sa
 
 - **WHEN** the Head expands a submitted lead row
 - **THEN** `Review` and `Less` fill equal summary-row tracks
-- **AND** `Open`, `Request Changes`, and `Revoke` use equal expanded-row cells
+- **AND** `Open`, `Request changes`, and `Revoke` use equal expanded-row cells
 - **AND** every visible queue action remains vertically centered on the same baseline
 
 #### Scenario: An action changes its visible label

@@ -180,7 +180,7 @@ describe("UsersTab — dialog keyboard and click behavior", () => {
     await user.type(screen.getByLabelText(/^last name$/i), "Petrov");
     await user.type(screen.getByLabelText(/^first name$/i), "Ivan");
     await user.type(screen.getByLabelText(/^email$/i), "ivan@example.com");
-    await user.click(screen.getByRole("button", { name: "Add User" }));
+    await user.click(screen.getByRole("button", { name: "Add user" }));
 
     await screen.findByRole("button", { name: "Saving…" });
     expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
@@ -204,7 +204,7 @@ describe("UsersTab — dialog keyboard and click behavior", () => {
     await user.type(lastName, "Petrov");
     await user.type(screen.getByLabelText(/^first name$/i), "Ivan");
     await user.type(screen.getByLabelText(/^email$/i), "ivan@example.com");
-    await user.click(screen.getByRole("button", { name: "Add User" }));
+    await user.click(screen.getByRole("button", { name: "Add user" }));
 
     await screen.findByRole("button", { name: "Saving…" });
     expect(lastName).toBeDisabled();

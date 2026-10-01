@@ -70,7 +70,7 @@ function AddUserButton({ onClick }: { readonly onClick: () => void }) {
       aria-label="Add new user"
     >
       <PlusIcon />
-      Add User
+      Add user
     </button>
   );
 }

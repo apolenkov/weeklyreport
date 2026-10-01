@@ -58,7 +58,7 @@ export function UsersTab({ users, groups }: UsersTabProps) {
 
       <ConfirmDeleteDialog
         open={state.deleteTarget !== null}
-        title="Delete User?"
+        title="Delete user?"
         preview={state.deleteTarget ? state.deleteTarget.name : ""}
         reversible={false}
         confirmLabel="Delete"
@@ -83,7 +83,7 @@ function GroupChangeDialog({
       open={state.showGroupChangeConfirm}
       title="Change this user's group?"
       description="The change applies to future work only; archived report snapshots stay unchanged."
-      confirmLabel="Change Group"
+      confirmLabel="Change group"
       isPending={state.isSaving}
       onConfirm={state.confirmGroupChange}
       onClose={state.cancelGroupChange}

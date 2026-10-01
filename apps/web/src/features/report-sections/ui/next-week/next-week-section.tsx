@@ -38,7 +38,7 @@ function AddItemButton({
             : "No products assigned — contact admin"
         }
       >
-        + Add Item
+        + Add item
       </button>
     </div>
   );

@@ -65,10 +65,10 @@ const WEEKLY_FORM: Scope = {
 };
 const DECISION_DIALOG: Scope = {
   role: "dialog",
-  name: /^(Add|Edit) Decision$/,
+  name: /^(Add|Edit) decision$/,
 };
-const ITEM_DIALOG: Scope = { role: "dialog", name: /^Edit Item — / };
-const RISK_DIALOG: Scope = { role: "dialog", name: /^(Add|Edit) Risk — / };
+const ITEM_DIALOG: Scope = { role: "dialog", name: /^Edit item — / };
+const RISK_DIALOG: Scope = { role: "dialog", name: /^(Add|Edit) risk — / };
 const DEADLINE_SEGMENTS = [
   { maximum: "12", digits: "01" },
   { maximum: "31", digits: "01" },
@@ -295,7 +295,7 @@ async function openSlideRecord(record: SlideRecord): Promise<void> {
   await command(["press", "Enter"]);
   await assertModal(
     record.kind === "Decision"
-      ? "Edit Decision"
+      ? "Edit decision"
       : `Edit ${record.kind} — ${record.parent.name}`,
   );
 }
@@ -410,7 +410,7 @@ async function stageInvalid(): Promise<unknown> {
 
 async function switchToMultiStageProduct(text: string): Promise<void> {
   await select("Parent", PRODUCT.name);
-  await assertModal(`Edit Item — ${PRODUCT.name}`);
+  await assertModal(`Edit item — ${PRODUCT.name}`);
   await assertItemExtras("E2E retained next step", "10");
   assert.equal(await value("textbox", "Description *"), text);
   assert.equal(await checked("Development"), false);
@@ -448,7 +448,7 @@ void test("canonical item parent and stage choices preserve valid ownership", as
     text,
   });
   await select("Parent", ACTIVITY.name);
-  await assertModal(`Edit Item — ${ACTIVITY.name}`);
+  await assertModal(`Edit item — ${ACTIVITY.name}`);
   await assertNoItemStages();
   await assertItemExtras("E2E retained next step", "10");
   await saveSlide("Save item");
@@ -596,7 +596,7 @@ async function validateSupportingDialog(
   await discardDirtyDialog(
     field,
     `E2E unsaved ${kind.toLowerCase()}`,
-    kind === "Risk" ? `Add Risk — ${ACTIVITY.name}` : "Add Decision",
+    kind === "Risk" ? `Add risk — ${ACTIVITY.name}` : "Add decision",
   );
   await assertFocused(`+ Add ${kind}`);
   await openSupportingDialog(kind);
@@ -634,7 +634,7 @@ void test("canonical record dialogs validate required fields and discard unsaved
   await discardDirtyDialog(
     "Description *",
     "E2E unsaved item",
-    `Edit Item — ${ACTIVITY.name}`,
+    `Edit item — ${ACTIVITY.name}`,
   );
   await assertFocused(`Edit In progress: ${record.text}`);
   await openSlideRecord(record);
@@ -675,7 +675,7 @@ async function selectRiskSeverity(name: "At risk" | "Blocked"): Promise<void> {
 }
 
 async function createRisk(parent: ParentCase, text: string): Promise<void> {
-  await click("+ Add Risk");
+  await click("+ Add risk");
   await waitModal();
   await select("Parent", parent.name);
   await fill("Risk *", text);
@@ -831,8 +831,8 @@ async function setDeadline(deadline: "2000-01-01" | ""): Promise<void> {
 }
 
 async function createDecision(parent: ParentCase, text: string): Promise<void> {
-  await click("+ Add Decision");
-  await waitModal("Add Decision");
+  await click("+ Add decision");
+  await waitModal("Add decision");
   await select("Parent", parent.name);
   await fill("Decision *", text);
   await fill("Impact *", `${text} impact`);
@@ -885,8 +885,8 @@ async function createPublishedLineageDraft(
   await click("Save update");
   await command(["wait", "--fn", NO_INLINE_EDITORS]);
   await saveDraft();
-  await click("+ Add Decision");
-  await assertModal("Add Decision");
+  await click("+ Add decision");
+  await assertModal("Add decision");
   assert.equal(scopeCount(await snapshot(), "combobox", "Product"), 1);
   assert.ok((await roleText("group", "SDLC Stages")).includes("Planning"));
   await fill("Decision *", decisionText);
@@ -908,23 +908,23 @@ async function publishAndReopenPeriod(): Promise<void> {
   const session = headSession();
   await loginAsHead(session);
   await open(`/head/report/${LEAD_FORM_FIXTURE.reportId}`, session);
-  await waitText("Publish & Lock", session);
-  await click("Publish & Lock", session);
+  await waitText("Publish & lock", session);
+  await click("Publish & lock", session);
   const publishDialog: Scope = {
     role: "alertdialog",
-    name: "Publish & Lock Report?",
+    name: "Publish & lock report?",
   };
-  await waitModal("Publish & Lock Report?", "alertdialog", session);
+  await waitModal("Publish & lock report?", "alertdialog", session);
   assert.ok(
-    (await roleText("alertdialog", "Publish & Lock Report?", session)).includes(
+    (await roleText("alertdialog", "Publish & lock report?", session)).includes(
       "1 of 2 leads haven't submitted yet.",
     ),
   );
-  await scopedClick(publishDialog, "Publish Anyway", session);
+  await scopedClick(publishDialog, "Publish anyway", session);
   await waitText("Period published & locked", session);
   await waitNoModals(session);
-  await waitText("Reopen Period", session);
-  await click("Reopen Period", session);
+  await waitText("Reopen period", session);
+  await click("Reopen period", session);
   await waitModal("Reopen this period?", "alertdialog", session);
   await scopedClick(
     { role: "alertdialog", name: "Reopen this period?" },
@@ -955,7 +955,7 @@ async function editPublishedDecision(decisionText: string): Promise<void> {
     0,
   );
   await scopedClick(scope, editName);
-  await assertModal("Edit Decision");
+  await assertModal("Edit decision");
   assert.equal(await value("textbox", "Decision *"), decisionText);
   const impact = "E2E revised published impact";
   await fill("Impact *", impact);
@@ -968,7 +968,7 @@ async function editPublishedDecision(decisionText: string): Promise<void> {
   await waitText(impact);
   assert.ok((await roleText("region", "Decisions")).includes(impact));
   await scopedClick(scope, editName);
-  await assertModal("Edit Decision");
+  await assertModal("Edit decision");
   assert.equal(await value("textbox", "Impact *"), impact);
   await click("Cancel");
   await waitNoModals();
@@ -1166,7 +1166,7 @@ for (const entry of SLIDE_SAVE_CASES) {
     const record: SlideRecord = { kind: entry.kind, parent: ACTIVITY, text };
     const modalName =
       entry.kind === "Decision"
-        ? "Edit Decision"
+        ? "Edit decision"
         : `Edit ${entry.kind} — ${ACTIVITY.name}`;
     await openLeadReport();
     await createSlideSaveRecord(record);

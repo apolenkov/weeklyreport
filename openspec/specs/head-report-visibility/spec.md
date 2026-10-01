@@ -79,7 +79,7 @@ Slide mode is outside this presentation requirement.
 
 Section submission MUST gate only the publish precondition and the
 review/rollback affordance, never authorization to access drafts. The default
-submitted-only presentation MAY hide drafts until `Show all`. The `Publish & Lock` action MUST
+submitted-only presentation MAY hide drafts until `Show all`. The `Publish & lock` action MUST
 stay disabled until at least one section is submitted, and its disabled label
 (`Nothing to publish`) MUST reflect that publish precondition - NOT the absence
 of on-screen content. The `Live - X/Y Submitted` badge MUST continue to report
@@ -93,13 +93,13 @@ exists. A review capability on a draft section MUST NOT expose verdict actions.
 - **WHEN** the head views a live report with draft content and zero
   submitted sections
 - **THEN** the draft-hidden signal is visible and `Show all` reveals the draft content
-- **AND** `Publish & Lock` is disabled with the `Nothing to publish` label
+- **AND** `Publish & lock` is disabled with the `Nothing to publish` label
 - **AND** the `Live - 0/N Submitted` badge still shows the submitted count
 
 #### Scenario: one section submitted enables publish
 
 - **WHEN** at least one section is submitted
-- **THEN** `Publish & Lock` becomes available
+- **THEN** `Publish & lock` becomes available
 - **AND** the head can review and roll back (reopen) submitted sections
 
 #### Scenario: draft reviewer capability does not expose verdict actions
