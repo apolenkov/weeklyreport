@@ -7,12 +7,14 @@ workflow:
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
       when: never
     - if: "$CI_COMMIT_BRANCH"
+    - if: "$CI_COMMIT_TAG"
     - if: '$CI_PIPELINE_SOURCE == "web"'
     - when: never
 
-# Owner decision 2026-09-28: GitLab CI carries only lint/test lanes — no
-# Docker-in-Docker, no image builds, no operational smoke. Production builds,
-# PDF, and browser acceptance stay outside CI as separate required evidence.
+# Owner decisions 2026-09-28 and 2026-10-01: GitLab CI carries lint/test lanes,
+# one rootless-BuildKit image build, and an optional manual deploy — no
+# Docker-in-Docker and no operational smoke. Production builds, PDF, and
+# browser acceptance stay outside CI as separate required evidence.
 # The disposable-database guard accepts only exact loopback targets, while
 # GitLab services are reachable through DNS aliases, never through the job's
 # loopback. PostgreSQL therefore runs inside each database job container on
@@ -25,6 +27,8 @@ stages:
   - coverage
   - api-integration
   - migrate-reset
+  - image
+  - deploy
 
 variables:
   GIT_DEPTH: "2"
@@ -146,6 +150,8 @@ quality:
     NODE_OPTIONS: --max-old-space-size=8192
     DOCKER_COMPOSE_VERSION: "5.5.1"
     DOCKER_COMPOSE_SHA256: db1889184726840f75c4f9c001048430d4f25b3be3cb084d3ddd762bc0aed576
+    HELM_VERSION: "4.3.0"
+    HELM_SHA256: 86584a54def73570558f66f5111cc53dfed56689637ae32c1201205d494f54fb
   before_script:
     - !reference [.workspace-node, before_script]
     # The root test suite's production Compose contract gate requires a
@@ -155,6 +161,11 @@ quality:
     - echo "$DOCKER_COMPOSE_SHA256  /usr/local/bin/docker-compose" | sha256sum -c -
     - chmod +x /usr/local/bin/docker-compose
     - docker-compose version
+    # The chart gate renders the Helm chart (no cluster needed): pinned CLI.
+    - curl -fsSL "https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz" -o /tmp/helm.tar.gz
+    - echo "$HELM_SHA256  /tmp/helm.tar.gz" | sha256sum -c -
+    - tar -xzf /tmp/helm.tar.gz -C /usr/local/bin --strip-components=1 linux-amd64/helm
+    - helm version --short
   script:
     - pnpm lint
     - pnpm format:check
@@ -391,3 +402,103 @@ migrate-reset:
   script:
     - PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION="давай" pnpm exec tsx prisma/operations/migrate-reset.ts
     - PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION="давай" pnpm --dir apps/api exec tsx ../../prisma/seeds/profiles/seed-profile.ts full
+
+# Rootless BuildKit, daemonless: no Docker-in-Docker and no Docker socket.
+# The registry defaults to the project registry; IMAGE_REGISTRY* override it.
+# Runs by itself on the default branch and on tags once the web build
+# variables exist; until then (and on merge requests) it is manual and never
+# turns the pipeline red.
+build-images:
+  stage: image
+  image:
+    name: moby/buildkit:v0.33.1-rootless@sha256:f8a833b2de9d68e27f0815e4a737abdfaf8a2e4c615650557df11025101557b4
+    entrypoint: [""]
+  timeout: 45m
+  resource_group: weeklyreport-ci-heavy
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      when: manual
+      allow_failure: true
+    - if: "($CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH) && $WR_NEXT_PUBLIC_CLIENT_LOG_FORWARDING"
+      when: on_success
+    - if: "$CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
+      when: manual
+      allow_failure: true
+    - when: never
+  artifacts:
+    when: on_success
+    expire_in: 30 days
+    paths:
+      - image-digests.txt
+  script:
+    - |
+      set -eu
+      REGISTRY="${IMAGE_REGISTRY:-${CI_REGISTRY_IMAGE:-}}"
+      REGISTRY_USER="${IMAGE_REGISTRY_USER:-${CI_REGISTRY_USER:-}}"
+      REGISTRY_PASSWORD="${IMAGE_REGISTRY_PASSWORD:-${CI_REGISTRY_PASSWORD:-}}"
+      : "${REGISTRY:?no image registry: set IMAGE_REGISTRY or enable the project container registry}"
+      : "${REGISTRY_USER:?no registry user: set IMAGE_REGISTRY_USER}"
+      : "${REGISTRY_PASSWORD:?no registry password: set IMAGE_REGISTRY_PASSWORD}"
+      : "${WR_NEXT_PUBLIC_CLIENT_LOG_FORWARDING:?WR_NEXT_PUBLIC_CLIENT_LOG_FORWARDING is not set}"
+      : "${WR_NEXT_PUBLIC_WEB_VITALS:?WR_NEXT_PUBLIC_WEB_VITALS is not set}"
+      : "${WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED:?WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED is not set}"
+      : "${WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES:?WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES is not set}"
+
+      # Credentials live only in a job-local config.json and are never echoed.
+      export DOCKER_CONFIG="$CI_PROJECT_DIR/.registry-auth"
+      mkdir -p "$DOCKER_CONFIG"
+      auth="$(printf '%s:%s' "$REGISTRY_USER" "$REGISTRY_PASSWORD" | base64 | tr -d '\n')"
+      printf '{"auths":{"%s":{"auth":"%s"}}}' "${REGISTRY%%/*}" "$auth" > "$DOCKER_CONFIG/config.json"
+
+      : > image-digests.txt
+      # build_push NAME CONTEXT DOCKERFILE [buildctl options...]
+      build_push() {
+        name="$1"; context="$2"; dockerfile="$3"; shift 3
+        buildctl-daemonless.sh build \
+          --frontend dockerfile.v0 \
+          --local "context=$context" --local "dockerfile=$context" \
+          --opt "filename=$dockerfile" "$@" \
+          --output "type=image,name=$REGISTRY/$name:$CI_COMMIT_SHA,push=true" \
+          --metadata-file "$name.meta.json"
+        digest="$(sed -n 's/.*"containerimage.digest": *"\([^"]*\)".*/\1/p' "$name.meta.json")"
+        : "${digest:?no digest recorded for $name}"
+        printf '%s=%s/%s@%s\n' "$name" "$REGISTRY" "$name" "$digest" >> image-digests.txt
+      }
+
+      build_push api . Dockerfile.api --opt "build-arg:BUILD_VERSION=$CI_COMMIT_SHA"
+      build_push migrate . Dockerfile.api --opt target=migrator --opt "build-arg:BUILD_VERSION=$CI_COMMIT_SHA"
+      build_push web . Dockerfile.web \
+        --opt build-arg:API_URL=http://api:3001 \
+        --opt build-arg:NEXT_PUBLIC_AUTH_STUB=false \
+        --opt build-arg:NEXT_PUBLIC_DEV_ROLE_SWITCHER=false \
+        --opt "build-arg:NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN:-}" \
+        --opt "build-arg:NEXT_PUBLIC_APP_VERSION=$CI_COMMIT_SHA" \
+        --opt "build-arg:NEXT_PUBLIC_CLIENT_LOG_FORWARDING=$WR_NEXT_PUBLIC_CLIENT_LOG_FORWARDING" \
+        --opt "build-arg:NEXT_PUBLIC_WEB_VITALS=$WR_NEXT_PUBLIC_WEB_VITALS" \
+        --opt "build-arg:NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED=$WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED" \
+        --opt "build-arg:NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES=$WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES"
+      build_push backup deploy/postgres Dockerfile.backup --opt "build-arg:BUILD_VERSION=$CI_COMMIT_SHA"
+      cat image-digests.txt
+
+# Defined only when DevOps supplies a file-type KUBECONFIG variable. The values
+# file (HELM_VALUES_FILE, file-type) and HELM_NAMESPACE come from CI variables;
+# no cluster credential lives in the repository. --atomic waits for readiness
+# and rolls the release back on failure; it cannot undo a database migration.
+deploy-production:
+  stage: deploy
+  image:
+    name: alpine/helm:4.3.0@sha256:a6cf54599ccb99d90cf0712b30f03fdb3cab062e6b94e0418cc4db7e8a1464b2
+    entrypoint: [""]
+  environment:
+    name: production
+  resource_group: weeklyreport-production-deploy
+  rules:
+    - if: '$KUBECONFIG && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"'
+      when: manual
+    - when: never
+  script:
+    - : "${HELM_VALUES_FILE:?HELM_VALUES_FILE (file variable) is not set}"
+    - : "${HELM_NAMESPACE:?HELM_NAMESPACE is not set}"
+    - helm upgrade --install weeklyreport deploy/helm/weeklyreport --namespace "$HELM_NAMESPACE" -f "$HELM_VALUES_FILE" --set "images.tag=$CI_COMMIT_SHA" --atomic --timeout 10m
