@@ -34,3 +34,9 @@ The weekly read model's `submissionCount` and `totalLeads` SHALL be computed by 
 - **GIVEN** an open period with two active leads, one of whom submitted, plus a deactivated lead whose section is also submitted
 - **WHEN** the Admin lists periods
 - **THEN** the period row has `submittedCount` 1 and `totalCount` 2, and a published period reports the authors frozen in its snapshot
+
+#### Scenario: A Head PDF header matches the interface
+
+- **GIVEN** a published period with nine submitted leads across several groups and a Head whose PDF job snapshot is scoped to seven of them
+- **WHEN** the Head's PDF is rendered
+- **THEN** its header shows the org-wide figure frozen into the job (9/9), while its sections stay inside the Head's groups
