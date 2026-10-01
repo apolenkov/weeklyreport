@@ -22,5 +22,5 @@
     // here would typecheck an import that fails at runtime.
     "paths": {}
   },
-  "include": ["scripts/**/*.ts", "tools/**/*.ts"]
+  "include": ["scripts/**/*.ts"]
 }

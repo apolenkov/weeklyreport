@@ -54,6 +54,7 @@
     "@eslint-community/eslint-plugin-eslint-comments": "^4.7.2",
     "@fission-ai/openspec": "1.13.0",
     "@next/eslint-plugin-next": "^16.3.7",
+    "@types/eslint-plugin-jsx-a11y": "^6.10.1",
     "@types/node": "catalog:",
     "@types/pg": "^8.23.1",
     "@vitest/coverage-v8": "^4.1.11",
