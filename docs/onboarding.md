@@ -161,6 +161,21 @@ AI-провайдеров и промптов. Управляющая запис
 только если её ещё нет. `Wipe + Reseed` сначала выполняет `prisma migrate reset`,
 поэтому удаляет и это состояние перед заполнением выбранного профиля.
 
+По умолчанию ассистент в dev/e2e выключен: seed не создаёт конфигурацию
+провайдера. Включить её можно opt-in шагом `prisma/seed-ai-provider.ts`,
+который `db:seed:profile` запускает после writers любого профиля: если в
+незакоммиченном окружении задана `E2E_AI_PROVIDER_API_KEY`, шаг создаёт одну
+активную ревизию провайдера с ключом, зашифрованным штатным
+`AesGcmCredentialCodec` (`AI_PROVIDER_CONFIG_ENCRYPTION_KEY` /
+`AI_PROVIDER_CONFIG_KEY_VERSION`), и включает `AiProviderControl`. Тогда же
+обязательны `E2E_AI_PROVIDER_BASE_URL` (origin должен входить в
+`AI_PROVIDER_ALLOWED_ORIGINS`), `E2E_AI_PROVIDER_MODEL`,
+`E2E_AI_PROVIDER_EMBEDDING_MODEL` и `E2E_AI_PROVIDER_EMBEDDING_DIMENSIONS`.
+Без ключа шаг завершается без записей, и ассистент остаётся выключенным.
+Для реальных ответов дополнительно нужен
+`REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED=true` в окружении API. Значение ключа
+никуда не коммитится; в лог выводится только masked-суффикс.
+
 - Схема — `prisma/schema.prisma`. После init любые изменения оформляются
   отдельной forward-only additive Prisma migration и применяются через
   `prisma migrate deploy`; init и migration history должны оставаться
