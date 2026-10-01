@@ -214,7 +214,8 @@ unchanged.
 #### Scenario: A retried pdf-export entry leaves the failed list
 
 - **GIVEN** a failed `pdf-export` entry `${jobId}-g1` whose durable row accepts a retry
-- **WHEN** the retry enqueues the fresh `${jobId}-g2` job
+- **WHEN** a retry started from the failed list or the PDF recovery panel
+  enqueues the fresh `${jobId}-g2` job
 - **THEN** the superseded g1 entry is removed from the failed list and the
   failed-job count drops without a manual Remove
 - **AND** a failure to remove it does not fail the retry
