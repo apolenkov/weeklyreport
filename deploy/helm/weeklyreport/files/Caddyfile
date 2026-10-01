@@ -2,6 +2,7 @@
 # CustomReport — production reverse-proxy
 #
 # Auto-HTTPS via Let's Encrypt when CADDY_SITE_ADDRESS resolves publicly.
+# The Helm chart serves plain HTTP (http://:8080) behind the cluster Ingress.
 #
 # Routes:
 #   /api/web-vitals*, /api/client-logs*, /trpc/*, /auth/*, /health/*,
@@ -15,10 +16,16 @@
 	# Let's Encrypt account email (set via env in docker-compose.prod.yml).
 	email {$CADDY_ACME_EMAIL}
 
-	# Defaults that the org may want to override:
-	# servers {
-	#   protocols h1 h2 h3
-	# }
+	# Client address behind a proxy: CADDY_TRUSTED_PROXIES is a space-separated
+	# CIDR list (the Helm chart sets it to the cluster Ingress). Unset (compose)
+	# trusts nobody, so {client_ip} is the peer address. Strict mode walks
+	# X-Forwarded-For right to left and stops at the first untrusted address;
+	# without it Caddy takes the left-most one, which a client can forge even
+	# through a trusted peer.
+	servers {
+		trusted_proxies static {$CADDY_TRUSTED_PROXIES}
+		trusted_proxies_strict
+	}
 }
 
 {$CADDY_SITE_ADDRESS} {
@@ -36,8 +43,8 @@
 	handle @api {
 		reverse_proxy api:3001 {
 			header_up Host {host}
-			header_up X-Real-IP {remote_host}
-			header_up X-Forwarded-For {remote_host}
+			header_up X-Real-IP {client_ip}
+			header_up X-Forwarded-For {client_ip}
 			header_up X-Forwarded-Proto {scheme}
 			transport http {
 				read_timeout 5m
@@ -57,8 +64,8 @@
 	handle {
 		reverse_proxy web:3000 {
 			header_up Host {host}
-			header_up X-Real-IP {remote_host}
-			header_up X-Forwarded-For {remote_host}
+			header_up X-Real-IP {client_ip}
+			header_up X-Forwarded-For {client_ip}
 			header_up X-Forwarded-Proto {scheme}
 		}
 	}

@@ -162,7 +162,7 @@ would let rewrites and server-side fetches target different origins.
    curl -fsS https://<host>/health/ready                # api: DB + Redis + queues + memory
    ```
 
-The production Caddy mount defaults to `deploy/caddy/Caddyfile`; do not
+The production Caddy mount defaults to `deploy/helm/weeklyreport/files/Caddyfile`; do not
 hand-edit the container mount.
 
 ## Owner flags and when to remove them
