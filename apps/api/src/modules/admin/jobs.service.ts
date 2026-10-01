@@ -243,6 +243,18 @@ export class JobsService {
     // already-advanced is an idempotent repeat of the same caller-selected
     // generation — the requested end state already holds, so report success.
     if (outcome === "retried" || outcome === "already-advanced") {
+      // The fresh `-g${generation + 1}` job supersedes this failed entry;
+      // dropping it keeps the DLQ count and badge truthful. The durable row
+      // still drives recovery if the new generation fails in turn.
+      // Best effort: the durable advance already succeeded.
+      await job.remove().catch((error: unknown) => {
+        this.logger.warn("admin.jobs.retry — superseded entry not removed", {
+          phase: ADMIN_JOBS_RETRY_PHASE,
+          queue: PDF_EXPORT_QUEUE_NAME,
+          jobId,
+          error: String(error),
+        });
+      });
       this.logger.info("admin.jobs.retry — job requeued", {
         phase: ADMIN_JOBS_RETRY_PHASE,
         queue: PDF_EXPORT_QUEUE_NAME,
