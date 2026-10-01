@@ -95,7 +95,7 @@ describe("StatusOverview", () => {
     await user.click(within(preview).getByText("More actions"));
     await user.click(
       within(preview).getByRole("button", {
-        name: "Move Work item 1 to next week",
+        name: "Move to next week: Work item 1",
       }),
     );
     expect(onMoveItem).toHaveBeenCalledWith(
@@ -170,7 +170,7 @@ describe("StatusOverview", () => {
     ).toBeVisible();
     expect(
       within(preview).getByRole("button", {
-        name: "Move Work item 1 to next week",
+        name: "Move to next week: Work item 1",
       }),
     ).toBeVisible();
     // The unconfirmed carry offers no terminal outcome entry: Update progress

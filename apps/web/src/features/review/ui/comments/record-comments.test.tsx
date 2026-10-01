@@ -107,6 +107,54 @@ function renderComments() {
 }
 
 describe("RecordComments — mutation success", () => {
+  it("names each composer after its record when a subject is given", () => {
+    renderWithClient(
+      <>
+        <RecordComments
+          anchor={{ itemId: "11111111-1111-4111-8111-111111111111" }}
+          comments={[]}
+          canReview
+          currentUserId={REVIEWER_ID}
+          isAdmin={false}
+          subject="Ship the billing export"
+          onMutated={vi.fn()}
+        />
+        <RecordComments
+          anchor={{ riskId: "55555555-5555-4555-8555-555555555555" }}
+          comments={[]}
+          canReview
+          currentUserId={REVIEWER_ID}
+          isAdmin={false}
+          subject={"Vendor delay ".repeat(10)}
+          onMutated={vi.fn()}
+        />
+      </>,
+    );
+
+    expect(
+      screen.getByRole("textbox", {
+        name: "Add a review comment on Ship the billing export",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", {
+        name: /^Add a review comment on Vendor delay .+…$/u,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("textbox", { name: "Add a review comment" }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("button", {
+        name: "Comment on Ship the billing export",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /^Comment on Vendor delay .+…$/u }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Comment" })).toBeNull();
+  });
+
   it("scopes character descriptions to each rendered composer", () => {
     renderWithClient(
       <>

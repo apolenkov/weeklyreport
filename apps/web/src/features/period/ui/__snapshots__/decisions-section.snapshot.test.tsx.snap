@@ -25,7 +25,7 @@ exports[`DecisionsSection — Edit and Delete button DOM accessibility tree > De
 
 exports[`DecisionsSection — Edit and Delete button DOM accessibility tree > Edit button DOM accessibility tree — icon hidden from a11y tree (snapshot) 1`] = `
 <button
-  aria-label="Edit decision"
+  aria-label="Edit decision: Adopt new framework"
   class="flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] md:min-h-[34px] md:min-w-[34px] items-center justify-center rounded-full border border-[var(--card-surface-border)] bg-[var(--color-card)] p-1.5 text-[var(--color-muted-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)]"
   type="button"
 >

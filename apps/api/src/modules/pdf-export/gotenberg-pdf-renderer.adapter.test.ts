@@ -115,6 +115,40 @@ describe("GotenbergPdfRenderer", () => {
     );
   });
 
+  it("keeps a timeout while the PDF body is still streaming retryable", async () => {
+    const deadline = new AbortController();
+    const timeout = vi
+      .spyOn(AbortSignal, "timeout")
+      .mockReturnValue(deadline.signal);
+    fetchMock.mockImplementation((_target: string, init: RequestInit) => {
+      const body = new ReadableStream<Uint8Array>({
+        start(stream) {
+          stream.enqueue(PDF_BYTES.slice(0, 8));
+          init.signal?.addEventListener("abort", () => {
+            stream.error(init.signal?.reason);
+          });
+        },
+      });
+      return Promise.resolve(
+        new Response(body, {
+          status: 200,
+          headers: { "content-type": "application/pdf" },
+        }),
+      );
+    });
+    const renderer = new GotenbergPdfRenderer(STUB_ENV);
+
+    const pending = renderer.render(renderInput);
+    await vi.waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledOnce();
+    });
+    deadline.abort(new DOMException("The operation timed out", "TimeoutError"));
+
+    await expect(pending).rejects.toBeInstanceOf(Error);
+    await expect(pending).rejects.not.toBeInstanceOf(UnrecoverableError);
+    timeout.mockRestore();
+  });
+
   it("rejects an invalid print URL before any byte leaves as terminal", async () => {
     const renderer = new GotenbergPdfRenderer(STUB_ENV);
 

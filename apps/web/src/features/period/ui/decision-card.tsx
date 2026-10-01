@@ -1,4 +1,5 @@
 import { formatTimestampShort } from "../../../shared/lib/format/format-date";
+import { shortItemLabel } from "../../../shared/lib/format/short-label";
 import { DeleteIcon, EditIcon } from "../../../shared/ui/icons/action-icons";
 import { LockBadge } from "../../../shared/ui/report-shell/lock-badge";
 import { MetaRow } from "../../../shared/ui/report-shell/meta-row";
@@ -127,7 +128,7 @@ function DecisionCardActions({
         type="button"
         className={EDIT_BUTTON_CLASS}
         onClick={() => onEdit(decision)}
-        aria-label="Edit decision"
+        aria-label={`Edit decision: ${shortItemLabel(decision.text)}`}
         data-record-stable-id={decision.stableId}
       >
         <EditIcon />

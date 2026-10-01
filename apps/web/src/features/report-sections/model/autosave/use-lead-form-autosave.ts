@@ -13,6 +13,7 @@ import { toast } from "sonner";
 
 import { isLeadFormWriteConflict } from "../lead-form/lead-form-write-port";
 import {
+  autosaveFailureMessage,
   reportedAutosaveState,
   useBeforeUnloadGuard,
 } from "./autosave-effects";
@@ -191,9 +192,7 @@ export function useLeadFormAutosave(
       if (queuedSectionId !== null && queuedSectionId === reportSectionId) {
         setQueuedRetryRevision((revision) => revision + 1);
       }
-      const message =
-        err instanceof Error && err.message ? err.message : "Autosave failed";
-      toast.error(message);
+      toast.error(autosaveFailureMessage(err));
     },
     [onConflict, reportSectionId],
   );

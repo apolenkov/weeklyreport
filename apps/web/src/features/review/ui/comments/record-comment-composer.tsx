@@ -10,6 +10,10 @@ interface RecordCommentComposerProps {
   readonly submitDisabled: boolean;
   readonly isPending: boolean;
   readonly feedbackId?: string;
+  /** Accessible name; defaults to the generic label. */
+  readonly label?: string | undefined;
+  /** Accessible name of the submit button; its visible text stays first. */
+  readonly submitLabel?: string | undefined;
   readonly validationError?: string | undefined;
 }
 
@@ -20,6 +24,8 @@ export function RecordCommentComposer({
   submitDisabled,
   isPending,
   feedbackId,
+  label = "Add a review comment",
+  submitLabel,
   validationError,
 }: RecordCommentComposerProps) {
   const id = useId();
@@ -41,7 +47,7 @@ export function RecordCommentComposer({
         value={draft}
         disabled={isPending}
         onChange={(event) => onDraftChange(event.target.value)}
-        aria-label="Add a review comment"
+        aria-label={label}
         aria-invalid={validationError ? "true" : "false"}
         aria-describedby={[
           limitId,
@@ -72,6 +78,7 @@ export function RecordCommentComposer({
           className="btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-3 py-1 text-[12px] font-semibold text-[var(--color-primary-foreground)] transition-opacity disabled:cursor-not-allowed disabled:opacity-50"
           disabled={submitDisabled}
           aria-busy={isPending || undefined}
+          aria-label={isPending ? undefined : submitLabel}
         >
           {isPending ? "Adding…" : "Comment"}
         </button>

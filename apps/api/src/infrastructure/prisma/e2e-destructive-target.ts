@@ -30,7 +30,7 @@ export interface E2eRuntimeDatabaseIdentity {
 }
 
 const DEFAULT_POSTGRES_PORT = "5432";
-const MAX_TCP_PORT = 65_535;
+export const MAX_TCP_PORT = 65_535;
 const IPV4_MAX_OCTET = 255;
 const IPV4_MAPPED_HIGH_WORD = 0x7f_00;
 const RAW_ASCII_SPACE_OR_CONTROL = /[\u0000-\u0020\u007F]/u;
@@ -59,7 +59,7 @@ const refuse = (scriptName: string, url: string, reason: string): never => {
 const isLoopbackIpv4 = (host: string): boolean =>
   host.startsWith("127.") && Boolean(isIP(host));
 
-const isLoopbackHost = (hostname: string): boolean => {
+export const isLoopbackHost = (hostname: string): boolean => {
   const host = hostname.toLowerCase().replaceAll(/^\[|\]$/gu, "");
   if (host === "localhost" || host === "::1" || isLoopbackIpv4(host)) {
     return true;

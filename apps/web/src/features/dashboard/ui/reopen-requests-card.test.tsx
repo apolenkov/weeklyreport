@@ -6,7 +6,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined";
@@ -279,6 +279,74 @@ describe("ReopenRequestsCard", () => {
     expect(invalidateSpy).toHaveBeenCalledWith(
       proxy.weeklyReport.get.pathFilter(),
     );
+  });
+
+  it("moves focus to the queue after a rejected request leaves it", async () => {
+    let decided = false;
+    const { captured } = renderCard({
+      list: () =>
+        Promise.resolve({
+          items: decided
+            ? [makeRequest("request-2", "Bob Lead")]
+            : [
+                makeRequest("request-1", "Alice Lead"),
+                makeRequest("request-2", "Bob Lead"),
+              ],
+          nextCursor: null,
+        }),
+    });
+    const mutation = expectDefined(captured["admin.respondReopenRequest"]);
+    mutation.mutationFn.mockImplementation(() => {
+      decided = true;
+      return Promise.resolve({ staleAutoClosed: false, decision: "rejected" });
+    });
+
+    const alice = expectDefined(
+      (await screen.findByText("Alice L.")).closest("li"),
+    );
+    await userEvent.click(
+      within(alice).getByRole("button", { name: "Respond" }),
+    );
+    await userEvent.click(
+      within(alice).getByRole("button", { name: "Reject" }),
+    );
+
+    await waitFor(() => {
+      expect(screen.queryByText("Alice L.")).not.toBeInTheDocument();
+    });
+    expect(
+      screen.getByRole("region", { name: "Pending reopen requests" }),
+    ).toHaveFocus();
+  });
+
+  it("moves focus to the page when the last request is decided", async () => {
+    let decided = false;
+    const { captured } = renderCard({
+      list: () =>
+        Promise.resolve({
+          items: decided ? [] : [makeRequest("request-1", "Alice Lead")],
+          nextCursor: null,
+        }),
+      count: { count: 1 },
+    });
+    const main = document.createElement("main");
+    main.id = "main-content";
+    main.tabIndex = -1;
+    document.body.append(main);
+    onTestFinished(() => main.remove());
+    const mutation = expectDefined(captured["admin.respondReopenRequest"]);
+    mutation.mutationFn.mockImplementation(() => {
+      decided = true;
+      return Promise.resolve({ staleAutoClosed: false, decision: "rejected" });
+    });
+
+    const row = expectDefined(
+      (await screen.findByText("Alice L.")).closest("li"),
+    );
+    await userEvent.click(within(row).getByRole("button", { name: "Respond" }));
+    await userEvent.click(within(row).getByRole("button", { name: "Reject" }));
+
+    await waitFor(() => expect(main).toHaveFocus());
   });
 
   it("reports a stale auto-close without a success toast", async () => {

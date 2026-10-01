@@ -173,13 +173,14 @@ function createRepository(
 describe("compiled history immutable snapshots", () => {
   it("derives health and product counts from the frozen snapshot", () => {
     const entries = buildCompiledHistoryEntries([
-      { archived: true, snapshot: historySnapshot() },
+      { archived: true, reopened: false, snapshot: historySnapshot() },
     ]);
 
     expect(entries).toHaveLength(1);
     expect(entries[0]).toMatchObject({
       reportId,
       archived: true,
+      reopened: false,
       publishedByName: "Head User",
       trafficLights: { green: 1, yellow: 0, red: 1 },
       sectionCount: 1,
@@ -232,10 +233,21 @@ describe("compiled history immutable snapshots", () => {
     );
 
     expect(result.reports).toHaveLength(1);
+    expect(result.reports[0]?.reopened).toBe(true);
     expect(result.reports[0]?.snapshot.sections).toHaveLength(1);
     expect(result.reports[0]?.snapshot.sections[0]?.reportSectionId).toBe(
       historySectionId,
     );
+  });
+
+  it("flags only a published period as not reopened", async () => {
+    const result = await queryCompiledHistory(
+      queryFixture("published").prisma,
+      session("admin"),
+      true,
+    );
+
+    expect(result.reports[0]?.reopened).toBe(false);
   });
 
   it("bounds viewer history and archive count with the indexed frozen scope", async () => {
@@ -266,6 +278,7 @@ describe("compiled history immutable snapshots", () => {
       select: {
         id: true,
         archived: true,
+        periodStatus: true,
         publishedSnapshot: true,
       },
     });

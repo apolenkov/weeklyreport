@@ -136,6 +136,7 @@ function SectionsToolbar({
 }
 
 type SectionsSurfaceKeys =
+  | "reportId"
   | "reviewEnabled"
   | "reviewModel"
   | "submittedOnly"
@@ -147,6 +148,7 @@ type SectionsSurfaceKeys =
   | "overviewNavigationEpochs";
 
 function ReportSectionsSurface({
+  reportId,
   reviewEnabled,
   reviewModel,
   submittedOnly,
@@ -163,6 +165,7 @@ function ReportSectionsSurface({
       {reviewEnabled ? <SectionsToolbar {...toolbar} /> : null}
 
       <ReviewModeVerdictSurface
+        reportId={reportId}
         reviewModel={reviewModel}
         reviewMode={toolbar.reviewMode}
       />
@@ -231,6 +234,7 @@ export function ReportContent(props: ReportContentProps) {
         />
 
         <ReportSectionsSurface
+          reportId={props.reportId}
           reviewEnabled={props.reviewEnabled}
           reviewModel={props.reviewModel}
           submittedOnly={props.submittedOnly}

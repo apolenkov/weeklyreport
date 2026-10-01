@@ -165,6 +165,7 @@ function SeverityChoice({
   onSeveritySelect,
 }: Pick<RiskEditDialogFieldsProps, "severity" | "onSeveritySelect">) {
   const labelId = useId();
+  const hintId = useId();
 
   return (
     <div>
@@ -174,7 +175,10 @@ function SeverityChoice({
       >
         Severity
       </span>
-      <p className="mb-1 text-xs text-[var(--color-muted-foreground)]">
+      <p
+        id={hintId}
+        className="mb-1 text-xs text-[var(--color-muted-foreground)]"
+      >
         <strong>At risk</strong> = needs attention; <strong>Blocked</strong> =
         work stopped.
       </p>
@@ -183,6 +187,7 @@ function SeverityChoice({
         value={severity}
         onSelect={onSeveritySelect}
         ariaLabelledBy={labelId}
+        ariaDescribedBy={hintId}
       />
     </div>
   );

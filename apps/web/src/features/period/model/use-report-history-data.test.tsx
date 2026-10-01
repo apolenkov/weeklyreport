@@ -62,6 +62,7 @@ function compiledResult() {
         periodEnd: entry.periodEnd,
         publishedAt: new Date("2026-05-18T09:00:00.000Z"),
         archived: false,
+        reopened: false,
         publishedByName: "Head",
         trafficLights: entry.trafficLights,
         itemCount: 1,

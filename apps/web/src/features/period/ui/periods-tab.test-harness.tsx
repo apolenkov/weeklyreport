@@ -80,6 +80,8 @@ export function renderTab(args?: {
     { path: ["reports", "myHistory"] },
     { path: ["reports", "compiledHistory"] },
     { path: ["admin", "snapshot"] },
+    { path: ["admin", "listReopenRequests"] },
+    { path: ["admin", "pendingReopenCount"] },
     { path: ["admin", "getSettings"] },
     { path: ["admin", "getOrganization"] },
     {

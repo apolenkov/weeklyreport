@@ -18,52 +18,16 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import pg from "pg";
 
-import { assertE2eRuntimeDestructive } from "../guards/_destructive-guard.js";
+import {
+  assertE2eRuntimeDestructive,
+  E2E_REDIS_DB,
+  parseE2eRuntimeRedisTarget,
+} from "../guards/_destructive-guard.js";
 import { isEntrypoint } from "../guards/_entrypoint.js";
 import { requireEnv } from "../guards/_require-env.js";
 import { parseSeedProfile } from "../seeds/profiles/seed-profile-contract.js";
 
-interface RedisEndpoint {
-  readonly host: string;
-  readonly port: number;
-}
-
 const REDIS_FLUSH_TIMEOUT_MS = 5000;
-const E2E_REDIS_DATABASE = "15";
-const IPV4_PART_COUNT = 4;
-const LOOPBACK_OCTET = 127;
-const MAX_IPV4_OCTET = 255;
-const REDIS_DB_ERROR = `Refusing Redis cleanup: REDIS_DB must be exactly ${E2E_REDIS_DATABASE}`;
-
-function getRedisEndpoint(): RedisEndpoint {
-  const rawPort = process.env.REDIS_PORT;
-  if (!rawPort) throw new Error("REDIS_PORT must be set in .env");
-  const port = Number(rawPort);
-  if (!Number.isInteger(port) || port <= 0)
-    throw new Error(`Invalid REDIS_PORT: ${rawPort}`);
-  const host = process.env.REDIS_HOST;
-  if (!host) throw new Error("REDIS_HOST must be set in .env");
-  if (!isLoopbackHost(host))
-    throw new Error(
-      `Redis endpoint must be loopback-only for reset-hard: ${host}`,
-    );
-  return { host, port };
-}
-
-function isLoopbackIpv4(host: string): boolean {
-  const parts = host.split(".");
-  return (
-    parts.length === IPV4_PART_COUNT &&
-    parts.every((part) => /^(?:0|[1-9]\d*)$/u.test(part)) &&
-    Number(parts[0]) === LOOPBACK_OCTET &&
-    parts.slice(1).every((part) => Number(part) <= MAX_IPV4_OCTET)
-  );
-}
-
-function isLoopbackHost(hostname: string): boolean {
-  const host = hostname.toLowerCase().replaceAll(/^\[|\]$/gu, "");
-  return host === "localhost" || host === "::1" || isLoopbackIpv4(host);
-}
 
 function writeRedisCommand(command: string, ...args: string[]): Buffer {
   const parts = [command, ...args];
@@ -128,11 +92,6 @@ function parseRespArray(buffer: string, count: number): RespFrame | undefined {
   return { value: values, rest };
 }
 
-function requireRedisDatabase(): void {
-  if (process.env.REDIS_DB !== E2E_REDIS_DATABASE)
-    throw new Error(REDIS_DB_ERROR);
-}
-
 function getRedisReplyError(
   value: unknown,
   replyCount: number,
@@ -148,9 +107,7 @@ function getRedisReplyError(
 
 export async function flushRedis(): Promise<void> {
   assertE2eRuntimeDestructive("reset-hard-flush-redis");
-  requireRedisDatabase();
-
-  const { host, port } = getRedisEndpoint();
+  const { host, port } = parseE2eRuntimeRedisTarget("reset-hard-flush-redis");
   console.log(
     `[reset-hard] Redis target: ${host}:${port} (REDIS_HOST/REDIS_PORT)`,
   );
@@ -159,7 +116,7 @@ export async function flushRedis(): Promise<void> {
     const sock = net.createConnection({ host, port }, () => {
       // Never pipeline FLUSHDB: if SELECT were rejected, a pipelined flush
       // would run against Redis' default DB 0.
-      sock.write(writeRedisCommand("SELECT", E2E_REDIS_DATABASE));
+      sock.write(writeRedisCommand("SELECT", E2E_REDIS_DB));
     });
     const timer = setTimeout(() => {
       sock.destroy();

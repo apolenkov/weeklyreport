@@ -68,10 +68,10 @@ function PeriodRowButton({
       onClick={onSelect}
     >
       <div className="flex-1">
-        {/* Badges share the title line, right-aligned — one
-            horizontal level for Archived and Previous. */}
-        <div className="flex items-center gap-1.5 text-sm font-semibold">
-          <span className="flex-1 truncate">
+        {/* The title never truncates: its intrinsic width is the floor, so
+            when badges do not fit beside it they wrap to the next line. */}
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-sm font-semibold">
+          <span className="min-w-fit flex-1">
             {period.weekLabel} &middot; {period.dateRange}
           </span>
           {period.archived && (
@@ -98,7 +98,7 @@ function PeriodRowButton({
 interface FillFromDropdownPanelProps {
   readonly open: boolean;
   readonly id: string;
-  readonly pos: { top: number; right: number } | null;
+  readonly pos: { top: number; left: number; width: number } | null;
   readonly panelRef: RefObject<HTMLDivElement | null>;
   readonly pastPeriods: readonly ReportPeriod[];
   readonly filteredPeriods: readonly ReportPeriod[];
@@ -132,8 +132,8 @@ export function FillFromDropdownPanel({
         ref={panelRef}
         role="region"
         aria-label="Past reports"
-        className="fixed z-50 w-[340px] rounded-xl border border-[var(--color-muted)] bg-[var(--color-popover)] p-3 shadow-lg"
-        style={{ top: pos.top, right: pos.right }}
+        className="fixed z-50 rounded-xl border border-[var(--color-muted)] bg-[var(--color-popover)] p-3 shadow-lg"
+        style={{ top: pos.top, left: pos.left, width: pos.width }}
       >
         {pastPeriods.length > 0 && (
           <PeriodSearchInput value={search} onChange={onSearchChange} />

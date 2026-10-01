@@ -33,6 +33,8 @@ export interface OverviewPlanState {
   readonly unitKey: string | null;
   readonly editorAtOpen: ReadyEditor;
   readonly fields: OverviewPlanFields;
+  // Fields as opened, to tell an edited composer from an untouched one.
+  readonly baseline: OverviewPlanFields;
   readonly attempt?:
     | {
         readonly key: string;
@@ -83,6 +85,18 @@ export function createOverviewPlanState(
       : item.source === "current"
         ? "currentWeek"
         : "nextWeek";
+  const fields: OverviewPlanFields = {
+    outcome: null,
+    resultText: item.text,
+    planText:
+      item.source !== "previous" && raw.type === "current"
+        ? (raw.nextStepText ?? "")
+        : item.text,
+    nextStepText: item.source === "previous" ? "" : (raw.nextStepText ?? ""),
+    reason: "",
+    parent: initialParent(raw, editor),
+    stageNames: [...raw.stageNames],
+  };
   return {
     generation: editor.generation,
     mode,
@@ -95,18 +109,8 @@ export function createOverviewPlanState(
           (candidate) => candidate.key === item.key,
         ),
       )?.key ?? null,
-    fields: {
-      outcome: null,
-      resultText: item.text,
-      planText:
-        item.source !== "previous" && raw.type === "current"
-          ? (raw.nextStepText ?? "")
-          : item.text,
-      nextStepText: item.source === "previous" ? "" : (raw.nextStepText ?? ""),
-      reason: "",
-      parent: initialParent(raw, editor),
-      stageNames: [...raw.stageNames],
-    },
+    fields,
+    baseline: fields,
     attempt: null,
   };
 }
@@ -148,6 +152,15 @@ export function createOpenWorkPlanState(
       ? "plan_next"
       : "continue";
   const parent = initialParent(item, editor);
+  const fields: OverviewPlanFields = {
+    outcome,
+    resultText: text,
+    planText: text,
+    nextStepText: "",
+    reason: "",
+    parent,
+    stageNames: parent.kind === "activity" ? [] : [...item.stageNames],
+  };
   return {
     generation: editor.generation,
     mode: "resolve",
@@ -159,17 +172,26 @@ export function createOpenWorkPlanState(
     },
     unitKey: null,
     editorAtOpen: editor,
-    fields: {
-      outcome,
-      resultText: text,
-      planText: text,
-      nextStepText: "",
-      reason: "",
-      parent,
-      stageNames: parent.kind === "activity" ? [] : [...item.stageNames],
-    },
+    fields,
+    baseline: fields,
     attempt: null,
   };
+}
+
+export function nextPlanHint(state: OverviewPlanState): string {
+  return state.source.kind === "current" && state.item.source === "current"
+    ? "The current result stays unchanged. This is a separate commitment."
+    : "This commitment will be planned for next week. The previous report stays unchanged.";
+}
+
+/** True when input beyond the outcome choice differs from what the composer opened with. */
+export function isPlanInputEdited({
+  fields,
+  baseline,
+}: Pick<OverviewPlanState, "fields" | "baseline">): boolean {
+  const input = (value: OverviewPlanFields) =>
+    JSON.stringify({ ...value, outcome: null });
+  return input(fields) !== input(baseline);
 }
 
 function planSourceFields(item: SectionItem): string {

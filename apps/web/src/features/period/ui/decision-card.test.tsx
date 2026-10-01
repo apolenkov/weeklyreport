@@ -63,13 +63,36 @@ describe("DecisionCard deadline chip", () => {
       />,
     );
 
-    const edit = screen.getByRole("button", { name: "Edit decision" });
-    expect(edit).toHaveAttribute("aria-label", "Edit decision");
+    const edit = screen.getByRole("button", {
+      name: "Edit decision: Adopt new framework",
+    });
+    expect(edit).toHaveAttribute(
+      "aria-label",
+      "Edit decision: Adopt new framework",
+    );
     expect(edit).toHaveAttribute(
       "data-record-stable-id",
       "88888888-8888-4888-8888-888888888888",
     );
     expect(BASE_DECISION.id).not.toBe(BASE_DECISION.stableId);
+  });
+
+  it("names the edit action after the decision, truncating long text", () => {
+    render(
+      <DecisionCard
+        decision={{ ...BASE_DECISION, text: "Adopt ".repeat(40) }}
+        readOnly={false}
+        publishedLocked={false}
+        onEdit={noop}
+        onDelete={noop}
+      />,
+    );
+
+    const name = screen
+      .getByRole("button", { name: /^Edit decision: Adopt/ })
+      .getAttribute("aria-label");
+    expect(name).toMatch(/^Edit decision: Adopt Adopt .*…$/);
+    expect(name?.length).toBeLessThanOrEqual("Edit decision: ".length + 60);
   });
 
   it("omits record lineage for a new decision that has not been persisted", () => {
@@ -85,7 +108,9 @@ describe("DecisionCard deadline chip", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: "Edit decision" }),
+      screen.getByRole("button", {
+        name: "Edit decision: Adopt new framework",
+      }),
     ).not.toHaveAttribute("data-record-stable-id");
   });
 

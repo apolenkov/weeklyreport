@@ -100,6 +100,7 @@ describe("public contract immutability", () => {
       periodEnd: "2026-07-26",
       publishedAt: null,
       archived: false,
+      reopened: false,
       publishedByName: "Head",
       trafficLights: { green: 1, yellow: 0, red: 0 },
       itemCount: 1,

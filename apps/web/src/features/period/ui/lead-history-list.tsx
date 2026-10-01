@@ -45,6 +45,13 @@ function StatusBadge({ status }: { readonly status: HistoryEntry["status"] }) {
       </span>
     );
   }
+  if (status === "reopened") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-status-at-risk-bg)] px-3 py-1 text-xs font-semibold text-[var(--color-status-at-risk-fg)]">
+        Reopened
+      </span>
+    );
+  }
   if (status === "archived") {
     return (
       <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-primary)] px-3 py-1 text-xs font-semibold text-[var(--color-primary-foreground)]">
@@ -136,7 +143,10 @@ function HistoryTimeline({ entry }: { readonly entry: HistoryEntry }) {
         <TimelineRow label="Submitted" value="Not submitted" muted />
       ) : null}
       {entry.publishedAt ? (
-        <TimelineRow label="Published" value={entry.publishedAt} />
+        <TimelineRow
+          label={entry.reopened ? "Last published" : "Published"}
+          value={entry.publishedAt}
+        />
       ) : null}
     </div>
   );

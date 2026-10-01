@@ -9,6 +9,7 @@ import {
 import { type ComponentProps, useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import { useFocusAfterRowRemoved } from "../../../shared/hooks/browser/use-focus-after-row-removed";
 import {
   invalidateLeadForm,
   invalidateSubmissionDashboard,
@@ -162,11 +163,14 @@ export function ReopenRequestsCard() {
   const countQuery = useQuery(
     trpc.admin.pendingReopenCount.queryOptions(undefined),
   );
-  const respondMut = useRespondReopenRequest(closeResponder);
   const requests = useMemo(
     () => listQuery.data?.pages.flatMap((page) => page.items) ?? [],
     [listQuery.data?.pages],
   );
+  // A decided request leaves the queue with its focused button: land on the
+  // queue, or on the page when that was the last request.
+  const queueRef = useFocusAfterRowRemoved<HTMLElement>(requests.length);
+  const respondMut = useRespondReopenRequest(closeResponder);
 
   if (listQuery.isPending) {
     return (
@@ -198,7 +202,9 @@ export function ReopenRequestsCard() {
 
   return (
     <section
-      className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[var(--shadow-card-elevated)]"
+      ref={queueRef}
+      tabIndex={-1}
+      className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[var(--shadow-card-elevated)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
       aria-label="Pending reopen requests"
     >
       <ReopenRequestsHeader

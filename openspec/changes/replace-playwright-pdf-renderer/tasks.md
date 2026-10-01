@@ -232,11 +232,16 @@ write or update the colocated test first, then the code.
 
 ## 7. Candidate review
 
-- [ ] 7.1 Review the exact candidate diff and references end-to-end against
+- [x] 7.1 Review the exact candidate diff and references end-to-end against
       the delta specs, the removal inventory, and the pinned image/config —
       verify a written findings list covers every modified file and that every
       remaining `playwright` match is classified (historical, upstream
-      metadata, agent-tool, or deny-only rule). Not run (reviewer work), TASK-145.11.06.
+      metadata, agent-tool, or deny-only rule). Done 2026-09-30 by an independent
+      Fable review on main 19cc7762b: no blocking findings, no leftover `playwright`
+      match; the SSR print view, the env comment and a body-read timeout test were
+      reconciled afterwards.
 - [ ] 7.2 Run the final `astra_reviewer` review of the candidate after all
       checks pass — verify the verdict is recorded and any blocking finding is
-      returned to the owning task before the change is called done. Not run (reviewer work), TASK-145.11.06.
+      returned to the owning task before the change is called done. Open until
+      6.1 passes on the compose stack (TASK-145.11.04/05); the reviewer is an
+      independent model, not necessarily `astra_reviewer`.

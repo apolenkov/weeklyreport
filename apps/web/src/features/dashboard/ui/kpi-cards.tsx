@@ -46,19 +46,11 @@ function SubmissionsCard({
       </div>
       <div className="min-w-0">
         <p className={KPI_CAPTION_CLASS}>Submissions</p>
-        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-          <span className="text-[13px] text-[var(--color-muted-foreground)]">
-            Last week
+        {pendingCount > 0 && (
+          <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-status-at-risk-bg)] px-2 py-0.5 text-xs font-semibold text-[var(--color-status-at-risk-fg)]">
+            {pendingCount} pending
           </span>
-          <span className="text-[13px] text-[var(--color-muted-foreground)]">
-            unavailable
-          </span>
-          {pendingCount > 0 && (
-            <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-status-at-risk-bg)] px-2 py-0.5 text-xs font-semibold text-[var(--color-status-at-risk-fg)]">
-              {pendingCount} pending
-            </span>
-          )}
-        </div>
+        )}
       </div>
     </section>
   );

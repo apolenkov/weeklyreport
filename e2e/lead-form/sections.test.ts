@@ -948,12 +948,13 @@ async function editPublishedDecision(decisionText: string): Promise<void> {
   const data = scopeSnapshot(await snapshot(), scope.role, scope.name);
   assert.ok(data.snapshot.includes(decisionText));
   assert.ok(data.snapshot.includes("In published report"));
-  assert.equal(refsByRole(data, "button", "Edit decision").length, 1);
+  const editName = `Edit decision: ${decisionText}`;
+  assert.equal(refsByRole(data, "button", editName).length, 1);
   assert.equal(
     refsByRole(data, "button", `Delete decision for ${PRODUCT.name}`).length,
     0,
   );
-  await scopedClick(scope, "Edit decision");
+  await scopedClick(scope, editName);
   await assertModal("Edit Decision");
   assert.equal(await value("textbox", "Decision *"), decisionText);
   const impact = "E2E revised published impact";
@@ -966,7 +967,7 @@ async function editPublishedDecision(decisionText: string): Promise<void> {
   await expandSupport("Decisions");
   await waitText(impact);
   assert.ok((await roleText("region", "Decisions")).includes(impact));
-  await scopedClick(scope, "Edit decision");
+  await scopedClick(scope, editName);
   await assertModal("Edit Decision");
   assert.equal(await value("textbox", "Impact *"), impact);
   await click("Cancel");

@@ -56,7 +56,9 @@ describe("DecisionsSection meta-row", () => {
 describe("DecisionsSection — EditIcon and DeleteIcon aria-hidden", () => {
   it("EditIcon svg has aria-hidden='true'", () => {
     render(<DecisionsSection decisions={[BASE_DECISION]} />);
-    const editButton = screen.getByRole("button", { name: "Edit decision" });
+    const editButton = screen.getByRole("button", {
+      name: "Edit decision: Adopt new framework",
+    });
     const svg = editButton.querySelector("svg");
     expect(svg).not.toBeNull();
     expect(svg).toHaveAttribute("aria-hidden", "true");
@@ -72,10 +74,15 @@ describe("DecisionsSection — EditIcon and DeleteIcon aria-hidden", () => {
     expect(svg).toHaveAttribute("aria-hidden", "true");
   });
 
-  it("Edit button has aria-label='Edit decision' and child svg has aria-hidden='true'", () => {
+  it("Edit button has aria-label='Edit decision: <text>' and child svg has aria-hidden='true'", () => {
     render(<DecisionsSection decisions={[BASE_DECISION]} />);
-    const editButton = screen.getByRole("button", { name: "Edit decision" });
-    expect(editButton).toHaveAttribute("aria-label", "Edit decision");
+    const editButton = screen.getByRole("button", {
+      name: "Edit decision: Adopt new framework",
+    });
+    expect(editButton).toHaveAttribute(
+      "aria-label",
+      "Edit decision: Adopt new framework",
+    );
     const svg = editButton.querySelector("svg");
     expect(svg).toHaveAttribute("aria-hidden", "true");
   });
@@ -93,11 +100,13 @@ describe("DecisionsSection — EditIcon and DeleteIcon aria-hidden", () => {
     expect(svg).toHaveAttribute("aria-hidden", "true");
   });
 
-  it("Edit button accessible name is 'Edit decision' with no icon content leaking", () => {
+  it("Edit button accessible name is 'Edit decision: <text>' with no icon content leaking", () => {
     render(<DecisionsSection decisions={[BASE_DECISION]} />);
     // getByRole resolves by accessible name — if SVG leaked into the name,
     // the name would differ from the aria-label and this query would fail.
-    const editButton = screen.getByRole("button", { name: "Edit decision" });
+    const editButton = screen.getByRole("button", {
+      name: "Edit decision: Adopt new framework",
+    });
     expect(editButton).toBeInTheDocument();
   });
 
@@ -113,7 +122,9 @@ describe("DecisionsSection — EditIcon and DeleteIcon aria-hidden", () => {
 describe("DecisionsSection — Edit and Delete button DOM accessibility tree", () => {
   it("Edit button DOM accessibility tree — icon hidden from a11y tree (snapshot)", () => {
     render(<DecisionsSection decisions={[BASE_DECISION]} />);
-    const editButton = screen.getByRole("button", { name: "Edit decision" });
+    const editButton = screen.getByRole("button", {
+      name: "Edit decision: Adopt new framework",
+    });
     expect(editButton).toMatchSnapshot();
   });
 
@@ -137,7 +148,9 @@ describe("DecisionsSection — own decision stays editable despite owner/name mi
       />,
     );
     expect(
-      screen.getByRole("button", { name: "Edit decision" }),
+      screen.getByRole("button", {
+        name: "Edit decision: Adopt new framework",
+      }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Delete decision for CRM" }),
@@ -156,7 +169,9 @@ describe("DecisionsSection — own decision stays editable despite owner/name mi
       />,
     );
     expect(
-      screen.queryByRole("button", { name: "Edit decision" }),
+      screen.queryByRole("button", {
+        name: "Edit decision: Adopt new framework",
+      }),
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole("img", {

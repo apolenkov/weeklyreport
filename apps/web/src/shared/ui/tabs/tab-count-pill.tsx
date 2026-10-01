@@ -12,6 +12,8 @@ function formatTabCount(count: number): string {
   return String(count);
 }
 
+// Anchored to the label's trailing edge (left-full) so it never covers the
+// label's last letter, and absolute so it adds no width to the tab.
 export function TabCountPill({
   ariaLabel,
   count,
@@ -26,7 +28,7 @@ export function TabCountPill({
     <>
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute -right-3 -top-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--color-destructive)] px-1 text-xs font-bold leading-none tracking-normal text-[var(--color-destructive-foreground)] tabular-nums shadow-[0_1px_2px_var(--color-border-strong)] ring-1 ring-[var(--color-card)]"
+        className="pointer-events-none absolute left-full ml-0.5 -top-2 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-[var(--color-destructive)] px-1 text-xs font-bold leading-none tracking-normal text-[var(--color-destructive-foreground)] tabular-nums shadow-[0_1px_2px_var(--color-border-strong)] ring-1 ring-[var(--color-card)]"
         data-testid={testId}
       >
         {unavailable ? "!" : formatTabCount(safeCount)}

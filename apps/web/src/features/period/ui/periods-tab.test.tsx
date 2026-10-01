@@ -282,6 +282,10 @@ describe("PeriodsTab", () => {
       screen.getByRole("alertdialog", { name: "Publish this period?" }),
     ).toBeInTheDocument();
     expect(publishEntry.mutationFn).not.toHaveBeenCalled();
+    // Same neutral wording as the head publish dialog: no reversibility claim.
+    const dialogText = screen.getByRole("alertdialog").textContent;
+    expect(dialogText).toContain("Leads can no longer edit this period.");
+    expect(dialogText).not.toContain("reopened");
 
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
@@ -324,7 +328,7 @@ describe("PeriodsTab", () => {
       name: "Reopen this period?",
     });
     expect(dialog).toHaveTextContent(
-      "Leads will be able to edit their sections again.",
+      "Sections they already submitted return to draft and must be submitted again.",
     );
     expect(reopenEntry.mutationFn).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();

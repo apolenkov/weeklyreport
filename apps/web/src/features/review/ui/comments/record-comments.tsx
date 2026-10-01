@@ -9,6 +9,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { shortItemLabel } from "../../../../shared/lib/format/short-label";
 import { invalidateReview } from "../../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
 import { ReviewCommentList } from "../../../../shared/ui/feedback/review-comment-list";
@@ -39,8 +40,6 @@ export type RecordCommentAnchor =
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const COMMENT_EXCERPT_MAX_LENGTH = 60;
-const COMMENT_EXCERPT_SUFFIX_LENGTH = 3;
 
 function anchorId(anchor: RecordCommentAnchor): string | undefined {
   return anchor.itemId ?? anchor.riskId ?? anchor.decisionId;
@@ -61,14 +60,20 @@ function reviewErrorMessage(err: unknown, fallback: string): string {
 
 function commentDeleteLabel(comment: RecordCommentView): string {
   const author = comment.reviewerName ?? "Reviewer";
-  const excerpt = comment.text.replaceAll(/\s+/g, " ").trim();
-  const shortened =
-    excerpt.length > COMMENT_EXCERPT_MAX_LENGTH
-      ? `${excerpt.slice(0, COMMENT_EXCERPT_MAX_LENGTH - COMMENT_EXCERPT_SUFFIX_LENGTH)}…`
-      : excerpt;
+  const shortened = shortItemLabel(comment.text);
   return shortened
     ? `Delete comment by ${author}: ${shortened}`
     : `Delete comment by ${author}`;
+}
+
+// Subject-specific accessible names keep repeated composers distinguishable.
+function composerLabels(subject: string | undefined) {
+  if (!subject) return {};
+  const excerpt = shortItemLabel(subject);
+  return {
+    label: `Add a review comment on ${excerpt}`,
+    submitLabel: `Comment on ${excerpt}`,
+  };
 }
 
 function commentValidationError(
@@ -197,6 +202,7 @@ export function RecordComments({
   canReview,
   currentUserId,
   isAdmin,
+  subject,
   onMutated,
 }: {
   readonly anchor: RecordCommentAnchor;
@@ -204,6 +210,8 @@ export function RecordComments({
   readonly canReview: boolean;
   readonly currentUserId: string;
   readonly isAdmin: boolean;
+  /** Record text; makes each composer's accessible name unique in a list. */
+  readonly subject?: string | undefined;
   readonly onMutated: () => void;
 }) {
   const [draft, setDraft] = useState("");
@@ -298,6 +306,7 @@ export function RecordComments({
           onSubmit={submitDraft}
           submitDisabled={submitDisabled}
           isPending={isCommentPending}
+          {...composerLabels(subject)}
           validationError={validationError}
           {...(feedback ? { feedbackId } : {})}
         />

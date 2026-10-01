@@ -19,6 +19,7 @@ export interface MyHistorySectionRow {
     readonly periodEnd: Date;
     readonly status: ReportStatus;
     readonly archived: boolean;
+    readonly reopened: boolean;
     readonly publishedAt: Date | null;
   };
   readonly items: readonly {
@@ -39,6 +40,9 @@ export interface MyHistorySectionRow {
     readonly status: TrafficLightStatus | null;
     readonly updatedAt: Date;
   }[];
+  // Effective light per product as the report shows it (covering-risk floor
+  // applied); the card totals must agree with the report, not the raw rows.
+  readonly productLights: readonly (TrafficLightStatus | null)[];
   readonly stageStatuses: readonly {
     readonly projectId: string;
     readonly updatedAt: Date;
@@ -50,11 +54,11 @@ function countTrafficLights(s: MyHistorySectionRow): {
   yellow: number;
   red: number;
 } {
-  return s.projectStatuses.reduce(
-    (acc, row) => ({
-      green: acc.green + (row.status === "green" ? 1 : 0),
-      yellow: acc.yellow + (row.status === "yellow" ? 1 : 0),
-      red: acc.red + (row.status === "red" ? 1 : 0),
+  return s.productLights.reduce(
+    (acc, light) => ({
+      green: acc.green + (light === "green" ? 1 : 0),
+      yellow: acc.yellow + (light === "yellow" ? 1 : 0),
+      red: acc.red + (light === "red" ? 1 : 0),
     }),
     { green: 0, yellow: 0, red: 0 },
   );
@@ -92,6 +96,7 @@ function toHistoryEntry(s: MyHistorySectionRow) {
     reportStatus: s.report.status,
     sectionStatus: s.status,
     archived: s.report.archived,
+    reopened: s.report.reopened,
     submittedAt: s.submittedAt,
     publishedAt: s.report.publishedAt,
     createdAt: s.createdAt,

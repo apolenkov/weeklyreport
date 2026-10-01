@@ -242,6 +242,9 @@ describe("PeriodPrismaRepository.reopenPeriod — overlap translation", () => {
       reportSection: {
         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
       },
+      reopenRequest: {
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
       reminderRule,
     };
     const prisma = {
@@ -260,6 +263,10 @@ describe("PeriodPrismaRepository.reopenPeriod — overlap translation", () => {
       repo.reopenPeriod(reportId, publishedExpectation()),
     ).resolves.toBeUndefined();
 
+    expect(tx.reopenRequest.updateMany.mock.calls[0]?.[0]).toMatchObject({
+      where: { status: "pending", reportSection: { reportId } },
+      data: { status: "rejected" },
+    });
     const createArgs = reminderRule.create.mock.calls[0]?.[0] as unknown as {
       data: Record<string, unknown>;
     };

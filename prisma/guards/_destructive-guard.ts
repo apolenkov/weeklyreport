@@ -4,5 +4,6 @@
 // assertion without dragging the prisma/ tooling tree into the production
 // Docker image — Dockerfile.api hygiene forbids guards/operations/seeds paths
 // under /app/apps. This path is preserved for existing script and test
-// importers; the export surface is unchanged.
+// importers; it also re-exports the Redis target contract (e2e-redis-target.ts).
 export * from "../../apps/api/src/infrastructure/prisma/e2e-destructive-target.js";
+export * from "../../apps/api/src/infrastructure/prisma/e2e-redis-target.js";

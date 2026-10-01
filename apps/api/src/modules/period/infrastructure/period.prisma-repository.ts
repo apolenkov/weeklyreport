@@ -1,4 +1,7 @@
-import { currentPeriodLifecycleSchema } from "@customreport/shared";
+import {
+  currentPeriodLifecycleSchema,
+  REOPEN_AUTO_CLOSE_NOTES,
+} from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
@@ -198,6 +201,19 @@ export class PeriodPrismaRepository implements PeriodRepository {
           data: {
             status: "draft",
             submittedAt: null,
+          },
+        });
+        // Their sections are draft again, so a pending section-reopen request
+        // has nothing left to reopen. Unlike a stale approval, no reviewer
+        // decided it, so reviewedById stays null; the shared auto-close note
+        // marks the system closure for the UI (openspec/specs/reopen-requests,
+        // "A period reopen closes the pending section requests it supersedes").
+        await tx.reopenRequest.updateMany({
+          where: { status: "pending", reportSection: { reportId } },
+          data: {
+            status: "rejected",
+            reviewedAt: reopenedAt,
+            reviewNote: REOPEN_AUTO_CLOSE_NOTES.periodReopened,
           },
         });
         await synchronizeReminderRulesForReport(

@@ -586,6 +586,9 @@ void test("pending canonical save locks write actions until connectivity returns
     await setOffline(true);
     await clickIn(ACTIVITY_FORM, "Save update");
     await waitButton("Saving draft", { busy: true });
+    await waitText(
+      "You’re offline — changes will save when the connection returns",
+    );
     const saving = oneRef(await snapshot(), "button", "Saving draft");
     assert.equal(await getAttr(saving, "aria-busy"), "true");
     assert.equal((await command(["is", "enabled", saving])).enabled, false);
@@ -865,7 +868,11 @@ void test("Head request changes returns reason to Lead", async () => {
     await command(
       [
         "click",
-        oneRef(headLeadRow(await snapshot(session)), "button", "Details"),
+        oneRef(
+          headLeadRow(await snapshot(session)),
+          "button",
+          `Details for ${LEAD_FORM_FIXTURE.leadDisplayName}`,
+        ),
       ],
       session,
     );
@@ -875,7 +882,7 @@ void test("Head request changes returns reason to Lead", async () => {
         oneRef(
           headLeadRow(await snapshot(session)),
           "button",
-          "Request Changes",
+          `Request changes from ${LEAD_FORM_FIXTURE.leadDisplayName}`,
         ),
       ],
       session,

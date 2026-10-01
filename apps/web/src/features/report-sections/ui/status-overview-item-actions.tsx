@@ -145,10 +145,11 @@ function MoveMenuItem({
 }) {
   const nextWeek = item.source === "current";
   const focusKey = `move:${item.source}:${item.stableId ?? item.key}`;
+  const label = nextWeek ? "Move to next week" : "Move to this week";
   return (
     <MenuItem
-      label={nextWeek ? "Move to next week" : "Move to this week"}
-      ariaLabel={`Move ${shortItemLabel(item.text)} to ${nextWeek ? "next week" : "this week"}`}
+      label={label}
+      ariaLabel={`${label}: ${shortItemLabel(item.text)}`}
       focusKey={focusKey}
       onActivate={() => {
         onDone();

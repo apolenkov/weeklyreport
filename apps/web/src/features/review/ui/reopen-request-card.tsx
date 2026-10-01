@@ -1,3 +1,6 @@
+import { isReopenAutoCloseNote } from "@customreport/shared";
+import { type Ref, useEffect, useRef } from "react";
+
 import {
   formatDateTime,
   formatPeriodRangeWithYear,
@@ -26,6 +29,13 @@ export interface ReopenRequest {
   };
 }
 
+// The system closes superseded requests as `rejected` with a shared auto-close
+// note (openspec/specs/reopen-requests); the reviewer FK cannot mark it because
+// deleting a user nulls it.
+function isSystemClosed(r: ReopenRequest): boolean {
+  return r.status === "rejected" && isReopenAutoCloseNote(r.reviewNote);
+}
+
 const STATUS_LABEL: Record<ReopenRequest["status"], string> = {
   pending: "Pending",
   approved: "Approved",
@@ -39,6 +49,9 @@ const STATUS_PALETTE: Record<ReopenRequest["status"], string> = {
   rejected:
     "bg-[var(--color-status-blocked-bg)] text-[var(--color-destructive)]",
 };
+
+const NEUTRAL_PALETTE =
+  "bg-[var(--color-surface-hover)] text-[var(--color-muted-foreground)]";
 
 function formatPeriod(
   periodStart: string,
@@ -56,6 +69,7 @@ function ReopenRequestMeta({
 }: {
   readonly request: ReopenRequest;
 }) {
+  const systemClosed = isSystemClosed(r);
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-2">
@@ -66,9 +80,9 @@ function ReopenRequestMeta({
           {r.requestedBy.email}
         </span>
         <span
-          className={`rounded-[var(--radius-pill)] px-2 py-0.5 text-xs font-bold uppercase tracking-wide ${STATUS_PALETTE[r.status]}`}
+          className={`rounded-[var(--radius-pill)] px-2 py-0.5 text-xs font-bold uppercase tracking-wide ${systemClosed ? NEUTRAL_PALETTE : STATUS_PALETTE[r.status]}`}
         >
-          {STATUS_LABEL[r.status]}
+          {systemClosed ? "Auto-closed" : STATUS_LABEL[r.status]}
         </span>
       </div>
       <div className="text-xs text-[var(--color-muted-foreground)]">
@@ -103,7 +117,7 @@ function ReopenRequestNotes({
       {r.status !== "pending" && r.reviewNote && (
         <div className="mt-3 rounded-[var(--radius)] border border-[var(--color-border)] p-3 text-sm">
           <div className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
-            Head Comment
+            {isSystemClosed(r) ? "System Note" : "Head Comment"}
           </div>
           <div className="mt-1 whitespace-pre-wrap">{r.reviewNote}</div>
           {r.reviewedBy && r.reviewedAt && (
@@ -120,17 +134,20 @@ function ReopenRequestNotes({
 function RespondButton({
   onStartRespond,
   isSaving,
+  buttonRef,
 }: {
   readonly onStartRespond: () => void;
   readonly isSaving: boolean;
+  readonly buttonRef: Ref<HTMLButtonElement>;
 }) {
   return (
     <div className="flex gap-2">
       <button
+        ref={buttonRef}
         type="button"
         disabled={isSaving}
         onClick={onStartRespond}
-        className="btn-press inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-transparent px-3 py-1.5 text-xs font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2"
+        className="btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-transparent px-3 py-1.5 text-xs font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2"
       >
         Respond
       </button>
@@ -161,12 +178,31 @@ export function ReopenRequestCard({
   readonly onReject: () => void;
   readonly onApprove: () => void;
 }) {
+  const respondButtonRef = useRef<HTMLButtonElement>(null);
+  const noteFieldRef = useRef<HTMLTextAreaElement>(null);
+  const restoreFocusAfterCancelRef = useRef(false);
+
+  // Opening the form focuses its field; Cancel returns to the Respond button
+  // that the form replaced. A decision is handled by the list (ReopenTab).
+  useEffect(() => {
+    if (isResponding) {
+      noteFieldRef.current?.focus();
+    } else if (restoreFocusAfterCancelRef.current) {
+      restoreFocusAfterCancelRef.current = false;
+      respondButtonRef.current?.focus();
+    }
+  }, [isResponding]);
+
   return (
     <li className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-4 shadow-[var(--shadow-card-resting)]">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <ReopenRequestMeta request={r} />
         {r.status === "pending" && !isResponding && (
-          <RespondButton onStartRespond={onStartRespond} isSaving={isSaving} />
+          <RespondButton
+            onStartRespond={onStartRespond}
+            isSaving={isSaving}
+            buttonRef={respondButtonRef}
+          />
         )}
       </div>
 
@@ -178,8 +214,12 @@ export function ReopenRequestCard({
           note={note}
           isPending={isSaving}
           pendingDecision={pendingDecision}
+          textareaRef={noteFieldRef}
           onNoteChange={onNoteChange}
-          onCancel={onCancelRespond}
+          onCancel={() => {
+            restoreFocusAfterCancelRef.current = true;
+            onCancelRespond();
+          }}
           onReject={onReject}
           onApprove={onApprove}
         />

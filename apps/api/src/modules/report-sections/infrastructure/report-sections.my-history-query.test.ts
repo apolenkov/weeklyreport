@@ -4,6 +4,13 @@ import { describe, expect, it, vi } from "vitest";
 import { publishedSnapshotFixture } from "../../../test-utils/prisma-test-helper.js";
 import { ReportSectionDomainError } from "../application/report-sections.contract.js";
 import {
+  baseRow,
+  type FabricatedRow,
+  fullProjectStatus,
+  fullRisk,
+  OWNED_PROJECT,
+} from "./__tests__/report-sections-prisma-harness.js";
+import {
   decodeMyHistoryCursor,
   queryMyHistoryPage,
 } from "./report-sections.my-history-query.js";
@@ -55,6 +62,7 @@ describe("queryMyHistoryPage", () => {
       sectionId,
       reportId,
       reportStatus: "published",
+      reopened: false,
     });
     expect(findManyLive).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -129,6 +137,74 @@ describe("queryMyHistoryPage", () => {
     },
   );
 
+  it("counts a live product's traffic light after the covering-risk floor, as the report does", async () => {
+    const at = new Date("2026-04-14T12:00:00Z");
+    const greenStatus = [
+      fullProjectStatus({ projectId: OWNED_PROJECT, status: "green" }),
+    ];
+    const blockedRisk = fullRisk({
+      projectId: OWNED_PROJECT,
+      severity: "blocked",
+      stageNames: ["Development"],
+      project: { name: "Owned Project" },
+    });
+    const prismaFor = (rows: unknown[]) => {
+      const client = {
+        reportSection: { findMany: vi.fn(() => Promise.resolve(rows)) },
+        report: { findMany: vi.fn(() => Promise.resolve([])) },
+      };
+      return {
+        $transaction: (operation: (tx: typeof client) => unknown) =>
+          Promise.resolve(operation(client)),
+      } as never;
+    };
+    const lights = async (overrides: Partial<FabricatedRow>) => {
+      const result = await queryMyHistoryPage(
+        prismaFor([liveRow(sectionId, at, at, overrides)]),
+        authorId,
+        { limit: 20 },
+      );
+      return result.items[0]?.trafficLights;
+    };
+
+    expect(await lights({ projectStatuses: greenStatus })).toEqual({
+      green: 1,
+      yellow: 0,
+      red: 0,
+    });
+    expect(
+      await lights({ projectStatuses: greenStatus, risks: [blockedRisk] }),
+    ).toEqual({ green: 0, yellow: 0, red: 1 });
+  });
+
+  it("flags a live section of a reopened period as reopened", async () => {
+    const at = new Date("2026-04-14T12:00:00Z");
+    const open = liveRow(sectionId, at, at);
+    const reopened = {
+      ...open,
+      id: "a0000000-0000-4000-8000-000000000013",
+      report: { ...open.report, periodStatus: "reopened" },
+    };
+    const client = {
+      reportSection: {
+        findMany: vi.fn(() => Promise.resolve([open, reopened])),
+      },
+      report: { findMany: vi.fn(() => Promise.resolve([])) },
+    };
+    const prisma = {
+      $transaction: (operation: (tx: typeof client) => unknown) =>
+        Promise.resolve(operation(client)),
+    } as never;
+
+    const { items } = await queryMyHistoryPage(prisma, authorId, {
+      limit: 20,
+    });
+
+    expect(
+      Object.fromEntries(items.map((e) => [e.sectionId, e.reopened])),
+    ).toEqual({ [sectionId]: false, [reopened.id]: true });
+  });
+
   it.each([
     ["a schema-invalid payload", { reportId }],
     [
@@ -185,11 +261,20 @@ describe("queryMyHistoryPage", () => {
   );
 });
 
-function liveRow(id: string, periodStart: Date, createdAt: Date) {
+// Full include-shaped row: the query maps it through the report's own mapper.
+function liveRow(
+  id: string,
+  periodStart: Date,
+  createdAt: Date,
+  overrides: Partial<FabricatedRow> = {},
+) {
   return {
-    id,
-    status: "submitted",
-    submittedAt: createdAt,
+    ...baseRow({
+      id,
+      status: "submitted",
+      submittedAt: createdAt,
+      ...overrides,
+    }),
     createdAt,
     updatedAt: createdAt,
     report: {
@@ -198,13 +283,9 @@ function liveRow(id: string, periodStart: Date, createdAt: Date) {
       periodEnd: new Date(periodStart.getTime() + 4 * 86_400_000),
       status: "draft",
       archived: false,
+      periodStatus: "open",
       publishedAt: null,
     },
-    items: [],
-    risks: [],
-    decisions: [],
-    projectStatuses: [],
-    stageStatuses: [],
   };
 }
 

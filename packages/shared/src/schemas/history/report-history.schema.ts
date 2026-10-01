@@ -78,6 +78,9 @@ export const compiledHistoryEntrySchema = z
     periodEnd: reportDate(),
     publishedAt: z.coerce.date().nullable(),
     archived: z.boolean(),
+    // The period is live again after a reopen; the counts below still describe
+    // the last publication.
+    reopened: z.boolean(),
     publishedByName: z.string().min(1),
     trafficLights: z
       .object({
@@ -113,6 +116,9 @@ export const myHistoryEntrySchema = z
     reportStatus: reportStatusSchema,
     sectionStatus: reportSectionStatusSchema,
     archived: z.boolean().optional(),
+    // The period is live again after a reopen; publishedAt still names the
+    // last publication.
+    reopened: z.boolean().optional(),
     submittedAt: z.coerce.date().nullable(),
     publishedAt: z.coerce.date().nullable(),
     createdAt: z.coerce.date().optional(),

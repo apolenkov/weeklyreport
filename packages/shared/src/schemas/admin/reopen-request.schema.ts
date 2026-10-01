@@ -4,6 +4,33 @@ const DEFAULT_REOPEN_REQUEST_PAGE_LIMIT = 50;
 const MAX_REOPEN_REQUEST_PAGE_LIMIT = 100;
 const MAX_REOPEN_REQUEST_SEARCH_LENGTH = 500;
 
+/** Why a lead cannot request a section reopen; the read model ships it to the UI. */
+export type ReopenBlockedReason =
+  | "not_submitted"
+  | "period_archived"
+  | "period_closed"
+  | "pending_request_exists";
+
+const REOPEN_AUTO_CLOSE_PREFIX = "Auto-closed:";
+
+/**
+ * Review notes the system writes when it closes a pending reopen request
+ * itself; the UI recognises them by exact text, as the reviewer FK is nulled when
+ * a user is deleted and cannot mark a system closure.
+ */
+export const REOPEN_AUTO_CLOSE_NOTES = {
+  periodReopened: `${REOPEN_AUTO_CLOSE_PREFIX} the period was reopened.`,
+  sectionAlreadyReopened: `${REOPEN_AUTO_CLOSE_PREFIX} the section was already reopened.`,
+} as const;
+
+/** True when a review note was written by a system auto-close. */
+export function isReopenAutoCloseNote(note: string | null): boolean {
+  return (
+    note !== null &&
+    (Object.values(REOPEN_AUTO_CLOSE_NOTES) as string[]).includes(note)
+  );
+}
+
 /** Filters supported by the admin reopen-request list endpoint. */
 export const reopenRequestStatusFilterSchema = z.enum([
   "pending",

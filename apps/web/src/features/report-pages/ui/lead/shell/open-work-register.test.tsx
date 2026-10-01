@@ -67,11 +67,17 @@ describe("OpenWorkRegister", () => {
     expect(screen.getAllByText(/Published · Jul 6–12, 2026/)).toHaveLength(2);
     expect(screen.getByText("Pause reason: Waiting for legal")).toBeVisible();
     expect(screen.getByText("Deferral reason was not recorded.")).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Resume paused work" }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Resume paused work: Provider rollout, Jul 6–12, 2026",
+      }),
+    );
     expect(onOpen).toHaveBeenCalledTimes(1);
     expect(onOpen.mock.calls[0]?.[0].action.kind).toBe("resume");
     expect(
-      screen.getByRole("button", { name: "Replan deferred work" }),
+      screen.getByRole("button", {
+        name: "Replan deferred work: Invoice review, Jul 6–12, 2026",
+      }),
     ).toBeEnabled();
   });
 
@@ -120,11 +126,15 @@ describe("OpenWorkRegister", () => {
 
     expect(screen.getByText("Completed and cancelled work (1)")).toBeVisible();
     expect(
-      screen.queryByRole("button", { name: "Reopen in this report" }),
+      screen.queryByRole("button", {
+        name: "Reopen in this report: Provider rollout, Jul 6–12, 2026",
+      }),
     ).not.toBeVisible();
     fireEvent.click(screen.getByText("Completed and cancelled work (1)"));
     expect(
-      screen.getByRole("button", { name: "Reopen in this report" }),
+      screen.getByRole("button", {
+        name: "Reopen in this report: Provider rollout, Jul 6–12, 2026",
+      }),
     ).toBeEnabled();
     expect(
       screen.getByText("Cancellation reason: Contract ended"),
@@ -170,7 +180,11 @@ describe("OpenWorkRegister", () => {
     expect(
       screen.getByText("Pause reason: Not scheduled for the new week"),
     ).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Resume paused work" }));
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Resume paused work: Provider rollout, Jul 6–12, 2026",
+      }),
+    );
     expect(onOpen).toHaveBeenCalledTimes(1);
     expect(onOpen.mock.calls[0]?.[0].action.kind).toBe("resume");
     // The projected row does not relabel the stored status.

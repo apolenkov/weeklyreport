@@ -1,3 +1,4 @@
+import { REOPEN_AUTO_CLOSE_NOTES } from "@customreport/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -87,5 +88,62 @@ describe("ReopenRequestCard", () => {
     expect(
       screen.queryByRole("button", { name: "Respond" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("labels a request closed by the period reopen as a system action", () => {
+    renderCard({
+      ...REQUEST,
+      status: "rejected",
+      reviewNote: REOPEN_AUTO_CLOSE_NOTES.periodReopened,
+      reviewedAt: "2026-07-28T12:00:00.000Z",
+      reviewedBy: null,
+    });
+
+    expect(screen.getByText("Auto-closed")).toBeInTheDocument();
+    expect(screen.queryByText("Rejected")).not.toBeInTheDocument();
+    expect(screen.getByText("System Note")).toBeInTheDocument();
+    expect(screen.queryByText("Head Comment")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(REOPEN_AUTO_CLOSE_NOTES.periodReopened),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps a head rejection labelled Rejected with the head comment", () => {
+    renderCard({
+      ...REQUEST,
+      status: "rejected",
+      reviewNote: "Not now.",
+      reviewedAt: "2026-07-28T12:00:00.000Z",
+      reviewedBy: { name: "Head User" },
+    });
+
+    expect(screen.getByText("Rejected")).toBeInTheDocument();
+    expect(screen.getByText("Head Comment")).toBeInTheDocument();
+  });
+
+  it("labels a stale-approval closure as a system action even though a reviewer is set", () => {
+    renderCard({
+      ...REQUEST,
+      status: "rejected",
+      reviewNote: REOPEN_AUTO_CLOSE_NOTES.sectionAlreadyReopened,
+      reviewedAt: "2026-07-28T12:00:00.000Z",
+      reviewedBy: { name: "Head User" },
+    });
+
+    expect(screen.getByText("Auto-closed")).toBeInTheDocument();
+    expect(screen.getByText("System Note")).toBeInTheDocument();
+  });
+
+  it("keeps a human rejection labelled Rejected after its reviewer was deleted", () => {
+    renderCard({
+      ...REQUEST,
+      status: "rejected",
+      reviewNote: "Not now.",
+      reviewedAt: "2026-07-28T12:00:00.000Z",
+      reviewedBy: null,
+    });
+
+    expect(screen.getByText("Rejected")).toBeInTheDocument();
+    expect(screen.getByText("Head Comment")).toBeInTheDocument();
   });
 });

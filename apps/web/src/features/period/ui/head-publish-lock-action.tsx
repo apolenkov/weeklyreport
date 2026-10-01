@@ -126,8 +126,12 @@ export function HeadPublishLockAction({
       pendingCount={pendingCount}
       totalLeads={total}
       periodStatus={view.period.periodStatus}
-      onPublish={() => publishMut.mutate({ reportId: view.period.reportId })}
-      onReopen={() => reopenMut.mutate({ reportId: view.period.reportId })}
+      onPublish={(onSuccess) =>
+        publishMut.mutate({ reportId: view.period.reportId }, { onSuccess })
+      }
+      onReopen={(onSuccess) =>
+        reopenMut.mutate({ reportId: view.period.reportId }, { onSuccess })
+      }
       isPending={publishMut.isPending || reopenMut.isPending}
       canPublish={canPublishReport}
     />

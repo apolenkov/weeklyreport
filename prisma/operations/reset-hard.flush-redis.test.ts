@@ -144,9 +144,7 @@ describe("flushRedis", () => {
     vi.stubEnv("REDIS_DB", "15");
     const flushRedis = await loadFlushRedis();
 
-    await expect(flushRedis()).rejects.toThrow(
-      /REDIS_PORT must be set in \.env/,
-    );
+    await expect(flushRedis()).rejects.toThrow(/REDIS_PORT must be set/);
   });
 });
 

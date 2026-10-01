@@ -38,4 +38,28 @@ describe("DialogSurface", () => {
       "true",
     );
   });
+
+  it("locks page scroll while mounted and restores it once the last dialog unmounts", () => {
+    document.body.style.overflow = "scroll";
+    const surface = (label: string) => (
+      <DialogSurface
+        surfaceRef={createRef()}
+        onDismiss={vi.fn()}
+        surfaceClassName="surface"
+        ariaLabel={label}
+      >
+        <span>{label}</span>
+      </DialogSurface>
+    );
+    const outer = render(surface("Outer"));
+    expect(document.body.style.overflow).toBe("hidden");
+
+    const inner = render(surface("Inner"));
+    outer.unmount();
+    expect(document.body.style.overflow).toBe("hidden");
+
+    inner.unmount();
+    expect(document.body.style.overflow).toBe("scroll");
+    document.body.style.overflow = "";
+  });
 });

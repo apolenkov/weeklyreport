@@ -80,7 +80,7 @@ export function PeriodsTabDialogs({
         <ConfirmationDialog
           open={true}
           title="Publish this period?"
-          description={`${publishConfirm.weekLabel ?? formatWeekLabel(publishConfirm.periodStart)} (${formatPeriodRangeWithYear(publishConfirm.periodStart, publishConfirm.periodEnd)}) will be published immediately, without waiting for the deadline. Leads will no longer be able to edit their sections until the period is reopened.`}
+          description={`${publishConfirm.weekLabel ?? formatWeekLabel(publishConfirm.periodStart)} (${formatPeriodRangeWithYear(publishConfirm.periodStart, publishConfirm.periodEnd)}) will be published immediately, without waiting for the deadline. Leads can no longer edit this period.`}
           confirmLabel={publishIsPending ? "Publishing…" : "Publish"}
           testId="periods-publish-dialog"
           isPending={publishIsPending}
@@ -93,7 +93,7 @@ export function PeriodsTabDialogs({
         <ConfirmationDialog
           open={true}
           title="Reopen this period?"
-          description="The published report will be unlocked. Leads will be able to edit their sections again. The current published version will be replaced when you publish again."
+          description="The published report will be unlocked. Leads will be able to edit their sections again. Sections they already submitted return to draft and must be submitted again. The current published version will be replaced when you publish again."
           confirmLabel={reopenIsPending ? "Reopening…" : "Reopen"}
           testId="periods-reopen-dialog"
           isPending={reopenIsPending}
