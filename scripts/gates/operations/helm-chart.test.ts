@@ -357,7 +357,7 @@ test("the backup pod shares the postgres node and the job is bounded in time", (
     podSpecOf(cronJob).affinity?.podAffinity
       ?.requiredDuringSchedulingIgnoredDuringExecution ?? [];
   assert.equal(term?.topologyKey, "kubernetes.io/hostname");
-  assert.deepEqual(term?.labelSelector?.matchLabels, {
+  assert.deepEqual(term.labelSelector?.matchLabels, {
     "app.kubernetes.io/name": "weeklyreport",
     "app.kubernetes.io/component": "postgres",
   });
