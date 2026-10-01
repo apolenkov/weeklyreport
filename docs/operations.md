@@ -373,13 +373,18 @@ mutations, and SSE rather than falling back to SQLite.
 
 Images are the unit of rollback; the database is not.
 
-- **Application only**: production image rollback is **BLOCKED** until the
-  delivery platform supplies immutable API/Web image references and read-back.
-  The repository-owned Compose file currently builds from the checked-out
-  source and has no image-tag input, so rebuilding an older commit is a
-  pre-production recovery exercise, not proof that the deployed artifact can
-  be restored. Do not describe a local rebuild or a dangling Docker image as a
-  production rollback.
+- **Application only, Compose**: production image rollback is **BLOCKED**
+  until the delivery platform supplies immutable API/Web image references and
+  read-back. The Compose file builds from the checked-out source, so
+  rebuilding an older commit is a pre-production recovery exercise, not proof
+  that the deployed artifact can be restored. Do not describe a local rebuild
+  or a dangling Docker image as a production rollback.
+- **Application only, Kubernetes**: the chart selects images by `images.tag`
+  (the commit SHA pushed by the `build-images` CI job), so rolling back is
+  `helm rollback` or `helm upgrade --set images.tag=<older SHA>` against an
+  image still in the registry (`docs/kubernetes.md`). This closes the
+  image-source blocker only after the first successful image push and a
+  deployment read-back exist; until then it is not a production rollback.
 - **Migration shipped**: rolling the image back does not roll the schema back,
   and Prisma has no down-migrations here. Either fix forward with a new
   migration, or restore the pre-deploy dump and accept losing writes made
@@ -397,16 +402,18 @@ Images are the unit of rollback; the database is not.
 
 ## CI
 
-`.gitlab-ci.yml` runs the lint/test lanes only (`node-toolchain`, `quality`,
-`dependency-scan`, `coverage`, `api-integration`, `migrate-reset`; see
-`docs/gitlab-ci.md`). The `api-integration` lane runs the API unit and
+`.gitlab-ci.yml` runs the lint/test lanes (`node-toolchain`, `quality`,
+`dependency-scan`, `coverage`, `api-integration`, `migrate-reset`), one gated
+image build (`build-images`, rootless BuildKit, no Docker-in-Docker), and an
+optional manual `deploy-production` job; see `docs/gitlab-ci.md`. The `api-integration` lane runs the API unit and
 integration suites once, serially, against disposable Postgres/Redis/Mailpit
 (in-job loopback Postgres; Redis and Mailpit as service aliases) and enforces the API coverage thresholds.
 The `coverage` lane enforces Web coverage without starting a second dependency
 stack; the `quality` lane runs lint, typecheck, and unit tests, and
 `migrate-reset` covers migration drift. The complete workspace build, the
-production image build, PDF export, and browser acceptance are not CI lanes and
-stay required evidence collected outside CI. Local
+PDF export, browser acceptance, and the read-back of a deployment are not CI
+evidence and stay required evidence collected outside CI; a successful
+`build-images` run produces images, not that evidence. Local
 commands remain the fast gate; run the same checks before pushing.
 
 ## External first-production prerequisites

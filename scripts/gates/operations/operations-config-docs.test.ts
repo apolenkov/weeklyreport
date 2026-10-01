@@ -647,7 +647,11 @@ test("external production controls remain blocked until external read-back", () 
   );
   assert.match(
     operationsText,
-    /production image rollback is \*\*BLOCKED\*\*[\s\S]*no image-tag input/i,
+    /production image rollback is \*\*BLOCKED\*\*[\s\S]*builds from the checked-out\s+source/i,
+  );
+  assert.match(
+    operationsText,
+    /closes the\s+image-source blocker only after the first successful image push/i,
   );
   assert.doesNotMatch(operationsText, /redeploy the previous image tag/i);
 });
