@@ -141,11 +141,11 @@ their credentials — can overlap, and MUST keep `CHROMIUM_CLEAR_COOKIES=true`,
 `CHROMIUM_CLEAR_STORAGE=true`, and `CHROMIUM_CLEAR_CACHE=true` so each
 conversion starts with an empty cookie jar, cleared localStorage, and an
 empty HTTP cache — localStorage and cacheable bytes were measured crossing
-the conversion boundary without those flags. sessionStorage, IndexedDB,
-Cache Storage API, and service-worker state are not covered by this
-evidence; they are accepted under the reachable-print-source audit (no
-persistent-storage API in the `/print` tree), which MUST be re-run on the
-final implementation candidate. Under serialization the renderer per-request
+the conversion boundary without those flags. The flags do not clear
+IndexedDB, and a tab orphaned by a client abort (only when the API process
+dies mid-render) keeps running until its own deadline beside later
+conversions; both are accepted because the `/print` tree uses no
+persistent-storage API (reachable-print-source audit). Under serialization the renderer per-request
 deadline includes queue waiting, so a queued conversion can exhaust its own
 timeout before receiving a slot — a bounded, retryable outcome. This
 invariant MUST be asserted by the production compose gate against the

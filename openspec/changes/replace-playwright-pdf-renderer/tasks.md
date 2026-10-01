@@ -194,7 +194,7 @@ write or update the colocated test first, then the code.
 
 ## 6. Runtime acceptance (real compose stack)
 
-- [ ] 6.1 Execute the design "Runtime Acceptance" matrix items 1–16 against
+- [x] 6.1 Execute the design "Runtime Acceptance" matrix items 1–16 against
       the real stack, running the two modes sequentially — compose
       (`pnpm dev:watch`) first, then host-source `pnpm dev` — not as sixteen
       independent environments; one real compose run may prove several items.
@@ -228,7 +228,19 @@ write or update the colocated test first, then the code.
       inadequate headroom stops the run for a data-driven cap revision),
       and the expired/absent-token path — verify every item produces
       manifest-bound evidence tied to the exact candidate SHA, with
-      exclusions reported rather than claimed. Status (2026-09-30), per-item results in `/Users/wrk/.local/state/session-review/weeklyreport-20260929/openspec-fix/pdf-matrix.json`: items 2, 3 (re-exported after the print CSS fix, `/Users/wrk/.local/state/session-review/weeklyreport-20260929/openspec-fix/after-export.pdf`), 5, 6, 8, 10, 12, 13, 14, 15 verified; items 4, 7, 9, 11, 16 verified in part (residual variants in TASK-145.11.05); item 1 only for the compose gotenberg service, not the full `pnpm dev:watch` stack, and no compose-first ordering or SHA-bound manifest (TASK-145.11.04). Stays unchecked.
+      exclusions reported rather than claimed. Done 2026-10-01 on 58d65df03
+      (tree of main ad8d0bb76), compose first, then host-source and the
+      production build; manifest with per-item evidence and sha256:
+      `~/.local/state/session-review/weeklyreport-20260929/pdf-final/58d65df03/manifest.json`,
+      each stage re-checked by an independent verifier. Items 1–5 and 8–16
+      pass; item 15 on a non-dev API (`AUTH_DEV_MODE=false`). The manifest
+      records item 6 and the IndexedDB part of item 7 as FAIL; both are
+      accepted exceptions recorded in design.md (orphan tab after a client
+      abort; IndexedDB not cleared). The compose stage ran `dev:watch`
+      through a wrapper with `--no-recreate --no-deps` so the shared
+      postgres/redis containers stayed untouched. Item 4: no product state
+      makes `/print` itself answer non-2xx, so `409` is shown with the web
+      origin down.
 
 ## 7. Candidate review
 
@@ -240,8 +252,9 @@ write or update the colocated test first, then the code.
       Fable review on main 19cc7762b: no blocking findings, no leftover `playwright`
       match; the SSR print view, the env comment and a body-read timeout test were
       reconciled afterwards.
-- [ ] 7.2 Run the final `astra_reviewer` review of the candidate after all
+- [x] 7.2 Run the final `astra_reviewer` review of the candidate after all
       checks pass — verify the verdict is recorded and any blocking finding is
-      returned to the owning task before the change is called done. Open until
-      6.1 passes on the compose stack (TASK-145.11.04/05); the reviewer is an
-      independent model, not necessarily `astra_reviewer`.
+      returned to the owning task before the change is called done. Done 2026-10-01 by an
+      independent Fable review of main ad8d0bb76 plus the acceptance edits:
+      APPROVE WITH CHANGES, all six findings applied (REMOVED delta for the
+      two attempt-count requirements, exception wording, stale design notes).
