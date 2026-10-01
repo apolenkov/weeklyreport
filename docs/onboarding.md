@@ -269,7 +269,7 @@ workspace, Prisma-тесты и проверки repository cleanliness и opera
 обычная локальная разработка и последовательные тесты используют loopback-базу
 `customreport_e2e` —
 образец [`.env.test.example`](../.env.test.example) несёт только E2E-цель.
-Для TASK-133 базы `customreport_e2e_lane_a_test` и
+Для изолированных приёмочных запусков базы `customreport_e2e_lane_a_test` и
 `customreport_e2e_lane_b_test` уже существуют; пользоваться ими можно только
 после проверки владельца процесса и точного адреса. Остальные lane-базы не
 подготовлены и не должны создаваться без нового распоряжения владельца.

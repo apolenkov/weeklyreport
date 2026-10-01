@@ -45,7 +45,7 @@ the acceptance authority; no custom replacement gate substitutes for them.
 
 ## Current hosting and CI boundary
 
-The only configured remote is the private GitLab project (decision-067).
+The only configured remote is the private GitLab project ([ADR 0019](adr/0019-gitlab-is-the-only-remote-and-ci-runs-lint-and-test-only.md)).
 `.gitlab-ci.yml` runs the lint/test lanes described in `docs/gitlab-ci.md`;
 the production build, Docker build, PDF export, and browser acceptance are not
 CI lanes. Repository files
