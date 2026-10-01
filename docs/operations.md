@@ -28,6 +28,61 @@ eleven services:
 `migrate` and `backup` talk to `postgres` **directly**, bypassing pgbouncer:
 DDL and `pg_dump` need a session that outlives a single transaction.
 
+## Host requirements
+
+Facts below come from `docker-compose.prod.yml`; sizing is a **recommendation**,
+not a measurement.
+
+- **Software.** Linux with Docker Engine and Compose v2 (`docker compose`) plus
+  `git`. No Node or pnpm on the host: `api`, `migrate`, `web`, and `backup` are
+  built on the host from this checkout (`up --build`), inside pinned
+  `node:26.8.1` images. The repository pins no minimum Docker/Compose version
+  or distribution; the file needs `depends_on` with
+  `service_completed_successfully` and `deploy.resources.limits`.
+- **Memory limits** (no CPU limits are set; `migrate` and `config-guard` are
+  one-shot and unlimited):
+
+  | Service     | Limit                    |
+  | ----------- | ------------------------ |
+  | `api`       | 2 GiB                    |
+  | `gotenberg` | 1 GiB                    |
+  | `postgres`  | 512 MiB                  |
+  | `web`       | 512 MiB                  |
+  | `pgbouncer` | 128 MiB                  |
+  | `redis`     | 256 MiB                  |
+  | `backup`    | 256 MiB                  |
+  | `caddy`     | 256 MiB                  |
+  | **Sum**     | 4992 MiB (about 4.9 GiB) |
+
+- **Recommended VM: 4 vCPU, 8 GiB RAM, 40+ GiB SSD.** The limits alone fill
+  about 5 GiB; the rest is headroom for the OS, Docker, and the on-host image
+  build (pnpm, Next, Nest), whose peak is unmeasured. Disk covers images, the
+  volumes below, and dumps; growth rates are unmeasured. The `observability`
+  overlay sets no limits and adds its own `lgtmdata` volume; size it separately
+  if enabled.
+- **Inbound.** Only `caddy` publishes ports: `HTTP_PORT` (80/tcp), `HTTPS_PORT`
+  (443/tcp), and `HTTPS_PORT_QUIC` (443/udp). Open those in the host firewall.
+  `CADDY_SITE_ADDRESS` needs a DNS A/AAAA record to the host so Caddy can
+  obtain a Let's Encrypt certificate.
+- **Outbound.** Let's Encrypt (ACME); image registries during builds; the SMTP
+  server (`SMTP_HOST`/`SMTP_PORT`; production has no mail container); the SAML
+  identity provider certificate and URLs from the `KEYCLOAK_SAML_*` variables
+  (the browser, not the host, talks to the IdP); optionally the origins in
+  `AI_PROVIDER_ALLOWED_ORIGINS` (data stays blocked until
+  `REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED=true`) and a Sentry-compatible
+  receiver when `SENTRY_DSN` is set. `CADDY_CSP_REPORT_URI` is an external
+  collector that browsers call. `gotenberg` prints the `PDF_BASE_URL` origin,
+  so the host must reach its own public address; this is untested on a real
+  network.
+- **Storage.** Named volumes: `pgdata`, `pgbackups`, `redisdata` (queues),
+  `pdfdata` (exported PDFs), `caddy_data` (certificates), `caddy_config`.
+  `pgbackups` on the same disk is not off-host protection; see
+  [Backups](#backups). Keep a copy of `.env.production` off the host too, including `AI_PROVIDER_CONFIG_ENCRYPTION_KEY`.
+- **Still undecided:** SAML provider, SMTP provider, off-host backup target,
+  alert receiver, and image promotion; see
+  [External first-production prerequisites](#external-first-production-prerequisites).
+  Required variables are listed in [First deploy](#first-deploy).
+
 ## First deploy
 
 1. **Write the environment file.** Copy
