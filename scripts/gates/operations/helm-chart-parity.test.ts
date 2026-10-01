@@ -27,17 +27,20 @@ interface ComposeModel {
 
 const compose = parse(composeSource, { maxAliasCount: 50 }) as ComposeModel;
 
-const schema = JSON.parse(
-  readFileSync(join(chartDirectory, "values.schema.json"), "utf8"),
-) as {
-  readonly required: readonly string[];
-  readonly properties: Readonly<Record<string, SchemaNode>>;
-};
-
 interface SchemaNode {
   readonly required?: readonly string[];
   readonly properties?: Readonly<Record<string, SchemaNode>>;
 }
+
+interface ChartSchema extends SchemaNode {
+  readonly properties: Readonly<Record<string, SchemaNode>> & {
+    readonly api: SchemaNode;
+  };
+}
+
+const schema = JSON.parse(
+  readFileSync(join(chartDirectory, "values.schema.json"), "utf8"),
+) as ChartSchema;
 
 /** Compose `${VAR:?}` inputs the chart derives or does not need. */
 const DERIVED_OR_UNNEEDED_INPUTS = new Set([
@@ -156,7 +159,7 @@ test("every compose required input is a required chart value or a listed excepti
   );
   const required = new Set(requiredPaths(schema, ""));
   const secretKeys = new Set(
-    declaredPaths(schema as SchemaNode, "").filter((path) =>
+    declaredPaths(schema, "").filter((path) =>
       path.startsWith("secrets.values."),
     ),
   );

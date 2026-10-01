@@ -10,8 +10,9 @@ templating with a required key absent MUST fail before any object is created.
 The only compose `${VAR:?}` inputs without a required chart value are those the
 chart derives or does not need: `HTTP_PORT`, `HTTPS_PORT`, `HTTPS_PORT_QUIC`,
 `CADDY_SITE_ADDRESS`, `CADDY_ACME_EMAIL`, `BACKUP_INTERVAL_SECONDS`,
-`PDF_BASE_URL`, `CHROMIUM_ALLOW_LIST`, `GOTENBERG_URL`, and
-`OTEL_SERVICE_VERSION`; the parity gate keeps this list.
+`PDF_BASE_URL`, `CHROMIUM_ALLOW_LIST`, `GOTENBERG_URL`,
+`OTEL_SERVICE_VERSION`, and the web build arguments `NEXT_PUBLIC_*` (set by the CI
+image job); the parity gate keeps this list.
 The database name MUST match letters, digits, and underscores. When the
 database password is supplied through values it MUST be checked at template
 time against the URL-safe unreserved character set; when it comes from an
