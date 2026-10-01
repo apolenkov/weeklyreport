@@ -39,7 +39,7 @@ export interface PodSpec {
   };
 }
 
-export interface ManifestSpec {
+interface ManifestSpec {
   readonly replicas?: number;
   readonly strategy?: { readonly type: string };
   readonly ports?: readonly { readonly port: number }[];

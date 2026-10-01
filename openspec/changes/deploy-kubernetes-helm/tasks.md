@@ -148,7 +148,7 @@
 
 ## 9. Gates before "done"
 
-- [ ] 9.1 `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm test`,
+- [x] 9.1 `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm test`,
       `pnpm spec:check`, `openspec validate deploy-kubernetes-helm --strict`
       all green, results quoted (a gate not run is not passed).
 - [ ] 9.2 Independent review of the final SHA by another model, then green CI on
