@@ -4,7 +4,10 @@ import type {
 } from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { buildSnapshotResult } from "./weekly-report-read-model.js";
+import {
+  buildPublishedReadModelFromSnapshot,
+  buildSnapshotResult,
+} from "./weekly-report-read-model.js";
 
 const GROUP = "00000000-0000-4000-8000-000000000099";
 const authorIds = Array.from(
@@ -64,5 +67,17 @@ describe("buildSnapshotResult progress", () => {
 
   it("counts only the scoped snapshot for a lead", () => {
     expect(progressFor("lead")).toEqual([0, 0]);
+  });
+});
+
+describe("buildPublishedReadModelFromSnapshot orgProgress", () => {
+  it("prefers the org-wide progress frozen into a scoped PDF snapshot", () => {
+    const scoped = {
+      ...snapshot,
+      sections: [],
+      orgProgress: { submitted: 9, total: 9 },
+    } as unknown as PublishedReportSnapshot;
+    const model = buildPublishedReadModelFromSnapshot(scoped, metadata);
+    expect([model.submissionCount, model.totalLeads]).toEqual([9, 9]);
   });
 });

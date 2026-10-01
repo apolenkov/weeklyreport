@@ -9,13 +9,13 @@ describe("TabHeader responsive composition", () => {
       <TabHeader
         title="Products"
         search={<input aria-label="Search products" />}
-        actions={<button type="button">Add Product</button>}
+        actions={<button type="button">Add product</button>}
       />,
     );
 
     const header = screen.getByTestId("products-tab-header");
     const actionGroup = screen.getByRole("button", {
-      name: "Add Product",
+      name: "Add product",
     }).parentElement;
 
     expect(header).toHaveClass("flex-col", "xl:flex-row");

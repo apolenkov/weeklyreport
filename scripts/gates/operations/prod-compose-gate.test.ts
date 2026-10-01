@@ -143,7 +143,7 @@ const backupDockerfile = readFileSync(
 const apiDockerfile = readFileSync(resolve("Dockerfile.api"), "utf8");
 const webDockerfile = readFileSync(resolve("Dockerfile.web"), "utf8");
 const caddyfileContent = readFileSync(
-  resolve("deploy/caddy/Caddyfile"),
+  resolve("deploy/helm/weeklyreport/files/Caddyfile"),
   "utf8",
 );
 const REVIEWED_EXTERNAL_IMAGES = new Set([
@@ -159,6 +159,8 @@ const REVIEWED_EXTERNAL_IMAGES = new Set([
   "bugsink/bugsink:2.5.1@sha256:ecdd845877464d70d61244b8adba20d623e1860e88d8338f2808d9cc2925745c",
   "gotenberg/gotenberg:8.37.0-chromium@sha256:0d28ae9a96441588ef739623726bd500ad0720b77266c6f1351a13e333fbd61c",
   "node:26.8.1-bookworm@sha256:9f94d34c787165dca03b74e5bf9c3bf90e8de79b19aa3d87fe1fa1694bf75c89",
+  "moby/buildkit:v0.33.1-rootless@sha256:f8a833b2de9d68e27f0815e4a737abdfaf8a2e4c615650557df11025101557b4",
+  "alpine/helm:4.3.0@sha256:a6cf54599ccb99d90cf0712b30f03fdb3cab062e6b94e0418cc4db7e8a1464b2",
 ]);
 const releaseImageTag =
   "$" +
@@ -890,10 +892,14 @@ test("external Compose and CI images use versioned immutable references", () => 
       readonly image?: unknown;
       readonly services?: readonly { readonly name?: unknown }[];
     };
-    if (typeof jobDefinition.image === "string") {
+    const jobImage =
+      typeof jobDefinition.image === "object" && jobDefinition.image !== null
+        ? (jobDefinition.image as { readonly name?: unknown }).name
+        : jobDefinition.image;
+    if (typeof jobImage === "string") {
       externalImages.push({
         path: `.gitlab-ci.yml:${job}`,
-        image: jobDefinition.image,
+        image: jobImage,
       });
     }
     for (const service of jobDefinition.services ?? []) {
@@ -935,20 +941,31 @@ test("external image policy rejects moving and mismatched references", () => {
   );
 });
 
-test("GitLab CI carries no Docker build or Compose smoke lane", () => {
-  for (const name of Object.keys(
-    parse(gitlabContent, { maxAliasCount: 50 }) as Record<string, unknown>,
-  )) {
+test("GitLab CI builds images only in the gated build-images job", () => {
+  const jobs = parse(gitlabContent, { maxAliasCount: 50 }) as Record<
+    string,
+    { readonly script?: readonly unknown[] } | undefined
+  >;
+  for (const name of Object.keys(jobs)) {
     assert.doesNotMatch(
       name,
       /docker/iu,
       `.gitlab-ci.yml:${name} must not be a Docker lane`,
+    );
+    const builds = JSON.stringify(jobs[name]?.script ?? []).includes(
+      "buildctl-daemonless.sh",
+    );
+    assert.equal(
+      builds,
+      name === "build-images",
+      `.gitlab-ci.yml:${name}: only build-images may run BuildKit`,
     );
   }
   assert.doesNotMatch(gitlabContent, /docker build/u);
   assert.doesNotMatch(gitlabContent, /docker compose/u);
   assert.doesNotMatch(gitlabContent, /docker-compose (up|run|exec|build)/u);
   assert.doesNotMatch(gitlabContent, /docker:dind|\bdind\b/iu);
+  assert.doesNotMatch(gitlabContent, /docker\.sock/u);
 });
 
 test("Bugsink persists its SQLite database in the named data volume", () => {

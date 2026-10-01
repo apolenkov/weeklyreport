@@ -10,7 +10,7 @@ marked **untested in production**.
 ## The stack
 
 `docker compose --env-file .env.production -f docker-compose.prod.yml` brings up
-eleven services:
+ten services:
 
 | Service        | Role                                                                                                                                                                                                                           |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -27,6 +27,62 @@ eleven services:
 
 `migrate` and `backup` talk to `postgres` **directly**, bypassing pgbouncer:
 DDL and `pg_dump` need a session that outlives a single transaction.
+
+## Host requirements
+
+Facts below come from `docker-compose.prod.yml`; sizing is a **recommendation**,
+not a measurement.
+
+- **Software.** Linux with Docker Engine and Compose v2 (`docker compose`) plus
+  `git`. No Node or pnpm on the host: `api`, `migrate`, `web`, and `backup` are
+  built on the host from this checkout (`up --build`), inside pinned
+  `node:26.8.1` images. The repository pins no minimum Docker/Compose version
+  or distribution; the file needs `depends_on` with
+  `service_completed_successfully` and `deploy.resources.limits`.
+- **Memory limits** (no CPU limits are set; `migrate` and `config-guard` are
+  one-shot and unlimited):
+
+  | Service     | Limit                    |
+  | ----------- | ------------------------ |
+  | `api`       | 2 GiB                    |
+  | `gotenberg` | 1 GiB                    |
+  | `postgres`  | 512 MiB                  |
+  | `web`       | 512 MiB                  |
+  | `pgbouncer` | 128 MiB                  |
+  | `redis`     | 256 MiB                  |
+  | `backup`    | 256 MiB                  |
+  | `caddy`     | 256 MiB                  |
+  | **Sum**     | 4992 MiB (about 4.9 GiB) |
+
+- **Recommended VM: 4 vCPU, 8 GiB RAM, 40+ GiB SSD.** The limits alone fill
+  about 5 GiB; the rest is headroom for the OS, Docker, and the on-host image
+  build (pnpm, Next, Nest), whose peak is unmeasured. Disk covers images, the
+  volumes below, and dumps; growth rates are unmeasured. The `observability`
+  overlay sets no limits and adds its own `lgtmdata` volume; size it separately
+  if enabled.
+- **Inbound.** Only `caddy` publishes ports: `HTTP_PORT` (80/tcp), `HTTPS_PORT`
+  (443/tcp), and `HTTPS_PORT_QUIC` (443/udp). Open those in the host firewall.
+  `CADDY_SITE_ADDRESS` needs a DNS A/AAAA record to the host so Caddy can
+  obtain a Let's Encrypt certificate.
+- **Outbound.** Let's Encrypt (ACME); image registries during builds; the SMTP
+  server (`SMTP_HOST`/`SMTP_PORT`; production has no mail container); optionally the origins in
+  `AI_PROVIDER_ALLOWED_ORIGINS` (data stays blocked until
+  `REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED=true`) and a Sentry-compatible
+  receiver when `SENTRY_DSN` is set. SAML sign-in needs no host egress: the
+  browser reaches the identity provider, and the api only holds the
+  `KEYCLOAK_SAML_*` URLs and certificate. `CADDY_CSP_REPORT_URI` is an external
+  collector that browsers call. `gotenberg` prints the `PDF_BASE_URL` origin,
+  so the host must reach its own public address; this is untested on a real
+  network.
+- **Storage.** Named volumes: `pgdata`, `pgbackups`, `redisdata` (queues),
+  `pdfdata` (exported PDFs), `caddy_data` (certificates), `caddy_config`.
+  `pgbackups` on the same disk is not off-host protection; see
+  [Backups](#backups). Keep a copy of `.env.production` off the host too,
+  including `AI_PROVIDER_CONFIG_ENCRYPTION_KEY`.
+- **Still undecided:** SAML provider, SMTP provider, off-host backup target,
+  alert receiver, and image promotion; see
+  [External first-production prerequisites](#external-first-production-prerequisites).
+  Required variables are listed in [First deploy](#first-deploy).
 
 ## First deploy
 
@@ -106,7 +162,7 @@ would let rewrites and server-side fetches target different origins.
    curl -fsS https://<host>/health/ready                # api: DB + Redis + queues + memory
    ```
 
-The production Caddy mount defaults to `deploy/caddy/Caddyfile`; do not
+The production Caddy mount defaults to `deploy/helm/weeklyreport/files/Caddyfile`; do not
 hand-edit the container mount.
 
 ## Owner flags and when to remove them
@@ -317,13 +373,18 @@ mutations, and SSE rather than falling back to SQLite.
 
 Images are the unit of rollback; the database is not.
 
-- **Application only**: production image rollback is **BLOCKED** until the
-  delivery platform supplies immutable API/Web image references and read-back.
-  The repository-owned Compose file currently builds from the checked-out
-  source and has no image-tag input, so rebuilding an older commit is a
-  pre-production recovery exercise, not proof that the deployed artifact can
-  be restored. Do not describe a local rebuild or a dangling Docker image as a
-  production rollback.
+- **Application only, Compose**: production image rollback is **BLOCKED**
+  until the delivery platform supplies immutable API/Web image references and
+  read-back. The Compose file builds from the checked-out source, so
+  rebuilding an older commit is a pre-production recovery exercise, not proof
+  that the deployed artifact can be restored. Do not describe a local rebuild
+  or a dangling Docker image as a production rollback.
+- **Application only, Kubernetes**: the chart selects images by `images.tag`
+  (the commit SHA pushed by the `build-images` CI job), so rolling back is
+  `helm rollback` or `helm upgrade --set images.tag=<older SHA>` against an
+  image still in the registry (`docs/kubernetes.md`). This closes the
+  image-source blocker only after the first successful image push and a
+  deployment read-back exist; until then it is not a production rollback.
 - **Migration shipped**: rolling the image back does not roll the schema back,
   and Prisma has no down-migrations here. Either fix forward with a new
   migration, or restore the pre-deploy dump and accept losing writes made
@@ -341,16 +402,18 @@ Images are the unit of rollback; the database is not.
 
 ## CI
 
-`.gitlab-ci.yml` runs the lint/test lanes only (`node-toolchain`, `quality`,
-`dependency-scan`, `coverage`, `api-integration`, `migrate-reset`; see
-`docs/gitlab-ci.md`). The `api-integration` lane runs the API unit and
+`.gitlab-ci.yml` runs the lint/test lanes (`node-toolchain`, `quality`,
+`dependency-scan`, `coverage`, `api-integration`, `migrate-reset`), one gated
+image build (`build-images`, rootless BuildKit, no Docker-in-Docker), and an
+optional manual `deploy-production` job; see `docs/gitlab-ci.md`. The `api-integration` lane runs the API unit and
 integration suites once, serially, against disposable Postgres/Redis/Mailpit
 (in-job loopback Postgres; Redis and Mailpit as service aliases) and enforces the API coverage thresholds.
 The `coverage` lane enforces Web coverage without starting a second dependency
 stack; the `quality` lane runs lint, typecheck, and unit tests, and
 `migrate-reset` covers migration drift. The complete workspace build, the
-production image build, PDF export, and browser acceptance are not CI lanes and
-stay required evidence collected outside CI. Local
+PDF export, browser acceptance, and the read-back of a deployment are not CI
+evidence and stay required evidence collected outside CI; a successful
+`build-images` run produces images, not that evidence. Local
 commands remain the fast gate; run the same checks before pushing.
 
 ## External first-production prerequisites

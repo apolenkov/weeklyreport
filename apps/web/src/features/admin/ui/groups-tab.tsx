@@ -225,7 +225,7 @@ export function GroupsTab({ groups, users, products }: GroupsTabProps) {
 
       <ConfirmDeleteDialog
         open={dialog.archiveTarget !== null}
-        title="Archive Group?"
+        title="Archive group?"
         preview={dialog.archiveTarget ? dialog.archiveTarget.name : ""}
         subtitle="Existing users keep the group, but new users cannot select it."
         reversible

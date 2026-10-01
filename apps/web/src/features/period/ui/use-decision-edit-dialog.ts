@@ -70,7 +70,7 @@ export function useDecisionEditDialog(args: UseDecisionEditDialogArgs) {
 
   return {
     dialogSurfaceRef,
-    headerVerb: decision === null ? "Add Decision" : "Edit Decision",
+    headerVerb: decision === null ? "Add decision" : "Edit decision",
     textRef,
     impactRef,
     ...decisionFieldsView(fields),

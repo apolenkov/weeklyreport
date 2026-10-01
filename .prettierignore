@@ -8,3 +8,4 @@ pnpm-lock.yaml
 .claude/commands/opsx
 .claude/skills/openspec-*
 .agents/skills/openspec-*
+deploy/helm/weeklyreport/templates/

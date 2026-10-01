@@ -1225,7 +1225,7 @@ void test("next step limit accepts a corrected boundary value", async () => {
   await findRole("button", `Edit In progress: ${text}`, "click");
   const dialog = {
     role: "dialog",
-    name: `Edit Item — ${LEAD_FORM_FIXTURE.activityName}`,
+    name: `Edit item — ${LEAD_FORM_FIXTURE.activityName}`,
   };
   const next = await checkRecordLimit(
     dialog,
@@ -1250,17 +1250,16 @@ void test("next step limit accepts a corrected boundary value", async () => {
 
 for (const kind of ["risk", "decision"] as const) {
   void test(`${kind} text limits reject oversized fields and persist corrected boundaries`, async () => {
-    const title = kind === "risk" ? "Risk" : "Decision";
     await openLeadReport();
     await findRole(
       "button",
       `Expand ${kind === "risk" ? "Risks & Blockers" : "Decisions"}`,
       "click",
     );
-    await findRole("button", `+ Add ${title}`, "click");
+    await findRole("button", `+ Add ${kind}`, "click");
     await waitScope({
       role: "dialog",
-      name: kind === "risk" ? /^Add Risk — /u : "Add Decision",
+      name: kind === "risk" ? /^Add risk — /u : "Add decision",
     });
     const initial = oneRef(await snapshot(), "combobox", "Parent");
     await command(["select", initial, LEAD_FORM_FIXTURE.activityName]);
@@ -1268,8 +1267,8 @@ for (const kind of ["risk", "decision"] as const) {
       role: "dialog",
       name:
         kind === "risk"
-          ? `Add Risk — ${LEAD_FORM_FIXTURE.activityName}`
-          : "Add Decision",
+          ? `Add risk — ${LEAD_FORM_FIXTURE.activityName}`
+          : "Add decision",
     };
     const fields =
       kind === "risk"
@@ -1321,8 +1320,8 @@ for (const kind of ["risk", "decision"] as const) {
       role: "dialog",
       name:
         kind === "risk"
-          ? `Edit Risk — ${LEAD_FORM_FIXTURE.activityName}`
-          : "Edit Decision",
+          ? `Edit risk — ${LEAD_FORM_FIXTURE.activityName}`
+          : "Edit decision",
     };
     for (const [index, label] of fields.entries())
       assert.equal(await inputValue(edited, label), boundaries[index]);

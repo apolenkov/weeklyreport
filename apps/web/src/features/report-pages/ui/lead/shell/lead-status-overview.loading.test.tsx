@@ -52,4 +52,13 @@ describe("LeadStatusOverview loading layout", () => {
     expect(root).toHaveAttribute("data-layout-key", "report-page");
     expect(root).toHaveAttribute("data-layout-stability", "position-width");
   });
+
+  it("stills the skeleton pulse under reduced motion", () => {
+    const { container } = renderLoadingOverview();
+    const pulses = container.querySelectorAll(".animate-pulse");
+    expect(pulses.length).toBeGreaterThan(0);
+    for (const el of pulses) {
+      expect(el.className).toContain("motion-reduce:animate-none");
+    }
+  });
 });

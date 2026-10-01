@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: gotenberg
+  labels:
+    {{- include "wr.labels" (dict "root" . "component" "gotenberg") | nindent 4 }}
+spec:
+  selector:
+    {{- include "wr.selector" (dict "component" "gotenberg") | nindent 4 }}
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gotenberg
+  labels:
+    {{- include "wr.labels" (dict "root" . "component" "gotenberg") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "wr.selector" (dict "component" "gotenberg") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "wr.labels" (dict "root" . "component" "gotenberg") | nindent 8 }}
+    spec:
+      {{- include "wr.podCommon" (dict "root" . "user" .Values.gotenberg.runAsUser) | nindent 6 }}
+      containers:
+        - name: gotenberg
+          image: {{ .Values.images.thirdParty.gotenberg }}
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 3000
+          # Serialized conversions and the clear-* flags keep the one shared
+          # browser from leaking state between jobs; the allow-list is the only
+          # destination conversions may reach and derives from PDF_BASE_URL.
+          env:
+            - { name: API_TIMEOUT, value: 150s }
+            - { name: CHROMIUM_MAX_CONCURRENCY, value: "1" }
+            - { name: CHROMIUM_CLEAR_COOKIES, value: "true" }
+            - { name: CHROMIUM_CLEAR_STORAGE, value: "true" }
+            - { name: CHROMIUM_CLEAR_CACHE, value: "true" }
+            - name: CHROMIUM_ALLOW_LIST
+              value: {{ include "wr.allowList" . | quote }}
+            - { name: CHROMIUM_DENY_PRIVATE_IPS, value: "true" }
+            - { name: CHROMIUM_DENY_PUBLIC_IPS, value: "true" }
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.gotenberg.resources | nindent 12 }}
+          {{- include "wr.containerSecurity" (dict) | nindent 10 }}

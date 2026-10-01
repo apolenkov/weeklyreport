@@ -2,12 +2,14 @@
 
 `.gitlab-ci.yml` is the repository CI. It runs the repository lint/test gates, coverage jobs, the
 disposable-database integration and reset lanes, and the scheduled/manual
-dependency audit. Per the owner decision of 2026-09-28 it carries **only tests
-and linters**: no Docker-in-Docker, no image builds, and no operational smoke.
-The product build (`pnpm build`), Production Compose builds, PDF export, and
-browser acceptance remain required evidence, collected outside CI as separate
-checks — the `quality` job is therefore a lint/test lane, not a full
-acceptance gate.
+dependency audit. Per the owner decision of 2026-09-28 it carries tests
+and linters; since the owner decision of 2026-10-01 it also has one gated image
+build (`build-images`, rootless BuildKit) and an optional manual deploy job. There is
+no Docker-in-Docker and no operational smoke. The product build (`pnpm build`),
+PDF export, browser acceptance, and the read-back of a deployment remain
+required evidence, collected outside CI as separate checks — the `quality` job
+is therefore a lint/test lane, not a full acceptance gate. The GitLab instance
+is 15.10, so `.gitlab-ci.yml` uses no keyword introduced after 15.10.
 
 | GitLab job          | Execution                                                     |
 | ------------------- | ------------------------------------------------------------- |
@@ -18,6 +20,31 @@ acceptance gate.
 | migrate-reset       | pgvector 0.8.6/pg15 job container on the shared Docker runner |
 | dependency-scan     | Schedule, manual, or MR changing lockfile/manifests           |
 | dependency-scan-dev | Same rules as dependency-scan; `allow_failure: true`          |
+| build-images        | Rootless BuildKit; default branch and tags, manual on MRs     |
+| deploy-production   | Manual, default branch, only when `KUBECONFIG` is set         |
+
+## Image build and deploy
+
+`build-images` builds `api`, `migrate`, `web`, and `backup` with
+`moby/buildkit:v0.33.1-rootless` (digest-pinned, no Docker daemon or socket) and
+pushes them tagged with the commit SHA to `$CI_REGISTRY_IMAGE`. `IMAGE_REGISTRY`,
+`IMAGE_REGISTRY_USER`, and `IMAGE_REGISTRY_PASSWORD` override the registry and
+credentials; the job fails in its first step when the resolved registry, user,
+or password is empty, or when a `WR_NEXT_PUBLIC_*` value that `Dockerfile.web`
+compiles in is unset. It runs automatically on the default branch and on tags
+when the single CI variable `WR_NEXT_PUBLIC_CLIENT_LOG_FORWARDING` is set —
+the only variable the rule evaluates — and is a manual, non-blocking job
+otherwise and on merge requests. The digests are the artifact `image-digests.txt`. The job sets
+`BUILDKITD_FLAGS=--oci-worker-no-process-sandbox`, the job-side mitigation
+for a runner whose default seccomp/AppArmor profile denies rootless
+buildkitd its worker sandbox (`mount proc: operation not permitted`); the
+alternative is a runner configured with seccomp, AppArmor, and system paths
+unconfined. Whether the project runner then permits the build is not
+verified — the first run decides.
+
+`deploy-production` runs `helm upgrade --install --atomic` with a values file
+from the file-type variable `HELM_VALUES_FILE` and `HELM_NAMESPACE`, and exists
+only when a file-type `KUBECONFIG` variable is set. See `docs/kubernetes.md`.
 
 ## Database-lane topology
 
@@ -43,9 +70,9 @@ the owner decision. The honest topology is:
   composite artifact to database jobs. `pnpm install --frozen-lockfile` needs
   no git inside the database image. Egress endpoints: the npm registry,
   Docker Hub, nodejs.org (`node-toolchain` tarball), and one
-  github.com/docker/compose release fetch in `quality` — the latter is a
-  digest-pinned `docker-compose` CLI used only to render the production
-  Compose config in the compose gate, not a Compose smoke lane.
+  github.com/docker/compose and get.helm.sh release fetches in `quality` — the
+  checksum-pinned `docker-compose` and `helm` CLIs only render configuration
+  for the compose and chart gates; they are not smoke lanes.
 - `api-integration` also declares `services:` for Redis (`redis` alias) and
   Mailpit (`mailpit` alias). Neither is guard-constrained; the suite reads the
   real hostnames (`REDIS_HOST=redis`, `SMTP_HOST=mailpit`,

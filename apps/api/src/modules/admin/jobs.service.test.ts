@@ -734,7 +734,9 @@ describe("JobsService — pdf-export generation retry", () => {
     // No BullMQ job.retry() or live-state read survives on the pdf path.
     expect(job.getState).not.toHaveBeenCalled();
     expect(job.retry).not.toHaveBeenCalled();
-    expect(job.remove).not.toHaveBeenCalled();
+    // The retried entry is superseded by the fresh generation job, so it
+    // leaves the failed list instead of keeping the DLQ badge lit.
+    expect(job.remove).toHaveBeenCalledTimes(1);
   });
 
   it("reports the idempotent already-advanced outcome as retried", async () => {
@@ -766,6 +768,7 @@ describe("JobsService — pdf-export generation retry", () => {
       expectedGeneration: 1,
     });
     expect(job.retry).not.toHaveBeenCalled();
+    expect(job.remove).toHaveBeenCalledTimes(1);
   });
 
   it("a retained g1 queue entry cannot advance a row already failed at g2", async () => {
@@ -795,6 +798,7 @@ describe("JobsService — pdf-export generation retry", () => {
       jobId: "pdf-job-1",
       expectedGeneration: 1,
     });
+    expect(job.remove).not.toHaveBeenCalled();
     expect(result).toEqual({
       retried: false,
       jobId: "pdf-job-1-g1",
@@ -981,6 +985,107 @@ describe("JobsService — pdf recovery surface", () => {
         outcome,
       });
       expect(retryPdfExportGeneration).toHaveBeenCalledWith(input);
+    },
+  );
+
+  // The queue entry the row's generation last dispatched — superseded the
+  // moment the retry commits a new generation.
+  function supersededEntry() {
+    return makeJob({
+      id: `${RECOVERY_ROW.jobId}-g${RECOVERY_ROW.generation}`,
+      queue: "pdf-export",
+      pdfExportIdentity: {
+        jobId: RECOVERY_ROW.jobId,
+        reportId: RECOVERY_ROW.reportId,
+        requestedBy: RECOVERY_ROW.requestedBy,
+        generation: RECOVERY_ROW.generation,
+      },
+    });
+  }
+
+  function recoveryQueueService(
+    outcome: AdminPdfExportRetryOutcome,
+    superseded?: FakeJob,
+  ) {
+    const pdfQueue = makeQueue({ failed: superseded ? [superseded] : [] });
+    const service = new JobsService(
+      {
+        names: QUEUE_NAMES,
+        get: (name: QueueName) =>
+          name === "pdf-export" ? pdfQueue : makeQueue({ failed: [] }),
+      },
+      {
+        reminderExecutionExists: vi.fn(),
+        retryPdfExportGeneration: vi
+          .fn<RetryPdfExportGeneration>()
+          .mockResolvedValue(outcome),
+        listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
+      },
+      createNullLogger(),
+    );
+    return { service, pdfQueue };
+  }
+
+  const INPUT = {
+    jobId: RECOVERY_ROW.jobId,
+    expectedGeneration: RECOVERY_ROW.generation,
+  };
+
+  it.each(["retried", "already-advanced"] as const)(
+    "retryPdfRecovery drops the superseded queue entry on a %s outcome",
+    async (outcome) => {
+      const superseded = supersededEntry();
+      const { service } = recoveryQueueService(outcome, superseded);
+
+      await expect(service.retryPdfRecovery(INPUT)).resolves.toEqual({
+        jobId: RECOVERY_ROW.jobId,
+        outcome,
+      });
+      expect(superseded.remove).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("retryPdfRecovery resolves cleanly when no superseded queue entry exists", async () => {
+    const { service, pdfQueue } = recoveryQueueService("retried");
+
+    await expect(service.retryPdfRecovery(INPUT)).resolves.toEqual({
+      jobId: RECOVERY_ROW.jobId,
+      outcome: "retried",
+    });
+    expect(pdfQueue.getJob).toHaveBeenCalledWith(`${INPUT.jobId}-g2`);
+  });
+
+  it("retryPdfRecovery touches no queue entry when the durable row declines", async () => {
+    const superseded = supersededEntry();
+    const { service, pdfQueue } = recoveryQueueService(
+      "ineligible",
+      superseded,
+    );
+
+    await expect(service.retryPdfRecovery(INPUT)).resolves.toEqual({
+      jobId: RECOVERY_ROW.jobId,
+      outcome: "ineligible",
+    });
+    expect(pdfQueue.getJob).not.toHaveBeenCalled();
+    expect(superseded.remove).not.toHaveBeenCalled();
+  });
+
+  it.each(["remove", "lookup"] as const)(
+    "retryPdfRecovery still reports retried when the superseded entry's %s fails",
+    async (failure) => {
+      const superseded = supersededEntry();
+      if (failure === "remove") {
+        superseded.remove.mockRejectedValue(new Error("job lock lost"));
+      }
+      const { service, pdfQueue } = recoveryQueueService("retried", superseded);
+      if (failure === "lookup") {
+        pdfQueue.getJob.mockRejectedValue(new Error("redis read failed"));
+      }
+
+      await expect(service.retryPdfRecovery(INPUT)).resolves.toEqual({
+        jobId: RECOVERY_ROW.jobId,
+        outcome: "retried",
+      });
     },
   );
 });

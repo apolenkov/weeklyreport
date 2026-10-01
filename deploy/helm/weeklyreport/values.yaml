@@ -1,0 +1,89 @@
+# Infrastructure defaults only. Product configuration has no default here: the
+# keys listed under "required" in values.schema.json must come from the
+# operator's values file (see values.production.example.yaml).
+
+clusterDomain: cluster.local
+
+images:
+  # `registry` (repository prefix, for example gitlab.example.com/group/project)
+  # and `tag` (the exact release, for example a Git SHA) are required.
+  pullPolicy: IfNotPresent
+  # Name of an existing dockerconfigjson Secret for a private registry.
+  pullSecret: ""
+  thirdParty:
+    postgres: pgvector/pgvector:0.8.6-pg15-bookworm@sha256:a947c45cdc5906a1bc951f20a8709e321256343ee0f251e4ae00b5e7def4e6da
+    pgbouncer: edoburu/pgbouncer:v1.25.2-p0@sha256:7d7a27d9e90985cab5cf42256f5c13a3120baa4b055b69df37beb272b89b2340
+    redis: redis:7.4.11-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf
+    caddy: caddy:2.11.4-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+    gotenberg: gotenberg/gotenberg:8.37.0-chromium@sha256:0d28ae9a96441588ef739623726bd500ad0720b77266c6f1351a13e333fbd61c
+
+secrets:
+  # Exactly one of the two: an existing Secret created outside Git, or
+  # `create: true` with `secrets.values` supplied at install time.
+  existingSecret: ""
+  create: false
+
+api:
+  # Extra pod annotations, for example prometheus.io/* for a scraper.
+  podAnnotations: {}
+  runAsUser: 1000
+  resources:
+    requests: { memory: 512Mi, cpu: 100m }
+    limits: { memory: 2Gi }
+  migrateResources:
+    requests: { memory: 128Mi, cpu: 50m }
+    limits: { memory: 512Mi }
+
+web:
+  runAsUser: 1001
+  resources:
+    requests: { memory: 128Mi, cpu: 50m }
+    limits: { memory: 512Mi }
+
+gotenberg:
+  runAsUser: 1001
+  resources:
+    requests: { memory: 512Mi, cpu: 100m }
+    limits: { memory: 1Gi }
+
+postgres:
+  runAsUser: 999
+  resources:
+    requests: { memory: 256Mi, cpu: 100m }
+    limits: { memory: 512Mi }
+
+pgbouncer:
+  runAsUser: 70
+  resources:
+    requests: { memory: 32Mi, cpu: 20m }
+    limits: { memory: 128Mi }
+
+redis:
+  maxmemoryMb: 200
+  runAsUser: 999
+  fsGroup: 1000
+  resources:
+    requests: { memory: 64Mi, cpu: 20m }
+    limits: { memory: 256Mi }
+
+edge:
+  runAsUser: 65532
+  resources:
+    requests: { memory: 32Mi, cpu: 20m }
+    limits: { memory: 256Mi }
+  ingress:
+    className: ""
+    tlsSecretName: ""
+    # Controller annotations, for example a read timeout of 300s to match the
+    # edge's five minute upstream transport.
+    annotations: {}
+
+backup:
+  runAsUser: 70
+  startingDeadlineSeconds: 3600
+  # Upper bound on one dump: a stuck Job must die before it starves later
+  # runs under concurrencyPolicy=Forbid.
+  activeDeadlineSeconds: 1800
+  resources:
+    requests: { memory: 64Mi, cpu: 20m }
+    limits: { memory: 256Mi }

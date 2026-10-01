@@ -52,6 +52,7 @@ publishes, and exports a unified report. pnpm + Turbo monorepo:
   build the minimal production migration image
 - `packages/shared` — Zod schemas, tRPC contracts (update here before duplicating types)
 - `packages/ui` — shadcn/ui + Tailwind 4 tokens
+- `deploy/helm/weeklyreport` — Kubernetes Helm chart (`docs/kubernetes.md`)
 - `prisma` — schema, canonical init plus additive migrations
   (`prisma/migrations`; see Migration policy below), seeds, destructive guard
 - `openspec` — durable product and engineering specifications (`specs/`)
@@ -200,10 +201,11 @@ them and link the relevant `openspec/specs/` spec.
 
 The repository lives on the private corporate GitLab (`gitlab` is the only
 remote). `.gitlab-ci.yml` is the CI that targets this
-remote and carries only lint/test lanes (owner decision 2026-09-28): quality,
+remote and carries lint/test lanes (owner decision 2026-09-28): quality,
 coverage, API integration, migrate-reset, and the dependency audit on the
 shared Docker runner, with in-job loopback PostgreSQL and Redis/Mailpit service
-aliases — no DinD, image builds, or operational checks. Production build, PDF, and browser acceptance stay outside CI. Do not treat a
+aliases, plus a gated rootless-BuildKit image build and an optional manual
+Helm deploy (owner decision 2026-10-01) — no DinD or operational checks. Production build, PDF, and browser acceptance stay outside CI. Do not treat a
 runnable GitLab pipeline as full acceptance. Use `docs/exemplary-code-standard.md#verification` for local
 acceptance.
 

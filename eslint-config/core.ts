@@ -1,5 +1,3 @@
-/// <reference path="../tools/types/eslint-plugin-jsx-a11y.d.ts" />
-
 import type { ESLint, Linter } from "eslint";
 import { globalIgnores } from "eslint/config";
 import jsxA11y from "eslint-plugin-jsx-a11y";
@@ -28,6 +26,7 @@ export const coreConfig: Linter.Config[] = [
     // dumps; linting them OOMs the run on duplicate sources.
     ".devin-artifacts/**",
     ".kilo/**",
+    ".claude/worktrees/**",
     "**/coverage/**",
     "**/.turbo/**",
     "openspec/**",

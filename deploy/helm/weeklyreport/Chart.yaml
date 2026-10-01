@@ -1,0 +1,5 @@
+apiVersion: v2
+name: weeklyreport
+description: WeeklyReport production stack (api, web, PDF renderer, PostgreSQL, Redis, edge)
+type: application
+version: 0.1.0

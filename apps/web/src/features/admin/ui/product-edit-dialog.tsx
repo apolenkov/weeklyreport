@@ -194,12 +194,13 @@ export function ProductEditDialog({
     containerRef: surfaceRef,
   });
 
+  const dialogTitle = editingProduct ? "Edit product" : "Add product";
   return (
     <DialogSurface
       surfaceRef={surfaceRef}
       onDismiss={closeIfIdle}
       surfaceClassName="animate-scale-in mx-4 flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl"
-      ariaLabel={editingProduct ? "Edit product" : "Add product"}
+      ariaLabel={dialogTitle}
     >
       <form
         className="flex min-h-0 flex-1 flex-col"
@@ -209,7 +210,7 @@ export function ProductEditDialog({
         }}
       >
         <h3 className="shrink-0 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-          {editingProduct ? "Edit Product" : "Add Product"}
+          {dialogTitle}
         </h3>
         <ProductFormFields
           form={form}
@@ -220,7 +221,7 @@ export function ProductEditDialog({
           isSaving={isSaving}
         />
         <AdminEntityDialogActions
-          saveLabel={editingProduct !== null ? "Save Changes" : "Add Product"}
+          saveLabel={editingProduct !== null ? "Save changes" : "Add product"}
           isSaving={isSaving}
           canSave={canSave}
           onClose={closeIfIdle}

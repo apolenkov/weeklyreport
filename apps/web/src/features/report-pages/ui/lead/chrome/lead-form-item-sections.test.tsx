@@ -118,7 +118,7 @@ describe("LeadFormItemSections — unified activity adapter", () => {
     expect(screen.queryByText(/\+ Add/)).toBeNull();
   });
 
-  it("offers one local Add Item action wired to the current-week signal", () => {
+  it("offers one local Add item action wired to the current-week signal", () => {
     const addCurrentWeekItem = vi.fn();
     render(
       <LeadFormItemSections
@@ -139,7 +139,7 @@ describe("LeadFormItemSections — unified activity adapter", () => {
       "data-add-signal",
       "7",
     );
-    screen.getByRole("button", { name: "+ Add Item" }).click();
+    screen.getByRole("button", { name: "+ Add item" }).click();
     expect(addCurrentWeekItem).toHaveBeenCalledOnce();
   });
 });

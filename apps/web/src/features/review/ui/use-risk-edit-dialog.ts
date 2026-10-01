@@ -111,7 +111,7 @@ export function useRiskEditDialog(args: UseRiskEditDialogArgs) {
 
   return {
     dialogSurfaceRef,
-    headerVerb: isCreate ? "Add Risk" : "Edit Risk",
+    headerVerb: isCreate ? "Add risk" : "Edit risk",
     ...toFieldView(fields),
     ...toParentStageView(parentStage),
     handleSave,
