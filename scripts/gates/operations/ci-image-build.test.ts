@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -9,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 import { afterEach, test } from "vitest";
 import { parse } from "yaml";
@@ -137,6 +138,9 @@ test("the build job pushes four SHA-tagged images and records their digests", ()
     result.stdout + result.stderr,
     new RegExp(BUILD_ENV.CI_REGISTRY_PASSWORD),
   );
+  // The build context is the project dir (`--local context=.`), so registry
+  // credentials must never land inside it.
+  assert.equal(existsSync(join(dirname(digests), ".registry-auth")), false);
 });
 
 test("IMAGE_REGISTRY overrides the project registry", () => {

@@ -447,8 +447,9 @@ build-images:
       : "${WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES:?WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES is not set}"
 
       # Credentials live only in a job-local config.json and are never echoed.
-      export DOCKER_CONFIG="$CI_PROJECT_DIR/.registry-auth"
-      mkdir -p "$DOCKER_CONFIG"
+      # The config must stay outside $CI_PROJECT_DIR: every `--local context=.`
+      # build would otherwise ship it into the pruner stage's `COPY . .`.
+      export DOCKER_CONFIG="$(mktemp -d)"
       auth="$(printf '%s:%s' "$REGISTRY_USER" "$REGISTRY_PASSWORD" | base64 | tr -d '\n')"
       printf '{"auths":{"%s":{"auth":"%s"}}}' "${REGISTRY%%/*}" "$auth" > "$DOCKER_CONFIG/config.json"
 
