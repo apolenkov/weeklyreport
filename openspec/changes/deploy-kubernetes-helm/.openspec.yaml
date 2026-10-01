@@ -1,0 +1,3 @@
+schema: spec-driven
+created: 2026-10-01
+goal: Deliver the production stack to the corporate Kubernetes cluster as an in-repo Helm chart, with images built and pushed by GitLab CI without Docker-in-Docker, while docker-compose.prod.yml stays the tested reference.
