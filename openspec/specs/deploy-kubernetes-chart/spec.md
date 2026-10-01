@@ -1,4 +1,10 @@
-## ADDED Requirements
+# deploy-kubernetes-chart Specification
+
+## Purpose
+
+Defines the Helm chart that deploys WeeklyReport to Kubernetes: workloads, configuration and secrets, migration, backup, networking, and the rendering checks that guard them.
+
+## Requirements
 
 ### Requirement: The chart fails closed on configuration
 
