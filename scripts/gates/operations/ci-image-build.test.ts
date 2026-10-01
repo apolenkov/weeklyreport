@@ -45,6 +45,23 @@ function requireJob(name: string): Job {
 const buildJob = requireJob("build-images");
 const deployJob = requireJob("deploy-production");
 
+// The `yaml` package accepts a bare `- : "text"` list item as a one-key
+// mapping, but GitLab's parser rejects the whole file; every script entry
+// must therefore be a plain string.
+void test("every CI script entry is a string GitLab can parse", () => {
+  for (const [name, job] of Object.entries(jobs)) {
+    const script = (job as { script?: unknown } | undefined)?.script;
+    if (!Array.isArray(script)) continue;
+    for (const entry of script) {
+      assert.equal(
+        typeof entry,
+        "string",
+        `${name} has a non-string script entry`,
+      );
+    }
+  }
+});
+
 const workspaces = new Set<string>();
 afterEach(() => {
   for (const root of workspaces) {
