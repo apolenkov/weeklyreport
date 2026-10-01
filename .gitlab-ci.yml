@@ -415,6 +415,11 @@ build-images:
     entrypoint: [""]
   timeout: 45m
   resource_group: weeklyreport-ci-heavy
+  variables:
+    # Job-side mitigation for a runner whose default seccomp/AppArmor profile
+    # denies rootless buildkitd its worker sandbox (mount proc: operation not
+    # permitted); the alternative is an unconfined runner profile.
+    BUILDKITD_FLAGS: --oci-worker-no-process-sandbox
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
       when: never
