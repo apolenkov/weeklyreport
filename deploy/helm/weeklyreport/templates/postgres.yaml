@@ -63,6 +63,14 @@ spec:
           {{- include "wr.containerSecurity" (dict) | nindent 10 }}
           volumeMounts:
             - { name: pgdata, mountPath: /var/lib/postgresql/data }
+            # Read-only: gives the backup PVC a consumer, so a WaitForFirstConsumer
+            # class binds it at install and `helm --atomic` can finish.
+            - { name: pgbackups, mountPath: /backups, readOnly: true }
+      volumes:
+        - name: pgbackups
+          persistentVolumeClaim:
+            claimName: pgbackups
+            readOnly: true
   volumeClaimTemplates:
     - metadata:
         name: pgdata
