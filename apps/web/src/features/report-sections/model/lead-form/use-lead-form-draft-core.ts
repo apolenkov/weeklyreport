@@ -12,6 +12,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 
+import { mutationErrorMessage } from "../../../../shared/lib/errors/mutation-error-message";
 import { useDraftServerSync } from "../autosave/use-lead-form-server-sync";
 import {
   countLocalOnlyRows,
@@ -119,10 +120,15 @@ function useDraftPayload(draftSection: ReportSectionReadModel | null) {
   return draftPayload;
 }
 
+// A bare browser transport message ("Failed to fetch") is not actionable.
+const SUBMIT_FAILURE_MESSAGE =
+  "Submit failed. Check your connection and try again.";
+
 function submitErrorMessage(error: unknown): string {
-  return error instanceof Error && error.message
-    ? error.message
-    : "Submit failed";
+  return (
+    mutationErrorMessage(error, SUBMIT_FAILURE_MESSAGE) ||
+    SUBMIT_FAILURE_MESSAGE
+  );
 }
 
 interface LeadFormDraftCoreArgs {

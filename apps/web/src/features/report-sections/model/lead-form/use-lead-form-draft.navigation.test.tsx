@@ -253,4 +253,24 @@ describe("lead draft writes across navigation", () => {
       expect(toast.error).not.toHaveBeenCalled();
     },
   );
+
+  it.each([
+    ["a raw transport failure", new TypeError("Failed to fetch")],
+    ["a non-error rejection", "boom"],
+  ])("announces a retry hint when submit hits %s", async (_label, failure) => {
+    const harness = mountDraft();
+    let submitted: Promise<unknown> | undefined;
+    act(() => {
+      submitted = harness.result.current.submit();
+    });
+    await act(async () => {
+      harness.pending.reject(failure);
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    await expect(submitted).resolves.toBe("error");
+    expect(toast.error).toHaveBeenCalledWith(
+      "Submit failed. Check your connection and try again.",
+    );
+  });
 });
