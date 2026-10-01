@@ -1,12 +1,11 @@
-# Spec Delta
+# pdf-renderer-service Specification
 
 ## Purpose
-
 Define the contract of the internal Gotenberg render service the `pdf-export`
 worker delegates page capture to: request/response surface, readiness gating,
 credential transport, network boundary, bounds, and deployment posture.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: The renderer converts the print URL through a bounded HTTP contract
 
