@@ -28,7 +28,9 @@ const nextConfig: NextConfig = {
   // Docker development keeps its build output separate from native Next.js.
   ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   // shared uses NodeNext `.js` specifiers that point at `.ts` sources.
-  webpack: (config: { resolve: { extensionAlias?: Record<string, string[]> } }) => {
+  webpack: (config: {
+    resolve: { extensionAlias?: Record<string, string[]> };
+  }) => {
     config.resolve.extensionAlias = {
       ...config.resolve.extensionAlias,
       ".js": [".ts", ".tsx", ".js"],
