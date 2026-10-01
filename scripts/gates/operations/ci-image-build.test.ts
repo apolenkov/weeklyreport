@@ -24,6 +24,7 @@ interface Rule {
 interface Job {
   readonly script: readonly string[];
   readonly rules: readonly Rule[];
+  readonly variables?: Readonly<Record<string, string>>;
 }
 
 const jobs = parse(readFileSync(resolve(".gitlab-ci.yml"), "utf8"), {
@@ -153,6 +154,13 @@ test("IMAGE_REGISTRY overrides the project registry", () => {
   assert.equal(result.status, 0, result.stderr);
   assert.ok(
     calls.every((call) => call.includes("name=other.example.com/team/")),
+  );
+});
+
+test("the build job disables the OCI process sandbox for a confined runner", () => {
+  assert.equal(
+    buildJob.variables?.BUILDKITD_FLAGS,
+    "--oci-worker-no-process-sandbox",
   );
 });
 
