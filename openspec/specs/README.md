@@ -195,6 +195,7 @@ Authority model:
 
 - [deploy-caddy-config](./deploy-caddy-config/spec.md) — Defines the production proxy security headers and API routing behavior.
 - [deploy-healthchecks](./deploy-healthchecks/spec.md) — Exercises real PgBouncer and API dependency paths rather than process-only liveness.
+- [pdf-renderer-service](./pdf-renderer-service/spec.md) — Bounds the internal Gotenberg renderer: HTTP contract, readiness gating, credential transport, egress to the print origin, and deployment posture.
 - [env-schema-coverage](./env-schema-coverage/spec.md) — Declares every consumed environment variable, removes silent defaults, and fails boot when mandatory production config is missing.
 - [operations-local-readiness](./operations-local-readiness/spec.md) — Keeps repository-owned operations instructions executable and fails closed without external production read-back.
 - [redis-connection-config](./redis-connection-config/spec.md) — Routes all Redis consumers through one validated, fail-loud host and port builder.

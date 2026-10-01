@@ -1,6 +1,7 @@
 # pdf-renderer-service Specification
 
 ## Purpose
+
 Define the contract of the internal Gotenberg render service the `pdf-export`
 worker delegates page capture to: request/response surface, readiness gating,
 credential transport, network boundary, bounds, and deployment posture.
