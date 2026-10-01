@@ -97,7 +97,7 @@ A blocker is a risk with severity `blocked`; item workflow stores progress only
 
 #### Scenario: choosing an activity hides the stage selector
 
-- **GIVEN** the Add Item dialog open with products and activities available
+- **GIVEN** the Add item dialog open with products and activities available
 - **WHEN** the lead selects an activity as the parent
 - **THEN** the SDLC Stages selector is not rendered
 - **AND** the lead can save the item without selecting any stage
@@ -494,7 +494,7 @@ product; activity risk entry continues to support blocked severity.
 #### Scenario: An activity-only lead opens record entry
 
 - **GIVEN** an editable section with no products and an attached activity
-- **WHEN** the lead uses current/next Add Item, Add Risk or generic quick add
+- **WHEN** the lead uses current/next Add item, Add risk or generic quick add
 - **THEN** the requested editor opens and offers the attached activity as a parent
 - **AND** activity item entry does not require an SDLC stage
 

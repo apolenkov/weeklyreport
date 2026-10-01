@@ -121,16 +121,16 @@ skip it.
 4. The selector stays multi-select; this requirement removes only the default
    pre-selection, not the ability to pick more than one stage.
 
-#### Scenario: opening Add Item shows no stage checked
+#### Scenario: opening Add item shows no stage checked
 
-- **WHEN** a lead opens the Add Item dialog on a product where they own two or more
+- **WHEN** a lead opens the Add item dialog on a product where they own two or more
   stages
 - **THEN** no stage is pre-selected
 - **AND** saving without choosing a stage is blocked with "Select at least one stage."
 
-#### Scenario: opening Add Decision shows no stage checked
+#### Scenario: opening Add decision shows no stage checked
 
-- **WHEN** a lead opens the Add Decision dialog on a product with two or more owned
+- **WHEN** a lead opens the Add decision dialog on a product with two or more owned
   stages
 - **THEN** no stage is pre-selected
 
@@ -152,7 +152,7 @@ exactly as the item and risk dialogs do.
 
 #### Scenario: changing the product re-scopes decision stages
 
-- **WHEN** a lead changes the Product picker in the Add Decision dialog
+- **WHEN** a lead changes the Product picker in the Add decision dialog
 - **THEN** the stage options update to the newly selected product's owned stages
 - **AND** the previous stage selection is cleared
 

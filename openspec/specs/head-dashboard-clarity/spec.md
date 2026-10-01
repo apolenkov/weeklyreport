@@ -105,7 +105,7 @@ after their unique signals and actions are represented in the queue.
 
 Each Period Summary row MUST offer only actions valid for its current state and
 server-provided capabilities: Open for content-bearing drafts/submissions, Remind
-only when an active reminder rule permits it, Review and Request Changes only
+only when an active reminder rule permits it, Review and Request changes only
 when review capability permits, and Revoke only for a submitted section in a
 non-published period.
 
@@ -113,12 +113,12 @@ non-published period.
 
 - **WHEN** a draft row has content and reminders are enabled
 - **THEN** Open and Remind are available
-- **AND** Review, Request Changes, and Revoke are not presented as valid actions
+- **AND** Review, Request changes, and Revoke are not presented as valid actions
 
 #### Scenario: A submitted section is reviewable
 
 - **WHEN** a submitted row has `canReview` in a non-published period
-- **THEN** Review and Request Changes are available through the existing review flow
+- **THEN** Review and Request changes are available through the existing review flow
 - **AND** Revoke remains a distinct explicit rollback action
 
 #### Scenario: A period is published
@@ -126,15 +126,15 @@ non-published period.
 - **WHEN** the queue displays a published period
 - **THEN** mutation actions that require an editable period are absent or disabled according to existing server capability fields
 
-### Requirement: Revoke All is secondary to per-lead queue actions
+### Requirement: Revoke all is secondary to per-lead queue actions
 
-The dashboard MUST place Revoke All in a secondary bulk/destructive action area
+The dashboard MUST place Revoke all in a secondary bulk/destructive action area
 rather than the primary page-header action slot, while preserving its
 confirmation, count, authorization, and mutation behavior.
 
 #### Scenario: Submitted leads exist
 
-- **WHEN** Revoke All is available
+- **WHEN** Revoke all is available
 - **THEN** normal per-lead queue actions remain visually primary
 - **AND** invoking the secondary bulk action still requires the existing destructive confirmation
 

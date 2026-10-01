@@ -74,7 +74,7 @@ export function RevokeLeadButton({
         open={open}
         onClose={() => setOpen(false)}
         onConfirm={handleConfirm}
-        title="Revoke Submission?"
+        title="Revoke submission?"
         description={`Revoke ${leadName}'s submission? Their form returns to Draft status.`}
         confirmLabel="Revoke"
         variant="destructive"

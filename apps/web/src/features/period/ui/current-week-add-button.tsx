@@ -22,7 +22,7 @@ export function AddItemButton({ defaultProduct, onAdd }: AddItemButtonProps) {
             : "No products assigned — contact admin"
         }
       >
-        + Add Item
+        + Add item
       </button>
     </div>
   );

@@ -112,9 +112,9 @@ describe("LeadOverviewSupportSections", () => {
         }}
       />,
     );
-    await user.click(screen.getByRole("button", { name: "+ Add Risk" }));
+    await user.click(screen.getByRole("button", { name: "+ Add risk" }));
     const dialog = await screen.findByRole("dialog", {
-      name: /^Add Risk/,
+      name: /^Add risk/,
     });
     expect(
       within(dialog).getByRole("option", { name: "Ops rotation" }),
@@ -166,8 +166,8 @@ describe("LeadOverviewSupportSections", () => {
     expect(
       screen.queryByRole("group", { name: "Status for Ops rotation" }),
     ).toBeNull();
-    expect(screen.queryByRole("button", { name: "+ Add Risk" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "+ Add Decision" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "+ Add risk" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "+ Add decision" })).toBeNull();
   });
 
   it("opens the collapsed risks section when its add signal advances", async () => {
@@ -177,9 +177,9 @@ describe("LeadOverviewSupportSections", () => {
     expect(
       screen.getByRole("button", { name: "Expand Risks & Blockers" }),
     ).toHaveAttribute("aria-expanded", "false");
-    await user.click(screen.getByRole("button", { name: "+ Add Risk" }));
+    await user.click(screen.getByRole("button", { name: "+ Add risk" }));
 
-    await screen.findByRole("dialog", { name: /^Add Risk/ });
+    await screen.findByRole("dialog", { name: /^Add risk/ });
     await waitFor(() =>
       expect(
         screen.getByRole("button", { name: "Collapse Risks & Blockers" }),
@@ -193,7 +193,7 @@ describe("LeadOverviewSupportSections", () => {
       screen.getByRole("button", { name: "Expand Risks & Blockers" }),
     ).toHaveAttribute("aria-expanded", "false");
 
-    await user.click(screen.getByRole("button", { name: "+ Add Risk" }));
+    await user.click(screen.getByRole("button", { name: "+ Add risk" }));
     await waitFor(() =>
       expect(
         screen.getByRole("button", { name: "Collapse Risks & Blockers" }),

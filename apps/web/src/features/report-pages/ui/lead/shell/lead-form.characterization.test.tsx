@@ -334,12 +334,12 @@ describe("lead-form draft: local section add", () => {
     expect(await screen.findByText("Autosaved")).toBeInTheDocument();
 
     act(() =>
-      screen.getAllByRole("button", { name: "+ Add Item" })[0]?.click(),
+      screen.getAllByRole("button", { name: "+ Add item" })[0]?.click(),
     );
     // The section action opens the shared item editor, whose accessible name
-    // starts with "Add Item" (distinct from the "Confirm submission" dialog).
+    // starts with "Add item" (distinct from the "Confirm submission" dialog).
     expect(
-      await screen.findByRole("dialog", { name: /^Add Item/ }),
+      await screen.findByRole("dialog", { name: /^Add item/ }),
     ).toBeInTheDocument();
   });
 
@@ -352,7 +352,7 @@ describe("lead-form draft: local section add", () => {
     );
     expect(await screen.findByText("Autosaved")).toBeInTheDocument();
 
-    act(() => screen.getByRole("button", { name: "+ Add Risk" }).click());
+    act(() => screen.getByRole("button", { name: "+ Add risk" }).click());
     const dialog = await screen.findByRole("dialog", { name: /risk/i });
     expect(
       within(dialog).getByRole("button", { name: /Blocked/i }),
@@ -554,7 +554,7 @@ describe("lead-form draft: submit gating + dialogs", () => {
       name: /^Fill from Week \d+\?$/,
     });
     act(() =>
-      within(dialog).getByRole("button", { name: "Replace & Fill" }).click(),
+      within(dialog).getByRole("button", { name: "Replace & fill" }).click(),
     );
     const overwriteDialog = await screen.findByRole("alertdialog", {
       name: "Overwrite unsaved changes?",

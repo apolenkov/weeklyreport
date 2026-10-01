@@ -81,10 +81,10 @@ function RoleUserItems({
 }
 
 const DATA_RESET_ACTIONS = [
-  ["minimal", "Wipe + Reseed (minimal)", "reseed-minimal"],
-  ["demo", "Wipe + Reseed (demo)", "reseed-demo"],
-  ["full", "Wipe + Reseed (full)", "reseed-full"],
-  ["stress", "Wipe + Reseed (stress)", "reseed-stress"],
+  ["minimal", "Wipe + reseed (minimal)", "reseed-minimal"],
+  ["demo", "Wipe + reseed (demo)", "reseed-demo"],
+  ["full", "Wipe + reseed (full)", "reseed-full"],
+  ["stress", "Wipe + reseed (stress)", "reseed-stress"],
 ] as const satisfies readonly [DataResetVariant, string, string][];
 
 function DataResetItems({
@@ -274,7 +274,7 @@ export function DevRoleSwitcher() {
         onConfirm={confirmReseed}
         title="Reset development data?"
         description={`Wipe and reseed the ${resetVariant ?? "selected"} dataset. Current development data will be deleted.`}
-        confirmLabel="Wipe + Reseed"
+        confirmLabel="Wipe + reseed"
         variant="destructive"
         isPending={pending}
         testId="dev-role-switcher-reset-confirm"

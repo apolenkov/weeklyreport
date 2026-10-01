@@ -303,7 +303,7 @@ export function LeadFormDialogs({
         open={writeActions.pendingFillFrom}
         title="Overwrite unsaved changes?"
         description="Fill from previous replaces the whole draft, including unsaved local edits."
-        confirmLabel="Overwrite & Fill"
+        confirmLabel="Overwrite & fill"
         variant="destructive"
         isPending={writeActions.fillFromPending}
         onConfirm={writeActions.confirmPendingFillFrom}

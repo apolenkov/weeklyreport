@@ -209,7 +209,7 @@ export function ProductEditDialog({
         }}
       >
         <h3 className="shrink-0 font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-          {editingProduct ? "Edit Product" : "Add Product"}
+          {editingProduct ? "Edit product" : "Add product"}
         </h3>
         <ProductFormFields
           form={form}
@@ -220,7 +220,7 @@ export function ProductEditDialog({
           isSaving={isSaving}
         />
         <AdminEntityDialogActions
-          saveLabel={editingProduct !== null ? "Save Changes" : "Add Product"}
+          saveLabel={editingProduct !== null ? "Save changes" : "Add product"}
           isSaving={isSaving}
           canSave={canSave}
           onClose={closeIfIdle}
