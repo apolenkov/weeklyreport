@@ -4,8 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 import { LEAD_1_ID } from "../support/seed-constants.js";
 import { endOfDayUTC } from "../support/utc-period-dates.js";
 import {
-  UX_ONE_DAY_REPORT_ID,
   seedUxFixtures,
+  UX_ONE_DAY_REPORT_ID,
 } from "./seed-advanced.ux-fixtures.js";
 
 function capture() {

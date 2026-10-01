@@ -24,12 +24,12 @@ import {
 import { seedRisks } from "./seeds/advanced/seed-advanced.risks.js";
 import { seedSingletons } from "./seeds/advanced/seed-advanced.settings.js";
 import { seedStageAssignments } from "./seeds/advanced/seed-advanced.stage-assignments.js";
-import { seedUxFixtures } from "./seeds/advanced/seed-advanced.ux-fixtures.js";
 import {
   logSeedSummary,
   NO_SECTION_COUNTS,
   sumSectionCounts,
 } from "./seeds/advanced/seed-advanced.summary.js";
+import { seedUxFixtures } from "./seeds/advanced/seed-advanced.ux-fixtures.js";
 import { finalizePublishedSnapshots } from "./seeds/support/published-snapshot.js";
 import { assertAssistantReadiness } from "./seeds/support/seed-assistant-readiness.js";
 import { SEED_REPORTS } from "./seeds/support/seed-constants.js";
