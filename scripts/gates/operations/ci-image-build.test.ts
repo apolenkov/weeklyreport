@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -9,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 import { afterEach, test } from "vitest";
 import { parse } from "yaml";
@@ -23,6 +24,10 @@ interface Rule {
 interface Job {
   readonly script: readonly string[];
   readonly rules: readonly Rule[];
+  readonly variables?: Readonly<Record<string, string>>;
+  readonly needs?: readonly (
+    string | { readonly job: string; readonly optional?: boolean }
+  )[];
 }
 
 const jobs = parse(readFileSync(resolve(".gitlab-ci.yml"), "utf8"), {
@@ -137,6 +142,9 @@ test("the build job pushes four SHA-tagged images and records their digests", ()
     result.stdout + result.stderr,
     new RegExp(BUILD_ENV.CI_REGISTRY_PASSWORD),
   );
+  // The build context is the project dir (`--local context=.`), so registry
+  // credentials must never land inside it.
+  assert.equal(existsSync(join(dirname(digests), ".registry-auth")), false);
 });
 
 test("IMAGE_REGISTRY overrides the project registry", () => {
@@ -149,6 +157,13 @@ test("IMAGE_REGISTRY overrides the project registry", () => {
   assert.equal(result.status, 0, result.stderr);
   assert.ok(
     calls.every((call) => call.includes("name=other.example.com/team/")),
+  );
+});
+
+test("the build job disables the OCI process sandbox for a confined runner", () => {
+  assert.equal(
+    buildJob.variables?.BUILDKITD_FLAGS,
+    "--oci-worker-no-process-sandbox",
   );
 });
 
@@ -171,4 +186,6 @@ test("the deploy job exists only with a kubeconfig, manually, on the default bra
   assert.match(script, /--atomic/);
   assert.doesNotMatch(script, /--wait/);
   assert.match(script, /images\.tag=\$CI_COMMIT_SHA/);
+  // A deploy must wait for this pipeline's image build, when it has one.
+  assert.deepEqual(deployJob.needs, [{ job: "build-images", optional: true }]);
 });

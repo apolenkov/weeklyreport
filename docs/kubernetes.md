@@ -103,7 +103,8 @@ plus the 60 second startup budget).
   NOT VERIFIED.
 - `deploy-production` is a manual job that exists only when a file-type
   `KUBECONFIG` variable is set; it also needs `HELM_VALUES_FILE` (file) and
-  `HELM_NAMESPACE`.
+  `HELM_NAMESPACE`, and must run only after a green `build-images` for the
+  same commit SHA.
 - Alternative: the GitLab agent for Kubernetes is enabled on the instance and
   can replace the `KUBECONFIG` job. No agent configuration is part of this change.
 

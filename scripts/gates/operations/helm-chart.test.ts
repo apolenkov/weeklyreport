@@ -347,6 +347,35 @@ function runMigrateCommand(password: string): {
   }
 }
 
+test("the backup pod shares the postgres node and the job is bounded in time", () => {
+  // pgbackups is ReadWriteOnce and mounted by postgres, so on a multi-node
+  // cluster the Job must be scheduled onto the postgres node or the volume
+  // attach deadlocks and concurrencyPolicy=Forbid blocks every later run.
+  const { manifests } = renderExample();
+  const cronJob = findManifest(manifests, "CronJob", "backup");
+  const [term] =
+    podSpecOf(cronJob).affinity?.podAffinity
+      ?.requiredDuringSchedulingIgnoredDuringExecution ?? [];
+  assert.equal(term?.topologyKey, "kubernetes.io/hostname");
+  assert.deepEqual(term?.labelSelector?.matchLabels, {
+    "app.kubernetes.io/name": "weeklyreport",
+    "app.kubernetes.io/component": "postgres",
+  });
+  assert.equal(cronJob.spec.jobTemplate?.spec.activeDeadlineSeconds, 1800);
+  const tuned = renderExample(["--set", "backup.activeDeadlineSeconds=60"]);
+  assert.equal(
+    findManifest(tuned.manifests, "CronJob", "backup").spec.jobTemplate?.spec
+      .activeDeadlineSeconds,
+    60,
+  );
+  const rejected = helm([
+    ...templateArgs(exampleValuesPath),
+    "--set",
+    "backup.activeDeadlineSeconds=0",
+  ]);
+  assert.notEqual(rejected.status, 0);
+});
+
 test("the migrate command checks the password before any database work", () => {
   const good = runMigrateCommand(SECRET_VALUES.DB_PASSWORD ?? "");
   assert.equal(good.status, 0);

@@ -81,6 +81,9 @@ edge:
 backup:
   runAsUser: 70
   startingDeadlineSeconds: 3600
+  # Upper bound on one dump: a stuck Job must die before it starves later
+  # runs under concurrencyPolicy=Forbid.
+  activeDeadlineSeconds: 1800
   resources:
     requests: { memory: 64Mi, cpu: 20m }
     limits: { memory: 256Mi }
