@@ -11,8 +11,8 @@ import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import {
   publishedReportScopeWhere,
   requirePublishedSnapshot,
-  requireScopedPublishedSnapshot,
 } from "../report-sections/index.js";
+import { scopeSnapshotWithOrgProgress } from "../weekly-report/index.js";
 import {
   assertCanonicalArtifact,
   assertValidCompletionJob,
@@ -59,7 +59,7 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
         report.publishedSnapshot,
         report.id,
       );
-      return requireScopedPublishedSnapshot(snapshot, session);
+      return scopeSnapshotWithOrgProgress(snapshot, session);
     });
   }
 
