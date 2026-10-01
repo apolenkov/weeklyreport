@@ -45,17 +45,20 @@ success does not waive them.
 
 The image-build job MUST use rootless BuildKit pinned by `tag@sha256:` digest
 without Docker-in-Docker or a mounted Docker socket. It MUST push to the registry
-named by the CI variables `IMAGE_REGISTRY`, `IMAGE_REGISTRY_USER`, and
-`IMAGE_REGISTRY_PASSWORD`, never to `$CI_REGISTRY`, and MUST fail before building
-when any of them, or any `WR_NEXT_PUBLIC_*` value `Dockerfile.web` requires, is
-unset. It MUST run on default-branch and tag pipelines and MUST be manual and
-non-blocking on merge requests. It MUST tag each pushed image with the commit SHA,
+named by `IMAGE_REGISTRY` when set, otherwise to `$CI_REGISTRY_IMAGE`, with
+`IMAGE_REGISTRY_USER` and `IMAGE_REGISTRY_PASSWORD` when set, otherwise the job
+token credentials, and MUST fail before building when the resolved registry,
+user, or password is empty, or any `WR_NEXT_PUBLIC_*` value `Dockerfile.web`
+requires is unset. It MUST use no keyword newer than the instance's GitLab
+version (15.10). It MUST run automatically on default-branch and tag pipelines
+once the web build variables are configured, be manual and non-blocking before
+that, and be manual and non-blocking on merge requests. It MUST tag each pushed image with the commit SHA,
 publish the resulting digests as a job artifact, and never print registry
 credentials.
 
 #### Scenario: Registry variables are missing
 
-- **WHEN** the job runs with `IMAGE_REGISTRY` unset
+- **WHEN** the job runs with neither `IMAGE_REGISTRY` nor `$CI_REGISTRY_IMAGE` available, or a required `WR_NEXT_PUBLIC_*` value unset
 - **THEN** it fails in its first script step with a message naming the variable
 - **AND** no build starts
 

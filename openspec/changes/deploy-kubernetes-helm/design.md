@@ -132,9 +132,12 @@ every user shares one rate-limit bucket. Fix (Task 2):
   right to left past trusted proxies, so private-range intranet clients are still
   resolved correctly (the trust list names proxies, not client ranges).
   The api then sees one `X-Forwarded-For` entry and `trust proxy: 1` stays right.
-- Site address `http://:8080` and `auto_https off` in the chart; compose keeps
-  its public site address. The ACME `email` global must not break the chart
-  mode; Task 2 verifies `caddy validate` for both modes.
+- Site address `http://:8080` in the chart; compose keeps its public site address.
+  An explicit `http://` site never gets an automation policy (checked with
+  `caddy adapt`: no `tls` app is emitted), so `auto_https off` is unnecessary.
+  An empty `email` argument is a parse error, so the chart sets
+  `CADDY_ACME_EMAIL` to a fixed unused literal in the edge environment; compose
+  still requires the real value. `caddy validate` passed for both modes.
 - `X-Forwarded-Proto` stays `{scheme}`: the app does not read it (cookie
   `secure` follows `NODE_ENV`). It reports `http` behind the Ingress; recorded
   as a known cosmetic difference.
@@ -321,9 +324,17 @@ log collection from stdout (everything already logs JSON to stdout).
 
 ## 7. Image build (GitLab CI, no Docker-in-Docker)
 
-Facts (checked 2026-10-01): the project has container_registry disabled, shared
-runners disabled, one project runner `cp-test-runner` (docker executor,
-privileges unknown). The registry is therefore a CI variable, never `$CI_REGISTRY`.
+Facts (checked 2026-10-01 and updated the same day): the GitLab instance is CE
+15.10.8, so `.gitlab-ci.yml` uses no keyword newer than 15.10. Shared runners are
+disabled; one project runner `cp-test-runner` (docker executor, privileges
+unknown). The project container registry is now enabled and private
+(`registry.example.com:5005/example/weeklyreport`), so the job defaults to
+`$CI_REGISTRY_IMAGE` with the job token (`$CI_REGISTRY_USER`,
+`$CI_REGISTRY_PASSWORD`); `IMAGE_REGISTRY`, `IMAGE_REGISTRY_USER`, and
+`IMAGE_REGISTRY_PASSWORD` are optional overrides. The cluster pulls from a private
+registry, so DevOps supplies a pull Secret named by `images.pullSecret`. The GitLab
+agent for Kubernetes (KAS) is enabled on the instance; it is documented as a CD
+option and no agent configuration is built now.
 
 Builder candidates:
 
@@ -354,10 +365,15 @@ workstation and push (not CI; recorded as a manual exception).
 
 Job rules (fail closed, never red on merge requests):
 
-- Runs on default-branch pushes and tags; manual (`allow_failure: true`) on merge requests.
-- First script line `: "${IMAGE_REGISTRY:?IMAGE_REGISTRY is not set}"`, likewise
-  `IMAGE_REGISTRY_USER`, `IMAGE_REGISTRY_PASSWORD` (masked), and every `WR_NEXT_PUBLIC_*`
-  required by `Dockerfile.web`. Registry credentials become a `config.json` in a
+- Runs automatically on default-branch pushes and tags once the web build
+  variables are configured (`WR_NEXT_PUBLIC_CLIENT_LOG_FORWARDING` set); before
+  that it is manual with `allow_failure: true`, so main is not red while they are
+  missing. Manual (`allow_failure: true`) on merge requests.
+- First script lines resolve `REGISTRY=${IMAGE_REGISTRY:-$CI_REGISTRY_IMAGE}`, the
+  user, and the password the same way, then `: "${REGISTRY:?...}"` for each, and
+  every `WR_NEXT_PUBLIC_*` required by `Dockerfile.web`. Image names are
+  `$REGISTRY/api`, `/migrate`, `/web`, `/backup`, the same scheme the chart uses
+  (`images.registry` plus a fixed name). Registry credentials become a `config.json` in a
   job-local directory; never echoed.
 - Builds and pushes `api`, `migrate` (api `--target migrator`), `web`, `backup`,
   each tagged with `$CI_COMMIT_SHA`, and records the pushed digest in a job
