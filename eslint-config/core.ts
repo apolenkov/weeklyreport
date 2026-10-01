@@ -28,6 +28,7 @@ export const coreConfig: Linter.Config[] = [
     // dumps; linting them OOMs the run on duplicate sources.
     ".devin-artifacts/**",
     ".kilo/**",
+    ".claude/worktrees/**",
     "**/coverage/**",
     "**/.turbo/**",
     "openspec/**",
