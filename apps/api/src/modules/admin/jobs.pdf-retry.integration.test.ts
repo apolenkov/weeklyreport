@@ -417,8 +417,8 @@ describe("JobsService — pdf-export generation retry (Postgres + BullMQ integra
     });
 
     // The advance wrote a new pending row generation and enqueued only the
-    // fresh `${jobId}-g2` job; the retained g1 entry is untouched and the
-    // job is never retried in place.
+    // fresh `${jobId}-g2` job; the superseded g1 entry is removed from the
+    // failed list and the job is never retried in place.
     const revived = await exportRow(jobId);
     expect(revived.status).toBe("pending");
     expect(revived.generation).toBe(2);
@@ -429,8 +429,7 @@ describe("JobsService — pdf-export generation retry (Postgres + BullMQ integra
       publicationProjection(before),
     );
 
-    const g1 = await queue.getJob(queueJobId(jobId, 1));
-    expect(await expectDefined(g1).getState()).toBe("failed");
+    await expect(queue.getJob(queueJobId(jobId, 1))).resolves.toBeUndefined();
     const g2 = expectDefined(await queue.getJob(queueJobId(jobId, 2)));
     expect(await g2.getState()).toBe("waiting");
     // The fresh attempt carries the durable row's identity plus its own
@@ -618,16 +617,14 @@ describe("JobsService — pdf-export generation retry (Postgres + BullMQ integra
       }),
     ).resolves.toEqual({ retried: true, jobId: queueJobId(jobId, 1) });
 
-    // The retained g1 entry is still in the failed set, so a repeated UI
-    // request reaches the seam again — the durable row reports the
-    // generation already advanced and the caller hears success, not a
-    // false decline.
+    // The superseded g1 entry is gone, so a repeated UI request is the
+    // structured no-op for a pruned job and dispatches nothing.
     await expect(
       jobsService.retryFailed({
         queue: QUEUE_NAME,
         jobId: queueJobId(jobId, 1),
       }),
-    ).resolves.toEqual({ retried: true, jobId: queueJobId(jobId, 1) });
+    ).resolves.toEqual({ retried: false, jobId: queueJobId(jobId, 1) });
 
     const row = await exportRow(jobId);
     expect(row).toMatchObject({ status: "pending", generation: 2 });
