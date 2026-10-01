@@ -148,3 +148,17 @@ under the previous renderer.
 - **AND** a later attempt of the same job completes with a valid artifact
 - **AND** the dedicated renderer health signal reflects the outage and the
   recovery while `/health/ready` stays `up`
+
+## REMOVED Requirements
+
+### Requirement: The worker's terminal-attempt check matches BullMQ's post-increment attemptsMade
+
+**Reason**: An unrecoverable renderer rejection is terminal while `attemptsMade` is still below `attempts`, so the attempt count alone cannot decide terminality.
+
+**Migration**: Terminal handling reads the current generation-scoped queue state under the export-row lock, per the modified readiness requirement and "Terminal queue states reconcile…".
+
+### Requirement: A PDF export job reaches `failed` only on the terminal BullMQ attempt
+
+**Reason**: Same as above — the count comparison is replaced by queue-state reconciliation.
+
+**Migration**: A retryable attempt (`delayed`, `waiting`, `active`) leaves the row queued; only a terminal queue job with matching identities writes `failed`.

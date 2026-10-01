@@ -163,10 +163,10 @@ IndexedDB, Cache Storage API, and service-worker state — accepted for now
 because the print-route source audit at `c1781215` finds no JavaScript
 persistent-storage API anywhere in the reachable `/print` tree (source
 evidence, not runtime proof; the finding does not generalize beyond that
-ref, so a fresh reachable-print-source audit MUST re-run on the final
-implementation candidate). **Not yet proven on the app stack:** real two-requester identity
-isolation — it stays a runtime acceptance item, so the serialization
-invariant stands regardless. A per-request credential transport MAY relax
+ref). Measured on the final candidate 58d65df03 (runtime acceptance item
+7): sessionStorage does not cross conversions, IndexedDB does (accepted —
+the built `/print` closure writes none), and real two-requester isolation
+holds (item 8). A per-request credential transport MAY relax
 serialization later, only after isolation is demonstrated live.
 
 ### D5: Error classification onto existing job semantics — fail-safe bias
@@ -349,10 +349,10 @@ advisor's "separate PDF degradation" recommendation.
   conversion boundaries without their flags, so `CHROMIUM_CLEAR_STORAGE` and
   `CHROMIUM_CLEAR_CACHE` join `CHROMIUM_MAX_CONCURRENCY=1` /
   `CHROMIUM_CLEAR_COOKIES` as gate-asserted deploy invariants (D4).
-  sessionStorage, IndexedDB, Cache Storage, and service workers were not
-  exercised — the print tree uses no persistent-storage API per the source
-  audit at `c1781215`, re-checked on the final implementation candidate.
-  Real two-requester identity isolation remains a runtime acceptance item.
+  IndexedDB is not cleared by the flags and an orphaned tab outlives a
+  client abort (items 6 and 7); both are accepted because the built
+  `/print` closure uses no persistent-storage API (re-audited on
+  58d65df03). Two-requester isolation passed live (item 8).
 - [Ambiguous renderer statuses could strand a real config bug in retries] →
   Accepted (D5): a malformed request burns the bounded retry budget and still
   converges to terminal failure; the alternative (terminal-on-400) would
@@ -431,7 +431,16 @@ demonstrated:
 6. Cleanup under timeout/interruption (_probe-covered_): a credentialed
    conversion that hits `API_TIMEOUT` (503) or is aborted mid-flight (499)
    leaves no cookie or localStorage sentinel visible to the next
-   conversion — re-verified on the real print route.
+   conversion — re-verified on the real print route. Accepted exception
+   (measured 2026-10-01 on 8.37.0): an aborted tab keeps running in the
+   shared browser until its own `API_TIMEOUT`, so a page that kept writing
+   storage could reach following conversions. The print tree writes no
+   storage, and the API aborts only after `API_TIMEOUT` (client bound
+   160 s > 150 s), so a `499` happens only when the API process dies
+   mid-render. By source reading of v8.37.0 (browser.go `Stop` takes
+   `ctxMu.Lock` while the tab holds `RLock`), `CHROMIUM_RESTART_AFTER=1`
+   would not kill the orphan: the restart waits for it holding the only
+   slot.
 7. Cache/storage isolation under the pinned flags (_probe-covered_): with
    `CHROMIUM_CLEAR_STORAGE=true` and `CHROMIUM_CLEAR_CACHE=true`, no
    localStorage state or HTTP-cached bytes cross conversions.
@@ -439,7 +448,12 @@ demonstrated:
    were not probed — accepted because the reachable `/print` tree at the
    audited ref uses no persistent-storage API; that audit predates the
    implementation, so a fresh reachable-print-source check MUST re-run on
-   the final implementation candidate.
+   the final implementation candidate. Re-run 2026-10-01 on 58d65df03:
+   the built `/print` closure uses no storage API; sessionStorage does not
+   cross conversions; IndexedDB does cross them (the pinned flag clears
+   local storage only); Cache Storage API and service workers were absent
+   on the non-secure `http://web:3000` origin. All are accepted because
+   nothing in the built print closure uses a persistent-storage API.
 8. Real two-requester isolation: two export jobs for different reports and
    requesters dispatched together both complete with their own correct
    artifacts — under `CHROMIUM_MAX_CONCURRENCY=1` no job's token is visible
@@ -515,8 +529,9 @@ ports, no application, database, Redis, or report-data access. Reports
   `409`; dead upstream → pinning-proxy `502` → `409`; never-ready gate →
   `503` at `API_TIMEOUT`; redirect into a disallowed origin → zero bytes
   to the blocked upstream, then `503` — not `403`; client disconnect →
-  renderer-side `499` `context canceled` (the abort terminates the render
-  and frees the serialized slot).
+  renderer-side `499` `context canceled`; the serialized slot frees at
+  once, but the aborted tab runs on the browser context until its own
+  `API_TIMEOUT` (measured 2026-10-01; see item 6).
 - Timeout scope (D6): `API_TIMEOUT` includes queue wait under
   `CHROMIUM_MAX_CONCURRENCY=1` (a fast request behind a 14 s render with a
   12 s timeout died at its own deadline without receiving a slot).
@@ -539,19 +554,10 @@ ports, no application, database, Redis, or report-data access. Reports
   evidence only); the Playwright removal surface is inventoried file by
   file (D9).
 
-**Still unproven — runtime acceptance items, not claims:**
+**Residual limits after runtime acceptance (2026-10-01, 58d65df03):**
 
-- Isolation of sessionStorage, IndexedDB, Cache Storage API, and
-  service-worker state — not exercised by probes; accepted because the
-  `/print` tree uses none at `c1781215`, and gated on a fresh
-  reachable-print-source audit on the final implementation candidate (the
-  storage findings do not generalize beyond that ref).
-- Real two-requester identity isolation on the application stack (probes
-  used a single synthetic origin).
-- Serialized-queue saturation behavior under real export volume — the
-  150s/160s figures are starting values and do not prove saturation is
-  harmless.
-- Sufficiency of the provisional 1 GiB renderer memory cap — an initial
-  containment value only; item 16 captures the effective and actual
-  limits, peak usage, OOM behavior, and host headroom, and a local pass
-  does not certify an unknown production host or platform.
+- IndexedDB and orphaned-tab isolation rest on the `/print` tree using no
+  persistent-storage API (items 6 and 7, accepted exceptions).
+- The 1 GiB renderer cap passed on the largest synthetic report (peak
+  827.5 MiB including page cache, no OOM) on local arm64 only; it does not
+  certify an unknown production host or platform.
