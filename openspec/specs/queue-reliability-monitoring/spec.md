@@ -211,6 +211,14 @@ unchanged.
 - **WHEN** retry succeeds and the queue no longer returns it as failed
 - **THEN** the next list read removes that row and refreshes the count
 
+#### Scenario: A retried pdf-export entry leaves the failed list
+
+- **GIVEN** a failed `pdf-export` entry `${jobId}-g1` whose durable row accepts a retry
+- **WHEN** the retry enqueues the fresh `${jobId}-g2` job
+- **THEN** the superseded g1 entry is removed from the failed list and the
+  failed-job count drops without a manual Remove
+- **AND** a failure to remove it does not fail the retry
+
 #### Scenario: A rejected action does not masquerade as success
 
 - **WHEN** retry or removal fails

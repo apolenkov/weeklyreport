@@ -734,7 +734,9 @@ describe("JobsService — pdf-export generation retry", () => {
     // No BullMQ job.retry() or live-state read survives on the pdf path.
     expect(job.getState).not.toHaveBeenCalled();
     expect(job.retry).not.toHaveBeenCalled();
-    expect(job.remove).not.toHaveBeenCalled();
+    // The retried entry is superseded by the fresh generation job, so it
+    // leaves the failed list instead of keeping the DLQ badge lit.
+    expect(job.remove).toHaveBeenCalledTimes(1);
   });
 
   it("reports the idempotent already-advanced outcome as retried", async () => {
@@ -766,6 +768,7 @@ describe("JobsService — pdf-export generation retry", () => {
       expectedGeneration: 1,
     });
     expect(job.retry).not.toHaveBeenCalled();
+    expect(job.remove).toHaveBeenCalledTimes(1);
   });
 
   it("a retained g1 queue entry cannot advance a row already failed at g2", async () => {
@@ -795,6 +798,7 @@ describe("JobsService — pdf-export generation retry", () => {
       jobId: "pdf-job-1",
       expectedGeneration: 1,
     });
+    expect(job.remove).not.toHaveBeenCalled();
     expect(result).toEqual({
       retried: false,
       jobId: "pdf-job-1-g1",
