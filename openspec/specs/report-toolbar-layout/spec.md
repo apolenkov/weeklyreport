@@ -60,7 +60,7 @@ they do not compete with that primary. The bordered context-control bar MUST NOT
 give any control a solid brand-accent fill; its segmented toggles use a neutral
 active-selection fill, not the brand accent.
 
-1. When a forward commit is available (Submit Section for lead, Publish & lock
+1. When a forward commit is available (Submit for lead, Publish & lock
    for head) it MUST be the only control with the resting solid brand-accent
    fill; in states with no forward commit (submitted lead, published head) the
    header action group has no resting solid primary.
@@ -102,7 +102,9 @@ while keeping the surviving controls in stable positions across the header actio
 group and the context bar.
 
 1. For a lead read-only past period, the header action group MUST hide the real
-   mutating document actions (Save, Submit Section, Fill-From); the
+   mutating document actions (Save, Submit, Fill from, whose accessible names
+   are `Fill from most recent submitted period` and `Choose past report to fill
+from`); the
    context-control bar MUST remain.
 2. When a lead submits, Save MUST be hidden and the forward commit slot MUST
    switch to the reversal action without reordering the remaining controls.
@@ -119,7 +121,7 @@ group and the context bar.
 #### Scenario: a lead views a locked past period
 
 - **WHEN** a lead opens a read-only past period
-- **THEN** the header action group hides Save, Submit Section, and Fill-From
+- **THEN** the header action group hides Save, Submit, and Fill from
 - **AND** the context bar still allows navigating periods
 
 #### Scenario: a viewer opens a published report
@@ -164,7 +166,7 @@ than lose meaningful names to truncation.
 The report surface MUST split its controls by one axis — operates on the report document vs changes which / how it is shown — placing the document actions on the page header line and the context controls in the single bordered toolbar bar below it. The Lead Save/Add/Submit cluster MAY hand off to the compact sticky action surface when its header leaves the viewport, as specified in `lead-completion-guidance`; both placements MUST share action state and handlers, and the context toolbar MUST NOT become a second action surface.
 
 1. A control that creates, persists, commits, or exports report content (Save,
-   Submit Section, Publish & lock, Fill-From, PDF export, Move to archive) MUST
+   Submit, Publish & lock, Fill from, PDF export, Archive) MUST
    render on the page header line, in a right-aligned action group beside the
    title/status block — NOT inside the bordered toolbar.
 2. A control that changes which report is shown or how it is presented (period
@@ -174,15 +176,14 @@ The report surface MUST split its controls by one axis — operates on the repor
 3. The bordered toolbar MUST render exactly one row (the context-control bar);
    it MUST NOT contain a document-action row.
 4. The head archive surfaces split by this axis: the show-archived-periods
-   filter is a context control (toolbar bar), while the published-period "Move
-   to archive" lifecycle button is a document action (header line).
+   filter is a context control (toolbar bar), while the published-period "Archive"
+   lifecycle button (accessible name `Move this report to the archive`) is a document action (header line).
 
 #### Scenario: the lead surface splits across the header and the toolbar
 
 - **WHEN** a lead opens their report for an editable period that has archived
   periods in its history
-- **THEN** the header line's action group shows Fill-From, Save, and the Submit
-  Section commit
+- **THEN** the header line's action group shows Fill from, Save, and the Submit commit
 - **AND** the bordered toolbar shows one row: period navigation, the
   show-archived-periods filter, the Mine/Everyone scope, the Report/Slides view
   mode, and the collapse-all control
@@ -198,7 +199,7 @@ The report surface MUST split its controls by one axis — operates on the repor
 
 - **WHEN** a head opens the review page for an open period
 - **THEN** the header line's action group shows the PDF export and the Publish &
-  Lock commit
+  lock commit
 - **AND** the bordered toolbar shows one row: period navigation, the
   show-archived-periods filter, the Product/Leads scope, the Edit/Slides view
   mode
@@ -206,7 +207,7 @@ The report surface MUST split its controls by one axis — operates on the repor
 #### Scenario: a published head period offers move-to-archive as a document action
 
 - **WHEN** a head views a published period that can be moved to the archive
-- **THEN** the Move to archive control renders in the header line's action group,
+- **THEN** the Archive control (accessible name `Move this report to the archive`) renders in the header line's action group,
   separate from the toolbar's show-archived-periods filter
 
 ### Requirement: The header action group and the context bar are accessible as labeled groups with a stable focus order
@@ -233,18 +234,18 @@ header actions before the context controls.
 
 ### Requirement: The lead quick-add control holds a stable document-action slot across view modes
 
-The lead "+ Add" quick-add control MUST render in both Report and Slides modes for
+The lead "+ Add item" quick-add control MUST render in both Report and Slides modes for
 an editable (non-read-only) section, so it does not disappear when the lead
 switches to slides. The
 control belongs to the shared Save/Add/Submit completion cluster, hosted in the
 header or its compact sticky handoff according to `lead-completion-guidance`. Within
 the document-action group it MUST sit immediately before the forward commit (the
-Submit Section primary) — after Save and Fill-From — so the
-single-forward-primary accent hierarchy is preserved: "+ Add" takes the
+Submit primary) — after Save and Fill from — so the
+single-forward-primary accent hierarchy is preserved: "+ Add item" takes the
 neutral/outline treatment and MUST NOT carry a resting solid brand-accent fill,
-which stays reserved for the Submit Section commit. On a read-only past period
-"+ Add" MUST be hidden together with the other mutating document actions (Save,
-Submit Section, Fill-From), and it MUST stay disabled when the lead has neither
+which stays reserved for the Submit commit. On a read-only past period
+"+ Add item" MUST be hidden together with the other mutating document actions (Save,
+Submit, Fill from), and it MUST stay disabled when the lead has neither
 an owned Product nor an assigned Activity. An Activity-only section MUST retain
 quick-add for supported Activity record types; product-only Blocker entry MUST
 remain unavailable without an owned Product.
@@ -253,32 +254,32 @@ remain unavailable without an owned Product.
 
 - **WHEN** a lead toggles the view-mode control from Report to Slides on an
   editable section
-- **THEN** the "+ Add" control remains present in the document-action group
+- **THEN** the "+ Add item" control remains present in the document-action group
 - **AND** it does not disappear or change position
 
 #### Scenario: + Add sits immediately before the Submit primary
 
 - **WHEN** a lead opens their editable, not-yet-submitted report
-- **THEN** the "+ Add" control renders after Save and Fill-From and immediately
-  before the Submit Section commit
-- **AND** "+ Add" carries a neutral/outline treatment, not the resting solid
+- **THEN** the "+ Add item" control renders after Save and Fill from and immediately
+  before the Submit commit
+- **AND** "+ Add item" carries a neutral/outline treatment, not the resting solid
   brand-accent fill
 
 #### Scenario: a read-only past period hides + Add
 
 - **WHEN** a lead opens a read-only past period
-- **THEN** the "+ Add" control is hidden alongside Save, Submit Section, and
-  Fill-From
+- **THEN** the "+ Add item" control is hidden alongside Save, Submit, and
+  Fill from
 
 #### Scenario: a lead with no reporting-unit targets cannot quick-add
 
 - **WHEN** the lead owns no Product and has no assigned Activity
-- **THEN** the "+ Add" control renders but is disabled
+- **THEN** the "+ Add item" control renders but is disabled
 
 #### Scenario: an Activity-only lead can quick-add supported records
 
 - **WHEN** the lead owns no Product but has an assigned Activity
-- **THEN** the "+ Add" control remains enabled for supported Activity record types
+- **THEN** the "+ Add item" control remains enabled for supported Activity record types
 - **AND** product-only Blocker entry remains unavailable
 
 ### Requirement: Report context controls preserve semantic clusters at every supported width
