@@ -48,7 +48,9 @@ describe("TrendsSection", () => {
         <p>Table data</p>
       </TrendsSection>,
     );
-    expect(screen.getByRole("status", { name: "Loading data" })).toBeVisible();
+    const status = screen.getByRole("status", { name: "Loading data" });
+    expect(status).toBeVisible();
+    expect(status).toHaveClass("animate-pulse", "motion-reduce:animate-none");
 
     rerender(
       <TrendsSection {...baseProps} emptyMessage="Two periods are required.">

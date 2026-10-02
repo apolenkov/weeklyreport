@@ -101,9 +101,13 @@ describe("ReopenRequestsCard", () => {
   it("renders a stable loading placeholder while the first page loads", () => {
     renderCard({ list: "pending" });
 
-    expect(
-      screen.getByRole("status", { name: /loading pending reopen requests/i }),
-    ).toBeInTheDocument();
+    const status = screen.getByRole("status", {
+      name: /loading pending reopen requests/i,
+    });
+    expect(status).toBeInTheDocument();
+    for (const pulse of status.querySelectorAll(".animate-pulse")) {
+      expect(pulse).toHaveClass("motion-reduce:animate-none");
+    }
   });
 
   it("shows a retryable full-card issue when the first page fails", async () => {

@@ -180,8 +180,8 @@ export function ReopenRequestsCard() {
         aria-busy="true"
         aria-label="Loading pending reopen requests"
       >
-        <div className="h-5 w-40 animate-pulse rounded bg-[var(--color-surface-hover)]" />
-        <div className="mt-4 h-12 w-full animate-pulse rounded bg-[var(--color-surface-hover)]" />
+        <div className="h-5 w-40 animate-pulse motion-reduce:animate-none rounded bg-[var(--color-surface-hover)]" />
+        <div className="mt-4 h-12 w-full animate-pulse motion-reduce:animate-none rounded bg-[var(--color-surface-hover)]" />
       </section>
     );
   }
