@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 
-import { SAFE_TEXT_MAX_LENGTH } from "../primitives/report-primitives.schema";
+import { SAFE_TEXT_MAX_LENGTH } from "../primitives/report-primitives.schema.js";
 import {
   draftSaveSchema,
   MAX_ACTIVITY_NAME_LENGTH,
   reportSectionReadModelSchema,
-} from "./section.schema";
-import { validateActivityStatuses } from "./section-validation.schema";
+} from "./section.schema.js";
+import { validateActivityStatuses } from "./section-validation.schema.js";
 
 const ACTIVITY_ID = "33333333-3333-4333-8333-333333333333";
 const OTHER_ACTIVITY_ID = "44444444-4444-4444-8444-444444444444";

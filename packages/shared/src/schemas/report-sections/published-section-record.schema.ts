@@ -4,7 +4,7 @@ import {
   decisionReadModelSchema,
   itemReadModelSchema,
   riskReadModelSchema,
-} from "./section-record.schema";
+} from "./section-record.schema.js";
 
 const publishedRecordIdentitySchema = {
   id: z.uuid(),

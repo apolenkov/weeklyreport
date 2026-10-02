@@ -7,11 +7,11 @@ import {
   reportSectionStatusSchema,
   reportStatusSchema,
   trafficLightStatusSchema,
-} from "../primitives/report-primitives.schema";
+} from "../primitives/report-primitives.schema.js";
 import {
   publishedReportSectionReadModelSchema,
   reportSectionReadModelSchema,
-} from "../report-sections/section.schema";
+} from "../report-sections/section.schema.js";
 
 /**
  * Live lead-section activity row; `lastEditAt` is derived from child records.

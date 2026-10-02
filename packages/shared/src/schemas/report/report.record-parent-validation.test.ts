@@ -13,7 +13,7 @@ import {
   riskWriteSchema,
   sharedItemReadModelSchema,
   validateRecordActivityIds,
-} from "../report";
+} from "../report.js";
 
 const uuid = () => randomUUID();
 const attachedActivityId = uuid();

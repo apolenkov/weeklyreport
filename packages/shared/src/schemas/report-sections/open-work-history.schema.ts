@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { reportDate } from "../primitives/report-primitives.schema";
-import { publishedItemReadModelSchema } from "./published-section-record.schema";
+import { reportDate } from "../primitives/report-primitives.schema.js";
+import { publishedItemReadModelSchema } from "./published-section-record.schema.js";
 
 const DEFAULT_OPEN_WORK_REPORT_LIMIT = 10;
 const MAX_OPEN_WORK_REPORT_LIMIT = 25;

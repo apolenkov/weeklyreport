@@ -8,7 +8,7 @@ import {
   paginationInputSchema,
   portfolioProductOverviewSchema,
   weeklyReportReadModelSchema,
-} from "../report";
+} from "../report.js";
 
 const uuid = () => randomUUID();
 

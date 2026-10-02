@@ -6,7 +6,7 @@ import {
   initialsFromName,
   shortName,
   shortNameFromName,
-} from "./user-name";
+} from "./user-name.js";
 
 describe("composeName", () => {
   it("composes full ФИО surname-first", () => {

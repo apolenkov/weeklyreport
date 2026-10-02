@@ -1,0 +1,23 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "platform": "gitlab",
+  "endpoint": "https://gitlab.example.org/api/v4",
+  "extends": ["config:recommended"],
+  "rangeStrategy": "update-lockfile",
+  "pinDigests": true,
+  "schedule": ["before 6am on monday"],
+  "labels": ["dependencies"],
+  "prConcurrentLimit": 5,
+  "packageRules": [
+    {
+      "description": "One weekly MR for all minor and patch updates",
+      "matchUpdateTypes": ["minor", "patch", "digest", "pin"],
+      "groupName": "minor and patch updates"
+    },
+    {
+      "description": "Major updates stay separate and are reviewed one by one",
+      "matchUpdateTypes": ["major"],
+      "labels": ["dependencies", "major"]
+    }
+  ]
+}

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { stageAssignmentSchema } from "../report";
+import { stageAssignmentSchema } from "../report.js";
 
 const uuid = () => randomUUID();
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { reportDate } from "./report-primitives.schema";
+import { reportDate } from "./report-primitives.schema.js";
 
 /** Verifies that report dates are evaluated by their UTC calendar year. */
 describe("reportDate — UTC calendar-year semantics", () => {

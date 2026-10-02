@@ -1,7 +1,7 @@
-import { deriveEffectiveProductStatus } from "../../status/effective-product-status";
-import { aggregateTrafficLight } from "../../status/traffic-light-aggregation";
-import type { ReportSectionReadModel } from "../report-sections/section.schema";
-import type { PortfolioProductOverview } from "./report.schema";
+import { deriveEffectiveProductStatus } from "../../status/effective-product-status.js";
+import { aggregateTrafficLight } from "../../status/traffic-light-aggregation.js";
+import type { ReportSectionReadModel } from "../report-sections/section.schema.js";
+import type { PortfolioProductOverview } from "./report.schema.js";
 
 interface ProjectOccurrence {
   readonly section: ReportSectionReadModel;

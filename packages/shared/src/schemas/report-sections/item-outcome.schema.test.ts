@@ -8,9 +8,12 @@ import {
   promotePlanInputSchema,
   resolvePlanInputSchema,
   restorePlanInputSchema,
-} from "../../index";
-import { publishedItemReadModelSchema } from "./published-section-record.schema";
-import { itemReadModelSchema, itemWriteSchema } from "./section-record.schema";
+} from "../../index.js";
+import { publishedItemReadModelSchema } from "./published-section-record.schema.js";
+import {
+  itemReadModelSchema,
+  itemWriteSchema,
+} from "./section-record.schema.js";
 
 const IDs = {
   record: "10000000-0000-4000-8000-000000000001",

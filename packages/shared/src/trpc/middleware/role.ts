@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 
-import type { Role, UserSession } from "../../schemas/auth/auth";
+import type { Role, UserSession } from "../../schemas/auth/auth.js";
 
 /**
  * Narrows an authenticated session after enforcing an allowed role set.

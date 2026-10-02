@@ -214,4 +214,4 @@ export const aiPromptOperationResultSchema = z
   })
   .strict();
 
-export type * from "./ai-prompt-management.types";
+export type * from "./ai-prompt-management.types.js";

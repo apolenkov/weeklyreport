@@ -8,7 +8,7 @@ import {
   groupProductEdgeInputSchema,
   groupProductSchema,
   myHistoryEntrySchema,
-} from "../report";
+} from "../report.js";
 
 const uuid = () => randomUUID();
 

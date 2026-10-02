@@ -12,7 +12,7 @@ import {
   loadAnnotations,
   saveAnnotations,
 } from "agentation";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
 
 import { useAgentationDeliveryStatus } from "./ui/use-agentation-delivery-status";
 
@@ -37,6 +37,9 @@ afterEach(() => {
   localStorage.clear();
   streams.length = 0;
 });
+
+// Agentation's 200 ms exit timer survives unmount; let it fire before jsdom is torn down.
+afterAll(() => new Promise((resolve) => setTimeout(resolve, 300)));
 
 const annotation = (id: string): Annotation => ({
   id,

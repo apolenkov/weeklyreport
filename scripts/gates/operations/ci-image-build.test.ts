@@ -25,9 +25,7 @@ interface Job {
   readonly script: readonly string[];
   readonly rules: readonly Rule[];
   readonly variables?: Readonly<Record<string, string>>;
-  readonly needs?: readonly (
-    string | { readonly job: string; readonly optional?: boolean }
-  )[];
+  readonly needs?: readonly (string | { readonly job: string })[];
 }
 
 const jobs = parse(readFileSync(resolve(".gitlab-ci.yml"), "utf8"), {
@@ -47,7 +45,7 @@ const deployJob = requireJob("deploy-production");
 
 // The `yaml` package accepts a bare `- : "text"` list item as a one-key
 // mapping, but GitLab's parser rejects the whole file; every script entry
-// must therefore be a plain string.
+// must therefore be a string or a `!reference` array.
 test("every CI script entry is a string GitLab can parse", () => {
   for (const [name, job] of Object.entries(jobs)) {
     for (const key of ["before_script", "script", "after_script"]) {

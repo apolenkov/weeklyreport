@@ -10,7 +10,7 @@ import {
   reportSectionReadModelSchema,
   riskInputSchema,
   riskWriteSchema,
-} from "../report";
+} from "../report.js";
 
 const uuid = () => randomUUID();
 const projectId = uuid();

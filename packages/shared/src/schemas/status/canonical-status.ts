@@ -3,7 +3,7 @@ import { z } from "zod";
 import type {
   RiskSeverity,
   TrafficLightStatus,
-} from "../primitives/report-primitives.schema";
+} from "../primitives/report-primitives.schema.js";
 
 /**
  * Canonical severity ladder shared by web presentation and API traffic-light folds.

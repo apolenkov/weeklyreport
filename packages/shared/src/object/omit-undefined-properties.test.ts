@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { omitUndefinedProperties } from "./omit-undefined-properties";
+import { omitUndefinedProperties } from "./omit-undefined-properties.js";
 
 describe("omitUndefinedProperties", () => {
   it("keeps defined values and removes explicit undefined keys", () => {

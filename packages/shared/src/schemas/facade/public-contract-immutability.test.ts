@@ -1,23 +1,23 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 
-import { DEFAULT_REPORTING_GROUP } from "../../organization/default-reporting-group";
-import type { AdminSnapshot } from "../admin/report-admin.schema";
-import { adminSnapshotSchema } from "../admin/report-admin.schema";
-import { ROLE_HOME_PATH, ROLE_LABEL } from "../auth/auth";
-import type { PaginatedResult } from "../history/report-history.schema";
-import { compiledHistoryEntrySchema } from "../history/report-history.schema";
+import { DEFAULT_REPORTING_GROUP } from "../../organization/default-reporting-group.js";
+import type { AdminSnapshot } from "../admin/report-admin.schema.js";
+import { adminSnapshotSchema } from "../admin/report-admin.schema.js";
+import { ROLE_HOME_PATH, ROLE_LABEL } from "../auth/auth.js";
+import type { PaginatedResult } from "../history/report-history.schema.js";
+import { compiledHistoryEntrySchema } from "../history/report-history.schema.js";
 import {
   CURRENT_ITEM_STATUSES,
   NEXT_ITEM_STATUSES,
-} from "../primitives/report-primitives.schema";
-import type { ProjectActivityCreateInput } from "../project-activity/project-activity.schema";
-import type { WeeklyReportReadModel } from "../report/report.schema";
+} from "../primitives/report-primitives.schema.js";
+import type { ProjectActivityCreateInput } from "../project-activity/project-activity.schema.js";
+import type { WeeklyReportReadModel } from "../report/report.schema.js";
 import type {
   ProjectReadModel,
   ReportSectionReadModel,
-} from "../report-sections/section.schema";
-import { reportSectionReadModelSchema } from "../report-sections/section.schema";
-import { STAGE, STAGE_NAMES } from "../stages/stage-names";
+} from "../report-sections/section.schema.js";
+import { reportSectionReadModelSchema } from "../report-sections/section.schema.js";
+import { STAGE, STAGE_NAMES } from "../stages/stage-names.js";
 
 const ID = "00000000-0000-4000-8000-000000000001";
 const SECOND_ID = "00000000-0000-4000-8000-000000000002";
