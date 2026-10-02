@@ -11,17 +11,26 @@ required evidence, collected outside CI as separate checks — the `quality` job
 is therefore a lint/test lane, not a full acceptance gate. The GitLab instance
 is 15.10, so `.gitlab-ci.yml` uses no keyword introduced after 15.10.
 
-| GitLab job          | Execution                                                     |
-| ------------------- | ------------------------------------------------------------- |
-| node-toolchain      | Node 26.8.1 container on the shared Docker runner             |
-| quality             | Node 26.8.1 container on the shared Docker runner             |
-| coverage            | Node 26.8.1 container on the shared Docker runner             |
-| api-integration     | pgvector 0.8.6/pg15 job container on the shared Docker runner |
-| migrate-reset       | pgvector 0.8.6/pg15 job container on the shared Docker runner |
-| dependency-scan     | Schedule, manual, or MR changing lockfile/manifests           |
-| dependency-scan-dev | Same rules as dependency-scan; `allow_failure: true`          |
-| build-images        | Rootless BuildKit; default branch and tags, manual on MRs     |
-| deploy-production   | Manual, default branch, only when `KUBECONFIG` is set         |
+| GitLab job          | Execution                                                            |
+| ------------------- | -------------------------------------------------------------------- |
+| node-toolchain      | Node 26.8.1 container on the shared Docker runner                    |
+| quality             | Node 26.8.1 container on the shared Docker runner                    |
+| coverage            | Node 26.8.1 container on the shared Docker runner                    |
+| api-integration     | pgvector 0.8.6/pg15 job container on the shared Docker runner        |
+| migrate-reset       | pgvector 0.8.6/pg15 job container on the shared Docker runner        |
+| dependency-scan     | Schedule, manual, or MR changing lockfile/manifests                  |
+| dependency-scan-dev | Same rules as dependency-scan; `allow_failure: true`                 |
+| renovate            | Schedule, web, or API pipeline with `RENOVATE_TOKEN` set; no `needs` |
+| build-images        | Rootless BuildKit; default branch and tags, manual on MRs            |
+| deploy-production   | Manual, default branch, only when `KUBECONFIG` is set                |
+
+## Renovate
+
+The `renovate` job opens weekly dependency MRs from `renovate.json`. It runs only
+when the masked CI/CD variable `RENOVATE_TOKEN` (project access token, scope
+`api`) is set. The weekly cadence is a GitLab pipeline schedule (Build > Pipeline
+schedules, weekly, cron in the instance time zone); `renovate.json` holds no
+schedule, so a manual run is never silently skipped.
 
 ## Image build and deploy
 
