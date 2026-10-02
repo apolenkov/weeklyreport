@@ -37,6 +37,7 @@ import { upsertSection } from "./seed-advanced.rows.js";
 //               exists in the published period, so Fill from is locked.
 export const UX_ONE_DAY_REPORT_ID = "a0000000-0000-4000-8000-000000000006";
 const UX_ONE_DAY_SECTION_ID = "a0000000-0000-4000-8000-000000004061";
+// Same week as the oldest history period of the simple seed (seed-simple.period.ts); keep in sync, the tsrange exclusion rejects overlaps.
 const WEEKS_BEFORE_ACTIVE = 5;
 const DAYS_PER_WEEK = 7;
 const FIRST_ITEM_SEQ = 1;
