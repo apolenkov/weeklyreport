@@ -5,11 +5,15 @@ The production stack is delivered to a Kubernetes cluster as the Helm chart in
 reference and rollback path; the chart is checked against it by
 `scripts/gates/operations/helm-chart-parity.test.ts`.
 
-**Status.** The chart lints, renders, and passes the gate tests. It has not
-been installed on a cluster yet; the cluster read-back (all pods ready,
-migration, edge routing, PDF export, backup job) is separate evidence.
-Authenticated flows, a real Ingress controller, and the CI image builder on
-the project runner are NOT VERIFIED.
+**Status.** The chart lints, renders, and passes the gate tests. It was
+installed on a local OrbStack cluster on 2026-10-01 and the read-back passed:
+pods ready, 11 migrations, edge headers and routing, forged `X-Forwarded-For`
+rejected, upgrade without data loss, postgres and redis pod deletion survived,
+Gotenberg through the internal origin, backup job and `pg_restore --list`,
+fail-closed password check, and sign-in, publish and PDF export through the
+edge. A real browser, SAML sign-in, a real Ingress controller with TLS,
+multi-node ReadWriteOnce volumes, `readOnlyRootFilesystem`, and the CI image
+builder on the project runner are NOT VERIFIED.
 
 ```
 Ingress (cluster) -> Service edge:8080 (Caddy, plain HTTP)

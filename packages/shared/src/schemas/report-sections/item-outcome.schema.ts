@@ -8,7 +8,7 @@ import {
   itemWorkflowStatusSchema,
   safeText,
   writeStageNamesField,
-} from "../primitives/report-primitives.schema";
+} from "../primitives/report-primitives.schema.js";
 
 const itemOutcomeSchema = z.enum(["done", "continue", "plan_next", "wont_do"]);
 

@@ -3,13 +3,13 @@ import type {
   ProjectReadModel,
   ReportSectionReadModel,
   SubmitSectionInput,
-} from "./section.schema";
+} from "./section.schema.js";
 import type {
   DraftSaveValidationError,
   DraftSaveValidationErrorCode,
-} from "./section-validation.types";
+} from "./section-validation.types.js";
 
-export type { DraftSaveValidationError } from "./section-validation.types";
+export type { DraftSaveValidationError } from "./section-validation.types.js";
 
 const validationError = (
   code: DraftSaveValidationErrorCode,
@@ -153,4 +153,4 @@ export function validateActivityStatuses(
   );
 }
 
-export { validateStageOwnership } from "./section-stage-ownership";
+export { validateStageOwnership } from "./section-stage-ownership.js";

@@ -1,14 +1,14 @@
 import { z } from "zod";
 
-import { reminderAudienceSchema } from "../../admin/reminder-policy.schema";
-import { DAYS_PER_WEEK, HOURS_PER_DAY } from "../../time";
+import { reminderAudienceSchema } from "../../admin/reminder-policy.schema.js";
+import { DAYS_PER_WEEK, HOURS_PER_DAY } from "../../time.js";
 import {
   periodStateSchema,
   periodStatusSchema,
   reportDate,
-} from "../primitives/report-primitives.schema";
-import { resolvableTimeZoneSchema } from "../time-zone.schema";
-import { currentPeriodLifecycleSchema } from "./period-lifecycle.schema";
+} from "../primitives/report-primitives.schema.js";
+import { resolvableTimeZoneSchema } from "../time-zone.schema.js";
+import { currentPeriodLifecycleSchema } from "./period-lifecycle.schema.js";
 
 /** Max length of a reporting period's week label. */
 export const MAX_WEEK_LABEL_LENGTH = 64;

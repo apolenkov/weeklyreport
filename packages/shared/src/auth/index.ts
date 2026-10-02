@@ -1,1 +1,1 @@
-export * from "./saml-profile";
+export * from "./saml-profile.js";

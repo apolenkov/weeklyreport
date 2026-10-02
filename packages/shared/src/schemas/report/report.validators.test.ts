@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { type ReportSectionReadModel, validateSubmitInput } from "../report";
+import { type ReportSectionReadModel, validateSubmitInput } from "../report.js";
 
 // ---------------------------------------------------------------------------
 // Fixtures

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { draftSaveSchema } from "../report";
+import { draftSaveSchema } from "../report.js";
 
 // ---------------------------------------------------------------------------
 // Fixtures

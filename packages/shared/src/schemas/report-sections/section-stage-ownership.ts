@@ -2,8 +2,8 @@ import type {
   DraftSaveInput,
   ReportSectionReadModel,
   SubmitSectionInput,
-} from "./section.schema";
-import type { DraftSaveValidationError } from "./section-validation.types";
+} from "./section.schema.js";
+import type { DraftSaveValidationError } from "./section-validation.types.js";
 
 interface StageOwnershipRow {
   readonly projectId: string | undefined;

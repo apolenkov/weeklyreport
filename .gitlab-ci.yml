@@ -203,6 +203,25 @@ dependency-scan-dev:
   script:
     - pnpm audit --dev --audit-level high
 
+# Weekly dependency MRs. The token is a masked CI/CD variable, never in Git;
+# without it the job is not created. The image runs without Docker-in-Docker.
+renovate:
+  stage: dependency-scan
+  image:
+    name: renovate/renovate:41.173.1@sha256:e998e1218fe572e23278d8808186a310784f7cb2ac8055307183ffc51d3a59e5
+    entrypoint: [""]
+  timeout: 30m
+  rules:
+    - if: '$RENOVATE_TOKEN && ($CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web")'
+    - when: never
+  variables:
+    RENOVATE_PLATFORM: gitlab
+    RENOVATE_ENDPOINT: https://forge.example.com/api/v4
+    RENOVATE_ONBOARDING: "false"
+    LOG_LEVEL: info
+  script:
+    - renovate example/weeklyreport
+
 coverage:
   extends: .workspace-node
   stage: coverage

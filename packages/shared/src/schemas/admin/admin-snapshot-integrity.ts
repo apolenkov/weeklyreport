@@ -1,10 +1,10 @@
 import { z } from "zod";
 
-import type { DbRole } from "../auth/auth";
+import type { DbRole } from "../auth/auth.js";
 import {
   type ReminderRecoverySnapshot,
   validateReminderRecoveryReferences,
-} from "./reminder-recovery.validation";
+} from "./reminder-recovery.validation.js";
 
 type SnapshotCollectionName =
   | "groups"

@@ -15,8 +15,8 @@ secrets:
 persistence:
   # An empty string selects the cluster default storage class.
   storageClass: ""
-  postgresSize: 20Gi
-  redisSize: 2Gi
+  postgresSize: 10Gi
+  redisSize: 1Gi
   pdfSize: 5Gi
   backupSize: 20Gi
 

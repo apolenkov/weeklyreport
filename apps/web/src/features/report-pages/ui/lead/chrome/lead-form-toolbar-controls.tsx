@@ -95,7 +95,7 @@ export function LeadFormToolbarControls({
       layoutKey="report-context-toolbar"
       contextControls={
         <ToolbarClusterRow>
-          <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 lg:basis-auto lg:shrink-0 lg:flex-nowrap">
+          <div className="flex min-w-0 basis-full items-center lg:basis-auto lg:shrink-0">
             <ToolbarPeriodCluster
               viewModel={viewModel}
               leadSubmittedAt={leadSubmittedAt}
@@ -149,7 +149,7 @@ export function LeadOverviewToolbarControls({
       layoutKey="report-context-toolbar"
       contextControls={
         <ToolbarClusterRow>
-          <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 lg:basis-auto lg:shrink-0 lg:flex-nowrap">
+          <div className="flex min-w-0 basis-full items-center lg:basis-auto lg:shrink-0">
             <ToolbarPeriodCluster
               viewModel={viewModel}
               leadSubmittedAt={leadSubmittedAt}
@@ -185,22 +185,28 @@ interface ToolbarPeriodClusterProps {
 
 // Period navigation (and the show-archived filter) anchor the left; the view
 // controls are pushed to the right by the spacer so "where you are" and "how
-// you see it" read as two clusters.
-function ToolbarPeriodCluster({
+// you see it" read as two clusters. The row never wraps: the navigator's own
+// basis-full would otherwise orphan the archive switch on a row of its own.
+export function ToolbarPeriodCluster({
   viewModel,
   leadSubmittedAt,
   showArchivePeriods,
   onShowArchivePeriodsChange,
 }: ToolbarPeriodClusterProps) {
   return (
-    <>
-      <PeriodNavigator
-        periods={viewModel.visiblePeriods}
-        showLeadSubmissionMarkers
-        leadSubmittedAt={leadSubmittedAt}
-      />
+    <div
+      data-testid="toolbar-period-cluster"
+      className="flex min-w-0 flex-1 flex-nowrap items-center gap-1.5 lg:flex-none"
+    >
+      <div className="min-w-0 flex-1 md:flex-none">
+        <PeriodNavigator
+          periods={viewModel.visiblePeriods}
+          showLeadSubmissionMarkers
+          leadSubmittedAt={leadSubmittedAt}
+        />
+      </div>
       {viewModel.hasArchivedPeriods && (
-        <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
+        <span className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap">
           <Separator
             orientation="vertical"
             className="h-5 bg-[var(--color-border)]"
@@ -211,7 +217,7 @@ function ToolbarPeriodCluster({
           />
         </span>
       )}
-    </>
+    </div>
   );
 }
 

@@ -1,6 +1,6 @@
-import { deriveEffectiveProductStatus } from "../../status/effective-product-status";
-import type { ReportSectionReadModel } from "../report-sections/section.schema";
-import type { Escalation } from "./report.schema";
+import { deriveEffectiveProductStatus } from "../../status/effective-product-status.js";
+import type { ReportSectionReadModel } from "../report-sections/section.schema.js";
+import type { Escalation } from "./report.schema.js";
 
 const UNKNOWN_PRODUCT_NAME = "Unknown";
 const STAGE_NAME_SEPARATOR = ", ";

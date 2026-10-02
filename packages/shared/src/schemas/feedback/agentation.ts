@@ -3,7 +3,7 @@ import { z } from "zod";
 import {
   MAX_FEEDBACK_MESSAGE_LENGTH,
   MAX_FEEDBACK_PAGE_SCOPE_LENGTH,
-} from "./product-feedback";
+} from "./product-feedback.js";
 
 /** Maximum length of an Agentation client identifier. */
 export const AGENTATION_MAX_ID_LENGTH = 128;

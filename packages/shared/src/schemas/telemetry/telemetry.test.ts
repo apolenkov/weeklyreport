@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { telemetrySummarySchema } from "./telemetry";
+import { telemetrySummarySchema } from "./telemetry.js";
 
 describe("telemetrySummarySchema accepted summaries", () => {
   it("accepts a fully-populated summary", () => {

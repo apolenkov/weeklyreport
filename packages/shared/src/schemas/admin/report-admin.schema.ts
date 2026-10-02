@@ -1,26 +1,26 @@
 import { z } from "zod";
 
-import { reminderPolicySchema } from "../../admin/reminder-policy.schema";
-import { roleSchema } from "../auth/auth";
+import { reminderPolicySchema } from "../../admin/reminder-policy.schema.js";
+import { roleSchema } from "../auth/auth.js";
 import {
   MAX_WEEK_LABEL_LENGTH,
   reportPeriodSchema,
-} from "../period/period.schema";
+} from "../period/period.schema.js";
 import {
   pdfExportStatusSchema,
   publishedReportSnapshotSchema,
-} from "../report/report.schema";
-import { validateAdminSnapshotIntegrity } from "./admin-snapshot-integrity";
+} from "../report/report.schema.js";
+import { validateAdminSnapshotIntegrity } from "./admin-snapshot-integrity.js";
 import {
   adminSnapshotReminderExecutionSchema,
   adminSnapshotReminderRuleSchema,
-} from "./reminder-recovery.schema";
+} from "./reminder-recovery.schema.js";
 
 export type {
   AdminReminderExecution,
   AdminReminderRule,
   ReminderQueuePayload,
-} from "./reminder-recovery.schema";
+} from "./reminder-recovery.schema.js";
 export {
   adminReminderExecutionSchema,
   adminReminderRuleSchema,
@@ -29,7 +29,7 @@ export {
   reminderDeadlinePayloadSchema,
   reminderEscalationPayloadSchema,
   reminderQueuePayloadSchema,
-} from "./reminder-recovery.schema";
+} from "./reminder-recovery.schema.js";
 
 const MAX_REPORTING_GROUP_NAME_LENGTH = 200;
 const MAX_REPORTING_GROUP_DESCRIPTION_LENGTH = 500;
