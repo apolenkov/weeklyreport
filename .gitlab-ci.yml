@@ -211,16 +211,17 @@ renovate:
     name: renovate/renovate:41.173.1@sha256:e998e1218fe572e23278d8808186a310784f7cb2ac8055307183ffc51d3a59e5
     entrypoint: [""]
   timeout: 30m
+  needs: []
   rules:
-    - if: '$RENOVATE_TOKEN && ($CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web")'
+    - if: '$RENOVATE_TOKEN && ($CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "api")'
     - when: never
   variables:
     RENOVATE_PLATFORM: gitlab
-    RENOVATE_ENDPOINT: https://forge.example.com/api/v4
+    RENOVATE_ENDPOINT: $CI_API_V4_URL
     RENOVATE_ONBOARDING: "false"
     LOG_LEVEL: info
   script:
-    - renovate example/weeklyreport
+    - renovate "$CI_PROJECT_PATH"
 
 coverage:
   extends: .workspace-node

@@ -1,11 +1,8 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "platform": "gitlab",
-  "endpoint": "https://forge.example.com/api/v4",
   "extends": ["config:recommended"],
   "rangeStrategy": "update-lockfile",
   "pinDigests": true,
-  "schedule": ["before 6am on monday"],
   "labels": ["dependencies"],
   "prConcurrentLimit": 5,
   "packageRules": [
