@@ -37,12 +37,12 @@ variables:
   # a network fetch. The composite artifact also carries libatomic.so.1 from
   # the same bookworm image — the slim database image lacks it and Node 26
   # links it.
-  NODE_TOOLCHAIN_TARBALL: node-v26.8.1-linux-x64.tar.gz
-  NODE_TOOLCHAIN_SHA256: b2b76660fa4ded4e0b2a41ee3c0c651cd52ea8170ead91ebac1e147ac3d55643
+  NODE_TOOLCHAIN_TARBALL: node-v26.10.0-linux-x64.tar.gz
+  NODE_TOOLCHAIN_SHA256: cb5c9ce9c80d7b8821e3a258543c71b939138cf17c74d5cc44bbe85d6dbc5ad8
   NODE_TOOLCHAIN_ARTIFACT: node-toolchain-linux-x64.tar.gz
 
 .node-image:
-  image: node:26.8.1-bookworm@sha256:9f94d34c787165dca03b74e5bf9c3bf90e8de79b19aa3d87fe1fa1694bf75c89
+  image: node:26.10.0-bookworm@sha256:2aaae6d91f99fee84cfc92da9b52c22a185752d247746052bbc3f961e44478c6
   # Without this, jobs fetch artifacts from every earlier stage — the
   # node-toolchain tarball would land in the workspace as untracked residue
   # and trip the cleanliness gate. Database jobs use explicit `needs`.
@@ -70,8 +70,8 @@ variables:
     - when: on_success
   before_script:
     # Node 26 no longer bundles Corepack; install only the pinned pnpm CLI here.
-    - npm install --global pnpm@11.24.0
-    - test "$(pnpm --version)" = "11.24.0"
+    - npm install --global pnpm@11.28.3
+    - test "$(pnpm --version)" = "11.28.3"
     - pnpm install --frozen-lockfile
     - pnpm exec prisma generate
 
@@ -79,7 +79,7 @@ variables:
 # so the exact-loopback destructive guard sees a truthful target. The Node
 # toolchain arrives as the verified node-toolchain artifact.
 .postgres-job:
-  image: pgvector/pgvector:0.8.6-pg15-bookworm@sha256:a947c45cdc5906a1bc951f20a8709e321256343ee0f251e4ae00b5e7def4e6da
+  image: pgvector/pgvector:0.8.7-pg15-bookworm@sha256:47af0b65960b14f1c6945aa4ccae37836c632e9a6fe0eea9160936e616e5b2e9
   timeout: 30m
   resource_group: weeklyreport-ci-heavy
   allow_failure: false
@@ -95,9 +95,9 @@ variables:
   before_script:
     - tar -xzf "$NODE_TOOLCHAIN_ARTIFACT" -C /
     - ldconfig
-    - test "$(node --version)" = "v26.8.1"
-    - npm install --global pnpm@11.24.0
-    - test "$(pnpm --version)" = "11.24.0"
+    - test "$(node --version)" = "v26.10.0"
+    - npm install --global pnpm@11.28.3
+    - test "$(pnpm --version)" = "11.28.3"
     - pnpm install --frozen-lockfile
     - pnpm exec prisma generate
     # The postgres daemon must run as the postgres user; initdb refuses root.
@@ -134,7 +134,7 @@ node-toolchain:
     paths:
       - node-toolchain-linux-x64.tar.gz
   script:
-    - curl -fsSLO "https://nodejs.org/dist/v26.8.1/$NODE_TOOLCHAIN_TARBALL"
+    - curl -fsSLO "https://nodejs.org/dist/v26.10.0/$NODE_TOOLCHAIN_TARBALL"
     - echo "$NODE_TOOLCHAIN_SHA256  $NODE_TOOLCHAIN_TARBALL" | sha256sum -c -
     - mkdir -p toolchain-root/usr/local/lib
     - tar -xzf "$NODE_TOOLCHAIN_TARBALL" -C toolchain-root/usr/local --strip-components=1
@@ -189,8 +189,8 @@ dependency-scan:
         - pnpm-workspace.yaml
     - when: never
   before_script:
-    - npm install --global pnpm@11.24.0
-    - test "$(pnpm --version)" = "11.24.0"
+    - npm install --global pnpm@11.28.3
+    - test "$(pnpm --version)" = "11.28.3"
     - pnpm install --frozen-lockfile
   script:
     - pnpm audit --prod
@@ -300,9 +300,9 @@ api-integration:
   # Redis and Mailpit are ordinary service aliases — the guard constrains only
   # the PostgreSQL target. The test suite reads their real hostnames from env.
   services:
-    - name: redis:7.4.11-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf
+    - name: redis:7.4.11-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
       alias: redis
-    - name: axllent/mailpit:v1.31.0@sha256:c96991d9bef73594c246d89ca81411d4e916f03e76a7d2d72fa2ab5dd3c9ce24
+    - name: axllent/mailpit:v1.31.3@sha256:ed9b00c609e77e99c79b93f1178255ebc271868920f2c69a8d166bd5634ed10d
       alias: mailpit
   variables:
     # MVP single-database policy: one disposable loopback target per job, and

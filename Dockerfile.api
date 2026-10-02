@@ -3,8 +3,8 @@
 # the same libc the runner uses.
 # Node 26 does not ship Corepack, so pnpm is installed with npm — the pin is
 # held against package.json's packageManager by scripts/gates/environment/check-runtime-node-sync.ts.
-FROM node:26.8.1-bookworm@sha256:9f94d34c787165dca03b74e5bf9c3bf90e8de79b19aa3d87fe1fa1694bf75c89 AS base
-RUN npm install -g pnpm@11.24.0 turbo@2.10.12
+FROM node:26.10.0-bookworm@sha256:2aaae6d91f99fee84cfc92da9b52c22a185752d247746052bbc3f961e44478c6 AS base
+RUN npm install -g pnpm@11.28.3 turbo@2.11.6
 
 # Stage 2: Prune monorepo for api workspace
 FROM base AS pruner
@@ -40,7 +40,7 @@ RUN --mount=type=cache,id=customreport-pnpm-store-v11,target=/pnpm/store,sharing
       ! -name 'migration_lock.toml' ! -name '*.sql' -delete
 
 # Stage 5: Minimal migration runner, rooted in a fresh base image.
-FROM node:26.8.1-bookworm@sha256:9f94d34c787165dca03b74e5bf9c3bf90e8de79b19aa3d87fe1fa1694bf75c89 AS migrator
+FROM node:26.10.0-bookworm@sha256:2aaae6d91f99fee84cfc92da9b52c22a185752d247746052bbc3f961e44478c6 AS migrator
 WORKDIR /app
 COPY --from=migrator-deps /tmp/migrate-deps/node_modules ./node_modules
 COPY --from=migrator-deps /tmp/migrate-deps/package.json ./package.json
@@ -106,7 +106,7 @@ RUN test -f /tmp/api-deps/node_modules/.prisma/client/default.js
 RUN mkdir -p /app/node_modules && cp -a /tmp/api-deps/node_modules/. /app/node_modules/
 
 # Stage 8: Production runner
-FROM node:26.8.1-bookworm@sha256:9f94d34c787165dca03b74e5bf9c3bf90e8de79b19aa3d87fe1fa1694bf75c89 AS runner
+FROM node:26.10.0-bookworm@sha256:2aaae6d91f99fee84cfc92da9b52c22a185752d247746052bbc3f961e44478c6 AS runner
 WORKDIR /app
 
 # Manifests and the built app come from the build; every node_modules tree comes

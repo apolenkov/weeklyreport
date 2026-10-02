@@ -11,7 +11,7 @@ context: |
   in this long-lived agent context.
 
   # Stack
-  - Monorepo: pnpm 11.24 workspaces + Turborepo 2.10.12
+  - Monorepo: pnpm 11.28 workspaces + Turborepo 2.11.6
   - Frontend: Next.js 16 (App Router, React Compiler), React 19, Tailwind 4,
     shadcn/ui via `@customreport/ui`, TanStack Query 5, tRPC 11 client
   - Backend: NestJS 11, Express 5, tRPC 11 server, Prisma 7 with
@@ -22,7 +22,7 @@ context: |
   - Validation: Zod 4 shared schemas in `@customreport/shared`
   - Testing: Vitest 4, Testing Library; PDF export renders through an
     internal Gotenberg service, not an in-process browser
-  - Node: 26.8.1 Current (Docker pins Node 26.8.1 images)
+  - Node: 26.10.0 Current (Docker pins Node 26.10.0 images)
 
   # Workspace layout
   apps/web         — Next.js frontend (`@customreport/web`)
