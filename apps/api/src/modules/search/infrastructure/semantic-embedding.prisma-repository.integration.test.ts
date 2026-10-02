@@ -80,7 +80,7 @@ describe("SemanticEmbedding migration contract", () => {
     `;
 
     expect(rows).toHaveLength(1);
-    expect(rows[0]?.extversion).toBe("0.8.6");
+    expect(rows[0]?.extversion).toBe("0.8.7");
   });
 
   it("round-trips a vector and its declared dimensions", async () => {

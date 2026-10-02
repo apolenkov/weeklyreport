@@ -13,11 +13,11 @@ is 15.10, so `.gitlab-ci.yml` uses no keyword introduced after 15.10.
 
 | GitLab job          | Execution                                                            |
 | ------------------- | -------------------------------------------------------------------- |
-| node-toolchain      | Node 26.8.1 container on the shared Docker runner                    |
-| quality             | Node 26.8.1 container on the shared Docker runner                    |
-| coverage            | Node 26.8.1 container on the shared Docker runner                    |
-| api-integration     | pgvector 0.8.6/pg15 job container on the shared Docker runner        |
-| migrate-reset       | pgvector 0.8.6/pg15 job container on the shared Docker runner        |
+| node-toolchain      | Node 26.10.0 container on the shared Docker runner                   |
+| quality             | Node 26.10.0 container on the shared Docker runner                   |
+| coverage            | Node 26.10.0 container on the shared Docker runner                   |
+| api-integration     | pgvector 0.8.7/pg15 job container on the shared Docker runner        |
+| migrate-reset       | pgvector 0.8.7/pg15 job container on the shared Docker runner        |
 | dependency-scan     | Schedule, manual, or MR changing lockfile/manifests                  |
 | dependency-scan-dev | Same rules as dependency-scan; `allow_failure: true`                 |
 | renovate            | Schedule, web, or API pipeline with `RENOVATE_TOKEN` set; no `needs` |
@@ -66,14 +66,14 @@ remote host as localhost — forbidden by the `destructive-db-guard` spec and by
 the owner decision. The honest topology is:
 
 - `api-integration` and `migrate-reset` run on the same pinned
-  `pgvector/pgvector:0.8.6-pg15-bookworm` image.
+  `pgvector/pgvector:0.8.7-pg15-bookworm` image.
   PostgreSQL starts inside the job container (`initdb` + `pg_ctl`)
   bound to `127.0.0.1` — a real in-job process, so the guarded
   `postgresql://…@127.0.0.1:5432/customreport_e2e` target is truthful. The
   `customreport` role is a superuser, the
   privilege `prisma migrate reset` needs to drop and recreate the database.
 - The image carries no Node, curl, wget, or git, so the `node-toolchain` job
-  downloads `node-v26.8.1-linux-x64.tar.gz` in the bookworm job image, verifies
+  downloads `node-v26.10.0-linux-x64.tar.gz` in the bookworm job image, verifies
   the pinned SHA-256, adds the `libatomic.so.1` that Node 26 links and the slim
   image lacks (copied from the same bookworm toolchain image), and passes one
   composite artifact to database jobs. `pnpm install --frozen-lockfile` needs
