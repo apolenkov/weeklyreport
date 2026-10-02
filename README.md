@@ -68,8 +68,8 @@ weeklyreport
 
 ## Требования
 
-- Node.js **26.8.1 Current** (`>=26.0.0 <27.0.0`, версия `.nvmrc`)
-- pnpm **11.24.0** (`npm install -g pnpm@11.24.0`; Node 26 не поставляет Corepack)
+- Node.js **26.10.0 Current** (`>=26.0.0 <27.0.0`, версия `.nvmrc`)
+- pnpm **11.28.3** (`npm install -g pnpm@11.28.3`; Node 26 не поставляет Corepack)
 - Docker (для локальных Postgres и Redis и production-сборки)
 
 ## Быстрый старт
