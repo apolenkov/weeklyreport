@@ -36,7 +36,7 @@ not a measurement.
 - **Software.** Linux with Docker Engine and Compose v2 (`docker compose`) plus
   `git`. No Node or pnpm on the host: `api`, `migrate`, `web`, and `backup` are
   built on the host from this checkout (`up --build`), inside pinned
-  `node:26.8.1` images. The repository pins no minimum Docker/Compose version
+  `node:26.10.0` images. The repository pins no minimum Docker/Compose version
   or distribution; the file needs `depends_on` with
   `service_completed_successfully` and `deploy.resources.limits`.
 - **Memory limits** (no CPU limits are set; `migrate` and `config-guard` are
