@@ -7,7 +7,7 @@ function TableSkeleton() {
   return (
     <div
       aria-label="Loading data"
-      className="h-64 w-full animate-pulse rounded-md bg-muted/50"
+      className="h-64 w-full animate-pulse motion-reduce:animate-none rounded-md bg-muted/50"
       role="status"
     />
   );
