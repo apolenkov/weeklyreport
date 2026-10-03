@@ -53,9 +53,12 @@ describe("Agentation web contract", () => {
     expectTypeOf<
       JsonFields<Pick<AgentationAnnotationResponse, CommonFields>>
     >().toEqualTypeOf<JsonFields<Pick<Annotation, CommonFields>>>();
+    // attributes and frame (3.1) are stripped by the create schema: not persisted.
     expectTypeOf<
       Exclude<keyof Annotation, keyof AgentationAnnotationCreate>
     >().toEqualTypeOf<
+      | "attributes"
+      | "frame"
       | "sessionId"
       | "url"
       | "status"

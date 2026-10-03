@@ -16,8 +16,8 @@ safe placeholders only.
 
 ## Agentation feedback and MCP
 
-The pinned product packages are `agentation@3.0.2` (authenticated browser UI)
-and `agentation-mcp@1.2.0` (agent transport). The UI uses the same-origin
+The pinned product packages are `agentation@3.1.2` (authenticated browser UI)
+and `agentation-mcp@1.3.2` (agent transport). The UI uses the same-origin
 WeeklyReport adapter and the current authenticated session cookie. The adapter
 maps sessions, annotations, statuses, threads, actions, and SSE to the
 WeeklyReport PostgreSQL feedback store; PostgreSQL is the sole product source

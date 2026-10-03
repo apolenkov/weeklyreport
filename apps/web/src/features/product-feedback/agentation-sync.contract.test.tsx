@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import {
   Agentation,
@@ -104,6 +105,17 @@ function respond(
   return fetcher;
 }
 
+// agentation 3.1 renders its toolbar, popups and markers inside an open shadow root.
+function nativeRoot(): ShadowRoot {
+  const root = document.querySelector("agentation-toolbar")?.shadowRoot;
+  if (!root) throw new Error("Expected the Agentation shadow root");
+  return root;
+}
+
+function nativeUi() {
+  return within(nativeRoot() as unknown as HTMLElement);
+}
+
 describe("pinned Agentation browser sync", () => {
   it("uploads a retained local annotation and adopts its server ID", async () => {
     const fetcher = respond([]);
@@ -146,15 +158,17 @@ describe("pinned Agentation browser sync", () => {
       ),
     );
 
-    fireEvent.click(screen.getByTitle("Start feedback mode"));
+    fireEvent.click(
+      nativeUi().getByRole("button", { name: "Start feedback mode" }),
+    );
     fireEvent.click(target, { clientX: 10, clientY: 20 });
     fireEvent.change(
-      await screen.findByPlaceholderText("What should change?"),
+      await nativeUi().findByPlaceholderText("What should change?"),
       {
         target: { value: "Live contract annotation" },
       },
     );
-    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    fireEvent.click(nativeUi().getByRole("button", { name: "Add" }));
 
     await waitFor(() => expect(onAnnotationAdd).toHaveBeenCalledOnce());
     await waitFor(() =>
@@ -222,15 +236,17 @@ describe("pinned Agentation browser sync", () => {
       ),
     );
 
-    fireEvent.click(screen.getByTitle("Start feedback mode"));
+    fireEvent.click(
+      nativeUi().getByRole("button", { name: "Start feedback mode" }),
+    );
     fireEvent.click(target, { clientX: 10, clientY: 20 });
     fireEvent.change(
-      await screen.findByPlaceholderText("What should change?"),
+      await nativeUi().findByPlaceholderText("What should change?"),
       {
         target: { value: "Delete after failed readback" },
       },
     );
-    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    fireEvent.click(nativeUi().getByRole("button", { name: "Add" }));
 
     await waitFor(() => expect(onAnnotationAdd).toHaveBeenCalledTimes(1));
     const deleteClientId = (onAnnotationAdd.mock.calls[0]?.[0] as Annotation)
@@ -257,11 +273,11 @@ describe("pinned Agentation browser sync", () => {
       { timeout: 1500 },
     );
 
-    const deleteMarker = document.querySelector("[data-annotation-marker]");
+    const deleteMarker = nativeRoot().querySelector("[data-annotation-marker]");
     if (!deleteMarker) throw new Error("Expected the retained native marker");
     fireEvent.click(deleteMarker);
     const editPopup = (
-      await screen.findByPlaceholderText("Edit your feedback...")
+      await nativeUi().findByPlaceholderText("Edit your feedback...")
     ).closest("[data-annotation-popup]");
     const deleteButton = editPopup?.querySelector<HTMLButtonElement>(
       'button[class*="deleteButton"]',
@@ -277,12 +293,12 @@ describe("pinned Agentation browser sync", () => {
 
     fireEvent.click(target, { clientX: 20, clientY: 30 });
     fireEvent.change(
-      await screen.findByPlaceholderText("What should change?"),
+      await nativeUi().findByPlaceholderText("What should change?"),
       {
         target: { value: "Clear while sync is pending" },
       },
     );
-    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+    fireEvent.click(nativeUi().getByRole("button", { name: "Add" }));
     await waitFor(() => expect(onAnnotationAdd).toHaveBeenCalledTimes(2));
     const clearClientId = (onAnnotationAdd.mock.calls[1]?.[0] as Annotation).id;
     await waitFor(() =>
@@ -302,11 +318,7 @@ describe("pinned Agentation browser sync", () => {
       { timeout: 1500 },
     );
 
-    const clearButton = screen
-      .getByText("Clear all")
-      .parentElement?.querySelector<HTMLButtonElement>("button");
-    if (!clearButton) throw new Error("Expected the native clear action");
-    fireEvent.click(clearButton);
+    fireEvent.click(nativeUi().getByRole("button", { name: "Clear all" }));
 
     expect(onAnnotationsClear).toHaveBeenCalledWith([
       expect.objectContaining({ id: clearClientId }),
