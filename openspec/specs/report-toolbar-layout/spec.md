@@ -170,8 +170,8 @@ The report surface MUST split its controls by one axis — operates on the repor
    render on the page header line, in a right-aligned action group beside the
    title/status block — NOT inside the bordered toolbar.
 2. A control that changes which report is shown or how it is presented (period
-   navigation, show-archived-periods filter, scope, view mode, the mode-adaptive
-   collapse-all (edit) / fullscreen (slides) control) MUST render in
+   navigation, show-archived-periods filter, scope, view mode, and in slides
+   the density and fullscreen controls) MUST render in
    the bordered toolbar bar, even when it persists a setting.
 3. The bordered toolbar MUST render exactly one row (the context-control bar);
    it MUST NOT contain a document-action row.
@@ -185,15 +185,14 @@ The report surface MUST split its controls by one axis — operates on the repor
   periods in its history
 - **THEN** the header line's action group shows Fill from, Save, and the Submit commit
 - **AND** the bordered toolbar shows one row: period navigation, the
-  show-archived-periods filter, the Mine/Everyone scope, the Report/Slides view
-  mode, and the collapse-all control
+  show-archived-periods filter, Report chat, the Mine/Everyone scope, and the
+  Report/Slides view mode; the Report overview has no collapse-all control
 
-#### Scenario: the lead slides surface shows fullscreen in the collapse-all slot
+#### Scenario: the lead slides surface shows density and fullscreen in the trailing slot
 
 - **WHEN** a lead opens their report in slides mode
-- **THEN** the bordered toolbar's trailing utility slot shows the fullscreen
-  toggle (not a collapse-all/expand control), in the same position the collapse
-  control occupies in edit mode
+- **THEN** the bordered toolbar's trailing utility slot shows the Document/Presentation
+  density control and the fullscreen toggle
 
 #### Scenario: the head surface splits across the header and the toolbar
 
@@ -232,55 +231,28 @@ header actions before the context controls.
 - **AND** the header action group and the context bar each expose an accessible
   group name
 
-### Requirement: The lead quick-add control holds a stable document-action slot across view modes
+### Requirement: The lead document-action group holds no quick-add control
 
-The lead "+ Add item" quick-add control MUST render in both Report and Slides modes for
-an editable (non-read-only) section, so it does not disappear when the lead
-switches to slides. The
-control belongs to the shared Save/Add/Submit completion cluster, hosted in the
-header or its compact sticky handoff according to `lead-completion-guidance`. Within
-the document-action group it MUST sit immediately before the forward commit (the
-Submit primary) — after Save and Fill from — so the
-single-forward-primary accent hierarchy is preserved: "+ Add item" takes the
-neutral/outline treatment and MUST NOT carry a resting solid brand-accent fill,
-which stays reserved for the Submit commit. On a read-only past period
-"+ Add item" MUST be hidden together with the other mutating document actions (Save,
-Submit, Fill from), and it MUST stay disabled when the lead has neither
-an owned Product nor an assigned Activity. An Activity-only section MUST retain
-quick-add for supported Activity record types; product-only Blocker entry MUST
-remain unavailable without an owned Product.
+The lead document-action group MUST contain only Fill from, Save, and the
+forward commit (Submit) or its reversal. Record creation MUST NOT use a header
+quick-add control: it happens through each editable cell's `Add item` footer
+(`lead-status-overview`) and the Risks & Blockers and Decisions sections. The
+header group MUST keep the same controls in Report and Slides modes so
+switching modes does not move them. On a read-only past period Save, Submit,
+and Fill from MUST be hidden.
 
-#### Scenario: switching Report to Slides keeps + Add present
+#### Scenario: switching Report to Slides keeps the document actions
 
 - **WHEN** a lead toggles the view-mode control from Report to Slides on an
   editable section
-- **THEN** the "+ Add item" control remains present in the document-action group
-- **AND** it does not disappear or change position
+- **THEN** the document-action group still shows Fill from, Save, and Submit in
+  the same order
+- **AND** no `+ Add item` control is present in the group
 
-#### Scenario: + Add sits immediately before the Submit primary
-
-- **WHEN** a lead opens their editable, not-yet-submitted report
-- **THEN** the "+ Add item" control renders after Save and Fill from and immediately
-  before the Submit commit
-- **AND** "+ Add item" carries a neutral/outline treatment, not the resting solid
-  brand-accent fill
-
-#### Scenario: a read-only past period hides + Add
+#### Scenario: a read-only past period hides the mutating actions
 
 - **WHEN** a lead opens a read-only past period
-- **THEN** the "+ Add item" control is hidden alongside Save, Submit, and
-  Fill from
-
-#### Scenario: a lead with no reporting-unit targets cannot quick-add
-
-- **WHEN** the lead owns no Product and has no assigned Activity
-- **THEN** the "+ Add item" control renders but is disabled
-
-#### Scenario: an Activity-only lead can quick-add supported records
-
-- **WHEN** the lead owns no Product but has an assigned Activity
-- **THEN** the "+ Add item" control remains enabled for supported Activity record types
-- **AND** product-only Blocker entry remains unavailable
+- **THEN** Save, Submit, and Fill from are hidden
 
 ### Requirement: Report context controls preserve semantic clusters at every supported width
 

@@ -64,8 +64,9 @@ The `/lead/report/:reportId` route MUST expose `Report` and `Slides` as
 addressable views. Report MUST use the Overview projection as its unified
 reading and authoring surface; Slides MUST retain the presentation surface.
 A lead opening the route without a valid mode MUST see Report. Report MUST
-retain the canonical report identity, autosave, Fill From, Save, quick-add,
-Submit, period navigation, visibility, and mode controls whenever available
+retain the canonical report identity, autosave, Fill from, Save, Submit,
+period navigation, visibility, and mode controls, and each editable cell's own
+`Add item` footer whenever available
 for the current section. These controls MUST call the existing editor draft
 and write actions; Overview MUST NOT introduce a second action implementation
 or persistence path. Removing the separate Edit mode MUST satisfy the full
@@ -88,11 +89,11 @@ authoring parity requirement in `unified-report-authoring`.
 
 - **WHEN** the lead opens `/lead/report/:reportId` without a mode query
 - **THEN** Report is active and the canonical document/context actions render
-- **AND** Save, quick add, Submit, period, visibility, and mode actions use the canonical editor eligibility and handlers
+- **AND** Save, Submit, period, visibility, and mode actions use the canonical editor eligibility and handlers
 
 #### Scenario: An Overview action opens a canonical dialog
 
-- **WHEN** the lead activates quick add, Fill From, Submit, or reopen/revoke
+- **WHEN** the lead activates a footer `Add item`, Fill from, Submit, or reopen/revoke
 - **THEN** the existing lead dialog host handles the action
 - **AND** no Overview-specific mutation endpoint or draft store is used
 
