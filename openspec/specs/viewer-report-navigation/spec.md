@@ -187,7 +187,6 @@ The `PeriodNavigator` rendered on the viewer's read-only report surface (`/repor
 - **GIVEN** the viewer's period navigator
 - **WHEN** the viewer picks a period directly from the listbox
 - **THEN** navigation lands on the picked period
-  change
 
 ### Requirement: Published document headers show publication state once
 

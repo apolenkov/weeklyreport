@@ -149,19 +149,24 @@ stay identical to the ones the print template emits.
 - **AND** the worker writes the artifact and calls `markExportCompleted`
   with a valid sha256 checksum
 
-### Requirement: Status-poll failure recovers the button to a clickable state
+### Requirement: A deterministic status-query error recovers the button to a clickable state
 
-`ExportPdfButton`'s status-poll query MUST handle `isError` by clearing the
-held `jobId` and surfacing an error toast, mirroring the existing
-`requestMut.onError` / `"failed"` recovery path. The button MUST NOT remain
-disabled/spinning indefinitely after the poll's retries are exhausted.
+`ExportPdfButton`'s status-poll query MUST treat a deterministic client error
+(for example, a stored job that no longer exists) as a terminal outcome: it
+MUST clear the held `jobId`, remove the tab-scoped stored ID, and surface the
+existing error message, mirroring the `requestMut.onError` / `"failed"`
+recovery path, so the control returns to a clickable idle state without a page
+reload. A transport failure is not a terminal observation: the control keeps
+the held job and polling continues until the API answers with a job status or
+a deterministic client error.
 
-#### Scenario: Status endpoint fails after the job is enqueued
+#### Scenario: The status endpoint declines the job deterministically
 
 - **GIVEN** an export job has been enqueued and the status poll is running
-- **WHEN** the status endpoint errors past the poll's retry budget
+- **WHEN** a status check fails with a deterministic client error
 - **THEN** the button clears its generating state, becomes clickable again,
   and an error toast is shown
+- **AND** the tab-scoped stored job ID is removed
 - **AND** no page reload is required to recover
 
 ### Requirement: PDF export status reads always enforce caller ownership
@@ -573,7 +578,7 @@ The web PDF export action MUST keep its status query scheduled while no status h
 
 ### Requirement: An active PDF export survives an in-tab control remount
 
-After a successful enqueue, the web PDF export action MUST preserve the opaque active job ID in browser-tab-scoped storage under the current report identity. If the control remounts or the page reloads before a terminal result, the new instance MUST restore that exact job ID and resume the ownership-bound status query. The stored ID MUST be removed before the client clears its active state on completion, terminal failure, recovery quarantine, or a deterministic status-query error. A transient status-query failure MUST retain the ID and continue polling. No artifact content, bearer credential, or user identity may be stored.
+After a successful enqueue, the web PDF export action MUST preserve the opaque active job ID in browser-tab-scoped storage under the current report identity. If the control remounts or the page reloads before a terminal result, the new instance MUST restore that exact job ID and resume the ownership-bound status query. The stored ID MUST be removed before the client clears its active state on completion, terminal failure, recovery quarantine, or a deterministic status-query error. A transient status-query failure MUST retain the ID and continue polling. A sustained transport outage MUST NOT be treated as terminal either: polling continues until the API answers with a job status or a deterministic client error. No artifact content, bearer credential, or user identity may be stored.
 
 #### Scenario: The export control remounts while the worker is running
 
