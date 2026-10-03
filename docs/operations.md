@@ -348,8 +348,8 @@ artifact, and queue entry.
 
 ### Agentation feedback operations
 
-WeeklyReport uses `agentation@3.0.2` for the authenticated development/
-non-production toolbar and `agentation-mcp@1.2.0` for agent access. Both use
+WeeklyReport uses `agentation@3.1.2` for the authenticated development/
+non-production toolbar and `agentation-mcp@1.3.2` for agent access. Both use
 the WeeklyReport adapter and PostgreSQL feedback store; the stock Agentation
 HTTP server and stock SQLite/memory store are not a product persistence path.
 MCP must run as:

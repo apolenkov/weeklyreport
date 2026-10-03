@@ -118,7 +118,7 @@ pnpm dev:feedback
 
 Agentation `3.0.2` отправляет sessions, annotations, статусы и threads в
 same-origin backend WeeklyReport; источником истины остаётся PostgreSQL.
-Штатный `agentation-mcp` `1.2.0` запускается только как MCP-клиент к этому
+Штатный `agentation-mcp` `1.3.2` запускается только как MCP-клиент к этому
 adapter API, без собственного HTTP-сервера и без локальной SQLite:
 
 ```bash

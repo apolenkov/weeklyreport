@@ -69,12 +69,12 @@ describe("Agentation dependency contract", () => {
   it("pins the researched package versions and PolyForm licenses", () => {
     expect(packageManifest("agentation")).toMatchObject({
       name: "agentation",
-      version: "3.0.2",
+      version: "3.1.2",
       license: "PolyForm-Shield-1.0.0",
     });
     expect(packageManifest("agentation-mcp")).toMatchObject({
       name: "agentation-mcp",
-      version: "1.2.0",
+      version: "1.3.2",
       license: "PolyForm-Shield-1.0.0",
     });
   });
@@ -85,15 +85,15 @@ describe("Agentation dependency contract", () => {
       "utf8",
     );
     expect(lockfile).toContain(
-      "agentation-mcp:\n        specifier: 1.2.0\n        version: 1.2.0",
+      "agentation-mcp:\n        specifier: 1.3.2\n        version: 1.3.2",
     );
-    expect(lockfile).toContain("agentation@3.0.2:");
-    expect(lockfile).toContain("agentation-mcp@1.2.0:");
+    expect(lockfile).toContain("agentation@3.1.2:");
+    expect(lockfile).toContain("agentation-mcp@1.3.2:");
     expect(lockfile).toContain(
-      "agentation-mcp@1.2.0:\n    resolution: {integrity: sha512-BRHVm/YRyAHzJFM8i+ZbgpLgpnVptyKeUyauYd2pkOBX/oVFYGOjjLU+YtpNZD1Np+5/jJAp9xFbv1SE112Wwg==}",
+      "agentation-mcp@1.3.2:\n    resolution: {integrity: sha512-1h3k6kj2ttzahwtMYGyfmrbYZMA3A5/mQwczFmQTfkNb2mgh5DyYG4uUjEbAaAz+a4LCDKahLmC050Gg8uY3tw==}",
     );
     expect(lockfile).toContain(
-      "agentation@3.0.2:\n    resolution: {integrity: sha512-iGzBxFVTuZEIKzLY6AExSLAQH6i6SwxV4pAu7v7m3X6bInZ7qlZXAwrEqyc4+EfP4gM7z2RXBF6SF4DeH0f2lA==}",
+      "agentation@3.1.2:\n    resolution: {integrity: sha512-ZZr6PRgX3ussGbvC9NVh5vFfKKFkQyHL6KuxOfBAAM/mJS3bM2XyhZ7wLPakDwU3pqkzq7u6vEfLikFsCOu5+Q==}",
     );
   });
 
