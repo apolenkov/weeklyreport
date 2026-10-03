@@ -150,7 +150,7 @@ function buildLeadProductReport(
     initials: initialsFromName(proj.projectName),
     name: proj.projectName,
     status,
-    statusLabel: statusLabel(status, "print"),
+    statusLabel: statusLabel(status, "screen"),
     leads: shortNameFromName(section.authorName),
     ...(attention
       ? {

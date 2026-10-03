@@ -110,7 +110,7 @@ export function projectWeeklyProduct(
   const productBase = {
     ...identity,
     authorIds: context.authorsByProject.get(overview.productId) ?? [],
-    statusLabel: statusLabel(status, "print"),
+    statusLabel: statusLabel(status, "screen"),
     currentWeek: items.current,
     nextWeek: items.next,
     risks,

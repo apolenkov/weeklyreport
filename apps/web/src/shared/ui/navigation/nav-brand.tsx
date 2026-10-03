@@ -61,16 +61,20 @@ function IdentitySlot({
   }
   if (userName === null) return null;
   return (
-    <div className={USER_IDENTITY_SLOT_CLASS} data-testid="nav-identity">
-      <span className="min-w-0 max-w-full text-[13px] leading-4 text-[var(--color-foreground)] [overflow-wrap:anywhere] sm:truncate">
+    <div
+      className={USER_IDENTITY_SLOT_CLASS}
+      data-testid="nav-identity"
+      title={identityMeta}
+    >
+      <span className="min-w-0 max-w-full text-[13px] leading-4 text-[var(--color-foreground)] [overflow-wrap:break-word]">
         <span className="font-semibold">{userName}</span>
       </span>
       {role && (
-        <span className="text-xs font-semibold text-[var(--color-muted-foreground)] md:hidden">
+        <span className="text-xs font-semibold text-[var(--color-muted-foreground)] lg:hidden">
           {ROLE_LABEL[role]}
         </span>
       )}
-      <span className="hidden min-w-0 max-w-full truncate whitespace-nowrap text-xs font-semibold leading-4 text-[var(--color-muted-foreground)] md:block">
+      <span className="hidden min-w-0 max-w-full truncate whitespace-nowrap text-xs font-semibold leading-4 text-[var(--color-muted-foreground)] lg:block">
         {identityMeta}
       </span>
     </div>
