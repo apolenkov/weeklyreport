@@ -101,12 +101,17 @@ export function ReportToolbarCenterLabel({
   detail,
 }: ReportToolbarCenterLabelProps) {
   return (
-    <div className="flex min-w-0 max-w-full flex-wrap items-baseline gap-x-2 gap-y-1">
+    <div className="flex min-w-0 max-w-full flex-col gap-y-0.5 md:flex-row md:items-baseline md:gap-x-2">
       <span className="min-w-0 text-sm text-[var(--color-muted-foreground)] [overflow-wrap:anywhere]">
         {label}
       </span>
-      <span className="text-[var(--color-muted-foreground)]">&middot;</span>
-      <span className="text-sm text-[var(--color-muted-foreground)]">
+      <span
+        aria-hidden="true"
+        className="hidden text-[var(--color-muted-foreground)] md:inline"
+      >
+        &middot;
+      </span>
+      <span className="text-sm text-[var(--color-muted-foreground)] md:whitespace-nowrap">
         {detail}
       </span>
     </div>

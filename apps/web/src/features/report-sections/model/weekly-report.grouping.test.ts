@@ -413,7 +413,7 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
     // Product status is the floor-free traffic-light passthrough, not floored
     // by the blocking risk present on the same section.
     expect(crm?.status).toBe("on-track");
-    expect(crm?.statusLabel).toBe("On Track");
+    expect(crm?.statusLabel).toBe("On track");
     expect(crmPortfolio?.status).toBe("on-track");
     // The risk still surfaces as a blocked-severity row (chip-level data); only
     // the product STATUS stays unfloored.

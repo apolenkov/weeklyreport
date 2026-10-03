@@ -1,7 +1,11 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { DocumentActionGroup, ReportToolbar } from "./report-toolbar";
+import {
+  DocumentActionGroup,
+  ReportToolbar,
+  ReportToolbarCenterLabel,
+} from "./report-toolbar";
 
 describe("ReportToolbar", () => {
   it("renders the context controls in a single labeled bar", () => {
@@ -108,5 +112,17 @@ describe("DocumentActionGroup", () => {
     expect(root.style.getPropertyValue("--sticky-toolbar-offset")).toBe("");
     height.mockRestore();
     vi.unstubAllGlobals();
+  });
+});
+
+describe("ReportToolbarCenterLabel (R19)", () => {
+  it("stacks label and detail below md and shows the separator only inline", () => {
+    const { container } = render(
+      <ReportToolbarCenterLabel label="Department" detail="Live review" />,
+    );
+    expect(container.firstElementChild).toHaveClass("flex-col", "md:flex-row");
+    const separator = screen.getByText("\u00B7");
+    expect(separator).toHaveClass("hidden", "md:inline");
+    expect(separator).toHaveAttribute("aria-hidden", "true");
   });
 });

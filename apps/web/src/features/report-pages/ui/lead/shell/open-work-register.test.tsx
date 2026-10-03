@@ -45,6 +45,32 @@ function item(status: "paused" | "postponed"): OpenWorkRegisterItem {
   };
 }
 
+describe("OpenWorkRegister disabled actions (R64)", () => {
+  it("keeps a disabled action readable instead of fading it with opacity", () => {
+    render(
+      <OpenWorkRegister
+        query={{
+          openItems: [item("postponed")],
+          terminalItems: [],
+          isLoading: false,
+          isComplete: true,
+          error: null,
+          retry: vi.fn(),
+        }}
+        actionsDisabled
+        disabledReason="Reopen the report to plan this work."
+        onOpen={vi.fn()}
+      />,
+    );
+    const button = screen.getByRole("button", { name: /Replan deferred work/ });
+    expect(button).toBeDisabled();
+    expect(button.className).not.toContain("disabled:opacity");
+    expect(button.className).toContain(
+      "disabled:text-[var(--color-muted-foreground)]",
+    );
+  });
+});
+
 describe("OpenWorkRegister", () => {
   it("shows source provenance, pause/deferral reason, and explicit actions", () => {
     const onOpen = vi.fn<(item: OpenWorkRegisterItem) => void>();

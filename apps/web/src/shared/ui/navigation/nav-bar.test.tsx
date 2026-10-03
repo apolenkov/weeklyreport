@@ -333,7 +333,20 @@ describe("NavBar — role-aware visibility", () => {
     const name = within(identity).getByText(
       "Alexandria Catherine Montgomery-Wetherington",
     ).parentElement;
-    expect(name).toHaveClass("min-w-0", "sm:truncate");
+    expect(name).toHaveClass("min-w-0");
+    expect(name).not.toHaveClass("sm:truncate");
+  });
+
+  it("shows the short role below lg and keeps the department line for lg only (R05)", () => {
+    setRole("head", "Alexandria Montgomery");
+    render(<NavBar />);
+
+    const identity = screen.getByTestId("nav-identity");
+    expect(within(identity).getByText("Head", { exact: true })).toHaveClass(
+      "lg:hidden",
+    );
+    expect(identity).toHaveAttribute("title");
+    expect(identity.lastElementChild).toHaveClass("hidden", "lg:block");
   });
 
   it("keeps a visible mobile menu label and the existing action names", () => {

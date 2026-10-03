@@ -168,7 +168,7 @@ describe("ActivityStatusStrip", () => {
       strip.querySelector(":scope > ul")?.children ?? [],
     );
     expect(cards.map((card) => card.textContent)).toEqual([
-      expect.stringContaining("Alpha dutyAt riskLead A.· Products: Payments"),
+      expect.stringContaining("Alpha dutyAt riskLead A.Products: Payments"),
       expect.stringContaining("Alpha dutyOn trackLead B."),
       expect.stringContaining("Zulu dutyOn trackLead B."),
     ]);
@@ -178,6 +178,35 @@ describe("ActivityStatusStrip", () => {
     expect(cards[0]).not.toHaveTextContent("Wrong activity item");
     expect(cards[2]).toHaveTextContent("NextLead B next item");
     expect(cards[2]).not.toHaveTextContent("Lead A current item");
+  });
+
+  it("puts the status dot in its own column and keeps the status label sentence-case (R06/R23)", () => {
+    render(
+      <ActivityStatusStrip
+        sections={[
+          sectionWithActivities({
+            activities: [
+              {
+                activityId: ACTIVITY_ID_A,
+                activityName:
+                  "Long running incident duty rotation for the holiday week",
+                status: "yellow",
+                linkedProducts: [{ productId: "p1", productName: "Payments" }],
+                derivedStatus: null,
+              },
+            ],
+          }),
+        ]}
+      />,
+    );
+    const label = screen.getByText("At risk");
+    expect(label.className).not.toContain("uppercase");
+    const grid = label.closest("li")?.firstElementChild;
+    expect(grid).toHaveClass("grid");
+    expect(grid?.firstElementChild).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByText(/^Products: Payments$/).textContent).not.toContain(
+      "·",
+    );
   });
 
   it("self-suppresses when no section carries an activity", () => {

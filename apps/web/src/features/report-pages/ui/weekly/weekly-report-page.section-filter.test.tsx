@@ -400,7 +400,7 @@ describe("WeeklyReportPage — Submitted/All filter + anti-empty-state (§7)", (
     const submittedHeader = within(submittedProduct).getByRole("button", {
       name: /Product Alpha/,
     });
-    expect(submittedHeader).toHaveTextContent("On Track");
+    expect(submittedHeader).toHaveTextContent("On track");
     expect(submittedHeader).toHaveTextContent("Alice");
     expect(submittedHeader).not.toHaveTextContent("Bob");
 
