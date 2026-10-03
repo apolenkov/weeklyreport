@@ -406,9 +406,13 @@ async function swipeOpenPeriodListbox(direction: "left" | "right") {
   assert.ok(typeof y === "number" && Number.isFinite(y));
   assert.ok(typeof width === "number" && Number.isFinite(width));
   assert.ok(typeof height === "number" && Number.isFinite(height));
-  // The pinned native CLI swipes from (200, 400); portals preserve React bubbling.
+  // The pinned native CLI swipes 100px from (200, 400); portals preserve React bubbling.
+  const [pathStart, pathEnd] = direction === "left" ? [200, 100] : [200, 300];
   assert.ok(
-    x < 100 && x + width > 300 && y < 400 && y + height > 400,
+    x < Math.min(pathStart, pathEnd) &&
+      x + width > Math.max(pathStart, pathEnd) &&
+      y < 400 &&
+      y + height > 400,
     "The open period listbox must contain the entire native swipe path",
   );
   await command(["swipe", direction, "100"]);
