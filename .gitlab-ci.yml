@@ -299,6 +299,8 @@ api-integration:
       artifacts: true
   # Redis and Mailpit are ordinary service aliases — the guard constrains only
   # the PostgreSQL target. The test suite reads their real hostnames from env.
+  # Digests stay on the runner-cached images: newer ones time out on pull
+  # (renovate.json disables their CI updates).
   services:
     - name: redis:7.4.11-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf
       alias: redis
