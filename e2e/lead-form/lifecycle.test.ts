@@ -1248,6 +1248,11 @@ void test("next step limit accepts a corrected boundary value", async () => {
   await waitClosed(dialog);
 });
 
+async function waitAriaLabel(label: string): Promise<void> {
+  const expression = `Array.from(document.getElementsByTagName("button")).some(element => element.getAttribute("aria-label") === ${JSON.stringify(label)})`;
+  await command(["wait", "--fn", expression]);
+}
+
 for (const kind of ["risk", "decision"] as const) {
   void test(`${kind} text limits reject oversized fields and persist corrected boundaries`, async () => {
     await openLeadReport();
@@ -1292,24 +1297,36 @@ for (const kind of ["risk", "decision"] as const) {
     await waitClosed(dialog);
     await saveDraft();
     await reload();
+    const text = boundaries.at(0);
+    assert(text);
+    // The overview renders before the saved record hydrates; wait for it.
+    await command([
+      "wait",
+      "--fn",
+      `document.body.textContent.includes(${JSON.stringify(text)})`,
+    ]);
     if (kind === "risk") {
       await waitButton("Expand Risks & Blockers");
       await findRole("button", "Expand Risks & Blockers", "click");
+      // The expand commit is what releases the inert card actions.
+      await waitAriaLabel("Collapse Risks & Blockers");
       await findRole(
         "button",
         `Edit risk for ${LEAD_FORM_FIXTURE.activityName}`,
         "click",
       );
     } else {
-      const text = boundaries.at(0);
-      assert(text);
       await openLeadReport("slides");
       await findRole("button", "Document", "click");
+      // The slide mounts before its saved records hydrate; wait for the row.
+      await waitAriaLabel(`Expand full details for Decision: ${text}`);
       await findRole(
         "button",
         `Expand full details for Decision: ${text}`,
         "click",
       );
+      // The details body mounts the edit action after the expand commit.
+      await waitAriaLabel(`Edit Decision: ${shortItemLabel(text)}`);
       await findRole(
         "button",
         `Edit Decision: ${shortItemLabel(text)}`,
