@@ -48,7 +48,8 @@ variables:
   # and trip the cleanliness gate. Database jobs use explicit `needs`.
   dependencies: []
   timeout: 30m
-  resource_group: weeklyreport-ci-heavy
+  # Serial inside one pipeline; separate pipelines may run on different runners.
+  resource_group: weeklyreport-ci-heavy-$CI_PIPELINE_ID
   allow_failure: false
   artifacts:
     when: always
@@ -81,7 +82,7 @@ variables:
 .postgres-job:
   image: pgvector/pgvector:0.8.7-pg15-bookworm@sha256:47af0b65960b14f1c6945aa4ccae37836c632e9a6fe0eea9160936e616e5b2e9
   timeout: 30m
-  resource_group: weeklyreport-ci-heavy
+  resource_group: weeklyreport-ci-heavy-$CI_PIPELINE_ID
   allow_failure: false
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
@@ -427,7 +428,7 @@ build-images:
     name: moby/buildkit:v0.33.1-rootless@sha256:f8a833b2de9d68e27f0815e4a737abdfaf8a2e4c615650557df11025101557b4
     entrypoint: [""]
   timeout: 45m
-  resource_group: weeklyreport-ci-heavy
+  resource_group: weeklyreport-ci-heavy-$CI_PIPELINE_ID
   variables:
     # Job-side mitigation for a runner whose default seccomp/AppArmor profile
     # denies rootless buildkitd its worker sandbox (mount proc: operation not
