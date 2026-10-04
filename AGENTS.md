@@ -28,6 +28,11 @@ WeeklyReport-specific context.
   Redis DB 15, restart local repository processes, recreate repository-scoped
   local Docker resources, and remove generated runtime/build/cache state when
   needed for the task.
+- **Standing Bugsink authority (owner request, recorded 2026-10-04).** In the
+  repository-scoped local disposable Bugsink container of the errors overlay,
+  runtime checks may create a temporary superuser, team, project, memberships,
+  and API token. Remove them afterwards and verify zero residue. This does not
+  extend to any non-local Bugsink, shared instance, or real credentials.
 - Preserve the task boundary: an audit does not authorize product fixes, and
   explicit read-only instructions override the test-record permission above.
   Do not expand local permission to production, shared/unknown data, credentials,

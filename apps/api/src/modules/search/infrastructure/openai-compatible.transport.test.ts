@@ -92,6 +92,48 @@ describe("OpenAiCompatibleTransport", () => {
     expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
+  it("fails fast with a retryable error when the provider is unreachable", async () => {
+    const fetcher = vi
+      .fn<OpenAiCompatibleFetch>()
+      .mockRejectedValue(new TypeError("fetch failed"));
+    const transport = new OpenAiCompatibleTransport(config(fetcher));
+
+    await expect(
+      transport.chat(
+        { model: "planner", maxTokens: 10, messages: [] },
+        "planner",
+      ),
+    ).rejects.toMatchObject({
+      constructor: ReportAssistantProviderError,
+      statusCode: undefined,
+      retryable: true,
+    });
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
+
+  it("gives up after one request timeout instead of waiting it out three times", async () => {
+    const fetcher = vi.fn<OpenAiCompatibleFetch>(
+      (_input, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () =>
+            reject(new DOMException("timed out", "TimeoutError")),
+          );
+        }),
+    );
+    const transport = new OpenAiCompatibleTransport({
+      ...config(fetcher),
+      timeoutMs: 20,
+    });
+
+    await expect(
+      transport.chat(
+        { model: "planner", maxTokens: 10, messages: [] },
+        "planner",
+      ),
+    ).rejects.toMatchObject({ retryable: true, statusCode: undefined });
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
+
   it("preserves a long Retry-After and does not retry before its reset", async () => {
     const fetcher = vi
       .fn<OpenAiCompatibleFetch>()
