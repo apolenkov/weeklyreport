@@ -26,14 +26,15 @@ const ago = (seconds: number): Date =>
   new Date(NOW.getTime() - seconds * MS_PER_SECOND);
 
 describe("formatDateTime", () => {
-  it("uses the Russian locale's local date and time format", () => {
+  it("uses the English locale's medium date and short time format", () => {
     const date = new Date("2026-04-20T12:30:00.000Z");
-    const expected = new Intl.DateTimeFormat("ru-RU", {
-      dateStyle: "short",
+    const expected = new Intl.DateTimeFormat("en-US", {
+      dateStyle: "medium",
       timeStyle: "short",
     }).format(date);
 
     expect(formatDateTime(date)).toBe(expected);
+    expect(formatDateTime(date)).toMatch(/Apr 20, 2026/);
   });
 
   it.each([null, undefined] as const)(

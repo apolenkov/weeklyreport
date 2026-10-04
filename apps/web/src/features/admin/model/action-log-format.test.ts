@@ -10,6 +10,9 @@ import {
 // hold with the zone pinned; each block restores the ambient TZ afterwards.
 // `vi.stubEnv` restores an originally-unset TZ by deleting the key, which a
 // plain save/reassign cannot do (`process.env` stringifies `undefined`).
+// ICU separates the meridiem with a narrow no-break space; compare on plain spaces.
+const plain = (value: string): string => value.replaceAll(/\s/g, " ");
+
 function withTimeZone(timeZone: string): void {
   beforeAll(() => {
     vi.stubEnv("TZ", timeZone);
@@ -23,12 +26,12 @@ describe("formatTimestamp in UTC", () => {
   withTimeZone("UTC");
 
   it.each([
-    ["2026-07-26T09:05:00.000Z", "26.07.2026, 09:05"],
-    ["2026-01-02T23:45:00.000Z", "02.01.2026, 23:45"],
-    ["2026-12-31T00:00:00.000Z", "31.12.2026, 00:00"],
-    ["2026-03-09T00:07:00.000Z", "09.03.2026, 00:07"],
+    ["2026-07-26T09:05:00.000Z", "Jul 26, 2026, 9:05 AM"],
+    ["2026-01-02T23:45:00.000Z", "Jan 2, 2026, 11:45 PM"],
+    ["2026-12-31T00:00:00.000Z", "Dec 31, 2026, 12:00 AM"],
+    ["2026-03-09T00:07:00.000Z", "Mar 9, 2026, 12:07 AM"],
   ])("renders %s as %s", (input, expected) => {
-    expect(formatTimestamp(input)).toBe(expected);
+    expect(plain(formatTimestamp(input))).toBe(expected);
   });
 });
 
@@ -36,14 +39,14 @@ describe("formatTimestamp across a day boundary", () => {
   withTimeZone("America/New_York");
 
   it("rolls the local date back when the UTC instant is past midnight", () => {
-    expect(formatTimestamp("2026-12-31T00:00:00.000Z")).toBe(
-      "30.12.2026, 19:00",
+    expect(plain(formatTimestamp("2026-12-31T00:00:00.000Z"))).toBe(
+      "Dec 30, 2026, 7:00 PM",
     );
   });
 
   it("keeps a two-digit local hour past noon", () => {
-    expect(formatTimestamp("2026-01-02T23:45:00.000Z")).toBe(
-      "02.01.2026, 18:45",
+    expect(plain(formatTimestamp("2026-01-02T23:45:00.000Z"))).toBe(
+      "Jan 2, 2026, 6:45 PM",
     );
   });
 });

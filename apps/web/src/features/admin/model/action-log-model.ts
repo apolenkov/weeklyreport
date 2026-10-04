@@ -14,22 +14,26 @@ export function matchesActionLogSearch(
   const needle = search.trim().toLowerCase();
   if (!needle) return true;
 
-  return [
-    event.userId,
-    event.role ?? "",
-    event.procedure,
-    humanizeProcedure(event.procedure),
-    event.targetId ?? "",
-    event.status,
-    statusLabel(event.status),
-    event.reason ?? "",
-    event.correlationId,
-    event.createdAt,
-    formatTimestamp(event.createdAt),
-  ]
-    .join(" ")
-    .toLowerCase()
-    .includes(needle);
+  return (
+    [
+      event.userId,
+      event.role ?? "",
+      event.procedure,
+      humanizeProcedure(event.procedure),
+      event.targetId ?? "",
+      event.status,
+      statusLabel(event.status),
+      event.reason ?? "",
+      event.correlationId,
+      event.createdAt,
+      formatTimestamp(event.createdAt),
+    ]
+      .join(" ")
+      // ICU puts a narrow no-break space before AM/PM; a typed needle has a plain one.
+      .replaceAll(/\s/g, " ")
+      .toLowerCase()
+      .includes(needle)
+  );
 }
 
 /** Serializes only the public allowlist in a stable, reviewable key order. */

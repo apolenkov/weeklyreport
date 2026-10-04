@@ -30,7 +30,7 @@ describe("matchesActionLogSearch", () => {
 
   it.each([
     "2026-08-14T10:15",
-    "14.08.2026, 10:15",
+    "Aug 14, 2026, 10:15 AM",
     "Admin: Update User",
     "Error",
     "BAD_REQUEST",

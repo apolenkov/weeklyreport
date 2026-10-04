@@ -432,4 +432,17 @@ describe("NavBar — role-aware visibility", () => {
 
     expectInactiveLink(container, "/reports");
   });
+
+  it("gives /reports/trends its own nav destination for every role", () => {
+    for (const role of ["lead", "head", "admin", "viewer"] as const) {
+      setRole(role);
+      setRoute("/reports/trends");
+
+      const { container, unmount } = render(<NavBar />);
+
+      expectLinkExists(container, "/reports/trends");
+      expectActiveLink(container, "/reports/trends");
+      unmount();
+    }
+  });
 });
