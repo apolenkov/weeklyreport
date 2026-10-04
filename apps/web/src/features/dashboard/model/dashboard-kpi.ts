@@ -2,6 +2,7 @@ import type { WeeklyReportReadModel } from "@customreport/shared";
 import { HOURS_PER_DAY, MS_PER_HOUR } from "@customreport/shared";
 
 import { formatTimestampShort } from "../../../shared/lib/format/format-date";
+import type { BlockedAtRiskItem } from "./dashboard-escalations";
 
 export interface KpiData {
   readonly submitted: number;
@@ -27,18 +28,19 @@ function formatRelativeDeadline(deadline: Date, now: Date): string {
 export function buildKpiData(
   weeklyReport: WeeklyReportReadModel,
   now: Date,
+  blockedAtRisk: readonly BlockedAtRiskItem[],
 ): KpiData {
   const submitted = weeklyReport.submissionCount;
   const total = weeklyReport.totalLeads;
   // Same scope as submitted/total, so the card always adds up.
   const pendingCount = Math.max(0, total - submitted);
 
-  const blockedCount = weeklyReport.escalations.filter(
-    (e) => e.type === "blocked",
+  // Counted from the rows the Blocked & At Risk list renders, so the card and
+  // the list never disagree (R77).
+  const blockedCount = blockedAtRisk.filter(
+    (item) => item.severity === "blocked",
   ).length;
-  const atRiskCount = weeklyReport.escalations.filter(
-    (e) => e.type === "at_risk" || e.type === "unresolved_risk",
-  ).length;
+  const atRiskCount = blockedAtRisk.length - blockedCount;
   // The portfolio KPI stays product-only — count
   // product-parented decisions so activity decisions never inflate the KPI.
   const decisionCount = weeklyReport.leadSections.reduce(

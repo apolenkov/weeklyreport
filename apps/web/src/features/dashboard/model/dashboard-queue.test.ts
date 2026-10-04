@@ -33,6 +33,47 @@ describe("dashboard submissions KPI", () => {
   });
 });
 
+describe("dashboard risk KPI", () => {
+  it("counts the same rows the Blocked & At Risk list renders", () => {
+    const productId = "50000000-0000-4000-8000-000000000001";
+    const common = {
+      productId,
+      productName: "Platform",
+      authorId: queueLeadId(1),
+      leadName: "Alex Lead",
+    };
+    const weeklyReport = {
+      ...queueReport([]),
+      // The red roll-up is folded into the concrete stage escalations.
+      escalations: [
+        {
+          ...common,
+          type: "blocked" as const,
+          stageName: "Development",
+          description: "blocked detail",
+        },
+        {
+          ...common,
+          type: "unresolved_risk" as const,
+          stageName: "Testing",
+          description: "risk detail",
+        },
+        {
+          ...common,
+          type: "at_risk" as const,
+          stageName: null,
+          description: "roll-up",
+        },
+      ],
+    };
+
+    const { kpi, blockedAtRisk } = mapWeeklyDashboardData({ weeklyReport });
+
+    expect(blockedAtRisk).toHaveLength(2);
+    expect([kpi.blockedCount, kpi.atRiskCount]).toEqual([1, 1]);
+  });
+});
+
 describe("dashboard lead queue", () => {
   it("suppresses a red roll-up only for its exact product id", () => {
     const firstProductId = "50000000-0000-4000-8000-000000000001";
