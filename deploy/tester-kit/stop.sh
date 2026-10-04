@@ -1,22 +1,15 @@
 #!/usr/bin/env bash
-# Stop and delete the tester kit namespace and all resources.
-
+# Delete the tester stand (namespace wr-tester with its data) and stop port-forwards.
+#   stop.sh [--yes]
 set -euo pipefail
+. "$(dirname "$0")/env.sh"
 
-NS=${NS:-wr-tester}
-
-if ! kubectl get namespace "$NS" >/dev/null 2>&1; then
-  echo "Namespace $NS not found"
-  exit 0
+if kubectl get namespace "$NS" >/dev/null 2>&1; then
+  if [ "${1:-}" != --yes ]; then
+    read -r -p "Delete namespace $NS with all data? (yes/no): " ans
+    [ "$ans" = yes ] || { echo Cancelled; exit 0; }
+  fi
+  kubectl delete namespace "$NS" --wait=true
 fi
-
-read -p "Delete namespace $NS and all resources? (yes/no): " -r confirm
-if [ "$confirm" != "yes" ]; then
-  echo "Cancelled"
-  exit 0
-fi
-
-echo "Deleting namespace $NS..."
-kubectl delete namespace "$NS" --wait=true
-
-echo "✓ Namespace deleted"
+for n in app keycloak mailpit; do pf_stop "$n"; done
+echo "Stopped. Secrets stay in $STATE_DIR."

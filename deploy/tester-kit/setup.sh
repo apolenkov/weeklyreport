@@ -1,24 +1,12 @@
 #!/usr/bin/env bash
 # TESTER KIT bootstrap (OrbStack or Docker Desktop with Kubernetes).
-# Generates secrets, creates namespace, Keycloak + Mailpit, and runs migrations.
-# Re-running reuses existing secrets.
-#   STATE_DIR=... deploy/tester-kit/setup.sh
+# Generates secrets and the IdP key into $STATE_DIR (outside Git), creates the namespace,
+# the two Secrets, Keycloak and Mailpit. Called by start.sh; re-running reuses secrets.
 
 set -euo pipefail
-trap 'echo "Error on line $LINENO"' ERR
 
-NS=${NS:-wr-tester}
-APP_ORIGIN=${APP_ORIGIN:-http://localhost:8080}
-STATE_DIR=${STATE_DIR:?set STATE_DIR to a directory outside Git}
-HERE=$(cd "$(dirname "$0")" && pwd)
-
-# Check prerequisites
-command -v kubectl >/dev/null 2>&1 || { echo "kubectl not found. Install Docker Desktop/OrbStack with Kubernetes enabled."; exit 1; }
-command -v helm >/dev/null 2>&1 || { echo "helm not found. Install Helm 3."; exit 1; }
-
-# Check cluster connectivity
-kubectl cluster-info >/dev/null 2>&1 || { echo "Cannot connect to cluster. Check kubectl context."; exit 1; }
-echo "✓ Cluster: $(kubectl config current-context)"
+. "$(dirname "$0")/env.sh"
+APP_ORIGIN=${APP_ORIGIN:-http://localhost:$APP_PORT}
 
 mkdir -p "$STATE_DIR"
 chmod 700 "$STATE_DIR"
@@ -86,18 +74,3 @@ kubectl -n "$NS" apply -f "$HERE/keycloak.yaml" -f "$HERE/mailpit.yaml"
 echo "Waiting for deployments..."
 kubectl -n "$NS" rollout status deploy/keycloak deploy/mailpit --timeout=300s
 echo "✓ Infrastructure ready"
-
-echo ""
-echo "=== Setup Complete ==="
-echo "Namespace: $NS"
-echo "State dir: $STATE_DIR"
-echo "Secrets at: $STATE_DIR/secrets.env"
-echo "IdP cert: $STATE_DIR/idp-cert.b64"
-echo ""
-echo "Users:"
-echo "  Lead (reports): lead1@customreport.local / PW_LEAD1"
-echo "  Head (publish): head@customreport.local / PW_HEAD"
-echo "  Viewer: viewer@customreport.local / PW_VIEWER"
-echo "  Admin: admin@customreport.local / PW_ADMIN"
-echo ""
-echo "Next: run ./start.sh"

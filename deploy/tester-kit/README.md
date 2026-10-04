@@ -1,166 +1,64 @@
-# Комплект для тестировщиков WeeklyReport
+# WeeklyReport: стенд для тестировщиков
 
-Локальное развёртывание приложения в Kubernetes для тестирования на собственном компьютере.
+Своё приложение на своём компьютере: Kubernetes, свой вход через Keycloak, почта в Mailpit, PDF.
+Собирать образы не нужно.
 
-## Требования
+## Что нужно
 
-- **Docker Desktop с Kubernetes** или **OrbStack** с включённым Kubernetes
-- **kubectl** и **helm** (версия 3+)
-- **4 ГБ ОЗУ** для кластера (если Docker Desktop, требует ~6 ГБ на машину)
-- Доступ к реестру образов: `registry.gitlab.example.org:5005/acme/weeklyreport`
-  - Если образы отсутствуют, используются локально собранные `wr/*:sha`
-- Терминал (bash/zsh)
+- **OrbStack** или **Docker Desktop** с включённым Kubernetes.
+- Свободно **6 ГБ ОЗУ** для кластера и **10 ГБ** на диске.
+- `kubectl`, `helm`, `openssl`, `envsubst`, `curl`, а также Node 26 и `pnpm` (они нужны для загрузки демо-данных).
+- Копия репозитория: `git clone https://gitlab.example.org/acme/weeklyreport.git`.
+- Доступ к реестру образов `gitlab.example.org:5005/acme/weeklyreport`. Если нужен вход:
+  `REGISTRY_USER=<логин> REGISTRY_PASSWORD=<токен> deploy/tester-kit/start.sh`.
+- Свободные порты `8080`, `8081`, `8026`. Если на машине уже работает другой стенд, остановите его.
 
-## Установка
-
-### 1. Клонируй репозиторий и перейди в папку
+## Запуск
 
 ```bash
-cd /path/to/weeklyreport
+cd weeklyreport
+deploy/tester-kit/start.sh                 # образы из реестра, тег = коммит вашей копии
+deploy/tester-kit/start.sh --tag <sha>     # образы другого коммита main
+deploy/tester-kit/start.sh --local         # образы wr/*, собранные на этой машине
 ```
 
-### 2. Создай папку для состояния
+Первый запуск занимает несколько минут. В конце скрипт печатает адреса и пароли. Он безопасно запускается повторно:
+заново поднимает доступ к страницам, если он пропал.
 
-Все секреты и сертификаты будут сохранены там (вне Git):
+## Адреса и пользователи
 
-```bash
-mkdir -p ~/.local/state/wr-tester
-export STATE_DIR="$HOME/.local/state/wr-tester"
-```
+| Что      | Адрес                                                       |
+| -------- | ----------------------------------------------------------- |
+| Стенд    | http://localhost:8080 (кнопка **Sign in**, вход через SAML) |
+| Почта    | http://localhost:8026 (Mailpit, все письма стенда)          |
+| Keycloak | http://localhost:8081 (`admin`, пароль в `secrets.env`)     |
 
-### 3. Запусти развёртывание
+Пользователи: `lead1@customreport.local` (лид), `head@customreport.local` (руководитель),
+`viewer@customreport.local` (наблюдатель), `admin@customreport.local` (администратор).
+Пароли печатает `start.sh` и хранит файл `~/.local/state/wr-tester/secrets.env`.
 
-```bash
-cd deploy/tester-kit
-bash start.sh
-```
+## Сброс и остановка
 
-Скрипт:
+- `deploy/tester-kit/reset.sh` стирает базу стенда и загружает демо-данные заново (спросит «yes»).
+- `deploy/tester-kit/stop.sh` удаляет стенд вместе с данными. Пароли остаются в `~/.local/state/wr-tester`.
 
-- Проверит подключение к кластеру
-- Создаст пространство имён `wr-tester`
-- Развернёт Keycloak (SAML провайдер) и Mailpit (почта)
-- Установит приложение через Helm
-- Дождётся готовности (/health/ready)
+## Если что-то не работает
 
-На дождь может потребоваться **2-3 минуты** (зависит от скорости скачивания образов).
+| Симптом                       | Что делать                                                                      |
+| ----------------------------- | ------------------------------------------------------------------------------- |
+| «Kubernetes context is …»     | Включите Kubernetes в OrbStack или Docker Desktop, выберите его контекст.       |
+| Образы не скачиваются         | Проверьте доступ к реестру, добавьте логин и токен, либо используйте `--local`. |
+| «Port … is busy»              | Освободите порт и запустите `start.sh` снова.                                   |
+| Страница не открывается       | Запустите `start.sh` ещё раз.                                                   |
+| «Too many requests» при входе | Подождите минуту: вход ограничен по частоте.                                    |
 
-## Доступ
+## Как сообщить о проблеме
 
-Приложение доступно по адресу: **http://localhost:8080**
-
-### Пользователи для входа
-
-Используй SAML-аутентификацию (кнопка входа на сайте):
-
-| Роль                   | Email                       | Пароль                                               |
-| ---------------------- | --------------------------- | ---------------------------------------------------- |
-| Лид (создание отчётов) | `lead1@customreport.local`  | в `~/.local/state/wr-tester/secrets.env` (PW_LEAD1)  |
-| Глава (публикация)     | `head@customreport.local`   | в `~/.local/state/wr-tester/secrets.env` (PW_HEAD)   |
-| Зритель (чтение)       | `viewer@customreport.local` | в `~/.local/state/wr-tester/secrets.env` (PW_VIEWER) |
-| Администратор          | `admin@customreport.local`  | в `~/.local/state/wr-tester/secrets.env` (PW_ADMIN)  |
-
-Пароли сгенерированы автоматически и сохранены в файле `secrets.env`.
-
-### Сопутствующие сервисы
-
-- **Keycloak** (управление учётными записями): http://localhost:8081
-  - Администратор: `admin` / пароль из `secrets.env` (KC_ADMIN_PASSWORD)
-- **Mailpit** (перехват писем): http://localhost:8025
-
-## Использование
-
-### Проверка здоровья приложения
+Приложите к сообщению: что делали, ожидали и получили, скриншот и вывод команд
 
 ```bash
-curl http://localhost:8080/health/ready
-```
-
-Ответ `200 OK` означает, что приложение готово.
-
-### Сброс демо-данных
-
-```bash
-bash reset.sh
-```
-
-Скрипт удалит базу данных и заполнит её свежими демо-данными. Требует подтверждения.
-
-### Остановка
-
-```bash
-bash stop.sh
-```
-
-Удаляет пространство имён и все ресурсы в кластере (запрашивает подтверждение).
-
-## Проблемы и решения
-
-### Кластер не подключён
-
-Убедись, что Docker Desktop или OrbStack с Kubernetes запущены, и проверь контекст:
-
-```bash
-kubectl config current-context
-```
-
-Для Docker Desktop контекст должен быть `docker-desktop` или `docker-for-desktop`.
-
-### Образы не скачиваются из реестра
-
-Если нет доступа к `registry.gitlab.example.org:5005`, используй локально собранные образы:
-
-```bash
-bash start.sh --tag <git-sha> --registry wr
-```
-
-### Долгий старт или таймауты
-
-Увеличь объём памяти для кластера в параметрах Docker Desktop (требует перезагрузки) или используй OrbStack, который гибче.
-
-## Отправка проблем
-
-Если возникли проблемы:
-
-1. Проверь состояние подов:
-
-   ```bash
-   kubectl -n wr-tester get pods
-   ```
-
-2. Посмотри логи приложения:
-
-   ```bash
-   kubectl -n wr-tester logs -l app=api --tail=50
-   ```
-
-3. Опиши проблему на TASK-145.54 с указанием:
-   - Вывода `kubectl version`
-   - Состояния подов (`get pods`)
-   - Релевантных логов
-   - Версии Docker/OrbStack
-
-## Полезные команды
-
-```bash
-# Просмотр состояния всех подов
 kubectl -n wr-tester get pods
-
-# Логи API приложения
-kubectl -n wr-tester logs -f deploy/api
-
-# Интерактивный доступ к контейнеру API
-kubectl -n wr-tester exec -it deploy/api -- /bin/sh
-
-# Переподключение к Keycloak (если вышла из-за ошибки)
-kubectl -n wr-tester rollout restart deploy/keycloak
-
-# Удаление и переустановка приложения (без удаления namespace и БД)
-helm uninstall weeklyreport -n wr-tester
-bash start.sh
+kubectl -n wr-tester logs deploy/api --tail=100
 ```
 
----
-
-**Создано:** 2026-10-04  
-**Часть задачи:** TASK-145.54
+Задача: TASK-145.54.

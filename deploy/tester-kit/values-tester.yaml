@@ -1,19 +1,20 @@
-# TESTER KIT values for a dev cluster (OrbStack or Docker Desktop with Kubernetes).
-# Namespace: wr-tester (separate from wr-local-prod for development).
-# Dependencies (Keycloak, Mailpit, Secrets) come from setup.sh;
-# Images are built from registry.gitlab.example.org:5005/acme/weeklyreport
-# or locally built wr/<name>:<git sha>.
+# Tester kit values for a local cluster (OrbStack or Docker Desktop Kubernetes),
+# namespace wr-tester. Derived from ../helm/weeklyreport/values-local-prod.example.yaml.
+# The database name is the one the repository destructive guard accepts, so
+# reset.sh can reseed it from a checkout. start.sh passes images.registry,
+# images.tag and the IdP certificate; secrets come from setup.sh.
 
 images:
-  registry: registry.gitlab.example.org:5005/acme/weeklyreport
+  registry: gitlab.example.org:5005/acme/weeklyreport
   tag: REPLACE_WITH_GIT_SHA
 
 secrets:
   # Secret keys: DB_PASSWORD, AUTH_JWT_SECRET, PDF_EXPORT_JWT_SECRET,
-  # AI_PROVIDER_CONFIG_ENCRYPTION_KEY
+  # AI_PROVIDER_CONFIG_ENCRYPTION_KEY, and optional SMTP_USER, SMTP_PASS, SENTRY_DSN.
   existingSecret: weeklyreport-secrets
 
 persistence:
+  # An empty string selects the cluster default storage class.
   storageClass: ""
   postgresSize: 2Gi
   redisSize: 256Mi
@@ -21,7 +22,7 @@ persistence:
   backupSize: 1Gi
 
 postgres:
-  db: customreport_tester
+  db: customreport_e2e
 
 pgbouncer:
   maxClientConn: 100
@@ -29,11 +30,16 @@ pgbouncer:
   reservePoolSize: 5
 
 edge:
+  # Addresses of the proxies in front of the edge (the cluster Ingress pods).
   trustedProxies:
     - 127.0.0.1/32
-  cspReportUri: ""
+  cspReportUri: https://csp-reports.example.net/weeklyreport
   ingress:
     host: localhost
+
+backup:
+  schedule: "0 * * * *"
+  retentionDays: 1
 
 api:
   env:
@@ -46,6 +52,7 @@ api:
     LOG_LEVEL: info
     OTEL_SDK_DISABLED: "true"
     OTEL_TRACES_SAMPLER_ARG: "0.1"
+    # About 75% of the api memory limit (2Gi).
     HEAP_HEALTH_THRESHOLD_BYTES: "1610612736"
     CLIENT_LOG_FORWARDING: "false"
     PRODUCT_FEEDBACK_ENABLED: "false"
@@ -56,6 +63,8 @@ api:
     KEYCLOAK_SAML_ENTRY_POINT: http://localhost:8081/realms/weeklyreport/protocol/saml
     KEYCLOAK_SAML_ISSUER: weeklyreport
     KEYCLOAK_SAML_CERT: REPLACE_WITH_IDP_CERT_B64
+    # The 32-byte key lives in the Secret; see production.env.example for the
+    # rotation rule of AI_PROVIDER_CONFIG_ENCRYPTION_KEY.
     AI_PROVIDER_CONFIG_KEY_VERSION: "1"
     AI_PROVIDER_ALLOWED_ORIGINS: https://api.mistral.ai,https://openrouter.ai,https://api.groq.com,https://api.jina.ai,https://api.openai.com
     REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED: "false"
