@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 
 import { runtimeSignal, trackRuntimeOperation } from "../setup/shutdown.js";
+import { pressKey, releasePressSocket } from "./press.js";
 import type { BrowserSnapshot } from "./snapshot-scope.js";
 
 export type { BrowserSnapshot } from "./snapshot-scope.js";
@@ -136,6 +137,7 @@ export async function command(
     : runtimeSignal(sessions.signal);
   signal.throwIfAborted();
   sessions.used.add(selected);
+  if (await pressKey(selected, args, command, signal)) return {};
   const { stdout } = await executeClient(args, signal, selected).catch(
     (error: unknown) => {
       if (
@@ -277,6 +279,7 @@ export function reload(session?: string): Promise<Record<string, unknown>> {
 
 export async function close(session?: string): Promise<void> {
   const selected = ownedSession(session);
+  releasePressSocket(selected);
   const data = await command(["close"], selected);
   assert(data.closed === true, "agent-browser did not close the owned session");
   sessions.used.delete(selected);
