@@ -34,7 +34,6 @@ if (
 for (const requiredPath of [
   join(root, "node_modules", ".pnpm"),
   join(root, "node_modules", ".modules.yaml"),
-  join(root, "node_modules", ".package-map.json"),
 ] as const) {
   await lstat(requiredPath);
 }

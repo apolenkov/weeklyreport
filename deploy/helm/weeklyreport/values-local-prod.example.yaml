@@ -1,0 +1,83 @@
+# LOCAL STAND-IN values for a dev cluster (OrbStack, namespace wr-local-prod).
+# Dependencies (Keycloak, Mailpit, Secrets) come from deploy/local-prod/setup.sh;
+# see docs/kubernetes.md "Local self-hosted stand". No secrets here: the Secret
+# `weeklyreport-secrets` is created by setup.sh, the IdP certificate is passed
+# with `--set-string api.env.KEYCLOAK_SAML_CERT="$(cat <state>/idp-cert.b64)"`.
+# Images are the locally built wr/<name>:<git sha>; install with
+# `--set images.tag=<sha>`.
+
+images:
+  registry: wr
+  tag: REPLACE_WITH_GIT_SHA
+
+secrets:
+  # Secret keys: DB_PASSWORD, AUTH_JWT_SECRET, PDF_EXPORT_JWT_SECRET,
+  # AI_PROVIDER_CONFIG_ENCRYPTION_KEY, and optional SMTP_USER, SMTP_PASS, SENTRY_DSN.
+  existingSecret: weeklyreport-secrets
+
+persistence:
+  # An empty string selects the cluster default storage class.
+  storageClass: ""
+  postgresSize: 2Gi
+  redisSize: 256Mi
+  pdfSize: 512Mi
+  backupSize: 1Gi
+
+postgres:
+  db: customreport_production
+
+pgbouncer:
+  maxClientConn: 100
+  poolSize: 20
+  reservePoolSize: 5
+
+edge:
+  # Addresses of the proxies in front of the edge (the cluster Ingress pods).
+  trustedProxies:
+    - 127.0.0.1/32
+  cspReportUri: https://csp-reports.example.net/weeklyreport
+  ingress:
+    host: localhost
+
+backup:
+  schedule: "0 * * * *"
+  retentionDays: 14
+
+api:
+  env:
+    DB_POOL_MAX: "10"
+    DB_POOL_IDLE_TIMEOUT_MS: "30000"
+    DB_POOL_CONNECTION_TIMEOUT_MS: "5000"
+    REDIS_DB: "0"
+    FRONTEND_URL: http://localhost:8080
+    APP_BASE_URL: http://localhost:8080
+    LOG_LEVEL: info
+    OTEL_SDK_DISABLED: "true"
+    OTEL_TRACES_SAMPLER_ARG: "0.1"
+    # About 75% of the api memory limit (2Gi).
+    HEAP_HEALTH_THRESHOLD_BYTES: "1610612736"
+    CLIENT_LOG_FORWARDING: "false"
+    PRODUCT_FEEDBACK_ENABLED: "false"
+    SMTP_HOST: mailpit
+    SMTP_PORT: "1025"
+    SMTP_FROM: weeklyreport@customreport.local
+    KEYCLOAK_SAML_CALLBACK_URL: http://localhost:8080/auth/saml/callback
+    KEYCLOAK_SAML_ENTRY_POINT: http://localhost:8081/realms/weeklyreport/protocol/saml
+    KEYCLOAK_SAML_ISSUER: weeklyreport
+    KEYCLOAK_SAML_CERT: REPLACE_WITH_IDP_CERT_B64
+    # The 32-byte key lives in the Secret; see production.env.example for the
+    # rotation rule of AI_PROVIDER_CONFIG_ENCRYPTION_KEY.
+    AI_PROVIDER_CONFIG_KEY_VERSION: "1"
+    AI_PROVIDER_ALLOWED_ORIGINS: https://api.mistral.ai,https://openrouter.ai,https://api.groq.com,https://api.jina.ai,https://api.openai.com
+    REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED: "false"
+    REPORT_ASSISTANT_INPUT_VERSION: "1"
+    REPORT_ASSISTANT_SIMILARITY_THRESHOLD: "0.55"
+    REPORT_ASSISTANT_CANDIDATE_LIMIT: "500"
+    REPORT_ASSISTANT_READ_THROUGH_LIMIT: "16"
+    REPORT_ASSISTANT_EXHAUSTIVE_LIMIT: "200"
+    REPORT_ASSISTANT_CONTEXT_TOKEN_BUDGET: "8000"
+    REPORT_ASSISTANT_PROVIDER_TIMEOUT_MS: "30000"
+    REPORT_ASSISTANT_PLANNER_MAX_TOKENS: "1500"
+    REPORT_ASSISTANT_ANSWER_MAX_TOKENS: "2000"
+    REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE: "32"
+    REPORT_ASSISTANT_EMBEDDING_TOKEN_BUDGET: "8000"
