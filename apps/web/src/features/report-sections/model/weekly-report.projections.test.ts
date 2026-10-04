@@ -77,10 +77,10 @@ describe("statusLabelFor", () => {
         "Иванов Василий Петрович",
         "Каштанова Мария Александровна",
       ]),
-    ).toBe("At Risk \u00B7 Иванов В.П., Каштанова М.А.");
+    ).toBe("At risk \u00B7 Иванов В.П., Каштанова М.А.");
   });
   it('falls back to "unassigned" when no leads', () => {
-    expect(statusLabelFor("on-track", [])).toBe("On Track \u00B7 unassigned");
+    expect(statusLabelFor("on-track", [])).toBe("On track \u00B7 unassigned");
   });
 
   it("shortens every product lead while preserving source names, ids, and order", () => {
@@ -594,7 +594,7 @@ describe("mapWeeklyReportLeadOverview", () => {
       initials: "PA",
       name: "Product",
       status: "on-track",
-      statusLabel: "On Track",
+      statusLabel: "On track",
       leads: "Lead",
       currentWeek: [],
       nextWeek: [],

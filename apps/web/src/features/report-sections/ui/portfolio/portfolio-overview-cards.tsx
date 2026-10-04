@@ -3,6 +3,7 @@
 import { shortNameFromName } from "@customreport/shared";
 import type { CSSProperties } from "react";
 
+import { statusLabel } from "../../../../shared/lib/status/status-presentation";
 import type {
   LeadOverviewRow,
   WeeklyPortfolioProduct,
@@ -30,13 +31,6 @@ const STATUS_ICON: Record<WeeklyProductStatus, string> = {
   "at-risk": "!",
   blocked: "✕",
   empty: "–",
-};
-
-const STATUS_LABEL: Record<WeeklyProductStatus, string> = {
-  "on-track": "On track",
-  "at-risk": "At risk",
-  blocked: "Blocked",
-  empty: "No status",
 };
 
 const EMPTY_CARD_BG = "var(--color-surface-empty-card)";
@@ -107,7 +101,7 @@ export function LeadOverviewCard({
           {shortNameFromName(lead.name)}
         </div>
         <div className="text-xs text-[var(--color-muted-foreground)]">
-          {STATUS_LABEL[lead.worstStatus]}
+          {statusLabel(lead.worstStatus, "screen")}
         </div>
         <span className="text-xs text-[var(--color-muted-foreground)]">
           {countLabel(lead.currentCount, lead.nextCount, lead.riskCount)}

@@ -363,6 +363,23 @@ describe("PeriodNavigator (lead)", () => {
     expect(push).toHaveBeenNthCalledWith(2, "/head/report/2026-W17");
   });
 
+  it("hides the Submitted badge below md and exposes the full label as a tooltip (R01)", () => {
+    render(
+      <PeriodNavigator
+        periods={PERIODS}
+        showLeadSubmissionMarkers
+        leadSubmittedAt="2026-04-20T10:00:00.000Z"
+      />,
+    );
+    const trigger = getTrigger();
+    const badge = within(trigger).getByText("Submitted");
+    expect(badge.closest(String.raw`.max-md\:hidden`)).not.toBeNull();
+    expect(trigger).toHaveAttribute(
+      "title",
+      expect.stringContaining("(Current)"),
+    );
+  });
+
   it("trigger shows the Archived badge when the selected period is archived", () => {
     navigationState.pathname = "/lead/report/2026-W15";
     render(<PeriodNavigator periods={PERIODS} />);

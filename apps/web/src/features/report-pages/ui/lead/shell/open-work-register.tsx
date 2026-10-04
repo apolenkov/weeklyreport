@@ -3,7 +3,7 @@ import type { OpenWorkRegisterItem } from "./open-work-register-model";
 import type { OpenWorkRegisterQuery } from "./use-open-work-register";
 
 const ACTION_BUTTON =
-  "min-h-[var(--touch-target-min)] rounded-[var(--radius-sm)] px-3 text-sm font-semibold text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] disabled:cursor-not-allowed disabled:opacity-50";
+  "min-h-[var(--touch-target-min)] rounded-[var(--radius-sm)] px-3 text-sm font-semibold text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] disabled:cursor-not-allowed disabled:text-[var(--color-muted-foreground)] disabled:hover:bg-transparent";
 
 function sourceLabel(item: OpenWorkRegisterItem): string {
   return item.occurrence.source === "published" ? "Published" : "Submitted";

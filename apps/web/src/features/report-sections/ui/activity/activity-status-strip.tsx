@@ -11,6 +11,10 @@ import {
 } from "@customreport/shared";
 
 import { activityDisplayTitle } from "../../../../shared/lib/activity/activity-display";
+import {
+  statusDotClassName,
+  statusLabel,
+} from "../../../../shared/lib/status/status-presentation";
 
 type ActivitySectionSlice = Pick<
   ReportSectionReadModel,
@@ -31,20 +35,6 @@ interface ActivityCardModel {
   readonly risks: readonly string[];
   readonly decisions: readonly string[];
 }
-
-const TONE_LABEL: Record<ActivityTone, string> = {
-  "on-track": "On track",
-  "at-risk": "At risk",
-  blocked: "Blocked",
-  empty: "No status",
-};
-
-const TONE_DOT_CLASS: Record<ActivityTone, string> = {
-  "on-track": "bg-[var(--color-primary)]",
-  "at-risk": "bg-[var(--color-status-dot-at-risk)]",
-  blocked: "bg-[var(--color-destructive)]",
-  empty: "bg-[var(--color-muted-foreground)] opacity-50",
-};
 
 function toActivityCard(
   section: ActivitySectionSlice,
@@ -115,28 +105,30 @@ function ActivityBodyCard({ card }: { readonly card: ActivityCardModel }) {
   const linkedNames = card.linkedProducts.join(", ");
   return (
     <li className="rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-card)]/70 p-3">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2">
         <span
           aria-hidden="true"
           className={[
-            "inline-block h-2 w-2 shrink-0 rounded-full",
-            TONE_DOT_CLASS[card.tone],
+            "mt-[0.45rem] h-2 w-2 shrink-0 self-start rounded-full",
+            statusDotClassName(card.tone),
           ].join(" ")}
         />
-        <span className="font-medium text-[var(--color-foreground)]">
-          {card.activityName}
-        </span>
-        <span className="text-xs font-semibold uppercase tracking-[0.04em] text-[var(--color-muted-foreground)]">
-          {TONE_LABEL[card.tone]}
-        </span>
-        <span className="text-xs text-[var(--color-muted-foreground)]">
-          {shortNameFromName(card.authorName)}
-        </span>
-        {linkedNames ? (
-          <span className="text-xs text-[var(--color-muted-foreground)]">
-            · Products: {linkedNames}
+        <div className="min-w-0">
+          <span className="font-medium text-[var(--color-foreground)]">
+            {card.activityName}
           </span>
-        ) : null}
+          <p className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-[var(--color-muted-foreground)]">
+            <span className="font-semibold">
+              {statusLabel(card.tone, "screen")}
+            </span>
+            <span>{shortNameFromName(card.authorName)}</span>
+          </p>
+          {linkedNames ? (
+            <p className="text-xs text-[var(--color-muted-foreground)]">
+              Products: {linkedNames}
+            </p>
+          ) : null}
+        </div>
       </div>
       {card.note ? (
         <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">

@@ -95,7 +95,7 @@ export function HeadContextControls({
 
   return (
     <>
-      <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5">
+      <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5 max-md:contents">
         {historyError ? (
           <span
             className="text-xs font-medium text-[var(--color-destructive)]"
@@ -109,7 +109,12 @@ export function HeadContextControls({
         ) : periods.length > 0 ? (
           <PeriodNavigator periods={periods} urlBuilder={urlBuilder} />
         ) : null}
-        <ArchiveToggle checked={includeArchive} onChange={setIncludeArchive} />
+        <span className="shrink-0">
+          <ArchiveToggle
+            checked={includeArchive}
+            onChange={setIncludeArchive}
+          />
+        </span>
       </div>
       <div className="grow" aria-hidden="true" />
       <HeadContextTrailing

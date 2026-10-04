@@ -50,7 +50,7 @@ export function statusLabelFor(
     leadNames.length > 0
       ? leadNames.map(shortNameFromName).join(", ")
       : "unassigned";
-  return `${statusLabel(status, "print")} · ${leads}`;
+  return `${statusLabel(status, "screen")} · ${leads}`;
 }
 
 // Report-wide projectId→name: section projects first, portfolio overview wins

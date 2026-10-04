@@ -90,7 +90,7 @@ function IssueRow({ item }: { readonly item: BlockedAtRiskItem }) {
           className="whitespace-nowrap rounded-[var(--radius-pill)] px-2.5 py-0.5 text-xs font-semibold"
           style={{ background: badge.bg, color: badge.fg }}
         >
-          {statusLabel(item.severity, "print")}
+          {statusLabel(item.severity, "screen")}
         </span>
       </span>
     </div>
@@ -125,7 +125,7 @@ export function ProductCard({ group }: { readonly group: ProductGroup }) {
                 style={{ background: tone }}
                 aria-hidden="true"
               />
-              {statusLabel(severity, "print")}
+              {statusLabel(severity, "screen")}
             </span>
           </div>
           <span className="truncate text-[12.5px] text-[var(--color-muted-foreground)]">
