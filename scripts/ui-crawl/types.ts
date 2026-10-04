@@ -1,4 +1,4 @@
-export type Severity = "high" | "medium" | "low";
+type Severity = "high" | "medium" | "low";
 
 export type Finding = Readonly<{
   severity: Severity;

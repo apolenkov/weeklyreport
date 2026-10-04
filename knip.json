@@ -19,6 +19,7 @@
         "scripts/**/*.ts",
         "vitest.*.config.ts"
       ],
+      "ignoreDependencies": ["axe-core"],
       "prisma": false
     },
     "apps/api": {

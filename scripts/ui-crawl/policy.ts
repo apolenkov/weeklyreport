@@ -19,9 +19,9 @@ const DANGEROUS = [
 ];
 
 /** Names of controls that a reviewed synthetic scenario allows to be pressed despite DANGEROUS. */
-export const SAFE_SCENARIOS: readonly string[] = (process.env.CRAWL_SAFE ?? "")
-  .split(";")
-  .filter(Boolean);
+const SAFE_SCENARIOS: ReadonlySet<string> = new Set(
+  (process.env.CRAWL_SAFE ?? "").split(";").filter(Boolean),
+);
 
 /** Collapses ids so /lead/report/<uuid> and another report share one page key. */
 export function pageKey(url: string): string {
@@ -51,7 +51,7 @@ export function skipReason(control: ControlInfo): string | null {
     return "select with a single option";
   if (control.href !== null) return "link: reached through page navigation";
   if (control.type === "submit") return "dangerous: form submit";
-  if (SAFE_SCENARIOS.includes(control.name)) return null;
+  if (SAFE_SCENARIOS.has(control.name)) return null;
   const match = DANGEROUS.map((pattern) => pattern.exec(control.name)).find(
     Boolean,
   );
