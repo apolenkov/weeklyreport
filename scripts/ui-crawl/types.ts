@@ -17,7 +17,7 @@ export type StepRecord = Readonly<{
   reason: string | null;
   urlChanged: boolean;
   stateChanged: boolean;
-  restoredBy: "none" | "escape" | "reload" | "navigate";
+  restoredBy: "none" | "escape" | "toggle" | "reload" | "navigate";
   responseMs: number | null;
   shot: string | null;
 }>;

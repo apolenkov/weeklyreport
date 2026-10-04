@@ -1,15 +1,10 @@
 import { join } from "node:path";
 
-import {
-  FAMILY_WORDS,
-  REPEAT_LIMIT,
-  SETTLE_MS,
-  SHOT_INDEX_WIDTH,
-  SLOW_LOAD_MS,
-} from "./constants.ts";
+import { quietState } from "./batch.ts";
+import { SLOW_LOAD_MS, VISIT_ATTEMPTS } from "./constants.ts";
 import { add, type Ctx, drainLogs, type Place } from "./logs.ts";
-import { pageKey, sameOrigin, skipReason } from "./policy.ts";
-import { pressControl, settle, skipped } from "./press.ts";
+import { pageKey, sameOrigin } from "./policy.ts";
+import { settle } from "./press.ts";
 import {
   axeProbe,
   PAGE_PROBE,
@@ -17,6 +12,13 @@ import {
   type ProbedControl,
   SIGNATURE_ONLY,
 } from "./probe.ts";
+import {
+  type Counters,
+  identity,
+  type PageRef,
+  planEntries,
+  pressEntries,
+} from "./round.ts";
 import type { PageRecord, StepRecord } from "./types.ts";
 
 type AxeViolation = Readonly<{
@@ -31,11 +33,6 @@ const INTERNAL = /\/(api|auth|monitoring|print)\b|logout|sign-?out/i;
 
 function slug(key: string): string {
   return key.replaceAll(/[^a-z0-9]+/gi, "-").replaceAll(/^-|-$/g, "") || "root";
-}
-
-/** Row-repeated controls ("Inspect health for X") share a family: only the first few are pressed. */
-function controlFamily(control: ProbedControl): string {
-  return `${control.tag}|${control.role ?? ""}|${control.name.split(" ").slice(0, FAMILY_WORDS).join(" ")}`;
 }
 
 function auditPage(
@@ -67,11 +64,6 @@ function auditPage(
   return axe.length;
 }
 
-type PageRef = Readonly<{ key: string; url: string; tag: string }>;
-
-const identity = (c: ProbedControl): string =>
-  `${c.tag}|${c.role ?? ""}|${c.name}`;
-
 function liveControls(ctx: Ctx): ReadonlyMap<string, ProbedControl> {
   const probe = ctx.browser.evaluate(PAGE_PROBE) as PageProbe;
   const live = new Map<string, ProbedControl>();
@@ -86,15 +78,16 @@ function revertSelection(
   first: PageProbe,
 ): ReadonlyMap<string, ProbedControl> {
   const live = liveControls(ctx);
+  let reverted = false;
   for (const c of first.controls) {
     const now = c.selected ? live.get(identity(c)) : undefined;
-    if (now && !now.selected)
-      ctx.browser.batch([
-        ["click", now.selector],
-        ["wait", String(SETTLE_MS)],
-      ]);
+    if (now && !now.selected) {
+      ctx.browser.batch([["click", now.selector]]);
+      quietState(ctx.browser);
+      reverted = true;
+    }
   }
-  return liveControls(ctx);
+  return reverted ? liveControls(ctx) : live;
 }
 
 function pressAll(
@@ -102,44 +95,29 @@ function pressAll(
   page: PageRef,
   probe: PageProbe,
 ): readonly StepRecord[] {
-  const families = new Map<string, number>();
+  const counters: Counters = { pressed: 0, families: new Map() };
   const baseline = String(ctx.browser.evaluate(SIGNATURE_ONLY));
-  let live = new Map(probe.controls.map((c) => [identity(c), c] as const));
-  let pressed = 0;
-  return probe.controls.map((control, i) => {
-    const family = controlFamily(control);
-    const repeated = families.get(family) === REPEAT_LIMIT;
-    const capped = pressed >= ctx.config.maxControls;
-    const target = live.get(identity(control));
-    const reason =
-      skipReason(control) ??
-      (repeated
-        ? `repeat: ${REPEAT_LIMIT} similar controls already pressed`
-        : null) ??
-      (capped
-        ? `cap: more than ${ctx.config.maxControls} controls per page`
-        : null) ??
-      (target ? null : "gone: an earlier press changed the view");
-    if (reason || !target) return skipped(control, reason ?? "gone");
-    pressed += 1;
-    families.set(family, (families.get(family) ?? 0) + 1);
-    const step = pressControl(
-      ctx,
-      {
-        key: page.key,
-        url: page.url,
-        shotBase: `${page.tag}-c${String(i).padStart(SHOT_INDEX_WIDTH, "0")}`,
-      },
-      target,
-    );
+  let live: ReadonlyMap<string, ProbedControl> = new Map(
+    probe.controls.map((c) => [identity(c), c] as const),
+  );
+  const steps: StepRecord[] = [];
+  for (let next = 0; next < probe.controls.length;) {
+    const entries = planEntries(ctx, { probe, live, counters }, next);
+    const round = pressEntries(ctx, page, entries, counters);
+    steps.push(...round.steps);
+    next = round.next ?? probe.controls.length;
+    const last = round.steps.at(-1);
+    // An Escape that restored the exact state needs no further check; after a reload, compare once.
     if (
-      step.stateChanged &&
+      last?.stateChanged &&
+      last.restoredBy !== "escape" &&
+      last.restoredBy !== "toggle" &&
       String(ctx.browser.evaluate(SIGNATURE_ONLY)) !== baseline
     ) {
-      live = new Map(revertSelection(ctx, probe));
+      live = revertSelection(ctx, probe);
     }
-    return step;
-  });
+  }
+  return steps;
 }
 
 function visitPage(
@@ -189,41 +167,49 @@ function visitPage(
   return { record, links: probe.links };
 }
 
-/** A page whose browser calls keep timing out is recorded as aborted; the walk goes on to the next page. */
+/** A browser call that times out gets the page one more try after signing in again; a second failure is recorded and the walk goes on. */
 function visitWithRecovery(
   ctx: Ctx,
   url: string,
   index: number,
   axeSource: string,
 ): ReturnType<typeof visitPage> {
-  try {
-    return visitPage(ctx, url, index, axeSource);
-  } catch (error: unknown) {
-    const key = pageKey(url);
-    const detail =
-      error instanceof Error ? (error.message.split("\n")[0] ?? "") : "failed";
-    add(
-      ctx,
-      { page: key, shot: null },
-      { severity: "high", kind: "page-aborted", detail },
-    );
+  let detail = "failed";
+  const mark = ctx.findings.length;
+  for (let attempt = 0; attempt < VISIT_ATTEMPTS; attempt += 1) {
     try {
-      ctx.signIn();
-    } catch {
-      // the next page visit reports the failure again
+      return visitPage(ctx, url, index, axeSource);
+    } catch (error: unknown) {
+      // findings of the abandoned attempt would repeat on the retry
+      ctx.findings.length = mark;
+      detail =
+        error instanceof Error
+          ? (error.message.split("\n")[0] ?? "")
+          : "failed";
+      try {
+        ctx.signIn();
+      } catch {
+        // the next attempt reports the failure again
+      }
     }
-    const record: PageRecord = {
-      url,
-      key,
-      loadMs: 0,
-      shot: "",
-      controlsFound: 0,
-      axeViolations: 0,
-      geometryIssues: 0,
-      steps: [],
-    };
-    return { record, links: [] };
   }
+  const key = pageKey(url);
+  add(
+    ctx,
+    { page: key, shot: null },
+    { severity: "high", kind: "page-aborted", detail },
+  );
+  const record: PageRecord = {
+    url,
+    key,
+    loadMs: 0,
+    shot: "",
+    controlsFound: 0,
+    axeViolations: 0,
+    geometryIssues: 0,
+    steps: [],
+  };
+  return { record, links: [] };
 }
 
 /** Breadth-first walk over same-origin pages, one visit per page key. */

@@ -32,7 +32,7 @@ export function parseCli(argv: readonly string[]): Cli {
       "max-controls": { type: "string", default: "40" },
       "max-pages": { type: "string", default: "20" },
       "no-video": { type: "boolean", default: false },
-      parallel: { type: "string", default: "1" },
+      parallel: { type: "string", default: "4" },
       secrets: { type: "string", default: SECRETS },
     },
   });

@@ -112,25 +112,4 @@ export function axeProbe(axeSource: string): string {
 })()`;
 }
 
-/** Starts watching DOM and network activity; returns the state signature before the press. */
-export const PRESS_BEGIN = `(() => {
-  const old = window.__crawl;
-  old?.mo.disconnect();
-  old?.po.disconnect();
-  const now = performance.now();
-  const watch = {t0: now, last: now, mo: null, po: null};
-  watch.mo = new MutationObserver(() => { watch.last = performance.now(); });
-  watch.mo.observe(document, {subtree: true, childList: true, attributes: true, characterData: true});
-  watch.po = new PerformanceObserver(() => { watch.last = performance.now(); });
-  watch.po.observe({type: 'resource'});
-  window.__crawl = watch;
-  return ${STATE_SIGNATURE};
-})()`;
-
-/** Signature after the press and the time the page kept changing (response time). */
-export const PRESS_END = `(() => {
-  const watch = window.__crawl;
-  return {sig: ${STATE_SIGNATURE}, ms: watch ? Math.round(watch.last - watch.t0) : null};
-})()`;
-
 export const SIGNATURE_ONLY = STATE_SIGNATURE;
