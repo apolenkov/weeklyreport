@@ -1,60 +1,41 @@
 #!/usr/bin/env bash
-# Reset demo data in the tester kit namespace.
-# Deletes database and re-runs migrations/seeds.
-
+# Reset the stand database: drop, migrate, seed the "full" demo profile, map the
+# four SAML users. Needs a repository checkout with Node and pnpm (the images carry
+# no seed tooling). The target is the cluster database customreport_e2e, reached through
+# a loopback port-forward and accepted by the repository destructive guard.
+#   reset.sh [--yes]
 set -euo pipefail
-trap 'echo "Error on line $LINENO"' ERR
+. "$(dirname "$0")/env.sh"
 
-NS=${NS:-wr-tester}
-STATE_DIR=${STATE_DIR:?set STATE_DIR to a directory outside Git}
-HERE=$(cd "$(dirname "$0")" && pwd)
-
-# Guard: confirm namespace exists and is tester kit
-if ! kubectl get namespace "$NS" >/dev/null 2>&1; then
-  echo "Error: Namespace $NS not found"
-  exit 1
+kubectl get namespace "$NS" >/dev/null 2>&1 || { echo "Namespace $NS not found. Run start.sh first." >&2; exit 1; }
+if [ "${1:-}" != --yes ]; then
+  read -r -p "Wipe the database in $NS and reseed demo data? (yes/no): " ans
+  [ "$ans" = yes ] || { echo Cancelled; exit 0; }
 fi
 
-read -p "Reset demo data in $NS? This will delete database and re-seed. (yes/no): " -r confirm
-if [ "$confirm" != "yes" ]; then
-  echo "Cancelled"
-  exit 0
-fi
+set -a; . "$STATE_DIR/secrets.env"; set +a
+PGPORT_LOCAL=55432
+lsof -iTCP:$PGPORT_LOCAL -sTCP:LISTEN >/dev/null 2>&1 && { echo "Port $PGPORT_LOCAL is busy." >&2; exit 1; }
+kubectl -n "$NS" scale deploy/api --replicas=0 >/dev/null
+kubectl -n "$NS" wait --for=delete pod -l app=api --timeout=120s >/dev/null 2>&1 || true
+kubectl -n "$NS" port-forward --address 127.0.0.1 svc/postgres "$PGPORT_LOCAL:5432" >/dev/null 2>&1 &
+PF=$!
+trap 'kill $PF 2>/dev/null || true' EXIT
+for _ in $(seq 1 30); do lsof -iTCP:$PGPORT_LOCAL -sTCP:LISTEN >/dev/null 2>&1 && break; sleep 1; done
 
-echo "Deleting PostgreSQL data..."
-# Delete PVC to force re-creation
-kubectl -n "$NS" delete pvc postgres-data --ignore-not-found
-echo "Waiting for pod recreation..."
-sleep 10
-
-# Restart deployments to trigger pod recreation
-echo "Restarting API and migrate pods..."
-kubectl -n "$NS" rollout restart deploy/api deploy/postgres 2>/dev/null || true
-kubectl -n "$NS" rollout status deploy/postgres --timeout=60s || true
-sleep 5
-
-# Wait for database to be ready
-echo "Waiting for PostgreSQL..."
-for i in {1..60}; do
-  if kubectl -n "$NS" exec -i $(kubectl -n "$NS" get pod -l app=postgres -o jsonpath='{.items[0].metadata.name}' 2>/dev/null) \
-     -- psql -U postgres -d customreport_tester -c "SELECT 1" >/dev/null 2>&1; then
-    echo "✓ PostgreSQL is ready"
-    break
-  fi
-  echo "Waiting... ($i/60)"
-  sleep 2
-done
-
-# Run migrations from the API pod
-echo "Running migrations..."
-API_POD=$(kubectl -n "$NS" get pod -l app=api -o jsonpath='{.items[0].metadata.name}')
-kubectl -n "$NS" exec "$API_POD" -- npm run db:migrate 2>&1 | tail -5
-
-# Run seeds
-echo "Seeding demo data..."
-kubectl -n "$NS" exec "$API_POD" -- npm run db:seed 2>&1 | tail -5
-
-echo "✓ Demo data reset and seeded"
-echo ""
-echo "Database: customreport_tester"
-echo "Test users available in Keycloak"
+export DATABASE_URL="postgresql://customreport:${DB_PASSWORD}@127.0.0.1:$PGPORT_LOCAL/customreport_e2e"
+# The tester DB must not inherit an AI provider key from a developer .env.
+export E2E_AI_PROVIDER_API_KEY=""
+export PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай'
+cd "$REPO"
+[ -d node_modules ] || pnpm install --frozen-lockfile
+pnpm --filter @customreport/api db:generate >/dev/null
+echo "Target: postgresql://***@127.0.0.1:$PGPORT_LOCAL/customreport_e2e"
+pnpm exec tsx prisma/operations/migrate-reset.ts
+(cd apps/api && pnpm exec tsx ../../prisma/seeds/profiles/seed-profile.ts full)
+kubectl -n "$NS" exec -i statefulset/postgres -- psql -U customreport -d customreport_e2e -v ON_ERROR_STOP=1 \
+  <"$HERE/post-seed.sql"
+kubectl -n "$NS" exec statefulset/redis -- redis-cli FLUSHDB >/dev/null
+kubectl -n "$NS" scale deploy/api --replicas=1 >/dev/null
+kubectl -n "$NS" rollout status deploy/api --timeout=300s
+echo "Demo data reset."
