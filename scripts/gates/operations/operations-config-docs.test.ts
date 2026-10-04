@@ -7,13 +7,14 @@ import { test } from "vitest";
 import { mergeNextEnvironment } from "../../../apps/web/scripts/run-next.ts";
 
 const read = (path: string): string => readFileSync(resolve(path), "utf8");
-const prodCompose = read("docker-compose.prod.yml");
 const operations = read("docs/operations.md");
 const onboarding = read("docs/onboarding.md");
 const readme = read("README.md");
 const localEnvironment = read(".env.example");
 const integrationEnvironment = read(".env.test.example");
-const productionEnvironment = read("deploy/environment/production.env.example");
+const productionValues = read(
+  "deploy/helm/weeklyreport/values.production.example.yaml",
+);
 const compose = read("docker-compose.yml");
 const devCompose = read("docker-compose.dev.yml");
 const observabilityCompose = read("docker-compose.observability.yml");
@@ -42,53 +43,6 @@ const webPackageJson = JSON.parse(read("apps/web/package.json")) as {
 const gitlabContent = read(".gitlab-ci.yml");
 const gitlabCiDoc = read("docs/gitlab-ci.md");
 const vitestBase = read("vitest.base.config.ts");
-
-const requiredProductionVariables = (): readonly string[] =>
-  [...prodCompose.matchAll(/\$\{([A-Z0-9_]+):\?/g)]
-    .flatMap((match) => (match[1] === undefined ? [] : [match[1]]))
-    .filter((name, index, names) => names.indexOf(name) === index);
-
-const assertFirstDeployVariableTable = (document: string): void => {
-  const lines = document.split("\n");
-  const tableStart = lines.findIndex((line) =>
-    /^ {3}\| Variable\s+\|/u.test(line),
-  );
-  assert.notEqual(
-    tableStart,
-    -1,
-    "first deploy must contain an indented variable table",
-  );
-  const tableEndOffset = lines
-    .slice(tableStart)
-    .findIndex((line) => !/^ {3}\|/u.test(line));
-  const tableEnd =
-    tableEndOffset === -1 ? lines.length : tableStart + tableEndOffset;
-  const table = lines.slice(tableStart, tableEnd).join("\n");
-
-  for (const variable of requiredProductionVariables()) {
-    assert.match(
-      table,
-      new RegExp(String.raw`\b${variable}\b`),
-      `${variable} is required by docker-compose.prod.yml but missing from the first-deploy variable table`,
-    );
-  }
-};
-
-test("first-deploy documentation lists every required production variable", () => {
-  assertFirstDeployVariableTable(operations);
-});
-
-test("first-deploy variable-table assertion rejects a broken Markdown row", () => {
-  const malformed = operations.replace(
-    "\n   | `POSTGRES_DB`",
-    "\n\n| `POSTGRES_DB`",
-  );
-  assert.notEqual(malformed, operations, "the planted row must exist");
-  assert.throws(
-    () => assertFirstDeployVariableTable(malformed),
-    /POSTGRES_DB.*missing from the first-deploy variable table/,
-  );
-});
 
 const assertLocalBootstrapContract = (
   environmentExample: string,
@@ -164,7 +118,6 @@ test("API source development uses the supported TypeScript loader", () => {
   const apiDevCommand = apiPackageJson.scripts.dev;
   assertNativeApiEnvironment(apiDevCommand, read(".env.example"), apiBootstrap);
   assert.match(compose, /API_HOST: 0\.0\.0\.0/);
-  assert.match(prodCompose, /API_HOST: 0\.0\.0\.0/);
 });
 
 test("native API environment guard rejects a planted public listener", () => {
@@ -300,44 +253,7 @@ test("the enforcing CSP policy reports violations to the required collector", ()
   );
 });
 
-test("production Compose mounts the sole Caddy policy", () => {
-  assert.match(
-    prodCompose,
-    /- \.\/deploy\/helm\/weeklyreport\/files\/Caddyfile:\/etc\/caddy\/Caddyfile:ro/,
-  );
-});
-
-test("production Compose examples always load the production environment", () => {
-  const examples = [operations, caddyReadme]
-    .flatMap((document) => document.split("\n"))
-    .filter(
-      (line) =>
-        line.includes("docker compose") &&
-        line.includes("docker-compose.prod.yml"),
-    );
-  assert.ok(examples.length > 0);
-  examples.forEach((line) =>
-    assert.match(
-      line,
-      /--env-file \.env\.production/,
-      `production Compose example lacks --env-file: ${line}`,
-    ),
-  );
-});
-
-test("production Caddy variables have one production-only source", () => {
-  for (const variable of [
-    "CADDY_SITE_ADDRESS",
-    "CADDY_ACME_EMAIL",
-    "CADDY_CSP_REPORT_URI",
-  ]) {
-    assert.ok(prodCompose.includes(`${variable}: \${${variable}:?`));
-    assert.match(productionEnvironment, new RegExp(`^${variable}=$`, "m"));
-    assert.doesNotMatch(localEnvironment, new RegExp(`^${variable}=`, "m"));
-  }
-});
-
-test("observability has explicit local and production Grafana contracts", () => {
+test("local observability has an explicit Grafana secret contract", () => {
   assert.match(localEnvironment, /^GRAFANA_PORT=3003$/m);
   assert.match(localEnvironment, /^GRAFANA_ADMIN_USER=admin$/m);
   assert.match(
@@ -353,7 +269,6 @@ test("observability has explicit local and production Grafana contracts", () => 
     onboarding,
     /pnpm observability:up[\s\S]*GRAFANA_ADMIN_PASSWORD/,
   );
-  assert.match(productionEnvironment, /^GRAFANA_ADMIN_PASSWORD=$/m);
   assert.match(
     operations,
     /observability overlay[\s\S]*GRAFANA_ADMIN_PASSWORD[\s\S]*no password default/i,
@@ -396,7 +311,7 @@ test("local Bugsink overlay has an explicit secret contract", () => {
   );
   assert.match(
     operations,
-    /Bugsink errors overlay[\s\S]*BUGSINK_PORT[\s\S]*BUGSINK_SECRET_KEY[\s\S]*not part of the production Compose command/u,
+    /Bugsink errors overlay[\s\S]*BUGSINK_PORT[\s\S]*BUGSINK_SECRET_KEY[\s\S]*not part of the production Helm release/u,
   );
 });
 
@@ -457,17 +372,12 @@ test("development Compose uses the canonical Sentry variable names", () => {
 
 test("production documents the browser DSN as a build-time input", () => {
   assert.match(
-    prodCompose,
-    /NEXT_PUBLIC_SENTRY_DSN: \$\{NEXT_PUBLIC_SENTRY_DSN:-\}/,
-  );
-  assert.match(productionEnvironment, /^# NEXT_PUBLIC_SENTRY_DSN=https:\/\//m);
-  assert.match(
     onboarding,
     /NEXT_PUBLIC_SENTRY_DSN[\s\S]*компилируется[\s\S]*новой сборки/,
   );
   assert.match(
     operations,
-    /NEXT_PUBLIC_SENTRY_DSN[\s\S]*compiled into the Web image[\s\S]*up --build/,
+    /NEXT_PUBLIC_SENTRY_DSN[\s\S]*compiled into the Web image[\s\S]*new image build and deployment/,
   );
 });
 
@@ -581,7 +491,7 @@ test("recovery guidance rejects a planted RPO overclaim", () => {
 
 const assertAiCredentialKeyRotationBoundary = (
   operationsDocument: string,
-  productionTemplate: string,
+  chartExample: string,
 ): void => {
   assert.match(
     operationsDocument,
@@ -600,17 +510,17 @@ const assertAiCredentialKeyRotationBoundary = (
     /restore the original pair to recover[\s\S]*every provider credential must be entered again/u,
   );
   assert.match(
-    productionTemplate,
+    chartExample,
     /current MVP supports one active key only[\s\S]*Existing credentials then cannot be decrypted/u,
   );
   assert.doesNotMatch(
-    productionTemplate,
+    chartExample,
     /Rotate by raising the explicit key version/u,
   );
 };
 
 test("AI credential-key documentation states the single-key MVP boundary", () => {
-  assertAiCredentialKeyRotationBoundary(operations, productionEnvironment);
+  assertAiCredentialKeyRotationBoundary(operations, productionValues);
 });
 
 test("AI credential-key documentation rejects a planted rotation claim", () => {
@@ -620,7 +530,7 @@ test("AI credential-key documentation rejects a planted rotation claim", () => {
   );
   assert.notEqual(overclaim, operations, "the planted claim must apply");
   assert.throws(() =>
-    assertAiCredentialKeyRotationBoundary(overclaim, productionEnvironment),
+    assertAiCredentialKeyRotationBoundary(overclaim, productionValues),
   );
 });
 
@@ -647,7 +557,7 @@ test("external production controls remain blocked until external read-back", () 
   );
   assert.match(
     operationsText,
-    /production image rollback is \*\*BLOCKED\*\*[\s\S]*builds from the checked-out\s+source/i,
+    /production image rollback\s+is \*\*BLOCKED\*\*[\s\S]*registry and deployment read-back/i,
   );
   assert.match(
     operationsText,

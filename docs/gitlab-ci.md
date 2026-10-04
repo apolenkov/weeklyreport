@@ -78,10 +78,9 @@ the owner decision. The honest topology is:
   image lacks (copied from the same bookworm toolchain image), and passes one
   composite artifact to database jobs. `pnpm install --frozen-lockfile` needs
   no git inside the database image. Egress endpoints: the npm registry,
-  Docker Hub, nodejs.org (`node-toolchain` tarball), and one
-  github.com/docker/compose and get.helm.sh release fetches in `quality` — the
-  checksum-pinned `docker-compose` and `helm` CLIs only render configuration
-  for the compose and chart gates; they are not smoke lanes.
+  Docker Hub, nodejs.org (`node-toolchain` tarball), and get.helm.sh in
+  `quality`. The checksum-pinned `helm` CLI only renders and validates the chart;
+  it is not a cluster smoke lane.
 - `api-integration` also declares `services:` for Redis (`redis` alias) and
   Mailpit (`mailpit` alias). Neither is guard-constrained; the suite reads the
   real hostnames (`REDIS_HOST=redis`, `SMTP_HOST=mailpit`,
@@ -112,14 +111,13 @@ GitLab setting, not declared in `.gitlab-ci.yml`.
 
 Node and pnpm declarations in `.gitlab-ci.yml` are pinned in sync by
 `lint:runtime-node`, including the toolchain tarball version. The mechanical
-contract gates — `prod-compose-gate.test.ts`,
+contract gates — the CI/image gates under `scripts/gates/operations/`,
 `operations-config-docs.test.ts`, and `vitest-reporting-contract.test.ts` —
 assert `.gitlab-ci.yml` directly: reviewed external images are collected from `.gitlab-ci.yml` jobs and
 services (adding the pinned Node image to `REVIEWED_EXTERNAL_IMAGES`), a
 negative lock forbids Docker build/Compose smoke lanes, the single combined
 API coverage contour and fail-closed `ci-reports` summary contract are
 asserted, and the `quality` job is pinned as build-free with the product
-build documented as outside-CI evidence. `DOCKER_COMPOSE_VERSION`/`SHA256`
-have a single declaration site in `.gitlab-ci.yml` (the compose CLI exists
-only for the render check), so the runtime-sync gate has nothing to pin them
-against — the digest itself is the lock.
+build documented as outside-CI evidence. The Helm CLI version and download
+checksum have one declaration site in `.gitlab-ci.yml`; production chart
+validation needs no Docker daemon or Compose CLI.

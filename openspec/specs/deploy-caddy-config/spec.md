@@ -9,7 +9,7 @@ Define the production Caddy reverse-proxy contract for WeeklyReport.
 ### Requirement: Production API-owned paths route directly to the API
 
 The `@api` matcher in the production Caddyfile (`deploy/helm/weeklyreport/files/Caddyfile`,
-the single file mounted by both `docker-compose.prod.yml` and the Helm chart) MUST route the API-owned
+the single file loaded by the Helm chart) MUST route the API-owned
 prefixes (`/api/web-vitals`, `/api/client-logs`, `/trpc`, `/auth`, `/health`,
 `/admin/queues`, and `/pdfs`, including their nested paths) directly to
 `api:3001`. The matcher MUST NOT claim frontend-owned Next.js routes. The
@@ -43,8 +43,8 @@ same resolved address.
 
 #### Scenario: Caddyfile has one location
 
-- **WHEN** the compose mount path and the chart's `.Files` source are compared
-- **THEN** they name the same file and no second copy exists
+- **WHEN** the chart's `.Files` source and production Caddy configuration are inspected
+- **THEN** they use the canonical chart file and no second production copy exists
 
 ### Requirement: Production responses carry the security-header floor
 

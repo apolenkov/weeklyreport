@@ -24,7 +24,7 @@ afterEach(() => {
   fixtureRoots.clear();
 });
 
-test("compose-mounted restore entrypoint is executable", () => {
+test("backup image restore entrypoint is executable", () => {
   assert.notEqual(statSync(restoreScript).mode & 0o111, 0);
 });
 

@@ -13,11 +13,11 @@
 #
 ################################################################################
 {
-	# Let's Encrypt account email (set via env in docker-compose.prod.yml).
+	# Account email from edge values; cluster Ingress owns production TLS.
 	email {$CADDY_ACME_EMAIL}
 
 	# Client address behind a proxy: CADDY_TRUSTED_PROXIES is a space-separated
-	# CIDR list (the Helm chart sets it to the cluster Ingress). Unset (compose)
+	# CIDR list (the Helm chart sets it to the cluster Ingress). An empty list
 	# trusts nobody, so {client_ip} is the peer address. Strict mode walks
 	# X-Forwarded-For right to left and stops at the first untrusted address;
 	# without it Caddy takes the left-most one, which a client can forge even
@@ -33,7 +33,7 @@
 
 	# API surface — order matters: caddy matches the first @block that wins.
 	# /metrics is intentionally absent: it must not be reachable from the public
-	# edge. Prometheus scrapes it over the internal compose network (api:3001).
+	# edge. Prometheus scrapes it over the internal cluster network (api:3001).
 	@api {
 		# Only the API-OWNED /api prefixes route here: a blanket /api/* would
 	# steal Next.js-only route handlers (e.g. /api/revalidate-org runs

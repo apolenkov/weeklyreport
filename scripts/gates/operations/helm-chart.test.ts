@@ -14,6 +14,7 @@ import { join } from "node:path";
 
 import { test } from "vitest";
 
+import { REQUIRED_REPORT_ASSISTANT_ENV_KEYS } from "../../../apps/api/src/infrastructure/config/report-assistant-env-keys.ts";
 import {
   chartDirectory,
   type Container,
@@ -63,20 +64,59 @@ const SECRET_VALUES: Readonly<Record<string, string>> = Object.fromEntries(
   ].map((key) => [key, `fixture-${key.toLowerCase()}.value`]),
 );
 
-interface SchemaNode {
-  readonly required?: readonly string[];
-  readonly properties?: Readonly<Record<string, SchemaNode>>;
-}
-
-function requiredPaths(
-  node: SchemaNode,
-  prefix: readonly string[],
-): string[][] {
-  return (node.required ?? []).flatMap((key) => {
-    const path = [...prefix, key];
-    return [path, ...requiredPaths(node.properties?.[key] ?? {}, path)];
-  });
-}
+// Independent operator policy: removing a schema requirement must not also
+// remove the corresponding negative render case.
+const REQUIRED_VALUE_PATHS = [
+  "images",
+  "images.registry",
+  "images.tag",
+  "postgres",
+  "postgres.db",
+  "pgbouncer",
+  "pgbouncer.maxClientConn",
+  "pgbouncer.poolSize",
+  "pgbouncer.reservePoolSize",
+  "persistence",
+  "persistence.storageClass",
+  "persistence.postgresSize",
+  "persistence.redisSize",
+  "persistence.pdfSize",
+  "persistence.backupSize",
+  "edge",
+  "edge.trustedProxies",
+  "edge.cspReportUri",
+  "edge.ingress",
+  "edge.ingress.host",
+  "backup",
+  "backup.schedule",
+  "backup.retentionDays",
+  "api",
+  "api.env",
+  ...[
+    "DB_POOL_MAX",
+    "DB_POOL_IDLE_TIMEOUT_MS",
+    "DB_POOL_CONNECTION_TIMEOUT_MS",
+    "REDIS_DB",
+    "FRONTEND_URL",
+    "APP_BASE_URL",
+    "LOG_LEVEL",
+    "OTEL_SDK_DISABLED",
+    "OTEL_TRACES_SAMPLER_ARG",
+    "HEAP_HEALTH_THRESHOLD_BYTES",
+    "CLIENT_LOG_FORWARDING",
+    "PRODUCT_FEEDBACK_ENABLED",
+    "SMTP_HOST",
+    "SMTP_PORT",
+    "SMTP_FROM",
+    "KEYCLOAK_SAML_CALLBACK_URL",
+    "KEYCLOAK_SAML_ENTRY_POINT",
+    "KEYCLOAK_SAML_ISSUER",
+    "KEYCLOAK_SAML_CERT",
+    ...REQUIRED_REPORT_ASSISTANT_ENV_KEYS.filter(
+      (key) => key !== "AI_PROVIDER_CONFIG_ENCRYPTION_KEY",
+    ),
+  ].map((key) => `api.env.${key}`),
+];
 
 function withoutPath(
   values: Readonly<Record<string, unknown>>,
@@ -123,24 +163,35 @@ test("helm lint without values fails closed", () => {
   assert.notEqual(helm(["lint", chartDirectory]).status, 0);
 });
 
-test("dropping any required value fails the render and names the key", () => {
-  const schema = JSON.parse(
-    readFileSync(join(chartDirectory, "values.schema.json"), "utf8"),
-  ) as SchemaNode;
-  const paths = requiredPaths(schema, []);
-  assert.ok(paths.length > 40, "the schema must require the product inputs");
-  for (const path of paths) {
-    const result = withValuesFile(
-      withoutPath(loadExampleValues(), path),
-      (file) => helm(templateArgs(file)),
+test("missing or blank operator policy fails rendering and names the input", () => {
+  for (const label of REQUIRED_VALUE_PATHS) {
+    const path = label.split(".");
+    const missing = withoutPath(loadExampleValues(), path);
+    const variants = [missing];
+    const original = path.reduce<unknown>(
+      (value, key) => (value as Record<string, unknown>)[key],
+      loadExampleValues(),
     );
-    const label = path.join(".");
-    assert.notEqual(result.status, 0, `${label} was optional`);
-    assert.equal(result.stdout, "", `${label} emitted a manifest`);
-    assert.ok(
-      result.stderr.includes(path[path.length - 1] ?? ""),
-      `${label} is not named in: ${result.stderr}`,
-    );
+    if (typeof original === "string" && label !== "persistence.storageClass") {
+      const blanked = structuredClone(loadExampleValues());
+      const parent = path
+        .slice(0, -1)
+        .reduce<Record<string, unknown>>(
+          (value, key) => value[key] as Record<string, unknown>,
+          blanked,
+        );
+      parent[path.at(-1) ?? ""] = "";
+      variants.push(blanked);
+    }
+    for (const values of variants) {
+      const result = withValuesFile(values, (file) => helm(templateArgs(file)));
+      assert.notEqual(result.status, 0, `${label} was optional or blank`);
+      assert.equal(result.stdout, "", `${label} emitted a manifest`);
+      assert.ok(
+        result.stderr.includes(path.at(-1) ?? ""),
+        `${label}: ${result.stderr}`,
+      );
+    }
   }
 });
 
@@ -257,6 +308,12 @@ test("the print allow-list is the escaped print origin for any namespace and dom
     assert.equal(allowList, `^${escapedOrigin}/`);
     assert.ok(new RegExp(allowList).test(`${origin}/print/1`));
     assert.ok(!new RegExp(allowList).test("http://api:3001/health"));
+    assert.ok(
+      !new RegExp(allowList).test(`${origin.replace("web.", "webX")}/print/1`),
+    );
+    assert.ok(
+      !new RegExp(allowList).test(`http://elsewhere.invalid/${origin}/print/1`),
+    );
   }
 });
 
@@ -318,6 +375,7 @@ function runMigrateCommand(password: string): {
   readonly status: number | null;
   readonly started: boolean;
   readonly output: string;
+  readonly arguments: string;
 } {
   const [init] =
     podSpecOf(findManifest(renderExample().manifests, "Deployment", "api"))
@@ -330,7 +388,10 @@ function runMigrateCommand(password: string): {
     const bin = join(directory, "node_modules", ".bin");
     mkdirSync(bin, { recursive: true });
     const prisma = join(bin, "prisma");
-    writeFileSync(prisma, `#!/bin/sh\ntouch '${join(directory, "started")}'\n`);
+    writeFileSync(
+      prisma,
+      `#!/bin/sh\nprintf '%s\\n' "$@" > '${join(directory, "started")}'\n`,
+    );
     chmodSync(prisma, 0o755);
     const result = spawnSync("/bin/sh", ["-ec", command[2] ?? ""], {
       cwd: directory,
@@ -341,6 +402,9 @@ function runMigrateCommand(password: string): {
       status: result.status,
       started: existsSync(join(directory, "started")),
       output: result.stdout + result.stderr,
+      arguments: existsSync(join(directory, "started"))
+        ? readFileSync(join(directory, "started"), "utf8")
+        : "",
     };
   } finally {
     rmSync(directory, { recursive: true, force: true });
@@ -380,6 +444,7 @@ test("the migrate command checks the password before any database work", () => {
   const good = runMigrateCommand(SECRET_VALUES.DB_PASSWORD ?? "");
   assert.equal(good.status, 0);
   assert.equal(good.started, true);
+  assert.equal(good.arguments, "migrate\ndeploy\n");
   for (const bad of ["a@b", "pa ss", "p/w", ""]) {
     const rejected = runMigrateCommand(bad);
     assert.notEqual(rejected.status, 0, JSON.stringify(bad));
@@ -387,5 +452,45 @@ test("the migrate command checks the password before any database work", () => {
     if (bad !== "") {
       assert.ok(!rejected.output.includes(bad), "the password was printed");
     }
+  }
+});
+
+test("chart-created authentication secrets cannot be missing or blank", () => {
+  for (const key of [
+    "DB_PASSWORD",
+    "AUTH_JWT_SECRET",
+    "PDF_EXPORT_JWT_SECRET",
+    "AI_PROVIDER_CONFIG_ENCRYPTION_KEY",
+  ]) {
+    for (const blank of [false, true]) {
+      const supplied = { ...SECRET_VALUES };
+      if (blank) supplied[key] = "";
+      else delete supplied[key];
+      const values = {
+        ...loadExampleValues(),
+        secrets: { existingSecret: "", create: true, values: supplied },
+      };
+      const result = withValuesFile(values, (file) => helm(templateArgs(file)));
+      assert.notEqual(result.status, 0, key);
+      assert.equal(result.stdout, "", key);
+      assert.ok(result.stderr.includes(key), result.stderr);
+    }
+  }
+});
+
+test("unsafe database names are refused before any workload is emitted", () => {
+  for (const db of [
+    "unsafe/name",
+    "unsafe-name",
+    "unsafe@host",
+    "unsafe name",
+    "",
+  ]) {
+    const result = helm(
+      templateArgs(exampleValuesPath, ["--set-string", `postgres.db=${db}`]),
+    );
+    assert.notEqual(result.status, 0, JSON.stringify(db));
+    assert.equal(result.stdout, "");
+    assert.match(result.stderr, /postgres[\s\S]*db/);
   }
 });

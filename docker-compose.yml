@@ -107,7 +107,7 @@ services:
     deploy:
       resources:
         limits:
-          # Initial provisional cap matching docker-compose.prod.yml — not
+          # Initial provisional cap matching the production Helm chart — not
           # measured capacity; runtime acceptance revises it from observed
           # peaks (openspec replace-playwright-pdf-renderer, D9).
           memory: 1G
@@ -147,7 +147,7 @@ services:
       REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE: 32
       REPORT_ASSISTANT_EMBEDDING_TOKEN_BUDGET: 8000
       # This is the DEV compose (Mailpit catch-all, exposed ports,
-      # dev secrets, AUTH_DEV_MODE on). Production uses docker-compose.prod.yml.
+      # dev secrets, AUTH_DEV_MODE on). Production uses the Helm chart.
       # The boot fence in env.schema.ts refuses to start when both
       # NODE_ENV=production AND AUTH_DEV_MODE=true; keeping NODE_ENV=development
       # here matches the actual purpose of this compose.
