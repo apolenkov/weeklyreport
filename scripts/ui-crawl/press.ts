@@ -102,11 +102,12 @@ function reportLogs(
   name: string,
 ): void {
   for (const log of logs)
-    add(ctx, place, {
-      severity: LOG_SEVERITY[log.kind] ?? "medium",
-      kind: log.kind,
-      detail: `${name}: ${log.detail}`,
-    });
+    if (log.kind !== "network")
+      add(ctx, place, {
+        severity: LOG_SEVERITY[log.kind] ?? "medium",
+        kind: log.kind,
+        detail: `${name}: ${log.detail}`,
+      });
 }
 
 /** A press that never returns (native dialog, stuck navigation): dismiss, reopen the page, move on. */
@@ -234,6 +235,7 @@ export function finishPress(
     restoredBy,
     responseMs: result.ms,
     shot,
+    logs: result.logs,
   };
 }
 
