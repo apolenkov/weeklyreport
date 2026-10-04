@@ -91,6 +91,7 @@ function PeriodSelectTrigger({
         type="button"
         role="combobox"
         aria-label="Select reporting period"
+        title={selectedPeriod ? periodLabel(selectedPeriod) : undefined}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={listboxId}
@@ -104,7 +105,13 @@ function PeriodSelectTrigger({
         <span className="truncate">
           {selectedPeriod ? periodLabel(selectedPeriod) : ""}
         </span>
-        {selectedSubmitted && <SubmittedBadge />}
+        {/* Below md the page header already shows the status; the badge would
+            truncate the period label. */}
+        {selectedSubmitted && (
+          <span className="contents max-md:hidden">
+            <SubmittedBadge />
+          </span>
+        )}
         {selectedPeriod?.archived && <ArchivedBadge />}
       </button>
       <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-muted-foreground)]">

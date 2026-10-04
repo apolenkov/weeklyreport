@@ -83,7 +83,7 @@ describe("BlockedAtRiskTable — grouping by product", () => {
     expect(within(card).getByText("MP")).toBeVisible();
     expect(within(card).getByText("Anna · Boris")).toBeVisible();
     expect(within(card).getAllByText("Blocked")).toHaveLength(2);
-    expect(within(card).getByText("At Risk")).toBeVisible();
+    expect(within(card).getByText("At risk")).toBeVisible();
 
     const blockedRow = card.querySelector('[data-blocked-row="blocked"]');
     const atRiskRow = card.querySelector('[data-blocked-row="at-risk"]');
@@ -94,7 +94,7 @@ describe("BlockedAtRiskTable — grouping by product", () => {
       throw new TypeError("expected issue rows");
     }
     expect(blockedRow).toHaveTextContent("DevAnnaVendor patch pendingBlocked");
-    expect(atRiskRow).toHaveTextContent("TestingBorisQA capacity shortAt Risk");
+    expect(atRiskRow).toHaveTextContent("TestingBorisQA capacity shortAt risk");
   });
 
   it("renders a separate product card per product, preserving first-appearance order", () => {
@@ -126,7 +126,7 @@ describe("BlockedAtRiskTable — grouping by product", () => {
       name: "Billing",
     }).parentElement;
     if (!billingHeader) throw new Error("expected billing header");
-    expect(within(billingHeader).getByText("At Risk")).toHaveStyle({
+    expect(within(billingHeader).getByText("At risk")).toHaveStyle({
       color: "var(--color-status-at-risk-fg)",
     });
     // Total count badge sums across groups, not per-group.
@@ -150,7 +150,7 @@ describe("BlockedAtRiskTable — grouping by product", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /blocked & at risk/i }));
 
-    expect(screen.getByText("At Risk")).toBeVisible();
+    expect(screen.getByText("At risk")).toBeVisible();
     expect(screen.getByText("Blocked")).toBeVisible();
   });
 
