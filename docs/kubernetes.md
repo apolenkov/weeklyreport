@@ -92,6 +92,50 @@ The api runs one replica with strategy `Recreate` because `pdfdata` is a
 ReadWriteOnce volume, so every upgrade has a short api outage (the initContainer
 plus the 60 second startup budget).
 
+## Local self-hosted stand
+
+A dev cluster (OrbStack, namespace `wr-local-prod`) can host the whole stack
+without DevOps: `deploy/local-prod/` replaces the corporate IdP and SMTP relay,
+and `deploy/helm/weeklyreport/values-local-prod.example.yaml` is the matching
+values file. Nothing in it is a production artefact.
+
+```sh
+SHA=$(git rev-parse HEAD); STATE=<dir outside Git>
+# 1. images (one at a time): wr/api, wr/migrate, wr/web, wr/backup tagged $SHA,
+#    same targets and build args as the CI job build-images
+# 2. dependencies: generates secrets/IdP key into $STATE, Secrets, Keycloak, Mailpit
+STATE_DIR=$STATE deploy/local-prod/setup.sh
+# 3. chart (copy the example outside Git first; the cert comes from setup.sh)
+helm upgrade --install weeklyreport deploy/helm/weeklyreport -n wr-local-prod \
+  -f $STATE/values-local-prod.yaml --set images.tag=$SHA \
+  --set-string api.env.KEYCLOAK_SAML_CERT="$(cat $STATE/secrets/idp-cert.b64)" --atomic --timeout 10m
+# 4. roles (below), then browser access
+kubectl -n wr-local-prod port-forward svc/edge 8080:8080 &       # app
+kubectl -n wr-local-prod port-forward svc/keycloak 8081:8080 &   # IdP, browser-facing
+```
+
+The realm `weeklyreport` has the SAML client `weeklyreport` (signed response and
+assertion, NameID = e-mail, attributes `email` and `displayName`) and the users
+`lead1@`, `head@`, `viewer@`, `admin@customreport.local`; their passwords are in
+`$STATE/secrets/secrets.env`. Mailpit receives the api's SMTP on `mailpit:1025`.
+
+**Roles after SAML.** The assertion carries no role: `verifySamlProfile` always
+yields `viewer`, and an existing `User` row is the source of truth and is never
+re-synced from the IdP (`apps/api/src/modules/auth/user-session.ts`). Roles are
+therefore assigned in the database before or after the first login. For the
+stand, `deploy/local-prod/provision-users.sql` is the reproducible way: it
+creates a reporting group and the four users with `samlId` equal to the NameID
+(a different `samlId` for the same e-mail is refused as an identity mismatch)
+and a non-viewer needs a reporting group. It is idempotent:
+
+```sh
+kubectl -n wr-local-prod exec -i statefulset/postgres -- \
+  psql -U customreport -d customreport_production -v ON_ERROR_STOP=1 \
+  < deploy/local-prod/provision-users.sql
+```
+
+In a real deployment an admin does the same through the admin UI.
+
 ## CI and delivery options
 
 - `build-images` (GitLab CI, rootless BuildKit, no Docker daemon) pushes `api`,

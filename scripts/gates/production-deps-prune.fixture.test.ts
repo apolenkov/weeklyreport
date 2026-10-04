@@ -34,7 +34,6 @@ async function makeDeployRoot(name = "@customreport/api"): Promise<string> {
     recursive: true,
   });
   await writeFile(join(root, "node_modules", ".modules.yaml"), "fixture\n");
-  await writeFile(join(root, "node_modules", ".package-map.json"), "{}\n");
   return root;
 }
 

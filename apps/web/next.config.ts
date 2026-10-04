@@ -18,6 +18,15 @@ const nextConfig: NextConfig = {
   // The repository owns its agent guidance; `next dev` must not create local copies.
   agentRules: false,
   output: "standalone",
+  // Next 16.3.7 (webpack) traces `server/proxy.js` into next-server, then
+  // renames it to `middleware.js` before the standalone copy, so a clean Linux
+  // build fails with ENOENT on copyfile. The renamed file is traced separately.
+  outputFileTracingExcludes: {
+    "next-server": [
+      "**/.next/server/proxy.js",
+      "**/.next/server/proxy.js.nft.json",
+    ],
+  },
   reactCompiler: true,
   transpilePackages: ["@customreport/ui"],
   experimental: {
