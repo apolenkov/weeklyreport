@@ -92,6 +92,107 @@ The api runs one replica with strategy `Recreate` because `pdfdata` is a
 ReadWriteOnce volume, so every upgrade has a short api outage (the initContainer
 plus the 60 second startup budget).
 
+## Local self-hosted stand
+
+A dev cluster (OrbStack, namespace `wr-local-prod`) can host the whole stack
+without DevOps: `deploy/local-prod/` replaces the corporate IdP and SMTP relay,
+and `deploy/helm/weeklyreport/values-local-prod.example.yaml` is the matching
+values file. Nothing in it is a production artefact.
+
+```sh
+SHA=$(git rev-parse HEAD); STATE=<dir outside Git>
+# 1. images (one at a time): wr/api, wr/migrate, wr/web, wr/backup tagged $SHA,
+#    same targets and build args as the CI job build-images
+# 2. dependencies: generates secrets/IdP key into $STATE, Secrets, Keycloak, Mailpit
+STATE_DIR=$STATE deploy/local-prod/setup.sh
+# 3. chart (copy the example outside Git first; the cert comes from setup.sh)
+helm upgrade --install weeklyreport deploy/helm/weeklyreport -n wr-local-prod \
+  -f $STATE/values-local-prod.yaml --set images.tag=$SHA \
+  --set-string api.env.KEYCLOAK_SAML_CERT="$(cat $STATE/secrets/idp-cert.b64)" --atomic --timeout 10m
+# 4. roles (below), then browser access
+kubectl -n wr-local-prod port-forward svc/edge 8080:8080 &       # app
+kubectl -n wr-local-prod port-forward svc/keycloak 8081:8080 &   # IdP, browser-facing
+```
+
+The realm `weeklyreport` has the SAML client `weeklyreport` (signed response and
+assertion, NameID = e-mail, attributes `email` and `displayName`) and the users
+`lead1@`, `head@`, `viewer@`, `admin@customreport.local`; their passwords are in
+`$STATE/secrets/secrets.env`. Mailpit receives the api's SMTP on `mailpit:1025`.
+
+**Roles after SAML.** The assertion carries no role: `verifySamlProfile` always
+yields `viewer`, and an existing `User` row is the source of truth and is never
+re-synced from the IdP (`apps/api/src/modules/auth/user-session.ts`). Roles are
+therefore assigned in the database before or after the first login. For the
+stand, `deploy/local-prod/provision-users.sql` is the reproducible way: it
+creates a reporting group and the four users with `samlId` equal to the NameID
+(a different `samlId` for the same e-mail is refused as an identity mismatch)
+and a non-viewer needs a reporting group. It is idempotent:
+
+```sh
+kubectl -n wr-local-prod exec -i statefulset/postgres -- \
+  psql -U customreport -d customreport_production -v ON_ERROR_STOP=1 \
+  < deploy/local-prod/provision-users.sql
+```
+
+In a real deployment an admin does the same through the admin UI.
+
+## Local stand and move to production
+
+The local stand is the same chart with three stand-ins: Keycloak (IdP), Mailpit
+(SMTP), and locally built `wr/*` images. Moving to production means replacing
+those and the items below; the chart, the migrations and the backup job do not
+change.
+
+Install command (the same as in the local stand section, with production inputs):
+
+```sh
+helm upgrade --install weeklyreport deploy/helm/weeklyreport -n <ns> --create-namespace \
+  -f values.production.yaml --set images.tag=<commit-sha> --atomic --timeout 10m
+```
+
+Start from `deploy/helm/weeklyreport/values.production.example.yaml`. The table
+maps every stand value to its production counterpart. Items marked REPLACE IN
+PROD (ЗАМЕНИТЬ В ПРОДЕ) have no usable stand value.
+
+| Value                                                                         | Stand                                                  | REPLACE IN PROD (ЗАМЕНИТЬ В ПРОДЕ)                                                                                                                     |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `images.registry`, `images.pullSecret`                                        | `wr`, none                                             | The registry written by `build-images`, plus a `dockerconfigjson` Secret                                                                               |
+| `edge.ingress.host`, Ingress class, TLS                                       | `localhost`, port-forward                              | Real host, the cluster Ingress controller, a TLS Secret or cert-manager                                                                                |
+| `edge.trustedProxies`                                                         | `127.0.0.1/32`                                         | The Ingress controller pod CIDR (and any load balancer hop)                                                                                            |
+| `edge.cspReportUri`                                                           | placeholder                                            | Real CSP report collector or an agreed sink                                                                                                            |
+| `api.env.FRONTEND_URL`, `APP_BASE_URL`                                        | `http://localhost:8080`                                | `https://<host>`                                                                                                                                       |
+| `api.env.KEYCLOAK_SAML_ENTRY_POINT`, `_ISSUER`, `_CALLBACK_URL`, `_CERT`      | Keycloak realm `weeklyreport`, `http://localhost:8081` | Corporate IdP metadata: SSO URL, SP entity ID, callback `https://<host>/auth/saml/callback`, IdP signing certificate (base64)                          |
+| IdP attributes                                                                | `email`, `displayName`, NameID = e-mail                | The IdP must release `email` and `displayName` (or `cn`); NameID is stored as `samlId` and must be stable                                              |
+| `api.env.SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, Secret `SMTP_USER`/`SMTP_PASS` | `mailpit:1025`, no auth                                | The corporate relay and a sender it accepts                                                                                                            |
+| Secret `weeklyreport-secrets`                                                 | generated by `setup.sh`                                | Created by DevOps tooling; fresh `DB_PASSWORD` (charset in "Secrets"), `AUTH_JWT_SECRET`, `PDF_EXPORT_JWT_SECRET`, `AI_PROVIDER_CONFIG_ENCRYPTION_KEY` |
+| `persistence.storageClass` and sizes                                          | cluster default, 2Gi / 256Mi / 512Mi / 1Gi             | A real class (check `WaitForFirstConsumer` and ReadWriteOnce node pinning) and production sizes                                                        |
+| `backup.schedule`, `retentionDays`                                            | hourly, 14                                             | Agreed RPO and retention; off-cluster replication of `pgbackups`                                                                                       |
+| `AUTH_DEV_MODE`                                                               | `false` (chart value)                                  | Must stay `false`                                                                                                                                      |
+
+Roles are not carried by SAML. After the first sign-in every user is a
+`viewer`; an admin assigns roles and reporting groups in the admin UI (the
+stand uses `deploy/local-prod/provision-users.sql` instead). Do not apply that
+file in production.
+
+Checks after install (all observed on the stand except those marked NOT
+VERIFIED):
+
+1. `kubectl -n <ns> get pods` all Ready; `helm status weeklyreport` deployed.
+2. `GET /health/ready` is 200 through the edge (migrations, database, Redis,
+   workers) and `GET /health/pdf-renderer` is 200.
+3. SAML sign-in as a lead, a head and a viewer lands on the expected home page
+   and the role matches the admin-assigned one. Real IdP: NOT VERIFIED.
+4. Lead saves and submits; head acknowledges, publishes and exports a PDF; the
+   downloaded file is larger than zero bytes and `file` reports a PDF.
+5. A reminder reaches the mail relay (Mailpit on the stand). Reminders are sent
+   only for an editable period (open, or published and reopened) that has an
+   active policy; the rule is created by the hourly repair job and sent by the
+   next hourly dispatch, so allow up to two hours. Real SMTP: NOT VERIFIED.
+6. A manual backup Job completes and `pg_restore --list` reads the dump; run the
+   restore drill below once on a non-production namespace.
+7. Edge: forged `X-Forwarded-For` is ignored and `/metrics` returns 404.
+8. Real Ingress with TLS, HSTS and the CSP report sink: NOT VERIFIED.
+
 ## CI and delivery options
 
 - `build-images` (GitLab CI, rootless BuildKit, no Docker daemon) pushes `api`,
@@ -147,14 +248,81 @@ the volume is a DevOps decision. Alert on the CronJob's last successful run
 equivalent. Run one manually with
 `kubectl -n <ns> create job --from=cronjob/backup backup-manual-1`.
 
-Restore: scale `api` and `web` to zero, run `restore.sh` from the backup image
-as a one-off Job that mounts the `pgbackups` claim and sets `PGHOST=postgres`,
-`PGPORT=5432`, `PGUSER=customreport`, `PGPASSWORD` (from the Secret),
-`PGDATABASE`, `RESTORE_ENVIRONMENT=production`,
-`CONFIRM_RESTORE_TARGET=production|postgres|5432|<db>`,
-`PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=давай`, `ALLOW_PROD_DESTRUCTIVE=yes`,
-and the dump path as the command argument; then scale back up and check
-`/health/ready`. The drill is documented, not automated, and untested here.
+Restore procedure (drilled on the local stand on 2026-10-04: backup, `TRUNCATE`
+of the report tables, restore, identical control counts and ids):
+
+1. Pick the dump: `kubectl -n <ns> exec statefulset/postgres -- ls -l /backups`
+   (the volume is mounted read-only there).
+2. Stop writers: `kubectl -n <ns> scale deploy/api deploy/web --replicas=0`.
+3. Run `restore.sh` from the backup image as a one-off Job on the same node as
+   `postgres` (ReadWriteOnce volume). `--clean --if-exists --single-transaction`
+   replaces the schema contents, so a failed restore leaves the database as it was.
+
+   ```yaml
+   apiVersion: batch/v1
+   kind: Job
+   metadata: { name: restore-1 }
+   spec:
+     backoffLimit: 0
+     template:
+       spec:
+         restartPolicy: Never
+         automountServiceAccountToken: false
+         securityContext: { runAsNonRoot: true, runAsUser: 70, fsGroup: 70 }
+         affinity:
+           podAffinity:
+             requiredDuringSchedulingIgnoredDuringExecution:
+               - topologyKey: kubernetes.io/hostname
+                 labelSelector:
+                   matchLabels:
+                     {
+                       app.kubernetes.io/component: postgres,
+                       app.kubernetes.io/name: weeklyreport,
+                     }
+         containers:
+           - name: restore
+             image: <registry>/backup:<tag>
+             command: ["/usr/local/bin/restore.sh", "/backups/<dump-file>"]
+             env:
+               - { name: PGHOST, value: postgres }
+               - { name: PGPORT, value: "5432" }
+               - { name: PGUSER, value: customreport }
+               - {
+                   name: PGPASSWORD,
+                   valueFrom:
+                     { secretKeyRef: { name: <secret>, key: DB_PASSWORD } },
+                 }
+               - { name: PGDATABASE, value: <db> }
+               - { name: RESTORE_ENVIRONMENT, value: production }
+               - {
+                   name: CONFIRM_RESTORE_TARGET,
+                   value: "production|postgres|5432|<db>",
+                 }
+               - {
+                   name: PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION,
+                   value: "давай",
+                 }
+               - { name: ALLOW_PROD_DESTRUCTIVE, value: "yes" }
+             volumeMounts:
+               [{ name: pgbackups, mountPath: /backups, readOnly: true }]
+         volumes:
+           - {
+               name: pgbackups,
+               persistentVolumeClaim: { claimName: pgbackups },
+             }
+   ```
+
+   Add `imagePullSecrets` when the registry is private. Wait with
+   `kubectl -n <ns> wait --for=condition=complete job/restore-1` and read its
+   log for `[restore] complete`.
+
+4. Scale `api` and `web` back to 1 and check `/health/ready`.
+5. Compare a control sample taken before the incident (row counts of `Report`,
+   `ReportSection`, `User`, ids and statuses of the published report).
+
+Not in the dump: Redis (queues are rebuilt by the api) and the files on the
+`pdfdata` volume (the export rows are restored, regenerate the files). A
+restore from an off-cluster copy is not drilled.
 
 ## Monitoring and logs
 
