@@ -56,7 +56,9 @@ The review-acknowledge control MUST be presented, for a publish-capable reviewer
 (head/admin) on a live (non-published) period, within the Publish & lock action
 cluster on the report header line — not as a separate standalone band above the
 report body — so "review → acknowledge → publish & lock" reads as one
-sequence. The control is
+sequence. A leadership viewer has no publish cluster to host the control, so for
+a viewer the same per-group control renders as a band inside the report body.
+The control is
 `apps/web/src/features/review/ui/review-acknowledge-bar.tsx`, rendered by
 `apps/web/src/features/report-pages/ui/weekly/weekly-report-page-content.tsx` via
 `AcknowledgeSurface`. Placement MUST NOT turn
@@ -73,6 +75,8 @@ MUST NOT render as indistinguishable `Acknowledge` buttons.
 - **THEN** the Acknowledge control renders within the Publish & lock action
   cluster on the header line
 - **AND** no separate acknowledgement band renders above the report body
+- **AND** a viewer opening the same live report sees the per-group control as a
+  band inside the report body
 
 #### Scenario: acknowledgement does not gate publish
 
