@@ -4,6 +4,11 @@ interface Props {
   searchParams: Promise<{ reason?: string | string[] }>;
 }
 
+// The heading already says "Authentication Error"; the fallback names the next
+// step instead of repeating it (R76).
+const FALLBACK_MESSAGE =
+  "Sign-in could not be completed. Return to the login page and try again, or contact your administrator if it keeps happening.";
+
 const AUTH_ERROR_MESSAGES: Readonly<Record<string, string>> = {
   invalid_assertion: "The SSO response was invalid. Please try again.",
   session_expired: "Your session has expired. Please sign in again.",
@@ -14,8 +19,7 @@ export default async function AuthErrorPage({ searchParams }: Props) {
   const { reason } = await searchParams;
   const resolvedReason = typeof reason === "string" ? reason : "";
 
-  const message =
-    AUTH_ERROR_MESSAGES[resolvedReason] ?? "An authentication error occurred.";
+  const message = AUTH_ERROR_MESSAGES[resolvedReason] ?? FALLBACK_MESSAGE;
 
   return (
     <main
