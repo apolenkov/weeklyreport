@@ -129,7 +129,10 @@ describe("SlideCell row hover", () => {
     expect(controlledId).not.toBeNull();
     const controlled = document.getElementById(controlledId ?? "");
     expect(controlled).not.toBeNull();
-    expect(screen.getByText(riskRow.text)).toHaveClass("line-clamp-2");
+    expect(screen.getByText(riskRow.text)).toHaveClass(
+      "line-clamp-4",
+      "md:line-clamp-2",
+    );
     expect(disclosure).toHaveAttribute("aria-expanded", "false");
 
     fireEvent.mouseEnter(screen.getByRole("listitem"));
@@ -145,7 +148,7 @@ describe("SlideCell row hover", () => {
     await user.keyboard("{Enter}");
 
     expect(disclosure).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText(riskRow.text)).not.toHaveClass("line-clamp-2");
+    expect(screen.getByText(riskRow.text)).not.toHaveClass("line-clamp-4");
     expect(screen.getByText("The customer rollout pauses")).toBeVisible();
     expect(screen.getByText("Escalate to the platform lead")).toBeVisible();
 

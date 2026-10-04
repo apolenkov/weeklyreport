@@ -119,7 +119,14 @@ function OpenWorkRow({
   const parent = item.occurrence.parent;
   return (
     <li className="min-w-0 rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] p-3">
-      <p className="break-words text-sm font-semibold">{historical.text}</p>
+      {/* R56: identical item texts recur across periods; the period in the
+          title is the only thing that tells the occurrences apart. */}
+      <p className="break-words text-sm font-semibold">
+        {historical.text}{" "}
+        <span className="font-normal text-[var(--color-muted-foreground)]">
+          · {item.periodLabel}
+        </span>
+      </p>
       <p className="break-words text-xs text-[var(--color-muted-foreground)]">
         {parent.name ?? (parent.kind === "product" ? "Product" : "Activity")}
         {" · "}

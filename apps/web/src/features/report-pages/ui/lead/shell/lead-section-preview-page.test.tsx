@@ -23,9 +23,10 @@ describe("LeadReportPreviewPage", () => {
         await LeadReportPreviewPage({ params: Promise.resolve({ reportId }) }),
       );
 
+      expect(screen.getByText("Section preview")).toBeVisible();
       expect(
-        screen.getByRole("heading", { name: "Section Preview", level: 1 }),
-      ).toBeVisible();
+        screen.queryByRole("heading", { name: /section preview/i }),
+      ).not.toBeInTheDocument();
       expect(
         screen.getByRole("link", { name: /Back to form/ }),
       ).toHaveAttribute("href", href);

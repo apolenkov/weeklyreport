@@ -22,9 +22,11 @@ export default async function LeadReportPreviewPage({ params }: Props) {
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           <header className="mb-6 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
-                Section Preview
-              </h1>
+              {/* R61: eyebrow banner, not a second H1 — the embedded report
+                  owns the page's single "Status Report" heading. */}
+              <p className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
+                Section preview
+              </p>
               <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
                 Your section as it appears in the head&apos;s consolidated
                 report.
