@@ -743,13 +743,16 @@ describe("StatusOverview", () => {
 
     render(<StatusOverview model={readOnlyModel} />);
 
-    expect(screen.getByText("No item")).toBeVisible();
-    // Empty cell collapses to one compact line below md: no period date.
-    const emptyCell = screen
-      .getByText("No item")
-      .closest("[data-overview-lineage-lane]");
-    expect(emptyCell).toHaveClass("max-md:flex", "max-md:py-1");
-    expect(emptyCell).not.toHaveTextContent("7–13 Sep 2026");
+    // R55: the empty lane is a quiet dash on desktop (sr-only name stays);
+    // on mobile it folds into the row's single collapse line instead of a
+    // labelled "No item" strip.
+    const emptyLane = document.querySelector(
+      '[data-overview-lineage-lane="next"]',
+    );
+    expect(emptyLane).toHaveClass("hidden", "md:flex");
+    expect(emptyLane).toHaveTextContent("No item in this period");
+    expect(emptyLane).not.toHaveTextContent("7–13 Sep 2026");
+    expect(screen.getByText("No item in Next week")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add next step" })).toBeNull();
   });
 
@@ -783,9 +786,12 @@ describe("StatusOverview", () => {
 
     render(<StatusOverview model={linkedModel} />);
 
-    expect(screen.getAllByText("Previously planned").length).toBeGreaterThan(1);
+    // R15: every week label stays visible once in the shared mobile periods
+    // header; populated cells still repeat their own lane label.
+    for (const label of ["Previously planned", "Current week", "Next week"]) {
+      expect(screen.getAllByText(label).length).toBeGreaterThanOrEqual(1);
+    }
     expect(screen.getAllByText("Current week").length).toBeGreaterThan(1);
-    expect(screen.getAllByText("Next week").length).toBeGreaterThan(1);
     expect(screen.queryByRole("button", { name: "Add next step" })).toBeNull();
   });
 

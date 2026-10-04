@@ -25,6 +25,8 @@ import { StatusOverviewUnitSummary } from "./status-overview-summary";
 import { TimelineFooter } from "./status-overview-timeline-footer";
 
 export { STATUS_OVERVIEW_DESKTOP_GRID };
+
+const PERIOD_UNAVAILABLE = "Period unavailable";
 function MobileWeekLabel({
   label,
   period,
@@ -42,9 +44,77 @@ function MobileWeekLabel({
       </p>
       {period === undefined ? null : (
         <p className="text-xs text-[var(--color-muted-foreground)]">
-          {period ?? "Period unavailable"}
+          {period ?? PERIOD_UNAVAILABLE}
         </p>
       )}
+    </div>
+  );
+}
+
+function editorBelongsToLineageRow(
+  row: StatusOverviewLineageRow,
+  editorSlot: ItemHandlers["editorSlot"],
+): boolean {
+  if (!editorSlot || editorSlot.mode === "create") return false;
+  if (editorSlot.stableId) {
+    return STATUS_OVERVIEW_COLUMNS.some(
+      (column) => row[column.source]?.stableId === editorSlot.stableId,
+    );
+  }
+  return Boolean(
+    editorSlot.recordId &&
+    STATUS_OVERVIEW_COLUMNS.some(
+      (column) => row[column.source]?.recordId === editorSlot.recordId,
+    ),
+  );
+}
+
+function EmptyLane({
+  column,
+}: {
+  readonly column: (typeof STATUS_OVERVIEW_COLUMNS)[number];
+}) {
+  // R55: an empty lane stays a quiet muted cell — one em dash instead of a
+  // "No item" caption that competes with real content; on mobile it folds
+  // into the single summary line below the row.
+  return (
+    <div
+      data-overview-lineage-lane={column.source}
+      className={`${TIMELINE_CELL} hidden md:min-h-36 md:flex md:flex-col md:items-center md:justify-center md:border-t-0 bg-[var(--color-surface-muted)]`}
+    >
+      <span
+        aria-hidden="true"
+        className="text-sm text-[var(--color-muted-foreground)]"
+      >
+        —
+      </span>
+      <span className="sr-only">No item in this period</span>
+    </div>
+  );
+}
+
+function MobilePeriodsSummary({
+  periods,
+}: {
+  readonly periods: StatusOverviewModel["periods"];
+}) {
+  // R15: one shared periods header per product on mobile instead of a strip
+  // repeated inside every row cell.
+  return (
+    <div className="mx-3 mb-2 rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-muted)] px-4 py-2 md:hidden">
+      {STATUS_OVERVIEW_COLUMNS.map((column) => (
+        <div
+          key={column.key}
+          className="flex items-baseline justify-between gap-2 py-0.5"
+        >
+          <p className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--color-foreground)]">
+            {column.label}
+          </p>
+          <p className="text-xs text-[var(--color-muted-foreground)]">
+            {periods[column.key] ?? PERIOD_UNAVAILABLE}
+          </p>
+        </div>
+      ))}
     </div>
   );
 }
@@ -58,17 +128,9 @@ function LineageRow({
   readonly row: StatusOverviewLineageRow;
   readonly periods: StatusOverviewModel["periods"];
 } & Omit<ItemHandlers, "onAddItem">) {
-  const editorBelongsToRow = Boolean(
-    editorSlot &&
-    editorSlot.mode !== "create" &&
-    (editorSlot.stableId
-      ? STATUS_OVERVIEW_COLUMNS.some(
-          (column) => row[column.source]?.stableId === editorSlot.stableId,
-        )
-      : editorSlot.recordId &&
-        STATUS_OVERVIEW_COLUMNS.some(
-          (column) => row[column.source]?.recordId === editorSlot.recordId,
-        )),
+  const editorBelongsToRow = editorBelongsToLineageRow(row, editorSlot);
+  const emptyColumns = STATUS_OVERVIEW_COLUMNS.filter(
+    (column) => !row[column.source],
   );
   return (
     <div
@@ -76,38 +138,36 @@ function LineageRow({
     >
       {STATUS_OVERVIEW_COLUMNS.map((column) => {
         const item = row[column.source];
+        if (!item) return <EmptyLane key={column.key} column={column} />;
         return (
           <div
             key={column.key}
             data-overview-lineage-lane={column.source}
             role="group"
             aria-labelledby={STATUS_OVERVIEW_COLUMN_HEADER_IDS[column.key]}
-            className={`${TIMELINE_CELL} block border-t border-[var(--color-border-subtle)] first:border-t-0 md:min-h-36 md:flex-col md:border-t-0 md:flex ${item ? "" : "bg-[var(--color-surface-muted)] max-md:flex max-md:items-baseline max-md:gap-2 max-md:py-1"}`}
+            className={`${TIMELINE_CELL} block border-t border-[var(--color-border-subtle)] first:border-t-0 md:min-h-36 md:flex-col md:border-t-0 md:flex`}
           >
             <MobileWeekLabel
               label={column.label}
-              period={item ? periods[column.key] : undefined}
+              period={periods[column.key]}
             />
-            {item ? (
-              <>
-                {column.source === "previous" && row.previousParent ? (
-                  <p className="mb-1 break-words text-xs text-[var(--color-muted-foreground)]">
-                    Previously in {row.previousParent}
-                  </p>
-                ) : null}
-                <ReportItemSlot item={item} {...handlers} />
-              </>
-            ) : (
-              <p className="text-xs text-[var(--color-muted-foreground)]">
-                <span aria-hidden="true" className="md:hidden">
-                  ·{" "}
-                </span>
-                No item
+            {column.source === "previous" && row.previousParent ? (
+              <p className="mb-1 break-words text-xs text-[var(--color-muted-foreground)]">
+                Previously in {row.previousParent}
               </p>
-            )}
+            ) : null}
+            <ReportItemSlot item={item} {...handlers} />
           </div>
         );
       })}
+      {/* R15: one muted line replaces the per-empty-period strips on mobile. */}
+      {emptyColumns.length > 0 ? (
+        <p className="border-t border-[var(--color-border-subtle)] px-4 py-1.5 text-xs text-[var(--color-muted-foreground)] md:hidden">
+          {emptyColumns.length === 1
+            ? `No item in ${emptyColumns[0]?.label ?? "this period"}`
+            : "No items in other periods"}
+        </p>
+      ) : null}
       {editorBelongsToRow ? (
         <div className="min-w-0 border-t border-[var(--color-border-subtle)] bg-[var(--color-card)] px-4 py-3 md:col-span-3">
           {editorSlot?.content}
@@ -161,6 +221,7 @@ export function StatusOverviewUnitRow({
           />
         </div>
         <div className="min-w-0 min-[80rem]:col-span-3">
+          <MobilePeriodsSummary periods={periods} />
           <div
             className={`${TIMELINE_GRID} max-md:hidden min-[80rem]:sr-only bg-[var(--color-surface-muted)]`}
           >
@@ -168,7 +229,7 @@ export function StatusOverviewUnitRow({
               <div key={column.key} className={TIMELINE_CELL}>
                 <p className="text-xs font-semibold">{column.label}</p>
                 <p className="text-xs text-[var(--color-muted-foreground)]">
-                  {periods[column.key] ?? "Period unavailable"}
+                  {periods[column.key] ?? PERIOD_UNAVAILABLE}
                 </p>
               </div>
             ))}

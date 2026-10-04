@@ -52,9 +52,11 @@ describe("LeadReportPreviewPage — lead-only preview shell", () => {
   it("renders the preview for the route reportId on a focusable main", async () => {
     await renderPage();
 
+    // R61: eyebrow banner, not an H1 — the embedded report owns the heading.
+    expect(screen.getByText("Section preview")).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { level: 1, name: "Section Preview" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("heading", { level: 1, name: /section preview/i }),
+    ).not.toBeInTheDocument();
     const main = screen.getByRole("main");
     expect(main).toHaveAttribute("id", "main-content");
     expect(main).toHaveAttribute("tabindex", "-1");
