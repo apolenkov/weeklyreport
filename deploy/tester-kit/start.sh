@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Start the tester kit: setup infrastructure, install Helm chart, wait for health.
 #   start.sh [--tag <git-sha>] [--registry <host>]
+#   start.sh [--local]  # Use local wr/* images
 
 set -euo pipefail
 trap 'echo "Error on line $LINENO"' ERR
@@ -12,6 +13,7 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 # Parse arguments
 TAG=""
 REGISTRY="registry.gitlab.example.org:5005/acme/weeklyreport"
+USE_LOCAL=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -23,8 +25,12 @@ while [[ $# -gt 0 ]]; do
       REGISTRY="$2"
       shift 2
       ;;
+    --local)
+      USE_LOCAL=true
+      shift
+      ;;
     *)
-      echo "Usage: $0 [--tag <sha>] [--registry <host>]"
+      echo "Usage: $0 [--tag <sha>] [--registry <host>] [--local]"
       exit 1
       ;;
   esac
@@ -33,12 +39,18 @@ done
 # If no tag specified, use main HEAD from git
 if [ -z "$TAG" ]; then
   if command -v git >/dev/null 2>&1 && [ -d "$(git rev-parse --git-dir 2>/dev/null)" ]; then
-    TAG=$(git rev-parse --short HEAD)
+    TAG=$(git rev-parse HEAD)
     echo "Using git HEAD: $TAG"
   else
     echo "Error: --tag <git-sha> required (git not available or not a repo)"
     exit 1
   fi
+fi
+
+# Use local images if requested or if registry images not available
+if [ "$USE_LOCAL" = true ]; then
+  REGISTRY="wr"
+  echo "Using local wr/* images"
 fi
 
 echo "Registry: $REGISTRY"
@@ -69,7 +81,7 @@ helm upgrade --install weeklyreport "$CHART_DIR" \
   --set "images.tag=$TAG" \
   --set-string "api.env.KEYCLOAK_SAML_CERT=$IDP_CERT_B64" \
   --wait \
-  --timeout 5m
+  --timeout 10m
 
 echo "✓ Helm chart installed"
 
@@ -78,7 +90,7 @@ echo "Waiting for /health/ready..."
 for i in {1..120}; do
   if kubectl -n "$NS" get pod -l app=api -o jsonpath='{.items[0].metadata.name}' 2>/dev/null | grep -q .; then
     POD=$(kubectl -n "$NS" get pod -l app=api -o jsonpath='{.items[0].metadata.name}')
-    if kubectl -n "$NS" exec "$POD" -- curl -f http://localhost:3000/health/ready >/dev/null 2>&1; then
+    if kubectl -n "$NS" exec "$POD" -- curl -f http://localhost:3001/health/ready >/dev/null 2>&1; then
       echo "✓ API is ready"
       break
     fi
