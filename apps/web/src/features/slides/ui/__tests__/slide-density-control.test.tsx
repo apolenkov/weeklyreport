@@ -13,4 +13,15 @@ describe("SlideDensityControl", () => {
       "bg-[var(--color-toggle-active)]",
     );
   });
+
+  // R08: two visually identical segmented pills in the slides toolbar read as
+  // peers; a muted "Format" caption nests the density group semantically.
+  it("names the group with a visible Format caption", () => {
+    render(<SlideDensityControl value="document" onChange={vi.fn()} />);
+
+    expect(screen.getByText("Format")).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Slide density" }),
+    ).toBeInTheDocument();
+  });
 });

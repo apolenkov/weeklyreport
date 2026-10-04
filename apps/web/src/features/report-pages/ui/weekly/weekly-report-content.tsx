@@ -109,28 +109,36 @@ type SectionsToolbarProps = Pick<
   | "onFilterChange"
 >;
 
-// Submitted|All filter for access-holders on a live period.
+// The "Sections" caption names the accordion on every surface (published
+// included); the mode/filter controls are live-review-only and stay in one
+// scrollable row so they never read as detached capsules on narrow viewports.
 function SectionsToolbar({
+  reviewEnabled,
   canReviewAny,
   reviewMode,
   onReviewModeChange,
   submissionFilter,
   onFilterChange,
-}: SectionsToolbarProps) {
+}: SectionsToolbarProps & { readonly reviewEnabled: boolean }) {
   return (
     <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
       <span className="text-xs font-bold text-[var(--color-muted-foreground)]">
         Sections
       </span>
-      <div className="flex max-w-full flex-wrap items-center gap-2">
-        {canReviewAny ? (
-          <ReviewModeToggle value={reviewMode} onChange={onReviewModeChange} />
-        ) : null}
-        <SubmissionFilterToggle
-          value={submissionFilter}
-          onChange={onFilterChange}
-        />
-      </div>
+      {reviewEnabled ? (
+        <div className="flex max-w-full flex-nowrap items-center gap-2 overflow-x-auto">
+          {canReviewAny ? (
+            <ReviewModeToggle
+              value={reviewMode}
+              onChange={onReviewModeChange}
+            />
+          ) : null}
+          <SubmissionFilterToggle
+            value={submissionFilter}
+            onChange={onFilterChange}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -162,7 +170,7 @@ function ReportSectionsSurface({
 }: SectionsToolbarProps & Pick<ReportContentProps, SectionsSurfaceKeys>) {
   return (
     <>
-      {reviewEnabled ? <SectionsToolbar {...toolbar} /> : null}
+      <SectionsToolbar {...toolbar} reviewEnabled={reviewEnabled} />
 
       <ReviewModeVerdictSurface
         reportId={reportId}

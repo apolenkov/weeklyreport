@@ -67,6 +67,7 @@ export function ViewerContextControls({
         slidesHref={slidesHref}
         mode={mode === "slides" ? "slides" : "edit"}
         readOnly
+        desktopLabels
       />
     </>
   );

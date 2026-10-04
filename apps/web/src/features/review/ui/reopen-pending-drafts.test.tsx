@@ -451,7 +451,7 @@ describe("Admin reopen pagination", () => {
 
     expect(await screen.findByText("Alice")).toBeInTheDocument();
     const search = screen.getByRole("searchbox", {
-      name: "Search by lead, email, week or note…",
+      name: "Lead, email, or week…",
     });
     await userEvent.type(search, "  Bob  ");
     expect(await screen.findByText("Bob")).toBeInTheDocument();

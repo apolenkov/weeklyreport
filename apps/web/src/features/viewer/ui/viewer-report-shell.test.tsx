@@ -278,6 +278,20 @@ describe("ViewerReportShell — read-only toolbar parity", () => {
     ).not.toBeInTheDocument();
   });
 
+  // Same control, same presentation: the published surface must not degrade the
+  // view-mode toggle to icon-only where the live report shows labels (≥lg).
+  it("keeps desktop labels on the view-mode toggle like the live report", () => {
+    render(<ViewerReportShell reportId={REPORT_ID} mode="form" />);
+    const reportLabel = within(
+      screen.getByRole("link", { name: "Report" }),
+    ).getByText("Report");
+    expect(reportLabel).toHaveClass("lg:not-sr-only");
+    const slidesLabel = within(
+      screen.getByRole("link", { name: "Slides" }),
+    ).getByText("Slides");
+    expect(slidesLabel).toHaveClass("lg:not-sr-only");
+  });
+
   it("view-mode toggle links target /reports/, never /head/report", () => {
     render(<ViewerReportShell reportId={REPORT_ID} mode="form" />);
     const slidesHref = screen
