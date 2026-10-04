@@ -24,8 +24,8 @@ const ACTIVITY_JUST_NOW_THRESHOLD_SECONDS = 30;
 export function formatDateTime(date: DateInput): string {
   if (!date) return "\u2014";
   const d = date instanceof Date ? date : new Date(date);
-  return d.toLocaleString("ru-RU", {
-    dateStyle: "short",
+  return d.toLocaleString("en-US", {
+    dateStyle: "medium",
     timeStyle: "short",
   });
 }

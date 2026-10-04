@@ -38,13 +38,13 @@ export function TabHeader({
           ) : null}
         </div>
         {description ? (
-          <p className="text-sm text-[var(--color-muted-foreground)]">
+          <p className="max-w-[65ch] text-sm text-[var(--color-muted-foreground)]">
             {description}
           </p>
         ) : null}
       </div>
       {(search || actions) && (
-        <div className="flex flex-shrink-0 flex-wrap items-center gap-2 xl:flex-nowrap">
+        <div className="flex flex-shrink-0 flex-wrap items-center gap-3 xl:flex-nowrap">
           {search}
           {actions}
         </div>

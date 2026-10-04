@@ -18,6 +18,7 @@ export const REPORTS_ROUTE = "/reports";
 export const ADMIN_ROUTE = "/admin";
 const PDF_EXPORTS_ROUTE = "/pdf-exports";
 export const REPORTS_LATEST_ROUTE = "/reports/latest";
+const REPORTS_TRENDS_ROUTE = "/reports/trends";
 export const HEAD_DASHBOARD_ROUTE = "/head/dashboard";
 export const HEAD_REPORT_ROUTE = "/head/report";
 const FEEDBACK_ROUTE = "/feedback";
@@ -58,6 +59,14 @@ export const NAV_LINKS: readonly NavLink[] = [
   },
   { href: HEAD_DASHBOARD_ROUTE, label: "Dashboard", roles: ["head"] },
   { href: HEAD_REPORT_ROUTE, label: "Status", roles: ["head"] },
+  // Trends is an any-role analytics surface; without a nav entry the page is
+  // unreachable except by URL and no item lights while visiting it.
+  {
+    href: REPORTS_TRENDS_ROUTE,
+    label: "Trends",
+    title: "Status and risk changes over recent periods",
+    roles: ["lead", "head", "admin", "viewer"],
+  },
   // Slides is a mode toggle inside Status/History, not a separate nav
   // destination.
   // admin tab is admin-only. heads have a dashboard, not an admin panel.
