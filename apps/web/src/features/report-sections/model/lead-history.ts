@@ -7,6 +7,7 @@ import type {
 } from "@customreport/shared";
 
 import {
+  formatDateTime,
   formatPeriodRangeWithYear,
   formatRelativePast,
   formatWeekLabel,
@@ -28,9 +29,13 @@ export interface HistoryEntry {
   reopened?: boolean | undefined;
   submissionState: HistorySubmissionState;
   submittedAt: string | null;
+  submittedAtTitle?: string | null | undefined;
   publishedAt?: string | null | undefined;
+  publishedAtTitle?: string | null | undefined;
   createdAt: string | null;
+  createdAtTitle?: string | null | undefined;
   lastEditAt: string | null;
+  lastEditAtTitle?: string | null | undefined;
   trafficLights: { green: number; yellow: number; red: number };
   itemCount: number;
   riskCount: number;
@@ -68,9 +73,16 @@ export function mapHistoryEntries(
           ? "not-submitted"
           : "unavailable",
     submittedAt: formatHistoryTimestamp(e.submittedAt, now),
+    submittedAtTitle: e.submittedAt ? formatDateTime(e.submittedAt) : null,
     publishedAt: formatHistoryTimestamp(e.publishedAt, now),
+    publishedAtTitle: e.publishedAt ? formatDateTime(e.publishedAt) : null,
     createdAt: formatHistoryTimestamp(e.createdAt, now),
+    createdAtTitle: e.createdAt ? formatDateTime(e.createdAt) : null,
     lastEditAt: formatHistoryTimestamp(e.lastEditAt ?? e.updatedAt, now),
+    lastEditAtTitle:
+      (e.lastEditAt ?? e.updatedAt)
+        ? formatDateTime(e.lastEditAt ?? e.updatedAt)
+        : null,
     trafficLights: e.trafficLights ?? { green: 0, yellow: 0, red: 0 },
     itemCount: e.itemCount ?? 0,
     riskCount: e.riskCount ?? 0,
@@ -95,9 +107,13 @@ export function mapCompiledHistoryEntries(
     reopened: e.reopened,
     submissionState: "unavailable",
     submittedAt: null,
+    submittedAtTitle: null,
     publishedAt: formatHistoryTimestamp(e.publishedAt, now),
+    publishedAtTitle: formatDateTime(e.publishedAt),
     createdAt: null,
+    createdAtTitle: null,
     lastEditAt: null,
+    lastEditAtTitle: null,
     trafficLights: e.trafficLights,
     itemCount: e.itemCount,
     riskCount: e.riskCount,

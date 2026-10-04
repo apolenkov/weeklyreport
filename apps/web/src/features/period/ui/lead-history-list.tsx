@@ -11,10 +11,12 @@ interface LeadHistoryListProps {
 
 function TrafficDot({
   label,
+  short,
   count,
   className,
 }: {
   readonly label: string;
+  readonly short: string;
   readonly count: number;
   readonly className: string;
 }) {
@@ -23,9 +25,13 @@ function TrafficDot({
       role="img"
       className="inline-flex h-7 min-w-12 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border-subtle)] bg-[color-mix(in_srgb,var(--color-card)_70%,transparent)] px-2 text-[12px] font-semibold text-[var(--color-foreground)]"
       aria-label={`${label}: ${count}`}
+      title={`${label}: ${count}`}
     >
-      <span className={`h-2 w-2 rounded-full ${className}`} />
-      {count}
+      <span
+        className={`h-2 w-2 rounded-full ${className}`}
+        aria-hidden="true"
+      />
+      {count} {short}
     </span>
   );
 }
@@ -72,18 +78,12 @@ function formatCount(count: number, singular: string, plural = `${singular}s`) {
 
 function describeHealth(lights: HistoryEntry["trafficLights"]) {
   if (lights.green > 0 && lights.yellow === 0 && lights.red === 0) {
-    return "All green";
+    return "All on track";
   }
   const statusParts = [
-    lights.green > 0
-      ? formatCount(lights.green, "green status", "green statuses")
-      : null,
-    lights.yellow > 0
-      ? formatCount(lights.yellow, "yellow status", "yellow statuses")
-      : null,
-    lights.red > 0
-      ? formatCount(lights.red, "red status", "red statuses")
-      : null,
+    lights.green > 0 ? `${lights.green} on track` : null,
+    lights.yellow > 0 ? `${lights.yellow} at risk` : null,
+    lights.red > 0 ? `${lights.red} blocked` : null,
   ].filter(Boolean);
 
   return statusParts.length > 0 ? statusParts.join(", ") : "No statuses";
@@ -98,16 +98,18 @@ function buildHistorySummary(entry: HistoryEntry) {
       : null,
   ].filter(Boolean);
 
-  return [describeHealth(entry.trafficLights), ...scopeParts].join(" | ");
+  return [describeHealth(entry.trafficLights), ...scopeParts].join(" · ");
 }
 
 function TimelineRow({
   label,
   value,
+  title,
   muted = false,
 }: {
   readonly label: string;
   readonly value: string;
+  readonly title?: string | null | undefined;
   readonly muted?: boolean;
 }) {
   return (
@@ -116,6 +118,7 @@ function TimelineRow({
         {label}
       </span>
       <span
+        title={title ?? undefined}
         className={
           muted
             ? "min-w-0 truncate text-right text-[var(--color-muted-foreground)]"
@@ -132,13 +135,25 @@ function HistoryTimeline({ entry }: { readonly entry: HistoryEntry }) {
   return (
     <div className="mt-4 space-y-1.5 border-t border-[var(--color-border-subtle)] pt-3">
       {entry.createdAt && (
-        <TimelineRow label="Created" value={entry.createdAt} />
+        <TimelineRow
+          label="Created"
+          value={entry.createdAt}
+          title={entry.createdAtTitle}
+        />
       )}
       {entry.lastEditAt && (
-        <TimelineRow label="Last edit" value={entry.lastEditAt} />
+        <TimelineRow
+          label="Last edit"
+          value={entry.lastEditAt}
+          title={entry.lastEditAtTitle}
+        />
       )}
       {entry.submissionState === "submitted" && entry.submittedAt ? (
-        <TimelineRow label="Submitted" value={entry.submittedAt} />
+        <TimelineRow
+          label="Submitted"
+          value={entry.submittedAt}
+          title={entry.submittedAtTitle}
+        />
       ) : entry.submissionState === "not-submitted" ? (
         <TimelineRow label="Submitted" value="Not submitted" muted />
       ) : null}
@@ -146,6 +161,7 @@ function HistoryTimeline({ entry }: { readonly entry: HistoryEntry }) {
         <TimelineRow
           label={entry.reopened ? "Last published" : "Published"}
           value={entry.publishedAt}
+          title={entry.publishedAtTitle}
         />
       ) : null}
     </div>
@@ -178,17 +194,20 @@ function HistoryCard({ entry }: { readonly entry: HistoryEntry }) {
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <TrafficDot
-          label="Green statuses"
+          label="On track statuses"
+          short="on track"
           count={entry.trafficLights.green}
           className="bg-[var(--color-starbucks-accent)]"
         />
         <TrafficDot
-          label="Yellow statuses"
+          label="At risk statuses"
+          short="at risk"
           count={entry.trafficLights.yellow}
           className="bg-[var(--color-status-dot-at-risk)]"
         />
         <TrafficDot
-          label="Red statuses"
+          label="Blocked statuses"
+          short="blocked"
           count={entry.trafficLights.red}
           className="bg-[var(--color-destructive)]"
         />

@@ -6,12 +6,12 @@ import type {
   PeriodNavigatorSelection,
 } from "../model/use-period-navigator";
 import { periodLabel, usePeriodNavigator } from "../model/use-period-navigator";
+import { ArchivedBadge, PeriodListboxPanel } from "./period-listbox-panel";
 import {
-  ArchivedBadge,
-  PeriodListboxPanel,
-  SubmittedBadge,
-} from "./period-listbox-panel";
-import { ChevronLeft, ChevronRight } from "./period-navigator-icons";
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+} from "./period-navigator-icons";
 
 interface PeriodNavigatorProps {
   readonly periods: readonly ReportPeriod[];
@@ -52,7 +52,7 @@ function PeriodNavArrowButton({
       aria-label={isPrev ? "Previous period" : "Next period"}
     >
       {isPrev && <ChevronLeft />}
-      <span className="hidden text-xs font-medium md:inline xl:hidden">
+      <span className="hidden text-xs font-medium md:inline">
         {isPrev ? "Previous" : "Next"}
       </span>
       {!isPrev && <ChevronRight />}
@@ -63,11 +63,9 @@ function PeriodNavArrowButton({
 function PeriodSelectTrigger({
   listbox,
   selectedPeriod,
-  selectedSubmitted,
 }: {
   readonly listbox: PeriodListboxNav;
   readonly selectedPeriod: ReportPeriod | undefined;
-  readonly selectedSubmitted: boolean;
 }) {
   const {
     open,
@@ -80,12 +78,7 @@ function PeriodSelectTrigger({
     handleTriggerKeyDown,
   } = listbox;
   return (
-    <div
-      className={[
-        "relative min-w-0 flex-1 md:flex-none",
-        selectedSubmitted ? "md:w-[32ch]" : "md:w-[24ch]",
-      ].join(" ")}
-    >
+    <div className="relative min-w-0 flex-1 md:flex-none md:w-[24ch]">
       <button
         ref={triggerRef}
         type="button"
@@ -105,17 +98,12 @@ function PeriodSelectTrigger({
         <span className="truncate">
           {selectedPeriod ? periodLabel(selectedPeriod) : ""}
         </span>
-        {/* Below md the page header already shows the status; the badge would
-            truncate the period label. */}
-        {selectedSubmitted && (
-          <span className="contents max-md:hidden">
-            <SubmittedBadge />
-          </span>
-        )}
+        {/* R30: no in-trigger Submitted badge — the header already announces
+            the same displayed-period status; the marker stays in the listbox. */}
         {selectedPeriod?.archived && <ArchivedBadge />}
       </button>
       <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--color-muted-foreground)]">
-        <ChevronRight />
+        <ChevronDown />
       </span>
     </div>
   );
@@ -157,7 +145,6 @@ export function PeriodNavigator({
       <PeriodSelectTrigger
         listbox={listbox}
         selectedPeriod={selection.selectedPeriod}
-        selectedSubmitted={selectedSubmitted}
       />
 
       <PeriodNavArrowButton
