@@ -1,22 +1,19 @@
-# Optional observability stack for local or production-like Compose runs.
+# Optional observability stack for local Compose runs.
 #
 # Brings up grafana/otel-lgtm (Grafana + Loki + Tempo + Prometheus + OTel Collector)
 # alongside Postgres exporter, Redis exporter, and CustomReport dashboards.
 # Bugsink (Sentry-compatible error tracking) is in docker-compose.errors.yml.
-# Not part of the prod-default compose — the org typically has a managed stack already.
+# Production uses the organization's managed observability stack.
 #
 # Usage:
 #   pnpm observability:up   # extends the current local Compose project
 #   pnpm observability:down # removes only observability-owned services
-#   docker compose --project-name customreport-production-observability \
-#     --env-file .env.production -f docker-compose.prod.yml \
-#     -f docker-compose.observability.yml up --build -d
 #
 # Grafana login: admin / the configured GRAFANA_ADMIN_PASSWORD  →  http://localhost:3003
 
 services:
   # Composing this overlay is what turns api tracing ON: it supplies the
-  # collector endpoint the base prod compose deliberately leaves unset.
+  # collector endpoint for the local API.
   api:
     environment:
       OTEL_SDK_DISABLED: "false"

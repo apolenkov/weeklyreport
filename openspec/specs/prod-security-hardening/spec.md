@@ -33,8 +33,8 @@ absent or empty.
 ### Requirement: Every base image MUST be pinned by digest, not mutable tag
 
 Every `FROM` instruction in `Dockerfile.web` and `Dockerfile.api` MUST be
-pinned by `@sha256:<digest>`. Every `image:` reference in
-`docker-compose.prod.yml` MUST carry the same pin, so a registry-side
+pinned by `@sha256:<digest>`. Every third-party service image reference in
+`deploy/helm/weeklyreport/values.yaml` MUST carry a reviewed digest pin, so a registry-side
 repush of a mutable tag cannot silently change what a rebuild deploys.
 
 #### Scenario: A Dockerfile FROM line is digest-pinned
@@ -44,11 +44,11 @@ repush of a mutable tag cannot silently change what a rebuild deploys.
   64-hex-character digest
 - **AND** no `FROM` instruction references a bare tag with no digest
 
-#### Scenario: A compose service image is digest-pinned
+#### Scenario: A production chart image is digest-pinned
 
-- **WHEN** a reviewer inspects `docker-compose.prod.yml`
-- **THEN** every `image:` value for `postgres`, `pgbouncer`, `redis`, and
-  `caddy` includes an `@sha256:` digest alongside its tag
+- **WHEN** a reviewer inspects `deploy/helm/weeklyreport/values.yaml`
+- **THEN** every third-party image value for `postgres`, `pgbouncer`, `redis`,
+  `caddy`, and `gotenberg` includes an `@sha256:` digest alongside its tag
 
 ### Requirement: The web image's dev-auth build args default to safe values
 

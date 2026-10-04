@@ -1,169 +1,79 @@
 # Operations runbook
 
-Everything needed to stand up, watch, and recover the production stack.
-This file is the operational runbook for the current stack.
-
-No production deployment exists yet. Steps below are written against
-`docker-compose.prod.yml` as it stands and were exercised locally except where
-marked **untested in production**.
+Production uses the Helm chart in `deploy/helm/weeklyreport/`. This runbook
+covers diagnosis and recovery; [Kubernetes delivery](kubernetes.md) covers
+cluster prerequisites, installation, and the local stand. Production deployment
+and recovery remain unverified until a real target supplies read-back evidence.
+The dated local-stand results in that guide are not production acceptance.
 
 ## The stack
 
-`docker compose --env-file .env.production -f docker-compose.prod.yml` brings up
-ten services:
+The chart installs one release per namespace with fixed Service names:
 
-| Service        | Role                                                                                                                                                                                                                           |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `config-guard` | Fails before database services start if `DB_PASSWORD` contains a reserved URL character.                                                                                                                                       |
-| `caddy`        | The only public entrypoint. TLS, security headers, routes `/api/web-vitals`, `/api/client-logs`, `/trpc`, `/auth`, `/health`, `/admin/queues`, and `/pdfs` to the api and everything else to web. `/metrics` is internal-only. |
-| `web`          | Next.js standalone server. Not published to the host — reachable only through caddy.                                                                                                                                           |
-| `api`          | NestJS + tRPC. Not published to the host either.                                                                                                                                                                               |
-| `migrate`      | Init container: `prisma migrate deploy`, then exits. `api` waits for it to succeed.                                                                                                                                            |
-| `pgbouncer`    | Transaction-mode pool in front of Postgres. All api query traffic goes through it.                                                                                                                                             |
-| `postgres`     | The database. No host port; reachable only on the compose network.                                                                                                                                                             |
-| `redis`        | BullMQ queues. `--maxmemory 200mb`, `noeviction`.                                                                                                                                                                              |
-| `gotenberg`    | Internal PDF renderer reached only by the api over the compose network — no host port, no Caddy route. Serializes conversions and clears browser state between jobs; egress is confined to the `PDF_BASE_URL` print origin.    |
-| `backup`       | Periodic `pg_dump` into the `pgbackups` volume. See [Backups](#backups).                                                                                                                                                       |
+| Workload                | Role                                                                                                                                                         |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `edge` Deployment       | Caddy on private port 8080 behind the cluster Ingress; Ingress owns TLS. Routes API paths to `api` and other requests to `web`; `/metrics` is internal-only. |
+| `web` Deployment        | Next.js standalone server, private Service on port 3000.                                                                                                     |
+| `api` Deployment        | NestJS + tRPC, private Service on port 3001, one replica with `Recreate` rollout.                                                                            |
+| `migrate` initContainer | Runs `prisma migrate deploy` before the API container starts.                                                                                                |
+| `pgbouncer` Deployment  | Transaction-mode pool for API database traffic.                                                                                                              |
+| `postgres` StatefulSet  | Database on the `pgdata-postgres-0` PVC.                                                                                                                     |
+| `redis` StatefulSet     | BullMQ queues on persistent storage, `noeviction` with an explicit memory cap.                                                                               |
+| `gotenberg` Deployment  | Private PDF renderer; Chromium may fetch only the chart-derived internal Web print origin.                                                                   |
+| `backup` CronJob        | One-shot `pg_dump` into the `pgbackups` PVC with required schedule and retention.                                                                            |
 
-`migrate` and `backup` talk to `postgres` **directly**, bypassing pgbouncer:
-DDL and `pg_dump` need a session that outlives a single transaction.
-
-## Host requirements
-
-Facts below come from `docker-compose.prod.yml`; sizing is a **recommendation**,
-not a measurement.
-
-- **Software.** Linux with Docker Engine and Compose v2 (`docker compose`) plus
-  `git`. No Node or pnpm on the host: `api`, `migrate`, `web`, and `backup` are
-  built on the host from this checkout (`up --build`), inside pinned
-  `node:26.10.0` images. The repository pins no minimum Docker/Compose version
-  or distribution; the file needs `depends_on` with
-  `service_completed_successfully` and `deploy.resources.limits`.
-- **Memory limits** (no CPU limits are set; `migrate` and `config-guard` are
-  one-shot and unlimited):
-
-  | Service     | Limit                    |
-  | ----------- | ------------------------ |
-  | `api`       | 2 GiB                    |
-  | `gotenberg` | 1 GiB                    |
-  | `postgres`  | 512 MiB                  |
-  | `web`       | 512 MiB                  |
-  | `pgbouncer` | 128 MiB                  |
-  | `redis`     | 256 MiB                  |
-  | `backup`    | 256 MiB                  |
-  | `caddy`     | 256 MiB                  |
-  | **Sum**     | 4992 MiB (about 4.9 GiB) |
-
-- **Recommended VM: 4 vCPU, 8 GiB RAM, 40+ GiB SSD.** The limits alone fill
-  about 5 GiB; the rest is headroom for the OS, Docker, and the on-host image
-  build (pnpm, Next, Nest), whose peak is unmeasured. Disk covers images, the
-  volumes below, and dumps; growth rates are unmeasured. The `observability`
-  overlay sets no limits and adds its own `lgtmdata` volume; size it separately
-  if enabled.
-- **Inbound.** Only `caddy` publishes ports: `HTTP_PORT` (80/tcp), `HTTPS_PORT`
-  (443/tcp), and `HTTPS_PORT_QUIC` (443/udp). Open those in the host firewall.
-  `CADDY_SITE_ADDRESS` needs a DNS A/AAAA record to the host so Caddy can
-  obtain a Let's Encrypt certificate.
-- **Outbound.** Let's Encrypt (ACME); image registries during builds; the SMTP
-  server (`SMTP_HOST`/`SMTP_PORT`; production has no mail container); optionally the origins in
-  `AI_PROVIDER_ALLOWED_ORIGINS` (data stays blocked until
-  `REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED=true`) and a Sentry-compatible
-  receiver when `SENTRY_DSN` is set. SAML sign-in needs no host egress: the
-  browser reaches the identity provider, and the api only holds the
-  `KEYCLOAK_SAML_*` URLs and certificate. `CADDY_CSP_REPORT_URI` is an external
-  collector that browsers call. `gotenberg` prints the `PDF_BASE_URL` origin,
-  so the host must reach its own public address; this is untested on a real
-  network.
-- **Storage.** Named volumes: `pgdata`, `pgbackups`, `redisdata` (queues),
-  `pdfdata` (exported PDFs), `caddy_data` (certificates), `caddy_config`.
-  `pgbackups` on the same disk is not off-host protection; see
-  [Backups](#backups). Keep a copy of `.env.production` off the host too,
-  including `AI_PROVIDER_CONFIG_ENCRYPTION_KEY`.
-- **Still undecided:** SAML provider, SMTP provider, off-host backup target,
-  alert receiver, and image promotion; see
-  [External first-production prerequisites](#external-first-production-prerequisites).
-  Required variables are listed in [First deploy](#first-deploy).
+Migrations, backups, and restores connect directly to `postgres:5432` because
+DDL and `pg_dump` need a session that outlives one transaction. The API uses
+PgBouncer. `pdfdata` holds exported files separately from the database.
 
 ## First deploy
 
-1. **Write the environment file.** Copy
-   `deploy/environment/production.env.example` to `.env.production`, then fill
-   every empty assignment. Compose or the api rejects an untouched template;
-   the few populated values are explicit repository policy, not hidden defaults.
-
-   | Variable                                                                                                                                                                                  | What it is                                                                              |
-   | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-   | `DB_PASSWORD`                                                                                                                                                                             | Postgres password; URL-safe unreserved characters only (`A-Z a-z 0-9 . - _ ~`).         |
-   | `POSTGRES_DB`                                                                                                                                                                             | Database name shared by all consumers; letters, digits, and underscores only.           |
-   | `FRONTEND_URL`, `APP_BASE_URL`, `PDF_BASE_URL`                                                                                                                                            | Public origins.                                                                         |
-   | `GOTENBERG_URL`, `CHROMIUM_ALLOW_LIST`                                                                                                                                                    | Renderer compose-network URL and the anchored regex matching the `PDF_BASE_URL` origin. |
-   | `CLIENT_LOG_FORWARDING`, `NEXT_PUBLIC_CLIENT_LOG_FORWARDING`, `NEXT_PUBLIC_WEB_VITALS`                                                                                                    | Explicit server/browser telemetry toggles.                                              |
-   | `PRODUCT_FEEDBACK_ENABLED`, `NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED`, `NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES`                                                                            | Matching API/Web feedback gates and the comma-separated inbox role allowlist.           |
-   | `AUTH_JWT_SECRET`, `PDF_EXPORT_JWT_SECRET`                                                                                                                                                | Min 32 chars each, distinct, never the dev values.                                      |
-   | `AI_PROVIDER_CONFIG_ENCRYPTION_KEY`                                                                                                                                                       | Base64 or hexadecimal key for encrypted provider credentials; required at boot.         |
-   | `AI_PROVIDER_CONFIG_KEY_VERSION`, `AI_PROVIDER_ALLOWED_ORIGINS`                                                                                                                           | Current key version and exact upstream origin allowlist.                                |
-   | `REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED`                                                                                                                                                 | Explicit owner decision for sending report-derived content; `false` blocks it.          |
-   | `REPORT_ASSISTANT_INPUT_VERSION`, `REPORT_ASSISTANT_SIMILARITY_THRESHOLD`, `REPORT_ASSISTANT_CANDIDATE_LIMIT`, `REPORT_ASSISTANT_READ_THROUGH_LIMIT`, `REPORT_ASSISTANT_EXHAUSTIVE_LIMIT` | Bounded retrieval policy for the report assistant.                                      |
-   | `REPORT_ASSISTANT_CONTEXT_TOKEN_BUDGET`, `REPORT_ASSISTANT_PROVIDER_TIMEOUT_MS`, `REPORT_ASSISTANT_PLANNER_MAX_TOKENS`, `REPORT_ASSISTANT_ANSWER_MAX_TOKENS`                              | Bounded assistant execution limits.                                                     |
-   | `REPORT_ASSISTANT_EMBEDDING_BATCH_SIZE`, `REPORT_ASSISTANT_EMBEDDING_TOKEN_BUDGET`                                                                                                        | Bounded embedding workload limits.                                                      |
-   | `KEYCLOAK_SAML_CALLBACK_URL`, `KEYCLOAK_SAML_ENTRY_POINT`, `KEYCLOAK_SAML_ISSUER`, `KEYCLOAK_SAML_CERT`                                                                                   | The IdP; all four are required when `AUTH_DEV_MODE=false`.                              |
-   | `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`                                                                                                                                                     | Reminder delivery. Missing values fail production boot instead of dropping mail.        |
-   | `HEAP_HEALTH_THRESHOLD_BYTES`                                                                                                                                                             | ~75% of the api container memory limit (2 GB → `1610612736`).                           |
-   | `CADDY_SITE_ADDRESS`, `CADDY_ACME_EMAIL`, `CADDY_CSP_REPORT_URI`                                                                                                                          | Public hostname, ACME account email, and external CSP violation collector.              |
-   | `HTTP_PORT`, `HTTPS_PORT`, `HTTPS_PORT_QUIC`                                                                                                                                              | Host ports for the public Caddy listener.                                               |
-   | `PGBOUNCER_MAX_CLIENT_CONN`, `PGBOUNCER_POOL_SIZE`, `PGBOUNCER_RESERVE_POOL_SIZE`                                                                                                         | PgBouncer capacity limits.                                                              |
-   | `DB_POOL_MAX`, `DB_POOL_IDLE_TIMEOUT_MS`, `DB_POOL_CONNECTION_TIMEOUT_MS`                                                                                                                 | API pg.Pool capacity and timeout policy; all three are required.                        |
-   | `REDIS_DB`, `LOG_LEVEL`, `OTEL_SDK_DISABLED`, `OTEL_TRACES_SAMPLER_ARG`, `OTEL_SERVICE_VERSION`                                                                                           | Runtime policy, telemetry mode, and the exact release identity.                         |
-   | `BACKUP_INTERVAL_SECONDS`, `BACKUP_RETENTION_DAYS`                                                                                                                                        | Local backup cadence and history window. See [Backups](#backups).                       |
-   | `GRAFANA_ADMIN_PASSWORD`                                                                                                                                                                  | Operator secret required when the optional observability overlay is composed.           |
-
-Optional: `FRONTEND_URLS` (extra CORS origins, no wildcards in production),
-`SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN`, `SMTP_USER`, `SMTP_PASS`.
-`CLIENT_LOG_FORWARDING`, `NEXT_PUBLIC_CLIENT_LOG_FORWARDING`,
-`NEXT_PUBLIC_WEB_VITALS`, `PRODUCT_FEEDBACK_ENABLED`,
-`NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED`, and
-`NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES` are explicit required values. The
-inbox role list must include `admin` whenever feedback is enabled, and the two
-product-feedback values must match. `NEXT_PUBLIC_SENTRY_DSN` is compiled into the Web image; changing
-it requires `up --build`, not a container restart.
-
-The local Bugsink errors overlay accepts `BUGSINK_PORT` (default `8000`) and
-requires `BUGSINK_SECRET_KEY` with no Compose fallback. Both are loopback/local
-settings; the errors overlay is not part of the production Compose command, so
-`BUGSINK_SECRET_KEY` is intentionally absent from the production environment
-template.
-
-Production Compose owns the internal web-to-api origin as one YAML anchor
-(`http://api:3001`) and supplies it to both the Next build and the running
-Web server. Do not add `API_URL` to `.env.production`; an operator override
-would let rewrites and server-side fetches target different origins.
-
-2. **Build the release images.** `NEXT_PUBLIC_*` values are compiled into the
-   client bundle, so a changed public origin needs a rebuild, not a restart.
+1. Confirm the Kubernetes context and namespace, registry access, StorageClass,
+   Ingress/TLS, trusted proxy ranges, IdP, SMTP, and monitoring ownership using
+   [Before the first install](kubernetes.md#before-the-first-install). Memory
+   requests and limits live in chart `values.yaml`; size the cluster and storage
+   for the chosen values. The repository has no measured production capacity.
+2. Copy `deploy/helm/weeklyreport/values.production.example.yaml` to a reviewed
+   values file outside Git. `values.schema.json` is the required-input contract;
+   missing required values fail rendering. Supply exactly one Secret source as
+   described in [Secrets](kubernetes.md#secrets). Do not copy local `.env` values
+   into production. Keep the encryption key and its version recoverable outside
+   the cluster, together with the values and Secret recovery procedure.
+3. Build the release with the `build-images` CI job and verify its result and
+   `image-digests.txt`. All four repository images use the same commit SHA in
+   `images.tag`. `NEXT_PUBLIC_*` inputs belong to the image build, not Helm
+   runtime configuration. `NEXT_PUBLIC_SENTRY_DSN` is compiled into the Web image;
+   changing it requires a new image build and deployment. The build and chart
+   own the same fixed `API_URL=http://api:3001`; it is not an operator override.
+4. Review the render before activation, then install the release:
 
    ```sh
-   docker compose --env-file .env.production -f docker-compose.prod.yml build
+   kubectl config current-context
+   helm lint deploy/helm/weeklyreport --strict -f <values-file> --set images.tag=<commit-sha>
+   helm template weeklyreport deploy/helm/weeklyreport -n <ns> -f <values-file> --set images.tag=<commit-sha>
+   helm upgrade --install weeklyreport deploy/helm/weeklyreport -n <ns> --create-namespace \
+     -f <values-file> --set images.tag=<commit-sha> --atomic --timeout 10m
    ```
 
-3. **Activate the release.** Start the stack:
+   Use the same reviewed values and tag for rendering and installation. Rendered
+   output can contain Secrets when `secrets.create=true`; protect it accordingly.
+   `--atomic` restores manifests on failure, but does not undo migrations.
+
+5. Verify the release before serving users:
 
    ```sh
-   docker compose --env-file .env.production -f docker-compose.prod.yml up -d
+   helm -n <ns> status weeklyreport
+   kubectl -n <ns> get pods,pvc,jobs,cronjobs
+   kubectl -n <ns> logs deployment/api -c migrate
+   kubectl -n <ns> rollout status deployment/api --timeout=5m
+   kubectl -n <ns> rollout status deployment/web --timeout=5m
+   curl -fsS https://<host>/health/ready
+   curl -fsS https://<host>/health/pdf-renderer
    ```
 
-4. **Watch the boot order.** `migrate` must exit 0 before `api` starts; `api`
-   must report healthy before `web` and `caddy` start. A stuck start is almost
-   always `migrate` failing — read its log first.
-
-5. **Verify before announcing.**
-
-   ```sh
-   docker compose --env-file .env.production -f docker-compose.prod.yml ps        # long-running services healthy; guards/migrate exited 0
-   curl -fsS https://<host>/health/ready                # api: DB + Redis + queues + memory
-   ```
-
-The production Caddy mount defaults to `deploy/helm/weeklyreport/files/Caddyfile`; do not
-hand-edit the container mount.
+   Follow the sign-in, role, report, PDF, mail, and edge checks in
+   [Kubernetes delivery](kubernetes.md#local-stand-and-move-to-production).
+   Readiness alone does not prove those flows or external production controls.
 
 ## Owner flags and when to remove them
 
@@ -183,9 +93,9 @@ gone. Env flags accept only `true` or `false`; any other value fails startup.
 - `GET /health/live` — the process is up. Says nothing about dependencies.
 - `GET /health/ready` — checks Postgres, Redis, both required BullMQ workers and
   their queues, and heap against `HEAP_HEALTH_THRESHOLD_BYTES`. This is what the
-  container healthcheck and any load balancer should use. During startup it
-  stays unavailable until both workers connect; Compose grants a 60-second
-  startup grace.
+  API startup and readiness probes use. During startup it stays unavailable
+  until both workers connect; the chart allows 12 startup attempts at five-second
+  intervals. Liveness uses `/health/live` independently.
 - `GET /health/pdf-renderer` — dedicated, non-gating probe of the Gotenberg
   service's own `GET /health`. It reports `up`/`down` (200/503) and never joins
   `/health/ready`: a renderer outage degrades PDF exports (jobs fail retryably)
@@ -204,71 +114,154 @@ gone. Env flags accept only `true` or `false`; any other value fails startup.
 
 Read the JSON body first: it names the failing indicator.
 
-| Indicator  | Likely cause and first move                                                                                                                                                                                                                                   |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `database` | pgbouncer or postgres down, or the pool is exhausted. `docker compose --env-file .env.production -f docker-compose.prod.yml logs pgbouncer postgres`. Its healthcheck runs a real `SELECT 1` through the pooler, so a healthy pgbouncer means the path works. |
-| `redis`    | Redis evicting or out of memory. It runs `noeviction` on purpose — a full Redis fails writes loudly rather than dropping jobs. Check `INFO memory` against the 200 MB cap.                                                                                    |
-| `bullmq`   | A required worker is starting, paused, stopped, or disconnected, or a queue is wedged. Read the safe `workers` states, then inspect API logs, `/admin/queues`, and the DLQ.                                                                                   |
-| `memory`   | Heap crossed the threshold. This sheds traffic on purpose, ahead of the container OOM-killer. Restart the api, then find what grew.                                                                                                                           |
+| Indicator  | Likely cause and first move                                                                                                                                                                                             |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `database` | pgbouncer or postgres down, or the pool is exhausted. `kubectl -n <ns> logs deployment/pgbouncer` and `kubectl -n <ns> logs statefulset/postgres`. The pooler probe runs a real `SELECT 1` through its database path.   |
+| `redis`    | Redis evicting or out of memory. It runs `noeviction` on purpose — a full Redis fails writes loudly rather than dropping jobs. Check `INFO memory` against the configured `redis.maxmemoryMb` cap (200 MiB by default). |
+| `bullmq`   | A required worker is starting, paused, stopped, or disconnected, or a queue is wedged. Read the safe `workers` states, then inspect API logs, `/admin/queues`, and the DLQ.                                             |
+| `memory`   | Heap crossed the threshold. This sheds traffic on purpose, ahead of the container OOM-killer. Restart the api, then find what grew.                                                                                     |
 
 ## Backups
 
-The `backup` service dumps the database every `BACKUP_INTERVAL_SECONDS` into
-the `pgbackups` volume and deletes dumps older than `BACKUP_RETENTION_DAYS`.
-Both values are required: cadence sets the intended interval between successful
-local dumps, while retention sets the local history window. Neither value alone
+The `backup` CronJob runs the image-baked `backup-loop.sh` with
+`BACKUP_RUN_ONCE=true`. `backup.schedule` controls the cadence and
+`backup.retentionDays` controls the local history window. Neither value alone
 proves achieved RPO or RTO; those measurements come from a recorded restore
-drill. A default would silently invent recovery policy nobody agreed to.
-Its pinned backup image contains the backup, health, and restore entrypoints;
-the production Compose file does not mount mutable host scripts into it. Every
-repository-built image is tagged with the configured release version; the
-documented `up --build` command prevents a stale local tag from being reused.
+drill. The CronJob has `concurrencyPolicy: Forbid`, no Job retry, and a bounded
+run time. A completed dump is published as `customreport-<stamp>.dump` only after
+`pg_dump` succeeds; failures leave no restorable-looking partial file.
 
-Its healthcheck is deliberately not a liveness probe — it goes red when the
-newest dump is older than two intervals, because a loop whose every `pg_dump`
-fails looks perfectly alive until someone needs a restore.
+The backup image also contains `restore.sh`. It uses the release's image tag,
+Secret, resource limits, and security context. No mutable host script is mounted.
+The Job is pinned to the PostgreSQL node because both mount the ReadWriteOnce
+`pgbackups` volume. PostgreSQL mounts that volume read-only for inspection.
 
-**The volume is not off-site.** A local dump survives a bad migration or a
-mistaken `DELETE`; it does not survive the disk. Replicating `pgbackups`
-somewhere else is a deployment decision this repo cannot make for you.
+Monitor the CronJob's last successful run and failed Jobs through the cluster
+monitoring platform (for example, kube-state-metrics). The chart does not run
+the standalone backup loop's staleness healthcheck. **The PVC is not off-cluster
+protection.** Replication to an independent failure domain, encryption, retention,
+and restore access remain operator-owned requirements.
+
+### Manual and pre-deploy backup
+
+Record the CronJob's current suspension state, suspend it, and wait for any
+already-active backup Job to finish. Coordinate with other operators so they do
+not create a concurrent manual Job, then choose a unique Job name.
+`concurrencyPolicy: Forbid` governs the CronJob controller; it does not serialize
+manually created Jobs. Suspension does not stop an already-running Job.
+
+```sh
+kubectl -n <ns> get cronjob/backup -o jsonpath='{.spec.suspend}'
+kubectl -n <ns> patch cronjob/backup --type=merge -p '{"spec":{"suspend":true}}'
+kubectl -n <ns> get jobs
+# Continue only after every earlier backup Job has finished.
+kubectl -n <ns> create job --from=cronjob/backup backup-<run-id>
+kubectl -n <ns> wait --for=condition=complete job/backup-<run-id> --timeout=30m
+kubectl -n <ns> logs job/backup-<run-id>
+kubectl -n <ns> exec statefulset/postgres -- ls -lh /backups
+kubectl -n <ns> exec statefulset/postgres -- pg_restore --list /backups/<dump-file>
+kubectl -n <ns> exec statefulset/postgres -- sha256sum /backups/<dump-file>
+```
+
+Use the exact filename from the successful Job log. A timeout is not a success;
+inspect Job status, events, and logs before proceeding. Before a schema release,
+preserve the verified dump and checksum in protected recovery storage outside
+CronJob retention. Its ordinary `customreport-*.dump` remains subject to pruning.
+A readable archive is necessary evidence, but does not prove a successful restore.
+Restore the recorded CronJob suspension state after the backup finishes and its
+archive is secured; if it was previously unsuspended, use
+`kubectl -n <ns> patch cronjob/backup --type=merge -p '{"spec":{"suspend":false}}'`.
+A failed manual run must be investigated, not silently reported as a backup.
 
 ### Restore drill
 
-Practise this on a scratch database before you need it in anger. Repository
-tests exercise the archive, target, consent, and transaction guards, but they do
+Practise on an explicitly authorized disposable target. Repository tests
+exercise the archive, target, consent, and transaction guards, but they do
 not constitute a current restore drill or prove schema and row-count parity.
-The procedure remains **untested in production**.
+The local-stand drill recorded in [Kubernetes delivery](kubernetes.md#backups-and-restore-drill)
+does not authorize another target or establish production recovery.
 
-```sh
-# 1. Stop everything that writes. pg_restore --clean must DROP objects, and an
-#    open api connection makes that hang halfway.
-docker compose --env-file .env.production -f docker-compose.prod.yml stop api web
+A production restore is destructive and requires separate authorization for the
+exact target and data-loss window. The standing local test-database permission
+does not authorize it. The procedure remains **untested in production**.
 
-# 2. Pick a dump.
-docker compose --env-file .env.production -f docker-compose.prod.yml run --rm backup ls -lh /backups
+1. Confirm the Kubernetes context, namespace, `postgres.db`, Secret reference,
+   dump path and checksum, and release image. Record the current API, Web, and
+   PgBouncer replica counts and CronJob suspension state. Arrange maintenance
+   access at the Ingress so users cannot resume traffic during validation. Stop
+   deployment automation and all other writers for the maintenance window.
+2. Suspend scheduled backups and wait for every already-active backup Job to
+   finish. Suspension does not stop running Jobs. Stop the application and
+   pooler, then wait until their pods have terminated:
 
-# 3. Restore. The token binds environment, host, port, and database. Production
-#    additionally requires the repository-wide destructive consent. Replace
-#    <POSTGRES_DB> below with the exact value from .env.production.
-docker compose --env-file .env.production -f docker-compose.prod.yml run --rm \
-  -e 'CONFIRM_RESTORE_TARGET=production|postgres|5432|<POSTGRES_DB>' \
-  -e 'PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=давай' \
-  -e ALLOW_PROD_DESTRUCTIVE=yes \
-  backup /usr/local/bin/restore.sh /backups/customreport-<stamp>.dump
+   ```sh
+   kubectl -n <ns> patch cronjob/backup --type=merge -p '{"spec":{"suspend":true}}'
+   kubectl -n <ns> get jobs
+   kubectl -n <ns> scale deployment/api deployment/web deployment/pgbouncer --replicas=0
+   kubectl -n <ns> wait --for=delete pod -l 'app.kubernetes.io/name=weeklyreport,app.kubernetes.io/component in (api,web,pgbouncer)' --timeout=2m
+   ```
 
-# 4. Bring the app back and confirm before serving traffic.
-docker compose --env-file .env.production -f docker-compose.prod.yml start api web
-curl -fsS https://<host>/health/ready
-```
+   Verify there are no remaining external database writers or open transactions.
+   Do not start a restore after a failed wait or while a backup is still active.
 
-The restore runs in a single transaction: a failure part-way rolls back to the
-pre-restore state rather than leaving a half-populated schema.
+3. Prepare a Job outside Git from the installed CronJob. This retains the exact
+   image, Secret references, UID, resource limits, and PostgreSQL node affinity:
+
+   ```sh
+   kubectl -n <ns> create job --from=cronjob/backup restore-<run-id> \
+     --dry-run=client -o yaml > <protected-state-dir>/restore.yaml
+   ```
+
+   Edit its single container's `command` and append the three guard variables to
+   its existing `env` list; preserve the inherited `PG*` and
+   `RESTORE_ENVIRONMENT=production` values:
+
+   ```yaml
+   command: ["/usr/local/bin/restore.sh", "/backups/<dump-file>"]
+   # Append to the existing env list; substitute the exact postgres.db below.
+   env:
+     - { name: CONFIRM_RESTORE_TARGET, value: "production|postgres|5432|<db>" }
+     - { name: PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION, value: "давай" }
+     - { name: ALLOW_PROD_DESTRUCTIVE, value: "yes" }
+   ```
+
+   Set the `/backups` volume mount to `readOnly: true`, review the Job deadline
+   for the planned restore, and verify the manifest's namespace and target before
+   applying. These tokens satisfy the script guard; they do not grant production
+   authorization. Never weaken or remove the guard to make a run pass.
+
+4. Run the reviewed Job and inspect its result:
+
+   ```sh
+   kubectl -n <ns> apply -f <protected-state-dir>/restore.yaml
+   kubectl -n <ns> wait --for=condition=complete job/restore-<run-id> --timeout=<approved-timeout>
+   kubectl -n <ns> logs job/restore-<run-id>
+   ```
+
+   `restore.sh` validates the archive and exact target before invoking
+   `pg_restore --clean --if-exists --single-transaction`. A failed restore rolls
+   back the transaction. Require both a completed Job and `[restore] complete`;
+   on failure keep writers stopped and investigate.
+
+5. Compare the restored schema and agreed control queries against the backup
+   record before restarting writers. Confirm that the selected API image and
+   migrations are compatible with that schema: the migrate initContainer runs
+   again when the API starts. Restore PgBouncer, API, and Web to their recorded
+   replica counts, wait for rollout readiness, then check `/health/ready` and the
+   agreed role/report/PDF flows before reopening traffic. Restore the prior
+   CronJob suspension state only after recovery succeeds.
+
+Redis queues and `pdfdata` files are not in the PostgreSQL dump. Preserve them
+and reconcile their state with the restored database; do not assume every queue
+or PDF can be rebuilt automatically. Record missing or stale artifacts before
+choosing an authorized repair.
 
 A drill record must bind the repository SHA, dump checksum, source and target,
 start and finish timestamps, schema comparison, agreed row-count or checksum
 queries, and the final readiness result. Keep that read-back outside the
 repository with the production release evidence; without it, measured RPO/RTO
-and production recovery remain BLOCKED.
+and production recovery remain BLOCKED. Preserve Job logs and evidence before
+removing completed manual Jobs and the temporary restore manifest.
 
 ## Rotating secrets
 
@@ -279,9 +272,10 @@ live session or in-flight export** — there is no dual-key grace period.
 To rotate `AUTH_JWT_SECRET`:
 
 1. Announce that signed-in users will need to log in again.
-2. Put the new `AUTH_JWT_SECRET` value in the environment file.
-3. Run `docker compose --env-file .env.production -f docker-compose.prod.yml up -d api`
-   to recreate the API with the new key.
+2. Update `AUTH_JWT_SECRET` through the owner of the installed Kubernetes Secret.
+3. Run `kubectl -n <ns> rollout restart deployment/api`, wait for
+   `kubectl -n <ns> rollout status deployment/api`, and verify readiness and sign-in.
+   Changing a Secret alone does not restart pods.
 
 `AI_PROVIDER_CONFIG_ENCRYPTION_KEY` and `AI_PROVIDER_CONFIG_KEY_VERSION` have
 an even narrower current-MVP boundary: the credential codec has exactly one
@@ -299,12 +293,18 @@ be recovered and every provider credential must be entered again under the new
 pair. Treat that outcome as provider reconfiguration, not a reversible key
 rotation.
 
-`DB_PASSWORD` is referenced by the config guard, postgres, pgbouncer, migrate
-and backup, so rotating it means changing the role password in Postgres and
-recreating those services together. It must contain only URL-safe unreserved
-characters (`A-Z a-z 0-9 . - _ ~`); `POSTGRES_DB` must contain only letters,
-digits, and underscores. The config guard validates both before any
-database-dependent service starts. `NEXT_PUBLIC_*` changes need a **rebuild** —
+`DB_PASSWORD` is shared by PostgreSQL, PgBouncer, migrations, and backups.
+Changing the Kubernetes Secret or restarting PostgreSQL does **not** change an
+existing database role's password. Plan a coordinated maintenance operation to
+change the role password, update the Secret, restart its consumers, and verify
+new connections; suspend backups during that window. Do not use a generic
+Secret restart command as a database-password rotation procedure.
+
+The password must contain only URL-safe unreserved characters
+(`A-Z a-z 0-9 . - _ ~`); `postgres.db` must contain only letters, digits, and
+underscores. Helm validates the database name and a values-supplied password.
+For an existing Secret, the migrate initContainer validates the password before
+its first database connection. `NEXT_PUBLIC_*` changes need a **rebuild** —
 they are inlined at build time and a restart will not pick them up.
 
 ### API shutdown budget
@@ -314,14 +314,16 @@ budget: application close, rate-limit Redis, log barrier and file flush, OTel,
 and Sentry. BullMQ workers and queue handles first attempt a graceful close for
 500 ms, then use BullMQ's supported force-close/disconnect operation. Force
 disconnecting does not delete active jobs; BullMQ's stalled-job recovery can
-reclaim them on the next worker start. Production Compose grants the API a
-20-second `stop_grace_period`, leaving margin for signal delivery and runtime
+reclaim them on the next worker start. The chart grants the API a
+20-second `terminationGracePeriodSeconds`, leaving margin for signal delivery and runtime
 teardown while preserving the final log and telemetry phases.
 
 ## Migrations
 
-`migrate` runs `prisma migrate deploy` on every `up`, applying only pending
-migrations. It never resets.
+The API pod's `migrate` initContainer runs `prisma migrate deploy` before the
+API starts, applying only pending migrations. It never resets. A failed
+migration blocks API startup; inspect `kubectl -n <ns> logs deployment/api -c migrate`
+and follow [failed migration recovery](kubernetes.md#rollback-and-failed-migrations).
 
 The repository has a canonical init migration followed by forward-only additive
 migrations synchronized with `schema.prisma`. Never rewrite applied migration
@@ -371,34 +373,29 @@ mutations, and SSE rather than falling back to SQLite.
 
 ## Rollback
 
-Images are the unit of rollback; the database is not.
+Images are the unit of rollback; the database is not. Production image rollback
+is **BLOCKED** until the selected release's images remain available in the
+registry and deployment read-back exists. The chart closes the
+image-source blocker only after the first successful image push and a
+verified deployment; a local rebuild is not evidence of production rollback.
 
-- **Application only, Compose**: production image rollback is **BLOCKED**
-  until the delivery platform supplies immutable API/Web image references and
-  read-back. The Compose file builds from the checked-out source, so
-  rebuilding an older commit is a pre-production recovery exercise, not proof
-  that the deployed artifact can be restored. Do not describe a local rebuild
-  or a dangling Docker image as a production rollback.
-- **Application only, Kubernetes**: the chart selects images by `images.tag`
-  (the commit SHA pushed by the `build-images` CI job), so rolling back is
-  `helm rollback` or `helm upgrade --set images.tag=<older SHA>` against an
-  image still in the registry (`docs/kubernetes.md`). This closes the
-  image-source blocker only after the first successful image push and a
-  deployment read-back exist; until then it is not a production rollback.
-- **Migration shipped**: rolling the image back does not roll the schema back,
-  and Prisma has no down-migrations here. Either fix forward with a new
-  migration, or restore the pre-deploy dump and accept losing writes made
-  since. Decide which before deploying anything schema-touching, and take a
-  dump of your own first rather than trusting the cycle to have just run:
+For a schema-compatible application/configuration rollback, inspect the release
+history and the target revision's images and values before running:
 
-  ```sh
-  docker compose --env-file .env.production -f docker-compose.prod.yml exec backup sh -c \
-    'pg_dump --format=custom --compress=6 --file=/backups/predeploy-$(date -u +%Y%m%dT%H%M%SZ).dump'
-  ```
+```sh
+helm -n <ns> history weeklyreport
+helm -n <ns> rollback weeklyreport <revision> --wait --timeout 10m
+kubectl -n <ns> rollout status deployment/api --timeout=5m
+curl -fsS https://<host>/health/ready
+```
 
-  Retention only prunes `customreport-*.dump`, so a `predeploy-*` dump stays
-  until you remove it — which is what you want for a rollback anchor. Delete it
-  yourself once the deploy has proven itself.
+Helm rollback and an upgrade's `--atomic` rollback restore manifests and image
+tags; neither restores the database. Never overwrite a published image tag.
+If a migration shipped, either fix forward with a new migration or use an
+explicitly authorized pre-deploy dump restore and accept the agreed loss of
+later writes. Prepare and verify that dump with
+[Manual and pre-deploy backup](#manual-and-pre-deploy-backup) before the release.
+The PDF artifact generation compatibility constraint above also applies.
 
 ## CI
 
@@ -418,7 +415,7 @@ commands remain the fast gate; run the same checks before pushing.
 
 ## External first-production prerequisites
 
-Local Compose and repository tests prove only repository-owned readiness. The
+Local Helm rehearsals and repository tests prove only repository-owned readiness. The
 following remain **BLOCKED** until an authorized external read-back exists:
 
 - a real alert receiver, escalation owner, and tested end-to-end alert;
@@ -435,14 +432,20 @@ The local `docker-compose.observability.yml` overlay, its
 `deploy/prometheus-otel-lgtm.yml` and `deploy/alert-rules.yml` mounts,
 `pgbackups` volume, and checked-in workflows are templates or repository evidence
 only; none is a production PASS by itself.
-When this overlay is composed with the production stack, it reads the required
-`GRAFANA_ADMIN_PASSWORD` operator secret from `.env.production`; the Compose
-contract has no password default.
+The local observability overlay reads `GRAFANA_ADMIN_PASSWORD` from root `.env`;
+its Compose contract has no password default. It is separate from production
+Helm, which ships no monitoring stack. The local Bugsink errors overlay accepts
+`BUGSINK_PORT` (default `8000`) and requires `BUGSINK_SECRET_KEY` with no Compose
+fallback; it is not part of the production Helm release.
+
 Grafana scans two non-overlapping dashboard roots: operational and tRPC
 dashboards appear in `CustomReport`, while product telemetry appears in
-`Product KPIs`. The production Prometheus overlay labels its series
+`Product KPIs`. The base Prometheus template still labels its series
 `cluster=customreport-production`; the composed-last development override keeps
-`cluster=customreport-local`.
+`cluster=customreport-local`. That template label does not establish a running
+production collector. `deploy/alert-rules.yml` and `deploy/grafana/**` remain
+operator reference material; verify their labels and receivers against the
+actual cluster before treating them as production monitoring.
 Off-box encrypted backup remains **BLOCKED** until an operator supplies a
 provider endpoint, repository identity, encryption key policy, retention policy,
 and a scheduled restore read-back. This repository deliberately does not invent

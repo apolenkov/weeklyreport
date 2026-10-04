@@ -2,82 +2,58 @@
 
 ## Purpose
 
-Docker healthchecks for the production API must exercise the real dependency
-path, not just TCP/process liveness, so an unhealthy container is detected
-before it serves traffic.
+Define dependency-aware production Kubernetes probes and standalone image healthchecks so unhealthy workloads cannot serve traffic while startup and liveness remain correctly bounded.
 
 ## Requirements
 
 ### Requirement: PgBouncer Healthcheck MUST Exercise the Query Path
 
-The pgbouncer service's `docker-compose.prod.yml` healthcheck MUST execute
-a real query against the `customreport` database through pgbouncer's own
-listener (`127.0.0.1:5432`) and MUST report unhealthy when that query
-fails or times out, even if pgbouncer's TCP listener still accepts
-connections. A bare `pg_isready`-style TCP-only probe MUST NOT be used as
-the sole healthcheck.
+The production Helm chart's pgbouncer readiness and liveness probes MUST execute a real query against the configured application database through pgbouncer's own listener (`127.0.0.1:5432`). A failed or timed-out query MUST fail the probe even when TCP connections succeed. A TCP-only check MUST NOT be the sole healthcheck.
 
 #### Scenario: PgBouncer can reach Postgres
 
-- **WHEN** the pgbouncer healthcheck runs and the query through
-  `127.0.0.1:5432` returns successfully
-- **THEN** Docker reports the pgbouncer container `healthy`
+- **WHEN** the pgbouncer readiness probe queries through `127.0.0.1:5432` successfully
+- **THEN** Kubernetes can mark the container Ready
 
 #### Scenario: Postgres is unreachable through pgbouncer
 
-- **WHEN** Postgres is overloaded, misconfigured, or its pool is exhausted,
-  such that a query routed through pgbouncer fails or times out, while
-  pgbouncer's own TCP listener still accepts connections
-- **THEN** the pgbouncer healthcheck fails
-- **AND** Docker reports the pgbouncer container `unhealthy` rather than
-  `healthy`
+- **WHEN** a query through pgbouncer fails or times out while its TCP listener still accepts connections
+- **THEN** readiness and liveness probes fail
+- **AND** the container is not Ready
 
-### Requirement: The API Image's Baked Healthcheck MUST Match Its Compose Override
+### Requirement: API deployment and image healthchecks exercise readiness with a startup budget
 
-`Dockerfile.api`'s baked `HEALTHCHECK` instruction MUST target the same
-`/health/ready` endpoint and MUST use a `--start-period` no shorter than
-`docker-compose.prod.yml`'s `api` service healthcheck override, so a
-standalone `docker run` of the image is checked as deeply as a
-compose-orchestrated container and is not marked healthy on liveness alone
-during its own startup window.
+`Dockerfile.api`'s baked `HEALTHCHECK` and the Helm API startup and readiness probes MUST use `/health/ready`. The baked start period and Helm startup failure budget MUST each allow at least 60 seconds for bootstrap. Kubernetes liveness MUST use `/health/live` so dependency failures do not restart a live process.
 
 #### Scenario: Standalone container without reachable dependencies
 
-- **WHEN** the api image runs standalone (no `docker compose`, no linked
-  Postgres/Redis) past its healthcheck `start-period`
-- **THEN** the baked `HEALTHCHECK` reports the container `unhealthy`,
-  because `/health/ready` fails its database/Redis/BullMQ checks
-- **AND** it does not report `healthy` on process-alive/memory checks alone
+- **WHEN** the API image runs standalone without reachable Postgres or Redis past its healthcheck start period
+- **THEN** its baked healthcheck reports unhealthy because readiness fails its database, Redis, or BullMQ checks
+- **AND** process liveness alone cannot report the image healthy
 
-#### Scenario: Compose-orchestrated container during bootstrap
+#### Scenario: Kubernetes container during bootstrap
 
-- **WHEN** the api container starts under `docker-compose.prod.yml` and is
-  still completing migration and tRPC bootstrap within the tuned
-  `start_period`
-- **THEN** the healthcheck does not flip the container to `unhealthy`
-  before that window elapses
+- **WHEN** the API container starts after migration and is completing bootstrap within its startup failure budget
+- **THEN** startup probing protects it from premature liveness restarts
+- **AND** the workload does not receive traffic until readiness succeeds
 
 ### Requirement: The PDF renderer healthcheck exercises its real health endpoint
 
-The `gotenberg` service's `docker-compose.prod.yml` healthcheck MUST exercise
-the renderer's real `GET /health` endpoint and MUST report unhealthy when
-that endpoint fails or times out. A bare TCP/process-liveness check MUST NOT
-be the sole healthcheck.
+The production Helm chart's gotenberg readiness and liveness probes MUST exercise the renderer's real `GET /health` endpoint and fail when it fails or times out. A bare TCP or process-liveness check MUST NOT be the sole healthcheck.
 
 #### Scenario: Renderer health endpoint is exercised
 
-- **WHEN** the gotenberg healthcheck runs and `GET /health` succeeds
-- **THEN** Docker reports the renderer container `healthy`
+- **WHEN** gotenberg readiness probing receives a successful `GET /health` response
+- **THEN** Kubernetes can mark the renderer container Ready
 
 #### Scenario: Renderer health endpoint fails
 
 - **WHEN** the renderer's `GET /health` fails or times out
-- **THEN** Docker reports the renderer container `unhealthy`
+- **THEN** Kubernetes readiness probing fails
 
 ### Requirement: The API has no startup dependency on the renderer
 
-The `api` service MUST NOT declare a `depends_on` edge on the renderer
-service in any Compose file. Compose `depends_on` does offer an optional
+The production Helm API workload MUST NOT wait for renderer readiness during startup, and the development `api` service MUST NOT declare a `depends_on` edge on the renderer in any retained Compose file. Compose `depends_on` does offer an optional
 mode (`required: false`, since Compose 2.20.0), but the renderer is a
 runtime-optional capability, not a startup dependency — the API never
 contacts it during boot, so even an optional edge would declare an ordering

@@ -1,9 +1,11 @@
 # Kubernetes delivery
 
 The production stack is delivered to a Kubernetes cluster as the Helm chart in
-`deploy/helm/weeklyreport/`. `docker-compose.prod.yml` stays as the tested
-reference and rollback path; the chart is checked against it by
-`scripts/gates/operations/helm-chart-parity.test.ts`.
+`deploy/helm/weeklyreport/`. Helm is the sole production deployment and
+rollback surface. Rendered manifests are checked against independent production
+contracts and the API runtime schema; chart `values.schema.json` and
+`values.production.example.yaml` define operator inputs. Development and local
+observability continue to use their existing Compose recipes.
 
 **Status.** The chart lints, renders, and passes the gate tests. It was
 installed on a local OrbStack cluster on 2026-10-01 and the read-back passed:
@@ -64,14 +66,16 @@ Keys: `DB_PASSWORD`, `AUTH_JWT_SECRET`, `PDF_EXPORT_JWT_SECRET`,
 `SENTRY_DSN`. `DB_PASSWORD` may contain only `A-Z a-z 0-9 . _ ~ -`; a password
 supplied through values is rejected at render time, one from an existing Secret
 is rejected by the first line of the `migrate` initContainer before any
-database connection. The assembled `DATABASE_URL` is built inside the pod, so
-the password never appears in a ConfigMap or rendered manifest.
+database connection. The assembled `DATABASE_URL` is built inside the pod and
+kept out of ConfigMaps. With `existingSecret`, rendered workloads contain only
+Secret references; `secrets.create=true` also renders sensitive Secret data.
 
-Rotation: changing a Secret does not restart pods. Run
-`kubectl -n <ns> rollout restart deployment/api deployment/web statefulset/postgres`
-(and `deployment/pgbouncer`); backup Jobs read the Secret on their next run.
-Do not rotate `AI_PROVIDER_CONFIG_ENCRYPTION_KEY` while encrypted provider
-credentials exist (see `docs/operations.md`).
+Changing a Secret does not restart pods. Restart only the consumers of the
+changed key and verify their rollout; backup Jobs read the Secret on their next
+run. Database-password rotation also requires changing the persisted PostgreSQL
+role password, which a Secret update or pod restart does not do. Follow
+[Rotating secrets](operations.md#rotating-secrets), including the restriction on
+`AI_PROVIDER_CONFIG_ENCRYPTION_KEY` while encrypted provider credentials exist.
 
 ## Install and upgrade
 
@@ -239,90 +243,21 @@ VERIFIED):
 
 ## Backups and restore drill
 
-The `backup` CronJob (`backup.schedule`, `backup.retentionDays`, both required)
-runs `backup-loop.sh` in one-shot mode into the `pgbackups` volume with
-`concurrencyPolicy: Forbid`. A failed `pg_dump` fails the Job and leaves no
-partial file. Same-cluster storage is not off-cluster protection; replicating
-the volume is a DevOps decision. Alert on the CronJob's last successful run
-(needs kube-state-metrics); the Compose staleness healthcheck has no CronJob
-equivalent. Run one manually with
-`kubectl -n <ns> create job --from=cronjob/backup backup-manual-1`.
+The chart's `backup` CronJob uses the release backup image, required
+`backup.schedule` and `backup.retentionDays`, and the `pgbackups` PVC. PostgreSQL
+mounts that PVC read-only; backup and recovery Jobs must share its node because
+it is ReadWriteOnce. Same-cluster storage is not off-cluster protection.
 
-Restore procedure (drilled on the local stand on 2026-10-04: backup, `TRUNCATE`
-of the report tables, restore, identical control counts and ids):
+Use the canonical [backup and restore runbook](operations.md#backups) for manual
+Jobs, pre-deploy archives, writer shutdown, CronJob suspension, and the one-off
+restore Job with the exact target and all destructive-consent guards. Do not
+apply production restore tokens to an unapproved target.
 
-1. Pick the dump: `kubectl -n <ns> exec statefulset/postgres -- ls -l /backups`
-   (the volume is mounted read-only there).
-2. Stop writers: `kubectl -n <ns> scale deploy/api deploy/web --replicas=0`.
-3. Run `restore.sh` from the backup image as a one-off Job on the same node as
-   `postgres` (ReadWriteOnce volume). `--clean --if-exists --single-transaction`
-   replaces the schema contents, so a failed restore leaves the database as it was.
-
-   ```yaml
-   apiVersion: batch/v1
-   kind: Job
-   metadata: { name: restore-1 }
-   spec:
-     backoffLimit: 0
-     template:
-       spec:
-         restartPolicy: Never
-         automountServiceAccountToken: false
-         securityContext: { runAsNonRoot: true, runAsUser: 70, fsGroup: 70 }
-         affinity:
-           podAffinity:
-             requiredDuringSchedulingIgnoredDuringExecution:
-               - topologyKey: kubernetes.io/hostname
-                 labelSelector:
-                   matchLabels:
-                     {
-                       app.kubernetes.io/component: postgres,
-                       app.kubernetes.io/name: weeklyreport,
-                     }
-         containers:
-           - name: restore
-             image: <registry>/backup:<tag>
-             command: ["/usr/local/bin/restore.sh", "/backups/<dump-file>"]
-             env:
-               - { name: PGHOST, value: postgres }
-               - { name: PGPORT, value: "5432" }
-               - { name: PGUSER, value: customreport }
-               - {
-                   name: PGPASSWORD,
-                   valueFrom:
-                     { secretKeyRef: { name: <secret>, key: DB_PASSWORD } },
-                 }
-               - { name: PGDATABASE, value: <db> }
-               - { name: RESTORE_ENVIRONMENT, value: production }
-               - {
-                   name: CONFIRM_RESTORE_TARGET,
-                   value: "production|postgres|5432|<db>",
-                 }
-               - {
-                   name: PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION,
-                   value: "давай",
-                 }
-               - { name: ALLOW_PROD_DESTRUCTIVE, value: "yes" }
-             volumeMounts:
-               [{ name: pgbackups, mountPath: /backups, readOnly: true }]
-         volumes:
-           - {
-               name: pgbackups,
-               persistentVolumeClaim: { claimName: pgbackups },
-             }
-   ```
-
-   Add `imagePullSecrets` when the registry is private. Wait with
-   `kubectl -n <ns> wait --for=condition=complete job/restore-1` and read its
-   log for `[restore] complete`.
-
-4. Scale `api` and `web` back to 1 and check `/health/ready`.
-5. Compare a control sample taken before the incident (row counts of `Report`,
-   `ReportSection`, `User`, ids and statuses of the published report).
-
-Not in the dump: Redis (queues are rebuilt by the api) and the files on the
-`pdfdata` volume (the export rows are restored, regenerate the files). A
-restore from an off-cluster copy is not drilled.
+Recorded local evidence from 2026-10-04: backup, `TRUNCATE` of report tables,
+restore, and matching control counts and IDs on the local stand. This historical
+read-back is not a new drill, production acceptance, or evidence of an
+independent off-cluster restore. Redis queues and `pdfdata` are outside the
+PostgreSQL dump and require separate reconciliation.
 
 ## Monitoring and logs
 

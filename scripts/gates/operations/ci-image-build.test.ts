@@ -154,6 +154,22 @@ test("the build job pushes four SHA-tagged images and records their digests", ()
     );
   }
   assert.ok(calls.some((call) => call.includes("target=migrator")));
+  const webBuild = calls.find((call) =>
+    call.includes(`name=${registry}/web:0123456789abcdef,push=true`),
+  );
+  assert.ok(webBuild, "the web image must be built");
+  for (const argument of [
+    "API_URL=http://api:3001",
+    `NEXT_PUBLIC_APP_VERSION=${BUILD_ENV.CI_COMMIT_SHA}`,
+    "NEXT_PUBLIC_AUTH_STUB=false",
+    "NEXT_PUBLIC_DEV_ROLE_SWITCHER=false",
+    `NEXT_PUBLIC_CLIENT_LOG_FORWARDING=${BUILD_ENV.WR_NEXT_PUBLIC_CLIENT_LOG_FORWARDING}`,
+    `NEXT_PUBLIC_WEB_VITALS=${BUILD_ENV.WR_NEXT_PUBLIC_WEB_VITALS}`,
+    `NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED=${BUILD_ENV.WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED}`,
+    `NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES=${BUILD_ENV.WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES}`,
+  ]) {
+    assert.ok(webBuild.includes(`build-arg:${argument}`), argument);
+  }
   assert.equal(readFileSync(digests, "utf8").trim().split("\n").length, 4);
   assert.doesNotMatch(
     result.stdout + result.stderr,

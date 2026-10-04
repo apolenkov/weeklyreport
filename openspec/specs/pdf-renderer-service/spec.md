@@ -147,7 +147,7 @@ conversions; both are accepted because the `/print` tree uses no
 persistent-storage API (reachable-print-source audit). Under serialization the renderer per-request
 deadline includes queue waiting, so a queued conversion can exhaust its own
 timeout before receiving a slot — a bounded, retryable outcome. This
-invariant MUST be asserted by the production compose gate against the
+invariant MUST be asserted by the production Helm gate against the
 effective configured values, not mere env presence; it MAY be relaxed only
 when the credential transport is proven to be per-request isolated from the
 shared jar.
@@ -162,7 +162,7 @@ shared jar.
 
 #### Scenario: The invariant is gate-enforced
 
-- **WHEN** the production Compose definition is inspected by the
+- **WHEN** the rendered production Helm manifests are inspected by the
   configuration gate
 - **THEN** the renderer service carries `CHROMIUM_MAX_CONCURRENCY=1`,
   `CHROMIUM_CLEAR_COOKIES=true`, `CHROMIUM_CLEAR_STORAGE=true`, and
@@ -194,7 +194,7 @@ initial safety bound, not measured capacity evidence.
 
 ### Requirement: The renderer service is internal-only and immutably pinned
 
-The `gotenberg` service MUST be declared in the Compose service graph with an
+The production `gotenberg` service MUST be declared in the Helm chart with an
 immutable image reference — `gotenberg/gotenberg:8.37.0-chromium` pinned by
 the multi-platform manifest-list sha256 digest — MUST NOT publish a host
 port or a public ingress route, and MUST be reachable only by the API over
@@ -204,8 +204,8 @@ address.
 
 #### Scenario: No external surface exists
 
-- **WHEN** the production Compose file is inspected
-- **THEN** the renderer has no `ports:` publish and no ingress route
+- **WHEN** the rendered production Helm resources are inspected
+- **THEN** the renderer has only an internal ClusterIP Service, no host port or host networking, and no ingress route
 - **AND** the API reaches it only through `GOTENBERG_URL` on the internal
   network
 

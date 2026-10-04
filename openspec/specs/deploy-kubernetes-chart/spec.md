@@ -8,17 +8,7 @@ Defines the Helm chart that deploys WeeklyReport to Kubernetes: workloads, confi
 
 ### Requirement: The chart fails closed on configuration
 
-The Helm chart in `deploy/helm/weeklyreport/` MUST declare every production
-input that `docker-compose.prod.yml` requires with `${VAR:?}` as a required
-key in `values.schema.json`, MUST set `additionalProperties: false`, and MUST
-give product configuration no default in `values.yaml`. Installing or
-templating with a required key absent MUST fail before any object is created.
-The only compose `${VAR:?}` inputs without a required chart value are those the
-chart derives or does not need: `HTTP_PORT`, `HTTPS_PORT`, `HTTPS_PORT_QUIC`,
-`CADDY_SITE_ADDRESS`, `CADDY_ACME_EMAIL`, `BACKUP_INTERVAL_SECONDS`,
-`PDF_BASE_URL`, `CHROMIUM_ALLOW_LIST`, `GOTENBERG_URL`,
-`OTEL_SERVICE_VERSION`, and the web build arguments `NEXT_PUBLIC_*` (set by the CI
-image job); the parity gate keeps this list.
+The Helm chart in `deploy/helm/weeklyreport/` MUST declare all required operator-owned production policy inputs as required keys in `values.schema.json`, MUST set `additionalProperties: false`, and MUST give required product configuration no default in `values.yaml`. Installing or templating with a required key absent MUST fail before any object is created. Chart-derived topology and runtime literals MUST NOT become independent operator inputs; runtime release identity MUST derive from the required image tag. Secret inputs MUST follow the chart's explicit Secret-source contract; public Web build arguments MUST remain required inputs of the CI image build.
 The database name MUST match letters, digits, and underscores. When the
 database password is supplied through values it MUST be checked at template
 time against the URL-safe unreserved character set; when it comes from an
@@ -81,7 +71,7 @@ NOT start until the initContainer has completed.
 ### Requirement: One edge carries the route and header contract
 
 The Ingress MUST route all paths to Service `edge`, which runs Caddy over plain
-HTTP with the same Caddyfile compose uses. The Caddyfile MUST keep the route
+HTTP with the canonical `deploy/helm/weeklyreport/files/Caddyfile`. The Caddyfile MUST keep the route
 table, the enforcing security-header floor, and the `/metrics` 404. The chart
 MUST NOT expose any other workload through the Ingress. The Caddyfile MUST
 resolve the client address through a configured trusted-proxy list with
@@ -178,15 +168,14 @@ protection.
 - **THEN** one `customreport-*.dump` is written atomically, older dumps beyond retention are pruned, and the job exits 0
 - **AND** a failed `pg_dump` exits non-zero and leaves no restorable-looking partial file
 
-#### Scenario: Compose loop unchanged
+#### Scenario: Standalone backup loop remains available
 
 - **WHEN** `backup-loop.sh` runs without the one-shot variable
 - **THEN** it loops at `BACKUP_INTERVAL_SECONDS` as before
 
 ### Requirement: Resources, probes, and security contexts are explicit
 
-Every workload MUST set memory requests and limits (compose limits as the
-ceiling), `automountServiceAccountToken: false`, `seccompProfile: RuntimeDefault`,
+Every workload MUST set explicit memory requests and limits. Default memory limits MUST remain at the reviewed bounds: api 2Gi; migrate, web, and postgres 512Mi; gotenberg 1Gi; pgbouncer 128Mi; redis, edge, and backup 256Mi. Explicit operator resource overrides remain available through chart values. Every workload MUST set `automountServiceAccountToken: false`, `seccompProfile: RuntimeDefault`,
 `allowPrivilegeEscalation: false`, dropped capabilities, and numeric `runAsUser`
 with `runAsNonRoot`. The api MUST use `/health/live` for liveness and
 `/health/ready` for readiness and startup. A read-only root filesystem MUST be
@@ -209,32 +198,46 @@ The chart MUST NOT install a monitoring stack. It MUST offer `api.podAnnotations
 ### Requirement: Chart images are pinned and come from CI
 
 Third-party images in `values.yaml` MUST use an explicit tag and `@sha256:`
-digest, identical to the digests in `docker-compose.prod.yml` for the same
-service. Application images (`api`, `migrate`, `web`, `backup`) MUST be selected
+digest from the reviewed external-image policy. Application images (`api`, `migrate`, `web`, `backup`) MUST be selected
 by a required `images.tag` and registry value, MUST NOT use `latest`, and MUST be
 the images built by the CI image job. The api `OTEL_SERVICE_VERSION` MUST be
 derived from `images.tag`, not supplied separately.
 
-#### Scenario: Image drift between compose and chart
+#### Scenario: An unreviewed third-party image is introduced
 
-- **WHEN** compose and the chart name different digests for the same third-party service
-- **THEN** the parity gate fails
+- **WHEN** chart values select an unpinned, moving, or unreviewed third-party service image
+- **THEN** the production image-policy gate fails
 
-### Requirement: Chart behaviour is gate-enforced and compose is the parity reference
+### Requirement: Chart behaviour is gate-enforced against independent production contracts
 
-`pnpm test` MUST run chart tests that lint and render the chart with a fixture
-values file, enforce the fixed `CHROMIUM_*` and literal-environment invariants,
-and compare only (a) third-party image digests and (b) the api environment key
-set against `docker-compose.prod.yml`, with the exception list kept in the test. The
-repository MUST keep `docker-compose.prod.yml` until a later change removes it
-after the first production deployment on the cluster.
+`pnpm test` MUST lint and render the production chart with fixture values and enforce the runtime environment contract, required inputs, reviewed images, private Services, explicit memory limits, security contexts, health probes, fixed `CHROMIUM_*` policy, and literal production auth flags. The API key coverage check MUST compare the rendered environment and chart schema against the runtime configuration contract, including reviewed generated and secret keys, without reading a production Compose file.
 
-#### Scenario: A key is added to one side only
+#### Scenario: A runtime input is omitted
 
-- **WHEN** an api environment key exists in compose but not in the chart, or the reverse, and is not on a reviewed exception list
-- **THEN** the parity gate fails and names the key
+- **WHEN** a required API runtime environment key has no chart-provided value, generated value, or Secret reference
+- **THEN** the chart configuration gate fails and names the key
+
+#### Scenario: A production constraint is weakened
+
+- **WHEN** a rendered workload loses a required memory bound, probe, security context, or private network boundary
+- **THEN** the production chart gate fails
 
 #### Scenario: Untested claims stay marked
 
 - **WHEN** the delivery report is written
 - **THEN** authenticated flows, real Ingress behaviour, and the CI builder on the project runner are listed as NOT VERIFIED unless evidence exists
+
+### Requirement: Helm is the sole production deployment and rollback path
+
+The repository MUST offer production installation, upgrades, and rollback through `deploy/helm/weeklyreport/`, Helm values, and Kubernetes Secrets. Current production instructions and acceptance gates MUST NOT depend on a production Compose file or Compose environment template. Runbooks MUST describe Helm rollback separately from database restore.
+
+#### Scenario: A production release is installed or rolled back
+
+- **WHEN** an operator follows the current production runbook
+- **THEN** installation and upgrades use Helm and compatible release rollback uses Helm release history
+- **AND** database recovery retains its explicit target confirmation and destructive consent safeguards
+
+#### Scenario: Development tooling is inspected
+
+- **WHEN** the production deployment configuration is retired
+- **THEN** development Compose and its local observability and error-tracking overlays remain available with their existing safety requirements
