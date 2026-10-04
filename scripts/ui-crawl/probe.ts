@@ -17,7 +17,7 @@ export type ProbedControl = Readonly<{
   alternatives: readonly string[];
 }>;
 
-export type GeometryIssue = Readonly<{
+type GeometryIssue = Readonly<{
   kind: string;
   target: string;
   detail: string;
@@ -95,7 +95,7 @@ export const PAGE_PROBE = String.raw`(() => {
 })()`;
 
 /** Compact fingerprint of observable UI state: URL, open dialogs and menus, expanded flags, text. */
-export const STATE_SIGNATURE = `(() => {
+const STATE_SIGNATURE = `(() => {
   const text = document.body.innerText;
   let hash = 0;
   for (let i = 0; i < text.length; i++) hash = (hash * 31 + text.charCodeAt(i)) | 0;
