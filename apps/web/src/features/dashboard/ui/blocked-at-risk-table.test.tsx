@@ -133,6 +133,12 @@ describe("BlockedAtRiskTable — grouping by product", () => {
     expect(screen.getByText("3 issues")).toBeVisible();
   });
 
+  it("uses the singular noun when exactly one issue exists", () => {
+    render(<BlockedAtRiskTable items={oneItem} />);
+    expect(screen.getByText("1 issue")).toBeVisible();
+    expect(screen.queryByText("1 issues")).toBeNull();
+  });
+
   it("keeps a red product header when its remaining concrete row is at risk", () => {
     const item = oneItem[0];
     if (!item) throw new Error("expected blocked fixture");

@@ -1,7 +1,7 @@
 import type { WeeklyReportReadModel } from "@customreport/shared";
 import { HOURS_PER_DAY, MS_PER_HOUR } from "@customreport/shared";
 
-import { toIsoDateString } from "../../../shared/lib/format/format-date";
+import { formatTimestampShort } from "../../../shared/lib/format/format-date";
 
 export interface KpiData {
   readonly submitted: number;
@@ -59,7 +59,7 @@ export function buildKpiData(
   const deadlineTime =
     weeklyReport.deadline === null
       ? "—"
-      : toIsoDateString(weeklyReport.deadline);
+      : formatTimestampShort(weeklyReport.deadline);
 
   return {
     submitted,

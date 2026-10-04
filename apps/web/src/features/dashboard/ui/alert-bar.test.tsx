@@ -310,6 +310,15 @@ describe("AlertBar — pending label accuracy", () => {
     expect(screen.queryByText("Alice")).not.toBeInTheDocument();
     expect(screen.queryByText("Bob")).not.toBeInTheDocument();
   });
+
+  it("uses the singular verb when exactly one lead is pending", () => {
+    mockRole(null);
+
+    render(<AlertBar {...baseProps} pendingLeads={["Alice"]} />);
+
+    expect(screen.getByText(/lead hasn't started/i)).toBeInTheDocument();
+    expect(screen.queryByText(/haven't started/i)).not.toBeInTheDocument();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -335,7 +344,7 @@ describe("AlertBar — no reopen surface", () => {
       <AlertBar {...baseProps} pendingLeads={["Alice"]} ruleId={RULE_ID} />,
     );
 
-    expect(screen.getByText(/haven't started/i)).toBeInTheDocument();
+    expect(screen.getByText(/hasn't started/i)).toBeInTheDocument();
     expect(screen.queryByText(/reopen request/i)).not.toBeInTheDocument();
   });
 });

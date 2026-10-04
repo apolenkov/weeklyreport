@@ -1,5 +1,6 @@
 "use client";
 
+import { pluralize } from "../../../shared/lib/format/pluralize";
 import type { KpiData } from "../model/dashboard";
 
 interface KpiCardsProps {
@@ -116,7 +117,7 @@ function RisksCard({
     <section
       className={KPI_CARD_CLASS}
       style={{ borderLeft: "3px solid var(--color-destructive)" }}
-      aria-label={`Risks: ${blockedCount} blocked, ${atRiskCount} at risk, ${decisionCount} decisions`}
+      aria-label={`Risks: ${blockedCount} blocked, ${atRiskCount} at risk, ${decisionCount} ${pluralize(decisionCount, "decision", "decisions")}`}
     >
       <div className="min-w-0">
         <p className={KPI_CAPTION_CLASS}>Risks &amp; Blockers</p>
@@ -134,7 +135,7 @@ function RisksCard({
           <RiskStat
             count={decisionCount}
             countClassName="text-lg font-bold tabular-nums text-[var(--color-primary)]"
-            label="decisions"
+            label={pluralize(decisionCount, "decision", "decisions")}
           />
         </div>
       </div>
