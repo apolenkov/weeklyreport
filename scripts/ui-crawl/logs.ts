@@ -76,7 +76,7 @@ function reportNetwork(ctx: Ctx, place: Place, raw: unknown): void {
 }
 
 /** Turns raw console, network (>= 400) and page-error payloads into findings. */
-export function reportLogs(
+function reportLogs(
   ctx: Ctx,
   place: Place,
   raw: Readonly<{ console: unknown; network: unknown; errors: unknown }>,
@@ -93,7 +93,7 @@ export function reportLogs(
 }
 
 /** Commands that read and clear console, failed requests and page errors. */
-export const DRAIN_COMMANDS: readonly (readonly string[])[] = [
+const DRAIN_COMMANDS: readonly (readonly string[])[] = [
   ["console"],
   ["network", "requests", "--status", "400-599"],
   ["errors"],

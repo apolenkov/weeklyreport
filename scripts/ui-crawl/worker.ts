@@ -1,17 +1,22 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import {
+  AUTH_BUDGET,
+  AUTH_COST,
   DEFAULT_HEIGHT,
   LOGIN_ATTEMPTS,
   LOGIN_BACKOFF_MS,
   MOBILE_HEIGHT,
   MOBILE_WIDTH,
+  TRPC_BUDGET,
 } from "./constants.ts";
 import { type Browser, createBrowser } from "./driver.ts";
 import { CLEAR_COMMANDS, type Ctx } from "./logs.ts";
 import { crawlPages } from "./page.ts";
+import { configureRate, pace } from "./rate.ts";
 import type { Config, Finding, PageRecord, Role, RunRecord } from "./types.ts";
 
 const axeSource = readFileSync(
@@ -34,6 +39,7 @@ function attemptLogin(
   role: Role,
   password: string,
 ): boolean {
+  pace("auth", AUTH_COST);
   browser.batch([
     ["cookies", "clear"],
     ["open", config.url],
@@ -149,6 +155,14 @@ export function crawlRole(
   role: Role,
   password: string,
 ): readonly RunRecord[] {
+  // one ledger per stand, outside the output directory: a run right after another shares the minute
+  const ledger = (name: string): string =>
+    join(
+      tmpdir(),
+      `wr-crawl-${new URL(config.url).host.replace(":", "-")}-${name}.log`,
+    );
+  configureRate("trpc", ledger("trpc"), TRPC_BUDGET);
+  configureRate("auth", ledger("auth"), AUTH_BUDGET);
   const browser = createBrowser(role.name);
   try {
     login(browser, config, role, password);
@@ -159,6 +173,16 @@ export function crawlRole(
       }),
     );
   } finally {
+    writeJson(join(config.out, `profile-${role.name}.json`), {
+      stalls: browser.stalls,
+      restarts: browser.restarts,
+      calls: Object.fromEntries(
+        [...browser.profile].map(([k, v]) => [
+          k,
+          { calls: v.calls, ms: Math.round(v.ms) },
+        ]),
+      ),
+    });
     browser.close();
   }
 }

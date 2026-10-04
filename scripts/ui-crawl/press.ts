@@ -1,14 +1,28 @@
 import { join } from "node:path";
 
-import { ESCAPE_WAIT_MS, SETTLE_MS, SLOW_MS } from "./constants.ts";
-import type { Step } from "./driver.ts";
-import { add, type Ctx, DRAIN_COMMANDS, reportLogs } from "./logs.ts";
 import {
-  PRESS_BEGIN,
-  PRESS_END,
-  type ProbedControl,
-  SIGNATURE_ONLY,
-} from "./probe.ts";
+  type BatchOutcome,
+  escapeState,
+  pressBatch,
+  type PressLog,
+  type PressResult,
+  quietState,
+  recoverResults,
+  repress,
+  takeRequests,
+} from "./batch.ts";
+import {
+  BATCH_BUDGET_MS,
+  BATCH_COST,
+  MAX_QUIET_MS,
+  PAGE_LOAD_COST,
+  REPRESS_COST,
+  SLOW_MS,
+  STALL_MS,
+} from "./constants.ts";
+import { add, type Ctx, type Place } from "./logs.ts";
+import type { ProbedControl } from "./probe.ts";
+import { pace, settleRate } from "./rate.ts";
 import type { StepRecord } from "./types.ts";
 
 export type Target = Readonly<{ key: string; url: string; shotBase: string }>;
@@ -29,11 +43,11 @@ function signedOut(ctx: Ctx, url: string): boolean {
 
 /** Reload the page or reopen its URL, signing in again if the browser lost its session. */
 export function settle(ctx: Ctx, url: string | null): number {
+  const reservedAt = pace("trpc", PAGE_LOAD_COST);
   const start = performance.now();
   const load = [
     url ? ["open", url] : ["reload"],
     ["wait", "--load", "networkidle"],
-    ["wait", String(SETTLE_MS)],
   ];
   ctx.browser.batch(load);
   const target = url ?? String(ctx.browser.evaluate("location.href"));
@@ -41,20 +55,23 @@ export function settle(ctx: Ctx, url: string | null): number {
     ctx.signIn();
     ctx.browser.batch([["open", target], ...load.slice(1)]);
   }
-  return Math.round(performance.now() - start);
+  quietState(ctx.browser);
+  const loadMs = Math.round(performance.now() - start);
+  settleRate("trpc", reservedAt, PAGE_LOAD_COST, takeRequests(ctx.browser));
+  return loadMs;
 }
 
 type Outcome = Readonly<{
   before: string;
   after: string;
   escaped: string;
-  responseMs: number | null;
 }>;
 
 function restore(
   ctx: Ctx,
   target: Target,
   outcome: Outcome,
+  control: ProbedControl,
 ): StepRecord["restoredBy"] {
   const urlChanged =
     outcome.after.split("|")[0] !== outcome.before.split("|")[0];
@@ -64,27 +81,36 @@ function restore(
   }
   if (outcome.after === outcome.before) return "none";
   if (outcome.escaped === outcome.before) return "escape";
+  // An expander or toggle: pressing it again is cheaper than reloading the page.
+  const reservedAt = pace("trpc", REPRESS_COST);
+  const again = repress(ctx.browser, control.selector, control.name);
+  settleRate("trpc", reservedAt, REPRESS_COST, takeRequests(ctx.browser));
+  if (again === outcome.before) return "toggle";
   settle(ctx, null);
   return "reload";
 }
 
-/** One batch: press, wait, capture screenshot and logs, try Escape. Then undo if the state moved. */
-export function pressControl(
+const LOG_SEVERITY: Readonly<Record<string, "high" | "medium" | "low">> = {
+  "console-warn": "low",
+  "page-error": "high",
+};
+
+function reportLogs(
   ctx: Ctx,
-  target: Target,
-  control: ProbedControl,
-): StepRecord {
-  const shot = `${target.shotBase}.png`;
-  console.error(
-    `[${ctx.role.name}@${ctx.width}] ${target.key} :: ${control.name}`,
-  );
-  const outcome = pressBatch(ctx, control, shot);
-  if ("error" in outcome) return hung(ctx, target, control, outcome.error);
-  return finishPress(ctx, target, control, { steps: outcome.steps, shot });
+  place: Place,
+  logs: readonly PressLog[],
+  name: string,
+): void {
+  for (const log of logs)
+    add(ctx, place, {
+      severity: LOG_SEVERITY[log.kind] ?? "medium",
+      kind: log.kind,
+      detail: `${name}: ${log.detail}`,
+    });
 }
 
 /** A press that never returns (native dialog, stuck navigation): dismiss, reopen the page, move on. */
-function hung(
+export function hung(
   ctx: Ctx,
   target: Target,
   control: ProbedControl,
@@ -100,12 +126,6 @@ function hung(
       detail: `${control.name}: ${reason}`,
     },
   );
-  try {
-    ctx.browser.batch([["dialog", "dismiss"]]);
-  } catch {
-    // no dialog was open
-  }
-  settle(ctx, target.url);
   return {
     name: control.name,
     tag: control.tag,
@@ -115,48 +135,58 @@ function hung(
   };
 }
 
-/** A native select opens an OS popup that headless Chrome cannot close: choose another option instead. */
-function pressCommand(control: ProbedControl): readonly string[] {
-  const [alternative] = control.alternatives;
-  return control.tag === "select" && alternative !== undefined
-    ? ["select", control.selector, alternative]
-    : ["click", control.selector];
-}
-
-function pressBatch(
+/** Runs one batch; a failed browser call keeps the presses finished before it and flags the next one as hung. */
+export function runBatch(
   ctx: Ctx,
-  control: ProbedControl,
-  shot: string,
-): Readonly<{ steps: readonly Step[] }> | Readonly<{ error: string }> {
+  target: Target,
+  controls: readonly ProbedControl[],
+): Readonly<{ outcome: BatchOutcome; hungReason: string | null }> {
+  const reservedAt = pace("trpc", BATCH_COST);
   try {
-    const steps = ctx.browser.batch([
-      ["eval", PRESS_BEGIN],
-      pressCommand(control),
-      ["wait", String(SETTLE_MS)],
-      ["eval", PRESS_END],
-      ["screenshot", join(ctx.dir, shot)],
-      ...DRAIN_COMMANDS,
-      ["press", "Escape"],
-      ["wait", String(ESCAPE_WAIT_MS)],
-      ["eval", SIGNATURE_ONLY],
-    ]);
-    return { steps };
+    const sent = performance.now();
+    const outcome = pressBatch(
+      ctx.browser,
+      controls,
+      BATCH_BUDGET_MS,
+      MAX_QUIET_MS,
+    );
+    settleRate("trpc", reservedAt, BATCH_COST, outcome.req);
+    const total = Math.round(performance.now() - sent);
+    if (total > STALL_MS)
+      console.error(
+        `[${ctx.role.name}@${ctx.width}] slow batch: ${total} ms, in page ${outcome.took} ms, ${outcome.results.length} presses`,
+      );
+    return { outcome, hungReason: null };
   } catch (error: unknown) {
-    return { error: error instanceof Error ? error.message : "press failed" };
+    const hungReason = error instanceof Error ? error.message : "press failed";
+    try {
+      ctx.browser.batch([["dialog", "dismiss"]]);
+    } catch {
+      // no dialog was open
+    }
+    settle(ctx, target.url);
+    return {
+      outcome: {
+        results: recoverResults(ctx.browser),
+        stopped: true,
+        req: 0,
+        took: 0,
+      },
+      hungReason,
+    };
   }
 }
 
-function finishPress(
+/** Turns one finished press into a step; a visible change is photographed, then undone. */
+export function finishPress(
   ctx: Ctx,
   target: Target,
   control: ProbedControl,
-  { steps, shot }: Readonly<{ steps: readonly Step[]; shot: string }>,
+  result: PressResult,
 ): StepRecord {
-  const [begin, click, , end, , console_, network, errors, , , , , , escaped] =
-    steps;
   const base = { name: control.name, tag: control.tag };
-  if (!click?.ok) {
-    const reason = click?.error ?? "click failed";
+  if (result.status === "obstructed") {
+    const reason = "covered by another element";
     add(
       ctx,
       { page: target.key, shot: null },
@@ -166,38 +196,43 @@ function finishPress(
         detail: `${control.name}: ${reason}`,
       },
     );
-    settle(ctx, null);
     return { ...base, ...NO_EFFECT, action: "error", reason };
   }
+  const changed = result.after !== result.before;
+  const shot = changed ? `${target.shotBase}.png` : null;
   const place = { page: target.key, shot };
-  reportLogs(ctx, place, {
-    console: console_?.value,
-    network: network?.value,
-    errors: errors?.value,
-  });
-  const result = end?.value as { sig: string; ms: number | null } | undefined;
-  const outcome: Outcome = {
-    before: String(begin?.value),
-    after: result?.sig ?? "",
-    escaped: String(escaped?.value),
-    responseMs: result?.ms ?? null,
-  };
-  if (outcome.responseMs !== null && outcome.responseMs > SLOW_MS) {
+  reportLogs(ctx, place, result.logs, control.name);
+  if (result.ms > SLOW_MS) {
     add(ctx, place, {
       severity: "low",
       kind: "slow-response",
-      detail: `${control.name}: ${outcome.responseMs} ms`,
+      detail: `${control.name}: ${result.ms} ms`,
     });
   }
-  const restoredBy = restore(ctx, target, outcome);
+  let restoredBy: StepRecord["restoredBy"] = "none";
+  if (changed) {
+    const urlMoved = result.urlChanged;
+    ctx.browser.batch([
+      ["screenshot", join(ctx.dir, `${target.shotBase}.png`)],
+    ]);
+    const escaped = urlMoved ? result.after : escapeState(ctx.browser);
+    restoredBy = restore(
+      ctx,
+      target,
+      { before: result.before, after: result.after, escaped },
+      control,
+    );
+  }
+  if (process.env.CRAWL_TRACE)
+    console.error(`[${ctx.role.name}] ${control.name} -> ${restoredBy}`);
   return {
     ...base,
     action: "pressed",
     reason: null,
     urlChanged: restoredBy === "navigate",
-    stateChanged: outcome.after !== outcome.before,
+    stateChanged: changed,
     restoredBy,
-    responseMs: outcome.responseMs,
+    responseMs: result.ms,
     shot,
   };
 }

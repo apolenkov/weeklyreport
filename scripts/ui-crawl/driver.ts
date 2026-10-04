@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 
 import { CLI_TIMEOUT_MS, MAX_BUFFER_BYTES } from "./constants.ts";
+import { createDiagnostics, isRecord } from "./diagnostics.ts";
 
 const BIN = process.env.AGENT_BROWSER_BIN ?? "agent-browser";
 
@@ -12,10 +13,6 @@ export type Step = Readonly<{
   error: string | null;
   value: unknown;
 }>;
-
-function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 /** One named agent-browser session; every call is a plain CLI invocation. */
 export function createBrowser(label: string, timeoutMs = CLI_TIMEOUT_MS) {
@@ -32,6 +29,9 @@ export function createBrowser(label: string, timeoutMs = CLI_TIMEOUT_MS) {
     { encoding: "utf8" },
   ).trim();
   assert.match(session, /^[a-zA-Z0-9-]+$/, "unexpected session id");
+  /** Wall time per kind of CLI call, for the speed profile. */
+  const profile = new Map<string, { calls: number; ms: number }>();
+  const diagnostics = createDiagnostics(label);
   const env: Env = { ...process.env, AGENT_BROWSER_SESSION: session };
   /** A batch with a failed command exits non-zero but still prints every result: keep that output. */
   const exec = (args: readonly string[], input?: string): string => {
@@ -54,10 +54,19 @@ export function createBrowser(label: string, timeoutMs = CLI_TIMEOUT_MS) {
 
   /** Runs commands in one CLI call; a failed command does not stop the rest. */
   const batch = (commands: readonly (readonly string[])[]): readonly Step[] => {
-    const parsed: unknown = JSON.parse(
-      exec(["batch", "--json"], JSON.stringify(commands)),
-    );
+    const started = performance.now();
+    const kind = commands.map((c) => c[0]).join("+");
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(exec(["batch", "--json"], JSON.stringify(commands)));
+    } finally {
+      const took = performance.now() - started;
+      diagnostics.noteCall(kind, took);
+      const entry = profile.get(kind) ?? { calls: 0, ms: 0 };
+      profile.set(kind, { calls: entry.calls + 1, ms: entry.ms + took });
+    }
     assert.ok(Array.isArray(parsed), "batch: expected an array");
+    for (const entry of parsed) diagnostics.noteLifecycle(entry, kind);
     return parsed.map((entry: unknown): Step => {
       assert.ok(isRecord(entry), "batch: malformed entry");
       const result = entry.result;
@@ -81,7 +90,15 @@ export function createBrowser(label: string, timeoutMs = CLI_TIMEOUT_MS) {
       // the daemon may already be gone
     }
   };
-  return { session, batch, evaluate, close };
+  return {
+    session,
+    batch,
+    evaluate,
+    close,
+    profile,
+    stalls: diagnostics.stalls,
+    restarts: diagnostics.restarts,
+  };
 }
 
 export type Browser = ReturnType<typeof createBrowser>;
