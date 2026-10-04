@@ -67,11 +67,11 @@ function SummaryCard({
         />
         <Stat
           label="Avg items / week"
-          value={avgItems > 0 ? `${avgItems}` : "—"}
+          value={submitted > 0 ? `${avgItems}` : "—"}
         />
         <Stat
           label="Total risks"
-          value={totalRisks > 0 ? `${totalRisks}` : "—"}
+          value={`${totalRisks}`}
           accent={totalRisks > 0 ? "warn" : "muted"}
         />
       </StatGrid>
@@ -91,18 +91,30 @@ function SummaryCard({
 function TrafficLightFooter({ stats }: { readonly stats: HistoryStats }) {
   const { totalGreen, totalYellow, totalRed, submitted } = stats;
   return (
-    <div className="mt-3 flex items-center gap-1.5 text-xs text-[var(--color-muted-foreground)]">
+    <div
+      className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[var(--color-muted-foreground)]"
+      aria-label={`Traffic lights: ${totalGreen} on track, ${totalYellow} at risk, ${totalRed} blocked across ${submitted} ${submitted === 1 ? "period" : "periods"}`}
+    >
       <span className="inline-flex items-center gap-1">
-        <span className="h-2 w-2 rounded-full bg-[var(--color-starbucks-accent)]" />{" "}
-        {totalGreen}
+        <span
+          className="h-2 w-2 rounded-full bg-[var(--color-starbucks-accent)]"
+          aria-hidden="true"
+        />{" "}
+        {totalGreen} on track
       </span>
       <span className="inline-flex items-center gap-1">
-        <span className="h-2 w-2 rounded-full bg-[var(--color-status-dot-at-risk)]" />{" "}
-        {totalYellow}
+        <span
+          className="h-2 w-2 rounded-full bg-[var(--color-status-dot-at-risk)]"
+          aria-hidden="true"
+        />{" "}
+        {totalYellow} at risk
       </span>
       <span className="inline-flex items-center gap-1">
-        <span className="h-2 w-2 rounded-full bg-[var(--color-destructive)]" />{" "}
-        {totalRed}
+        <span
+          className="h-2 w-2 rounded-full bg-[var(--color-destructive)]"
+          aria-hidden="true"
+        />{" "}
+        {totalRed} blocked
       </span>
       {/* Denominator is completed periods only (same set as traffic-light sums). */}
       <span className="ml-auto">
@@ -216,14 +228,14 @@ function Stat({
           ? "var(--color-muted-foreground)"
           : "var(--color-foreground)";
   return (
-    <div className="rounded-md bg-[var(--color-priority-row-bg)] px-3 py-2">
+    <div className="flex h-full flex-col justify-between rounded-md bg-[var(--color-priority-row-bg)] px-3 py-2">
       <div
         className="font-[family-name:var(--font-sans)] text-lg font-semibold leading-none tabular-nums"
         style={{ color: valueColor }}
       >
         {value}
       </div>
-      <div className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+      <div className="mt-1 text-xs leading-tight text-[var(--color-muted-foreground)]">
         {label}
       </div>
     </div>

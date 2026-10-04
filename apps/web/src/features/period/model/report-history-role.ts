@@ -25,7 +25,7 @@ export function historySearchPlaceholder(role: Role | null): string {
 }
 
 export function historySubtitle(role: Role | null): string {
-  if (isLeadRole(role)) return "Your report history.";
+  if (isLeadRole(role)) return "Your submitted reports and drafts.";
   if (isHead(role)) return "Compiled group report history.";
   if (isViewer(role)) return "Published report history.";
   return "Compiled report history.";

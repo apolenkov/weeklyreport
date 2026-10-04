@@ -107,6 +107,15 @@ describe("PeriodNavigator (lead)", () => {
       expect(decoratorSpan).toHaveAttribute("aria-hidden", "true");
     });
 
+    it("trigger decorator is a combobox caret, not a next-period chevron", () => {
+      const { container } = render(<PeriodNavigator periods={PERIODS} />);
+      const decorator = container.querySelector(".pointer-events-none");
+      // Right-pointing chevron (M9 18l6-6-6-6) belongs to the Next button;
+      // inside the pill it reads as "already at the end" next to Next.
+      expect(decorator?.querySelector('path[d="M9 18l6-6-6-6"]')).toBeNull();
+      expect(decorator?.querySelector('path[d="M6 9l6 6 6-6"]')).not.toBeNull();
+    });
+
     it("all three navigator SVGs have aria-hidden='true' (closed listbox)", () => {
       // prev-button + next-button + trigger-chevron decorator = 3. The listbox
       // panel is portaled to document.body, so it is outside `container`.
@@ -158,6 +167,8 @@ describe("PeriodNavigator (lead)", () => {
         "max-md:min-w-[var(--touch-target-min)]",
       );
       expect(arrow.querySelector("span")?.className).toContain("md:inline");
+      // R46: labels must not drop again at xl — wide screens have room for text.
+      expect(arrow.querySelector("span")?.className).not.toContain("xl:hidden");
     }
   });
 
@@ -363,7 +374,7 @@ describe("PeriodNavigator (lead)", () => {
     expect(push).toHaveBeenNthCalledWith(2, "/head/report/2026-W17");
   });
 
-  it("hides the Submitted badge below md and exposes the full label as a tooltip (R01)", () => {
+  it("keeps the full period label as a tooltip without a Submitted badge (R01/R30)", () => {
     render(
       <PeriodNavigator
         periods={PERIODS}
@@ -372,8 +383,7 @@ describe("PeriodNavigator (lead)", () => {
       />,
     );
     const trigger = getTrigger();
-    const badge = within(trigger).getByText("Submitted");
-    expect(badge.closest(String.raw`.max-md\:hidden`)).not.toBeNull();
+    expect(within(trigger).queryByText("Submitted")).not.toBeInTheDocument();
     expect(trigger).toHaveAttribute(
       "title",
       expect.stringContaining("(Current)"),
@@ -537,7 +547,9 @@ describe("PeriodNavigator (lead)", () => {
   describe("lead submission markers", () => {
     const SUBMITTED_AT = new Date("2026-04-22T17:42:00.000Z");
 
-    it("shows the submitted marker on the selected period when enabled and submittedAt is set", () => {
+    // R30: the marker moved out of the trigger (it duplicated the header badge
+    // for the same displayed period); it still marks the period in the listbox.
+    it("marks the selected period inside the open listbox, not the trigger", () => {
       render(
         <PeriodNavigator
           periods={PERIODS}
@@ -545,10 +557,19 @@ describe("PeriodNavigator (lead)", () => {
           leadSubmittedAt={SUBMITTED_AT}
         />,
       );
-      expect(screen.getByText("Submitted")).toBeInTheDocument();
+      expect(
+        within(getTrigger()).queryByText("Submitted"),
+      ).not.toBeInTheDocument();
+
+      fireEvent.click(getTrigger());
+      expect(
+        within(
+          screen.getByRole("option", { name: /Apr 21–27, 2026/ }),
+        ).getByText("Submitted"),
+      ).toBeInTheDocument();
     });
 
-    it("widens the submitted trigger on desktop while preserving mobile reflow", () => {
+    it("keeps the compact trigger width with submission markers enabled", () => {
       render(
         <PeriodNavigator
           periods={PERIODS}
@@ -562,19 +583,19 @@ describe("PeriodNavigator (lead)", () => {
       });
       const triggerContainer = getTrigger().parentElement;
 
-      expect(triggerContainer?.className).toContain("md:w-[32ch]");
-      expect(triggerContainer?.className).not.toContain("md:w-[24ch]");
+      expect(triggerContainer?.className).not.toContain("md:w-[32ch]");
+      expect(triggerContainer?.className).toContain("md:w-[24ch]");
       expect(triggerContainer?.className).toContain("flex-1");
       expect(navigation.className).toContain("basis-full");
       expect(navigation.className).toContain("md:basis-auto");
       expect(getTrigger()).toHaveTextContent("Apr 21–27, 2026 (Current)");
-      expect(within(getTrigger()).getByText("Submitted")).toBeInTheDocument();
     });
 
     it("does not show the submitted marker when the flag is off (head/viewer)", () => {
       render(
         <PeriodNavigator periods={PERIODS} leadSubmittedAt={SUBMITTED_AT} />,
       );
+      fireEvent.click(getTrigger());
       expect(screen.queryByText("Submitted")).not.toBeInTheDocument();
     });
 
