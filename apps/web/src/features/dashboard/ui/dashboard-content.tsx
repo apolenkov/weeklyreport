@@ -98,6 +98,7 @@ function DashboardQueuePanel(props: DashboardPanelsProps) {
         <div className="space-y-3">
           <LeadSummaryTable
             leads={props.queue.leads}
+            expectedLeads={props.weekly?.kpi.total}
             reportId={reportId}
             onMutated={props.onRefreshDashboard}
           />

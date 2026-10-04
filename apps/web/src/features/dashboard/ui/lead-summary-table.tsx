@@ -5,6 +5,7 @@ import { ChevronDown } from "lucide-react";
 import type { RefObject } from "react";
 import { useRef, useState } from "react";
 
+import { pluralize } from "../../../shared/lib/format/pluralize";
 import type { LeadInfo } from "../model/dashboard";
 import { LeadPrimaryAction } from "./lead-queue-actions";
 import { LeadQueueDetail } from "./lead-queue-detail";
@@ -18,6 +19,8 @@ import {
 
 interface LeadSummaryTableProps {
   readonly leads: readonly LeadInfo[];
+  // Leads the period expects; the queue lists only those that have a section.
+  readonly expectedLeads?: number | undefined;
   readonly reportId: string;
   readonly onMutated: () => void;
 }
@@ -185,8 +188,34 @@ function LeadQueueRow({
   );
 }
 
+function LeadCountBadge({
+  listed,
+  expected,
+}: {
+  readonly listed: number;
+  readonly expected: number | undefined;
+}) {
+  const outOfScope =
+    expected === undefined ? 0 : Math.max(0, expected - listed);
+  return (
+    <span
+      title={
+        outOfScope > 0
+          ? `Queue lists the ${listed} ${pluralize(listed, "lead", "leads")} in your scope; the Submissions card counts all ${expected}`
+          : undefined
+      }
+      className="rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 text-[13px] font-semibold tabular-nums text-[var(--color-muted-foreground)]"
+    >
+      {outOfScope > 0
+        ? `${listed} of ${expected} leads`
+        : `${listed} ${pluralize(listed, "lead", "leads")}`}
+    </span>
+  );
+}
+
 export function LeadSummaryTable({
   leads,
+  expectedLeads,
   reportId,
   onMutated,
 }: LeadSummaryTableProps) {
@@ -203,9 +232,7 @@ export function LeadSummaryTable({
           >
             Period Summary
           </h2>
-          <span className="rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 text-[13px] font-semibold tabular-nums text-[var(--color-muted-foreground)]">
-            {leads.length} lead{leads.length === 1 ? "" : "s"}
-          </span>
+          <LeadCountBadge listed={leads.length} expected={expectedLeads} />
         </div>
         <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
           One action queue ordered by review need, freshness, and completion.
