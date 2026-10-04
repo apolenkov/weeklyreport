@@ -195,19 +195,19 @@ function LeadCountBadge({
   readonly listed: number;
   readonly expected: number | undefined;
 }) {
-  const outOfScope =
-    expected === undefined ? 0 : Math.max(0, expected - listed);
+  const total = expected ?? listed;
+  const outOfScope = total > listed;
   return (
     <span
       title={
-        outOfScope > 0
-          ? `Queue lists the ${listed} ${pluralize(listed, "lead", "leads")} in your scope; the Submissions card counts all ${expected}`
+        outOfScope
+          ? `Queue lists the ${listed} ${pluralize(listed, "lead", "leads")} in your scope; the Submissions card counts all ${total}`
           : undefined
       }
       className="rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 text-[13px] font-semibold tabular-nums text-[var(--color-muted-foreground)]"
     >
-      {outOfScope > 0
-        ? `${listed} of ${expected} leads`
+      {outOfScope
+        ? `${listed} of ${total} leads`
         : `${listed} ${pluralize(listed, "lead", "leads")}`}
     </span>
   );
