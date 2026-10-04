@@ -240,4 +240,5 @@ The repository MUST offer production installation, upgrades, and rollback throug
 #### Scenario: Development tooling is inspected
 
 - **WHEN** the production deployment configuration is retired
-- **THEN** development Compose and its local observability and error-tracking overlays remain available with their existing safety requirements
+- **THEN** local development dependencies run from `deploy/local-dev/` in the Kubernetes namespace `wr-dev`, with no Docker Compose file in the repository
+- **AND** the Grafana dashboards and Prometheus alert rules remain under `deploy/helm/weeklyreport/observability/` as reference material for the operator, outside the chart templates

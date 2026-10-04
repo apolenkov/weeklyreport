@@ -11,7 +11,7 @@ import { withReadinessTimeout } from "./readiness-timeout.js";
 // Dedicated lazy probe of the renderer's own GET /health — never aggregated
 // into /health/ready: a renderer outage degrades export jobs (they fail
 // retryably), it does not make the API unready. The API never contacts the
-// renderer at boot, so an unresolvable compose-internal hostname under
+// renderer at boot, so an unresolvable cluster-internal hostname under
 // host-source `pnpm dev` reports `down` here while boot and readiness stay
 // unaffected.
 @Injectable()

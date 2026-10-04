@@ -12,10 +12,11 @@ WeeklyReport keeps operational signals small and explicit:
 - the API exposes internal metrics at `/metrics`;
 - production Caddy keeps `/metrics` off the public edge.
 
-The repository includes an optional observability Compose overlay for local and
-production-like diagnosis. It starts Grafana, Loki, Tempo, Prometheus, the OTel
-Collector, and the repository-owned dashboards, but it is not part of the
-production Helm chart. Production connects the same application signals to an
+The repository keeps the Grafana dashboards and Prometheus alert rules under
+`deploy/helm/weeklyreport/observability/` as DevOps reference material (the
+former local Compose overlay with Grafana, Loki, Tempo and the OTel Collector
+was removed on 2026-10-04). They are not part of the production Helm chart.
+Production connects the same application signals to an
 operator-managed platform.
 
 The application remains useful with Sentry and the optional overlay disabled:

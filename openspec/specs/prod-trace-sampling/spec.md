@@ -4,9 +4,9 @@ Defines production OTLP trace export configuration, sampling policy, and boot-ti
 
 ## Requirements
 
-### Requirement: Production tracing is explicit and local overlays remain available
+### Requirement: Production tracing is explicit
 
-The production Helm chart MUST permit an explicitly empty `api.env.OTEL_EXPORTER_OTLP_ENDPOINT` as tracing off, and MUST use a managed collector only when the operator supplies its endpoint. The chart MUST NOT install a monitoring stack. The retained local `docker-compose.observability.yml` overlay MUST enable its internal collector for development Compose; it is not a production deployment path.
+The production Helm chart MUST permit an explicitly empty `api.env.OTEL_EXPORTER_OTLP_ENDPOINT` as tracing off, and MUST use a managed collector only when the operator supplies its endpoint. The chart MUST NOT install a monitoring stack.
 
 #### Scenario: Production tracing is explicitly disabled
 
@@ -14,18 +14,11 @@ The production Helm chart MUST permit an explicitly empty `api.env.OTEL_EXPORTER
 - **WHEN** the API container starts
 - **THEN** tracing remains disabled and the disabled decision is logged at warn level
 
-#### Scenario: The local observability overlay enables its internal collector
-
-- **GIVEN** the documented development Compose and observability overlays are composed together
-- **WHEN** the API container starts
-- **THEN** the overlay sets `OTEL_EXPORTER_OTLP_ENDPOINT` to `http://otel-lgtm:4318`
-- **AND** tracing is enabled
-
 #### Scenario: An external managed collector is supplied
 
 - **GIVEN** an operator sets `api.env.OTEL_EXPORTER_OTLP_ENDPOINT` to a managed collector URL and `api.env.OTEL_SDK_DISABLED=false` in Helm values
 - **WHEN** the API container starts
-- **THEN** tracing uses that endpoint without a Compose overlay
+- **THEN** tracing uses that endpoint
 
 ### Requirement: Trace sampling honors the parent span's decision at a low-volume-appropriate ratio
 

@@ -10,7 +10,7 @@ safe placeholders only.
 | Unit tests                | Vitest setup and per-test stubs; no personal env file                       | Deterministic test doubles                                         | `pnpm test`; tests must not depend on a developer's `.env`.                                                                                                                                                                                                                  |
 | Guarded API integration   | Root `.env.test` loaded by `apps/api/vitest.integration.config.ts`          | Disposable PostgreSQL `customreport_e2e` and Redis logical DB `15` | Copy `.env.test.example` to `.env.test`; set `E2E_DATABASE_URL`, `API_HOST=127.0.0.1`, Redis host/port, `REDIS_DB=15`, and `REDIS_MAXMEMORY_BYTES`. Destructive operations require the exact guard and per-run consent.                                                      |
 | Source browser acceptance | Explicit shell variables plus a source-run API/web                          | One-off local browser session                                      | Use the same dev API/web origins (`3002`/`3000`) and `AUTH_DEV_MODE=true`; do not add a browser harness or commit browser state.                                                                                                                                             |
-| Local dependencies        | Compose interpolation from root `.env`                                      | `docker-compose.yml`                                               | Start the local PostgreSQL and Redis services explicitly, then run the guarded bootstrap.                                                                                                                                                                                    |
+| Local dependencies        | Fixed disposable values in the manifest                                     | `deploy/local-dev/deps.yaml`                                       | `pnpm deps:up` starts PostgreSQL, Redis, Mailpit and Gotenberg in the OrbStack namespace `wr-dev`, then run the guarded bootstrap.                                                                                                                                           |
 | Production Helm           | Reviewed values outside Git, Kubernetes Secrets, and CI Web build arguments | `deploy/helm/weeklyreport/` and `.gitlab-ci.yml`                   | Start from `values.production.example.yaml`; `values.schema.json` rejects absent required inputs. Keep `DB_PASSWORD` URL-safe and `postgres.db` a simple identifier. The chart derives internal origins and release identity; `NEXT_PUBLIC_*` values require an image build. |
 | CI                        | Job `env` blocks and service containers                                     | `.gitlab-ci.yml` (lint/test lanes)                                 | CI uses disposable PostgreSQL `customreport_e2e`, Redis DB `15`, and non-production values. No developer `.env` is uploaded or required.                                                                                                                                     |
 
@@ -47,29 +47,18 @@ for local development. Production examples keep both feedback flags false;
 the API must fail closed if required configuration is absent or if a dev flag
 is enabled under `NODE_ENV=production`.
 
-## Optional local observability overlays
+## Local observability
 
-`pnpm observability:up` reads the root `.env`, joins the current local Compose
-project, and reuses its PostgreSQL, Redis, and Mailpit services while adding
-Grafana/OTel and Bugsink. It never creates a second host-bound dependency
-stack. `pnpm observability:down` removes only those observability services. The
-host ports are loopback-only. These overlays are local tooling. The production
-Helm chart ships no Grafana/OTel or Bugsink stack; operators connect application
-signals to their monitoring platform.
-
-| Variable                 | Scope and default                                          | Security contract                                                               |
-| ------------------------ | ---------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| `GRAFANA_PORT`           | Grafana host port; defaults to `3003`                      | Loopback binding; change only for a local port collision.                       |
-| `GRAFANA_ADMIN_USER`     | Grafana UI user; defaults to `admin`                       | Local convenience default; choose an explicit operator identity elsewhere.      |
-| `GRAFANA_ADMIN_PASSWORD` | Required by the observability overlay; no password default | The copied example is local-only; replace it outside the local stack.           |
-| `BUGSINK_PORT`           | Local Bugsink host port; defaults to `8000`                | Loopback binding; change only for a local port collision.                       |
-| `BUGSINK_SECRET_KEY`     | Required by the errors overlay; no Compose fallback        | The example value is local-only; replace it with a unique secret outside local. |
+The repository ships no local observability stack. Tracing stays off
+(`OTEL_SDK_DISABLED=true` in `.env.example`) until an operator points
+`OTEL_EXPORTER_OTLP_ENDPOINT` at a collector and sets it to `false`. Grafana
+dashboards and Prometheus alert rules live under
+`deploy/helm/weeklyreport/observability/` as DevOps reference material; see
+`docs/kubernetes.md`.
 
 ## Precedence and ownership
 
-Compose interpolation reads the shell and the Compose project env file before
-service `environment` values are assembled. A service's `environment` value is
-not available for interpolation elsewhere. Production CI and Helm fix
+Production CI and Helm fix
 `API_URL=http://api:3001` for the Next build and Web runtime; it is not a Helm
 operator value. Native API and Web scripts both load the root `.env`; an already
 exported shell variable takes precedence.
@@ -83,8 +72,7 @@ public origin for browser-origin checks. API values are validated by
 validated by `apps/web/src/shared/server/transport/public-web-origin.ts`.
 
 Native listeners fail on a port collision instead of terminating an unrelated
-process. Docker explicitly binds API and Web to `0.0.0.0` inside the private
-Compose network; only the loopback-published host ports cross that boundary.
+process.
 
 Never commit `.env`, `.env.test`, `.env.production`, or web-local env files.
 These files may contain credentials, private IdP certificates, database URLs,

@@ -1,13 +1,13 @@
 -- pg_stat_statements bootstrap.
 --
--- Runs once on first DB init (when pgdata volume is empty). The extension
--- itself is loaded via shared_preload_libraries in docker-compose.yml.
+-- Runs once on first DB init (when the data volume is empty). The extension
+-- itself is loaded via shared_preload_libraries in deploy/local-dev/deps.yaml.
 -- This file makes it queryable from SQL.
 --
--- Usage after the dev stack has been hit by E2E / manual smoke for a few
+-- Usage after the local dependencies has been hit by E2E / manual smoke for a few
 -- minutes:
 --
---   docker compose exec postgres psql -U customreport -c "
+--   kubectl -n wr-dev exec statefulset/postgres -- psql -U customreport -c "
 --     SELECT round(total_exec_time::numeric, 1) AS total_ms,
 --            calls,
 --            round(mean_exec_time::numeric, 2) AS mean_ms,

@@ -47,8 +47,8 @@ pnpm dev
 ```
 
 The canonical native ports are API `3002` and web `3000`. The API environment
-is validated at boot; missing required values fail closed. For Docker-backed
-development use `pnpm dev:watch`.
+is validated at boot; missing required values fail closed. Local PostgreSQL,
+Redis, Mailpit and Gotenberg start with `pnpm deps:up`.
 
 ## Testing
 

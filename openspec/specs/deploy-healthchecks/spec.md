@@ -53,11 +53,10 @@ The production Helm chart's gotenberg readiness and liveness probes MUST exercis
 
 ### Requirement: The API has no startup dependency on the renderer
 
-The production Helm API workload MUST NOT wait for renderer readiness during startup, and the development `api` service MUST NOT declare a `depends_on` edge on the renderer in any retained Compose file. Compose `depends_on` does offer an optional
-mode (`required: false`, since Compose 2.20.0), but the renderer is a
-runtime-optional capability, not a startup dependency — the API never
-contacts it during boot, so even an optional edge would declare an ordering
-that does not exist and would invite drift toward health-gated startup.
+The production Helm API workload MUST NOT wait for renderer readiness during startup, and no local development process MAY gate API startup on the renderer. The
+renderer is a runtime-optional capability, not a startup dependency — the API
+never contacts it during boot, so a startup edge would declare an ordering that
+does not exist and would invite drift toward health-gated startup.
 Boot validation of `GOTENBERG_URL` MUST be syntactic only: the variable
 must exist and parse as a URL, and the API MUST NOT perform DNS or
 reachability checks against it. A cold API start with the renderer

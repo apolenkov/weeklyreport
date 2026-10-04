@@ -5,7 +5,7 @@
 ```bash
 pnpm install
 cp .env.example .env
-docker compose up -d postgres redis
+pnpm deps:up # Postgres, Redis, Mailpit, Gotenberg in the wr-dev namespace
 PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' \
   pnpm db:bootstrap:local demo
 pnpm dev # web on :3000, api on :3002
