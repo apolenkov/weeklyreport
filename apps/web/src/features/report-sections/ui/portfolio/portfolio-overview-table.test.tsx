@@ -344,4 +344,20 @@ describe("PortfolioOverviewTable — scope-adaptive (by lead)", () => {
     fireEvent.click(card);
     expect(onNavigate).toHaveBeenCalledWith("p1");
   });
+
+  // R25: the overview must say it is not filtered like the Sections list.
+  it("states that product status spans all authors regardless of the Sections filter", () => {
+    render(
+      <PortfolioOverviewTable
+        products={ONE_PRODUCT}
+        onNavigate={NOOP_NAVIGATE}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        /Status across all authors, whatever the Sections filter shows/,
+      ),
+    ).toBeInTheDocument();
+  });
 });

@@ -103,7 +103,7 @@ export function PortfolioOverviewTable(props: PortfolioOverviewTableProps) {
     : pluralize(count, "product", "products");
   const subtitle = isLead
     ? "Each lead's contribution — open their section below."
-    : "Products with content open detailed sections. Empty products stay muted.";
+    : "Status across all authors, whatever the Sections filter shows. Products with content open detailed sections.";
 
   return (
     <div
