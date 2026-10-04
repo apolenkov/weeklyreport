@@ -4,8 +4,9 @@ import { defineConfig, mergeConfig } from "vitest/config";
 
 import baseConfig from "./vitest.base.config.ts";
 
-// Root-level code under prisma/ is outside every workspace suite; this config
-// is its only runner, chained into `pnpm test`.
+// Root-level code under prisma/ and the tester-kit crawler under scripts/ui-crawl
+// are outside every workspace suite; this config is their only runner, chained
+// into `pnpm test`.
 export default mergeConfig(
   baseConfig,
   defineConfig({
@@ -20,7 +21,7 @@ export default mergeConfig(
       },
     },
     test: {
-      include: ["prisma/**/*.test.ts"],
+      include: ["prisma/**/*.test.ts", "scripts/ui-crawl/**/*.test.ts"],
     },
   }),
 );

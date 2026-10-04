@@ -4,6 +4,7 @@ import {
   MAX_QUIET_MS,
   QUIET_MS,
   REPRESS_NAME_CHARS,
+  RETURN_WAIT_MS,
 } from "./constants.ts";
 import type { Browser } from "./driver.ts";
 import { type ProbedControl, SIGNATURE_ONLY } from "./probe.ts";
@@ -51,7 +52,7 @@ const HOOKS = `(() => {
   }
   addEventListener('error', (e) => push('page-error', e.message || 'resource failed: ' + (e.target?.src ?? e.target?.href ?? e.target?.tagName)), true);
   addEventListener('unhandledrejection', (e) => push('page-error', 'unhandled rejection: ' + (e.reason?.message ?? e.reason)));
-  const failed = (status, method, url) => { if (status >= 400) push(status === 429 ? 'rate-limited' : 'http-error', status + ' ' + method + ' ' + url); };
+  const failed = (status, method, url) => { push('network', status + ' ' + method + ' ' + url); if (status >= 400) push(status === 429 ? 'rate-limited' : 'http-error', status + ' ' + method + ' ' + url); };
   const nativeFetch = window.fetch.bind(window);
   window.fetch = async (input, init) => {
     S.inflight++; touchNet();
@@ -88,6 +89,18 @@ const QUIET = `(S, maxMs) => new Promise((resolve) => {
   tick();
 })`;
 
+/**
+ * Resolves true as soon as `test()` holds, driven by DOM mutations, or false after `ms`.
+ * A page that is still returning from a reload or a dismissed surface is waited for, not skipped.
+ */
+export const UNTIL = `(test, ms) => new Promise((resolve) => {
+  if (test()) return resolve(true);
+  const done = (ok) => { observer.disconnect(); clearTimeout(timer); resolve(ok); };
+  const observer = new MutationObserver(() => { if (test()) done(true); });
+  const timer = setTimeout(() => done(false), ms);
+  observer.observe(document, {subtree: true, childList: true, attributes: true, characterData: true});
+})`;
+
 const PRESS = `(el, alternative) => {
   if (alternative !== undefined) {
     Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(el, alternative);
@@ -115,6 +128,7 @@ function batchScript(
   const S = ${HOOKS};
   const quiet = ${QUIET};
   const press = ${PRESS};
+  const until = ${UNTIL};
   const state = () => ${SIGNATURE_ONLY};
   const items = ${JSON.stringify(items)};
   const results = [];
@@ -127,8 +141,15 @@ function batchScript(
     const top = document.elementFromPoint(Math.max(0, Math.min(innerWidth - 1, r.x + r.width / 2)), Math.max(0, Math.min(innerHeight - 1, r.y + r.height / 2)));
     return !!top && top !== el && !el.contains(top) && !top.contains(el) && top.closest('label')?.control !== el;
   };
+  let returned = false;
   for (let n = 0; n < items.length; n++) {
-    const el = document.querySelector(items[n].selector);
+    let el = document.querySelector(items[n].selector);
+    // once per batch: a control missing because the page is still coming back is waited for
+    if (!el && !returned) {
+      returned = true;
+      await until(() => !!document.querySelector(items[n].selector), ${RETURN_WAIT_MS});
+      el = document.querySelector(items[n].selector);
+    }
     const base = {n, before: '', after: '', urlChanged: false, ms: 0, blockedMs: 0, logs: []};
     if (!el) { results.push({...base, status: 'gone'}); keep(); continue; }
     el.scrollIntoView?.({block: 'nearest'});
@@ -228,4 +249,34 @@ export function recoverResults(browser: Browser): readonly PressResult[] {
   } catch {
     return [];
   }
+}
+
+/** Waits, driven by DOM mutations, until the page state equals `baseline` or `ms` pass; returns the state seen last. */
+export function waitForState(
+  browser: Browser,
+  baseline: string,
+  ms = RETURN_WAIT_MS,
+): string {
+  return String(
+    browser.evaluate(`(async () => {
+  const S = ${HOOKS};
+  const state = () => ${SIGNATURE_ONLY};
+  await (${UNTIL})(() => state() === ${JSON.stringify(baseline)}, ${ms});
+  await (${QUIET})(S, ${MAX_QUIET_MS});
+  return state();
+})()`),
+  );
+}
+
+/** Waits, driven by DOM mutations, until `selector` matches an element; false when it never does. */
+export function waitForSelector(
+  browser: Browser,
+  selector: string,
+  ms = RETURN_WAIT_MS,
+): boolean {
+  return (
+    browser.evaluate(
+      `(${UNTIL})(() => !!document.querySelector(${JSON.stringify(selector)}), ${ms})`,
+    ) === true
+  );
 }
