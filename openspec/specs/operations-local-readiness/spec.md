@@ -2,33 +2,31 @@
 
 ## Purpose
 
-Ensure the repository-owned development and production operations instructions
-agree with the current Compose service graph and recovery entrypoints while
-keeping external production dependencies explicit.
+Ensure repository-owned development Compose and production Helm operations instructions agree with their service graphs and recovery entrypoints while keeping external production dependencies explicit.
 
 ## Requirements
 
 ### Requirement: Repository-owned operations instructions are executable
 
 The repository-owned development and production instructions, including
-Compose, SMTP, database, backup, and restore surfaces, MUST agree with the
+development Compose, production Helm, SMTP, database, backup, and restore surfaces, MUST agree with the
 checked-in service graph, required environment variables, routes, credentials,
 and ownership declarations.
 
 #### Scenario: A documented environment is rendered
 
-- **WHEN** the documented example environment is supplied to its Compose stack
-- **THEN** configuration rendering succeeds without a missing required variable or duplicate application port owner
+- **WHEN** the documented development environment is supplied to Compose, or the documented production values are supplied to Helm
+- **THEN** configuration rendering succeeds without a missing required input or duplicate application port owner
 
 #### Scenario: Native development starts from the repository root
 
 - **WHEN** an operator copies the root `.env.example` to `.env` and runs the native API and Web package scripts
 - **THEN** both processes load that root contract and the Web receives explicit server and public API origins without a second required env file
 
-#### Scenario: An untouched production environment template is used
+#### Scenario: Required production configuration is absent
 
-- **WHEN** an operator copies the tracked production template without filling its required empty values
-- **THEN** Compose or runtime validation fails before a production service accepts traffic
+- **WHEN** an operator renders the production Helm chart with any required value absent or empty where non-empty input is required
+- **THEN** Helm validation fails before a production workload is created
 
 #### Scenario: A production image is built
 
@@ -69,8 +67,9 @@ and ownership declarations.
 
 #### Scenario: Production database identity is unsafe for a connection URL
 
-- **WHEN** `DB_PASSWORD` contains a reserved URL character or `POSTGRES_DB` contains anything other than letters, digits, and underscores
-- **THEN** the configuration guard exits non-zero without logging either value and no database-dependent service starts
+- **WHEN** `postgres.db` contains anything other than letters, digits, and underscores, or a values-supplied `DB_PASSWORD` contains a reserved URL character
+- **THEN** Helm rendering fails without logging either value
+- **AND** an unsafe password supplied through an existing Secret is rejected by the migration initContainer before its first database connection, so the API cannot start
 
 #### Scenario: Metrics remain private
 

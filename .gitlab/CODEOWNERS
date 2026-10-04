@@ -10,10 +10,17 @@
 /prisma/migrations/ @apolenkov
 /Dockerfile.api @apolenkov
 /Dockerfile.web @apolenkov
-/docker-compose*.yml @apolenkov
 /deploy/ @apolenkov
+/deploy/helm/weeklyreport/ @apolenkov
+/scripts/gates/operations/ @apolenkov
 /docs/operations.md @apolenkov
 /docs/sdlc.md @apolenkov
+
+# Local development and observability configuration
+/docker-compose.yml @apolenkov
+/docker-compose.dev.yml @apolenkov
+/docker-compose.observability*.yml @apolenkov
+/docker-compose.errors.yml @apolenkov
 
 # Shared and contract-boundary packages
 /packages/shared/ @apolenkov

@@ -70,7 +70,7 @@ weeklyreport
 
 - Node.js **26.10.0 Current** (`>=26.0.0 <27.0.0`, версия `.nvmrc`)
 - pnpm **11.28.3** (`npm install -g pnpm@11.28.3`; Node 26 не поставляет Corepack)
-- Docker (для локальных Postgres и Redis и production-сборки)
+- Docker (для локальных Postgres и Redis и локальной сборки образов)
 
 ## Быстрый старт
 
@@ -134,8 +134,8 @@ repository cleanliness и operations. Интеграционные тесты AP
 `pnpm --filter @customreport/api test:integration`.
 
 Полезное при локальной отладке: читай структурированный лог API в
-`apps/api/.logs/app.log`; в production Compose API пишет только в stdout
-(`docker compose logs api`, точные команды — в `docs/onboarding.md`). Готовность проверяй через `/health/ready`, а метрики —
+`apps/api/.logs/app.log`; в production Kubernetes API пишет в stdout
+(`kubectl -n <ns> logs deployment/api -c api`, точные команды — в `docs/onboarding.md`). Готовность проверяй через `/health/ready`, а метрики —
 через `/metrics`.
 
 ## Куда смотреть дальше

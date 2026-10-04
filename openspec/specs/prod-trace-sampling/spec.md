@@ -4,38 +4,28 @@ Defines production OTLP trace export configuration, sampling policy, and boot-ti
 
 ## Requirements
 
-### Requirement: Production tracing is explicit and overlay-enabled
+### Requirement: Production tracing is explicit and local overlays remain available
 
-The production compose file MUST leave `OTEL_EXPORTER_OTLP_ENDPOINT` empty
-unless an operator explicitly supplies a managed collector. The optional
-`docker-compose.observability.yml` overlay MUST enable tracing against its
-internal collector when composed, and an operator MUST be able to substitute
-a separately managed collector. Leaving the endpoint unset MUST remain a valid
-"tracing off" configuration rather than exporting to a nonexistent host.
+The production Helm chart MUST permit an explicitly empty `api.env.OTEL_EXPORTER_OTLP_ENDPOINT` as tracing off, and MUST use a managed collector only when the operator supplies its endpoint. The chart MUST NOT install a monitoring stack. The retained local `docker-compose.observability.yml` overlay MUST enable its internal collector for development Compose; it is not a production deployment path.
 
-#### Scenario: Base production compose keeps tracing off by default
+#### Scenario: Production tracing is explicitly disabled
 
-- **GIVEN** only `docker-compose.prod.yml` is composed with no endpoint override
-- **WHEN** the api container starts
-- **THEN** `decideOtelBootstrap` receives an empty endpoint
-- **AND** `startOtel` returns a disabled decision that is logged at warn level
+- **GIVEN** Helm values set `api.env.OTEL_EXPORTER_OTLP_ENDPOINT` to an empty string
+- **WHEN** the API container starts
+- **THEN** tracing remains disabled and the disabled decision is logged at warn level
 
-#### Scenario: The observability overlay enables its internal collector
+#### Scenario: The local observability overlay enables its internal collector
 
-- **GIVEN** `docker-compose.prod.yml` and `docker-compose.observability.yml`
-  are composed together with no endpoint override
-- **WHEN** the api container starts
-- **THEN** the overlay sets `OTEL_EXPORTER_OTLP_ENDPOINT` to
-  `http://otel-lgtm:4318`
-- **AND** `startOtel` returns `{ started: true, reason: "enabled" }`
+- **GIVEN** the documented development Compose and observability overlays are composed together
+- **WHEN** the API container starts
+- **THEN** the overlay sets `OTEL_EXPORTER_OTLP_ENDPOINT` to `http://otel-lgtm:4318`
+- **AND** tracing is enabled
 
-#### Scenario: An external managed collector can be substituted
+#### Scenario: An external managed collector is supplied
 
-- **GIVEN** an operator sets `OTEL_EXPORTER_OTLP_ENDPOINT` to a managed
-  collector's URL without composing `docker-compose.observability.yml`
-- **WHEN** the api container starts
-- **THEN** `decideOtelBootstrap` uses the operator-supplied endpoint, not the
-  overlay's default
+- **GIVEN** an operator sets `api.env.OTEL_EXPORTER_OTLP_ENDPOINT` to a managed collector URL and `api.env.OTEL_SDK_DISABLED=false` in Helm values
+- **WHEN** the API container starts
+- **THEN** tracing uses that endpoint without a Compose overlay
 
 ### Requirement: Trace sampling honors the parent span's decision at a low-volume-appropriate ratio
 

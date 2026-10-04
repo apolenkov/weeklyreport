@@ -45,7 +45,7 @@ function registerQueueOptionsFor(name: QueueName): RegisterQueueOptions {
   };
 }
 
-// Redis noeviction is enforced in Docker Compose, not code.
+// Redis noeviction is enforced by the deployment configuration.
 @Module({
   imports: [
     ConfigModule,
