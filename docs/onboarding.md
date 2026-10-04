@@ -206,8 +206,8 @@ AI-провайдеров и промптов. Управляющая запис
 ## 6. Наблюдаемость (логи, метрики, ошибки)
 
 - При локальном запуске API пишет структурированные логи в
-  `apps/api/.logs/app.log` (без ротации). В production Compose API пишет только
-  в stdout, ротацию делает Docker. В обоих случаях записи содержат `traceId` и
+  `apps/api/.logs/app.log` (без ротации). В production Kubernetes API пишет
+  в stdout, ротацию делает kubelet. В обоих случаях записи содержат `traceId` и
   `spanId`, если они есть в контексте запроса.
 - `GET /metrics` отдаёт внутренние метрики API. Production Caddy не публикует
   этот endpoint во внешний интернет.
@@ -310,11 +310,10 @@ DOM-, сетевыми наблюдениями или снимком экран
   ошибки — `pnpm logs:errors`. Production-логи читаются из stdout контейнера:
 
   ```bash
-  docker compose --env-file .env.production -f docker-compose.prod.yml logs -f api
+  kubectl -n <ns> logs -f deployment/api -c api
   ```
 
-  Стандартный поток контейнера доступен через ту же конфигурацию командой
-  `docker compose --env-file .env.production -f docker-compose.prod.yml logs -f api`.
+  Лог миграций доступен через `kubectl -n <ns> logs deployment/api -c migrate`.
   В строках структурированного лога есть `traceId`/`spanId`.
 
 - Трассировка запроса начинается со структурированного лога и его `traceId`.

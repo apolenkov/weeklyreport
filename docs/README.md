@@ -8,7 +8,7 @@ not belong in this directory.
 | `adr/`                       | Current accepted architectural and product decisions; `adr/README.md` holds the ADR template.     |
 | `exemplary-code-standard.md` | Current code-quality and maintainability standard.                                                |
 | `onboarding.md`              | New-contributor guide: setup, development, testing, workflows.                                    |
-| `environment.md`             | Environment precedence, ownership, and safe contracts for dev, tests, Docker, production, and CI. |
+| `environment.md`             | Environment precedence and safe contracts for dev, tests, local Compose, production Helm, and CI. |
 | `gitlab-ci.md`               | GitLab CI lint/test lanes and the gated image build and deploy jobs: job map, database topology.  |
 | `kubernetes.md`              | Kubernetes delivery: Helm chart install, upgrade, secrets, rollback limits, backup, recovery.     |
 | `operations.md`              | Production runbook: first deploy, health triage, backups and restore, secret rotation, rollback.  |

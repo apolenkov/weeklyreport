@@ -148,19 +148,10 @@ quality:
     DATABASE_URL: postgresql://customreport:localdev@127.0.0.1:5432/customreport_generate_only
     API_URL: http://127.0.0.1:3002
     NODE_OPTIONS: --max-old-space-size=8192
-    DOCKER_COMPOSE_VERSION: "5.5.1"
-    DOCKER_COMPOSE_SHA256: db1889184726840f75c4f9c001048430d4f25b3be3cb084d3ddd762bc0aed576
     HELM_VERSION: "4.3.0"
     HELM_SHA256: 86584a54def73570558f66f5111cc53dfed56689637ae32c1201205d494f54fb
   before_script:
     - !reference [.workspace-node, before_script]
-    # The root test suite's production Compose contract gate requires a
-    # resolvable compose binary (config rendering only — no daemon needed).
-    # The node image has none, so install the pinned standalone CLI.
-    - curl -fsSL "https://github.com/docker/compose/releases/download/v${DOCKER_COMPOSE_VERSION}/docker-compose-linux-x86_64" -o /usr/local/bin/docker-compose
-    - echo "$DOCKER_COMPOSE_SHA256  /usr/local/bin/docker-compose" | sha256sum -c -
-    - chmod +x /usr/local/bin/docker-compose
-    - docker-compose version
     # The chart gate renders the Helm chart (no cluster needed): pinned CLI.
     - curl -fsSL "https://get.helm.sh/helm-v${HELM_VERSION}-linux-amd64.tar.gz" -o /tmp/helm.tar.gz
     - echo "$HELM_SHA256  /tmp/helm.tar.gz" | sha256sum -c -

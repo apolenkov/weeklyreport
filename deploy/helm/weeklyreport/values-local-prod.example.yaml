@@ -65,8 +65,10 @@ api:
     KEYCLOAK_SAML_ENTRY_POINT: http://localhost:8081/realms/weeklyreport/protocol/saml
     KEYCLOAK_SAML_ISSUER: weeklyreport
     KEYCLOAK_SAML_CERT: REPLACE_WITH_IDP_CERT_B64
-    # The 32-byte key lives in the Secret; see production.env.example for the
-    # rotation rule of AI_PROVIDER_CONFIG_ENCRYPTION_KEY.
+    # The 32-byte AI_PROVIDER_CONFIG_ENCRYPTION_KEY lives in the Secret. The
+    # current MVP supports one active key only; do not change the key or version
+    # while encrypted credentials are retained. Existing credentials then cannot be decrypted.
+    # Preserve the original key/version pair; see docs/operations.md for recovery.
     AI_PROVIDER_CONFIG_KEY_VERSION: "1"
     AI_PROVIDER_ALLOWED_ORIGINS: https://api.mistral.ai,https://openrouter.ai,https://api.groq.com,https://api.jina.ai,https://api.openai.com
     REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED: "false"

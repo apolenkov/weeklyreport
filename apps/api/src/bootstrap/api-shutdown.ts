@@ -13,8 +13,8 @@ export interface ApiShutdownDependencies {
   readonly shutdownSentry: (timeoutMs: number) => Promise<void>;
 }
 
-// Per-step deadlines sum to 12.5 s, inside stop_grace_period (20 s) in
-// docker-compose.prod.yml; raise that grace period before raising these.
+// Per-step deadlines sum to 12.5 s, inside the Helm API pod's 20 s
+// terminationGracePeriodSeconds; raise that grace period before raising these.
 const CLOSE_TIMEOUT_MS = 3000;
 const LOG_FLUSH_TIMEOUT_MS = 1500;
 const OTEL_SHUTDOWN_TIMEOUT_MS = 2000;

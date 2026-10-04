@@ -23,12 +23,9 @@ default). Every consumer — `apps/web/next.config.ts`,
 this seam, so a missing value fails loud at config-load / request time rather
 than silently targeting localhost.
 
-Production Compose MUST own one immutable internal API origin (`http://api:3001`)
-and provide that same value to both the Next build arguments (which compile the
-rewrites) and the running Web server environment (which serves server-side
-fetches). `API_URL` MUST NOT be a production operator input or be interpolated
+The production CI image build and Helm chart MUST use one immutable internal API origin (`http://api:3001`). The CI build MUST pass that value to the Next build arguments (which compile rewrites), and the chart MUST supply the same literal to the running Web server environment (which serves server-side fetches). `API_URL` MUST NOT be a production operator input or be interpolated
 from the shell, because divergent build-time and runtime values create a
-split-brain Web route. Native development and CI may continue to provide their
+split-brain Web route. Native development and non-production CI checks may continue to provide their
 own explicit `API_URL` values.
 
 #### Scenario: API_URL unset
@@ -73,8 +70,7 @@ That degrade MUST NOT be silent. Each of the three branches MUST emit a
 server-side error log naming which branch fired — stderr is the sink every
 deployment has, so this clause is enforceable regardless of observability
 wiring — AND MUST forward the same failure to Sentry, which reports only where a
-DSN is configured (`docker-compose.prod.yml` supplies `SENTRY_DSN` to the `web`
-service for that reason).
+DSN is configured (the Helm chart supplies optional `SENTRY_DSN` from a Secret to the `web` workload for that reason).
 
 This requirement is scoped to `getOrgPublic`. Applying
 `DEFAULT_ORGANIZATION_IDENTITY` elsewhere is not a failure and MUST NOT be

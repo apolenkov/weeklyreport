@@ -18,11 +18,52 @@ export const exampleValuesPath = join(
   "values.production.example.yaml",
 );
 
+interface EnvEntry {
+  readonly name: string;
+  readonly value?: string;
+  readonly valueFrom?: {
+    readonly secretKeyRef?: {
+      readonly name: string;
+      readonly key: string;
+      readonly optional?: boolean;
+    };
+  };
+}
+
+interface Probe {
+  readonly httpGet?: {
+    readonly path: string;
+    readonly port: string | number;
+    readonly host?: string;
+  };
+  readonly tcpSocket?: { readonly port: string | number };
+  readonly exec?: { readonly command: readonly string[] };
+  readonly periodSeconds?: number;
+  readonly failureThreshold?: number;
+}
+
 export interface Container {
   readonly name: string;
   readonly image: string;
   readonly command?: readonly string[];
-  readonly env?: readonly { readonly name: string; readonly value?: string }[];
+  readonly env?: readonly EnvEntry[];
+  readonly envFrom?: readonly {
+    readonly configMapRef?: { readonly name: string };
+  }[];
+  readonly resources?: {
+    readonly requests?: { readonly memory?: string };
+    readonly limits?: { readonly memory?: string };
+  };
+  readonly ports?: readonly { readonly hostPort?: number }[];
+  readonly startupProbe?: Probe;
+  readonly readinessProbe?: Probe;
+  readonly livenessProbe?: Probe;
+  readonly volumeMounts?: readonly {
+    readonly name: string;
+    readonly mountPath: string;
+    readonly readOnly?: boolean;
+    readonly subPath?: string;
+  }[];
   readonly args?: readonly string[];
   readonly securityContext?: Readonly<Record<string, unknown>>;
 }
@@ -30,6 +71,13 @@ export interface Container {
 export interface PodSpec {
   readonly containers: readonly Container[];
   readonly initContainers?: readonly Container[];
+  readonly hostNetwork?: boolean;
+  readonly volumes?: readonly {
+    readonly name: string;
+    readonly hostPath?: unknown;
+    readonly configMap?: { readonly name: string };
+    readonly persistentVolumeClaim?: { readonly claimName: string };
+  }[];
   readonly automountServiceAccountToken?: boolean;
   readonly enableServiceLinks?: boolean;
   readonly imagePullSecrets?: readonly { readonly name: string }[];
@@ -51,9 +99,16 @@ export interface PodSpec {
 }
 
 interface ManifestSpec {
+  readonly type?: string;
+  readonly externalIPs?: readonly string[];
+  readonly externalName?: string;
+  readonly concurrencyPolicy?: string;
   readonly replicas?: number;
   readonly strategy?: { readonly type: string };
-  readonly ports?: readonly { readonly port: number }[];
+  readonly ports?: readonly {
+    readonly port: number;
+    readonly nodePort?: number;
+  }[];
   readonly rules?: unknown;
   readonly template?: { readonly spec: PodSpec };
   readonly jobTemplate?: {
@@ -69,6 +124,7 @@ export interface Manifest {
   readonly metadata: { readonly name: string };
   readonly spec: ManifestSpec;
   readonly data?: Readonly<Record<string, string>>;
+  readonly stringData?: Readonly<Record<string, string>>;
 }
 
 export interface HelmResult {
