@@ -63,7 +63,8 @@ Use `pnpm` from the repo root (Node 26.10.0 Current, `>=26.0.0 <27.0.0`). Never 
 
 ```bash
 pnpm dev                # run API and web from source
-pnpm dev:watch          # docker compose dev with --watch
+pnpm deps:up            # local PostgreSQL/Redis/Mailpit/Gotenberg in Kubernetes namespace wr-dev
+pnpm deps:down          # stop them; data volumes survive
 pnpm typecheck          # Prisma/scripts tsc + turbo package typechecks
 pnpm lint               # ESLint, Stylelint, runtime sync, repository cleanliness
 pnpm format:check       # Prettier check without rewriting files
@@ -87,6 +88,12 @@ pnpm test:e2e           # agent-browser lead-form regression (running app on cus
 ## Runtime
 
 - Web `http://localhost:3000`, API `http://localhost:3002`, Mailpit UI `http://localhost:8025`.
+- Local dependencies (PostgreSQL pgvector, Redis, Mailpit, Gotenberg) run in the
+  OrbStack Kubernetes namespace `wr-dev` from `deploy/local-dev/`: `pnpm deps:up`
+  before `pnpm dev`, `pnpm deps:down` after (data volumes survive; wipe with
+  `kubectl delete namespace wr-dev`). Services appear on localhost at 5432, 6379,
+  1025/8025 and 3010, so those ports must be free. There is no Docker Compose
+  path in the repository.
 - Dev auth: `AUTH_DEV_MODE=true` + `/auth/dev-login`; refused at boot when `NODE_ENV=production`.
 - `NEXT_PUBLIC_DEV_ROLE_SWITCHER=true` shows the dev-only role switcher.
 - When the owner asks to try the product, start it from source (`pnpm dev`),

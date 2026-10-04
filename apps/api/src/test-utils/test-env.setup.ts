@@ -2,9 +2,9 @@
 // `.env`, and app code reads these via requireEnv (no fallbacks) — supply them
 // here. `??=` lets an individual test override or delete a value per scenario.
 process.env.PDF_BASE_URL ??= "http://localhost:3000";
-// Required fail-closed config (syntactic z.url only): the compose-internal
+// Required fail-closed config (syntactic z.url only): the cluster-internal
 // hostname never resolves inside unit tests because no test contacts it.
-// eslint-disable-next-line sonarjs/no-clear-text-protocols -- the compose-internal renderer is plaintext by design inside the docker network
+// eslint-disable-next-line sonarjs/no-clear-text-protocols -- the cluster-internal renderer is plaintext by design inside the cluster network
 process.env.GOTENBERG_URL ??= "http://gotenberg:3000";
 process.env.APP_BASE_URL ??= "http://localhost:3000";
 process.env.API_HOST ??= "127.0.0.1";

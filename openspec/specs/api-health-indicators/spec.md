@@ -110,7 +110,7 @@ internal error details. The probe is
 lazy: the API never contacts the renderer during boot, so an environment
 where the configured renderer hostname cannot resolve (for example
 host-source `pnpm dev`, whose `GOTENBERG_URL` points at the
-compose-internal hostname) still starts normally. The renderer
+cluster-internal hostname) still starts normally. The renderer
 probe MUST NOT join the `/health/ready` aggregate: a renderer outage leaves
 `/health/ready` reporting the API's real dependency set (`database`,
 `redis`, `bullmq`, `memory_heap`) and MUST NOT turn it to 503. A renderer
