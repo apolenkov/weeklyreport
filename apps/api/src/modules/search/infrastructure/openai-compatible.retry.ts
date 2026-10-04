@@ -23,6 +23,10 @@ const attemptWithTransientRetry = async <T>(
     if (
       !(error instanceof ReportAssistantProviderError) ||
       !error.retryable ||
+      // A network failure or timeout has no HTTP status: repeating it only
+      // multiplies the connect/timeout wait (3x) while the user watches a
+      // spinner, so it fails fast with the retryable provider outcome.
+      error.statusCode === undefined ||
       attempt >= MAX_TRANSIENT_ATTEMPTS - 1
     ) {
       throw error;
