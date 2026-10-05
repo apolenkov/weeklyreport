@@ -4,14 +4,10 @@ import {
   AI_PROMPT_FEATURE_KEYS,
   type AiFeatureKey,
   type AiPromptCatalogRead,
+  type AiPromptFeatureRead,
   type AiProviderControlRead,
 } from "@customreport/shared";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@customreport/ui/components/ui/tabs";
+import { Tabs, TabsContent } from "@customreport/ui/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -23,6 +19,7 @@ import {
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { AiProviderCard } from "./ai-provider-card";
 import { AiRuntimeFailureNotice } from "./ai-runtime-failure-notice";
+import { AiTabsList, ReadinessSummary, RetryAlert } from "./ai-tab-sections";
 import { SettingsAiFeatureDetail } from "./settings-ai-feature-detail";
 
 const sameFeatureKey = (left: unknown, right: unknown): boolean =>
@@ -81,8 +78,7 @@ function aiReadiness({
   };
 }
 
-export function AiTab() {
-  const trpc = useTRPC();
+function useAiSettingsSelection() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -113,6 +109,78 @@ export function AiTab() {
     if (values.feature) params.set("aiFeature", values.feature);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   };
+  return { featureKey, activeTab, setAiState };
+}
+
+type FeatureQuery = Readonly<{
+  data: AiPromptFeatureRead | undefined;
+  isPending: boolean;
+  isError: boolean;
+  isFetching: boolean;
+  refetch: () => Promise<unknown>;
+}>;
+
+function FeaturesPanel({
+  features,
+  selectedKey,
+  featureQ,
+  onSelect,
+  onRefresh,
+}: Readonly<{
+  features: AiPromptCatalogRead["features"];
+  selectedKey: AiFeatureKey | null;
+  featureQ: FeatureQuery;
+  onSelect: (featureKey: AiFeatureKey) => void;
+  onRefresh: () => Promise<unknown>;
+}>) {
+  return (
+    <>
+      <div
+        className="flex flex-wrap gap-2"
+        role="group"
+        aria-label="Registered AI features"
+      >
+        {features.map((feature) => (
+          <button
+            key={feature.featureKey}
+            type="button"
+            aria-pressed={selectedKey === feature.featureKey}
+            className={`btn-press min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] hover:bg-[var(--color-surface-hover)] ${selectedKey === feature.featureKey ? "border-[var(--color-starbucks-accent)] bg-[var(--color-surface-hover)] text-[var(--color-foreground)]" : "border-[var(--color-border)] text-[var(--color-muted-foreground)]"}`}
+            onClick={() => {
+              onSelect(feature.featureKey);
+            }}
+          >
+            {feature.displayName}
+          </button>
+        ))}
+      </div>
+      {featureQ.isPending && selectedKey !== null && (
+        <p className="text-sm text-[var(--color-muted-foreground)]">
+          Loading feature controls…
+        </p>
+      )}
+      {featureQ.isError && (
+        <RetryAlert
+          message="Feature controls could not be loaded."
+          isFetching={featureQ.isFetching}
+          onRetry={() => void featureQ.refetch()}
+        />
+      )}
+      {featureQ.data &&
+        selectedKey !== null &&
+        sameFeatureKey(featureQ.data.featureKey, selectedKey) && (
+          <SettingsAiFeatureDetail
+            feature={featureQ.data}
+            onRefresh={onRefresh}
+          />
+        )}
+    </>
+  );
+}
+
+export function AiTab() {
+  const trpc = useTRPC();
+  const { featureKey, activeTab, setAiState } = useAiSettingsSelection();
   const providerQ = useQuery(trpc.admin.aiProvider.get.queryOptions());
   const catalogQ = useQuery(trpc.admin.aiPrompts.list.queryOptions());
   const selectedKey =
@@ -151,48 +219,19 @@ export function AiTab() {
         <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
           Configure a provider, test it, then enable report features.
         </p>
-        <p
-          role="status"
-          aria-label="AI readiness"
-          className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm"
-        >
-          <span>
-            <span className="text-[var(--color-muted-foreground)]">
-              Provider{" "}
-            </span>
-            <strong className="font-semibold text-[var(--color-foreground)]">
-              {readiness.provider}
-            </strong>
-          </span>
-          <span>
-            <span className="text-[var(--color-muted-foreground)]">
-              Features{" "}
-            </span>
-            <strong className="font-semibold text-[var(--color-foreground)]">
-              {readiness.features}
-            </strong>
-          </span>
-        </p>
+        <ReadinessSummary readiness={readiness} />
       </div>
 
       <AiRuntimeFailureNotice provider={providerQ.data} />
 
       {catalogQ.isError && (
-        <div className="flex flex-wrap items-center gap-3" role="alert">
-          <p className="text-sm text-[var(--color-destructive)]">
-            AI feature catalog could not be loaded.
-          </p>
-          <button
-            type="button"
-            className="btn-press min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] disabled:opacity-50"
-            onClick={() => {
-              void catalogQ.refetch();
-            }}
-            disabled={catalogQ.isFetching}
-          >
-            {catalogQ.isFetching ? "Retrying…" : "Retry"}
-          </button>
-        </div>
+        <RetryAlert
+          message="AI feature catalog could not be loaded."
+          isFetching={catalogQ.isFetching}
+          onRetry={() => {
+            void catalogQ.refetch();
+          }}
+        />
       )}
 
       <Tabs
@@ -202,68 +241,22 @@ export function AiTab() {
         }}
         className="w-full"
       >
-        <div className="min-w-0 max-w-full overflow-x-auto">
-          <TabsList
-            variant="line"
-            className="grid w-full grid-cols-2 justify-start border-b border-[var(--color-border)] group-data-[orientation=horizontal]/tabs:h-auto sm:inline-flex sm:w-fit sm:min-w-max"
-          >
-            <TabsTrigger value="provider">Provider</TabsTrigger>
-            <TabsTrigger value="features">Features</TabsTrigger>
-          </TabsList>
-        </div>
+        <AiTabsList />
 
         <TabsContent value="provider" className="pt-6">
           <AiProviderCard onRefreshDependents={refreshProviderDependents} />
         </TabsContent>
 
         <TabsContent value="features" className="space-y-5 pt-6">
-          <div
-            className="flex flex-wrap gap-2"
-            role="group"
-            aria-label="Registered AI features"
-          >
-            {(catalogQ.data?.features ?? []).map((feature) => (
-              <button
-                key={feature.featureKey}
-                type="button"
-                aria-pressed={selectedKey === feature.featureKey}
-                className={`btn-press min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] hover:bg-[var(--color-surface-hover)] ${selectedKey === feature.featureKey ? "border-[var(--color-starbucks-accent)] bg-[var(--color-surface-hover)] text-[var(--color-foreground)]" : "border-[var(--color-border)] text-[var(--color-muted-foreground)]"}`}
-                onClick={() => {
-                  setAiState({ tab: "features", feature: feature.featureKey });
-                }}
-              >
-                {feature.displayName}
-              </button>
-            ))}
-          </div>
-          {featureQ.isPending && selectedKey !== null && (
-            <p className="text-sm text-[var(--color-muted-foreground)]">
-              Loading feature controls…
-            </p>
-          )}
-          {featureQ.isError && (
-            <div className="flex flex-wrap items-center gap-3" role="alert">
-              <p className="text-sm text-[var(--color-destructive)]">
-                Feature controls could not be loaded.
-              </p>
-              <button
-                type="button"
-                className="btn-press min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
-                onClick={() => void featureQ.refetch()}
-                disabled={featureQ.isFetching}
-              >
-                {featureQ.isFetching ? "Retrying…" : "Retry"}
-              </button>
-            </div>
-          )}
-          {featureQ.data &&
-            selectedKey !== null &&
-            sameFeatureKey(featureQ.data.featureKey, selectedKey) && (
-              <SettingsAiFeatureDetail
-                feature={featureQ.data}
-                onRefresh={refreshFeature}
-              />
-            )}
+          <FeaturesPanel
+            features={catalogQ.data?.features ?? []}
+            selectedKey={selectedKey}
+            featureQ={featureQ}
+            onSelect={(feature) =>
+              setAiState({ tab: "features", feature: feature })
+            }
+            onRefresh={refreshFeature}
+          />
         </TabsContent>
       </Tabs>
     </div>

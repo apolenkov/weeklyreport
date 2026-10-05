@@ -6,20 +6,21 @@ import type {
   AiProviderDraft,
 } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown } from "lucide-react";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { ConfirmationDialog } from "../../../shared/ui/dialogs/confirmation-dialog";
 import { AiProviderCardFeedback } from "./ai-provider-card-feedback";
+import {
+  AiProviderDiagnostics,
+  AiProviderLoadError,
+} from "./ai-provider-diagnostics";
 import { AiProviderForm, toAiProviderForm } from "./ai-provider-form";
 import {
   AI_PROVIDER_TEST_QUEUED_MESSAGE,
   providerTestExecutionMessage,
   useAiProviderMutations,
 } from "./ai-provider-mutations";
-import { AiProviderRetainedRevisions } from "./ai-provider-retained-revisions";
-import { AiProviderRevisionDetails } from "./ai-provider-revision-details";
 import { selectObservedRevision } from "./ai-provider-revision-selection";
 import { AiProviderStateSummary } from "./ai-provider-state-summary";
 
@@ -51,28 +52,8 @@ const mutationsAreBusy = (mutations: AiProviderMutations): boolean =>
 const preparationIsPending = (revision: AiProviderConfigurationRead): boolean =>
   revision.lifecycle === "preparing" && revision.progress.finishedAt === null;
 
-export function AiProviderCardContent({
-  data,
-  savedRevision,
-  message,
-  operationFailed = false,
-  mutations,
-  onSave,
-}: AiProviderCardContentProps) {
-  const revision = selectObservedRevision(data, savedRevision);
+function useRevisionEditing(revision: AiProviderConfigurationRead | null) {
   const revisionId = revision?.id ?? null;
-  const executionMessage = revision
-    ? providerTestExecutionMessage(revision)
-    : null;
-  const observedMessage =
-    message === AI_PROVIDER_TEST_QUEUED_MESSAGE
-      ? (executionMessage ?? message)
-      : (message ?? executionMessage);
-  const allBusy = mutationsAreBusy(mutations);
-  const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
-  const diagnosticsBaseId = useId();
-  const diagnosticsSummaryId = `${diagnosticsBaseId}-summary`;
-  const diagnosticsPanelId = `${diagnosticsBaseId}-panel`;
   const [editingActiveRevisionId, setEditingActiveRevisionId] = useState<
     string | null
   >(null);
@@ -84,6 +65,46 @@ export function AiProviderCardContent({
   }, [editingActiveRevisionId, revision?.lifecycle]);
   const editing =
     revision?.lifecycle === "active" && editingActiveRevisionId === revisionId;
+  return {
+    editing,
+    startEditing: () => setEditingActiveRevisionId(revisionId),
+    stopEditing: () => setEditingActiveRevisionId(null),
+    disableRequested,
+    setDisableRequested,
+  };
+}
+
+function observeMessage(
+  revision: AiProviderConfigurationRead | null,
+  message: string | null,
+): string | null {
+  const executionMessage = revision
+    ? providerTestExecutionMessage(revision)
+    : null;
+  return message === AI_PROVIDER_TEST_QUEUED_MESSAGE
+    ? (executionMessage ?? message)
+    : (message ?? executionMessage);
+}
+
+export function AiProviderCardContent({
+  data,
+  savedRevision,
+  message,
+  operationFailed = false,
+  mutations,
+  onSave,
+}: AiProviderCardContentProps) {
+  const revision = selectObservedRevision(data, savedRevision);
+  const revisionId = revision?.id ?? null;
+  const observedMessage = observeMessage(revision, message);
+  const allBusy = mutationsAreBusy(mutations);
+  const {
+    editing,
+    startEditing,
+    stopEditing,
+    disableRequested,
+    setDisableRequested,
+  } = useRevisionEditing(revision);
   const { lifecycle, activeReadOnly } = getAiProviderView(revision, editing);
 
   return (
@@ -92,7 +113,7 @@ export function AiProviderCardContent({
         lifecycle={lifecycle}
         availability={data.availability}
         revision={revision}
-        onEdit={() => setEditingActiveRevisionId(revisionId)}
+        onEdit={() => startEditing()}
         onDisable={() => setDisableRequested(true)}
         disablePending={allBusy}
         showActiveActions={activeReadOnly}
@@ -114,9 +135,7 @@ export function AiProviderCardContent({
           onTest={(id) => mutations.test.mutate({ revisionId: id })}
           onActivate={(id) => mutations.activate.mutate({ revisionId: id })}
           onDisable={() => mutations.disable.mutate()}
-          onCancelEdit={
-            editing ? () => setEditingActiveRevisionId(null) : undefined
-          }
+          onCancelEdit={editing ? () => stopEditing() : undefined}
         />
       )}
 
@@ -139,65 +158,12 @@ export function AiProviderCardContent({
         operationFailed={operationFailed}
       />
       {revision && (
-        <details
-          className="group mt-4 border-t border-[var(--color-border)] pt-3"
-          data-testid="ai-provider-diagnostics"
-          open={diagnosticsOpen}
-        >
-          <summary
-            id={diagnosticsSummaryId}
-            aria-controls={diagnosticsPanelId}
-            aria-expanded={diagnosticsOpen}
-            className="flex cursor-pointer list-none items-center justify-between gap-3 rounded-[var(--radius-sm)] py-1 text-sm font-semibold text-[var(--color-foreground)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] [&::-webkit-details-marker]:hidden"
-            onClick={(event) => {
-              event.preventDefault();
-              setDiagnosticsOpen((isOpen) => !isOpen);
-            }}
-          >
-            <span className="min-w-0">
-              <span className="block text-xs tracking-[0.12em] text-[var(--color-muted-foreground)] uppercase">
-                Diagnostics
-              </span>
-              <span className="mt-1 block font-normal text-[var(--color-muted-foreground)]">
-                Provider metadata and retained revisions
-              </span>
-            </span>
-            <ChevronDown
-              aria-hidden="true"
-              className="size-4 shrink-0 transition-transform group-open:rotate-180"
-            />
-          </summary>
-          <div
-            id={diagnosticsPanelId}
-            role="region"
-            aria-labelledby={diagnosticsSummaryId}
-            aria-hidden={!diagnosticsOpen}
-            className="mt-3 flex flex-col gap-4"
-          >
-            {diagnosticsOpen && (
-              <AiProviderRevisionDetails revision={revision} />
-            )}
-            {diagnosticsOpen && (
-              <AiProviderRetainedRevisions
-                revisions={data.revisions}
-                activeRevisionId={data.activeRevisionId}
-                busy={allBusy}
-                restorePendingRevisionId={
-                  mutations.restore.isPending
-                    ? mutations.restore.variables.revisionId
-                    : null
-                }
-                onRestore={(id) => mutations.restore.mutate({ revisionId: id })}
-                discardPendingRevisionId={
-                  mutations.discard.isPending
-                    ? mutations.discard.variables.revisionId
-                    : null
-                }
-                onDiscard={(id) => mutations.discard.mutate({ revisionId: id })}
-              />
-            )}
-          </div>
-        </details>
+        <AiProviderDiagnostics
+          revision={revision}
+          data={data}
+          mutations={mutations}
+          allBusy={allBusy}
+        />
       )}
     </div>
   );
@@ -263,19 +229,10 @@ export function AiProviderCard({
   }
   if (aiQ.isError || !aiQ.data) {
     return (
-      <div className="flex flex-wrap items-center gap-3" role="alert">
-        <p className="text-[var(--color-destructive)]">
-          Failed to load AI configuration.
-        </p>
-        <button
-          type="button"
-          className="btn-press min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50"
-          onClick={() => void aiQ.refetch()}
-          disabled={aiQ.isFetching}
-        >
-          {aiQ.isFetching ? "Retrying…" : "Retry"}
-        </button>
-      </div>
+      <AiProviderLoadError
+        isFetching={aiQ.isFetching}
+        onRetry={() => void aiQ.refetch()}
+      />
     );
   }
   return (

@@ -40,6 +40,23 @@ const hasPendingExecution = (revision: RevisionRead | null): boolean => {
   return state === "queued" || state === "running";
 };
 
+const activateButtonLabel = (pending: boolean, preparing: boolean): string => {
+  if (pending) return "Activating…";
+  return preparing ? "Resume activation" : "Activate";
+};
+
+function CancelEditButton({ onCancel }: Readonly<{ onCancel: () => void }>) {
+  return (
+    <button
+      type="button"
+      className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+      onClick={onCancel}
+    >
+      Cancel edit
+    </button>
+  );
+}
+
 function ProviderActionButtons({
   revision,
   revisionId,
@@ -97,11 +114,7 @@ function ProviderActionButtons({
         aria-describedby="ai-provider-action-guidance"
         onClick={() => setConfirmation("activate")}
       >
-        {activatePending
-          ? "Activating…"
-          : preparing
-            ? "Resume activation"
-            : "Activate"}
+        {activateButtonLabel(activatePending, preparing)}
       </button>
       {availability === "available" && (
         <button
@@ -113,15 +126,7 @@ function ProviderActionButtons({
           {disablePending ? "Disabling…" : "Disable"}
         </button>
       )}
-      {onCancel && (
-        <button
-          type="button"
-          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
-          onClick={onCancel}
-        >
-          Cancel edit
-        </button>
-      )}
+      {onCancel && <CancelEditButton onCancel={onCancel} />}
     </div>
   );
 }

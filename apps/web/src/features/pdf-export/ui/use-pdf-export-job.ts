@@ -59,6 +59,13 @@ export function pdfExportRefetchInterval(
     : STATUS_POLL_INTERVAL_MS;
 }
 
+const replaceState = <T>(_current: T | null, next: T | null): T | null => next;
+
+interface FallbackLink {
+  readonly reportId: string;
+  readonly url: string;
+}
+
 interface UsePdfExportJobArgs {
   readonly reportId: string;
   readonly periodStatus: PeriodStatus;
@@ -79,25 +86,18 @@ export function usePdfExportJob({
 }: UsePdfExportJobArgs): UsePdfExportJobResult {
   const trpc = useTRPC();
   const [activeJob, setActiveJob] = useReducer(
-    (_current: ActivePdfExportJob | null, next: ActivePdfExportJob | null) =>
-      next,
+    replaceState<ActivePdfExportJob>,
     null,
   );
   const jobId = activeJob?.reportId === reportId ? activeJob.jobId : null;
   // Held so the fallback link stays visible after jobId is cleared; keyed by
   // reportId so a report switch never offers the previous report's artifact.
-  const [fallback, setFallback] = useState<{
-    readonly reportId: string;
-    readonly url: string;
-  } | null>(null);
+  const [fallback, setFallback] = useState<FallbackLink | null>(null);
   const fallbackUrl = fallback?.reportId === reportId ? fallback.url : null;
   // Same reportId keying as the fallback link: a report switch hides the
   // quarantine notice instead of leaking it onto another report.
   const [recoveryNotice, setRecoveryNotice] = useReducer(
-    (
-      _current: { readonly reportId: string } | null,
-      next: { readonly reportId: string } | null,
-    ) => next,
+    replaceState<{ readonly reportId: string }>,
     null,
   );
   const recoveryRequired = recoveryNotice?.reportId === reportId;
