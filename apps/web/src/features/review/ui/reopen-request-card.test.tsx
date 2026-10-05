@@ -146,4 +146,11 @@ describe("ReopenRequestCard", () => {
     expect(screen.getByText("Rejected")).toBeInTheDocument();
     expect(screen.getByText("Head Comment")).toBeInTheDocument();
   });
+
+  it("labels the creation time as requested, matching the dashboard term (R40)", () => {
+    renderCard(REQUEST);
+
+    expect(screen.getByText(/· requested /)).toBeInTheDocument();
+    expect(screen.queryByText(/submitted \d/i)).toBeNull();
+  });
 });
