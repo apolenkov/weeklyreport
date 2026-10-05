@@ -9,29 +9,36 @@ export const reportSectionFullInclude = {
       id: true,
       // Live read stamps group for reviewer affordances / Acknowledge gating.
       reportingGroupId: true,
+      // Only what the section mapper reads: no whole Project/Stage rows.
       stageAssignments: {
-        include: {
-          // Full cross-lead stageSet (display); ownedStages stays author-only.
+        select: {
+          projectId: true,
+          stageId: true,
+          stage: { select: { name: true, sortOrder: true } },
           project: {
-            include: {
+            select: {
+              id: true,
+              name: true,
+              archived: true,
+              // Full cross-lead stageSet (display); ownedStages stays author-only.
               stageAssignments: {
-                include: { stage: true },
+                select: {
+                  stageId: true,
+                  stage: { select: { name: true, sortOrder: true } },
+                },
               },
               groupProducts: { select: { groupId: true } },
             },
           },
-          stage: true,
         },
       },
     },
   },
   projectStatuses: {
-    include: {
-      project: true,
-    },
+    select: { projectId: true, status: true, updatedAt: true },
   },
   stageStatuses: {
-    include: { stage: true },
+    select: { projectId: true, stageId: true, status: true, updatedAt: true },
   },
   // Activity statuses + name + linkedProducts in one query.
   activityStatuses: {

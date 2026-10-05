@@ -139,3 +139,18 @@ the user's next request without revoking the session.
 - **GIVEN** a valid JWT carrying reporting group `A`
 - **WHEN** the database group is `B` (or none)
 - **THEN** the resolved session carries `B` (or no group)
+
+### Requirement: Session hydration reuses the live-access read
+
+Human-session resolution MUST obtain the live reporting group name, and the
+requester's own section of the active report when the token lacks one, from the
+same Prisma read as the `isActive` gate. Hydration MUST NOT repeat those
+lookups for that session, and the values MUST reflect the database, not the
+token.
+
+#### Scenario: One user read serves group name and section
+
+- **GIVEN** a valid lead token without an active section id
+- **WHEN** the session is resolved
+- **THEN** the session carries the database group name and the lead's section id
+- **AND** no separate reporting-group or report-section query is issued
