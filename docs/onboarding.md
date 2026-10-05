@@ -87,13 +87,21 @@ WeeklyReport автоматизирует еженедельные статус-
 web, чтобы заработала корреляция ошибок с трейсами (см. раздел 6). В production
 он компилируется в Web-образ, поэтому изменение требует новой сборки.
 
-Локальный `pnpm observability:up` читает настройки overlay из корневого `.env`:
-`GRAFANA_PORT` (по умолчанию `3003`), `GRAFANA_ADMIN_USER` (по умолчанию
-`admin`) и обязательный `GRAFANA_ADMIN_PASSWORD`. Порты Grafana и Bugsink
-(`BUGSINK_PORT`, по умолчанию `8000`) привязаны только к loopback. Для Bugsink
-также обязателен `BUGSINK_SECRET_KEY`; значение из `.env.example` подходит
-только для локального стека и должно быть заменено в общем окружении. Подробный
-контракт — в [environment.md](environment.md).
+Локальные зависимости (Postgres с pgvector, Redis, Mailpit, Gotenberg) работают в
+Kubernetes OrbStack, namespace `wr-dev`. `pnpm deps:up` применяет
+`deploy/local-dev/deps.yaml`, `pnpm deps:down` останавливает поды, но не трогает
+тома с данными; полный сброс — `kubectl delete namespace wr-dev`. OrbStack
+публикует сервисы на localhost: Postgres `5432`, Redis `6379`, Mailpit SMTP
+`1025` и UI `8025`, Gotenberg `3010`. Рендерер открывает печатную страницу
+через алиас `host.internal`, поэтому в `.env` стоит
+`PDF_BASE_URL=http://host.internal:3000`, а `GOTENBERG_URL=http://localhost:3010`.
+
+Переход со старого Docker Compose: порты выше должны быть свободны. Останови
+старые контейнеры `weeklyreport-postgres-1`, `-redis-1`, `-mailpit-1`,
+`-gotenberg-1` (`docker stop`, без `down -v`), затем `pnpm deps:up` и заново
+`pnpm db:bootstrap:local demo`: данные старого тома не переносятся, это
+синтетическая база. Образец `.env` обновлён (`PDF_BASE_URL`, `GOTENBERG_URL`,
+`OTEL_SDK_DISABLED=true`); перенеси эти строки в свой `.env`.
 
 Аутентификация локально:
 
@@ -212,11 +220,10 @@ AI-провайдеров и промптов. Управляющая запис
 - `GET /metrics` отдаёт внутренние метрики API. Production Caddy не публикует
   этот endpoint во внешний интернет.
 - Sentry-совместимый сервис получает ошибки API и Web, когда заданы
-  `SENTRY_DSN` и `NEXT_PUBLIC_SENTRY_DSN`. Для локальной диагностики команда
-  `pnpm observability:up` добавляет Grafana/OTel и Bugsink в текущий Compose-
-  проект и переиспользует его PostgreSQL, Redis и Mailpit без конкурирующих
-  host-портов. Основной dev-стек остаётся работоспособным без overlay и DSN;
-  `pnpm observability:down` удаляет только observability-сервисы.
+  `SENTRY_DSN` и `NEXT_PUBLIC_SENTRY_DSN`. Локального стека Grafana/OTel и
+  Bugsink в репозитории нет; дашборды и правила алертов лежат в
+  `deploy/helm/weeklyreport/observability/` как материал для DevOps. Dev-запуск
+  работает без DSN и без коллектора.
 
 ## 7. Гейты и стиль кода
 

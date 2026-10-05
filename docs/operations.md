@@ -428,24 +428,17 @@ following remain **BLOCKED** until an authorized external read-back exists:
 - an immutable release record binding commit, image, migrations, approvals,
   deployment evidence, and rollback decision.
 
-The local `docker-compose.observability.yml` overlay, its
-`deploy/prometheus-otel-lgtm.yml` and `deploy/alert-rules.yml` mounts,
-`pgbackups` volume, and checked-in workflows are templates or repository evidence
-only; none is a production PASS by itself.
-The local observability overlay reads `GRAFANA_ADMIN_PASSWORD` from root `.env`;
-its Compose contract has no password default. It is separate from production
-Helm, which ships no monitoring stack. The local Bugsink errors overlay accepts
-`BUGSINK_PORT` (default `8000`) and requires `BUGSINK_SECRET_KEY` with no Compose
-fallback; it is not part of the production Helm release.
+The `pgbackups` volume, the alert rules and Grafana dashboards under
+`deploy/helm/weeklyreport/observability/`, and checked-in workflows are templates
+or repository evidence only; none is a production PASS by itself. The
+production Helm chart ships no monitoring stack, and the repository has no local
+one.
 
 Grafana scans two non-overlapping dashboard roots: operational and tRPC
 dashboards appear in `CustomReport`, while product telemetry appears in
-`Product KPIs`. The base Prometheus template still labels its series
-`cluster=customreport-production`; the composed-last development override keeps
-`cluster=customreport-local`. That template label does not establish a running
-production collector. `deploy/alert-rules.yml` and `deploy/grafana/**` remain
-operator reference material; verify their labels and receivers against the
-actual cluster before treating them as production monitoring.
+`Product KPIs`. `observability/alert-rules.yml` and `observability/grafana/**`
+remain operator reference material; verify their labels and receivers against
+the actual cluster before treating them as production monitoring.
 Off-box encrypted backup remains **BLOCKED** until an operator supplies a
 provider endpoint, repository identity, encryption key policy, retention policy,
 and a scheduled restore read-back. This repository deliberately does not invent
