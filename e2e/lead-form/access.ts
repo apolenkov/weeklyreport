@@ -6,6 +6,7 @@ import {
   ROLE_LABEL,
 } from "@customreport/shared";
 
+import { E2E_BASE_URL } from "../setup/base-url.js";
 import { LEAD_FORM_FIXTURE } from "../setup/fixture-data.js";
 import {
   findRole,
@@ -29,7 +30,7 @@ async function login(role: "lead" | "head", session?: string): Promise<void> {
   assert(ref);
   const href = await getAttr(ref, "href", session);
   assert(href, "Missing dev-login link target");
-  const url = new URL(href, "http://localhost:3000");
+  const url = new URL(href, E2E_BASE_URL);
   assert.equal(url.pathname, "/auth/dev-login");
   assert.equal(url.searchParams.get("role"), role);
   assert.equal(url.searchParams.get("email"), DEV_LOGIN_EMAIL_BY_ROLE[role]);

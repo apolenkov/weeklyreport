@@ -1,9 +1,9 @@
 import { assertObservedRuntimeTarget } from "../../prisma/guards/_destructive-guard.js";
+import { E2E_BASE_URL } from "./base-url.js";
 
 const SCRIPT_NAME = "e2e-running-app-target";
 // Through the web rewrite, so the web to API link the browser uses is probed.
-export const RUNTIME_TARGET_URL =
-  "http://localhost:3000/trpc/dev.runtimeTarget";
+export const RUNTIME_TARGET_URL = `${E2E_BASE_URL}/trpc/dev.runtimeTarget`;
 
 type Fetch = (url: string, init: { signal: AbortSignal }) => Promise<Response>;
 
