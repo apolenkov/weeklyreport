@@ -124,4 +124,58 @@ describe("AiProviderConfigurationService read boundary", () => {
     expect(serialized).not.toContain("generationCredential");
     expect(serialized).not.toContain("embeddingCredential");
   });
+
+  describe("runtime failure", () => {
+    const failure = {
+      outcome: "provider_response_incomplete" as const,
+      occurredAt: "2026-08-10T01:00:00.000Z",
+    };
+    const readWith = (activatedAt: Date | null, lastFailure: unknown) => {
+      const base = control();
+      const stored = {
+        ...base,
+        activeConfiguration: base.activeConfiguration && {
+          ...base.activeConfiguration,
+          activatedAt,
+        },
+      };
+      return new AiProviderConfigurationService(
+        { getControl: () => Promise.resolve(stored) } as never,
+        codec,
+        {
+          AI_PROVIDER_ALLOWED_ORIGINS: "https://api.mistral.ai",
+          REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED: true,
+          REPORT_ASSISTANT_INPUT_VERSION: "report-assistant/v1",
+        },
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        {
+          lastFailure: () => Promise.resolve(lastFailure),
+          recordFailure: () => Promise.resolve(),
+          recordSuccess: () => Promise.resolve(),
+        } as never,
+      ).read();
+    };
+
+    it("exposes a failure recorded after the active revision was activated", async () => {
+      const result = await readWith(now, failure);
+      expect(result.runtimeFailure).toEqual(failure);
+    });
+
+    it("hides a failure that predates the current activation", async () => {
+      const result = await readWith(
+        new Date("2026-08-10T02:00:00.000Z"),
+        failure,
+      );
+      expect(result.runtimeFailure).toBeNull();
+    });
+
+    it("reports no failure when none is stored", async () => {
+      const result = await readWith(now, null);
+      expect(result.runtimeFailure).toBeNull();
+    });
+  });
 });

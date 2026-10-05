@@ -137,11 +137,20 @@ export const aiProviderDiscardResultSchema = z
   .object({ discarded: z.literal(true) })
   .strict();
 
+/** Latest request-path failure of the active provider, retained briefly. */
+export const aiProviderRuntimeFailureSchema = z
+  .object({
+    outcome: z.enum(["provider_unavailable", "provider_response_incomplete"]),
+    occurredAt: z.iso.datetime(),
+  })
+  .strict();
+
 /** Public shared schema or contract constant for ai provider control read schema. */
 export const aiProviderControlReadSchema = z
   .object({
     enabled: z.boolean(),
     availability: aiProviderAvailabilitySchema,
+    runtimeFailure: aiProviderRuntimeFailureSchema.nullable(),
     activeRevisionId: z.uuid().nullable(),
     profileCapabilities: z
       .array(aiProviderProfileCapabilitySchema)

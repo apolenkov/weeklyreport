@@ -12,6 +12,20 @@ describe("reportAssistantOutcomeSchema", () => {
     ).toEqual({ kind: "provider_unavailable" });
   });
 
+  it("accepts the incomplete-provider-response outcome without details", () => {
+    expect(
+      reportAssistantOutcomeSchema.parse({
+        kind: "provider_response_incomplete",
+      }),
+    ).toEqual({ kind: "provider_response_incomplete" });
+    expect(
+      reportAssistantOutcomeSchema.safeParse({
+        kind: "provider_response_incomplete",
+        providerCode: "length",
+      }).success,
+    ).toBe(false);
+  });
+
   it("keeps provider failure details out of the public outcome", () => {
     expect(
       reportAssistantOutcomeSchema.safeParse({

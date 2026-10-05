@@ -400,12 +400,22 @@ describe("ai provider contracts", () => {
     const baseline = {
       enabled: false,
       availability: "not_configured" as const,
+      runtimeFailure: null,
       activeRevisionId: null,
       profileCapabilities: AI_PROVIDER_PROFILE_CAPABILITIES,
       active: null,
       revisions: [],
     };
     expect(aiProviderControlReadSchema.safeParse(baseline).success).toBe(true);
+    expect(
+      aiProviderControlReadSchema.safeParse({
+        ...baseline,
+        runtimeFailure: {
+          outcome: "provider_response_incomplete",
+          occurredAt: "2026-10-05T12:30:00.000Z",
+        },
+      }).success,
+    ).toBe(true);
 
     const { revisions: _revisions, ...withoutRevisions } = baseline;
     const result = aiProviderControlReadSchema.safeParse(withoutRevisions);
@@ -422,6 +432,7 @@ describe("ai provider contracts", () => {
       aiProviderControlReadSchema.safeParse({
         enabled: false,
         availability: "not_configured",
+        runtimeFailure: null,
         activeRevisionId: null,
         profileCapabilities: AI_PROVIDER_PROFILE_CAPABILITIES,
         active: null,

@@ -76,6 +76,7 @@ export const reportAssistantOutcomeSchema = z.discriminatedUnion("kind", [
       rateLimit: providerRateLimitSchema.optional(),
     })
     .strict(),
+  z.object({ kind: z.literal("provider_response_incomplete") }).strict(),
   z.object({ kind: z.literal("result_set_too_large") }).strict(),
   z.object({ kind: z.literal("invalid_plan") }).strict(),
   z.object({ kind: z.literal("ai_not_configured") }).strict(),

@@ -136,6 +136,7 @@ const provider: AiProviderConfigurationRead = {
 const providerControl: AiProviderControlRead = {
   enabled: true,
   availability: "available",
+  runtimeFailure: null,
   activeRevisionId: provider.id,
   profileCapabilities: AI_PROVIDER_PROFILE_CAPABILITIES.map(
     ({ profile, roles }) => ({ profile, roles: [...roles] }),
@@ -407,6 +408,37 @@ describe("AiTab", () => {
     await waitFor(() => expect(readiness).toHaveTextContent("0/1 ready"));
     expect(reads.list).toBeGreaterThan(initialListReads);
     expect(reads.feature).toBeGreaterThan(initialFeatureReads);
+  });
+
+  it("flags a provider whose report chat failed at request time", async () => {
+    renderWorkspace(
+      makeFeature(
+        makeBundle({
+          id: CANDIDATE_ID,
+          revision: 2,
+          lifecycle: "draft",
+          hash: HASH_B,
+        }),
+      ),
+      [],
+      undefined,
+      {
+        provider: () => ({
+          ...providerControl,
+          runtimeFailure: {
+            outcome: "provider_response_incomplete",
+            occurredAt: "2026-10-05T12:30:00.000Z",
+          },
+        }),
+      },
+    );
+    const readiness = screen.getByRole("status", { name: "AI readiness" });
+    await waitFor(() =>
+      expect(readiness).toHaveTextContent("Provider Failing"),
+    );
+    expect(await screen.findByTestId("ai-runtime-failure")).toHaveTextContent(
+      "cut report chat answers short",
+    );
   });
 
   it("recovers the feature catalog through the settings retry action", async () => {

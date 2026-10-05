@@ -104,6 +104,7 @@ export const emptyControl = (): AiProviderControlRead =>
   aiProviderControlReadSchema.parse({
     enabled: false,
     availability: "not_configured",
+    runtimeFailure: null,
     activeRevisionId: null,
     profileCapabilities: AI_PROVIDER_PROFILE_CAPABILITIES,
     active: null,
@@ -121,6 +122,7 @@ export const toControl = (
       control.activeConfiguration?.lifecycle === AiProviderLifecycle.active
         ? "available"
         : "not_configured",
+    runtimeFailure: null,
     activeRevisionId: control.activeConfigurationId,
     profileCapabilities: AI_PROVIDER_PROFILE_CAPABILITIES,
     active: control.activeConfiguration
