@@ -36,6 +36,18 @@ Recommended types: `feat | fix | chore | docs | refactor | test | perf | ci | bu
 
 Subject ≤ 100 chars. Body is free-form (multi-line line length unrestricted).
 
+`pnpm install` installs lefthook git hooks (the `prepare` script, `lefthook.yml`):
+
+- pre-commit — `prettier --check`, ESLint and Stylelint on staged files, `pnpm typecheck`;
+- commit-msg — commitlint (`commitlint.config.ts`): Conventional Commits (plus `merge:` and
+  GitLab `Merge branch …`), scope from the list;
+- pre-push — light: `format:check`, `typecheck`, `spec:check`; full lint and tests run in the CI
+  `quality` job. Skipped when `CI` or any `AGENT_*` variable is set.
+
+Hooks live in the common git directory and work in every worktree without a separate install.
+
+In merge request pipelines the `quality` job runs commitlint over every MR commit.
+
 ## Local quality gate
 
 Before committing, run `pnpm format:check`, `pnpm lint`, `pnpm typecheck`,
