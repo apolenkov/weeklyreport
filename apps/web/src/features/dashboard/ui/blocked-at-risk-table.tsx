@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { pluralize } from "../../../shared/lib/format/pluralize";
 import { RotatingChevron } from "../../../shared/ui/report-shell/rotating-chevron";
 import type { BlockedAtRiskItem } from "../model/dashboard";
 import {
@@ -60,7 +61,7 @@ function HeaderLabel({
             : "bg-[var(--color-muted)] text-[var(--color-muted-foreground)]"
         }`}
       >
-        {issueCount} issues
+        {issueCount} {pluralize(issueCount, "issue", "issues")}
       </span>
     </div>
   );

@@ -36,12 +36,7 @@ function HistoryArchiveToggle({
           }
         />
         <Archive className="h-4 w-4" aria-hidden="true" />
-        <span>Archive</span>
-        {archiveCount > 0 && (
-          <span className="rounded-[var(--radius-pill)] bg-[var(--color-success)] px-2 py-0.5 text-xs text-[var(--color-starbucks-accent)]">
-            {archiveCount}
-          </span>
-        )}
+        <span>Show archived{archiveCount > 0 ? ` (${archiveCount})` : ""}</span>
       </label>
     </div>
   );

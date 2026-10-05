@@ -133,6 +133,12 @@ describe("BlockedAtRiskTable — grouping by product", () => {
     expect(screen.getByText("3 issues")).toBeVisible();
   });
 
+  it("uses the singular noun when exactly one issue exists", () => {
+    render(<BlockedAtRiskTable items={oneItem} />);
+    expect(screen.getByText("1 issue")).toBeVisible();
+    expect(screen.queryByText("1 issues")).toBeNull();
+  });
+
   it("keeps a red product header when its remaining concrete row is at risk", () => {
     const item = oneItem[0];
     if (!item) throw new Error("expected blocked fixture");
@@ -151,7 +157,20 @@ describe("BlockedAtRiskTable — grouping by product", () => {
     fireEvent.click(screen.getByRole("button", { name: /blocked & at risk/i }));
 
     expect(screen.getByText("At risk")).toBeVisible();
-    expect(screen.getByText("Blocked")).toBeVisible();
+    expect(screen.getByTestId("product-header-status")).toHaveTextContent(
+      "Flagged red",
+    );
+    expect(screen.queryByText("Blocked")).toBeNull();
+  });
+
+  it("labels the header Blocked when a blocked row backs it (R26)", () => {
+    render(<BlockedAtRiskTable items={oneItem} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /blocked & at risk/i }));
+
+    expect(screen.getByTestId("product-header-status")).toHaveTextContent(
+      "Blocked",
+    );
   });
 
   it("renders separate cards for distinct products with the same display name", () => {

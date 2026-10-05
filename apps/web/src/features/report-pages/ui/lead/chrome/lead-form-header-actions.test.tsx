@@ -186,7 +186,13 @@ describe("LeadFormHeaderActions", () => {
     it("shows a Reopen requested status instead of the action while a request is pending", () => {
       renderSubmitted({ canRequestReopen: false, hasPendingReopen: true });
 
-      expect(screen.getByRole("status")).toHaveTextContent("Reopen requested");
+      const status = screen.getByRole("status");
+      expect(status).toHaveTextContent("Reopen requested");
+      // The icon keeps the pill from reading as a disabled action (R30).
+      expect(status.querySelector("svg")).toHaveAttribute(
+        "aria-hidden",
+        "true",
+      );
       expect(
         screen.queryByRole("button", { name: "Request reopen" }),
       ).toBeNull();

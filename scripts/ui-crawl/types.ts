@@ -20,6 +20,11 @@ export type StepRecord = Readonly<{
   restoredBy: "none" | "escape" | "toggle" | "reload" | "navigate";
   responseMs: number | null;
   shot: string | null;
+  elementId?: string;
+  state?: string;
+  depth?: number;
+  path?: readonly string[];
+  logs?: readonly Readonly<{ kind: string; detail: string }>[];
 }>;
 
 export type PageRecord = Readonly<{
@@ -31,10 +36,37 @@ export type PageRecord = Readonly<{
   axeViolations: number;
   geometryIssues: number;
   steps: readonly StepRecord[];
+  state?: string;
+  depth?: number;
+  coverage?: Readonly<{
+    found: number;
+    pressed: number;
+    skipped: number;
+    errors: number;
+    reasons: Readonly<Record<string, number>>;
+  }>;
+  states?: readonly Readonly<{
+    id: string;
+    depth: number;
+    path: readonly string[];
+    controlsFound: number;
+    shot: string;
+    signature: string;
+    dom?: string;
+    status: "observed" | "depth-limit";
+  }>[];
+  pairwise?: readonly Readonly<{
+    values: Readonly<Record<string, string>>;
+    status: "observed" | "skipped" | "error";
+    reason: string | null;
+    shot: string | null;
+  }>[];
+  completion?: "complete" | "limited" | "error";
 }>;
 
 export type RunRecord = Readonly<{
   role: string;
+  state?: string;
   width: number;
   ms: number;
   video: string;
@@ -66,6 +98,12 @@ export const ROLES: readonly Role[] = [
 ];
 
 export type Config = Readonly<{
+  mode: "quick" | "full";
+  maxDepth: number;
+  state: string;
+  allowSynthetic: boolean;
+  entrypoints: readonly string[];
+  fixtureReportId: string | null;
   url: string;
   out: string;
   widths: readonly number[];

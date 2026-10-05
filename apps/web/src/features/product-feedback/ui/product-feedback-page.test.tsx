@@ -319,3 +319,17 @@ describe("ProductFeedbackPage inbox states", () => {
     expect(screen.queryByText("The row is difficult to read")).toBeNull();
   });
 });
+
+describe("ProductFeedbackPage readability", () => {
+  it("keeps the Search placeholder on the shared AA token and caps the intro measure (R65, R18)", () => {
+    setRole("admin");
+    render(<ProductFeedbackPage />);
+
+    expect(screen.getByRole("searchbox", { name: "Search" })).toHaveClass(
+      "placeholder:text-[var(--color-muted-foreground)]",
+    );
+    expect(screen.getByText(/proposed layout changes/i)).toHaveClass(
+      "max-w-[65ch]",
+    );
+  });
+});

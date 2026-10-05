@@ -209,6 +209,13 @@ export function JobsTabView(props: JobsTabViewProps) {
             placeholder="Search failed jobs…"
             testId="jobs-search"
             ariaLabel="Search failed jobs"
+            // R54: nothing to search in an empty queue.
+            disabled={
+              !props.isLoading &&
+              !props.isError &&
+              props.jobs.length === 0 &&
+              props.search === ""
+            }
           />
         }
       />

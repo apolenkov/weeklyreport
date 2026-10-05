@@ -27,15 +27,17 @@ export function RecordVisibilityToggle({
   value,
   onChange,
   disabled = false,
+  desktopLabels = false,
 }: {
   readonly value: RecordVisibility;
   readonly onChange: (next: RecordVisibility) => void;
   // Foreign slide decks force Mine so co-owner rows never merge onto another deck.
   readonly disabled?: boolean;
+  // Icon-only on narrow screens; desktopLabels restores "Mine only"/"Everyone"
+  // at lg so the toggle reads as a segmented control, not a filled button.
+  readonly desktopLabels?: boolean;
 }) {
-  // Icon-only (User = mine, Users = everyone) so the toggle stays compact and
-  // does not crowd the period navigator; each keeps an accessible name via
-  // aria-label + tooltip.
+  const labelClassName = desktopLabels ? "sr-only lg:not-sr-only" : "sr-only";
   return (
     <SegmentedToggle ariaLabel="Record visibility">
       {RECORD_VISIBILITY_OPTIONS.map((option) => (
@@ -49,9 +51,11 @@ export function RecordVisibilityToggle({
           onClick={() => onChange(option.key)}
           className={`btn-press ${segmentClassName(value === option.key, {
             iconOnly: true,
+            desktopLabels,
           })} ${MOBILE_TOUCH_SEGMENT_CLASS} disabled:cursor-not-allowed disabled:opacity-50`}
         >
           <option.Icon className="h-4 w-4" aria-hidden="true" />
+          <span className={labelClassName}>{option.label}</span>
         </button>
       ))}
     </SegmentedToggle>

@@ -66,7 +66,7 @@ export function ProductFeedbackPage() {
           <h1 className="text-2xl font-semibold text-[var(--color-ink)]">
             Feedback
           </h1>
-          <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
+          <p className="mt-1 max-w-[65ch] text-sm text-[var(--color-ink-muted)]">
             {scopeLabel}. Use Agentation to mark elements, text, page areas, or
             proposed layout changes and send structured context to an agent.
           </p>
@@ -81,7 +81,7 @@ export function ProductFeedbackPage() {
           Search
           <input
             autoComplete="off"
-            className="rounded-lg border border-[var(--color-border)] bg-transparent px-3 py-2 font-normal"
+            className="rounded-lg border border-[var(--color-border)] bg-transparent px-3 py-2 font-normal placeholder:text-[var(--color-muted-foreground)]"
             name="feedbackSearch"
             onChange={(event) => inbox.setSearch(event.target.value)}
             placeholder="Message or author"

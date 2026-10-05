@@ -362,6 +362,16 @@ describe("ReportsPage history archive toggle", () => {
     expect(screen.getByText("Week 15, Apr 6–12, 2026")).toBeInTheDocument();
   });
 
+  it("titles the viewer summary as portfolio-wide, not as personal stats (R34)", () => {
+    setRole("viewer");
+    render(<ReportsPage />);
+
+    expect(
+      screen.getByRole("complementary", { name: "Portfolio History Summary" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Periods completed")).toBeInTheDocument();
+  });
+
   it("renders the published-scoped search for a viewer", () => {
     setRole("viewer");
     render(<ReportsPage />);

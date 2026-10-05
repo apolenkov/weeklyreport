@@ -3,6 +3,7 @@
 import {
   Circle,
   CircleCheck,
+  Clock,
   type LucideIcon,
   RefreshCw,
   TriangleAlert,
@@ -167,11 +168,14 @@ function SubmittedSectionAction({
     );
   }
   if (hasPendingReopen) {
+    // Status pill, not a disabled action: icon + status role keep it from
+    // reading as the third repetition of the header's Submitted badge (R30).
     return (
       <span
         role="status"
-        className="inline-flex h-[var(--toolbar-control-h)] items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-4 text-sm font-semibold text-[var(--color-muted-foreground)]"
+        className="inline-flex h-[var(--toolbar-control-h)] items-center gap-1.5 rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-4 text-sm font-semibold text-[var(--color-muted-foreground)]"
       >
+        <Clock aria-hidden="true" className="size-3.5" />
         Reopen requested
       </span>
     );

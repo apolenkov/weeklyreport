@@ -8,6 +8,9 @@ data:
   {{- range $key, $value := .Values.api.env }}
   {{ $key }}: {{ $value | quote }}
   {{- end }}
+  {{- range $key, $value := .Values.api.extraEnv }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
@@ -57,7 +60,7 @@ spec:
       labels:
         {{- include "wr.labels" (dict "root" . "component" "api") | nindent 8 }}
       annotations:
-        checksum/config: {{ toJson .Values.api.env | sha256sum }}
+        checksum/config: {{ toJson (list .Values.api.env .Values.api.extraEnv) | sha256sum }}
         {{- with .Values.api.podAnnotations }}
         {{- toYaml . | nindent 8 }}
         {{- end }}

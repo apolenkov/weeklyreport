@@ -80,9 +80,10 @@ export function mapWeeklyDashboardData({
   weeklyReport,
   now = new Date(),
 }: MapWeeklyDashboardArgs): MappedWeeklyDashboard {
+  const blockedAtRisk = mapBlockedAtRisk(weeklyReport);
   return {
-    kpi: buildKpiData(weeklyReport, now),
-    blockedAtRisk: mapBlockedAtRisk(weeklyReport),
+    kpi: buildKpiData(weeklyReport, now, blockedAtRisk),
+    blockedAtRisk,
   };
 }
 

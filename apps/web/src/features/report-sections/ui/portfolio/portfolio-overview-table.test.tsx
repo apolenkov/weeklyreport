@@ -344,4 +344,37 @@ describe("PortfolioOverviewTable — scope-adaptive (by lead)", () => {
     fireEvent.click(card);
     expect(onNavigate).toHaveBeenCalledWith("p1");
   });
+
+  // R25: the overview must say it is not filtered like the Sections list.
+  it("states that product status spans all authors regardless of the Sections filter", () => {
+    render(
+      <PortfolioOverviewTable
+        products={ONE_PRODUCT}
+        onNavigate={NOOP_NAVIGATE}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        /Status across all authors, whatever the Sections filter shows/,
+      ),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("PortfolioOverviewTable jump affordance (R60)", () => {
+  it("shows the product jump chevron without hover", () => {
+    render(
+      <PortfolioOverviewTable
+        products={[makeProduct({ id: "p1" })]}
+        mountedProductIds={new Set(["p1"])}
+        onNavigate={NOOP_NAVIGATE}
+      />,
+    );
+
+    const chevron = screen
+      .getByRole("button", { name: /Product Alpha/u })
+      .querySelector("[aria-hidden='true'].opacity-60");
+    expect(chevron).not.toBeNull();
+  });
 });

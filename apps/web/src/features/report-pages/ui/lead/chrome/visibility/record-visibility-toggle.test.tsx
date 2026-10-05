@@ -32,6 +32,21 @@ describe("RecordVisibilityToggle — responsive touch-target geometry", () => {
     ).toHaveClass("h-[var(--toolbar-control-h)]");
   });
 
+  // R08: icon-only segments read as stray filled buttons next to the labelled
+  // view-mode toggle; desktopLabels restores text on wide screens.
+  it("shows segment labels at lg when desktopLabels is set", () => {
+    render(
+      <RecordVisibilityToggle value="mine" onChange={vi.fn()} desktopLabels />,
+    );
+
+    for (const label of ["Mine only", "Everyone"]) {
+      expect(screen.getByText(label)).toHaveClass("lg:not-sr-only");
+    }
+    expect(screen.getByRole("button", { name: "Mine only" })).toHaveClass(
+      "lg:min-w-[68px]",
+    );
+  });
+
   it("preserves accessible state and switches to the selected visibility", () => {
     const onChange = vi.fn();
     render(<RecordVisibilityToggle value="mine" onChange={onChange} />);

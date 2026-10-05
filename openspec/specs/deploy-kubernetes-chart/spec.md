@@ -195,6 +195,19 @@ The chart MUST NOT install a monitoring stack. It MUST offer `api.podAnnotations
 - **WHEN** the chart is rendered with default values
 - **THEN** the api pod has no extra annotation and no monitoring object is emitted
 
+### Requirement: Test-stand extension points are opt-in
+
+The chart MUST offer `postgres.args`, default empty, passed to the postgres container as `args`, and `api.extraEnv`, default empty, rendered into the `api-config` ConfigMap after `api.env`. They exist so a test stand can enable server extensions and diagnostics from its own values file; the production example sets neither.
+
+#### Scenario: Default and custom render
+
+- **WHEN** the chart is rendered without `postgres.args`
+- **THEN** the postgres container has no `args`
+- **WHEN** `postgres.args` lists `-c` and `log_statement=all`
+- **THEN** the postgres container carries exactly those args
+- **WHEN** `api.extraEnv` has a key
+- **THEN** `api-config` carries that key and nothing is added without it
+
 ### Requirement: Chart images are pinned and come from CI
 
 Third-party images in `values.yaml` MUST use an explicit tag and `@sha256:`

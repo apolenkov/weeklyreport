@@ -47,9 +47,12 @@ describe("LeadHistorySidebar completed-week stats", () => {
     expect(screen.getByText("5/5")).toBeInTheDocument();
     expect(screen.getByText("100%")).toBeInTheDocument();
     // Streak counts consecutive completed weeks from the top of the list.
-    expect(screen.getByText(/Submitted/i, { selector: "p" })).toHaveTextContent(
-      "Submitted 5 weeks in a row.",
+    expect(screen.getByText(/Completed/i, { selector: "p" })).toHaveTextContent(
+      "Completed 5 weeks in a row.",
     );
+    // R34: a viewer's population is periods, not their own submissions.
+    expect(screen.getByText("Periods completed")).toBeInTheDocument();
+    expect(screen.queryByText("Submissions")).not.toBeInTheDocument();
     expect(screen.queryByText(/still a draft/i)).not.toBeInTheDocument();
   });
 
@@ -64,6 +67,7 @@ describe("LeadHistorySidebar completed-week stats", () => {
     render(<LeadHistorySidebar entries={entries} />);
 
     // 3 of 4 weeks completed -> 75%.
+    expect(screen.getByText("Submissions")).toBeInTheDocument();
     expect(screen.getByText("3/4")).toBeInTheDocument();
     expect(screen.getByText("75%")).toBeInTheDocument();
     // Streak stops at the first draft -> 2 consecutive submitted weeks.

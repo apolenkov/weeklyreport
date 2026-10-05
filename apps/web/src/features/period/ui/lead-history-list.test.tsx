@@ -17,7 +17,9 @@ const entry: HistoryEntry = {
   submissionState: "not-submitted",
   submittedAt: null,
   createdAt: "May 15",
+  createdAtTitle: "May 15, 2026, 9:00 AM",
   lastEditAt: "2 hours ago",
+  lastEditAtTitle: "May 17, 2026, 3:00 PM",
   trafficLights: { green: 2, yellow: 0, red: 1 },
   itemCount: 5,
   riskCount: 1,
@@ -35,16 +37,22 @@ describe("LeadHistoryList", () => {
       "/lead/report/22222222-2222-4222-8222-222222222222",
     );
     expect(screen.getByText("Week 20, May 11-17, 2026")).toBeInTheDocument();
-    expect(screen.getByLabelText("Green statuses: 2")).toBeInTheDocument();
-    expect(screen.getByLabelText("Yellow statuses: 0")).toBeInTheDocument();
-    expect(screen.getByLabelText("Red statuses: 1")).toBeInTheDocument();
+    expect(screen.getByLabelText("On track statuses: 2")).toBeInTheDocument();
+    expect(screen.getByLabelText("At risk statuses: 0")).toBeInTheDocument();
+    expect(screen.getByLabelText("Blocked statuses: 1")).toBeInTheDocument();
+    // Status counts stay readable without color vision.
+    expect(screen.getByText("2 on track")).toBeVisible();
+    expect(screen.getByText("0 at risk")).toBeVisible();
+    expect(screen.getByText("1 blocked")).toBeVisible();
     expect(
       screen.getByText(
-        "2 green statuses, 1 red status | 5 items | 1 risk | 2 decisions",
+        "2 on track, 1 blocked · 5 items · 1 risk · 2 decisions",
       ),
     ).toBeInTheDocument();
     expect(screen.getByText("Last edit")).toBeInTheDocument();
-    expect(screen.getByText("2 hours ago")).toBeInTheDocument();
+    const lastEdit = screen.getByText("2 hours ago");
+    expect(lastEdit).toBeInTheDocument();
+    expect(lastEdit).toHaveAttribute("title", "May 17, 2026, 3:00 PM");
     expect(screen.queryByText("Products")).not.toBeInTheDocument();
     expect(screen.queryByText("Versions")).not.toBeInTheDocument();
   });
@@ -93,9 +101,9 @@ describe("LeadHistoryList", () => {
     const dots = screen.getAllByRole("img");
     expect(dots).toHaveLength(3);
     for (const name of [
-      "Green statuses: 2",
-      "Yellow statuses: 0",
-      "Red statuses: 1",
+      "On track statuses: 2",
+      "At risk statuses: 0",
+      "Blocked statuses: 1",
     ]) {
       expect(screen.getByRole("img", { name })).toBeInTheDocument();
     }

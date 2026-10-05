@@ -323,7 +323,7 @@ describe("AiTab", () => {
     );
   });
 
-  it("shows provider and feature readiness inside the tab menu", async () => {
+  it("shows provider and feature readiness outside the tab menu", async () => {
     renderWorkspace(
       makeFeature(
         makeBundle({
@@ -342,10 +342,13 @@ describe("AiTab", () => {
       "grid-cols-2",
       "w-full",
     );
-    expect(providerTab).toHaveClass("flex-col", "sm:flex-row");
-    expect(featuresTab).toHaveClass("flex-col", "sm:flex-row");
-    await waitFor(() => expect(providerTab).toHaveTextContent("ProviderReady"));
-    expect(featuresTab).toHaveTextContent("Features1/1 ready");
+    // R58: readiness is a status strip, never part of a tab's name or text.
+    const readiness = screen.getByRole("status", { name: "AI readiness" });
+    await waitFor(() => expect(readiness).toHaveTextContent("Provider Ready"));
+    expect(readiness).toHaveTextContent("Features 1/1 ready");
+    expect(providerTab).toHaveTextContent(/^Provider$/);
+    expect(featuresTab).toHaveTextContent(/^Features$/);
+    expect(within(screen.getByRole("tablist")).queryByText("Ready")).toBeNull();
     expect(screen.queryByText("Active and ready")).toBeNull();
     expect(screen.queryByText(/••••abcd/)).toBeNull();
   });
@@ -389,10 +392,10 @@ describe("AiTab", () => {
       return Promise.resolve({ disabled: true });
     });
     const user = userEvent.setup();
-    const providerTab = await screen.findByRole("tab", { name: "Provider" });
-    const featuresTab = screen.getByRole("tab", { name: "Features" });
-    await waitFor(() => expect(providerTab).toHaveTextContent("Ready"));
-    expect(featuresTab).toHaveTextContent("1/1 ready");
+    await screen.findByRole("tab", { name: "Provider" });
+    const readiness = screen.getByRole("status", { name: "AI readiness" });
+    await waitFor(() => expect(readiness).toHaveTextContent("Provider Ready"));
+    expect(readiness).toHaveTextContent("1/1 ready");
     const initialListReads = reads.list;
     const initialFeatureReads = reads.feature;
 
@@ -400,10 +403,8 @@ describe("AiTab", () => {
     const dialog = await screen.findByRole("alertdialog");
     await user.click(within(dialog).getByRole("button", { name: "Disable" }));
 
-    await waitFor(() =>
-      expect(providerTab).toHaveTextContent("Setup required"),
-    );
-    await waitFor(() => expect(featuresTab).toHaveTextContent("0/1 ready"));
+    await waitFor(() => expect(readiness).toHaveTextContent("Setup required"));
+    await waitFor(() => expect(readiness).toHaveTextContent("0/1 ready"));
     expect(reads.list).toBeGreaterThan(initialListReads);
     expect(reads.feature).toBeGreaterThan(initialFeatureReads);
   });
@@ -435,9 +436,11 @@ describe("AiTab", () => {
     await user.click(within(alert).getByRole("button", { name: "Retry" }));
 
     await waitFor(() => expect(reads.list).toBeGreaterThan(initialReads));
-    expect(
-      await screen.findByRole("tab", { name: "Features" }),
-    ).toHaveTextContent("1/1 ready");
+    await waitFor(() =>
+      expect(
+        screen.getByRole("status", { name: "AI readiness" }),
+      ).toHaveTextContent("1/1 ready"),
+    );
   });
 
   it("supports keyboard navigation into the feature workspace", async () => {
