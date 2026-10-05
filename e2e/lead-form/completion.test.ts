@@ -5,6 +5,7 @@ import type { ReportAssistantOutcome } from "@customreport/shared";
 
 import { PROD_CRM_360 } from "../../prisma/seeds/simple/seed-simple.ids.js";
 import { DEMO_STAGE_ASSIGNMENTS } from "../../prisma/seeds/simple/seed-simple.stages.js";
+import { E2E_BASE_URL } from "../setup/base-url.js";
 import { prepareE2eData } from "../setup/reset.js";
 import { openLeadReport } from "./access.js";
 import {
@@ -254,7 +255,7 @@ async function askQuestion(question = QUESTION): Promise<void> {
 
 async function signOutToLogin(): Promise<void> {
   await findRole("button", "Sign out", "click");
-  await command(["wait", "--url", "http://localhost:3000/"]);
+  await command(["wait", "--url", `${E2E_BASE_URL}/`]);
   await waitText("Lead");
   await waitScope({ role: "list", name: "Sign in as" });
   await findRole("link", "Lead", "text");
