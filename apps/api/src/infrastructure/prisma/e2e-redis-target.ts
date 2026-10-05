@@ -33,6 +33,24 @@ export function redisDbForDatabase(database: string): string | undefined {
 }
 
 /**
+ * Integration-test guard: the configured Redis DB must be the one assigned to
+ * the disposable database that `databaseUrl` names.
+ */
+export function assertRedisDbMatchesDatabase(
+  scriptName: string,
+  databaseUrl: string,
+  redisDb: number | string,
+): void {
+  const { database } = parseE2eRuntimeDatabaseTarget(scriptName, databaseUrl);
+  const expected = redisDbForDatabase(database);
+  if (expected === undefined || String(redisDb) !== expected) {
+    throw new Error(
+      `[${scriptName}] REDIS_DB must be exactly ${expected ?? "unassigned"} for ${database}.`,
+    );
+  }
+}
+
+/**
  * Validate the loopback Redis endpoint and the reserved logical DB 15 from the
  * environment. One check shared by E2E setup and the guarded Redis cleanup.
  */

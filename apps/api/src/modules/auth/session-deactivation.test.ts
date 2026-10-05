@@ -91,14 +91,45 @@ describe("readLiveAccess", () => {
         USER_ID,
         prisma,
         revocation(() => Promise.resolve(false)),
-        "r1",
+        { activeReportId: "r1" },
       ),
     ).resolves.toEqual({
       role: "lead",
       reportingGroupId: "g1",
       reportingGroupName: "Group One",
       reportSectionId: "s1",
+      viewerGroupIds: null,
     });
+  });
+
+  it("reads a viewer's group grants in the same user query on request", async () => {
+    const findUnique = vi.fn(() =>
+      Promise.resolve({
+        isActive: true,
+        role: "viewer",
+        reportingGroupId: null,
+        reportingGroup: null,
+        viewerGroupAccess: [{ groupId: "g1" }, { groupId: "g2" }],
+      }),
+    );
+    const prisma = { user: { findUnique } } as unknown as PrismaService;
+
+    await expect(
+      readLiveAccess(
+        USER_ID,
+        prisma,
+        revocation(() => Promise.resolve(false)),
+        { withViewerGroups: true },
+      ),
+    ).resolves.toMatchObject({ viewerGroupIds: ["g1", "g2"] });
+    expect(findUnique).toHaveBeenCalledOnce();
+    expect(findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        select: expect.objectContaining({
+          viewerGroupAccess: { select: { groupId: true } },
+        }) as unknown,
+      }),
+    );
   });
 
   it("reads group name and own section in the same user query", async () => {
@@ -118,7 +149,7 @@ describe("readLiveAccess", () => {
         USER_ID,
         prisma,
         revocation(() => Promise.resolve(false)),
-        "r1",
+        { activeReportId: "r1" },
       ),
     ).resolves.toMatchObject({
       reportingGroupName: null,

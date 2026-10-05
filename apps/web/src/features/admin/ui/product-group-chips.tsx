@@ -1,8 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-
-import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
+import type { OwningGroup } from "./use-group-products";
 
 function ProductGroupChipsMessage({
   kind,
@@ -29,18 +27,20 @@ function ProductGroupChipsMessage({
 }
 
 // Editing lives in the Groups tab so the GroupProduct edge has one write path;
-// this Products-tab surface is intentionally read-only.
-export function ProductGroupChips({
-  productId,
-}: {
-  readonly productId: string;
-}) {
-  const trpc = useTRPC();
-  const groupsQuery = useQuery(
-    trpc.admin.listProductGroups.queryOptions({ productId }),
-  );
+// this Products-tab surface is intentionally read-only. The table resolves
+// ownership for every row in one batched query.
+export interface ProductGroupsView {
+  readonly group: OwningGroup | undefined;
+  readonly isLoading: boolean;
+  readonly isError: boolean;
+}
 
-  if (groupsQuery.isLoading) {
+export function ProductGroupChips({
+  group,
+  isLoading,
+  isError,
+}: ProductGroupsView) {
+  if (isLoading) {
     return (
       <ProductGroupChipsMessage kind="loading">
         Loading groups…
@@ -48,7 +48,7 @@ export function ProductGroupChips({
     );
   }
 
-  if (groupsQuery.isError) {
+  if (isError) {
     return (
       <ProductGroupChipsMessage kind="error">
         Groups unavailable
@@ -56,8 +56,7 @@ export function ProductGroupChips({
     );
   }
 
-  const groups = groupsQuery.data ?? [];
-  if (groups.length === 0) {
+  if (group === undefined) {
     return (
       <ProductGroupChipsMessage kind="empty">
         No groups
@@ -71,14 +70,9 @@ export function ProductGroupChips({
       data-testid="product-group-chips"
       aria-label="Groups owning this product"
     >
-      {groups.map((group) => (
-        <li
-          key={group.id}
-          className="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-background)] px-2 py-0.5 text-xs font-medium text-[var(--color-foreground)]"
-        >
-          {group.name}
-        </li>
-      ))}
+      <li className="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-background)] px-2 py-0.5 text-xs font-medium text-[var(--color-foreground)]">
+        {group.name}
+      </li>
     </ul>
   );
 }

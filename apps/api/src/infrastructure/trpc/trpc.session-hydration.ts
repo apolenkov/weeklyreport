@@ -117,17 +117,19 @@ async function resolveSectionId(
 
 // A fixed pipeline keeps request and PDF-export sessions aligned on mutable
 // authorization scope; file-local steps prevent callers from skipping one.
-// `sectionResolved`: the caller already looked up the user's section (found or
-// not), so the lookup is not repeated.
+// `liveResolved`: the caller already read the user's section (found or not) and
+// a viewer's group grants, so those lookups are not repeated.
 export async function hydrateSession(
   session: UserSession,
   prisma: PrismaService,
-  options: { readonly sectionResolved?: boolean } = {},
+  options: { readonly liveResolved?: boolean } = {},
 ): Promise<UserSession> {
-  const resolved = options.sectionResolved
+  const resolved = options.liveResolved
     ? session
     : await resolveSectionId(session, prisma);
-  const hydrated = await hydrateViewerGroupAccess(resolved, prisma);
+  const hydrated = options.liveResolved
+    ? resolved
+    : await hydrateViewerGroupAccess(resolved, prisma);
   const withGroup = await hydrateReportingGroupName(hydrated, prisma);
   return hydrateOrganization(withGroup, prisma);
 }

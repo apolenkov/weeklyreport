@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createAuthController } from "../../modules/auth/index.js";
 import { PrismaService } from "../prisma/prisma.service";
-import { resolveHumanSession } from "./trpc.context";
+import { clearOrgCache, resolveHumanSession } from "./trpc.context";
 
 // The /pdfs download handler authenticates through `resolveHumanSession`, which
 // must accept ONLY a real human session — never the PDF-worker token or the
@@ -44,13 +44,13 @@ function makePrisma(opts: PrismaStubOptions = {}): PrismaService {
                 isActive: opts.isActive ?? true,
                 role: opts.liveRole ?? "viewer",
                 reportingGroupId: opts.liveGroupId ?? null,
+                reportingGroup: opts.liveGroupName
+                  ? { name: opts.liveGroupName }
+                  : null,
+                viewerGroupAccess: (opts.viewerGroups ?? []).map((groupId) => ({
+                  groupId,
+                })),
               },
-        ),
-    },
-    viewerGroupAccess: {
-      findMany: () =>
-        Promise.resolve(
-          (opts.viewerGroups ?? []).map((groupId) => ({ groupId })),
         ),
     },
     reportSection: {
@@ -193,4 +193,52 @@ describe("resolveHumanSession", () => {
     // JWT), which the download authz check reads.
     expect(result?.viewerGroupAccess).toEqual(["group-1"]);
   });
+
+  // Statement budget per authenticated request: the live-access read serves the
+  // isActive gate, role, group name, own section and viewer grants (TASK-145.62).
+  it.each(["viewer", "lead", "head"] as const)(
+    "resolves a %s with a single database statement",
+    async (role) => {
+      const statement = (value: unknown) => vi.fn(() => Promise.resolve(value));
+      const prisma = {
+        user: {
+          findUnique: statement({
+            isActive: true,
+            role,
+            reportingGroupId: "g1",
+            reportingGroup: { name: "Group One" },
+            authoredReportSections: [{ id: "s1" }],
+            viewerGroupAccess: [{ groupId: "g1" }],
+          }),
+        },
+        viewerGroupAccess: { findMany: statement([]) },
+        reportSection: { findFirst: statement(null) },
+        reportingGroup: { findUnique: statement(null) },
+        organization: {
+          findUnique: statement({ shortName: "PEO", fullName: "Product Team" }),
+        },
+      };
+      clearOrgCache();
+
+      const result = await resolveHumanSession("valid-token", {
+        verifySessionToken: () => ({
+          ...viewerSession,
+          role,
+          activeReportId: "r1",
+        }),
+        sessionRevocation: { isRevoked: () => Promise.resolve(false) },
+        prisma: prisma as unknown as PrismaService,
+      });
+
+      expect(result?.reportingGroupName).toBe("Group One");
+      expect(result?.activeReportSectionId).toBe("s1");
+      expect(result?.viewerGroupAccess).toEqual(
+        role === "viewer" ? ["g1"] : undefined,
+      );
+      expect(prisma.user.findUnique).toHaveBeenCalledOnce();
+      expect(prisma.viewerGroupAccess.findMany).not.toHaveBeenCalled();
+      expect(prisma.reportSection.findFirst).not.toHaveBeenCalled();
+      expect(prisma.reportingGroup.findUnique).not.toHaveBeenCalled();
+    },
+  );
 });
