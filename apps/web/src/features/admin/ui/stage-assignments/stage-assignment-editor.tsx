@@ -112,7 +112,7 @@ function StageCell({
         }
         aria-label={`Assign ${stageName} stage for ${projectName}`}
       >
-        <option value="">-- unassigned --</option>
+        <option value="">Unassigned</option>
         {isRetainedAssignee ? (
           <option value={currentAssignee} disabled>
             {shortNameFromName(assignment.userName ?? "") || currentAssignee}

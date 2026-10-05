@@ -222,6 +222,10 @@ describe("StageAssignmentEditor", () => {
       name: "Assign Design stage for Reference product",
     });
     expect(select).toHaveValue("u-eligible");
+    // R20: the empty option is capitalised like its siblings.
+    expect(
+      within(select).getByRole("option", { name: "Unassigned" }),
+    ).toBeInTheDocument();
     const options = within(select).getAllByRole("option");
     expect(options).toHaveLength(2);
     for (const option of options) {

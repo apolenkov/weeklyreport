@@ -85,7 +85,9 @@ describe("LeadSummaryTable action queue", () => {
           onMutated={vi.fn()}
         />,
       );
+      // R29: the pill carries the same outline as the status badge beside it.
       expect(within(leadRow("Alice Lead")).getByText(reviewLabel)).toHaveClass(
+        "border",
         "text-[var(--color-foreground)]",
       );
     },
@@ -143,7 +145,7 @@ describe("LeadSummaryTable action queue", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
-    expect(toggle).toHaveAccessibleName("Less details for Alice Lead");
+    expect(toggle).toHaveAccessibleName("Hide details for Alice Lead");
     expect(toggle).toHaveClass(
       "h-[var(--dashboard-action-h)]",
       "w-[var(--dashboard-summary-action-w)]",

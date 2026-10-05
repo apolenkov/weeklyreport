@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { SessionContext } from "../../../shared/lib/auth/session-provider";
@@ -60,5 +61,15 @@ describe("UserRowActions self-protection", () => {
     expect(
       screen.getByRole("button", { name: "Deactivate Petrov Admin" }),
     ).toBeEnabled();
+  });
+
+  it("disables Delete user in the overflow menu on the own row", async () => {
+    renderRow(ADMIN, "admin-1");
+    await userEvent.click(
+      screen.getByRole("button", { name: /^More actions for Petrov/ }),
+    );
+    expect(
+      await screen.findByRole("menuitem", { name: /Delete user/ }),
+    ).toHaveAttribute("aria-disabled", "true");
   });
 });

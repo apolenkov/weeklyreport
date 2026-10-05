@@ -68,12 +68,14 @@ export async function upsertUser(
   });
   try {
     await prisma.$transaction(async (tx) => {
+      // Admin set first, then the user row: deactivate/delete take the same
+      // order, so concurrent demotions cannot deadlock.
+      if (user.role !== "admin") await assertNotLastActiveAdmin(tx, user.id);
       await lockUserAndAssertActivityAssignments(tx, {
         userId: user.id,
         role: user.role,
         reportingGroupId,
       });
-      if (user.role !== "admin") await assertNotLastActiveAdmin(tx, user.id);
       await tx.user.upsert({
         where: { id: user.id },
         create: {

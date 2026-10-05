@@ -9,6 +9,7 @@ import {
 } from "../../test-utils/prisma-test-helper";
 import { AdminPrismaRepository } from "./admin.prisma-repository";
 import { AdminLastAdminError, AdminSelfLockoutError } from "./admin-errors";
+import { upsertUsers } from "./admin-snapshot/users";
 import { SnapshotAdminService } from "./snapshot-admin.service";
 
 const ADMIN_A = "a0000000-0000-4000-a000-0000000000a1";
@@ -96,5 +97,45 @@ describe("last active administrator guard (integration)", () => {
     await expect(service.deactivateUser(ADMIN_B, ADMIN_A)).rejects.toThrow(
       AdminLastAdminError,
     );
+  });
+
+  it("serializes a concurrent demotion and deactivation of the last two admins", async () => {
+    await makeAdmin(ADMIN_B, "b");
+    const snapshot = await service.getSnapshot();
+    const adminA = expectDefined(snapshot.users.find((u) => u.id === ADMIN_A));
+    const locked = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    // Hold the admin-set lock so both writers queue behind it.
+    const holder = prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "User" WHERE "role" = 'admin' AND "isActive" = true ORDER BY "id" FOR UPDATE`;
+      locked.resolve();
+      await release.promise;
+    });
+    await locked.promise;
+    const writes = Promise.allSettled([
+      service.upsertUser({ ...adminA, role: "head" }, "someone-else"),
+      service.deactivateUser(ADMIN_B, "someone-else"),
+    ]);
+    release.resolve();
+    await holder;
+    const results = await writes;
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    const rejected = results.find((r) => r.status === "rejected");
+    expect(rejected?.reason).toBeInstanceOf(AdminLastAdminError);
+    expect(
+      await prisma.user.count({ where: { role: "admin", isActive: true } }),
+    ).toBe(1);
+  });
+
+  it("rejects a snapshot restore that would leave no active administrator", async () => {
+    const snapshot = await service.getSnapshot();
+    const users = snapshot.users.map((u) =>
+      u.id === ADMIN_A ? { ...u, isActive: false } : u,
+    );
+    await expect(
+      prisma.$transaction((tx) => upsertUsers(tx, users)),
+    ).rejects.toThrow(AdminLastAdminError);
+    const row = await prisma.user.findUniqueOrThrow({ where: { id: ADMIN_A } });
+    expect(row.isActive).toBe(true);
   });
 });
