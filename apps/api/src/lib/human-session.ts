@@ -30,15 +30,19 @@ export async function resolveHumanSession(
     session.userId,
     deps.prisma,
     deps.sessionRevocation,
-    session.activeReportSectionId
-      ? undefined
-      : (session.activeReportId ?? undefined),
+    {
+      activeReportId: session.activeReportSectionId
+        ? undefined
+        : (session.activeReportId ?? undefined),
+      withViewerGroups: true,
+    },
   );
   if (!live) return null;
   // Role and group come from the database, not the JWT, so an admin change
   // takes effect on the next request (jwt-session-integrity).
   // The JWT's cached group name is dropped with its id; the live read already
-  // carries the current name and the user's section, so hydration skips both.
+  // carries the current name, the user's section and a viewer's group grants,
+  // so hydration skips all three.
   const { reportingGroupId: _id, reportingGroupName: _name, ...rest } = session;
   return hydrateSession(
     {
@@ -53,8 +57,11 @@ export async function resolveHumanSession(
       ...(live.reportSectionId
         ? { activeReportSectionId: live.reportSectionId }
         : {}),
+      ...(live.viewerGroupIds
+        ? { viewerGroupAccess: [...live.viewerGroupIds] }
+        : {}),
     },
     deps.prisma,
-    { sectionResolved: true },
+    { liveResolved: true },
   );
 }
