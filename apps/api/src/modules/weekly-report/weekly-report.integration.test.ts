@@ -288,5 +288,13 @@ describe("WeeklyReportService with Prisma (integration)", () => {
     expect(
       expectDefined(result.leadSections[0]).projects[0]?.ownerGroupId,
     ).toBeNull();
+
+    // A scoped role reads through the group filter, not the admin bypass.
+    const headResult = await service.getWeeklyReport(data.report.id, {
+      ...adminSession,
+      role: "head",
+      reportingGroupId: TEST_IDS.group,
+    });
+    expect(headResult.status).toBe("active");
   });
 });

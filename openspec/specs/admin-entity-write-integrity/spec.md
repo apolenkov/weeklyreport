@@ -29,8 +29,7 @@ unique-constraint error surface to the caller.
 owner (detach then attach is the supported way to move a product). The live
 report read MUST keep succeeding for every role when a staffed product has no
 owner: the product's frozen `ownerGroupId` is `null`, and the cross-group
-signal treats `null` as "no foreign owner". More than one owner edge remains an
-invariant violation and fails the read.
+signal treats `null` as "no foreign owner".
 
 #### Scenario: Staffed product detached from its only group
 
