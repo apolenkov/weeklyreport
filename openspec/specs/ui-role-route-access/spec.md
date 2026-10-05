@@ -131,3 +131,28 @@ role has a dashboard.
 - **WHEN** a denied visitor sees a gate requiring head or admin
 - **THEN** any role explanation names head or admin rather than a hardcoded admin-only requirement
 - **AND** the home link keeps the existing visitor-specific destination
+
+### Requirement: Trends has a navigation entry for every role
+
+`/reports/trends` MUST have a primary navigation entry labelled "Trends" for
+lead, head, admin, and viewer, and that entry MUST be active while the page is
+open.
+
+#### Scenario: Any role opens Trends
+
+- **WHEN** a signed-in user of any role opens `/reports/trends`
+- **THEN** the "Trends" navigation entry is present and marked current
+
+### Requirement: The denial wall states its audience
+
+`ForbiddenPage` MUST state the audience of the page as "available to the
+{required roles} role only" and MUST direct the visitor to their own home page,
+without receiving or revealing the visitor's role. A role-specific entry such as
+`/reports/latest` (the viewer Status resolver) MUST keep denying other roles
+with this wall rather than redirecting them.
+
+#### Scenario: A head opens the viewer Status resolver
+
+- **WHEN** a head opens `/reports/latest`
+- **THEN** the wall reads that the page is available to the viewer role only
+- **AND** the home link resolves to the head's own home

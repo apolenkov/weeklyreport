@@ -160,3 +160,22 @@ inventing a new lifecycle state or changing server semantics.
   shown from the existing read model
 - **AND** a recoverable error includes an actionable next step without exposing
   provider response bodies or credentials
+
+### Requirement: AI readiness is a status strip, not part of the tabs
+
+The AI settings page MUST present provider readiness and feature readiness
+count in a polite status region outside the `Provider` / `Features` tablist.
+Tab triggers MUST carry only their navigation label.
+
+#### Scenario: Administrator reads readiness
+
+- **WHEN** an administrator opens `/admin?tab=ai`
+- **THEN** a status region named "AI readiness" shows the provider state and the
+  "N/M ready" feature count
+- **AND** neither tab's text contains a status
+
+#### Scenario: Readiness changes after a provider change
+
+- **WHEN** the provider is disabled
+- **THEN** the status region updates to "Setup required" and "0/N ready"
+  without a reload

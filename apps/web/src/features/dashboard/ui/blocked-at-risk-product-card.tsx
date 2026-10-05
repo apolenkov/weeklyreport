@@ -52,6 +52,15 @@ function groupSeverity(group: ProductGroup): Severity {
     : "at-risk";
 }
 
+// A red header with no blocked row comes from the product-level flag alone;
+// naming that source keeps the header from contradicting its at-risk rows.
+function headerLabel(group: ProductGroup, severity: Severity): string {
+  const hasBlockedRow = group.items.some((item) => item.severity === "blocked");
+  return severity === "blocked" && !hasBlockedRow
+    ? "Flagged red"
+    : statusLabel(severity, "screen");
+}
+
 // Up to two leading initials from the product name (e.g. "Marketing Portal" →
 // "MP"), the same avatar treatment the report cards use for leads.
 function productInitials(product: string): string {
@@ -117,15 +126,19 @@ export function ProductCard({ group }: { readonly group: ProductGroup }) {
               {group.product}
             </h3>
             <span
-              className="inline-flex flex-shrink-0 items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.04em]"
-              style={{ color: SEVERITY_BADGE[severity].fg }}
+              className="inline-flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-[var(--radius-pill)] px-2.5 py-0.5 text-xs font-semibold"
+              style={{
+                background: SEVERITY_BADGE[severity].bg,
+                color: SEVERITY_BADGE[severity].fg,
+              }}
+              data-testid="product-header-status"
             >
               <span
                 className="h-[7px] w-[7px] rounded-full"
                 style={{ background: tone }}
                 aria-hidden="true"
               />
-              {statusLabel(severity, "screen")}
+              {headerLabel(group, severity)}
             </span>
           </div>
           <span className="truncate text-[12.5px] text-[var(--color-muted-foreground)]">

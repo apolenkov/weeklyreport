@@ -8,7 +8,7 @@ export { RotatingChevron as Chevron } from "../../../shared/ui/report-shell/rota
 const DANGER_ICON_CLASSES =
   "text-[var(--color-destructive-emphasis)] hover:text-[var(--color-destructive-emphasis-hover)]";
 const NEUTRAL_ICON_CLASSES =
-  "text-[var(--color-muted-foreground)] hover:text-[var(--color-starbucks-accent)]";
+  "text-[var(--color-foreground)] hover:text-[var(--color-starbucks-accent)]";
 
 export function IconButton({
   testId,
@@ -33,7 +33,7 @@ export function IconButton({
       aria-label={label}
       title={label}
       data-testid={testId}
-      className={`btn-press inline-flex h-8 w-8 items-center justify-center rounded-full border border-transparent transition-colors ${
+      className={`btn-press inline-flex h-8 w-8 pointer-coarse:h-[var(--touch-target-min)] pointer-coarse:w-[var(--touch-target-min)] items-center justify-center rounded-full border border-transparent transition-colors ${
         disabled
           ? "cursor-not-allowed opacity-50"
           : `hover:border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] ${

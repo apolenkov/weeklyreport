@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { makeRow } from "./periods-tab.test-harness";
+import { IconButton } from "./periods-tab-icons";
 import { PeriodTable } from "./periods-tab-table";
 
 describe("PeriodTable responsive rows", () => {
@@ -74,5 +75,29 @@ describe("PeriodTable responsive rows", () => {
         name: "Publish now: May 4–10, 2026",
       }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("IconButton (R67)", () => {
+  it("is labelled, grows to the touch target on coarse pointers, and is not pale", () => {
+    render(
+      <IconButton
+        testId="icon"
+        label="Archive period: Sep 28 – Oct 4, 2026"
+        onClick={() => undefined}
+        icon={<span />}
+      />,
+    );
+
+    const button = screen.getByRole("button", {
+      name: "Archive period: Sep 28 – Oct 4, 2026",
+    });
+    expect(button).toHaveAttribute("title", button.getAttribute("aria-label"));
+    expect(button).toHaveClass(
+      "pointer-coarse:h-[var(--touch-target-min)]",
+      "pointer-coarse:w-[var(--touch-target-min)]",
+      "text-[var(--color-foreground)]",
+    );
+    expect(button).not.toHaveClass("text-[var(--color-muted-foreground)]");
   });
 });

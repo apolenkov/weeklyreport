@@ -63,7 +63,7 @@ describe("RoleGate (ui-role-route-access)", () => {
     mockedGetServerSession.mockResolvedValue(sessionWithRole("viewer"));
     await renderGate(["head", "admin"]);
     expect(
-      screen.getByText(/requires the head or admin role/i),
+      screen.getByText(/available to the head or admin role only/i),
     ).toBeInTheDocument();
     expectForbiddenWall("/reports/latest");
   });
