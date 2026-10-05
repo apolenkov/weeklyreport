@@ -4,6 +4,7 @@ import { useRef } from "react";
 
 import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
 import type { AdminGroupView, AdminUserView } from "../model/admin-types";
+import { useCurrentUserId } from "../model/use-current-user-id";
 import type { UserFormData } from "../model/user-form";
 import { AdminEntityDialogActions } from "./admin-entity-dialog-actions";
 import { UserEditDialogFields } from "./user-edit-dialog-fields";
@@ -34,6 +35,11 @@ export function UserEditDialog({
   onSave,
   onClose,
 }: UserEditDialogProps) {
+  const currentUserId = useCurrentUserId();
+  const isOwnAdminRow =
+    editingUser !== null &&
+    editingUser.id === currentUserId &&
+    editingUser.role === "admin";
   const surfaceRef = useRef<HTMLDivElement>(null);
   const closeIfIdle = () => {
     if (!isSaving) onClose();
@@ -69,6 +75,7 @@ export function UserEditDialog({
             groupOptions={groupOptions}
             activeGroups={activeGroups}
             groups={groups}
+            roleLocked={isOwnAdminRow}
           />
         </fieldset>
         <AdminEntityDialogActions

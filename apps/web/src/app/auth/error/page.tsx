@@ -25,9 +25,12 @@ export default async function AuthErrorPage({ searchParams }: Props) {
     <main
       id="main-content"
       tabIndex={-1}
-      className="flex min-h-svh items-center justify-center bg-[var(--color-background)]"
+      className="flex min-h-svh items-center justify-center bg-[var(--color-card)] p-6"
     >
       <div className="w-full max-w-sm space-y-6 text-center">
+        <p className="font-[family-name:var(--font-sans)] text-sm font-semibold tracking-wide text-[var(--color-starbucks-accent)]">
+          Weekly Report
+        </p>
         <div
           className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-destructive)]"
           aria-hidden="true"

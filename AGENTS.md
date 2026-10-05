@@ -138,9 +138,11 @@ pnpm test:e2e           # agent-browser lead-form regression (running app on cus
 - Prisma 7 quirk: `migrate reset` does NOT auto-seed; run the required seed
   explicitly with the same consent token after a successful reset.
 - Redis connections require explicit `REDIS_DB`. Product/dev environments use
-  logical DB 0; E2E uses reserved logical DB 15. Destructive E2E Redis cleanup
-  must select DB 15, pass the exact disposable PostgreSQL guard and the
-  per-command consent token, and must never flush DB 0.
+  logical DB 0; E2E on `customreport_e2e` uses reserved logical DB 15, and the
+  runtime lanes `customreport_e2e_lane_[a-l]_test` use logical DB 1..12 (a=1 …
+  l=12). Destructive E2E Redis cleanup must select the DB derived from the
+  guarded database name, pass the exact disposable PostgreSQL guard and the
+  per-command consent token, and must never flush DB 0, 13 or 14.
 
 ## Migration policy
 

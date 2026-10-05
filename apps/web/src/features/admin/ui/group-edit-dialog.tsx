@@ -153,26 +153,32 @@ function GroupFormFields({
   | "isSaving"
 >) {
   return (
-    <fieldset
-      disabled={isSaving}
-      aria-label="Group fields"
-      className="mt-4 min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto pr-1"
+    // A <fieldset> does not clip overflow in Chromium, so the scroll box is a
+    // div and the fieldset only carries disabled/label semantics.
+    <div
+      className="mt-4 min-h-0 min-w-0 flex-1 overflow-y-auto pr-1"
       data-testid="group-dialog-body"
     >
-      <GroupNameField form={form} onFormChange={onFormChange} />
-      <GroupDescriptionField form={form} onFormChange={onFormChange} />
-      <GroupLeaderField
-        form={form}
-        onFormChange={onFormChange}
-        headCandidates={headCandidates}
-      />
-      {editingGroup && (
-        <GroupArchivedField form={form} onFormChange={onFormChange} />
-      )}
-      {editingGroup && (
-        <GroupProductsEditor groupId={editingGroup.id} products={products} />
-      )}
-    </fieldset>
+      <fieldset
+        disabled={isSaving}
+        aria-label="Group fields"
+        className="m-0 min-w-0 space-y-4 border-0 p-0"
+      >
+        <GroupNameField form={form} onFormChange={onFormChange} />
+        <GroupDescriptionField form={form} onFormChange={onFormChange} />
+        <GroupLeaderField
+          form={form}
+          onFormChange={onFormChange}
+          headCandidates={headCandidates}
+        />
+        {editingGroup && (
+          <GroupArchivedField form={form} onFormChange={onFormChange} />
+        )}
+        {editingGroup && (
+          <GroupProductsEditor groupId={editingGroup.id} products={products} />
+        )}
+      </fieldset>
+    </div>
   );
 }
 

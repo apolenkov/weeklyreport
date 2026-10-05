@@ -348,7 +348,9 @@ describe("focused services — users and stages", () => {
     const repo = createRepository(initialSnapshot);
     const service = new SnapshotAdminService(repo);
 
-    await expect(service.deactivateUser("user-1")).resolves.toEqual({
+    await expect(
+      service.deactivateUser("user-1", "admin-actor"),
+    ).resolves.toEqual({
       success: true,
     });
     expect(vi.mocked(repo.deactivateUser)).toHaveBeenCalledWith("user-1");

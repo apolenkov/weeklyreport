@@ -4,12 +4,14 @@ import { describe, expect, it } from "vitest";
 import {
   AdminAccessError,
   AdminGroupProductConflictError,
+  AdminLastAdminError,
   AdminPeriodAlreadyArchivedError,
   AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
   AdminPeriodStaleStateError,
   AdminReopenRequestAlreadyProcessedError,
   AdminReopenRequestNotFoundError,
+  AdminSelfLockoutError,
   AdminSnapshotConflictError,
   AdminUserActivityAssignmentConflictError,
   AdminUserConflictError,
@@ -603,6 +605,16 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
     {
       name: "AdminUserPublishedHistoryError",
       make: () => new AdminUserPublishedHistoryError("m"),
+      code: "CONFLICT",
+    },
+    {
+      name: "AdminSelfLockoutError",
+      make: () => new AdminSelfLockoutError("m"),
+      code: "BAD_REQUEST",
+    },
+    {
+      name: "AdminLastAdminError",
+      make: () => new AdminLastAdminError("m"),
       code: "CONFLICT",
     },
     {

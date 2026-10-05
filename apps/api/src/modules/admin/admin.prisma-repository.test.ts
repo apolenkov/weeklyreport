@@ -371,7 +371,11 @@ describe("AdminPrismaRepository entity writers — P2002 race handling", () => {
         $transaction: vi.fn((run: (tx: unknown) => Promise<unknown>) =>
           run(prisma),
         ),
-        $queryRaw: vi.fn(() => Promise.resolve([{ id: USER_INPUT.id }])),
+        // First the active-admin set (none), then the user row lock.
+        $queryRaw: vi
+          .fn()
+          .mockResolvedValueOnce([])
+          .mockResolvedValue([{ id: USER_INPUT.id }]),
         project: { findMany: vi.fn().mockResolvedValue([]) },
         projectActivityLead: { findMany: vi.fn().mockResolvedValue([]) },
         reportingGroup: { findMany: vi.fn().mockResolvedValue([]) },
@@ -439,19 +443,34 @@ describe("AdminPrismaRepository entity writers — P2002 race handling", () => {
 });
 
 // Group-scope where-clause pinning lives at this repository boundary.
+// removeUser/deactivateUser run in a transaction that first locks the active
+// administrators; the stub returns none, so the last-admin guard stays quiet.
+function withTransaction(base: object): PrismaService {
+  const prisma = {
+    ...base,
+    $queryRaw: vi.fn(() => Promise.resolve([])),
+    $transaction: vi.fn((run: (tx: unknown) => Promise<unknown>) =>
+      run(prisma),
+    ),
+  };
+  return prisma as unknown as PrismaService;
+}
+
 describe("AdminPrismaRepository — deactivate/activate, stages", () => {
   it("removeUser reports a published-report reference before deleting", async () => {
     const deleteMany = vi.fn();
     const sectionCount = vi.fn();
     const projectCount = vi.fn();
-    const repo = new AdminPrismaRepository({
-      report: {
-        findFirst: vi.fn(() => Promise.resolve({ id: "report-1" })),
-      },
-      reportSection: { count: sectionCount },
-      project: { count: projectCount },
-      user: { deleteMany },
-    } as unknown as PrismaService);
+    const repo = new AdminPrismaRepository(
+      withTransaction({
+        report: {
+          findFirst: vi.fn(() => Promise.resolve({ id: "report-1" })),
+        },
+        reportSection: { count: sectionCount },
+        project: { count: projectCount },
+        user: { deleteMany },
+      }),
+    );
 
     await expect(repo.removeUser("publisher-1")).rejects.toBeInstanceOf(
       AdminUserPublishedHistoryError,
@@ -466,14 +485,16 @@ describe("AdminPrismaRepository — deactivate/activate, stages", () => {
       .fn()
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ id: "report-raced" });
-    const repo = new AdminPrismaRepository({
-      report: { findFirst },
-      reportSection: { count: vi.fn(() => Promise.resolve(0)) },
-      project: { count: vi.fn(() => Promise.resolve(0)) },
-      user: {
-        deleteMany: vi.fn(() => Promise.reject({ code: "P2003" })),
-      },
-    } as unknown as PrismaService);
+    const repo = new AdminPrismaRepository(
+      withTransaction({
+        report: { findFirst },
+        reportSection: { count: vi.fn(() => Promise.resolve(0)) },
+        project: { count: vi.fn(() => Promise.resolve(0)) },
+        user: {
+          deleteMany: vi.fn(() => Promise.reject({ code: "P2003" })),
+        },
+      }),
+    );
 
     await expect(repo.removeUser("publisher-1")).rejects.toMatchObject({
       name: "AdminUserPublishedHistoryError",
@@ -490,12 +511,14 @@ describe("AdminPrismaRepository — deactivate/activate, stages", () => {
     "removeUser reports a conflict when $references still reference the user",
     async ({ sectionCount, projectCount }) => {
       const deleteMany = vi.fn();
-      const repo = new AdminPrismaRepository({
-        report: { findFirst: vi.fn(() => Promise.resolve(null)) },
-        reportSection: { count: vi.fn(() => Promise.resolve(sectionCount)) },
-        project: { count: vi.fn(() => Promise.resolve(projectCount)) },
-        user: { deleteMany },
-      } as unknown as PrismaService);
+      const repo = new AdminPrismaRepository(
+        withTransaction({
+          report: { findFirst: vi.fn(() => Promise.resolve(null)) },
+          reportSection: { count: vi.fn(() => Promise.resolve(sectionCount)) },
+          project: { count: vi.fn(() => Promise.resolve(projectCount)) },
+          user: { deleteMany },
+        }),
+      );
 
       await expect(repo.removeUser("lead-1")).rejects.toBeInstanceOf(
         AdminUserConflictError,
@@ -508,14 +531,16 @@ describe("AdminPrismaRepository — deactivate/activate, stages", () => {
     // A reference committed between the count check and the delete surfaces as
     // P2003; with no raced publication it is still an honest conflict.
     const findFirst = vi.fn(() => Promise.resolve(null));
-    const repo = new AdminPrismaRepository({
-      report: { findFirst },
-      reportSection: { count: vi.fn(() => Promise.resolve(0)) },
-      project: { count: vi.fn(() => Promise.resolve(0)) },
-      user: {
-        deleteMany: vi.fn(() => Promise.reject({ code: "P2003" })),
-      },
-    } as unknown as PrismaService);
+    const repo = new AdminPrismaRepository(
+      withTransaction({
+        report: { findFirst },
+        reportSection: { count: vi.fn(() => Promise.resolve(0)) },
+        project: { count: vi.fn(() => Promise.resolve(0)) },
+        user: {
+          deleteMany: vi.fn(() => Promise.reject({ code: "P2003" })),
+        },
+      }),
+    );
 
     await expect(repo.removeUser("lead-1")).rejects.toBeInstanceOf(
       AdminUserConflictError,
@@ -525,21 +550,25 @@ describe("AdminPrismaRepository — deactivate/activate, stages", () => {
 
   it("removeUser re-throws a non-P2003 delete failure unchanged", async () => {
     const original = new Error("connection reset");
-    const repo = new AdminPrismaRepository({
-      report: { findFirst: vi.fn(() => Promise.resolve(null)) },
-      reportSection: { count: vi.fn(() => Promise.resolve(0)) },
-      project: { count: vi.fn(() => Promise.resolve(0)) },
-      user: { deleteMany: vi.fn(() => Promise.reject(original)) },
-    } as unknown as PrismaService);
+    const repo = new AdminPrismaRepository(
+      withTransaction({
+        report: { findFirst: vi.fn(() => Promise.resolve(null)) },
+        reportSection: { count: vi.fn(() => Promise.resolve(0)) },
+        project: { count: vi.fn(() => Promise.resolve(0)) },
+        user: { deleteMany: vi.fn(() => Promise.reject(original)) },
+      }),
+    );
 
     await expect(repo.removeUser("lead-1")).rejects.toBe(original);
   });
 
   it("deactivateUser sets isActive=false", async () => {
     const update = vi.fn(() => Promise.resolve({}));
-    const repo = new AdminPrismaRepository({
-      user: { update },
-    } as unknown as PrismaService);
+    const repo = new AdminPrismaRepository(
+      withTransaction({
+        user: { update },
+      }),
+    );
 
     await repo.deactivateUser("user-1");
 
@@ -551,9 +580,11 @@ describe("AdminPrismaRepository — deactivate/activate, stages", () => {
 
   it("activateUser sets isActive=true", async () => {
     const update = vi.fn(() => Promise.resolve({}));
-    const repo = new AdminPrismaRepository({
-      user: { update },
-    } as unknown as PrismaService);
+    const repo = new AdminPrismaRepository(
+      withTransaction({
+        user: { update },
+      }),
+    );
 
     await repo.activateUser("user-1");
 
@@ -566,11 +597,13 @@ describe("AdminPrismaRepository — deactivate/activate, stages", () => {
   it.each(["deactivateUser", "activateUser"] as const)(
     "%s translates a missing-row P2025 into AdminUserNotFoundError",
     async (method) => {
-      const repo = new AdminPrismaRepository({
-        user: {
-          update: vi.fn(() => Promise.reject({ code: "P2025" })),
-        },
-      } as unknown as PrismaService);
+      const repo = new AdminPrismaRepository(
+        withTransaction({
+          user: {
+            update: vi.fn(() => Promise.reject({ code: "P2025" })),
+          },
+        }),
+      );
 
       await expect(repo[method]("missing-user")).rejects.toBeInstanceOf(
         AdminUserNotFoundError,
@@ -616,9 +649,11 @@ describe("AdminPrismaRepository — deactivate/activate, stages", () => {
   ] as const)(
     "$method re-throws a $kind rejection unchanged",
     async ({ method, rejection }) => {
-      const repo = new AdminPrismaRepository({
-        user: { update: vi.fn(() => Promise.reject(rejection)) },
-      } as unknown as PrismaService);
+      const repo = new AdminPrismaRepository(
+        withTransaction({
+          user: { update: vi.fn(() => Promise.reject(rejection)) },
+        }),
+      );
 
       await expect(repo[method]("user-1")).rejects.toBe(rejection);
     },

@@ -26,18 +26,21 @@ export function createAdminUsersProcedures(deps: AdminUsersDeps) {
     saveUser: adminProcedure
       .input(adminUserSchema)
       .use(captureMutationAuditInputMiddleware)
-      .mutation(({ input }) =>
+      .mutation(({ input, ctx }) =>
         withDomainErrorMapping(() =>
-          deps.snapshotAdminService.upsertUser(input),
+          deps.snapshotAdminService.upsertUser(input, ctx.session.userId),
         ),
       ),
 
     deleteUser: adminProcedure
       .input(z.object({ userId: z.uuid() }))
       .use(captureMutationAuditInputMiddleware)
-      .mutation(({ input }) =>
+      .mutation(({ input, ctx }) =>
         withDomainErrorMapping(() =>
-          deps.snapshotAdminService.removeUser(input.userId),
+          deps.snapshotAdminService.removeUser(
+            input.userId,
+            ctx.session.userId,
+          ),
         ),
       ),
 
@@ -45,10 +48,11 @@ export function createAdminUsersProcedures(deps: AdminUsersDeps) {
     deactivateUser: adminProcedure
       .input(z.object({ userId: z.uuid() }))
       .use(captureMutationAuditInputMiddleware)
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         try {
           const result = await deps.snapshotAdminService.deactivateUser(
             input.userId,
+            ctx.session.userId,
           );
           await deps.sessionRevocationService.revokeSession(input.userId);
           return result;

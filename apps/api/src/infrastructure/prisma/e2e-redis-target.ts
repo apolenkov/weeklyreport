@@ -6,6 +6,7 @@ import {
   E2E_DATABASE_NAME,
   isLoopbackHost,
   MAX_TCP_PORT,
+  parseE2eRuntimeDatabaseTarget,
 } from "./e2e-destructive-target.js";
 
 export const E2E_REDIS_DB = "15" as const;
@@ -13,7 +14,22 @@ export const E2E_REDIS_DB = "15" as const;
 export interface E2eRedisTarget {
   readonly host: string;
   readonly port: number;
-  readonly db: typeof E2E_REDIS_DB;
+  readonly db: string;
+}
+
+const LANE_DATABASE_PATTERN = /^customreport_e2e_lane_([a-l])_test$/u;
+const LANE_FIRST_REDIS_DB = 1;
+
+/**
+ * The only logical Redis DB a disposable database may flush: DB 15 for
+ * customreport_e2e, DB 1..12 for lanes a..l. DB 0 (product) and DB 13/14 are
+ * never reachable; lanes m..o have no Redis DB and are refused.
+ */
+export function redisDbForDatabase(database: string): string | undefined {
+  if (database === E2E_DATABASE_NAME) return E2E_REDIS_DB;
+  const lane = LANE_DATABASE_PATTERN.exec(database)?.[1];
+  if (lane === undefined) return undefined;
+  return String(LANE_FIRST_REDIS_DB + lane.charCodeAt(0) - "a".charCodeAt(0));
 }
 
 /**
@@ -23,14 +39,28 @@ export interface E2eRedisTarget {
 export function parseE2eRuntimeRedisTarget(
   scriptName: string,
   env: {
+    readonly DATABASE_URL?: string;
     readonly REDIS_DB?: string;
     readonly REDIS_HOST?: string;
     readonly REDIS_PORT?: string;
   } = process.env,
 ): E2eRedisTarget {
-  if (env.REDIS_DB !== E2E_REDIS_DB) {
+  if (!env.DATABASE_URL) {
+    throw new Error(`[${scriptName}] DATABASE_URL must be set.`);
+  }
+  const { database } = parseE2eRuntimeDatabaseTarget(
+    scriptName,
+    env.DATABASE_URL,
+  );
+  const db = redisDbForDatabase(database);
+  if (db === undefined) {
     throw new Error(
-      `[${scriptName}] REDIS_DB must be exactly ${E2E_REDIS_DB}.`,
+      `[${scriptName}] Database ${database} has no Redis DB assigned.`,
+    );
+  }
+  if (env.REDIS_DB !== db) {
+    throw new Error(
+      `[${scriptName}] REDIS_DB must be exactly ${db} for ${database}.`,
     );
   }
   const host = env.REDIS_HOST;
@@ -48,7 +78,7 @@ export function parseE2eRuntimeRedisTarget(
       `[${scriptName}] REDIS_PORT must be a decimal TCP port: ${rawPort}`,
     );
   }
-  return { host, port, db: E2E_REDIS_DB };
+  return { host, port, db };
 }
 
 /**
