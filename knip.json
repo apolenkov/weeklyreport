@@ -9,6 +9,7 @@
         "prisma/**/*.ts",
         "scripts/**/*.test.ts",
         "scripts/gates/*.ts",
+        "scripts/ui-crawl/crawl.ts",
         "vitest.*.config.ts"
       ],
       "project": [
@@ -18,6 +19,7 @@
         "scripts/**/*.ts",
         "vitest.*.config.ts"
       ],
+      "ignoreDependencies": ["axe-core"],
       "prisma": false
     },
     "apps/api": {
