@@ -134,7 +134,7 @@ function SignInPanel({
         <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold leading-tight tracking-[-0.02em] lg:sr-only">
           Weekly Report
         </h1>
-        <p className="mb-10 mt-2 text-[15px] text-[var(--color-muted-foreground)]">
+        <p className="mb-10 mt-2 text-[15px] lg:hidden text-[var(--color-muted-foreground)]">
           Status Reporting System
         </p>
 
