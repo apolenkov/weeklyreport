@@ -280,6 +280,7 @@ checkout, with exit code 0 recorded before target handoff.
 
 - **WHEN** browser correction and acceptance finish against the handed-over target
 - **THEN** the canonical full reset and seed complete through the repository guard with exit 0
+- **AND** the report records restoration without stopping or restarting the existing web/API
 
 ### Requirement: Guarded Redis cleanup flushes only the Redis DB assigned to its database
 
@@ -299,7 +300,6 @@ an assigned DB (`m` to `o`) MUST NOT be flushed.
 
 - **WHEN** the target database is `customreport_e2e_lane_b_test` and `REDIS_DB` is `2`
 - **THEN** cleanup selects DB 2 and only then flushes it
-- **AND** the report records restoration without stopping or restarting the existing web/API
 
 ### Requirement: Browser regression uses the selected CLI with native Node tests
 
