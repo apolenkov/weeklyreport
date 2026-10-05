@@ -11,6 +11,7 @@ import type { FullFrame } from "./full-restore.ts";
 import {
   executeControl,
   type FullSession,
+  observeEffect,
   restoreOrRebase,
 } from "./full-session.ts";
 
@@ -40,13 +41,13 @@ function selectFactor(
   const control = factorTarget(probe, factor, value);
   if (!control)
     return { reason: `pairwise: value unavailable ${factor.id}=${value}` };
-  const effect = executeControl(session, current, control);
-  if (!effect)
+  if (!executeControl(session, current, control))
     return { reason: `pairwise: failed to select ${factor.id}=${value}` };
+  const after = observeEffect(session, current);
   return {
     frame: {
-      probe: effect.probe,
-      path: [...current.path, { control, expected: effect.probe.signature }],
+      probe: after,
+      path: [...current.path, { control, expected: after.signature }],
       depth: current.depth + 1,
       known: childKnown(current),
     },

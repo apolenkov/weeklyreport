@@ -21,6 +21,7 @@ function runChild(cli: Cli, name: string): Promise<void> {
     config.mode === "full" ? "--full" : "--quick",
     ...(cli.fixtureManifest ? ["--fixture-manifest", cli.fixtureManifest] : []),
     ...(config.allowSynthetic ? ["--synthetic"] : []),
+    ...(cli.adminStateTabs ? ["--admin-state-tabs"] : []),
     ...(config.video ? [] : ["--no-video"]),
   ];
   return new Promise((resolve, reject) => {

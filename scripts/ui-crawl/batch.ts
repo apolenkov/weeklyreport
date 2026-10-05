@@ -141,13 +141,12 @@ function batchScript(
     const top = document.elementFromPoint(Math.max(0, Math.min(innerWidth - 1, r.x + r.width / 2)), Math.max(0, Math.min(innerHeight - 1, r.y + r.height / 2)));
     return !!top && top !== el && !el.contains(top) && !top.contains(el) && top.closest('label')?.control !== el;
   };
-  let returned = false;
+  let waitedOut = false;
   for (let n = 0; n < items.length; n++) {
     let el = document.querySelector(items[n].selector);
-    // once per batch: a control missing because the page is still coming back is waited for
-    if (!el && !returned) {
-      returned = true;
-      await until(() => !!document.querySelector(items[n].selector), ${RETURN_WAIT_MS});
+    // a control missing because the page is still coming back is waited for; after one wait that ran out the rest are gone for good
+    if (!el && !waitedOut) {
+      waitedOut = !(await until(() => !!document.querySelector(items[n].selector), ${RETURN_WAIT_MS}));
       el = document.querySelector(items[n].selector);
     }
     const base = {n, before: '', after: '', urlChanged: false, ms: 0, blockedMs: 0, logs: []};

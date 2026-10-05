@@ -1,4 +1,3 @@
-import { waitForSelector } from "./batch.ts";
 import { exploreCombinations } from "./full-combinations.ts";
 import type { StateEvidence } from "./full-evidence.ts";
 import { filterPlan } from "./full-filters.ts";
@@ -6,18 +5,23 @@ import {
   childKnown,
   controlKey,
   familySkipReason,
-  findFullControl,
   fullControlReason,
   fullUrl,
+  matchControl,
   rowSkipReason,
   stateControls,
 } from "./full-plan.ts";
-import { type FullControl, readFullProbe } from "./full-probe.ts";
+import {
+  awaitFullProbe,
+  type FullControl,
+  readFullProbe,
+} from "./full-probe.ts";
 import type { FullFrame } from "./full-restore.ts";
 import {
   captureState,
   executeControl,
   type FullSession,
+  observeEffect,
   recordSkip,
   restoreOrRebase,
 } from "./full-session.ts";
@@ -53,43 +57,55 @@ function dangerOrder(control: FullControl): number {
   );
 }
 
+/** True when the press left the page as it was. */
 function visitEffect(
   session: FullSession,
   frame: FullFrame,
   control: FullControl,
-): void {
+): boolean {
   const effect = executeControl(session, frame, control);
+  if (effect?.unchanged) return true;
   if (!effect) {
     session.limited = true;
     if (!session.mutated) restoreOrRebase(session, frame, control);
-    return;
+    return false;
   }
+  const after = observeEffect(session, frame);
   const child = {
-    probe: effect.probe,
-    path: [...frame.path, { control, expected: effect.probe.signature }],
+    probe: after,
+    path: [...frame.path, { control, expected: after.signature }],
     depth: frame.depth + 1,
     known: childKnown(frame),
   };
   if (session.mutated) captureState(session, child);
-  else if (fullUrl(effect.probe.url) === fullUrl(frame.probe.url))
+  else if (fullUrl(after.url) === fullUrl(frame.probe.url))
     walkFrame(session, child);
   else captureState(session, child);
-  if (session.mutated) return;
+  if (session.mutated) return false;
   const restoredBy = restoreOrRebase(session, frame, control);
   const recorded = session.steps[effect.index];
   if (recorded && restoredBy)
     session.steps[effect.index] = { ...recorded, restoredBy };
+  return false;
 }
 
-/** A control missing because the page is still coming back is waited for by DOM events before it counts as gone. */
+/**
+ * A control missing because the page is still coming back is waited for by DOM events (until the page shows
+ * its parent state again) before it counts as gone.
+ */
 function liveControl(
   session: FullSession,
+  frame: FullFrame,
   control: FullControl,
 ): FullControl | undefined {
   const { browser } = session.ctx;
-  const found = findFullControl(readFullProbe(browser), control.elementId);
-  if (found || !waitForSelector(browser, control.selector)) return found;
-  return findFullControl(readFullProbe(browser), control.elementId);
+  const probe = session.probeCache ?? readFullProbe(browser);
+  session.probeCache = probe;
+  const found = matchControl(probe, control, frame.probe);
+  if (found) return found;
+  const settled = awaitFullProbe(browser, frame.probe.signature);
+  session.probeCache = settled;
+  return matchControl(settled, control, frame.probe);
 }
 
 /** Bound or pairwise reason to leave a policy-approved control alone. */
@@ -129,9 +145,13 @@ function walkControl(
   control: FullControl,
   reason: string | null,
 ): void {
-  const live = reason ? undefined : liveControl(session, control);
-  if (live) visitEffect(session, frame, live);
-  else if (reason) recordSkip(session, frame, control, reason);
+  const live = reason ? undefined : liveControl(session, frame, control);
+  if (live) {
+    const cache = session.probeCache;
+    session.probeCache = null;
+    // an unchanged page keeps its probe for the next control
+    if (visitEffect(session, frame, live)) session.probeCache = cache;
+  } else if (reason) recordSkip(session, frame, control, reason);
   else {
     session.limited = true;
     recordSkip(session, frame, control, "gone: control vanished before action");
