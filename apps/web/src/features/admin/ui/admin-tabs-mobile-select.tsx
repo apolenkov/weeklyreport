@@ -140,11 +140,17 @@ export function AdminTabsMobileSelect({ activeTab }: Props) {
 
   return (
     <>
+      <label
+        htmlFor="admin-tab-select"
+        className="block text-xs font-medium text-[var(--color-muted-foreground)] lg:hidden"
+      >
+        Admin tab
+      </label>
       <select
-        className="block h-11 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-card)] px-3 text-sm font-medium text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2 lg:hidden"
+        id="admin-tab-select"
+        className="mt-1 block h-11 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-card)] px-3 text-sm font-medium text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2 lg:hidden"
         value={activeTab}
         onChange={(e) => router.push(`/admin?tab=${e.target.value}`)}
-        aria-label="Admin tab"
       >
         {ADMIN_TABS.map((tab) => (
           <option key={tab} value={tab}>

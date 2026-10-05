@@ -722,6 +722,13 @@ describe("RemindersTab — permanent delete", () => {
     vi.clearAllMocks();
   });
 
+  it("outlines Remove like the other destructive capsules (R89)", () => {
+    renderTab();
+    expect(screen.getByTestId(`remove-${policyDeadline.id}`)).not.toHaveClass(
+      "border-transparent",
+    );
+  });
+
   it("warns that delete is permanent and calls removePolicy", async () => {
     const user = userEvent.setup();
     const { captured } = renderTab();

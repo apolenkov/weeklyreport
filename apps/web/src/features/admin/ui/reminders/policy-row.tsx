@@ -27,7 +27,7 @@ const ACTION_BASE =
 
 const EDIT_ACTION_CLASS = `${ACTION_BASE} border-[var(--color-border)] text-[var(--color-foreground)] hover:bg-[var(--color-surface-empty)]`;
 
-const REMOVE_ACTION_CLASS = `${ACTION_BASE} border-transparent text-[var(--color-destructive)] hover:border-[color-mix(in_srgb,var(--color-destructive)_30%,transparent)] hover:bg-[var(--color-status-blocked-bg)]`;
+const REMOVE_ACTION_CLASS = `${ACTION_BASE} border-[color-mix(in_srgb,var(--color-destructive)_30%,transparent)] text-[var(--color-destructive)] hover:bg-[var(--color-status-blocked-bg)]`;
 
 function PolicyToggle({
   policy,
