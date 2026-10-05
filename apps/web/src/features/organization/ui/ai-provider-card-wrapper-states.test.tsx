@@ -102,6 +102,7 @@ const validatedControl = (): AiProviderControlRead => {
   return {
     enabled: false,
     availability: "not_configured",
+    runtimeFailure: null,
     activeRevisionId: null,
     profileCapabilities: [],
     active: null,

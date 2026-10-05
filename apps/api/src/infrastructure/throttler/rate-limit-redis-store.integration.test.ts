@@ -6,7 +6,10 @@ import express from "express";
 import { Redis } from "ioredis";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
-import { assertE2eRuntimeDestructiveTarget } from "../../../../../prisma/guards/_destructive-guard.js";
+import {
+  assertE2eRuntimeDestructiveTarget,
+  assertRedisDbMatchesDatabase,
+} from "../../../../../prisma/guards/_destructive-guard.js";
 import { requireEnv } from "../../lib/env";
 import { createNullLogger } from "../../lib/logger";
 import type { EnvConfig } from "../config/env.schema";
@@ -30,16 +33,9 @@ const REDIS_OPTIONS = {
 const SCRIPT_NAME = "rate-limit-redis-store.integration";
 
 function assertSafeRedisMutation(): void {
-  assertE2eRuntimeDestructiveTarget(
-    SCRIPT_NAME,
-    requireEnv(process.env, "E2E_DATABASE_URL"),
-    process.env,
-  );
-  if (REDIS_ENV.REDIS_DB !== 15) {
-    throw new Error(
-      `[${SCRIPT_NAME}] REDIS_DB must be exactly 15 before Redis access.`,
-    );
-  }
+  const databaseUrl = requireEnv(process.env, "E2E_DATABASE_URL");
+  assertE2eRuntimeDestructiveTarget(SCRIPT_NAME, databaseUrl, process.env);
+  assertRedisDbMatchesDatabase(SCRIPT_NAME, databaseUrl, REDIS_ENV.REDIS_DB);
 }
 
 // Documentation IP (RFC 5737) so the keyed bucket never collides with a real

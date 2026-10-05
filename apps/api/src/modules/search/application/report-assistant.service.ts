@@ -28,12 +28,11 @@ import {
 } from "./report-assistant.orchestration.js";
 import {
   type GroundedAnswerInput,
-  ReportAssistantProviderError,
   type ReportAssistantResourceGuardPort,
 } from "./report-assistant.ports.js";
 import {
   createReportAssistantClock,
-  providerUnavailable,
+  failureOutcome,
   type ReportAssistantClock,
   type ReportAssistantConfig,
   resolveReportAssistantTimeZone,
@@ -47,7 +46,9 @@ import {
 } from "./report-assistant.telemetry.js";
 import type { ReportSearchRepository } from "./report-search.repository.js";
 
-const LEASE_LOSS_RETRY_AFTER_SECONDS = 1;
+// The Lead gets an answer or a clear outcome inside this bound, whatever the
+// per-call provider timeout allows (planner + answer + repairs add up).
+export const REPORT_ASSISTANT_REQUEST_DEADLINE_MS = 12_000;
 
 const outcome = (value: ReportAssistantOutcome): ReportAssistantOutcome =>
   reportAssistantOutcomeSchema.parse(value);
@@ -118,11 +119,16 @@ export class ReportAssistantService {
         retryAfterSeconds: resource.retryAfterSeconds,
       });
     }
+    const deadline = new AbortController();
+    const deadlineTimer = setTimeout(
+      () => deadline.abort(),
+      REPORT_ASSISTANT_REQUEST_DEADLINE_MS,
+    );
     try {
       const execution = await this.answerInternal(
         request,
         actorId,
-        resource.lease.signal,
+        AbortSignal.any([resource.lease.signal, deadline.signal]),
       );
       resource.lease.signal.throwIfAborted();
       this.recordTelemetry(
@@ -133,27 +139,18 @@ export class ReportAssistantService {
       );
       return execution.outcome;
     } catch (error) {
-      if (resource.lease.signal.aborted) {
-        const limited = outcome({
-          kind: "resource_limited",
-          retryAfterSeconds: LEASE_LOSS_RETRY_AFTER_SECONDS,
-        });
+      const failure = failureOutcome(error, {
+        lease: resource.lease.signal,
+        deadline: deadline.signal,
+      });
+      if (failure) {
         this.recordTelemetry(
-          limited.kind,
+          failure.kind,
           EMPTY_REPORT_ASSISTANT_TRACE,
           this.config.model,
           startedAt,
         );
-        return limited;
-      }
-      if (error instanceof ReportAssistantProviderError && error.retryable) {
-        this.recordTelemetry(
-          "provider_unavailable",
-          EMPTY_REPORT_ASSISTANT_TRACE,
-          this.config.model,
-          startedAt,
-        );
-        return providerUnavailable(error);
+        return failure;
       }
       this.recordTelemetry(
         "error",
@@ -163,6 +160,7 @@ export class ReportAssistantService {
       );
       throw error;
     } finally {
+      clearTimeout(deadlineTimer);
       await resource.lease.release();
     }
   }

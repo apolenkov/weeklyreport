@@ -3,10 +3,14 @@ import {
   reportAssistantOutcomeSchema,
 } from "@customreport/shared";
 
-import type { ReportAssistantProviderError } from "./report-assistant.ports.js";
+import {
+  PROVIDER_RESPONSE_INCOMPLETE,
+  ReportAssistantProviderError,
+} from "./report-assistant.ports.js";
 
 const HTTP_TOO_MANY_REQUESTS = 429;
 const MILLISECONDS_PER_SECOND = 1000;
+const LEASE_LOSS_RETRY_AFTER_SECONDS = 1;
 
 export type ReportAssistantConfig = Readonly<{
   candidateLimit: number;
@@ -18,7 +22,7 @@ export type ReportAssistantConfig = Readonly<{
 
 export type ReportAssistantClock = Readonly<{ now: Date }>;
 
-export const providerUnavailable = (
+const providerUnavailable = (
   error: ReportAssistantProviderError,
 ): ReportAssistantOutcome =>
   reportAssistantOutcomeSchema.parse({
@@ -34,6 +38,25 @@ export const providerUnavailable = (
         }
       : {}),
   });
+
+/** Maps a thrown failure to a product outcome, or null for a technical error. */
+export const failureOutcome = (
+  error: unknown,
+  signals: Readonly<{ lease: AbortSignal; deadline: AbortSignal }>,
+): ReportAssistantOutcome | null => {
+  if (signals.lease.aborted) {
+    return reportAssistantOutcomeSchema.parse({
+      kind: "resource_limited",
+      retryAfterSeconds: LEASE_LOSS_RETRY_AFTER_SECONDS,
+    });
+  }
+  if (signals.deadline.aborted) return { kind: "provider_unavailable" };
+  if (!(error instanceof ReportAssistantProviderError)) return null;
+  if (error.providerCode === PROVIDER_RESPONSE_INCOMPLETE) {
+    return { kind: "provider_response_incomplete" };
+  }
+  return error.retryable ? providerUnavailable(error) : null;
+};
 
 export const createReportAssistantClock = (): ReportAssistantClock => ({
   get now(): Date {

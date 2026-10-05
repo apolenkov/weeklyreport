@@ -30,6 +30,7 @@ export {
   aiProviderDiscardResultSchema,
   aiProviderPreparationProgressSchema,
   aiProviderRevisionInputSchema,
+  aiProviderRuntimeFailureSchema,
 } from "./ai-provider-configuration.read.js";
 export {
   aiProviderCapabilityStatusSchema,

@@ -620,6 +620,7 @@ describe("LeadReportAssistant", () => {
   it.each([
     ["semantic_index_pending", "The semantic index is still catching up."],
     ["provider_unavailable", "AI service is temporarily unavailable"],
+    ["provider_response_incomplete", "stopped before it finished the answer"],
     ["no_results", "No matching report records were found"],
     ["result_set_too_large", "matches too many records"],
     ["invalid_plan", "safe report search"],
