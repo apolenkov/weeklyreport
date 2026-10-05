@@ -1,8 +1,9 @@
 import { spawn } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { type Cli, loadPasswords, parseCli } from "./config.ts";
+import { matrix } from "./coverage.ts";
 import { renderMarkdown } from "./report.ts";
 import { type RoleResult, ROLES } from "./types.ts";
 import { crawlRole, writeJson } from "./worker.ts";
@@ -16,13 +17,19 @@ function runChild(cli: Cli, name: string): Promise<void> {
     ...["--widths", config.widths.join(","), "--secrets", cli.secrets],
     ...["--max-controls", String(config.maxControls)],
     ...["--max-pages", String(config.maxPages)],
+    ...["--max-depth", String(config.maxDepth)],
+    config.mode === "full" ? "--full" : "--quick",
+    ...(cli.fixtureManifest ? ["--fixture-manifest", cli.fixtureManifest] : []),
+    ...(config.allowSynthetic ? ["--synthetic"] : []),
     ...(config.video ? [] : ["--no-video"]),
   ];
   return new Promise((resolve, reject) => {
-    spawn(process.execPath, args, { stdio: "inherit" }).on("exit", (code) => {
-      if (code === 0) resolve();
-      else reject(new Error(`role ${name} exited with ${String(code)}`));
-    });
+    spawn(process.execPath, args, { stdio: "inherit" })
+      .on("error", reject)
+      .on("exit", (code) => {
+        if (code === 0) resolve();
+        else reject(new Error(`role ${name} exited with ${String(code)}`));
+      });
   });
 }
 
@@ -74,16 +81,46 @@ async function parentMode(cli: Cli): Promise<void> {
   const { config } = cli;
   const started = new Date().toISOString();
   const start = performance.now();
+  for (const role of cli.roles)
+    rmSync(join(config.out, `role-${role}.json`), { force: true });
   const settled = await runPool(cli);
   const wallMs = Math.round(performance.now() - start);
-  // Every role file in the output directory counts, so a failed role can be re-run into the same report.
-  const results = ROLES.flatMap((role) => readRole(config.out, role.name));
-  const meta = { url: config.url, started, wallMs, parallel: cli.parallel };
-  writeJson(join(config.out, "report.json"), { ...meta, results });
+  const results = cli.roles.flatMap((role) => readRole(config.out, role));
+  const meta = {
+    url: config.url,
+    started,
+    wallMs,
+    parallel: cli.parallel,
+    mode: config.mode,
+    state: config.state,
+  };
+  writeJson(join(config.out, "report.json"), {
+    ...meta,
+    results,
+    matrix: matrix(results),
+  });
   writeFileSync(join(config.out, "report.md"), renderMarkdown(meta, results));
   console.log(`Report: ${join(config.out, "report.md")} (${wallMs} ms)`);
   const failed = settled.filter((s) => s.status === "rejected");
-  if (failed.length > 0) throw new Error(`${failed.length} role run(s) failed`);
+  const incomplete =
+    results.length !== cli.roles.length ||
+    results.some((result) =>
+      result.runs.some(
+        (run) =>
+          run.findings.some((finding) =>
+            [
+              "page-aborted",
+              "session-lost",
+              "rate-limited",
+              "coverage-incomplete",
+            ].includes(finding.kind),
+          ) || run.pages.some((page) => page.completion === "error"),
+      ),
+    );
+  if (failed.length > 0 || incomplete)
+    throw new Error(
+      `Incomplete crawl: ${failed.length} failed role process(es); see report`,
+    );
 }
 
 const cli = parseCli(process.argv.slice(2));

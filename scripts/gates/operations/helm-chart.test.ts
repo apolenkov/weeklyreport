@@ -327,6 +327,31 @@ test("redis flag and api memory cap derive from one value", () => {
   );
 });
 
+test("postgres server args are empty by default and pass through when set", () => {
+  const read = (extra: readonly string[]) =>
+    mainContainer(renderExample(extra).manifests, "StatefulSet", "postgres")
+      .args;
+  assert.equal(read([]), undefined);
+  assert.deepEqual(
+    read([
+      "--set-string",
+      "postgres.args[0]=-c",
+      "--set-string",
+      "postgres.args[1]=log_statement=all",
+    ]),
+    ["-c", "log_statement=all"],
+  );
+  const config = (extra: readonly string[]) =>
+    renderExample(extra).manifests.find(
+      (m) => m.kind === "ConfigMap" && m.metadata.name === "api-config",
+    )?.data?.NODE_V8_COVERAGE;
+  assert.equal(config([]), undefined);
+  assert.equal(
+    config(["--set-string", "api.extraEnv.NODE_V8_COVERAGE=/c"]),
+    "/c",
+  );
+});
+
 test("chart-created secrets stay out of every ConfigMap", () => {
   const result = withValuesFile(createSecretValues(), (file) =>
     helm(templateArgs(file)),

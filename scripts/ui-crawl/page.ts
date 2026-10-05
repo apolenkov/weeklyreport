@@ -1,6 +1,6 @@
 import { join } from "node:path";
 
-import { quietState } from "./batch.ts";
+import { quietState, waitForState } from "./batch.ts";
 import { SLOW_LOAD_MS, VISIT_ATTEMPTS } from "./constants.ts";
 import { add, type Ctx, drainLogs, type Place } from "./logs.ts";
 import { pageKey, sameOrigin } from "./policy.ts";
@@ -107,12 +107,12 @@ function pressAll(
     steps.push(...round.steps);
     next = round.next ?? probe.controls.length;
     const last = round.steps.at(-1);
-    // An Escape that restored the exact state needs no further check; after a reload, compare once.
+    // An Escape that restored the exact state needs no further check; after a reload, wait for the baseline to return, then compare.
     if (
       last?.stateChanged &&
       last.restoredBy !== "escape" &&
       last.restoredBy !== "toggle" &&
-      String(ctx.browser.evaluate(SIGNATURE_ONLY)) !== baseline
+      waitForState(ctx.browser, baseline) !== baseline
     ) {
       live = revertSelection(ctx, probe);
     }
