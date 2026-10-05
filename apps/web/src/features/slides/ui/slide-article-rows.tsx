@@ -72,6 +72,79 @@ function RowBody({
   );
 }
 
+function RowDetails({
+  id,
+  row,
+  expanded,
+  activatable,
+  onEdit,
+}: {
+  readonly id: string;
+  readonly row: GridRow;
+  readonly expanded: boolean;
+  readonly activatable: boolean;
+  readonly onEdit: () => void;
+}) {
+  return (
+    <div
+      id={id}
+      hidden={!expanded}
+      className="mt-1 space-y-1 border-t border-current/15 pt-1 text-[12px]"
+    >
+      {expanded && (
+        <>
+          <p className="font-medium">{row.hoverLabel}</p>
+          {(row.details ?? []).map(({ label, text }) => (
+            <p key={label}>
+              <span className="font-medium">{label}:</span> {text}
+            </p>
+          ))}
+          {activatable && (
+            <button
+              type="button"
+              aria-label={`Edit ${row.hoverLabel}: ${shortItemLabel(row.text)}`}
+              onClick={onEdit}
+              className="rounded-sm px-1 py-0.5 font-medium text-[var(--color-muted-foreground)] underline-offset-2 hover:text-[var(--color-foreground)] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--color-primary)]"
+            >
+              Edit
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function RowMetadata({
+  author,
+  showStages,
+  stageNames,
+}: {
+  readonly author: GridAuthor | undefined;
+  readonly showStages: boolean;
+  readonly stageNames: GridRow["stageNames"];
+}) {
+  return (
+    <div
+      data-testid="slide-row-metadata"
+      className="flex w-6 min-w-0 flex-col justify-between gap-1 self-stretch"
+    >
+      <div
+        data-testid="slide-row-metadata-top"
+        className="flex items-start justify-end"
+      >
+        <AuthorBadge author={author} />
+      </div>
+      <div
+        data-testid="slide-row-metadata-bottom"
+        className="mt-auto flex flex-wrap items-end justify-end gap-0.5"
+      >
+        {showStages && <StageWatermarks stageNames={stageNames} />}
+      </div>
+    </div>
+  );
+}
+
 function ItemRow({
   row,
   author,
@@ -123,50 +196,19 @@ function ItemRow({
           {row.text}
           {srLabel !== null && <span className="sr-only">{srLabel}</span>}
         </RowBody>
-        <div
+        <RowDetails
           id={detailsId}
-          hidden={!expanded}
-          className="mt-1 space-y-1 border-t border-current/15 pt-1 text-[12px]"
-        >
-          {expanded && (
-            <>
-              <p className="font-medium">{row.hoverLabel}</p>
-              {(row.details ?? []).map(({ label, text }) => (
-                <p key={label}>
-                  <span className="font-medium">{label}:</span> {text}
-                </p>
-              ))}
-              {activatable && (
-                <button
-                  type="button"
-                  aria-label={`Edit ${row.hoverLabel}: ${shortItemLabel(row.text)}`}
-                  onClick={activate}
-                  className="rounded-sm px-1 py-0.5 font-medium text-[var(--color-muted-foreground)] underline-offset-2 hover:text-[var(--color-foreground)] hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--color-primary)]"
-                >
-                  Edit
-                </button>
-              )}
-            </>
-          )}
-        </div>
+          row={row}
+          expanded={expanded}
+          activatable={activatable}
+          onEdit={activate}
+        />
       </div>
-      <div
-        data-testid="slide-row-metadata"
-        className="flex w-6 min-w-0 flex-col justify-between gap-1 self-stretch"
-      >
-        <div
-          data-testid="slide-row-metadata-top"
-          className="flex items-start justify-end"
-        >
-          <AuthorBadge author={author} />
-        </div>
-        <div
-          data-testid="slide-row-metadata-bottom"
-          className="mt-auto flex flex-wrap items-end justify-end gap-0.5"
-        >
-          {showStages && <StageWatermarks stageNames={row.stageNames} />}
-        </div>
-      </div>
+      <RowMetadata
+        author={author}
+        showStages={showStages}
+        stageNames={row.stageNames}
+      />
     </li>
   );
 }

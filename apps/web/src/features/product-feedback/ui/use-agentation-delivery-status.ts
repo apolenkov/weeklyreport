@@ -1,18 +1,25 @@
-import { agentationSessionResponseSchema } from "@customreport/shared";
 import type { Annotation } from "agentation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type Dispatch,
+  type RefObject,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
-const AGENTATION_ENDPOINT = "/api/v1/agentation";
-const FIRST_CONFIRMATION_DELAY_MS = 400;
-const SECOND_CONFIRMATION_DELAY_MS = 800;
-const FINAL_CONFIRMATION_DELAY_MS = 1600;
+import {
+  abortableDelay,
+  AGENTATION_CONFIRMATION_DELAYS_MS,
+  sessionContainsClientIdWithinTimeout,
+} from "./agentation-delivery-confirmation";
 
-export const AGENTATION_CONFIRMATION_DELAYS_MS = [
-  FIRST_CONFIRMATION_DELAY_MS,
-  SECOND_CONFIRMATION_DELAY_MS,
-  FINAL_CONFIRMATION_DELAY_MS,
-] as const;
-export const AGENTATION_CONFIRMATION_TIMEOUT_MS = 1000;
+export {
+  AGENTATION_CONFIRMATION_DELAYS_MS,
+  AGENTATION_CONFIRMATION_TIMEOUT_MS,
+} from "./agentation-delivery-confirmation";
 
 interface ScopeReference {
   readonly authorUserId: string | null;
@@ -43,86 +50,118 @@ function annotationMatchesClientId(annotation: Annotation, clientId: string) {
   return annotation.id === clientId;
 }
 
-function abortableDelay(milliseconds: number, signal: AbortSignal) {
-  return new Promise<void>((resolve, reject) => {
-    if (signal.aborted) {
-      reject(signal.reason);
-      return;
-    }
+type SetCandidate = Dispatch<SetStateAction<DeliveryCandidate | null>>;
 
-    const timeout = window.setTimeout(resolve, milliseconds);
-    signal.addEventListener(
-      "abort",
-      () => {
-        window.clearTimeout(timeout);
-        reject(signal.reason);
-      },
-      { once: true },
-    );
-  });
-}
-
-async function sessionContainsClientId(
-  sessionId: string,
-  clientId: string,
-  authorUserId: string,
-  signal: AbortSignal,
+function useCandidateConfirmation(
+  candidate: DeliveryCandidate | null,
+  scope: ScopeReference,
+  setCandidate: SetCandidate,
 ) {
-  const response = await fetch(
-    `${AGENTATION_ENDPOINT}/sessions/${encodeURIComponent(sessionId)}`,
-    {
-      cache: "no-store",
-      credentials: "include",
-      headers: { accept: "application/json" },
-      signal,
-    },
-  );
-  if (!response.ok) return false;
-
-  const parsed = agentationSessionResponseSchema.safeParse(
-    await response.json(),
-  );
-  return (
-    parsed.success &&
-    parsed.data.id === sessionId &&
-    (parsed.data.annotations ?? []).some(
-      (annotation) =>
-        annotation.sessionId === sessionId &&
-        annotation.clientId === clientId &&
-        annotation.authorId === authorUserId,
+  useEffect(() => {
+    if (
+      (candidate?.state !== "checking" && candidate?.state !== "retrying") ||
+      candidate.scope !== scope
     )
-  );
+      return;
+
+    const controller = new AbortController();
+    const expectedCandidate = candidate;
+
+    void (async () => {
+      for (const delay of AGENTATION_CONFIRMATION_DELAYS_MS) {
+        try {
+          await abortableDelay(delay, controller.signal);
+          controller.signal.throwIfAborted();
+          if (
+            expectedCandidate.sessionId &&
+            expectedCandidate.scope.authorUserId &&
+            (await sessionContainsClientIdWithinTimeout(
+              expectedCandidate.sessionId,
+              expectedCandidate.clientId,
+              expectedCandidate.scope.authorUserId,
+              controller.signal,
+            ))
+          ) {
+            setCandidate((current) =>
+              current === expectedCandidate ? null : current,
+            );
+            return;
+          }
+        } catch {
+          if (controller.signal.aborted) return;
+        }
+      }
+
+      setCandidate((current) =>
+        current === expectedCandidate
+          ? { ...current, state: "unconfirmed" }
+          : current,
+      );
+    })();
+
+    return () => controller.abort();
+  }, [candidate, scope, setCandidate]);
 }
 
-async function sessionContainsClientIdWithinTimeout(
-  sessionId: string,
-  clientId: string,
-  authorUserId: string,
-  parentSignal: AbortSignal,
-) {
-  const controller = new AbortController();
-  const abortFromParent = () => controller.abort(parentSignal.reason);
-  if (parentSignal.aborted) abortFromParent();
-  else parentSignal.addEventListener("abort", abortFromParent, { once: true });
-  const timeout = window.setTimeout(
-    () =>
-      controller.abort(
-        new DOMException("Confirmation timed out", "TimeoutError"),
-      ),
-    AGENTATION_CONFIRMATION_TIMEOUT_MS,
+function useAnnotationHandlers({
+  scope,
+  activeScopeRef,
+  sessionRef,
+  setCandidate,
+}: {
+  readonly scope: ScopeReference;
+  readonly activeScopeRef: RefObject<ScopeReference>;
+  readonly sessionRef: RefObject<SessionReference | null>;
+  readonly setCandidate: SetCandidate;
+}) {
+  const onAnnotationAdd = useCallback(
+    (annotation: Annotation) => {
+      if (activeScopeRef.current !== scope) return;
+      const knownSession = sessionRef.current;
+      const sessionId =
+        annotation.sessionId ??
+        (knownSession?.scope === scope
+          ? knownSession.id
+          : (scope.initialSessionId ?? undefined));
+      setCandidate({
+        annotation,
+        clientId: annotation.id,
+        scope,
+        ...(sessionId ? { sessionId } : {}),
+        state: "checking",
+      });
+    },
+    [scope, activeScopeRef, sessionRef, setCandidate],
   );
 
-  try {
-    return await sessionContainsClientId(
-      sessionId,
-      clientId,
-      authorUserId,
-      controller.signal,
-    );
-  } finally {
-    window.clearTimeout(timeout);
-    parentSignal.removeEventListener("abort", abortFromParent);
-  }
+  const onAnnotationDelete = useCallback(
+    (annotation: Annotation) => {
+      if (activeScopeRef.current !== scope) return;
+      setCandidate((current) =>
+        current?.scope === scope &&
+        annotationMatchesClientId(annotation, current.clientId)
+          ? null
+          : current,
+      );
+    },
+    [scope, activeScopeRef, setCandidate],
+  );
+
+  const onAnnotationsClear = useCallback(
+    (annotations: Annotation[]) => {
+      if (activeScopeRef.current !== scope) return;
+      setCandidate((current) =>
+        current?.scope === scope &&
+        annotations.some((annotation) =>
+          annotationMatchesClientId(annotation, current.clientId),
+        )
+          ? null
+          : current,
+      );
+    },
+    [scope, activeScopeRef, setCandidate],
+  );
+  return { onAnnotationAdd, onAnnotationDelete, onAnnotationsClear };
 }
 
 export function useAgentationDeliveryStatus({
@@ -173,98 +212,10 @@ export function useAgentationDeliveryStatus({
     [scope],
   );
 
-  const onAnnotationAdd = useCallback(
-    (annotation: Annotation) => {
-      if (activeScopeRef.current !== scope) return;
-      const knownSession = sessionRef.current;
-      const sessionId =
-        annotation.sessionId ??
-        (knownSession?.scope === scope
-          ? knownSession.id
-          : (scope.initialSessionId ?? undefined));
-      setCandidate({
-        annotation,
-        clientId: annotation.id,
-        scope,
-        ...(sessionId ? { sessionId } : {}),
-        state: "checking",
-      });
-    },
-    [scope],
-  );
+  const { onAnnotationAdd, onAnnotationDelete, onAnnotationsClear } =
+    useAnnotationHandlers({ scope, activeScopeRef, sessionRef, setCandidate });
 
-  const onAnnotationDelete = useCallback(
-    (annotation: Annotation) => {
-      if (activeScopeRef.current !== scope) return;
-      setCandidate((current) =>
-        current?.scope === scope &&
-        annotationMatchesClientId(annotation, current.clientId)
-          ? null
-          : current,
-      );
-    },
-    [scope],
-  );
-
-  const onAnnotationsClear = useCallback(
-    (annotations: Annotation[]) => {
-      if (activeScopeRef.current !== scope) return;
-      setCandidate((current) =>
-        current?.scope === scope &&
-        annotations.some((annotation) =>
-          annotationMatchesClientId(annotation, current.clientId),
-        )
-          ? null
-          : current,
-      );
-    },
-    [scope],
-  );
-
-  useEffect(() => {
-    if (
-      (candidate?.state !== "checking" && candidate?.state !== "retrying") ||
-      candidate.scope !== scope
-    )
-      return;
-
-    const controller = new AbortController();
-    const expectedCandidate = candidate;
-
-    void (async () => {
-      for (const delay of AGENTATION_CONFIRMATION_DELAYS_MS) {
-        try {
-          await abortableDelay(delay, controller.signal);
-          controller.signal.throwIfAborted();
-          if (
-            expectedCandidate.sessionId &&
-            expectedCandidate.scope.authorUserId &&
-            (await sessionContainsClientIdWithinTimeout(
-              expectedCandidate.sessionId,
-              expectedCandidate.clientId,
-              expectedCandidate.scope.authorUserId,
-              controller.signal,
-            ))
-          ) {
-            setCandidate((current) =>
-              current === expectedCandidate ? null : current,
-            );
-            return;
-          }
-        } catch {
-          if (controller.signal.aborted) return;
-        }
-      }
-
-      setCandidate((current) =>
-        current === expectedCandidate
-          ? { ...current, state: "unconfirmed" }
-          : current,
-      );
-    })();
-
-    return () => controller.abort();
-  }, [candidate, scope]);
+  useCandidateConfirmation(candidate, scope, setCandidate);
 
   const retry = useCallback(() => {
     if (candidate?.scope !== scope || !candidate.sessionId) return;

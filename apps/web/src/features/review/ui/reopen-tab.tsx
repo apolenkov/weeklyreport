@@ -136,6 +136,38 @@ function reopenCountLabel(
   return `${count} ${count === 1 ? "request" : "requests"}`;
 }
 
+function ReopenPagination({
+  listQuery,
+  hasRequests,
+}: {
+  readonly listQuery: ReturnType<typeof useReopenTabState>["listQuery"];
+  readonly hasRequests: boolean;
+}) {
+  return listQuery.isError && hasRequests ? (
+    <ReopenNextPageIssue
+      errorMessage={formatClientErrorMessage(
+        "Some requests could not be loaded",
+        listQuery.error,
+      )}
+      isRetrying={listQuery.isFetching}
+      onRetry={() => {
+        if (listQuery.isFetchNextPageError) {
+          void listQuery.fetchNextPage({ cancelRefetch: false });
+        } else {
+          void listQuery.refetch({ cancelRefetch: false });
+        }
+      }}
+    />
+  ) : listQuery.hasNextPage ? (
+    <LoadMoreRequestsButton
+      isLoading={listQuery.isFetchingNextPage}
+      onLoadMore={() => {
+        void listQuery.fetchNextPage({ cancelRefetch: false });
+      }}
+    />
+  ) : null;
+}
+
 export function ReopenTab() {
   const {
     filter,
@@ -213,29 +245,10 @@ export function ReopenTab() {
         />
       </div>
 
-      {listQuery.isError && requests.length > 0 ? (
-        <ReopenNextPageIssue
-          errorMessage={formatClientErrorMessage(
-            "Some requests could not be loaded",
-            listQuery.error,
-          )}
-          isRetrying={listQuery.isFetching}
-          onRetry={() => {
-            if (listQuery.isFetchNextPageError) {
-              void listQuery.fetchNextPage({ cancelRefetch: false });
-            } else {
-              void listQuery.refetch({ cancelRefetch: false });
-            }
-          }}
-        />
-      ) : listQuery.hasNextPage ? (
-        <LoadMoreRequestsButton
-          isLoading={listQuery.isFetchingNextPage}
-          onLoadMore={() => {
-            void listQuery.fetchNextPage({ cancelRefetch: false });
-          }}
-        />
-      ) : null}
+      <ReopenPagination
+        listQuery={listQuery}
+        hasRequests={requests.length > 0}
+      />
     </div>
   );
 }
