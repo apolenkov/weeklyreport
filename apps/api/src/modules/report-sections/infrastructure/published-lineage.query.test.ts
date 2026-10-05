@@ -4,12 +4,15 @@ import {
   publishedReportSnapshotSchema,
   type ReportSectionReadModel,
 } from "@customreport/shared";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import { publishedSnapshotFixture } from "../../../test-utils/prisma-test-helper.js";
 import { LeadFormPrismaRepository } from "./lead-form.prisma-repository.js";
-import { queryPublishedLineage } from "./published-lineage.query.js";
+import {
+  queryPublishedLineage,
+  resetFrozenLineageCache,
+} from "./published-lineage.query.js";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository.js";
 
 const candidates = {
@@ -79,6 +82,34 @@ function publishedDecision(stableId: string, id: string): PublishedDecision {
   };
 }
 
+interface ServedReport {
+  readonly id: string;
+  readonly status?: string;
+  readonly updatedAt?: Date;
+  readonly publishedSnapshot: unknown;
+}
+
+// Serves both lineage reads: the (id, updatedAt) head scan by status and the
+// snapshot fetch of the stale ids.
+function serveReports(reports: readonly ServedReport[]) {
+  return (query: {
+    where: { status?: string; id?: { in: string[] } };
+  }): Promise<unknown[]> =>
+    Promise.resolve(
+      reports
+        .filter((report) =>
+          query.where.status === undefined
+            ? query.where.id?.in.includes(report.id)
+            : (report.status ?? "published") === query.where.status,
+        )
+        .map(({ id, updatedAt, publishedSnapshot }) => ({
+          id,
+          updatedAt: updatedAt ?? new Date(0),
+          publishedSnapshot,
+        })),
+    );
+}
+
 function createPrisma() {
   const documentFindMany = vi.fn().mockResolvedValue([
     { recordType: "item", stableId: "own-item" },
@@ -99,6 +130,8 @@ function createPrisma() {
 }
 
 describe("queryPublishedLineage", () => {
+  beforeEach(resetFrozenLineageCache);
+
   it("excludes an archived draft while retaining every published lifecycle", async () => {
     const lifecycleRows = [
       {
@@ -140,19 +173,7 @@ describe("queryPublishedLineage", () => {
         publishedSnapshot: null,
       },
     ] as const;
-    const selectedLabels: string[] = [];
-    const reportFindMany = vi.fn((query: { where: { status: string } }) => {
-      const selected = lifecycleRows.filter(
-        (report) => report.status === query.where.status,
-      );
-      selectedLabels.push(...selected.map((report) => report.label));
-      return Promise.resolve(
-        selected.map(({ id, publishedSnapshot }) => ({
-          id,
-          publishedSnapshot,
-        })),
-      );
-    });
+    const reportFindMany = vi.fn(serveReports(lifecycleRows));
     const prisma = {
       publishedSearchDocument: { findMany: vi.fn().mockResolvedValue([]) },
       report: { findMany: reportFindMany },
@@ -163,29 +184,29 @@ describe("queryPublishedLineage", () => {
       decisionStableIds: [],
     });
 
-    expect(reportFindMany).toHaveBeenCalledWith({
+    expect(reportFindMany).toHaveBeenNthCalledWith(1, {
       where: { status: "published" },
-      select: { id: true, publishedSnapshot: true },
+      select: { id: true, updatedAt: true },
     });
-    expect(selectedLabels).toEqual([
-      "published",
-      "reopened",
-      "archived-published",
-    ]);
+    expect(reportFindMany).toHaveBeenNthCalledWith(2, {
+      where: {
+        id: {
+          in: [
+            "20000000-0000-4000-8000-000000000001",
+            "20000000-0000-4000-8000-000000000002",
+            "20000000-0000-4000-8000-000000000003",
+          ],
+        },
+      },
+      select: { id: true, updatedAt: true, publishedSnapshot: true },
+    });
   });
 
   it("rejects a missing snapshot on a genuine publication", async () => {
     const fixture = createPrisma();
-    fixture.reportFindMany.mockResolvedValue([
-      {
-        id: candidates.reportId,
-        status: "published",
-        periodStatus: "published",
-        archived: true,
-        publishedAt: new Date("2026-04-14T10:00:00.000Z"),
-        publishedSnapshot: null,
-      },
-    ]);
+    fixture.reportFindMany.mockImplementation(
+      serveReports([{ id: candidates.reportId, publishedSnapshot: null }]),
+    );
 
     await expect(
       queryPublishedLineage(fixture.prisma, candidates),
@@ -255,67 +276,69 @@ describe("queryPublishedLineage", () => {
 
   it("includes the current report snapshot when the report was reopened", async () => {
     const fixture = createPrisma();
-    fixture.reportFindMany.mockResolvedValue([
-      {
-        id: candidates.reportId,
-        publishedSnapshot: {
-          reportId: candidates.reportId,
-          periodStart: "2026-04-07T00:00:00.000Z",
-          periodEnd: "2026-04-13T00:00:00.000Z",
-          deadline: null,
-          status: "published",
-          publishedAt: "2026-04-14T10:00:00.000Z",
-          publishedById: null,
-          publishedByName: null,
-          portfolioOverview: {
-            status: "green",
-            totals: { green: 0, yellow: 0, red: 0 },
-          },
-          sections: [
-            {
-              reportId: candidates.reportId,
-              reportSectionId: candidates.reportSectionId,
-              authorId: "00000000-0000-4000-8000-000000000001",
-              authorName: "Test Lead",
-              authorRole: "lead",
-              groupId: "00000000-0000-4000-8000-000000000002",
-              groupName: "Engineering",
-              status: "submitted",
-              submittedAt: null,
-              version: 1,
-              late: false,
-              projectStatuses: [],
-              stageStatuses: [],
-              activityStatuses: [],
-              projects: [],
-              referencedProjects: [],
-              activities: [],
-              reviews: [],
-              items: [
-                {
-                  id: "00000000-0000-4000-8000-000000000003",
-                  stableId: "10000000-0000-4000-8000-000000000005",
-                  projectId: "00000000-0000-4000-8000-000000000004",
-                  activityId: null,
-                  type: "current",
-                  text: "Published item",
-                  tag: "feature",
-                  workflowStatus: "done",
-                  carriedOver: false,
-                  priorityRank: null,
-                  pausedReason: null,
-                  createdAt: "2026-04-07T00:00:00.000Z",
-                  updatedAt: "2026-04-07T00:00:00.000Z",
-                  stageNames: ["Development"],
-                },
-              ],
-              risks: [],
-              decisions: [],
+    fixture.reportFindMany.mockImplementation(
+      serveReports([
+        {
+          id: candidates.reportId,
+          publishedSnapshot: {
+            reportId: candidates.reportId,
+            periodStart: "2026-04-07T00:00:00.000Z",
+            periodEnd: "2026-04-13T00:00:00.000Z",
+            deadline: null,
+            status: "published",
+            publishedAt: "2026-04-14T10:00:00.000Z",
+            publishedById: null,
+            publishedByName: null,
+            portfolioOverview: {
+              status: "green",
+              totals: { green: 0, yellow: 0, red: 0 },
             },
-          ],
+            sections: [
+              {
+                reportId: candidates.reportId,
+                reportSectionId: candidates.reportSectionId,
+                authorId: "00000000-0000-4000-8000-000000000001",
+                authorName: "Test Lead",
+                authorRole: "lead",
+                groupId: "00000000-0000-4000-8000-000000000002",
+                groupName: "Engineering",
+                status: "submitted",
+                submittedAt: null,
+                version: 1,
+                late: false,
+                projectStatuses: [],
+                stageStatuses: [],
+                activityStatuses: [],
+                projects: [],
+                referencedProjects: [],
+                activities: [],
+                reviews: [],
+                items: [
+                  {
+                    id: "00000000-0000-4000-8000-000000000003",
+                    stableId: "10000000-0000-4000-8000-000000000005",
+                    projectId: "00000000-0000-4000-8000-000000000004",
+                    activityId: null,
+                    type: "current",
+                    text: "Published item",
+                    tag: "feature",
+                    workflowStatus: "done",
+                    carriedOver: false,
+                    priorityRank: null,
+                    pausedReason: null,
+                    createdAt: "2026-04-07T00:00:00.000Z",
+                    updatedAt: "2026-04-07T00:00:00.000Z",
+                    stageNames: ["Development"],
+                  },
+                ],
+                risks: [],
+                decisions: [],
+              },
+            ],
+          },
         },
-      },
-    ]);
+      ]),
+    );
 
     await expect(
       queryPublishedLineage(fixture.prisma, {
@@ -360,29 +383,33 @@ describe("queryPublishedLineage", () => {
       }),
     );
     fixture.documentFindMany.mockResolvedValue([]);
-    fixture.reportFindMany.mockResolvedValue([
-      {
-        id: candidates.reportId,
-        publishedSnapshot: {
-          ...snapshot,
-          sections: snapshot.sections.map((section, index) => ({
-            ...section,
-            items: [
-              publishedItem(
-                index === 0 ? currentItemStableId : siblingItemStableId,
-                `60000000-0000-4000-8000-00000000001${index}`,
-              ),
-            ],
-            decisions: [
-              publishedDecision(
-                index === 0 ? currentDecisionStableId : siblingDecisionStableId,
-                `60000000-0000-4000-8000-00000000002${index}`,
-              ),
-            ],
-          })),
+    fixture.reportFindMany.mockImplementation(
+      serveReports([
+        {
+          id: candidates.reportId,
+          publishedSnapshot: {
+            ...snapshot,
+            sections: snapshot.sections.map((section, index) => ({
+              ...section,
+              items: [
+                publishedItem(
+                  index === 0 ? currentItemStableId : siblingItemStableId,
+                  `60000000-0000-4000-8000-00000000001${index}`,
+                ),
+              ],
+              decisions: [
+                publishedDecision(
+                  index === 0
+                    ? currentDecisionStableId
+                    : siblingDecisionStableId,
+                  `60000000-0000-4000-8000-00000000002${index}`,
+                ),
+              ],
+            })),
+          },
         },
-      },
-    ]);
+      ]),
+    );
 
     await expect(
       queryPublishedLineage(fixture.prisma, {
@@ -394,6 +421,47 @@ describe("queryPublishedLineage", () => {
       itemStableIds: [currentItemStableId, siblingItemStableId],
       decisionStableIds: [currentDecisionStableId, siblingDecisionStableId],
     });
+  });
+
+  it("validates a snapshot once per version and re-reads it after an update", async () => {
+    const fixture = createPrisma();
+    const snapshot = {
+      ...emptyPublishedSnapshot(candidates.reportId),
+      sections: [],
+    };
+    const served = (updatedAt: Date) =>
+      fixture.reportFindMany.mockImplementation(
+        serveReports([
+          { id: candidates.reportId, updatedAt, publishedSnapshot: snapshot },
+        ]),
+      );
+    const snapshotReads = () =>
+      fixture.reportFindMany.mock.calls.filter(
+        ([query]) => (query as { where: { id?: unknown } }).where.id,
+      ).length;
+
+    served(new Date(1000));
+    await queryPublishedLineage(fixture.prisma, candidates);
+    await queryPublishedLineage(fixture.prisma, candidates);
+    expect(snapshotReads()).toBe(1);
+
+    served(new Date(2000));
+    await queryPublishedLineage(fixture.prisma, candidates);
+    expect(snapshotReads()).toBe(2);
+  });
+
+  it("keeps rejecting a corrupt snapshot on every lookup", async () => {
+    const fixture = createPrisma();
+    fixture.reportFindMany.mockImplementation(
+      serveReports([{ id: candidates.reportId, publishedSnapshot: { x: 1 } }]),
+    );
+
+    await expect(
+      queryPublishedLineage(fixture.prisma, candidates),
+    ).rejects.toBeInstanceOf(PublishedSnapshotIntegrityError);
+    await expect(
+      queryPublishedLineage(fixture.prisma, candidates),
+    ).rejects.toBeInstanceOf(PublishedSnapshotIntegrityError);
   });
 
   it("keeps lead-form and report-sections repository results identical", async () => {

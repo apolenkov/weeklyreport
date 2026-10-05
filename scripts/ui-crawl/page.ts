@@ -1,7 +1,7 @@
 import { join } from "node:path";
 
-import { quietState, waitForState } from "./batch.ts";
-import { SLOW_LOAD_MS, VISIT_ATTEMPTS } from "./constants.ts";
+import { quietState, UNTIL, waitForState } from "./batch.ts";
+import { RETURN_WAIT_MS, SLOW_LOAD_MS, VISIT_ATTEMPTS } from "./constants.ts";
 import { add, type Ctx, drainLogs, type Place } from "./logs.ts";
 import { pageKey, sameOrigin } from "./policy.ts";
 import { settle } from "./press.ts";
@@ -64,8 +64,30 @@ function auditPage(
   return axe.length;
 }
 
-function liveControls(ctx: Ctx): ReadonlyMap<string, ProbedControl> {
-  const probe = ctx.browser.evaluate(PAGE_PROBE) as PageProbe;
+/**
+ * Waits, driven by DOM mutations, until every wanted control is on the page (or RETURN_WAIT_MS pass):
+ * a page that is still rendering after a reload must not make its controls look gone.
+ */
+function awaitControls(wanted: readonly string[]): string {
+  return `(async () => {
+  const read = () => ${PAGE_PROBE};
+  const want = ${JSON.stringify(wanted)};
+  const complete = () => {
+    const ids = new Set(read().controls.map((c) => c.tag + '|' + (c.role ?? '') + '|' + c.name));
+    return want.every((w) => ids.has(w));
+  };
+  await (${UNTIL})(complete, ${RETURN_WAIT_MS});
+  return read();
+})()`;
+}
+
+function liveControls(
+  ctx: Ctx,
+  wanted?: readonly string[],
+): ReadonlyMap<string, ProbedControl> {
+  const probe = ctx.browser.evaluate(
+    wanted ? awaitControls(wanted) : PAGE_PROBE,
+  ) as PageProbe;
   const live = new Map<string, ProbedControl>();
   for (const c of probe.controls)
     if (!live.has(identity(c))) live.set(identity(c), c);
@@ -77,7 +99,7 @@ function revertSelection(
   ctx: Ctx,
   first: PageProbe,
 ): ReadonlyMap<string, ProbedControl> {
-  const live = liveControls(ctx);
+  const live = liveControls(ctx, first.controls.map(identity));
   let reverted = false;
   for (const c of first.controls) {
     const now = c.selected ? live.get(identity(c)) : undefined;
@@ -87,7 +109,7 @@ function revertSelection(
       reverted = true;
     }
   }
-  return reverted ? liveControls(ctx) : live;
+  return reverted ? liveControls(ctx, first.controls.map(identity)) : live;
 }
 
 function pressAll(
@@ -101,6 +123,7 @@ function pressAll(
     probe.controls.map((c) => [identity(c), c] as const),
   );
   const steps: StepRecord[] = [];
+  let reported = false;
   for (let next = 0; next < probe.controls.length;) {
     const entries = planEntries(ctx, { probe, live, counters }, next);
     const round = pressEntries(ctx, page, entries, counters);
@@ -115,6 +138,22 @@ function pressAll(
       waitForState(ctx.browser, baseline) !== baseline
     ) {
       live = revertSelection(ctx, probe);
+      // a page that never returns to its first-visit state is an error, not a run of vanished controls
+      if (
+        !reported &&
+        String(ctx.browser.evaluate(SIGNATURE_ONLY)) !== baseline
+      ) {
+        reported = true;
+        add(
+          ctx,
+          { page: page.key, shot: null },
+          {
+            severity: "low",
+            kind: "restore-incomplete",
+            detail: `${last.name}: the page did not return to its first-visit state; later controls that the page no longer shows are reported as gone`,
+          },
+        );
+      }
     }
   }
   return steps;
@@ -127,7 +166,7 @@ function visitPage(
   axeSource: string,
 ): { record: PageRecord; links: readonly string[] } {
   const tag = `${String(index).padStart(2, "0")}-${slug(pageKey(url))}`;
-  const loadMs = settle(ctx, url);
+  const loadMs = settle(ctx, url, "visit");
   const shot = `${tag}.png`;
   ctx.browser.batch([["screenshot", "--full", join(ctx.dir, shot)]]);
   const probe = ctx.browser.evaluate(PAGE_PROBE) as PageProbe;

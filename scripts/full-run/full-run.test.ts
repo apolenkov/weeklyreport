@@ -10,6 +10,10 @@ import {
   repeats,
 } from "./logs.ts";
 import { mergeSnapshots, top } from "./pg.ts";
+import { procedureRows } from "./procedures.ts";
+import { PROCEDURE_REASONS } from "./reasons.ts";
+
+const MIN_REASON_CHARS = 40;
 
 const start = (procedure: string, role: string): string =>
   JSON.stringify({
@@ -30,6 +34,7 @@ describe("api log parsing", () => {
     ]);
     expect(used.get("a.b")).toEqual({
       calls: 2,
+      ok: 0,
       roles: new Set(["lead", "head"]),
     });
     expect(used.get("c.d")?.calls).toBe(1);
@@ -149,5 +154,51 @@ describe("jev second-judge signals", () => {
       "stuck 0.90",
       "1 console events, first: GET /x 500",
     ]);
+  });
+});
+
+describe("reasons for procedures nobody exercises", () => {
+  it("states a specific reason, never a generic one", () => {
+    for (const [path, reason] of Object.entries(PROCEDURE_REASONS)) {
+      expect(reason.why.length, path).toBeGreaterThan(MIN_REASON_CHARS);
+      expect(reason.why, path).not.toMatch(/not reachable|never called|n\/a/i);
+    }
+  });
+
+  it("marks a procedure without a reason as unclassified instead of guessing", () => {
+    const rows = procedureRows(
+      [{ path: "x.unknown", type: "query" }],
+      new Map(),
+    );
+    expect(rows[0]?.reason).toMatch(/^unclassified/);
+    expect(rows[0]?.exercised).toBe(false);
+  });
+
+  it("counts a call as exercised only when it finished successfully", () => {
+    const end = JSON.stringify({
+      phase: "trpc.request",
+      stage: "end",
+      procedure: "a.b",
+      status: "error",
+    });
+    const used = procedureCalls([start("a.b", "lead"), end]);
+    const [row] = procedureRows([{ path: "a.b", type: "mutation" }], used);
+    expect(row).toMatchObject({ called: true, exercised: false });
+    const ok = JSON.stringify({
+      phase: "trpc.request",
+      stage: "end",
+      procedure: "a.b",
+      status: "success",
+    });
+    const [after] = procedureRows(
+      [{ path: "a.b", type: "mutation" }],
+      procedureCalls([start("a.b", "lead"), ok]),
+      new Map([["a.b", 1]]),
+    );
+    expect(after).toMatchObject({
+      exercised: true,
+      via: "scenario",
+      reason: "",
+    });
   });
 });

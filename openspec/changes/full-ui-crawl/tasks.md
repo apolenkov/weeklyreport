@@ -6,6 +6,9 @@
 - [ ] Verify focused behavior, repository gates and real browser acceptance.
 - [ ] Align durable specification and tester-kit instructions with measured results.
 
+- [ ] Speed and determinism: admin tabs once, default views deduplicated, event-driven waits in quick mode, `compare.ts`.
+- [ ] Procedure coverage by success, reasons registry, synthetic API scenario, one-command start in `full-run.sh`.
+
 ## Verification
 
 Required: `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`,

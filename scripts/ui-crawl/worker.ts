@@ -36,7 +36,7 @@ function sleep(ms: number): void {
 
 function attemptLogin(
   browser: Browser,
-  config: Config,
+  config: Pick<Config, "url">,
   role: Role,
   password: string,
 ): boolean {
@@ -63,7 +63,7 @@ function attemptLogin(
 /** A slow or throttled identity provider times out the CLI: treat that as a failed attempt. */
 function tryLogin(
   browser: Browser,
-  config: Config,
+  config: Pick<Config, "url">,
   role: Role,
   password: string,
 ): boolean {
@@ -75,9 +75,9 @@ function tryLogin(
 }
 
 /** The stand limits sign-ins to 5 per minute per IP: a failed callback waits out the window. */
-function login(
+export function login(
   browser: Browser,
-  config: Config,
+  config: Pick<Config, "url">,
   role: Role,
   password: string,
 ): void {

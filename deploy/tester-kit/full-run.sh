@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # One-command full test run of the tester stand with evidence for performance review.
 #   full-run.sh [--states returned|all|<list>] [--widths-full 1280] [--out <dir>] [--no-e2e] [--walk-args "<crawler args>"]
-# Steps: check that pg_stat_statements/auto_explain/statement log (Postgres) and V8 coverage (api) are on
-# through values-tester.yaml, reset, walk --quick (all roles, 1280+375), walk --full for the
-# chosen states (default: returned at 1280; "all" is the 6-7 hour night mode), collect api/web/postgres
-# logs, coverage and statistics, build report.md, reset the stand again.
+# Steps: start the stand when it is not running (start.sh, with the image already deployed) or when the
+# collection of pg_stat_statements/auto_explain/statement log (Postgres) and V8 coverage (api) is off in
+# values-tester.yaml, reset, walk --quick (all roles, 1280+375), walk --full for the chosen states
+# (default: returned at 1280; "all" is the 6-7 hour night mode), the synthetic API scenario (handlers the
+# crawler skips as dangerous), the human-like pass, collect api/web/postgres logs, coverage and
+# statistics, build report.md, reset the stand again.
 # Evidence: ~/.local/state/wr-tester/full-run-<time>/ (override with --out).
 set -euo pipefail
 . "$(dirname "$0")/env.sh"
@@ -99,16 +101,29 @@ memory_wait() { # wait until at least 15 percent of memory is free
   done
 }
 
+# The stand runs and collects: otherwise start.sh brings it up with the image that is deployed now
+# (a registry image of this commit may not exist yet), or with its default image when nothing is deployed.
+collection_on() {
+  PG -c 'SHOW shared_preload_libraries' 2>/dev/null | grep -q 'pg_stat_statements.*auto_explain' \
+    && kubectl -n "$NS" exec deploy/api -c api -- printenv NODE_V8_COVERAGE >/dev/null 2>&1
+}
+ensure_stand() {
+  collection_on && return
+  local image start_args=()
+  image=$(kubectl -n "$NS" get deploy/api -o jsonpath='{.spec.template.spec.containers[?(@.name=="api")].image}' 2>/dev/null || true)
+  [ -z "$image" ] || start_args=(--registry "${image%/api:*}" --tag "${image##*:}")
+  phase "start the stand (start.sh ${start_args[*]:-})"
+  bash "$HERE/start.sh" "${start_args[@]+"${start_args[@]}"}"
+  collection_on || { echo "Collection is still off after start.sh: check values-tester.yaml" >&2; exit 1; }
+}
+ensure_stand
+
 tester_guard
 SELF="$HERE/full-run.sh"
 export WR_PRE_RESET_HOOK="bash '$SELF' hook-pre"
 export WR_POST_RESET_HOOK="bash '$SELF' hook-post"
 
-phase "check observability settings (values-tester.yaml)"
-# Collection is configured by values-tester.yaml (postgres.args, api.extraEnv); start.sh applies it.
-PG -c 'SHOW shared_preload_libraries' | grep -q 'pg_stat_statements.*auto_explain' \
-  && kubectl -n "$NS" exec deploy/api -c api -- printenv NODE_V8_COVERAGE >/dev/null \
-  || { echo "Collection is off: run start.sh to apply values-tester.yaml" >&2; exit 1; }
+phase "observability settings are on (values-tester.yaml)"
 
 phase "reset to the demo seed"
 memory_wait
@@ -130,6 +145,18 @@ sleep 70
 phase "walk --full (states $STATES, widths $WIDTHS_FULL)"
 memory_wait
 bash "$HERE/walk.sh" --full --states "$STATES" --widths "$WIDTHS_FULL" --out "$WR_RUN_DIR/full" "${WALK_ARGS[@]+"${WALK_ARGS[@]}"}" || phase "full walk exited non-zero"
+
+phase "synthetic API scenario (handlers the crawler skips as dangerous, run on the freshly reset stand)"
+memory_wait
+mkdir -p "$WR_RUN_DIR/scenarios"
+(
+  tester_lock
+  trap tester_unlock EXIT
+  cd "$REPO"
+  node --experimental-strip-types scripts/ui-crawl/scenario.ts --url "http://localhost:$APP_PORT" \
+    --secrets "$STATE_DIR/secrets.env" --out "$WR_RUN_DIR/scenarios" | tee "$WR_RUN_DIR/scenarios/scenario.log"
+) || phase "scenario exited non-zero"
+bash "$HERE/reset.sh" --yes # the scenario wrote: collect its api segment and return to the demo seed
 
 phase "human-like pass (dogfood.sh, 4 roles, Jev as second judge)"
 memory_wait

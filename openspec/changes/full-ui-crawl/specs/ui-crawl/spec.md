@@ -69,3 +69,42 @@ observable state equals the recorded parent.
 - **WHEN** a dismissed surface or a reload takes longer than the quiet window
 - **THEN** the next control is pressed once the page shows its parent state
 - **AND** a page that never returns is recorded as an error
+
+### Requirement: Admin tabs are walked in full once per run
+
+Admin tabs other than Periods and Reopen show the same content in every
+lifecycle state. A multi-state run MUST walk every admin tab and the PDF page
+once, in the first state, and MUST walk only the lifecycle-dependent tabs
+(Periods, Reopen) in the later states. The report MUST name the state each
+admin page was walked in.
+
+#### Scenario: A run covers several states
+
+- **WHEN** a full run covers the states returned and published
+- **THEN** admin tabs Users, Groups, Products, Activities, Reminders, Jobs, Actions, AI and Settings are walked once, in returned
+- **AND** Periods and Reopen are walked in both states
+
+### Requirement: A page with a default view is one page
+
+A page opened with the default value of a view query (admin tab Users, AI
+sub-tab Provider, settings sub-tab Identity) MUST be the same page as its bare
+URL, so a run MUST NOT walk it twice.
+
+#### Scenario: Link discovery finds the explicit default URL
+
+- **WHEN** a page links to `/admin?tab=users` after `/admin` was walked
+- **THEN** the page is not walked again
+
+### Requirement: Two runs of one state press the same controls
+
+The press and `gone` counts per role and width MUST NOT depend on timing: a
+control is reported gone only after the page had the chance, bounded and driven
+by DOM events, to show it again, in quick mode as well as in full mode. A page
+that never returns to its first-visit state MUST be reported as a finding
+instead of being silently reduced to gone controls. `compare.ts` MUST compare
+two runs and exit non-zero when a count differs.
+
+#### Scenario: Two quick runs on a freshly reset stand
+
+- **WHEN** the quick walk runs twice in a row on the demo seed
+- **THEN** every role at every width has the same pressed, skipped and gone counts in both runs

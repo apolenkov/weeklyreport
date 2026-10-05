@@ -3,9 +3,27 @@ import type { FullFrame } from "./full-restore.ts";
 import { pageKey } from "./policy.ts";
 import { controlFamily } from "./round.ts";
 
+/** A page opened without these query values shows them anyway: the explicit and the bare URL are one page. */
+const ADMIN_DEFAULTS: Readonly<Record<string, string>> = {
+  tab: "users",
+  aiTab: "provider",
+  settingsTab: "identity",
+};
+
+/** Admin tab, AI sub-tab and settings sub-tab defaults leave the key; the feature choice only matters on the Features sub-tab. */
+function withoutAdminDefaults(parsed: URL): void {
+  if (parsed.pathname !== "/admin") return;
+  const { searchParams } = parsed;
+  for (const [name, value] of Object.entries(ADMIN_DEFAULTS))
+    if (searchParams.get(name) === value) searchParams.delete(name);
+  if (searchParams.get("aiTab") !== "features")
+    searchParams.delete("aiFeature");
+}
+
 /** Full mode preserves record identifiers and query-controlled views. */
 export function fullPageKey(url: string): string {
   const parsed = new URL(url);
+  withoutAdminDefaults(parsed);
   parsed.searchParams.sort();
   return `${parsed.pathname}${parsed.search}`;
 }
@@ -17,6 +35,7 @@ const RECORD_ID = /^(?:[0-9a-f]{8}-[0-9a-f-]{27}|\d+)$/i;
 /** One representative per page family: record ids collapse, query views (tabs, archive) stay apart. */
 export function fullFamilyKey(url: string): string {
   const parsed = new URL(url);
+  withoutAdminDefaults(parsed);
   const query = new URLSearchParams(
     [...parsed.searchParams].filter(
       ([name, value]) =>
@@ -83,6 +102,24 @@ export function findFullControl(
   elementId: string,
 ): FullControl | undefined {
   return probe.controls.find((control) => control.elementId === elementId);
+}
+
+/**
+ * The live control for a planned one: the same element id, else the same identity at the same position
+ * while the list of such controls keeps its length (a re-render shifts DOM paths, not what the controls are).
+ */
+export function matchControl(
+  live: FullProbe,
+  planned: FullControl,
+  plannedFrom: FullProbe,
+): FullControl | undefined {
+  const exact = findFullControl(live, planned.elementId);
+  if (exact) return exact;
+  const key = controlKey(planned);
+  const was = plannedFrom.controls.filter((c) => controlKey(c) === key);
+  const now = live.controls.filter((c) => controlKey(c) === key);
+  if (was.length !== now.length) return undefined;
+  return now[was.findIndex((c) => c.elementId === planned.elementId)];
 }
 
 export function fullControlReason(control: FullControl): string | null {

@@ -37,6 +37,7 @@ function sessionFor(
     visited: new Set(),
     representatives: new Map(),
     done: new Set(),
+    probeCache: null,
     presses: 0,
     limited: false,
     mutated: false,
@@ -93,7 +94,7 @@ function visitFullPage(
   { url, index, seen }: Target,
   axeSource: string,
 ): Visit | null {
-  const loadMs = settle(ctx, url);
+  const loadMs = settle(ctx, url, "visit");
   const probe = readFullProbe(ctx.browser);
   const key = fullPageKey(probe.url);
   if (seen.has(key)) return null;
