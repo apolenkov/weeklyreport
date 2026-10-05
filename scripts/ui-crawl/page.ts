@@ -1,0 +1,248 @@
+import { join } from "node:path";
+
+import { quietState } from "./batch.ts";
+import { SLOW_LOAD_MS, VISIT_ATTEMPTS } from "./constants.ts";
+import { add, type Ctx, drainLogs, type Place } from "./logs.ts";
+import { pageKey, sameOrigin } from "./policy.ts";
+import { settle } from "./press.ts";
+import {
+  axeProbe,
+  PAGE_PROBE,
+  type PageProbe,
+  type ProbedControl,
+  SIGNATURE_ONLY,
+} from "./probe.ts";
+import {
+  type Counters,
+  identity,
+  type PageRef,
+  planEntries,
+  pressEntries,
+} from "./round.ts";
+import type { PageRecord, StepRecord } from "./types.ts";
+
+type AxeViolation = Readonly<{
+  id: string;
+  impact: string | null;
+  help: string;
+  nodes: number;
+  sample: string;
+}>;
+
+const INTERNAL = /\/(api|auth|monitoring|print)\b|logout|sign-?out/i;
+
+function slug(key: string): string {
+  return key.replaceAll(/[^a-z0-9]+/gi, "-").replaceAll(/^-|-$/g, "") || "root";
+}
+
+function auditPage(
+  ctx: Ctx,
+  place: Place,
+  probe: PageProbe,
+  axeSource: string,
+): number {
+  const axe = ctx.browser.evaluate(
+    axeProbe(axeSource),
+  ) as readonly AxeViolation[];
+  for (const v of axe) {
+    const severity =
+      v.impact === "critical" || v.impact === "serious" ? "medium" : "low";
+    add(ctx, place, {
+      severity,
+      kind: `axe-${v.id}`,
+      detail: `${v.help} (${v.nodes} nodes, e.g. ${v.sample})`,
+    });
+  }
+  for (const g of probe.geometry) {
+    const severity = g.kind.startsWith("target-under") ? "low" : "medium";
+    add(ctx, place, {
+      severity,
+      kind: g.kind,
+      detail: `${g.target}: ${g.detail}`,
+    });
+  }
+  return axe.length;
+}
+
+function liveControls(ctx: Ctx): ReadonlyMap<string, ProbedControl> {
+  const probe = ctx.browser.evaluate(PAGE_PROBE) as PageProbe;
+  const live = new Map<string, ProbedControl>();
+  for (const c of probe.controls)
+    if (!live.has(identity(c))) live.set(identity(c), c);
+  return live;
+}
+
+/** A press can persist a view mode (tabs, radios) that a reload keeps: click the first-visit selection back. */
+function revertSelection(
+  ctx: Ctx,
+  first: PageProbe,
+): ReadonlyMap<string, ProbedControl> {
+  const live = liveControls(ctx);
+  let reverted = false;
+  for (const c of first.controls) {
+    const now = c.selected ? live.get(identity(c)) : undefined;
+    if (now && !now.selected) {
+      ctx.browser.batch([["click", now.selector]]);
+      quietState(ctx.browser);
+      reverted = true;
+    }
+  }
+  return reverted ? liveControls(ctx) : live;
+}
+
+function pressAll(
+  ctx: Ctx,
+  page: PageRef,
+  probe: PageProbe,
+): readonly StepRecord[] {
+  const counters: Counters = { pressed: 0, families: new Map() };
+  const baseline = String(ctx.browser.evaluate(SIGNATURE_ONLY));
+  let live: ReadonlyMap<string, ProbedControl> = new Map(
+    probe.controls.map((c) => [identity(c), c] as const),
+  );
+  const steps: StepRecord[] = [];
+  for (let next = 0; next < probe.controls.length;) {
+    const entries = planEntries(ctx, { probe, live, counters }, next);
+    const round = pressEntries(ctx, page, entries, counters);
+    steps.push(...round.steps);
+    next = round.next ?? probe.controls.length;
+    const last = round.steps.at(-1);
+    // An Escape that restored the exact state needs no further check; after a reload, compare once.
+    if (
+      last?.stateChanged &&
+      last.restoredBy !== "escape" &&
+      last.restoredBy !== "toggle" &&
+      String(ctx.browser.evaluate(SIGNATURE_ONLY)) !== baseline
+    ) {
+      live = revertSelection(ctx, probe);
+    }
+  }
+  return steps;
+}
+
+function visitPage(
+  ctx: Ctx,
+  url: string,
+  index: number,
+  axeSource: string,
+): { record: PageRecord; links: readonly string[] } {
+  const tag = `${String(index).padStart(2, "0")}-${slug(pageKey(url))}`;
+  const loadMs = settle(ctx, url);
+  const shot = `${tag}.png`;
+  ctx.browser.batch([["screenshot", "--full", join(ctx.dir, shot)]]);
+  const probe = ctx.browser.evaluate(PAGE_PROBE) as PageProbe;
+  // The final URL decides the key: a redirect to sign-in means the session is gone.
+  const key = pageKey(probe.url);
+  drainLogs(ctx, { page: key, shot });
+  const axeViolations = auditPage(ctx, { page: key, shot }, probe, axeSource);
+  if (loadMs > SLOW_LOAD_MS)
+    add(
+      ctx,
+      { page: key, shot },
+      { severity: "low", kind: "slow-load", detail: `${loadMs} ms` },
+    );
+  if (key === "/") {
+    add(
+      ctx,
+      { page: key, shot },
+      {
+        severity: "high",
+        kind: "session-lost",
+        detail: `${url} redirected to sign-in`,
+      },
+    );
+  }
+  const steps =
+    key === "/" ? [] : pressAll(ctx, { key, url: probe.url, tag }, probe);
+  const record: PageRecord = {
+    url,
+    key,
+    loadMs,
+    shot,
+    controlsFound: probe.controls.length,
+    axeViolations,
+    geometryIssues: probe.geometry.length,
+    steps,
+  };
+  return { record, links: probe.links };
+}
+
+/** A browser call that times out gets the page one more try after signing in again; a second failure is recorded and the walk goes on. */
+function visitWithRecovery(
+  ctx: Ctx,
+  url: string,
+  index: number,
+  axeSource: string,
+): ReturnType<typeof visitPage> {
+  let detail = "failed";
+  const mark = ctx.findings.length;
+  for (let attempt = 0; attempt < VISIT_ATTEMPTS; attempt += 1) {
+    try {
+      return visitPage(ctx, url, index, axeSource);
+    } catch (error: unknown) {
+      // findings of the abandoned attempt would repeat on the retry
+      ctx.findings.length = mark;
+      detail =
+        error instanceof Error
+          ? (error.message.split("\n")[0] ?? "")
+          : "failed";
+      try {
+        ctx.signIn();
+      } catch {
+        // the next attempt reports the failure again
+      }
+    }
+  }
+  const key = pageKey(url);
+  add(
+    ctx,
+    { page: key, shot: null },
+    { severity: "high", kind: "page-aborted", detail },
+  );
+  const record: PageRecord = {
+    url,
+    key,
+    loadMs: 0,
+    shot: "",
+    controlsFound: 0,
+    axeViolations: 0,
+    geometryIssues: 0,
+    steps: [],
+  };
+  return { record, links: [] };
+}
+
+/** Breadth-first walk over same-origin pages, one visit per page key. */
+export function crawlPages(
+  ctx: Ctx,
+  start: string,
+  axeSource: string,
+): readonly PageRecord[] {
+  const seen = new Set<string>();
+  const queue = [start];
+  const pages: PageRecord[] = [];
+  for (
+    let url = queue.shift();
+    url !== undefined && pages.length < ctx.config.maxPages;
+    url = queue.shift()
+  ) {
+    if (seen.has(pageKey(url))) continue;
+    seen.add(pageKey(url));
+    const { record, links } = visitWithRecovery(
+      ctx,
+      url,
+      pages.length,
+      axeSource,
+    );
+    pages.push(record);
+    if (record.key === "/") break;
+    const next = links.filter(
+      (link) =>
+        sameOrigin(link, ctx.config.url) &&
+        !INTERNAL.test(new URL(link).pathname) &&
+        !seen.has(pageKey(link)),
+    );
+    queue.push(...next);
+  }
+  return pages;
+}

@@ -111,6 +111,9 @@ importers:
       agentation-mcp:
         specifier: 1.3.2
         version: 1.3.2(supports-color@10.2.2)
+      axe-core:
+        specifier: 4.13.0
+        version: 4.13.0
       eslint:
         specifier: ^10.9.1
         version: 10.9.1(jiti@2.7.0)(supports-color@10.2.2)
