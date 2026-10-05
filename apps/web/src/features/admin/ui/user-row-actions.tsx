@@ -12,7 +12,7 @@ import { useRef } from "react";
 import type { AdminUserView } from "../model/admin-types";
 import { useCurrentUserId } from "../model/use-current-user-id";
 
-export const SELF_ACTION_HINT =
+const SELF_ACTION_HINT =
   "You cannot deactivate or delete your own account. Ask another administrator.";
 
 interface UserRowActionsProps {
