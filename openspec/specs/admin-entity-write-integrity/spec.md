@@ -233,3 +233,28 @@ two valid write paths cannot form a User/Report deadlock.
 - **WHEN** an administrator changes the user's role to `viewer`
 - **THEN** the update returns a typed conflict and the product ownership
   remains valid
+
+### Requirement: An administrator cannot lock the project out of administration
+
+The `admin.deactivateUser`, `admin.deleteUser`, and `admin.saveUser` procedures
+MUST reject, on the server, a write by an administrator that deactivates,
+deletes, or removes the `admin` role from their own account, with a
+`BAD_REQUEST` and a fixed message. Independently of the actor, a write MUST
+be rejected with a `CONFLICT` when it would leave no active administrator.
+The check MUST lock the active administrator rows in the same transaction as
+the write so concurrent demotions serialize. The admin Users table MUST
+disable Deactivate and Delete on the signed-in administrator's own row, and the
+Edit user dialog MUST lock the Role field for it, each with a visible or
+accessible explanation.
+
+#### Scenario: Self-deactivation is refused
+
+- **GIVEN** an active administrator is signed in
+- **WHEN** they call `admin.deactivateUser` with their own id
+- **THEN** the call fails with `BAD_REQUEST` and the account stays active
+
+#### Scenario: The last active administrator is protected
+
+- **GIVEN** exactly one active administrator exists
+- **WHEN** another actor deactivates, deletes, or demotes that user
+- **THEN** the call fails with `CONFLICT` and the user stays an active admin

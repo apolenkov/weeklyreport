@@ -1,11 +1,17 @@
 import { type AdminSnapshot, composeName } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
+import { AdminLastAdminError } from "../admin-errors.js";
+
+const countActiveAdmins = (tx: Prisma.TransactionClient): Promise<number> =>
+  tx.user.count({ where: { role: "admin", isActive: true } });
+
 export async function upsertUsers(
   tx: Prisma.TransactionClient,
   users: AdminSnapshot["users"],
 ): Promise<void> {
   const currentUserIds = new Set((await tx.user.findMany()).map((u) => u.id));
+  const hadActiveAdmin = (await countActiveAdmins(tx)) > 0;
 
   for (const user of users) {
     const reportingGroupId = user.reportingGroupId ?? null;
@@ -46,5 +52,11 @@ export async function upsertUsers(
         },
       });
     }
+  }
+  // A restore must not strip the last active administrator.
+  if (hadActiveAdmin && (await countActiveAdmins(tx)) === 0) {
+    throw new AdminLastAdminError(
+      "The snapshot would leave no active administrator.",
+    );
   }
 }
