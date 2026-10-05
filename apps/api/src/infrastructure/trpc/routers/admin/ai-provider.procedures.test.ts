@@ -16,6 +16,7 @@ const now = new Date("2026-08-10T00:00:00.000Z");
 const control: AiProviderControlRead = {
   enabled: false,
   availability: "not_configured",
+  runtimeFailure: null,
   activeRevisionId: null,
   profileCapabilities: AI_PROVIDER_PROFILE_CAPABILITIES.map((capability) => ({
     profile: capability.profile,

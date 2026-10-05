@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { ReportAssistantProviderError } from "../application/report-assistant.ports.js";
+import {
+  PROVIDER_RESPONSE_INCOMPLETE,
+  ReportAssistantProviderError,
+} from "../application/report-assistant.ports.js";
 import { MAX_PROVIDER_RESPONSE_BYTES } from "./openai-compatible.response-body.js";
 import {
   type OpenAiCompatibleFetch,
@@ -65,6 +68,43 @@ describe("OpenAiCompatibleTransport", () => {
       completion_tokens: 2,
       total_tokens: 3,
     });
+  });
+
+  it("classifies a length-truncated chat response without leaking its body", async () => {
+    const fetcher = vi.fn<OpenAiCompatibleFetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              finish_reason: "length",
+              message: { content: "", reasoning_content: "secret thoughts" },
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+    const transport = new OpenAiCompatibleTransport(config(fetcher));
+
+    const failure = await transport
+      .chat(
+        {
+          model: "planner",
+          maxTokens: 10,
+          messages: [{ role: "user", content: "hello" }],
+        },
+        "planner",
+      )
+      .catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(ReportAssistantProviderError);
+    expect(failure).toMatchObject({
+      operation: "planner",
+      retryable: false,
+      providerCode: PROVIDER_RESPONSE_INCOMPLETE,
+    });
+    expect(JSON.stringify(failure)).not.toContain("secret thoughts");
+    expect(fetcher).toHaveBeenCalledOnce();
   });
 
   it("classifies rate limits as retryable without returning provider bodies", async () => {

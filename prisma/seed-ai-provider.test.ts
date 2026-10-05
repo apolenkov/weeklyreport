@@ -107,6 +107,7 @@ describe("seedAiProviderFromEnv", () => {
     expect(create.generationBaseUrl).toBe("https://provider.example.com/v1");
     expect(create.plannerModel).toBe("test-chat-model");
     expect(create.answerModel).toBe("test-chat-model");
+    expect(create.reasoningMode).toBe("off");
     expect(create.embeddingMode).toBe("reuse_generation");
     expect(create.embeddingModel).toBe("test-embed-model");
     expect(create.embeddingDimensions).toBe(1024);

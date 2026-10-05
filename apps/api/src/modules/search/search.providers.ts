@@ -13,10 +13,13 @@ import {
   AI_PROVIDER_PREPARATION_COORDINATOR,
   AI_PROVIDER_TEST_ENQUEUER,
   AI_PROVIDER_TEST_QUEUE_NAME,
+  AI_RUNTIME_HEALTH,
   AiProviderConfigurationService,
   AiProviderTestBullmqEnqueuer,
   type AiProviderTestEnqueuer,
   AiProviderTestProcessor,
+  type AiRuntimeHealth,
+  RedisAiRuntimeHealth,
 } from "../ai-provider/index.js";
 import { AiRuntimeResolver } from "./application/ai-runtime.resolver.js";
 import { REPORT_ASSISTANT_TELEMETRY } from "./application/report-assistant.telemetry.js";
@@ -25,6 +28,7 @@ import { SEMANTIC_INDEX_ENQUEUER } from "./application/semantic-index.enqueuer.j
 import { SemanticPreparationCoordinator } from "./application/semantic-preparation.coordinator.js";
 import { AiRuntimeConfigurationRepository } from "./infrastructure/ai-runtime-configuration.prisma-repository.js";
 import { OpenAiCompatibleCapabilityTester } from "./infrastructure/openai-compatible.capability-tester.js";
+import { ReportAssistantHealthTelemetry } from "./infrastructure/report-assistant-health-telemetry.adapter.js";
 import { ReportAssistantPrometheusTelemetry } from "./infrastructure/report-assistant-prometheus-telemetry.adapter.js";
 import { ReportSearchPrismaRepository } from "./infrastructure/report-search.prisma-repository.js";
 import { SearchPrismaRepository } from "./infrastructure/search.prisma-repository.js";
@@ -63,8 +67,18 @@ export const createSearchProviders = (): Provider[] => [
     inject: [ENV_CONFIG],
   },
   {
+    provide: AI_RUNTIME_HEALTH,
+    useFactory: (env: EnvConfig) => new RedisAiRuntimeHealth(env),
+    inject: [ENV_CONFIG],
+  },
+  {
     provide: REPORT_ASSISTANT_TELEMETRY,
-    useClass: ReportAssistantPrometheusTelemetry,
+    useFactory: (health: AiRuntimeHealth) =>
+      new ReportAssistantHealthTelemetry(
+        new ReportAssistantPrometheusTelemetry(),
+        health,
+      ),
+    inject: [AI_RUNTIME_HEALTH],
   },
   {
     provide: SEMANTIC_INDEX_ENQUEUER,
