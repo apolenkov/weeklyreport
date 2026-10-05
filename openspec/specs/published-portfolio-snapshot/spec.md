@@ -136,3 +136,21 @@ stage-union, lead-attribution, deduplication, and totals behavior.
 - **WHEN** the published portfolio is built
 - **THEN** the Product appears exactly once using the owned Product name
 - **AND** only owned occurrences contribute health, stages, and lead attribution
+
+### Requirement: Lineage lookup validates each snapshot version once
+
+Published-lineage lookup MUST NOT read every published snapshot on each call.
+It MAY reuse the validated record identities of a snapshot while the report's
+`updatedAt` is unchanged, and MUST read and validate the snapshot again after
+`updatedAt` changes. A missing or malformed snapshot MUST keep raising the
+snapshot-integrity error on every lookup and MUST NOT be cached.
+
+#### Scenario: Unchanged publication is not re-read
+
+- **WHEN** lineage is looked up twice and no published report's `updatedAt` changed
+- **THEN** the second lookup reads no snapshot
+
+#### Scenario: Updated publication is re-validated
+
+- **WHEN** a published report's `updatedAt` changes between lookups
+- **THEN** its snapshot is read and validated again

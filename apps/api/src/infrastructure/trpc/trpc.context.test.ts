@@ -146,14 +146,49 @@ describe("resolveHumanSession", () => {
           }),
         ),
       },
-      reportSection: {
-        findFirst: vi.fn(() => Promise.reject(hydrationError)),
+      organization: {
+        findUnique: vi.fn(() => Promise.reject(hydrationError)),
       },
     };
 
     await expect(
       resolveHumanSession("valid-token", makeHumanSessionDeps(prisma)),
     ).rejects.toBe(hydrationError);
+  });
+
+  it("takes group name and section from the one user read, without extra lookups", async () => {
+    const groupFindUnique = vi.fn();
+    const sectionFindFirst = vi.fn();
+    const prisma = {
+      user: {
+        findUnique: vi.fn(() =>
+          Promise.resolve({
+            isActive: true,
+            role: "lead",
+            reportingGroupId: "g1",
+            reportingGroup: { name: "Group One" },
+            authoredReportSections: [{ id: "section-1" }],
+          }),
+        ),
+      },
+      reportingGroup: { findUnique: groupFindUnique },
+      reportSection: { findFirst: sectionFindFirst },
+      organization: {
+        findUnique: vi.fn(() =>
+          Promise.resolve({ shortName: "S", fullName: "Full" }),
+        ),
+      },
+    };
+
+    await expect(
+      resolveHumanSession("valid-token", makeHumanSessionDeps(prisma)),
+    ).resolves.toMatchObject({
+      reportingGroupId: "g1",
+      reportingGroupName: "Group One",
+      activeReportSectionId: "section-1",
+    });
+    expect(groupFindUnique).not.toHaveBeenCalled();
+    expect(sectionFindFirst).not.toHaveBeenCalled();
   });
 
   it("propagates access-bar check errors", async () => {
