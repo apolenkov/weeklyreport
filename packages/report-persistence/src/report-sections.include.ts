@@ -17,8 +17,6 @@ export const reportSectionFullInclude = {
               stageAssignments: {
                 include: { stage: true },
               },
-              // Product ownership is an explicit one-group edge. The mapper
-              // rejects missing or duplicate edges before freezing a snapshot.
               groupProducts: { select: { groupId: true } },
             },
           },

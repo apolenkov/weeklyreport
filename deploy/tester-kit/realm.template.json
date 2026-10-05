@@ -1,0 +1,101 @@
+{
+  "realm": "weeklyreport",
+  "enabled": true,
+  "sslRequired": "none",
+  "loginWithEmailAllowed": true,
+  "components": {
+    "org.keycloak.keys.KeyProvider": [
+      {
+        "name": "rsa-local",
+        "providerId": "rsa",
+        "config": {
+          "priority": ["1000"],
+          "enabled": ["true"],
+          "active": ["true"],
+          "algorithm": ["RS256"],
+          "privateKey": ["${IDP_KEY_B64}"],
+          "certificate": ["${IDP_CERT_B64}"]
+        }
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "weeklyreport",
+      "protocol": "saml",
+      "enabled": true,
+      "redirectUris": ["${APP_ORIGIN}/*"],
+      "baseUrl": "${APP_ORIGIN}",
+      "attributes": {
+        "saml.assertion.signature": "true",
+        "saml.server.signature": "true",
+        "saml.signature.algorithm": "RSA_SHA256",
+        "saml.client.signature": "false",
+        "saml_name_id_format": "email",
+        "saml_force_name_id_format": "true",
+        "saml_assertion_consumer_url_post": "${APP_ORIGIN}/auth/saml/callback",
+        "saml.authnstatement": "true"
+      },
+      "protocolMappers": [
+        {
+          "name": "email",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "config": {
+            "user.attribute": "email",
+            "attribute.name": "email",
+            "attribute.nameformat": "Basic"
+          }
+        },
+        {
+          "name": "displayName",
+          "protocol": "saml",
+          "protocolMapper": "saml-user-property-mapper",
+          "config": {
+            "user.attribute": "firstName",
+            "attribute.name": "displayName",
+            "attribute.nameformat": "Basic"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "lead1@customreport.local",
+      "email": "lead1@customreport.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Lead One",
+      "lastName": "Local",
+      "credentials": [{ "type": "password", "value": "${PW_LEAD1}" }]
+    },
+    {
+      "username": "head@customreport.local",
+      "email": "head@customreport.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Department Head",
+      "lastName": "Local",
+      "credentials": [{ "type": "password", "value": "${PW_HEAD}" }]
+    },
+    {
+      "username": "viewer@customreport.local",
+      "email": "viewer@customreport.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Viewer",
+      "lastName": "Local",
+      "credentials": [{ "type": "password", "value": "${PW_VIEWER}" }]
+    },
+    {
+      "username": "admin@customreport.local",
+      "email": "admin@customreport.local",
+      "emailVerified": true,
+      "enabled": true,
+      "firstName": "Admin",
+      "lastName": "Local",
+      "credentials": [{ "type": "password", "value": "${PW_ADMIN}" }]
+    }
+  ]
+}
