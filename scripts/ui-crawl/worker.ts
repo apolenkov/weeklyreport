@@ -14,6 +14,7 @@ import {
   TRPC_BUDGET,
 } from "./constants.ts";
 import { type Browser, createBrowser } from "./driver.ts";
+import { crawlFullPages } from "./full.ts";
 import { CLEAR_COMMANDS, type Ctx } from "./logs.ts";
 import { crawlPages } from "./page.ts";
 import { configureRate, pace } from "./rate.ts";
@@ -105,6 +106,18 @@ function relativize(
       ...p,
       shot: `shots/${name}/${p.shot}`,
       steps: p.steps.map((s) => ({ ...s, shot: rel(s.shot) })),
+      ...(p.states
+        ? {
+            states: p.states.map((s) => ({
+              ...s,
+              shot: rel(s.shot) ?? "",
+              ...(s.dom ? { dom: rel(s.dom) ?? "" } : {}),
+            })),
+          }
+        : {}),
+      ...(p.pairwise
+        ? { pairwise: p.pairwise.map((s) => ({ ...s, shot: rel(s.shot) })) }
+        : {}),
     })),
   };
 }
@@ -137,11 +150,15 @@ function crawlWidth(
   if (config.video)
     browser.batch([["record", "start", join(config.out, video)]]);
   const start = performance.now();
-  const pages = crawlPages(ctx, landing, axeSource);
+  const pages =
+    config.mode === "full"
+      ? crawlFullPages(ctx, landing, axeSource)
+      : crawlPages(ctx, landing, axeSource);
   const ms = Math.round(performance.now() - start);
   if (config.video) browser.batch([["record", "stop"]]);
   return {
     role: role.name,
+    state: config.state,
     width,
     ms,
     video,
