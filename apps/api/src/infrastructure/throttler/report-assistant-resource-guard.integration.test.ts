@@ -3,7 +3,10 @@ import { randomUUID } from "node:crypto";
 import { Redis } from "ioredis";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { assertE2eRuntimeDestructiveTarget } from "../../../../../prisma/guards/_destructive-guard.js";
+import {
+  assertE2eRuntimeDestructiveTarget,
+  assertRedisDbMatchesDatabase,
+} from "../../../../../prisma/guards/_destructive-guard.js";
 import { requireEnv } from "../../lib/env.js";
 import {
   REPORT_ASSISTANT_ACQUIRE_SCRIPT,
@@ -50,16 +53,9 @@ function cancelKey(token: string): string {
 }
 
 function assertSafeRedisDeletion(): void {
-  assertE2eRuntimeDestructiveTarget(
-    SCRIPT_NAME,
-    requireEnv(process.env, "E2E_DATABASE_URL"),
-    process.env,
-  );
-  if (redisDb !== "15") {
-    throw new Error(
-      `[${SCRIPT_NAME}] REDIS_DB must be exactly 15 before cleanup.`,
-    );
-  }
+  const databaseUrl = requireEnv(process.env, "E2E_DATABASE_URL");
+  assertE2eRuntimeDestructiveTarget(SCRIPT_NAME, databaseUrl, process.env);
+  assertRedisDbMatchesDatabase(SCRIPT_NAME, databaseUrl, redisDb);
 }
 
 async function acquire(
