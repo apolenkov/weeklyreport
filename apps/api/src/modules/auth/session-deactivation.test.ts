@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import type { SessionRevocationService } from "../admin/index.js";
@@ -80,6 +80,8 @@ describe("readLiveAccess", () => {
             isActive: true,
             role: "lead",
             reportingGroupId: "g1",
+            reportingGroup: { name: "Group One" },
+            authoredReportSections: [{ id: "s1" }],
           }),
       },
     } as unknown as PrismaService;
@@ -89,8 +91,77 @@ describe("readLiveAccess", () => {
         USER_ID,
         prisma,
         revocation(() => Promise.resolve(false)),
+        "r1",
       ),
-    ).resolves.toEqual({ role: "lead", reportingGroupId: "g1" });
+    ).resolves.toEqual({
+      role: "lead",
+      reportingGroupId: "g1",
+      reportingGroupName: "Group One",
+      reportSectionId: "s1",
+    });
+  });
+
+  it("reads group name and own section in the same user query", async () => {
+    const findUnique = vi.fn(() =>
+      Promise.resolve({
+        isActive: true,
+        role: "lead",
+        reportingGroupId: null,
+        reportingGroup: null,
+        authoredReportSections: [],
+      }),
+    );
+    const prisma = { user: { findUnique } } as unknown as PrismaService;
+
+    await expect(
+      readLiveAccess(
+        USER_ID,
+        prisma,
+        revocation(() => Promise.resolve(false)),
+        "r1",
+      ),
+    ).resolves.toMatchObject({
+      reportingGroupName: null,
+      reportSectionId: null,
+    });
+    expect(findUnique).toHaveBeenCalledOnce();
+    expect(findUnique).toHaveBeenCalledWith({
+      where: { id: USER_ID },
+      select: {
+        isActive: true,
+        role: true,
+        reportingGroupId: true,
+        reportingGroup: { select: { name: true } },
+        authoredReportSections: {
+          where: { reportId: "r1" },
+          select: { id: true },
+          take: 1,
+        },
+      },
+    });
+  });
+
+  it("skips the section lookup without an active report", async () => {
+    const findUnique = vi.fn(() =>
+      Promise.resolve({ isActive: true, role: "head", reportingGroupId: null }),
+    );
+    const prisma = { user: { findUnique } } as unknown as PrismaService;
+
+    await readLiveAccess(
+      USER_ID,
+      prisma,
+      revocation(() => Promise.resolve(false)),
+    );
+
+    expect(findUnique).toHaveBeenCalledWith({
+      where: { id: USER_ID },
+      select: {
+        isActive: true,
+        role: true,
+        reportingGroupId: true,
+        reportingGroup: { select: { name: true } },
+      },
+    });
   });
 
   it("returns null for a deactivated user", async () => {
