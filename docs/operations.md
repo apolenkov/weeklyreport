@@ -413,6 +413,14 @@ evidence and stay required evidence collected outside CI; a successful
 `build-images` run produces images, not that evidence. Local
 commands remain the fast gate; run the same checks before pushing.
 
+## Load check
+
+`deploy/tester-kit/load/read-pages.js` (k6) signs a Lead and a Head in through SAML once and then loads their
+read pages (`/lead/report`, `/head/dashboard`, `/reports`, `/reports/latest`, `/reports/trends`) from 20 virtual
+users for 3 minutes against the tester stand. Measured 2026-10-06 on a shared laptop (OrbStack Kubernetes, load
+average above 30): 43,897 requests at about 243 requests per second, p95 108 ms, 0 failed. It covers
+read-only page loads only; it says nothing about saves, PDF export or a production-sized dataset.
+
 ## External first-production prerequisites
 
 Local Helm rehearsals and repository tests prove only repository-owned readiness. The
