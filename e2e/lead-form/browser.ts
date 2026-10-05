@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
+import { E2E_BASE_URL } from "../setup/base-url.js";
 import { runtimeSignal, trackRuntimeOperation } from "../setup/shutdown.js";
 import { pressKey, releasePressSocket } from "./press.js";
 import type { BrowserSnapshot } from "./snapshot-scope.js";
@@ -162,10 +163,7 @@ export function open(
   pathOrUrl: string,
   session?: string,
 ): Promise<Record<string, unknown>> {
-  return command(
-    ["open", new URL(pathOrUrl, "http://localhost:3000").href],
-    session,
-  );
+  return command(["open", new URL(pathOrUrl, E2E_BASE_URL).href], session);
 }
 
 type FindRoleOptions = Partial<Record<"text" | "session", string | undefined>>;
