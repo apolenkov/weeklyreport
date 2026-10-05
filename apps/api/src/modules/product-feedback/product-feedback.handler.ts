@@ -130,6 +130,74 @@ function invalidRequest(error: unknown): boolean {
   );
 }
 
+/** Resolves the cookie session, answering the request itself on failure. */
+async function authenticateHumanSession(
+  req: Request,
+  res: Response,
+  deps: AuthenticatedFeedbackHandlerDeps,
+): Promise<UserSession | null> {
+  try {
+    const session = await resolveRequestSession(req, deps);
+    if (!session) {
+      sendError(
+        res,
+        HTTP_UNAUTHORIZED,
+        "unauthorized",
+        "Authentication required.",
+      );
+    }
+    return session;
+  } catch (error: unknown) {
+    deps.logger.error("product feedback authentication failed", {
+      phase: LOG_PHASE,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    sendError(
+      res,
+      HTTP_SERVER_ERROR,
+      "server_error",
+      "Unable to authenticate request.",
+    );
+    return null;
+  }
+}
+
+function respondToFeedbackFailure({
+  req,
+  res,
+  session,
+  error,
+  logger,
+}: {
+  req: Request;
+  res: Response;
+  session: UserSession;
+  error: unknown;
+  logger: AuthenticatedFeedbackHandlerDeps["logger"];
+}): void {
+  if (error instanceof FeedbackNotFoundError) {
+    sendError(res, HTTP_NOT_FOUND, "not_found", "Feedback not found.");
+    return;
+  }
+  if (invalidRequest(error)) {
+    sendError(
+      res,
+      HTTP_BAD_REQUEST,
+      "invalid_request",
+      "Invalid feedback request.",
+    );
+    return;
+  }
+  logger.error("product feedback request failed", {
+    phase: LOG_PHASE,
+    method: req.method,
+    actorId: session.userId,
+    role: session.role,
+    error: error instanceof Error ? error.message : String(error),
+  });
+  sendError(res, HTTP_SERVER_ERROR, "server_error", "Feedback request failed.");
+}
+
 export function createAuthenticatedFeedbackHandler(
   deps: AuthenticatedFeedbackHandlerDeps,
 ): AuthenticatedFeedbackHandler {
@@ -165,31 +233,10 @@ export function createAuthenticatedFeedbackHandler(
       );
       return;
     }
-    try {
-      const session = await resolveRequestSession(req, deps);
-      if (!session) {
-        sendError(
-          res,
-          HTTP_UNAUTHORIZED,
-          "unauthorized",
-          "Authentication required.",
-        );
-        return;
-      }
-      principals.set(req, { session, agentationAgent: false });
-      next();
-    } catch (error: unknown) {
-      deps.logger.error("product feedback authentication failed", {
-        phase: LOG_PHASE,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      sendError(
-        res,
-        HTTP_SERVER_ERROR,
-        "server_error",
-        "Unable to authenticate request.",
-      );
-    }
+    const session = await authenticateHumanSession(req, res, deps);
+    if (!session) return;
+    principals.set(req, { session, agentationAgent: false });
+    next();
   };
 
   const handle: RequestHandler = async (req, res) => {
@@ -208,32 +255,13 @@ export function createAuthenticatedFeedbackHandler(
     try {
       await executeFeedbackRequest(req, res, principal, deps);
     } catch (error: unknown) {
-      if (error instanceof FeedbackNotFoundError) {
-        sendError(res, HTTP_NOT_FOUND, "not_found", "Feedback not found.");
-        return;
-      }
-      if (invalidRequest(error)) {
-        sendError(
-          res,
-          HTTP_BAD_REQUEST,
-          "invalid_request",
-          "Invalid feedback request.",
-        );
-        return;
-      }
-      deps.logger.error("product feedback request failed", {
-        phase: LOG_PHASE,
-        method: req.method,
-        actorId: session.userId,
-        role: session.role,
-        error: error instanceof Error ? error.message : String(error),
-      });
-      sendError(
+      respondToFeedbackFailure({
+        req,
         res,
-        HTTP_SERVER_ERROR,
-        "server_error",
-        "Feedback request failed.",
-      );
+        session,
+        error,
+        logger: deps.logger,
+      });
     }
   };
   return { authenticate, handle };

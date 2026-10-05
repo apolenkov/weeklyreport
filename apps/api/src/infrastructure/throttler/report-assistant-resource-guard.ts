@@ -147,54 +147,7 @@ export class ReportAssistantResourceGuard
         };
       }
       this.observe("granted", "none");
-      const controller = new AbortController();
-      const leaseState = { released: false };
-      const stopRenewal = (): void => {
-        const active = this.activeLeases.get(token);
-        if (!active) return;
-        clearInterval(active.renewalTimer);
-        this.activeLeases.delete(token);
-      };
-      const renew = async (): Promise<void> => {
-        if (leaseState.released || controller.signal.aborted || this.destroyed)
-          return;
-        try {
-          const renewed = await this.redis.eval(
-            REPORT_ASSISTANT_RENEW_SCRIPT,
-            1,
-            leaseKey,
-            token,
-            LEASE_MS,
-          );
-          if (renewed !== 1) {
-            this.observe("renew_failed", "expired");
-            controller.abort();
-            stopRenewal();
-          }
-        } catch (error) {
-          this.observe("renew_failed", "unavailable");
-          this.logUnavailable("renew_failed", error);
-          controller.abort();
-          stopRenewal();
-        }
-      };
-      const renewalTimer = setInterval(() => {
-        void renew();
-      }, LEASE_RENEWAL_INTERVAL_MS);
-      renewalTimer.unref();
-      this.activeLeases.set(token, { controller, renewalTimer });
-      return {
-        kind: "granted",
-        lease: {
-          signal: controller.signal,
-          release: async () => {
-            if (leaseState.released) return;
-            leaseState.released = true;
-            stopRenewal();
-            if (!this.destroyed) await this.release(leaseKey, token);
-          },
-        },
-      };
+      return this.grantLease(token, leaseKey);
     } catch (error) {
       await this.redis
         .eval(
@@ -211,6 +164,60 @@ export class ReportAssistantResourceGuard
       this.logUnavailable("deny", error);
       return { kind: "denied", reason: "unavailable", retryAfterSeconds: 1 };
     }
+  }
+
+  private grantLease(
+    token: string,
+    leaseKey: string,
+  ): ReportAssistantResourceDecision {
+    const controller = new AbortController();
+    const leaseState = { released: false };
+    const stopRenewal = (): void => {
+      const active = this.activeLeases.get(token);
+      if (!active) return;
+      clearInterval(active.renewalTimer);
+      this.activeLeases.delete(token);
+    };
+    const renew = async (): Promise<void> => {
+      if (leaseState.released || controller.signal.aborted || this.destroyed)
+        return;
+      try {
+        const renewed = await this.redis.eval(
+          REPORT_ASSISTANT_RENEW_SCRIPT,
+          1,
+          leaseKey,
+          token,
+          LEASE_MS,
+        );
+        if (renewed !== 1) {
+          this.observe("renew_failed", "expired");
+          controller.abort();
+          stopRenewal();
+        }
+      } catch (error) {
+        this.observe("renew_failed", "unavailable");
+        this.logUnavailable("renew_failed", error);
+        controller.abort();
+        stopRenewal();
+      }
+    };
+    const renewalTimer = setInterval(() => {
+      void renew();
+    }, LEASE_RENEWAL_INTERVAL_MS);
+    renewalTimer.unref();
+    this.activeLeases.set(token, { controller, renewalTimer });
+    return {
+      kind: "granted",
+      lease: {
+        signal: controller.signal,
+        release: async () => {
+          if (leaseState.released) return;
+          leaseState.released = true;
+          stopRenewal();
+          if (!this.destroyed) await this.release(leaseKey, token);
+        },
+      },
+    };
   }
 
   private async release(leaseKey: string, token: string): Promise<void> {

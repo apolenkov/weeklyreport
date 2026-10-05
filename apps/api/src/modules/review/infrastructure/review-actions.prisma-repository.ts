@@ -40,6 +40,25 @@ const groupIdOf = (row: SectionGroupRow | null): string | null | undefined =>
   row === null ? undefined : row.reportSection.author.reportingGroupId;
 const REVIEW_GROUP_NOT_FOUND = "Review group not found.";
 
+const deleteTargetSelect = {
+  reportSection: {
+    select: {
+      reportId: true,
+      authorId: true,
+      author: { select: { reportingGroupId: true } },
+    },
+  },
+} as const;
+
+const currentTargetSelect = {
+  reportSection: {
+    select: {
+      reportId: true,
+      author: { select: { reportingGroupId: true } },
+    },
+  },
+} as const;
+
 @Injectable()
 export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
@@ -184,37 +203,13 @@ export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
         select: {
           reviewerId: true,
           item: {
-            select: {
-              reportSection: {
-                select: {
-                  reportId: true,
-                  authorId: true,
-                  author: { select: { reportingGroupId: true } },
-                },
-              },
-            },
+            select: deleteTargetSelect,
           },
           risk: {
-            select: {
-              reportSection: {
-                select: {
-                  reportId: true,
-                  authorId: true,
-                  author: { select: { reportingGroupId: true } },
-                },
-              },
-            },
+            select: deleteTargetSelect,
           },
           decision: {
-            select: {
-              reportSection: {
-                select: {
-                  reportId: true,
-                  authorId: true,
-                  author: { select: { reportingGroupId: true } },
-                },
-              },
-            },
+            select: deleteTargetSelect,
           },
         },
       });
@@ -233,34 +228,13 @@ export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
         select: {
           reviewerId: true,
           item: {
-            select: {
-              reportSection: {
-                select: {
-                  reportId: true,
-                  author: { select: { reportingGroupId: true } },
-                },
-              },
-            },
+            select: currentTargetSelect,
           },
           risk: {
-            select: {
-              reportSection: {
-                select: {
-                  reportId: true,
-                  author: { select: { reportingGroupId: true } },
-                },
-              },
-            },
+            select: currentTargetSelect,
           },
           decision: {
-            select: {
-              reportSection: {
-                select: {
-                  reportId: true,
-                  author: { select: { reportingGroupId: true } },
-                },
-              },
-            },
+            select: currentTargetSelect,
           },
         },
       });

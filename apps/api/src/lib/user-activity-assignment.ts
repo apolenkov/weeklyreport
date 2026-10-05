@@ -126,6 +126,27 @@ export async function lockAndAssertGroupHead(
   }
 }
 
+/** Locks the current and desired project leads in one stable order. */
+async function lockProjectOwnershipUsers(
+  tx: Prisma.TransactionClient,
+  projectId: string,
+  desiredLeadId: string,
+): Promise<{ leadId: string } | null> {
+  const before = await tx.project.findUnique({
+    where: { id: projectId },
+    select: { leadId: true },
+  });
+  const userIds = [
+    ...new Set(
+      [before?.leadId, desiredLeadId].filter(
+        (id): id is string => id !== undefined,
+      ),
+    ),
+  ].sort((left, right) => left.localeCompare(right));
+  for (const userId of userIds) await lockUser(tx, userId);
+  return before;
+}
+
 /**
  * Locks the users participating in a project ownership write in one stable
  * order, then reads the project and its ownership edge again. Every project
@@ -151,19 +172,11 @@ export async function lockAndValidateProjectOwnership(
     createdAt: Date;
   } | null;
 }> {
-  const before = await tx.project.findUnique({
-    where: { id: input.projectId },
-    select: { leadId: true },
-  });
-  const userIds = [
-    ...new Set(
-      [before?.leadId, input.desiredLeadId].filter(
-        (id): id is string => id !== undefined,
-      ),
-    ),
-  ].sort((left, right) => left.localeCompare(right));
-  for (const userId of userIds) await lockUser(tx, userId);
-
+  const before = await lockProjectOwnershipUsers(
+    tx,
+    input.projectId,
+    input.desiredLeadId,
+  );
   const project = await tx.project.findUnique({
     where: { id: input.projectId },
     select: {
