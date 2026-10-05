@@ -105,6 +105,77 @@ export function ReportHealthPulseView({
   );
 }
 
+function HealthStageList({ unit }: { readonly unit: ReportHealthUnit }) {
+  if (unit.stages.length === 0) return null;
+  return (
+    <ul
+      aria-label={`All stages for ${unit.name}`}
+      className="mt-4 grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-3"
+    >
+      {unit.stages.map((stage) => (
+        <li
+          key={stage.name}
+          className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] p-2 text-sm"
+        >
+          <span className="min-w-0 break-words">{stage.name}</span>
+          <SlideStatusBadge status={stage.status} labelVariant="screen" />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function HealthRiskList({
+  risks,
+}: {
+  readonly risks: ReportHealthUnit["risks"];
+}) {
+  return (
+    <div className="mt-4 space-y-3">
+      <h5 className="text-sm font-semibold">Risks &amp; Blockers</h5>
+      {risks.length === 0 ? (
+        <p className="text-sm text-[var(--color-muted-foreground)]">
+          No risk details available for this unit.
+        </p>
+      ) : (
+        risks.map((risk) => (
+          <div
+            key={risk.id}
+            className="min-w-0 rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] bg-[var(--color-card)] p-3"
+          >
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <SlideStatusBadge status={risk.severity} labelVariant="screen" />
+              <span className="break-words text-xs text-[var(--color-muted-foreground)]">
+                {risk.locations.join(", ")}
+              </span>
+            </div>
+            <dl className="space-y-2 break-words text-sm">
+              <div>
+                <dt className="font-semibold">Cause</dt>
+                <dd className="whitespace-pre-wrap">
+                  {risk.description || NOT_PROVIDED}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-semibold">Impact</dt>
+                <dd className="whitespace-pre-wrap">
+                  {risk.impact || NOT_PROVIDED}
+                </dd>
+              </div>
+              <div>
+                <dt className="font-semibold">Mitigation</dt>
+                <dd className="whitespace-pre-wrap">
+                  {risk.mitigation || NOT_PROVIDED}
+                </dd>
+              </div>
+            </dl>
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 export function ReportHealthDetail({
   unit,
   panelId,
@@ -149,72 +220,13 @@ export function ReportHealthDetail({
           Historical unit. Not counted in current report health.
         </p>
       ) : null}
-      {unit.stages.length > 0 ? (
-        <ul
-          aria-label={`All stages for ${unit.name}`}
-          className="mt-4 grid min-w-0 gap-2 sm:grid-cols-2 lg:grid-cols-3"
-        >
-          {unit.stages.map((stage) => (
-            <li
-              key={stage.name}
-              className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] p-2 text-sm"
-            >
-              <span className="min-w-0 break-words">{stage.name}</span>
-              <SlideStatusBadge status={stage.status} labelVariant="screen" />
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      <HealthStageList unit={unit} />
       {unit.kind === "activity" ? (
         <p className="mt-3 text-xs text-[var(--color-muted-foreground)]">
           Activity health is independent of linked products.
         </p>
       ) : null}
-      <div className="mt-4 space-y-3">
-        <h5 className="text-sm font-semibold">Risks &amp; Blockers</h5>
-        {unit.risks.length === 0 ? (
-          <p className="text-sm text-[var(--color-muted-foreground)]">
-            No risk details available for this unit.
-          </p>
-        ) : (
-          unit.risks.map((risk) => (
-            <div
-              key={risk.id}
-              className="min-w-0 rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] bg-[var(--color-card)] p-3"
-            >
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                <SlideStatusBadge
-                  status={risk.severity}
-                  labelVariant="screen"
-                />
-                <span className="break-words text-xs text-[var(--color-muted-foreground)]">
-                  {risk.locations.join(", ")}
-                </span>
-              </div>
-              <dl className="space-y-2 break-words text-sm">
-                <div>
-                  <dt className="font-semibold">Cause</dt>
-                  <dd className="whitespace-pre-wrap">
-                    {risk.description || NOT_PROVIDED}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="font-semibold">Impact</dt>
-                  <dd className="whitespace-pre-wrap">
-                    {risk.impact || NOT_PROVIDED}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="font-semibold">Mitigation</dt>
-                  <dd className="whitespace-pre-wrap">
-                    {risk.mitigation || NOT_PROVIDED}
-                  </dd>
-                </div>
-              </dl>
-            </div>
-          ))
-        )}
-      </div>
+      <HealthRiskList risks={unit.risks} />
       <p className="mt-4 text-xs text-[var(--color-muted-foreground)]">
         Read-only inspection. Manage causes and mitigation in Risks &amp;
         Blockers below.

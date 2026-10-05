@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   blockedReasonOf,
   commandError,
+  type OutcomeCommandContext,
   type OutcomeCoordinatorArgs,
   type OutcomeScope,
   outcomeScopeOf,
@@ -46,22 +47,37 @@ interface ActiveCommand {
 
 const SECTION_UNAVAILABLE = "This report section is unavailable.";
 
-// Coordinates explicit lineage commands with the ordinary draft writer. A
-// command is accepted only from a clean saved baseline, and its first prepared
-// request is retained by commandId so an idempotent retry keeps the original
-// physical source id even if a later read remints that occurrence.
-export function useLeadFormOutcomeCoordinator(
-  args: OutcomeCoordinatorArgs,
-): LeadFormOutcomeActions & { readonly isLocked: () => boolean } {
-  const scope = useMemo(
-    () => outcomeScopeOf(args.generation, args.sectionId, args.draftSection),
-    [args.draftSection, args.generation, args.sectionId],
-  );
-  const activeRef = useRef<ActiveCommand | null>(null);
-  const liveScopeRef = useRef<OutcomeScope | null>(scope);
+// The prepared-request registry is dropped whenever the command scope moves.
+function usePreparedRegistry(scope: OutcomeScope | null) {
   const preparedScopeRef = useRef<string | null>(scope?.key ?? null);
   const preparedRef = useRef<Map<string, PreparedOutcomeCommand>>(new Map());
-  const [pendingScope, setPendingScope] = useState<string | null>(null);
+
+  useEffect(() => {
+    const nextScopeKey = scope?.key ?? null;
+    if (preparedScopeRef.current !== nextScopeKey) {
+      preparedScopeRef.current = nextScopeKey;
+      preparedRef.current.clear();
+    }
+  }, [scope]);
+
+  return useCallback((commandScope: OutcomeScope) => {
+    if (preparedScopeRef.current !== commandScope.key) {
+      preparedScopeRef.current = commandScope.key;
+      preparedRef.current.clear();
+    }
+    return preparedRef.current;
+  }, []);
+}
+
+// Single-flight gate: at most one active command per scope, adopted only while
+// that command and its scope are still current.
+function useOutcomeGate(
+  args: OutcomeCoordinatorArgs,
+  scope: OutcomeScope | null,
+) {
+  const activeRef = useRef<ActiveCommand | null>(null);
+  const liveScopeRef = useRef<OutcomeScope | null>(scope);
+  const [pending, setPendingScope] = useState<string | null>(null);
 
   useEffect(
     () => () => {
@@ -74,10 +90,6 @@ export function useLeadFormOutcomeCoordinator(
   useEffect(() => {
     liveScopeRef.current = scope;
     const nextScopeKey = scope?.key ?? null;
-    if (preparedScopeRef.current !== nextScopeKey) {
-      preparedScopeRef.current = nextScopeKey;
-      preparedRef.current.clear();
-    }
     if (
       activeRef.current !== null &&
       activeRef.current.scopeKey !== nextScopeKey
@@ -86,9 +98,6 @@ export function useLeadFormOutcomeCoordinator(
       setPendingScope(null);
     }
   }, [scope]);
-
-  const locallyPending = scope !== null && pendingScope === scope.key;
-  const blockedReason = blockedReasonOf(args, scope, locallyPending);
 
   const acquire = useCallback(
     (commandScope: OutcomeScope): symbol => {
@@ -115,14 +124,6 @@ export function useLeadFormOutcomeCoordinator(
     );
   }, []);
 
-  const prepareRegistry = useCallback((commandScope: OutcomeScope) => {
-    if (preparedScopeRef.current !== commandScope.key) {
-      preparedScopeRef.current = commandScope.key;
-      preparedRef.current.clear();
-    }
-    return preparedRef.current;
-  }, []);
-
   const adoptIfCurrent = useCallback(
     (result: ItemOutcomeResult, commandScope: OutcomeScope, token: symbol) => {
       if (
@@ -145,20 +146,46 @@ export function useLeadFormOutcomeCoordinator(
     [args],
   );
 
-  const resolve = useCallback<LeadFormOutcomeActions["resolve"]>(
-    async (input, sourceStableId) => {
+  const isActiveIn = useCallback(
+    (scopeKey: string) => activeRef.current?.scopeKey === scopeKey,
+    [],
+  );
+
+  return {
+    acquire,
+    release,
+    adoptIfCurrent,
+    isActiveIn,
+    locallyPending: scope !== null && pending === scope.key,
+  };
+}
+
+function useOutcomeExecutor(
+  args: OutcomeCoordinatorArgs,
+  scope: OutcomeScope | null,
+  gate: ReturnType<typeof useOutcomeGate>,
+) {
+  const prepareRegistry = usePreparedRegistry(scope);
+  const { acquire, release, adoptIfCurrent } = gate;
+  return useCallback(
+    async <Prepared>(
+      prepare: (
+        registry: Map<string, PreparedOutcomeCommand>,
+        context: OutcomeCommandContext,
+      ) => Prepared,
+      send: (prepared: Prepared) => Promise<ItemOutcomeResult>,
+    ): Promise<ItemOutcomeResult> => {
       if (scope === null || args.draftSection === null) {
         throw commandError(SECTION_UNAVAILABLE);
       }
       const token = acquire(scope);
       try {
-        const prepared = prepareResolveCommand(
-          prepareRegistry(scope),
-          input,
-          sourceStableId,
-          { scope, draftSection: args.draftSection, version: args.version },
-        );
-        const result = await args.writePort.resolvePlan(prepared);
+        const prepared = prepare(prepareRegistry(scope), {
+          scope,
+          draftSection: args.draftSection,
+          version: args.version,
+        });
+        const result = await send(prepared);
         adoptIfCurrent(result, scope, token);
         return result;
       } finally {
@@ -167,61 +194,61 @@ export function useLeadFormOutcomeCoordinator(
     },
     [acquire, adoptIfCurrent, args, prepareRegistry, release, scope],
   );
+}
+
+// Coordinates explicit lineage commands with the ordinary draft writer. A
+// command is accepted only from a clean saved baseline, and its first prepared
+// request is retained by commandId so an idempotent retry keeps the original
+// physical source id even if a later read remints that occurrence.
+export function useLeadFormOutcomeCoordinator(
+  args: OutcomeCoordinatorArgs,
+): LeadFormOutcomeActions & { readonly isLocked: () => boolean } {
+  const scope = useMemo(
+    () => outcomeScopeOf(args.generation, args.sectionId, args.draftSection),
+    [args.draftSection, args.generation, args.sectionId],
+  );
+  const gate = useOutcomeGate(args, scope);
+  const { isActiveIn, locallyPending } = gate;
+  const execute = useOutcomeExecutor(args, scope, gate);
+  const blockedReason = blockedReasonOf(args, scope, locallyPending);
+
+  const resolve = useCallback<LeadFormOutcomeActions["resolve"]>(
+    (input, sourceStableId) =>
+      execute(
+        (registry, context) =>
+          prepareResolveCommand(registry, input, sourceStableId, context),
+        (prepared) => args.writePort.resolvePlan(prepared),
+      ),
+    [args.writePort, execute],
+  );
 
   const restore = useCallback<LeadFormOutcomeActions["restore"]>(
-    async (input, stableId) => {
-      if (scope === null || args.draftSection === null) {
-        throw commandError(SECTION_UNAVAILABLE);
-      }
-      const token = acquire(scope);
-      try {
-        const prepared = prepareRestoreCommand(
-          prepareRegistry(scope),
-          input,
-          stableId,
-          { scope, draftSection: args.draftSection, version: args.version },
-        );
-        const result = await args.writePort.restorePlan(prepared);
-        adoptIfCurrent(result, scope, token);
-        return result;
-      } finally {
-        release(token, scope);
-      }
-    },
-    [acquire, adoptIfCurrent, args, prepareRegistry, release, scope],
+    (input, stableId) =>
+      execute(
+        (registry, context) =>
+          prepareRestoreCommand(registry, input, stableId, context),
+        (prepared) => args.writePort.restorePlan(prepared),
+      ),
+    [args.writePort, execute],
   );
 
   // MOVE-NEXT-CURRENT: the recorded commitment is promoted through the same
   // command registry, so an idempotent retry keeps its original physical id.
   const promote = useCallback<LeadFormOutcomeActions["promote"]>(
-    async (input, stableId) => {
-      if (scope === null || args.draftSection === null) {
-        throw commandError(SECTION_UNAVAILABLE);
-      }
-      const token = acquire(scope);
-      try {
-        const prepared = preparePromoteCommand(
-          prepareRegistry(scope),
-          input,
-          stableId,
-          { scope, draftSection: args.draftSection, version: args.version },
-        );
-        const result = await args.writePort.promotePlan(prepared);
-        adoptIfCurrent(result, scope, token);
-        return result;
-      } finally {
-        release(token, scope);
-      }
-    },
-    [acquire, adoptIfCurrent, args, prepareRegistry, release, scope],
+    (input, stableId) =>
+      execute(
+        (registry, context) =>
+          preparePromoteCommand(registry, input, stableId, context),
+        (prepared) => args.writePort.promotePlan(prepared),
+      ),
+    [args.writePort, execute],
   );
 
   const isLocked = useCallback(
     () =>
       scope !== null &&
-      (activeRef.current?.scopeKey === scope.key ||
-        portOutcomePending(args.writePort)),
-    [args.writePort, scope],
+      (isActiveIn(scope.key) || portOutcomePending(args.writePort)),
+    [args.writePort, isActiveIn, scope],
   );
 
   return useMemo(
