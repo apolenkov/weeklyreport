@@ -54,6 +54,13 @@ export const HEADER_STATUS_TONE = {
   empty: CSS.mutedForeground,
 } as const satisfies Record<WeeklyProductStatus, string>;
 
+// The at-risk dot keeps the amber hue of the portfolio overview; its label
+// stays on the darker foreground token for contrast.
+export const HEADER_STATUS_DOT = {
+  ...HEADER_STATUS_TONE,
+  "at-risk": "var(--color-status-dot-at-risk)",
+} as const satisfies Record<WeeklyProductStatus, string>;
+
 // Each workflow status resolves its badge through named tokens, never hardcoded
 // hex: blocked=red alarm, at-risk=amber alarm, in-progress=steel-blue,
 // completed=success green, planned/paused/postponed=muted.

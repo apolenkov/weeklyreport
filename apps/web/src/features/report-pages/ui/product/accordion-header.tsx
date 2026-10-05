@@ -2,6 +2,7 @@ import { RotatingChevron } from "../../../../shared/ui/report-shell/rotating-che
 import type { WeeklyProductReport } from "../../../report-sections";
 import {
   CSS,
+  HEADER_STATUS_DOT,
   HEADER_STATUS_TONE,
   STATUS_CONFIG,
   type StatusConfig,
@@ -17,11 +18,13 @@ function HeaderIdentity({
   config,
   statusLabel,
   statusTone,
+  statusDot,
 }: {
   readonly report: WeeklyProductReport;
   readonly config: StatusConfig;
   readonly statusLabel: string;
   readonly statusTone: string;
+  readonly statusDot: string;
 }) {
   return (
     <div className="flex min-w-0 flex-1 items-center gap-3 pr-3">
@@ -42,7 +45,7 @@ function HeaderIdentity({
           >
             <span
               className="h-[7px] w-[7px] rounded-full"
-              style={{ background: statusTone }}
+              style={{ background: statusDot }}
               aria-hidden="true"
             />
             {statusLabel}
@@ -76,6 +79,9 @@ export function AccordionHeader({
   const statusTone = hasContent
     ? HEADER_STATUS_TONE[report.status]
     : CSS.mutedForeground;
+  const statusDot = hasContent
+    ? HEADER_STATUS_DOT[report.status]
+    : CSS.mutedForeground;
   return (
     <button
       type="button"
@@ -97,6 +103,7 @@ export function AccordionHeader({
         config={config}
         statusLabel={statusLabel}
         statusTone={statusTone}
+        statusDot={statusDot}
       />
       {hasContent ? (
         <RotatingChevron expanded={expanded} />
