@@ -63,9 +63,11 @@ cd "$REPO"
 pnpm --filter @customreport/api db:generate >/dev/null
 echo "Target: postgresql://***@127.0.0.1:$PGPORT_LOCAL/customreport_e2e; Redis DB 15"
 pnpm exec tsx -e 'import { assertE2eRuntimeDestructive } from "./prisma/guards/_destructive-guard.ts"; assertE2eRuntimeDestructive("tester-reset")'
+# Observability hook (full-run.sh): collect api coverage, logs and database statistics before they are wiped.
+[ -z "${WR_PRE_RESET_HOOK:-}" ] || bash -c "$WR_PRE_RESET_HOOK"
 kubectl -n "$NS" scale deploy/api --replicas=0 >/dev/null
 STOPPED=1
-kubectl -n "$NS" wait --for=delete pod -l app=api --timeout=120s
+kubectl -n "$NS" wait --for=delete pod -l app.kubernetes.io/component=api --timeout=120s
 kubectl -n "$NS" port-forward --address 127.0.0.1 svc/postgres "$PGPORT_LOCAL:5432" >/dev/null 2>&1 &
 PF=$!
 kubectl -n "$NS" port-forward --address 127.0.0.1 svc/redis "$REDISPORT_LOCAL:6379" >/dev/null 2>&1 &
@@ -81,5 +83,6 @@ else
   (cd apps/api && pnpm exec tsx ../../prisma/seeds/profiles/seed-profile.ts full)
 fi
 kubectl -n "$NS" exec -i statefulset/postgres -- psql -U customreport -d customreport_e2e -v ON_ERROR_STOP=1 <"$HERE/post-seed.sql"
+[ -z "${WR_POST_RESET_HOOK:-}" ] || bash -c "$WR_POST_RESET_HOOK"
 pnpm exec tsx -e 'import { flushRedis } from "./prisma/operations/reset-hard.ts"; void flushRedis()'
 echo "Demo data reset."
