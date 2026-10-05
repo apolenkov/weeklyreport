@@ -17,7 +17,7 @@ import {
 const MAX_OUTCOME_TEXT = 500;
 export const BUTTON =
   "min-h-[var(--touch-target-min)] rounded-[var(--radius-sm)] px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] disabled:opacity-50";
-export const FIELD =
+const FIELD =
   "w-full min-h-24 resize-y rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-card)] p-3 text-sm text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
 export const CHOICES = [
   { value: "done", label: "Done" },
@@ -82,7 +82,7 @@ function OutcomeDetails({
   );
 }
 
-export function OutcomeFields({
+function OutcomeFields({
   state,
   onChange,
 }: Pick<ComposerProps, "state" | "onChange">) {

@@ -9,12 +9,9 @@ import type { ItemHandlers } from "./status-overview-item-handlers";
 import {
   STATUS_OVERVIEW_COLUMN_HEADER_IDS,
   STATUS_OVERVIEW_COLUMNS,
-  STATUS_OVERVIEW_DESKTOP_GRID,
   TIMELINE_CELL,
   TIMELINE_GRID,
 } from "./status-overview-layout";
-
-export { STATUS_OVERVIEW_DESKTOP_GRID };
 
 const PERIOD_UNAVAILABLE = "Period unavailable";
 function MobileWeekLabel({
