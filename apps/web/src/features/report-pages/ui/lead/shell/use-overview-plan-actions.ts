@@ -2,7 +2,6 @@
 
 import type { LeadStatusOverviewOutput } from "@customreport/shared";
 import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 
 import type {
   StatusOverviewItem,
@@ -14,86 +13,20 @@ import {
   createOpenWorkPlanState,
   createOverviewPlanState,
   type OverviewPlanFields,
-  overviewPlanInput,
   overviewPlanRecoveryReason,
   type OverviewPlanState,
   type PlanOutcome,
 } from "./overview-plan-command";
+import {
+  executePlan,
+  planOpenBlocked,
+  type PlanRunContext,
+  promotePlanItem,
+} from "./overview-plan-execution";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
 import { useOverviewFocusReturn } from "./use-overview-focus-return";
 
 type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
-
-interface PlanAttempt {
-  readonly key: string;
-  readonly commandId: string;
-  readonly owner: symbol;
-}
-
-function planAttemptInput(state: OverviewPlanState) {
-  return state.mode === "resolve"
-    ? overviewPlanInput(state)
-    : { recordId: state.item.recordId ?? "" };
-}
-
-function planAttemptKey(state: OverviewPlanState): string {
-  return `${state.mode}:${JSON.stringify(planAttemptInput(state))}`;
-}
-
-function completionMatches(
-  current: OverviewPlanState | null,
-  saved: OverviewPlanState,
-  attempt: PlanAttempt,
-): boolean {
-  if (
-    current?.item.key !== saved.item.key ||
-    current.generation !== saved.generation ||
-    current.attempt?.key !== attempt.key ||
-    current.attempt.commandId !== attempt.commandId ||
-    current.attempt.owner !== attempt.owner
-  )
-    return false;
-  try {
-    return planAttemptKey(current) === attempt.key;
-  } catch {
-    return false;
-  }
-}
-
-function attachAttempt(
-  current: OverviewPlanState | null,
-  saved: OverviewPlanState,
-  attempt: PlanAttempt,
-): OverviewPlanState | null {
-  if (
-    current?.item.key !== saved.item.key ||
-    current.generation !== saved.generation
-  )
-    return current;
-  try {
-    return planAttemptKey(current) === attempt.key
-      ? { ...current, attempt }
-      : current;
-  } catch {
-    return current;
-  }
-}
-
-async function runPlanAttempt(
-  editor: ReadyEditor,
-  state: OverviewPlanState,
-  input: ReturnType<typeof planAttemptInput>,
-  commandId: string,
-): Promise<void> {
-  if ("outcome" in input) {
-    await editor.outcomes.resolve({ ...input, commandId }, state.item.stableId);
-    return;
-  }
-  await editor.outcomes.restore(
-    { recordId: state.item.recordId ?? "", commandId },
-    state.item.stableId ?? "",
-  );
-}
 
 function capturePlan(
   editor: ReadyEditor,
@@ -122,166 +55,31 @@ function capturePlan(
   return createOverviewPlanState(editor, model, item, { raw, source, mode });
 }
 
-export function useOverviewPlanActions(
-  editor: ReadyEditor | null,
-  output: LeadStatusOverviewOutput,
-  model: StatusOverviewModel,
-  otherInputOpen: boolean,
-) {
-  const [dialog, setDialog] = useRetainedOverviewState(
-    "plan",
-    output.current.reportId,
-  );
-  const [error, setError] = useState<string | null>(null);
-  const [pending, setPending] = useState(false);
-  const running = useRef(false);
+function useMountedFlag() {
   const active = useRef(false);
-  const [owner] = useState(() => Symbol("overview-plan-actions"));
-  const rememberFocus = useOverviewFocusReturn(dialog !== null);
-  const recoveryReason = overviewPlanRecoveryReason(editor, dialog, owner);
   useEffect(() => {
     active.current = true;
     return () => {
       active.current = false;
     };
   }, []);
+  return active;
+}
 
-  const execute = async (state: OverviewPlanState): Promise<void> => {
-    if (running.current || !editor) return;
-    const recovery = overviewPlanRecoveryReason(editor, state, owner);
-    if (recovery || !editor.outcomes.canExecute) {
-      setError(
-        recovery ??
-          editor.outcomes.blockedReason ??
-          "The report context changed. Your input has been retained.",
-      );
-      return;
-    }
-    running.current = true;
-    setPending(true);
-    setError(null);
-    try {
-      const input = planAttemptInput(state);
-      const key = planAttemptKey(state);
-      const commandId =
-        state.attempt?.key === key
-          ? state.attempt.commandId
-          : crypto.randomUUID();
-      const attempt = { key, commandId, owner };
-      setDialog((current) => attachAttempt(current, state, attempt));
-      await runPlanAttempt(editor, state, input, commandId);
-      setDialog((current) =>
-        completionMatches(current, state, attempt) ? null : current,
-      );
-      if (active.current)
-        toast.success(
-          state.mode === "restore" ? "Plan restored" : "Plan outcome saved",
-        );
-    } catch (error_) {
-      setError(
-        error_ instanceof Error
-          ? error_.message
-          : "The outcome could not be saved. Your input is retained; try again.",
-      );
-    } finally {
-      running.current = false;
-      setPending(false);
-    }
-  };
-
-  // MOVE-NEXT-CURRENT: promotion needs no dialog — it consumes the commitment
-  // that is already recorded and archives the superseded result server-side.
-  const promote = async (item: StatusOverviewItem): Promise<void> => {
-    if (
-      !editor ||
-      editor.view.viewModel.isReadOnly ||
-      otherInputOpen ||
-      item.recordId === null ||
-      item.stableId === null
-    )
-      return;
-    if (running.current) return;
-    const recovery = overviewPlanRecoveryReason(editor, null, owner);
-    if (recovery || !editor.outcomes.canExecute) {
-      setError(
-        recovery ??
-          editor.outcomes.blockedReason ??
-          "The report context changed. Try again.",
-      );
-      return;
-    }
-    running.current = true;
-    setPending(true);
-    setError(null);
-    try {
-      await editor.outcomes.promote(
-        { recordId: item.recordId, commandId: crypto.randomUUID() },
-        item.stableId,
-      );
-      if (active.current) toast.success("Item moved to this week");
-    } catch (error_) {
-      setError(
-        error_ instanceof Error
-          ? error_.message
-          : "The item could not be moved to this week. Try again.",
-      );
-    } finally {
-      running.current = false;
-      setPending(false);
-    }
-  };
-
-  const open = (
-    item: StatusOverviewItem,
-    mode: "resolve" | "restore",
-    focusKey?: string,
-  ) => {
-    if (
-      !editor ||
-      editor.view.viewModel.isReadOnly ||
-      otherInputOpen ||
-      dialog ||
-      running.current
-    )
-      return;
-    const next = capturePlan(editor, output, model, { item, mode });
-    if (!next) return;
-    rememberFocus(focusKey);
-    setError(null);
-    setDialog(next);
-    if (mode === "restore") void execute(next);
-  };
-
-  const openWork = (item: OpenWorkRegisterItem) => {
-    if (
-      !editor ||
-      editor.view.viewModel.isReadOnly ||
-      otherInputOpen ||
-      dialog ||
-      running.current
-    )
-      return;
-    rememberFocus();
-    setError(null);
-    setDialog(createOpenWorkPlanState(editor, item));
-  };
-
+function usePlanDialogControls({
+  dialog,
+  setDialog,
+  setError,
+  running,
+  execute,
+}: {
+  readonly dialog: OverviewPlanState | null;
+  readonly setDialog: PlanRunContext["setDialog"];
+  readonly setError: PlanRunContext["setError"];
+  readonly running: PlanRunContext["running"];
+  readonly execute: (state: OverviewPlanState) => Promise<void>;
+}) {
   return {
-    dialog,
-    pending,
-    error,
-    recoveryReason,
-    blockedReason: editor
-      ? editor.outcomes.blockedReason
-      : "Editing is unavailable.",
-    resolve: (item: StatusOverviewItem, focusKey?: string) =>
-      open(item, "resolve", focusKey),
-    restore: (item: StatusOverviewItem, focusKey?: string) =>
-      open(item, "restore", focusKey),
-    promote: (item: StatusOverviewItem): void => {
-      void promote(item);
-    },
-    openWork,
     change: (patch: Partial<OverviewPlanFields>) => {
       if (!running.current)
         setDialog((current) =>
@@ -306,5 +104,86 @@ export function useOverviewPlanActions(
         setError(null);
       }
     },
+  };
+}
+
+export function useOverviewPlanActions(
+  editor: ReadyEditor | null,
+  output: LeadStatusOverviewOutput,
+  model: StatusOverviewModel,
+  otherInputOpen: boolean,
+) {
+  const [dialog, setDialog] = useRetainedOverviewState(
+    "plan",
+    output.current.reportId,
+  );
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const running = useRef(false);
+  const active = useMountedFlag();
+  const [owner] = useState(() => Symbol("overview-plan-actions"));
+  const rememberFocus = useOverviewFocusReturn(dialog !== null);
+  const recoveryReason = overviewPlanRecoveryReason(editor, dialog, owner);
+
+  const ctx: PlanRunContext = {
+    editor,
+    owner,
+    running,
+    active,
+    setError,
+    setPending,
+    setDialog,
+  };
+  const execute = (state: OverviewPlanState): Promise<void> =>
+    executePlan(ctx, state);
+
+  const open = (
+    item: StatusOverviewItem,
+    mode: "resolve" | "restore",
+    focusKey?: string,
+  ) => {
+    if (!editor || planOpenBlocked(editor, otherInputOpen, dialog, running))
+      return;
+    const next = capturePlan(editor, output, model, { item, mode });
+    if (!next) return;
+    rememberFocus(focusKey);
+    setError(null);
+    setDialog(next);
+    if (mode === "restore") void execute(next);
+  };
+
+  const openWork = (item: OpenWorkRegisterItem) => {
+    if (!editor || planOpenBlocked(editor, otherInputOpen, dialog, running))
+      return;
+    rememberFocus();
+    setError(null);
+    setDialog(createOpenWorkPlanState(editor, item));
+  };
+
+  const controls = usePlanDialogControls({
+    dialog,
+    setDialog,
+    setError,
+    running,
+    execute,
+  });
+
+  return {
+    dialog,
+    pending,
+    error,
+    recoveryReason,
+    blockedReason: editor
+      ? editor.outcomes.blockedReason
+      : "Editing is unavailable.",
+    resolve: (item: StatusOverviewItem, focusKey?: string) =>
+      open(item, "resolve", focusKey),
+    restore: (item: StatusOverviewItem, focusKey?: string) =>
+      open(item, "restore", focusKey),
+    promote: (item: StatusOverviewItem): void => {
+      void promotePlanItem(ctx, item, otherInputOpen);
+    },
+    openWork,
+    ...controls,
   };
 }

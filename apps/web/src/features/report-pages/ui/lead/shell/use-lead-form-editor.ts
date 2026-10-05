@@ -34,6 +34,7 @@ import {
 } from "./lead-form-loaded-inputs";
 import { useLeadFormData } from "./use-lead-form-data";
 import { useLeadFormEditing } from "./use-lead-form-editing";
+import type { LeadFormRequiredReadState } from "./use-lead-form-required-reads";
 
 export interface LeadFormEditorInput {
   readonly reportId?: string | undefined;
@@ -80,6 +81,60 @@ const EMPTY_LOADED_CONTEXT: LeadFormLoadedContext = {
   currentWeekItems: [],
   nextWeekItems: [],
 };
+
+function notReadyHandle(
+  data: {
+    readonly awaitingRoleRedirect: boolean;
+    readonly awaitingCanonicalRedirect: boolean;
+    readonly readState: LeadFormRequiredReadState;
+  },
+  mode: "overview" | "edit" | "slides",
+): LeadFormEditorHandle | null {
+  if (data.awaitingRoleRedirect || data.awaitingCanonicalRedirect) {
+    return { status: "loading", mode };
+  }
+  if (
+    data.readState.status === "unavailable" ||
+    data.readState.status === "no-active"
+  ) {
+    return { status: data.readState.status };
+  }
+  if (data.readState.status === "error") {
+    const { isRetrying, retry } = data.readState;
+    return {
+      status: "error",
+      isRetrying,
+      retry: () => {
+        if (!isRetrying) void retry();
+      },
+    };
+  }
+  return null;
+}
+
+function buildEditorDraftHandle(
+  draft: Omit<LeadFormEditorDraftHandle, "section">,
+  section: ReportSectionReadModel,
+): LeadFormEditorDraftHandle {
+  return {
+    section,
+    dirty: draft.dirty,
+    version: draft.version,
+    autosave: draft.autosave,
+    receiptScope: draft.receiptScope,
+    lastSaveReceipt: draft.lastSaveReceipt,
+    submitReadiness: draft.submitReadiness,
+    apply: draft.apply,
+    save: draft.save,
+    submit: draft.submit,
+    routeToBlocker: draft.routeToBlocker,
+    quickAdd: draft.quickAdd,
+    pendingQuickAdd: draft.pendingQuickAdd,
+    quickAddSave: draft.quickAddSave,
+    clearQuickAdd: draft.clearQuickAdd,
+    pendingRiskPrefill: draft.pendingRiskPrefill,
+  };
+}
 
 // External Lead Form seam. Draft merge and write actions remain separate
 // internal seams, while callers receive one declared handle.
@@ -130,51 +185,15 @@ export function useLeadFormEditorWithPort(
   });
   const draft = { ...editing.draft, ...quickAdd };
 
-  if (data.awaitingRoleRedirect || data.awaitingCanonicalRedirect) {
-    return { status: "loading", mode };
-  }
-  if (
-    data.readState.status === "unavailable" ||
-    data.readState.status === "no-active"
-  ) {
-    return { status: data.readState.status };
-  }
-  if (data.readState.status === "error") {
-    const { isRetrying, retry } = data.readState;
-    return {
-      status: "error",
-      isRetrying,
-      retry: () => {
-        if (!isRetrying) void retry();
-      },
-    };
-  }
-  if (loaded === null || viewModel === null) {
-    return { status: "loading", mode };
-  }
+  const pending = notReadyHandle(data, mode);
+  if (pending) return pending;
+  if (loaded === null || viewModel === null) return { status: "loading", mode };
 
   return {
     status: "ready",
     generation: draft.generation,
     outcomes: draft.outcomes,
-    draft: {
-      section: loaded.draftSection,
-      dirty: draft.dirty,
-      version: draft.version,
-      autosave: draft.autosave,
-      receiptScope: draft.receiptScope,
-      lastSaveReceipt: draft.lastSaveReceipt,
-      submitReadiness: draft.submitReadiness,
-      apply: draft.apply,
-      save: draft.save,
-      submit: draft.submit,
-      routeToBlocker: draft.routeToBlocker,
-      quickAdd: draft.quickAdd,
-      pendingQuickAdd: draft.pendingQuickAdd,
-      quickAddSave: draft.quickAddSave,
-      clearQuickAdd: draft.clearQuickAdd,
-      pendingRiskPrefill: draft.pendingRiskPrefill,
-    },
+    draft: buildEditorDraftHandle(draft, loaded.draftSection),
     writes: editing.writeActions,
     view: {
       data: buildLeadFormLoadedData(data),

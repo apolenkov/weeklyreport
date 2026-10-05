@@ -68,6 +68,83 @@ function getAvailabilityPresentation({
   };
 }
 
+function AssistantSheetHeader() {
+  return (
+    <SheetHeader className="border-b border-[var(--color-border)] bg-[var(--color-surface-hover)] px-5 py-5 pr-14">
+      <div className="flex items-center gap-2 text-[var(--color-primary)]">
+        <Sparkles className="size-4" aria-hidden="true" />
+        <span className="text-xs font-semibold uppercase tracking-[0.18em]">
+          Lead workspace
+        </span>
+      </div>
+      <SheetTitle className="text-xl tracking-tight">Report chat</SheetTitle>
+      <SheetDescription>
+        Ask one question about the reports you can access.
+      </SheetDescription>
+    </SheetHeader>
+  );
+}
+
+// A plain function, not a component: ReasonTooltip clones props onto this
+// element, so it must be the SheetTrigger itself.
+function renderAssistantTrigger({
+  presentation,
+  isChecking,
+}: {
+  readonly presentation: ReturnType<typeof getAvailabilityPresentation>;
+  readonly isChecking: boolean;
+}) {
+  return (
+    <SheetTrigger asChild>
+      <ToolbarIconButton
+        aria-label={presentation.ariaLabel}
+        aria-busy={isChecking}
+        aria-disabled={presentation.disabled || undefined}
+        data-testid="lead-report-assistant-trigger"
+        title={presentation.disabled ? "" : undefined}
+        className={ASSISTANT_TRIGGER_CLASS}
+      >
+        {isChecking ? (
+          <LoaderCircle
+            className="size-4 animate-spin motion-reduce:animate-none"
+            aria-hidden="true"
+          />
+        ) : (
+          <MessageCircle className="size-4" aria-hidden="true" />
+        )}
+      </ToolbarIconButton>
+    </SheetTrigger>
+  );
+}
+
+function AvailabilityRetryButton({
+  isFetching,
+  onRetry,
+}: {
+  readonly isFetching: boolean;
+  readonly onRetry: () => void;
+}) {
+  return (
+    <ToolbarIconButton
+      aria-label="Retry report chat availability check"
+      aria-busy={isFetching}
+      disabled={isFetching}
+      onClick={onRetry}
+      title="Retry report chat availability check"
+      className="border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+    >
+      {isFetching ? (
+        <LoaderCircle
+          className="size-4 animate-spin motion-reduce:animate-none"
+          aria-hidden="true"
+        />
+      ) : (
+        <RefreshCw className="size-4" aria-hidden="true" />
+      )}
+    </ToolbarIconButton>
+  );
+}
+
 export function LeadReportAssistant() {
   const trpc = useTRPC();
   const [open, setOpen] = useState(false);
@@ -111,25 +188,10 @@ export function LeadReportAssistant() {
                 : undefined
             }
           >
-            <SheetTrigger asChild>
-              <ToolbarIconButton
-                aria-label={availabilityPresentation.ariaLabel}
-                aria-busy={isCheckingAvailability}
-                aria-disabled={availabilityPresentation.disabled || undefined}
-                data-testid="lead-report-assistant-trigger"
-                title={availabilityPresentation.disabled ? "" : undefined}
-                className={ASSISTANT_TRIGGER_CLASS}
-              >
-                {isCheckingAvailability ? (
-                  <LoaderCircle
-                    className="size-4 animate-spin motion-reduce:animate-none"
-                    aria-hidden="true"
-                  />
-                ) : (
-                  <MessageCircle className="size-4" aria-hidden="true" />
-                )}
-              </ToolbarIconButton>
-            </SheetTrigger>
+            {renderAssistantTrigger({
+              presentation: availabilityPresentation,
+              isChecking: isCheckingAvailability,
+            })}
           </ReasonTooltip>
         </TooltipProvider>
         <SheetContent
@@ -137,20 +199,7 @@ export function LeadReportAssistant() {
           showCloseButton
           className="w-[min(100vw,34rem)] max-w-none gap-0 border-[var(--color-border)] bg-[var(--color-background)] p-0"
         >
-          <SheetHeader className="border-b border-[var(--color-border)] bg-[var(--color-surface-hover)] px-5 py-5 pr-14">
-            <div className="flex items-center gap-2 text-[var(--color-primary)]">
-              <Sparkles className="size-4" aria-hidden="true" />
-              <span className="text-xs font-semibold uppercase tracking-[0.18em]">
-                Lead workspace
-              </span>
-            </div>
-            <SheetTitle className="text-xl tracking-tight">
-              Report chat
-            </SheetTitle>
-            <SheetDescription>
-              Ask one question about the reports you can access.
-            </SheetDescription>
-          </SheetHeader>
+          <AssistantSheetHeader />
 
           <LeadReportAssistantBody
             outcome={outcome}
@@ -171,23 +220,10 @@ export function LeadReportAssistant() {
         </SheetContent>
       </Sheet>
       {availabilityFailed && (
-        <ToolbarIconButton
-          aria-label="Retry report chat availability check"
-          aria-busy={availability.isFetching}
-          disabled={availability.isFetching}
-          onClick={() => void availability.refetch()}
-          title="Retry report chat availability check"
-          className="border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
-        >
-          {availability.isFetching ? (
-            <LoaderCircle
-              className="size-4 animate-spin motion-reduce:animate-none"
-              aria-hidden="true"
-            />
-          ) : (
-            <RefreshCw className="size-4" aria-hidden="true" />
-          )}
-        </ToolbarIconButton>
+        <AvailabilityRetryButton
+          isFetching={availability.isFetching}
+          onRetry={() => void availability.refetch()}
+        />
       )}
     </div>
   );

@@ -1,6 +1,10 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 
 import {
@@ -24,11 +28,46 @@ function normalizeWriteError(error: unknown): LeadFormWriteError {
   );
 }
 
+type Invalidate = (
+  queryClient: QueryClient,
+  trpc: ReturnType<typeof useTRPC>,
+) => void;
+
+const invalidateForm: Invalidate = (queryClient, trpc) => {
+  invalidateLeadForm(queryClient, trpc);
+};
+const invalidateFormDashboardHistory: Invalidate = (queryClient, trpc) => {
+  invalidateLeadForm(queryClient, trpc);
+  invalidateDashboard(queryClient, trpc);
+  invalidateLeadHistory(queryClient, trpc);
+};
+
+// One write: run the mutation, refresh the caches it touched, and surface only
+// the normalized port error.
+function useWrite<Input, Output>(
+  mutation: { readonly mutateAsync: (input: Input) => Promise<Output> },
+  invalidate: Invalidate,
+) {
+  const trpc = useTRPC();
+  const queryClient = useQueryClient();
+  return useCallback(
+    async (input: Input): Promise<Output> => {
+      try {
+        const result = await mutation.mutateAsync(input);
+        invalidate(queryClient, trpc);
+        return result;
+      } catch (error: unknown) {
+        throw normalizeWriteError(error);
+      }
+    },
+    [invalidate, mutation, queryClient, trpc],
+  );
+}
+
 // Production adapter at the owned-network seam. Transport details and cache
 // invalidation stay here; the editor implementation owns workflow decisions.
 export function useLeadFormWritePort(): LeadFormWritePort {
   const trpc = useTRPC();
-  const queryClient = useQueryClient();
   const saveDraftMutation = useMutation(
     trpc.reports.saveDraft.mutationOptions({}),
   );
@@ -50,106 +89,14 @@ export function useLeadFormWritePort(): LeadFormWritePort {
     trpc.leadForm.requestReopen.mutationOptions({}),
   );
 
-  const saveDraft = useCallback<LeadFormWritePort["saveDraft"]>(
-    async (input) => {
-      try {
-        const saved = await saveDraftMutation.mutateAsync(input);
-        invalidateLeadForm(queryClient, trpc);
-        return saved;
-      } catch (error: unknown) {
-        throw normalizeWriteError(error);
-      }
-    },
-    [queryClient, saveDraftMutation, trpc],
-  );
-  const submit = useCallback<LeadFormWritePort["submit"]>(
-    async (input) => {
-      try {
-        const saved = await submitMutation.mutateAsync(input);
-        invalidateLeadForm(queryClient, trpc);
-        invalidateDashboard(queryClient, trpc);
-        invalidateLeadHistory(queryClient, trpc);
-        return saved;
-      } catch (error: unknown) {
-        throw normalizeWriteError(error);
-      }
-    },
-    [queryClient, submitMutation, trpc],
-  );
-  const resolvePlan = useCallback<LeadFormWritePort["resolvePlan"]>(
-    async (input) => {
-      try {
-        const result = await resolvePlanMutation.mutateAsync(input);
-        invalidateLeadForm(queryClient, trpc);
-        return result;
-      } catch (error: unknown) {
-        throw normalizeWriteError(error);
-      }
-    },
-    [queryClient, resolvePlanMutation, trpc],
-  );
-  const restorePlan = useCallback<LeadFormWritePort["restorePlan"]>(
-    async (input) => {
-      try {
-        const result = await restorePlanMutation.mutateAsync(input);
-        invalidateLeadForm(queryClient, trpc);
-        return result;
-      } catch (error: unknown) {
-        throw normalizeWriteError(error);
-      }
-    },
-    [queryClient, restorePlanMutation, trpc],
-  );
-  const promotePlan = useCallback<LeadFormWritePort["promotePlan"]>(
-    async (input) => {
-      try {
-        const result = await promotePlanMutation.mutateAsync(input);
-        invalidateLeadForm(queryClient, trpc);
-        return result;
-      } catch (error: unknown) {
-        throw normalizeWriteError(error);
-      }
-    },
-    [queryClient, promotePlanMutation, trpc],
-  );
-  const fillFrom = useCallback<LeadFormWritePort["fillFrom"]>(
-    async (input) => {
-      try {
-        const result = await fillFromMutation.mutateAsync(input);
-        invalidateLeadForm(queryClient, trpc);
-        return result;
-      } catch (error: unknown) {
-        throw normalizeWriteError(error);
-      }
-    },
-    [fillFromMutation, queryClient, trpc],
-  );
-  const revoke = useCallback<LeadFormWritePort["revoke"]>(
-    async (input) => {
-      try {
-        const result = await revokeMutation.mutateAsync(input);
-        invalidateLeadForm(queryClient, trpc);
-        invalidateDashboard(queryClient, trpc);
-        invalidateLeadHistory(queryClient, trpc);
-        return result;
-      } catch (error: unknown) {
-        throw normalizeWriteError(error);
-      }
-    },
-    [queryClient, revokeMutation, trpc],
-  );
-  const requestReopen = useCallback<LeadFormWritePort["requestReopen"]>(
-    async (input) => {
-      try {
-        const result = await reopenMutation.mutateAsync(input);
-        invalidateLeadForm(queryClient, trpc);
-        return result;
-      } catch (error: unknown) {
-        throw normalizeWriteError(error);
-      }
-    },
-    [queryClient, reopenMutation, trpc],
-  );
+  const saveDraft = useWrite(saveDraftMutation, invalidateForm);
+  const submit = useWrite(submitMutation, invalidateFormDashboardHistory);
+  const resolvePlan = useWrite(resolvePlanMutation, invalidateForm);
+  const restorePlan = useWrite(restorePlanMutation, invalidateForm);
+  const promotePlan = useWrite(promotePlanMutation, invalidateForm);
+  const fillFrom = useWrite(fillFromMutation, invalidateForm);
+  const revoke = useWrite(revokeMutation, invalidateFormDashboardHistory);
+  const requestReopen = useWrite(reopenMutation, invalidateForm);
 
   return useMemo(
     () => ({
