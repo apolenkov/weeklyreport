@@ -10,6 +10,10 @@ import { MoreHorizontal, Trash2 } from "lucide-react";
 import { useRef } from "react";
 
 import type { AdminUserView } from "../model/admin-types";
+import { useCurrentUserId } from "../model/use-current-user-id";
+
+export const SELF_ACTION_HINT =
+  "You cannot deactivate or delete your own account. Ask another administrator.";
 
 interface UserRowActionsProps {
   readonly user: AdminUserView;
@@ -32,7 +36,7 @@ function UserActivationButton(
     | "activatePending"
     | "onDeactivate"
     | "onActivate"
-  >,
+  > & { readonly isSelf: boolean },
 ) {
   const activation = props.user.isActive
     ? {
@@ -49,13 +53,19 @@ function UserActivationButton(
         className:
           "text-[var(--color-starbucks-accent)] hover:border-[var(--color-border-accent-hover)] hover:bg-[var(--color-success)]",
       };
+  const blockedAsSelf = props.isSelf && props.user.isActive;
   return (
     <button
       type="button"
       onClick={() => activation.action(props.user)}
-      disabled={activation.pending}
+      disabled={activation.pending || blockedAsSelf}
+      title={blockedAsSelf ? SELF_ACTION_HINT : undefined}
       className={`${ROUTINE_ACTION_CLASS} ${activation.className}`}
-      aria-label={`${activation.label} ${props.user.name}`}
+      aria-label={
+        blockedAsSelf
+          ? `${activation.label} ${props.user.name} (unavailable: ${SELF_ACTION_HINT})`
+          : `${activation.label} ${props.user.name}`
+      }
     >
       {activation.label}
     </button>
@@ -65,7 +75,10 @@ function UserActivationButton(
 function UserOverflowMenu({
   user,
   onDelete,
-}: Pick<UserRowActionsProps, "user" | "onDelete">) {
+  isSelf,
+}: Pick<UserRowActionsProps, "user" | "onDelete"> & {
+  readonly isSelf: boolean;
+}) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   return (
     <DropdownMenu>
@@ -87,6 +100,8 @@ function UserOverflowMenu({
       >
         <DropdownMenuItem
           variant="destructive"
+          disabled={isSelf}
+          title={isSelf ? SELF_ACTION_HINT : undefined}
           className="min-h-10 max-md:min-h-[var(--touch-target-min)] focus-visible:ring-2 focus-visible:ring-[var(--color-primary)]"
           onSelect={() => {
             const trigger = triggerRef.current;
@@ -110,6 +125,7 @@ export function UserRowActions({
   onActivate,
   onDelete,
 }: UserRowActionsProps) {
+  const isSelf = useCurrentUserId() === user.id;
   return (
     <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
       <button
@@ -126,8 +142,9 @@ export function UserRowActions({
         activatePending={activatePending}
         onDeactivate={onDeactivate}
         onActivate={onActivate}
+        isSelf={isSelf}
       />
-      <UserOverflowMenu user={user} onDelete={onDelete} />
+      <UserOverflowMenu user={user} onDelete={onDelete} isSelf={isSelf} />
     </div>
   );
 }
