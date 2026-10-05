@@ -142,11 +142,11 @@ the user's next request without revoking the session.
 
 ### Requirement: Session hydration reuses the live-access read
 
-Human-session resolution MUST obtain the live reporting group name, and the
-requester's own section of the active report when the token lacks one, from the
-same Prisma read as the `isActive` gate. Hydration MUST NOT repeat those
-lookups for that session, and the values MUST reflect the database, not the
-token.
+Human-session resolution MUST obtain the live reporting group name, the
+requester's own section of the active report when the token lacks one, and a
+viewer's group grants from the same Prisma read as the `isActive` gate.
+Hydration MUST NOT repeat those lookups for that session, and the values MUST
+reflect the database, not the token.
 
 #### Scenario: One user read serves group name and section
 
@@ -154,3 +154,10 @@ token.
 - **WHEN** the session is resolved
 - **THEN** the session carries the database group name and the lead's section id
 - **AND** no separate reporting-group or report-section query is issued
+
+#### Scenario: One user read serves a viewer's group grants
+
+- **GIVEN** a valid viewer token
+- **WHEN** the session is resolved
+- **THEN** the session carries the database group grants of the viewer
+- **AND** no separate viewer-group-access query is issued

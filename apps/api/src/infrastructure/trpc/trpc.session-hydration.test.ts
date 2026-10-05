@@ -131,6 +131,20 @@ describe("hydrateSession", () => {
     expect(findUnique).toHaveBeenCalledOnce();
   });
 
+  it("skips the section and viewer lookups when the live read already supplied them", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+
+    const result = await hydrateSession(
+      { ...viewerSession(), viewerGroupAccess: [VIEWER_GROUP_ID] },
+      makePrisma({ viewerGroupAccessFindMany: findMany }),
+      { liveResolved: true },
+    );
+
+    expect(findMany).not.toHaveBeenCalled();
+    expect(result.viewerGroupAccess).toEqual([VIEWER_GROUP_ID]);
+    expect(result.activeReportSectionId).toBeNull();
+  });
+
   it("skips viewer access hydration for non-viewer sessions", async () => {
     const findMany = vi.fn().mockResolvedValue([]);
     const session = {
