@@ -2,7 +2,7 @@ import { text } from "./logs.ts";
 import type { RunDir } from "./run-dir.ts";
 
 /** One call of the synthetic API scenario (written by scripts/ui-crawl/scenario.ts). */
-export interface ScenarioCall {
+interface ScenarioCall {
   step: string;
   role: string;
   path: string;

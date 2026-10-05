@@ -13,6 +13,8 @@
         "scripts/full-run/explain.ts",
         "scripts/ui-crawl/crawl.ts",
         "scripts/ui-crawl/merge.ts",
+        "scripts/ui-crawl/scenario.ts",
+        "scripts/ui-crawl/compare.ts",
         "vitest.*.config.ts"
       ],
       "project": [
