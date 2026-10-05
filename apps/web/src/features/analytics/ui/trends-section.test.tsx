@@ -37,8 +37,13 @@ describe("TrendsSection", () => {
         <p>Table data</p>
       </TrendsSection>,
     );
+    // The scroll region inside the table carries the heading name; a second
+    // landmark with the same name would fail axe landmark-unique.
+    expect(screen.queryByRole("region")).toBeNull();
     expect(
-      screen.getByRole("region", { name: "Traffic-light history" }),
+      screen
+        .getByRole("heading", { name: "Traffic-light history" })
+        .closest("section"),
     ).toHaveClass("card-surface");
   });
 

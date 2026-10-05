@@ -1,5 +1,6 @@
 "use client";
 
+import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type ReactNode, Suspense, useEffect } from "react";
@@ -25,13 +26,19 @@ function ReportsLatestShell({ children }: { readonly children: ReactNode }) {
 
 function ResolvingStatus() {
   return (
-    <p
-      className="py-16 text-center text-sm text-[var(--color-muted-foreground)]"
+    <div
+      className="space-y-4 py-4"
       role="status"
+      aria-live="polite"
       aria-label="Opening the status report"
     >
-      Opening the status report…
-    </p>
+      <span className="sr-only">Opening the status report…</span>
+      <div aria-hidden="true" className="space-y-4">
+        <Skeleton className="h-8 w-56" />
+        <Skeleton className="h-40 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    </div>
   );
 }
 
