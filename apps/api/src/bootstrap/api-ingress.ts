@@ -26,7 +26,7 @@ import {
 } from "../modules/product-feedback/index.js";
 import { PDF_DOWNLOAD_ROUTE } from "./http-access-log";
 
-export function mountApiIngress(deps: {
+interface ApiIngressDeps {
   app: INestApplication;
   expressApp: Express;
   env: EnvConfig;
@@ -36,7 +36,41 @@ export function mountApiIngress(deps: {
   trpcLimiter: RequestHandler;
   vitalsLimiter: RequestHandler;
   feedbackLimiter: RequestHandler;
-}): void {
+}
+
+function mountProductFeedback(
+  deps: ApiIngressDeps,
+  pdfAuthController: ReturnType<typeof createAuthController>,
+): void {
+  const { app, expressApp, env, logger, prisma, feedbackLimiter } = deps;
+  if (env.PRODUCT_FEEDBACK_ENABLED === true && env.NODE_ENV !== "production") {
+    const feedbackHandler = createAuthenticatedFeedbackHandler({
+      prisma,
+      repository: new ProductFeedbackPrismaRepository(prisma),
+      verifySessionToken: (token) =>
+        pdfAuthController.verifySessionToken(token),
+      sessionRevocation: app.get(SessionRevocationService),
+      frontendOrigin: env.FRONTEND_URL,
+      logger,
+      ...(env.AGENTATION_API_KEY
+        ? { agentationApiKey: env.AGENTATION_API_KEY }
+        : {}),
+      agentationEnabled: true,
+    });
+    expressApp.use(
+      "/api/v1",
+      feedbackLimiter,
+      feedbackHandler.authenticate,
+      express.json({ limit: PRODUCT_FEEDBACK_JSON_LIMIT }),
+      feedbackHandler.handle,
+    );
+    logger.info("mounted authenticated product feedback handler", {
+      route: "/api/v1/feedback and /api/v1/agentation",
+    });
+  }
+}
+
+export function mountApiIngress(deps: ApiIngressDeps): void {
   const {
     app,
     expressApp,
@@ -46,7 +80,6 @@ export function mountApiIngress(deps: {
     appRouter,
     trpcLimiter,
     vitalsLimiter,
-    feedbackLimiter,
   } = deps;
 
   // Same-origin /pdfs/{jobId}.pdf so the session cookie rides; handler authorizes
@@ -73,31 +106,7 @@ export function mountApiIngress(deps: {
     pdfDir,
   });
 
-  if (env.PRODUCT_FEEDBACK_ENABLED === true && env.NODE_ENV !== "production") {
-    const feedbackHandler = createAuthenticatedFeedbackHandler({
-      prisma,
-      repository: new ProductFeedbackPrismaRepository(prisma),
-      verifySessionToken: (token) =>
-        pdfAuthController.verifySessionToken(token),
-      sessionRevocation: app.get(SessionRevocationService),
-      frontendOrigin: env.FRONTEND_URL,
-      logger,
-      ...(env.AGENTATION_API_KEY
-        ? { agentationApiKey: env.AGENTATION_API_KEY }
-        : {}),
-      agentationEnabled: true,
-    });
-    expressApp.use(
-      "/api/v1",
-      feedbackLimiter,
-      feedbackHandler.authenticate,
-      express.json({ limit: PRODUCT_FEEDBACK_JSON_LIMIT }),
-      feedbackHandler.handle,
-    );
-    logger.info("mounted authenticated product feedback handler", {
-      route: "/api/v1/feedback and /api/v1/agentation",
-    });
-  }
+  mountProductFeedback(deps, pdfAuthController);
 
   // `maxBodySize` bounds the tRPC ingress with an explicit, auditable cap so an
   // oversized mutation body is rejected with 413 before the procedure runs.

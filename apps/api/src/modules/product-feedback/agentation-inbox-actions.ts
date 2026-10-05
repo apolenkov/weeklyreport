@@ -25,6 +25,10 @@ import {
 } from "./product-feedback.repository.js";
 
 const ANNOTATION_UPDATED_EVENT = "annotation.updated";
+const ANNOTATION_WITH_THREAD = {
+  session: true,
+  threadMessages: { orderBy: { timestamp: "asc" } },
+} as const;
 
 export class AgentationInboxActions {
   constructor(private readonly prisma: PrismaService) {}
@@ -175,10 +179,7 @@ export class AgentationInboxActions {
     return this.prisma.$transaction(async (tx) => {
       const current = await tx.agentationAnnotation.findFirst({
         where: { id, ...annotationScope(access) },
-        include: {
-          session: true,
-          threadMessages: { orderBy: { timestamp: "asc" } },
-        },
+        include: ANNOTATION_WITH_THREAD,
       });
       if (!current) throw new FeedbackNotFoundError();
       if (current.status === "dismissed")
@@ -198,10 +199,7 @@ export class AgentationInboxActions {
       if (claimed.count !== 1) {
         const dismissed = await tx.agentationAnnotation.findFirst({
           where: { id, ...annotationScope(access) },
-          include: {
-            session: true,
-            threadMessages: { orderBy: { timestamp: "asc" } },
-          },
+          include: ANNOTATION_WITH_THREAD,
         });
         if (!dismissed) throw new FeedbackNotFoundError();
         return projectAgentation(dismissed, access);
@@ -218,10 +216,7 @@ export class AgentationInboxActions {
       });
       const changed = await tx.agentationAnnotation.findUniqueOrThrow({
         where: { id },
-        include: {
-          session: true,
-          threadMessages: { orderBy: { timestamp: "asc" } },
-        },
+        include: ANNOTATION_WITH_THREAD,
       });
       await emit(tx, {
         type: "thread.message",
