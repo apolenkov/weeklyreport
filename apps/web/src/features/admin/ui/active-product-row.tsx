@@ -4,7 +4,10 @@ import { STAGE_NAMES } from "@customreport/shared";
 
 import { RotatingChevron } from "../../../shared/ui/report-shell/rotating-chevron";
 import type { AdminProductView, AdminUserView } from "../model/admin-types";
-import { ProductGroupChips } from "./product-group-chips";
+import {
+  ProductGroupChips,
+  type ProductGroupsView,
+} from "./product-group-chips";
 import { StageAssignmentEditor } from "./stage-assignments/stage-assignment-editor";
 
 const PRODUCT_ROW_TOUCH_TARGET_CLASS =
@@ -13,6 +16,7 @@ const PRODUCT_ROW_TOUCH_TARGET_CLASS =
 interface ActiveProductRowProps {
   readonly product: AdminProductView;
   readonly owner: AdminUserView | undefined;
+  readonly groups: ProductGroupsView;
   readonly assignedCount: number;
   readonly countsError: boolean;
   readonly isExpanded: boolean;
@@ -26,6 +30,7 @@ interface ActiveProductRowProps {
 export function ActiveProductRow({
   product,
   owner,
+  groups,
   assignedCount,
   countsError,
   isExpanded,
@@ -44,6 +49,7 @@ export function ActiveProductRow({
         <ProductSummary
           product={product}
           owner={owner}
+          groups={groups}
           isExpanded={isExpanded}
           onToggleExpand={onToggleExpand}
           toggleId={toggleId}
@@ -73,6 +79,7 @@ export function ActiveProductRow({
 function ProductSummary({
   product,
   owner,
+  groups,
   isExpanded,
   onToggleExpand,
   toggleId,
@@ -80,6 +87,7 @@ function ProductSummary({
 }: {
   readonly product: AdminProductView;
   readonly owner: AdminUserView | undefined;
+  readonly groups: ProductGroupsView;
   readonly isExpanded: boolean;
   readonly onToggleExpand: (id: string) => void;
   readonly toggleId: string;
@@ -110,7 +118,7 @@ function ProductSummary({
         {/* read-only Groups chips showing which
             ReportingGroups own this product via the explicit
             GroupProduct edge. Editing lives in the Groups tab. */}
-        <ProductGroupChips productId={product.id} />
+        <ProductGroupChips {...groups} />
       </div>
     </div>
   );
