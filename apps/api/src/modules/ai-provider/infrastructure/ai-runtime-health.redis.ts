@@ -21,10 +21,13 @@ export class RedisAiRuntimeHealth implements AiRuntimeHealth, OnModuleDestroy {
     this.redis.on("error", () => undefined);
   }
 
-  async recordFailure(outcome: AiRuntimeFailure["outcome"]): Promise<void> {
+  async recordFailure(
+    outcome: AiRuntimeFailure["outcome"],
+    occurredAt: Date = new Date(),
+  ): Promise<void> {
     const failure: AiRuntimeFailure = {
       outcome,
-      occurredAt: new Date().toISOString(),
+      occurredAt: occurredAt.toISOString(),
     };
     await this.redis
       .set(KEY, JSON.stringify(failure), "EX", FAILURE_TTL_SECONDS)

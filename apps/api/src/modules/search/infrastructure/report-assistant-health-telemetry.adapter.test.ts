@@ -29,13 +29,30 @@ const setup = () => {
 };
 
 describe("ReportAssistantHealthTelemetry", () => {
+  it("dates a failure at the request start, not its end", () => {
+    vi.useFakeTimers({ now: new Date("2026-10-05T12:00:12.000Z") });
+    try {
+      const { health, telemetry } = setup();
+      telemetry.record({ ...event("provider_unavailable"), latencyMs: 12_000 });
+      expect(health.recordFailure).toHaveBeenCalledWith(
+        "provider_unavailable",
+        new Date("2026-10-05T12:00:00.000Z"),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it.each(["provider_unavailable", "provider_response_incomplete"])(
     "remembers a %s outcome as a runtime failure",
     (outcome) => {
       const { health, inner, telemetry } = setup();
       telemetry.record(event(outcome));
       expect(inner.record).toHaveBeenCalledOnce();
-      expect(health.recordFailure).toHaveBeenCalledWith(outcome);
+      expect(health.recordFailure).toHaveBeenCalledWith(
+        outcome,
+        expect.any(Date),
+      );
       expect(health.recordSuccess).not.toHaveBeenCalled();
     },
   );

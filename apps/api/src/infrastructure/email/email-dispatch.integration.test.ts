@@ -10,6 +10,7 @@ vi.mock("@nestjs/common", () => ({
   // uses @Module; EmailService's constructor uses @Inject. Both are inert here.
   Module: () => (target: unknown) => target,
   Inject: () => () => undefined,
+  Optional: () => () => undefined,
 }));
 
 vi.mock("bullmq", () => ({
