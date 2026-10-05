@@ -10,6 +10,13 @@ import {
   FeedbackReplyForm,
 } from "./feedback-record-workflow-forms";
 
+type WorkflowKind = "edit" | "reply" | "dismiss" | "delete";
+
+const NEUTRAL_BUTTON =
+  "min-h-11 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
+const DANGER_BUTTON =
+  "min-h-11 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700";
+
 interface WorkflowProps {
   readonly item: FeedbackCardItem;
   readonly onEdit?:
@@ -28,25 +35,28 @@ export function FeedbackRecordWorkflows({
   onDismiss,
   onDelete,
 }: WorkflowProps) {
-  const [editing, setEditing] = useState(false);
-  const [replying, setReplying] = useState(false);
-  const [dismissing, setDismissing] = useState(false);
-  const [deleting, setDeleting] = useState(false);
+  const [active, setActive] = useState<WorkflowKind | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const restore = () =>
     requestAnimationFrame(() => triggerRef.current?.focus());
+  const open = (
+    kind: WorkflowKind,
+    toggle: boolean,
+    event: MouseEvent<HTMLButtonElement>,
+  ) => {
+    triggerRef.current = event.currentTarget;
+    setActive((current) => (toggle && current === kind ? null : kind));
+  };
+  const close = () => {
+    setActive(null);
+    restore();
+  };
   return (
     <>
       {onEdit ? (
         <button
-          className="min-h-11 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
-          onClick={(event) => {
-            triggerRef.current = event.currentTarget;
-            setEditing((v) => !v);
-            setReplying(false);
-            setDismissing(false);
-            setDeleting(false);
-          }}
+          className={NEUTRAL_BUTTON}
+          onClick={(event) => open("edit", true, event)}
           type="button"
         >
           Edit
@@ -54,14 +64,8 @@ export function FeedbackRecordWorkflows({
       ) : null}
       {onReply ? (
         <button
-          className="min-h-11 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
-          onClick={(event) => {
-            triggerRef.current = event.currentTarget;
-            setReplying((v) => !v);
-            setEditing(false);
-            setDismissing(false);
-            setDeleting(false);
-          }}
+          className={NEUTRAL_BUTTON}
+          onClick={(event) => open("reply", true, event)}
           type="button"
         >
           Reply
@@ -69,63 +73,31 @@ export function FeedbackRecordWorkflows({
       ) : null}
       {onDismiss ? (
         <button
-          className="min-h-11 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700"
-          onClick={(event) => {
-            triggerRef.current = event.currentTarget;
-            setDismissing(true);
-            setEditing(false);
-            setReplying(false);
-            setDeleting(false);
-          }}
+          className={DANGER_BUTTON}
+          onClick={(event) => open("dismiss", false, event)}
           type="button"
         >
           Dismiss
         </button>
       ) : null}
       <DeleteWorkflow
-        active={deleting}
+        active={active === "delete"}
         item={item}
         onDelete={onDelete}
-        onOpen={(event) => {
-          triggerRef.current = event.currentTarget;
-          setDeleting(true);
-          setEditing(false);
-          setReplying(false);
-          setDismissing(false);
-        }}
-        onCancel={() => {
-          setDeleting(false);
-          restore();
-        }}
+        onOpen={(event) => open("delete", false, event)}
+        onCancel={close}
       />
-      {editing && onEdit ? (
-        <FeedbackEditForm
-          item={item}
-          onEdit={onEdit}
-          onCancel={() => {
-            setEditing(false);
-            restore();
-          }}
-        />
+      {active === "edit" && onEdit ? (
+        <FeedbackEditForm item={item} onEdit={onEdit} onCancel={close} />
       ) : null}
-      {replying && onReply ? (
-        <FeedbackReplyForm
-          item={item}
-          onReply={onReply}
-          onCancel={() => {
-            setReplying(false);
-            restore();
-          }}
-        />
+      {active === "reply" && onReply ? (
+        <FeedbackReplyForm item={item} onReply={onReply} onCancel={close} />
       ) : null}
-      {dismissing && onDismiss ? (
+      {active === "dismiss" && onDismiss ? (
         <FeedbackDismissForm
           item={item}
           onDismiss={onDismiss}
-          onCancel={() => {
-            setDismissing(false);
-            restore();
-          }}
+          onCancel={close}
         />
       ) : null}
     </>
@@ -148,11 +120,7 @@ function DeleteWorkflow({
   if (!onDelete) return null;
   return (
     <>
-      <button
-        className="min-h-11 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700"
-        onClick={onOpen}
-        type="button"
-      >
+      <button className={DANGER_BUTTON} onClick={onOpen} type="button">
         Delete
       </button>
       {active ? (

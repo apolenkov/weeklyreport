@@ -17,11 +17,52 @@ import {
   CUSTOM_PROVIDER_PROFILE,
 } from "./ai-provider-configuration-fields.types";
 
-export function GenerationFields({
+function fieldUpdater<T extends object>(form: T, onChange: (value: T) => void) {
+  return <K extends keyof T>(key: K, value: T[K]) =>
+    onChange({ ...form, [key]: value });
+}
+
+function GenerationModelFields({
   form,
   busy,
-  profiles,
-  credentialConfigured,
+  onChange,
+}: Readonly<{
+  form: AiProviderFormState["generation"];
+  busy: boolean;
+  onChange: (value: AiProviderFormState["generation"]) => void;
+}>) {
+  const update = fieldUpdater(form, onChange);
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      <Field label="Planner model">
+        <input
+          name="generation.plannerModel"
+          aria-label="Planner model"
+          className={FIELD_CLASS}
+          value={form.plannerModel}
+          onChange={(event) => update("plannerModel", event.target.value)}
+          disabled={busy}
+          placeholder="Provider model ID"
+        />
+      </Field>
+      <Field label="Answer model">
+        <input
+          name="generation.answerModel"
+          aria-label="Answer model"
+          className={FIELD_CLASS}
+          value={form.answerModel}
+          onChange={(event) => update("answerModel", event.target.value)}
+          disabled={busy}
+          placeholder="Provider model ID"
+        />
+      </Field>
+    </div>
+  );
+}
+
+function GenerationReasoningFields({
+  form,
+  busy,
   onChange,
   reasoningInvalid,
   reasoningErrorId,
@@ -29,68 +70,14 @@ export function GenerationFields({
 }: Readonly<{
   form: AiProviderFormState["generation"];
   busy: boolean;
-  profiles: readonly AiProviderProfile[];
-  credentialConfigured: boolean;
   onChange: (value: AiProviderFormState["generation"]) => void;
   reasoningInvalid: boolean;
   reasoningErrorId: string;
   reasoningRef: RefObject<HTMLInputElement | null>;
 }>) {
-  const update = <K extends keyof AiProviderFormState["generation"]>(
-    key: K,
-    value: AiProviderFormState["generation"][K],
-  ) => onChange({ ...form, [key]: value });
+  const update = fieldUpdater(form, onChange);
   return (
-    <section
-      className="flex h-full flex-col gap-4 rounded-[var(--radius)] bg-[var(--color-surface-hover)]/60 p-4 sm:p-5"
-      data-testid="ai-provider-generation-section"
-    >
-      <SectionHeading
-        eyebrow="01"
-        title="Generation"
-        description="Planner and answer models."
-      />
-      <div className="grid gap-3 sm:grid-cols-2">
-        <ProfileField
-          connectionRole="generation"
-          value={form.profile}
-          profiles={profiles}
-          busy={busy}
-          onChange={(profile) => update("profile", profile)}
-        />
-        {form.profile === CUSTOM_PROVIDER_PROFILE && (
-          <EndpointField
-            connectionRole="generation"
-            baseUrl={form.baseUrl}
-            busy={busy}
-            onChange={(baseUrl) => update("baseUrl", baseUrl)}
-          />
-        )}
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="Planner model">
-          <input
-            name="generation.plannerModel"
-            aria-label="Planner model"
-            className={FIELD_CLASS}
-            value={form.plannerModel}
-            onChange={(event) => update("plannerModel", event.target.value)}
-            disabled={busy}
-            placeholder="Provider model ID"
-          />
-        </Field>
-        <Field label="Answer model">
-          <input
-            name="generation.answerModel"
-            aria-label="Answer model"
-            className={FIELD_CLASS}
-            value={form.answerModel}
-            onChange={(event) => update("answerModel", event.target.value)}
-            disabled={busy}
-            placeholder="Provider model ID"
-          />
-        </Field>
-      </div>
+    <>
       <Field label="Reasoning" hint="Verified during provider testing.">
         <select
           name="generation.reasoningMode"
@@ -128,6 +115,66 @@ export function GenerationFields({
           />
         </Field>
       )}
+    </>
+  );
+}
+
+export function GenerationFields({
+  form,
+  busy,
+  profiles,
+  credentialConfigured,
+  onChange,
+  reasoningInvalid,
+  reasoningErrorId,
+  reasoningRef,
+}: Readonly<{
+  form: AiProviderFormState["generation"];
+  busy: boolean;
+  profiles: readonly AiProviderProfile[];
+  credentialConfigured: boolean;
+  onChange: (value: AiProviderFormState["generation"]) => void;
+  reasoningInvalid: boolean;
+  reasoningErrorId: string;
+  reasoningRef: RefObject<HTMLInputElement | null>;
+}>) {
+  const update = fieldUpdater(form, onChange);
+  return (
+    <section
+      className="flex h-full flex-col gap-4 rounded-[var(--radius)] bg-[var(--color-surface-hover)]/60 p-4 sm:p-5"
+      data-testid="ai-provider-generation-section"
+    >
+      <SectionHeading
+        eyebrow="01"
+        title="Generation"
+        description="Planner and answer models."
+      />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <ProfileField
+          connectionRole="generation"
+          value={form.profile}
+          profiles={profiles}
+          busy={busy}
+          onChange={(profile) => update("profile", profile)}
+        />
+        {form.profile === CUSTOM_PROVIDER_PROFILE && (
+          <EndpointField
+            connectionRole="generation"
+            baseUrl={form.baseUrl}
+            busy={busy}
+            onChange={(baseUrl) => update("baseUrl", baseUrl)}
+          />
+        )}
+      </div>
+      <GenerationModelFields form={form} busy={busy} onChange={onChange} />
+      <GenerationReasoningFields
+        form={form}
+        busy={busy}
+        onChange={onChange}
+        reasoningInvalid={reasoningInvalid}
+        reasoningErrorId={reasoningErrorId}
+        reasoningRef={reasoningRef}
+      />
       <CredentialField
         label="Generation credential"
         value={form.credential}
@@ -136,6 +183,50 @@ export function GenerationFields({
         onChange={(credential) => update("credential", credential)}
       />
     </section>
+  );
+}
+
+function SeparateEmbeddingConnection({
+  form,
+  busy,
+  profiles,
+  credentialConfigured,
+  onChange,
+}: Readonly<{
+  form: AiProviderFormState["embeddings"];
+  busy: boolean;
+  profiles: readonly AiProviderProfile[];
+  credentialConfigured: boolean;
+  onChange: (value: AiProviderFormState["embeddings"]) => void;
+}>) {
+  const update = fieldUpdater(form, onChange);
+  return (
+    <div className="flex flex-col gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-hover)] p-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <ProfileField
+          connectionRole="embeddings"
+          value={form.profile}
+          profiles={profiles}
+          busy={busy}
+          onChange={(profile) => update("profile", profile)}
+        />
+        {form.profile === CUSTOM_PROVIDER_PROFILE && (
+          <EndpointField
+            connectionRole="embeddings"
+            baseUrl={form.baseUrl}
+            busy={busy}
+            onChange={(baseUrl) => update("baseUrl", baseUrl)}
+          />
+        )}
+      </div>
+      <CredentialField
+        label="Embeddings credential"
+        value={form.credential}
+        configured={credentialConfigured}
+        busy={busy}
+        onChange={(credential) => update("credential", credential)}
+      />
+    </div>
   );
 }
 
@@ -154,10 +245,7 @@ export function EmbeddingFields({
   credentialConfigured: boolean;
   onChange: (value: AiProviderFormState["embeddings"]) => void;
 }>) {
-  const update = <K extends keyof AiProviderFormState["embeddings"]>(
-    key: K,
-    value: AiProviderFormState["embeddings"][K],
-  ) => onChange({ ...form, [key]: value });
+  const update = fieldUpdater(form, onChange);
   return (
     <section
       className="flex h-full flex-col gap-4 rounded-[var(--radius)] bg-[var(--color-surface-hover)]/60 p-4 sm:p-5"
@@ -206,32 +294,13 @@ export function EmbeddingFields({
         />
       </Field>
       {form.mode === "separate" && (
-        <div className="flex flex-col gap-3 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-hover)] p-3">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <ProfileField
-              connectionRole="embeddings"
-              value={form.profile}
-              profiles={profiles}
-              busy={busy}
-              onChange={(profile) => update("profile", profile)}
-            />
-            {form.profile === CUSTOM_PROVIDER_PROFILE && (
-              <EndpointField
-                connectionRole="embeddings"
-                baseUrl={form.baseUrl}
-                busy={busy}
-                onChange={(baseUrl) => update("baseUrl", baseUrl)}
-              />
-            )}
-          </div>
-          <CredentialField
-            label="Embeddings credential"
-            value={form.credential}
-            configured={credentialConfigured}
-            busy={busy}
-            onChange={(credential) => update("credential", credential)}
-          />
-        </div>
+        <SeparateEmbeddingConnection
+          form={form}
+          busy={busy}
+          profiles={profiles}
+          credentialConfigured={credentialConfigured}
+          onChange={onChange}
+        />
       )}
     </section>
   );
