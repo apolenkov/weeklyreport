@@ -133,6 +133,38 @@ const sortActivityRows = (rows: readonly ActivityLiveRow[]) =>
     );
   });
 
+async function readPublishedActivity(
+  tx: Prisma.TransactionClient,
+  report: ActivityReport,
+  session: UserSession,
+): Promise<ActivityLiveResponse> {
+  if (session.role !== "admin") {
+    const admitted = await tx.report.findFirst({
+      where: {
+        id: report.id,
+        ...publishedReportScopeWhere(session),
+      },
+      select: { id: true },
+    });
+    if (!admitted) return emptyActivity();
+  }
+  const snapshot = requireScopedPublishedSnapshot(
+    requirePublishedSnapshot(report.publishedSnapshot, report.id),
+    session,
+  );
+  return {
+    reportId: report.id,
+    periodStart: report.periodStart,
+    periodEnd: report.periodEnd,
+    periodStatus: report.periodStatus,
+    rows: sortActivityRows(
+      snapshot.sections.map((section) =>
+        buildPublishedActivityRow(report.id, section),
+      ),
+    ),
+  };
+}
+
 @Injectable()
 export class ActivityPrismaRepository implements ActivityRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
@@ -159,31 +191,7 @@ export class ActivityPrismaRepository implements ActivityRepository {
         if (!report) return emptyActivity();
 
         if (report.periodStatus === "published") {
-          if (session.role !== "admin") {
-            const admitted = await tx.report.findFirst({
-              where: {
-                id: report.id,
-                ...publishedReportScopeWhere(session),
-              },
-              select: { id: true },
-            });
-            if (!admitted) return emptyActivity();
-          }
-          const snapshot = requireScopedPublishedSnapshot(
-            requirePublishedSnapshot(report.publishedSnapshot, report.id),
-            session,
-          );
-          return {
-            reportId: report.id,
-            periodStart: report.periodStart,
-            periodEnd: report.periodEnd,
-            periodStatus: report.periodStatus,
-            rows: sortActivityRows(
-              snapshot.sections.map((section) =>
-                buildPublishedActivityRow(report.id, section),
-              ),
-            ),
-          };
+          return readPublishedActivity(tx, report, session);
         }
 
         const [leads, sections]: [ActivityLead[], ActivitySection[]] =

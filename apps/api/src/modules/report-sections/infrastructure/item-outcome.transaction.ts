@@ -28,10 +28,11 @@ import {
   loadOutcomeTarget,
   readOutcomeResult,
 } from "./item-outcome-target.js";
+import { writeResolvedOutcome } from "./item-outcome-write.js";
 
 type Item = ReportSectionReadModel["items"][number];
 
-function outcomeCandidate(
+export function outcomeCandidate(
   source: Item,
   command: ResolvePlanInput,
   transition: ReturnType<typeof resolveItemTransition>,
@@ -113,67 +114,14 @@ export async function resolvePlanTx(
       validateOutcomeItem(target.section, candidate);
       // Source locks precede the write trigger's shared semantic-generation row.
       await advanceOutcomeVersion(tx, command);
-      const event = await tx.itemOutcomeEvent.create({
-        data: {
-          id: command.commandId,
-          reportSectionId: target.section.reportSectionId,
-          stableId,
-          requestHash: target.requestHash,
-          outcome: command.outcome,
-          reason: command.reason ?? null,
-          actorId: target.actor.id,
-          actorName: target.actor.name,
-          sourceReportId:
-            command.source.kind === "prior" ? command.source.reportId : null,
-          beforeState: transition.beforeState,
-          afterState: transition.afterState,
-        },
+      await writeResolvedOutcome(tx, command, {
+        sectionId: target.section.reportSectionId,
+        requestHash: target.requestHash,
+        actor: target.actor,
+        stableId,
+        transition,
+        candidate,
       });
-      const resolution =
-        command.outcome === "wont_do"
-          ? {
-              kind: "wont_do",
-              eventId: event.id,
-              reason: command.reason,
-              actorId: event.actorId,
-              actorName: event.actorName,
-              occurredAt: event.occurredAt.toISOString(),
-              previousState: transition.beforeState,
-            }
-          : Prisma.DbNull;
-      const data = {
-        projectId: candidate.projectId,
-        activityId: candidate.activityId,
-        stageNames: [...candidate.stageNames],
-        type: candidate.type,
-        workflowStatus: candidate.workflowStatus,
-        text: candidate.text,
-        tag: candidate.tag,
-        priorityRank: candidate.priorityRank,
-        carriedOver: candidate.carriedOver,
-        pausedReason: candidate.pausedReason,
-        nextStepText: candidate.nextStepText,
-        resolution,
-      };
-      if (command.source.kind === "current") {
-        await tx.item.update({
-          where: {
-            reportSectionId_stableId: {
-              reportSectionId: target.section.reportSectionId,
-              stableId,
-            },
-          },
-          data,
-        });
-      } else {
-        await tx.item.create({
-          data: {
-            ...data,
-            reportSectionId: target.section.reportSectionId,
-            stableId,
-          },
-        });
-      }
       return readOutcomeResult(tx, target.section.reportSectionId, stableId);
     },
     { timeout: 15_000 },

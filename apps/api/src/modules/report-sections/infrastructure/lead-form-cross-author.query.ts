@@ -96,6 +96,82 @@ export function getPublishedCrossAuthors(
   });
 }
 
+type PublishedSection = ReturnType<
+  typeof requirePublishedSnapshot
+>["sections"][number];
+
+function crossAuthorSectionRow(
+  section: PublishedSection,
+  sharedIds: ReadonlySet<string>,
+): CrossAuthorSectionRow {
+  return {
+    authorId: section.authorId,
+    authorName: section.authorName,
+    authorRole: section.authorRole,
+    sharedProductIds: [...sharedIds],
+    stages: [...frozenOwnedProjects(section).values()]
+      .filter((project) => sharedIds.has(project.projectId))
+      .flatMap((project) =>
+        project.ownedStages.map((stage) => ({
+          projectId: project.projectId,
+          stageName: stage.stageName,
+          status: frozenStageStatus(section, project, stage),
+        })),
+      ),
+    items: section.items
+      .filter(
+        (item): item is typeof item & { projectId: string } =>
+          item.projectId !== null &&
+          item.projectId !== undefined &&
+          sharedIds.has(item.projectId),
+      )
+      .map((item) => ({
+        id: item.id,
+        projectId: item.projectId,
+        type: item.type,
+        text: item.text,
+        tag: item.tag,
+        workflowStatus: itemWorkflowStatusSchema.parse(item.workflowStatus),
+        carriedOver: item.carriedOver,
+        priorityRank: item.priorityRank ?? null,
+        stageNames: [...item.stageNames],
+      })),
+    risks: section.risks
+      .filter(
+        (risk): risk is typeof risk & { projectId: string } =>
+          risk.projectId !== null &&
+          risk.projectId !== undefined &&
+          sharedIds.has(risk.projectId),
+      )
+      .map((risk) => ({
+        id: risk.id,
+        projectId: risk.projectId,
+        risk: risk.risk,
+        impact: risk.impact,
+        mitigation: risk.mitigation,
+        severity: riskSeveritySchema.parse(risk.severity),
+        stageNames: [...risk.stageNames],
+      })),
+    decisions: section.decisions
+      .filter(
+        (decision): decision is typeof decision & { productId: string } =>
+          decision.productId !== null &&
+          decision.productId !== undefined &&
+          sharedIds.has(decision.productId),
+      )
+      .map((decision) => ({
+        id: decision.id,
+        productId: decision.productId,
+        text: decision.text,
+        owner: decision.owner,
+        deadline: decision.deadline ?? null,
+        impact: decision.impact,
+        resolvedAt: decision.resolvedAt ?? null,
+        stageNames: [...decision.stageNames],
+      })),
+  };
+}
+
 export function getPublishedCrossAuthorContent(
   snapshot: ReturnType<typeof requirePublishedSnapshot>,
   userId: string,
@@ -108,74 +184,7 @@ export function getPublishedCrossAuthorContent(
     if (section.authorId === userId) return [];
     const sharedIds = frozenSharedProjectIds(viewer, section);
     if (sharedIds.size === 0) return [];
-    return [
-      {
-        authorId: section.authorId,
-        authorName: section.authorName,
-        authorRole: section.authorRole,
-        sharedProductIds: [...sharedIds],
-        stages: [...frozenOwnedProjects(section).values()]
-          .filter((project) => sharedIds.has(project.projectId))
-          .flatMap((project) =>
-            project.ownedStages.map((stage) => ({
-              projectId: project.projectId,
-              stageName: stage.stageName,
-              status: frozenStageStatus(section, project, stage),
-            })),
-          ),
-        items: section.items
-          .filter(
-            (item): item is typeof item & { projectId: string } =>
-              item.projectId !== null &&
-              item.projectId !== undefined &&
-              sharedIds.has(item.projectId),
-          )
-          .map((item) => ({
-            id: item.id,
-            projectId: item.projectId,
-            type: item.type,
-            text: item.text,
-            tag: item.tag,
-            workflowStatus: itemWorkflowStatusSchema.parse(item.workflowStatus),
-            carriedOver: item.carriedOver,
-            priorityRank: item.priorityRank ?? null,
-            stageNames: [...item.stageNames],
-          })),
-        risks: section.risks
-          .filter(
-            (risk): risk is typeof risk & { projectId: string } =>
-              risk.projectId !== null &&
-              risk.projectId !== undefined &&
-              sharedIds.has(risk.projectId),
-          )
-          .map((risk) => ({
-            id: risk.id,
-            projectId: risk.projectId,
-            risk: risk.risk,
-            impact: risk.impact,
-            mitigation: risk.mitigation,
-            severity: riskSeveritySchema.parse(risk.severity),
-            stageNames: [...risk.stageNames],
-          })),
-        decisions: section.decisions
-          .filter(
-            (decision): decision is typeof decision & { productId: string } =>
-              decision.productId !== null &&
-              decision.productId !== undefined &&
-              sharedIds.has(decision.productId),
-          )
-          .map((decision) => ({
-            id: decision.id,
-            productId: decision.productId,
-            text: decision.text,
-            owner: decision.owner,
-            deadline: decision.deadline ?? null,
-            impact: decision.impact,
-            resolvedAt: decision.resolvedAt ?? null,
-            stageNames: [...decision.stageNames],
-          })),
-      },
-    ];
+    return [crossAuthorSectionRow(section, sharedIds)];
   });
   return { coOwnsShared: rows.length > 0, rows };
 }

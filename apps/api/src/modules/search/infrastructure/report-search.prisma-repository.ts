@@ -99,6 +99,16 @@ function toOccurrence(
     sections,
   };
 }
+const REPORT_SOURCE_METADATA_SELECT = {
+  id: true,
+  periodStart: true,
+  status: true,
+  periodStatus: true,
+  periodState: true,
+  weekLabel: true,
+  archived: true,
+} as const;
+
 @Injectable()
 export class ReportSearchPrismaRepository implements ReportSearchRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
@@ -125,15 +135,7 @@ export class ReportSearchPrismaRepository implements ReportSearchRepository {
         : requestedCount;
     const currentRows = await this.prisma.report.findMany({
       where: LIVE_REPORT_LIFECYCLE_WHERE,
-      select: {
-        id: true,
-        periodStart: true,
-        status: true,
-        periodStatus: true,
-        periodState: true,
-        weekLabel: true,
-        archived: true,
-      },
+      select: REPORT_SOURCE_METADATA_SELECT,
       orderBy: [{ periodStart: "desc" }, { id: "desc" }],
     });
     const publishedRows =
@@ -143,15 +145,7 @@ export class ReportSearchPrismaRepository implements ReportSearchRepository {
             where: {
               ...PUBLISHED_REPORT_LIFECYCLE_WHERE,
             },
-            select: {
-              id: true,
-              periodStart: true,
-              status: true,
-              periodStatus: true,
-              periodState: true,
-              weekLabel: true,
-              archived: true,
-            },
+            select: REPORT_SOURCE_METADATA_SELECT,
             orderBy: [{ periodStart: "desc" }, { id: "desc" }],
             take: publishedTake,
           });

@@ -1,4 +1,5 @@
 import type { AdminReminderExecution } from "@customreport/shared";
+import type { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { errorMessage as normalizeErrorMessage } from "../../lib/error-message.js";
@@ -47,6 +48,63 @@ export async function queryExecutionByDedupeKey(
   return execution ? toExecutionDomain(execution) : null;
 }
 
+async function lockEligibleRuleAndReport(
+  tx: Prisma.TransactionClient,
+  execution: AdminReminderExecution,
+  queuePayload: ReminderQueuePayload,
+): Promise<void> {
+  const ruleOwner = await tx.reminderRule.findUnique({
+    where: { id: execution.ruleId },
+    select: { policyId: true },
+  });
+  if (!ruleOwner) throw new ReminderExecutionIneligibleError();
+  const [policy] = await tx.$queryRaw<{ active: boolean }[]>`
+    SELECT "active"
+    FROM "ReminderPolicy"
+    WHERE "id" = ${ruleOwner.policyId}
+    FOR UPDATE
+  `;
+  if (!policy?.active) throw new ReminderExecutionIneligibleError();
+
+  const executionDeadline = payloadDeadline(queuePayload);
+  // Lock the rule and owning Report under the exact editable predicate. A
+  // concurrent publish either commits first (zero rows, no insert) or waits
+  // for this transaction; it cannot slip between this guard and the write.
+  const eligible = await tx.$queryRaw<{ id: string }[]>`
+    SELECT rule."id"
+    FROM "ReminderRule" AS rule
+    INNER JOIN "Report" AS report ON report."id" = rule."reportId"
+    INNER JOIN "ReminderPolicy" AS policy ON policy."id" = rule."policyId"
+    WHERE rule."id" = ${execution.ruleId}
+      AND rule."policyId" = ${ruleOwner.policyId}
+      AND rule."reportId" = ${execution.reportId}
+      AND rule."fireAt" = ${execution.scheduledFor}
+      AND rule."kind" = ${queuePayload.kind}::"ReminderRuleKind"
+      AND rule."deadline" = ${executionDeadline}
+      AND rule."fireAt"::date = ${queuePayload.cycleDate}::date
+      AND rule."status" = 'active'::"ReminderRuleStatus"
+      AND policy."active" = true
+      AND policy."kind" = rule."kind"
+      AND policy."timezone" = rule."timezone"
+      AND policy."validFrom" <= rule."deadline"
+      AND (policy."validUntil" IS NULL OR policy."validUntil" >= rule."deadline")
+      AND rule."fireAt" = rule."deadline" + policy."offsetMinutes" * INTERVAL '1 minute'
+      AND report."deadline" IS NOT NULL
+      AND report."deadline" = rule."deadline"
+      AND report."archived" = false
+      AND report."periodState" = 'open'::"PeriodState"
+      AND (
+        (report."status" = 'draft'::"ReportStatus" AND report."periodStatus" = 'open'::"PeriodStatus")
+        OR
+        (report."status" = 'published'::"ReportStatus" AND report."periodStatus" = 'reopened'::"PeriodStatus")
+      )
+    FOR UPDATE OF rule, report
+  `;
+  if (eligible.length === 0) {
+    throw new ReminderExecutionIneligibleError();
+  }
+}
+
 export async function insertExecutionOnConflict(
   prisma: PrismaService,
   execution: AdminReminderExecution,
@@ -54,56 +112,7 @@ export async function insertExecutionOnConflict(
   allowFailedRevival = false,
 ): Promise<ReminderExecutionRecordResult> {
   return prisma.$transaction(async (tx) => {
-    const ruleOwner = await tx.reminderRule.findUnique({
-      where: { id: execution.ruleId },
-      select: { policyId: true },
-    });
-    if (!ruleOwner) throw new ReminderExecutionIneligibleError();
-    const [policy] = await tx.$queryRaw<{ active: boolean }[]>`
-      SELECT "active"
-      FROM "ReminderPolicy"
-      WHERE "id" = ${ruleOwner.policyId}
-      FOR UPDATE
-    `;
-    if (!policy?.active) throw new ReminderExecutionIneligibleError();
-
-    const executionDeadline = payloadDeadline(queuePayload);
-    // Lock the rule and owning Report under the exact editable predicate. A
-    // concurrent publish either commits first (zero rows, no insert) or waits
-    // for this transaction; it cannot slip between this guard and the write.
-    const eligible = await tx.$queryRaw<{ id: string }[]>`
-      SELECT rule."id"
-      FROM "ReminderRule" AS rule
-      INNER JOIN "Report" AS report ON report."id" = rule."reportId"
-      INNER JOIN "ReminderPolicy" AS policy ON policy."id" = rule."policyId"
-      WHERE rule."id" = ${execution.ruleId}
-        AND rule."policyId" = ${ruleOwner.policyId}
-        AND rule."reportId" = ${execution.reportId}
-        AND rule."fireAt" = ${execution.scheduledFor}
-        AND rule."kind" = ${queuePayload.kind}::"ReminderRuleKind"
-        AND rule."deadline" = ${executionDeadline}
-        AND rule."fireAt"::date = ${queuePayload.cycleDate}::date
-        AND rule."status" = 'active'::"ReminderRuleStatus"
-        AND policy."active" = true
-        AND policy."kind" = rule."kind"
-        AND policy."timezone" = rule."timezone"
-        AND policy."validFrom" <= rule."deadline"
-        AND (policy."validUntil" IS NULL OR policy."validUntil" >= rule."deadline")
-        AND rule."fireAt" = rule."deadline" + policy."offsetMinutes" * INTERVAL '1 minute'
-        AND report."deadline" IS NOT NULL
-        AND report."deadline" = rule."deadline"
-        AND report."archived" = false
-        AND report."periodState" = 'open'::"PeriodState"
-        AND (
-          (report."status" = 'draft'::"ReportStatus" AND report."periodStatus" = 'open'::"PeriodStatus")
-          OR
-          (report."status" = 'published'::"ReportStatus" AND report."periodStatus" = 'reopened'::"PeriodStatus")
-        )
-      FOR UPDATE OF rule, report
-    `;
-    if (eligible.length === 0) {
-      throw new ReminderExecutionIneligibleError();
-    }
+    await lockEligibleRuleAndReport(tx, execution, queuePayload);
 
     // ON CONFLICT DO NOTHING keeps the transaction usable so the loser can
     // return the canonical deduplicated row from the same locked snapshot.
