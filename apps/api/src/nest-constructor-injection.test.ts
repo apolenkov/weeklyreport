@@ -1,4 +1,11 @@
-import { readdirSync, readFileSync } from "node:fs";
+import {
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -19,6 +26,11 @@ const apiSourceRoot = resolve(dirname(fileURLToPath(import.meta.url)));
 const nestPackagePrefixes = ["@nestjs/", "nestjs-"] as const;
 const CONSTRUCTOR_INVENTORY_TIMEOUT_MS = 60_000;
 
+// module-public-api-boundary.test.ts writes short-lived lint probes with this
+// prefix next to real sources (boundary zones match physical paths), so a
+// concurrent walk must never see them.
+const BOUNDARY_PROBE_PREFIX = "boundary-probe-";
+
 const collectSourceFiles = (directory: string): readonly string[] =>
   readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const entryPath = join(directory, entry.name);
@@ -27,7 +39,8 @@ const collectSourceFiles = (directory: string): readonly string[] =>
       !entry.isFile() ||
       !entry.name.endsWith(".ts") ||
       entry.name.endsWith(".d.ts") ||
-      entry.name.includes(".test.")
+      entry.name.includes(".test.") ||
+      entry.name.startsWith(BOUNDARY_PROBE_PREFIX)
     ) {
       return [];
     }
@@ -119,6 +132,21 @@ const constructorInventory = async (): Promise<
   }
   return entries;
 };
+
+describe("collectSourceFiles", () => {
+  it("skips boundary lint probes written by a concurrent test", () => {
+    const dir = mkdtempSync(join(tmpdir(), "collect-"));
+    try {
+      writeFileSync(join(dir, "real.ts"), "export {};\n");
+      writeFileSync(join(dir, `${BOUNDARY_PROBE_PREFIX}x.ts`), "export {};\n");
+      expect(collectSourceFiles(dir).map((f) => relative(dir, f))).toEqual([
+        "real.ts",
+      ]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
 
 describe("Nest constructor injection", () => {
   it(
