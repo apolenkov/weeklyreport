@@ -2,7 +2,6 @@ import {
   assertE2eRuntimeDestructive,
   E2E_DATABASE_NAME,
   E2E_DESTRUCTIVE_CONSENT,
-  E2E_REDIS_DB,
   parseE2eRuntimeDatabaseTarget,
   parseE2eRuntimeRedisTarget,
   sameLocalPostgresDatabaseTarget,
@@ -13,7 +12,7 @@ export interface E2eRuntimeTarget {
   readonly e2eDatabaseUrl: string;
   readonly redisHost: string;
   readonly redisPort: number;
-  readonly redisDb: typeof E2E_REDIS_DB;
+  readonly redisDb: string;
   readonly consentToken: string;
 }
 
