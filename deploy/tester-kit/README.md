@@ -186,3 +186,8 @@ kubectl -n wr-tester logs deploy/api --tail=100
 ```
 
 Задачи: TASK-145.54, TASK-145.55, TASK-145.56.
+
+## Нагрузка
+
+`deploy/tester-kit/load/read-pages.js` — k6-сценарий чтения страниц (лид и руководитель, 20 пользователей, 3 минуты):
+`LEAD_PW=… HEAD_PW=… k6 run deploy/tester-kit/load/read-pages.js` (пароли PW_LEAD1 и PW_HEAD из `secrets.env`).
