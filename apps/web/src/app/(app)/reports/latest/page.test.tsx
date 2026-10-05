@@ -54,6 +54,7 @@ describe("ReportsLatestPage — redirect / empty / error wiring", () => {
     expect(screen.getByRole("status")).toHaveTextContent(
       /opening the status report/i,
     );
+    expect(screen.getByRole("status")).toHaveAttribute("aria-live", "polite");
   });
 
   it("PROPAGATES an incoming recovery=1 onto the resolved URL (loop guard)", () => {
