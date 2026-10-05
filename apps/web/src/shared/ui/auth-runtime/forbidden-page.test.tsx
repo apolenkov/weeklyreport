@@ -14,7 +14,9 @@ describe("ForbiddenPage", () => {
         name: /page unavailable for your role/i,
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/requires the head role/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/available to the head role only/i),
+    ).toBeInTheDocument();
     expect(
       screen.getByText(/you do not have access to this page/i),
     ).toBeInTheDocument();

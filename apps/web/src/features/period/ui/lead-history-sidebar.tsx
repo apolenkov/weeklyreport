@@ -28,7 +28,11 @@ export function LeadHistorySidebar({
   return (
     <aside aria-label={summaryTitle}>
       <div className="space-y-4">
-        <SummaryCard title={summaryTitle} stats={stats} />
+        <SummaryCard
+          title={summaryTitle}
+          stats={stats}
+          viewerMode={viewerMode}
+        />
         {showStatus && (
           <SubmissionStatusCard stats={stats} viewerMode={viewerMode} />
         )}
@@ -40,9 +44,11 @@ export function LeadHistorySidebar({
 function SummaryCard({
   title,
   stats,
+  viewerMode,
 }: {
   readonly title: string;
   readonly stats: HistoryStats;
+  readonly viewerMode: boolean;
 }) {
   const {
     submitted,
@@ -56,7 +62,7 @@ function SummaryCard({
     <SidebarCard title={title}>
       <StatGrid>
         <Stat
-          label="Submissions"
+          label={viewerMode ? "Periods completed" : "Submissions"}
           value={`${submitted}/${total}`}
           accent="primary"
         />
@@ -136,7 +142,8 @@ function StreakLine({
   if (streak >= 2) {
     return (
       <p className="text-[13px] text-[var(--color-foreground)]">
-        Submitted <strong>{streak}</strong> weeks in a row.
+        {viewerMode ? "Completed" : "Submitted"} <strong>{streak}</strong> weeks
+        in a row.
       </p>
     );
   }

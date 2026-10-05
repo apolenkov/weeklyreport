@@ -54,7 +54,9 @@ export default function ReportsPage() {
             includeArchive={includeArchive}
             isLoading={isSessionLoading || isLoading}
             failure={failure}
-            summaryTitle={isLead ? "My History Summary" : "History Summary"}
+            summaryTitle={
+              isLead ? "My History Summary" : "Portfolio History Summary"
+            }
             isLead={isLead}
           />
         </div>

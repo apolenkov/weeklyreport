@@ -30,8 +30,9 @@ export function ForbiddenPage({ requiredRoles, homeHref }: ForbiddenPageProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            You do not have access to this page. This page requires the{" "}
-            {rolesLabel} role.
+            You do not have access to this page. It is available to the{" "}
+            {rolesLabel} role only; your home page lists what your role can
+            open.
           </p>
           <Button asChild>
             <Link href={homeHref}>Go to my home page</Link>

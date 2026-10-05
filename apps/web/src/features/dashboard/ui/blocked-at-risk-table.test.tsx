@@ -157,7 +157,20 @@ describe("BlockedAtRiskTable — grouping by product", () => {
     fireEvent.click(screen.getByRole("button", { name: /blocked & at risk/i }));
 
     expect(screen.getByText("At risk")).toBeVisible();
-    expect(screen.getByText("Blocked")).toBeVisible();
+    expect(screen.getByTestId("product-header-status")).toHaveTextContent(
+      "Flagged red",
+    );
+    expect(screen.queryByText("Blocked")).toBeNull();
+  });
+
+  it("labels the header Blocked when a blocked row backs it (R26)", () => {
+    render(<BlockedAtRiskTable items={oneItem} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /blocked & at risk/i }));
+
+    expect(screen.getByTestId("product-header-status")).toHaveTextContent(
+      "Blocked",
+    );
   });
 
   it("renders separate cards for distinct products with the same display name", () => {

@@ -90,3 +90,16 @@ keyboard operation. Desktop navigation MUST retain its centered main links.
 - **WHEN** a signed-in visitor with a long display name opens an application page at 375 CSS pixels
 - **THEN** the name and role remain visible and the navigation actions remain reachable at the right
 - **AND** the existing named Menu and Sign out controls remain operable
+
+### Requirement: Icon-only row actions are labelled and reach the touch target
+
+Icon-only actions in table rows MUST expose an accessible name and tooltip that
+identify the row, MUST use the foreground colour (not the muted tone) while
+enabled so they do not read as disabled, and MUST grow to the shared
+`--touch-target-min` size on coarse pointers.
+
+#### Scenario: Periods table actions on a touch device
+
+- **WHEN** the admin Periods table renders on a `pointer: coarse` device
+- **THEN** each action button is at least `--touch-target-min` wide and tall
+- **AND** each carries an `aria-label` and `title` naming the action and period
