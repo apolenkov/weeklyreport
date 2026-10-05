@@ -159,6 +159,13 @@ quality:
     - tar -xzf /tmp/helm.tar.gz -C /usr/local/bin --strip-components=1 linux-amd64/helm
     - helm version --short
   script:
+    # MR commit messages follow Conventional Commits (commitlint.config.ts).
+    # GIT_DEPTH 2 hides the MR range, so deepen the clone first.
+    - |
+      if [ "$CI_PIPELINE_SOURCE" = merge_request_event ]; then
+        if [ "$(git rev-parse --is-shallow-repository)" = true ]; then git fetch --unshallow --quiet; fi
+        pnpm exec commitlint --from "$CI_MERGE_REQUEST_DIFF_BASE_SHA" --to "$CI_COMMIT_SHA"
+      fi
     - pnpm lint
     - pnpm format:check
     - pnpm spec:check

@@ -1,0 +1,31 @@
+pre-commit:
+  parallel: true
+  # Agents commit often from parallel worktrees on a loaded machine: skip in CI,
+  # for agents (AGENT_*) and during merges and rebases. Typecheck runs on push.
+  skip:
+    - merge
+    - rebase
+    - run: if [ -n "$CI" ] || env | grep -q '^AGENT_'; then exit 0; else exit 1; fi
+  jobs:
+    - name: format
+      run: pnpm exec prettier --check --ignore-unknown {staged_files}
+    - name: eslint
+      glob: "*.{ts,tsx,js,mjs,cjs}"
+      env:
+        NODE_OPTIONS: --max-old-space-size=6144
+      run: pnpm exec eslint --max-warnings 0 --no-warn-ignored {staged_files}
+    - name: stylelint
+      glob: "*.css"
+      run: pnpm exec stylelint --allow-empty-input --max-warnings 0 {staged_files}
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: pnpm exec commitlint --edit {1}
+pre-push:
+  jobs:
+    # Light by design: agents push from parallel worktrees, and lint and the
+    # test suites run in the CI `quality` job. Skipped in CI and for agents (AGENT_*).
+    - name: check
+      run: >-
+        if [ -n "$CI" ] || env | grep -q '^AGENT_'; then exit 0; fi;
+        pnpm format:check && pnpm typecheck && pnpm spec:check

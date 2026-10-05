@@ -27,6 +27,9 @@ allowBuilds:
   # Agentation MCP-only delegates persistence to the product HTTP API, so its
   # optional local SQLite backend must not run a native install script here.
   better-sqlite3: false
+  # Declined: the lefthook postinstall installs git hooks, which the root
+  # `prepare` script already does.
+  lefthook: false
   esbuild: true
   msgpackr-extract: true
   prisma: true
