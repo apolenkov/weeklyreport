@@ -1,4 +1,4 @@
-// Drop all app rows, flush the disposable Redis database, and seed a profile.
+// Drop all app rows, flush the Redis DB assigned to the target database, and seed a profile.
 
 import { spawnSync } from "node:child_process";
 import net from "node:net";
@@ -20,7 +20,6 @@ import pg from "pg";
 
 import {
   assertE2eRuntimeDestructive,
-  E2E_REDIS_DB,
   parseE2eRuntimeRedisTarget,
 } from "../guards/_destructive-guard.js";
 import { isEntrypoint } from "../guards/_entrypoint.js";
@@ -95,9 +94,10 @@ function parseRespArray(buffer: string, count: number): RespFrame | undefined {
 function getRedisReplyError(
   value: unknown,
   replyCount: number,
+  db: string,
 ): Error | undefined {
   if (value === "+OK") return undefined;
-  const command = replyCount === 0 ? "SELECT 15" : "FLUSHDB";
+  const command = replyCount === 0 ? `SELECT ${db}` : "FLUSHDB";
   const detail =
     typeof value === "string" && value.startsWith("-")
       ? `failed: ${value}`
@@ -107,7 +107,9 @@ function getRedisReplyError(
 
 export async function flushRedis(): Promise<void> {
   assertE2eRuntimeDestructive("reset-hard-flush-redis");
-  const { host, port } = parseE2eRuntimeRedisTarget("reset-hard-flush-redis");
+  const { host, port, db } = parseE2eRuntimeRedisTarget(
+    "reset-hard-flush-redis",
+  );
   console.log(
     `[reset-hard] Redis target: ${host}:${port} (REDIS_HOST/REDIS_PORT)`,
   );
@@ -116,12 +118,12 @@ export async function flushRedis(): Promise<void> {
     const sock = net.createConnection({ host, port }, () => {
       // Never pipeline FLUSHDB: if SELECT were rejected, a pipelined flush
       // would run against Redis' default DB 0.
-      sock.write(writeRedisCommand("SELECT", E2E_REDIS_DB));
+      sock.write(writeRedisCommand("SELECT", db));
     });
     const timer = setTimeout(() => {
       sock.destroy();
       reject(
-        new Error(`Redis SELECT 15 + FLUSHDB timed out at ${host}:${port}`),
+        new Error(`Redis SELECT ${db} + FLUSHDB timed out at ${host}:${port}`),
       );
     }, REDIS_FLUSH_TIMEOUT_MS);
     let buffered = "";
@@ -131,7 +133,7 @@ export async function flushRedis(): Promise<void> {
         const frame = parseRespFrame(buffered);
         if (frame === undefined) return;
         buffered = frame.rest;
-        const replyError = getRedisReplyError(frame.value, replies);
+        const replyError = getRedisReplyError(frame.value, replies, db);
         if (replyError) {
           clearTimeout(timer);
           sock.end();
@@ -164,13 +166,13 @@ export async function flushRedis(): Promise<void> {
       clearTimeout(timer);
       reject(
         new Error(
-          `Redis SELECT 15 + FLUSHDB: connection closed before both replies were received (got ${replies}/2)`,
+          `Redis SELECT ${db} + FLUSHDB: connection closed before both replies were received (got ${replies}/2)`,
         ),
       );
     });
   });
 
-  console.log("[reset-hard] Redis DB 15 FLUSHDB: OK");
+  console.log(`[reset-hard] Redis DB ${db} FLUSHDB: OK`);
 }
 
 // PostgreSQL identifiers are quoted by doubling embedded quotes (the dialect's

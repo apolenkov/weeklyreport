@@ -29,6 +29,12 @@ async function loadFlushRedis(): Promise<
   return flushRedis;
 }
 
+// Re-points the stubbed DATABASE_URL at another database name.
+function useDatabase(name: string): void {
+  const url = process.env.DATABASE_URL ?? "";
+  vi.stubEnv("DATABASE_URL", url.slice(0, url.lastIndexOf("/") + 1) + name);
+}
+
 function configureRedis(port: number): void {
   vi.stubEnv("REDIS_HOST", "127.0.0.1");
   vi.stubEnv("REDIS_PORT", String(port));
@@ -164,5 +170,49 @@ describe("quotePgIdentifier", () => {
     expect(quotePgIdentifier('x"); DROP TABLE users; --')).toBe(
       '"x""); DROP TABLE users; --"',
     );
+  });
+});
+
+describe("flushRedis Redis DB per target database", () => {
+  it("flushes only the lane's own Redis DB", async () => {
+    const server = await startMockRedisServer(["+OK\r\n", "+OK\r\n"]);
+    configureRedis(server.port);
+    const flushRedis = await loadFlushRedis();
+    useDatabase("customreport_e2e_lane_b_test");
+    vi.stubEnv("REDIS_DB", "2");
+
+    await expect(flushRedis()).resolves.toBeUndefined();
+    expect(server.receivedData()).toContain("SELECT\r\n$1\r\n2\r\n");
+  });
+
+  it.each(["0", "13", "14", "15", "1"])(
+    "refuses lane b with REDIS_DB %s before connecting",
+    async (redisDb) => {
+      const server = await startMockRedisServer(["+OK\r\n", "+OK\r\n"]);
+      configureRedis(server.port);
+      const flushRedis = await loadFlushRedis();
+      useDatabase("customreport_e2e_lane_b_test");
+      vi.stubEnv("REDIS_DB", redisDb);
+
+      await expect(flushRedis()).rejects.toThrow(/REDIS_DB must be exactly 2/);
+      expect(server.receivedData()).toBe("");
+    },
+  );
+
+  it("refuses customreport_e2e on a lane's Redis DB", async () => {
+    const server = await startMockRedisServer(["+OK\r\n", "+OK\r\n"]);
+    configureRedis(server.port);
+    vi.stubEnv("REDIS_DB", "2");
+    const flushRedis = await loadFlushRedis();
+
+    await expect(flushRedis()).rejects.toThrow(/REDIS_DB must be exactly 15/);
+  });
+
+  it("refuses a lane without an assigned Redis DB", async () => {
+    configureRedis(1);
+    const flushRedis = await loadFlushRedis();
+    useDatabase("customreport_e2e_lane_m_test");
+
+    await expect(flushRedis()).rejects.toThrow(/no Redis DB assigned/);
   });
 });
