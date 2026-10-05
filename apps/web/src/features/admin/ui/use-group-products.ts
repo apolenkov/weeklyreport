@@ -61,9 +61,11 @@ function useGroupProductMutations(groupId: string) {
 }
 
 // Single batched ownership read for every active product, replacing the
-// per-product listProductGroups fan-out. Skipped when there are no active
+// per-product listProductGroups fan-out (shared by the Groups and Products tabs). Skipped when there are no active
 // products (the empty-list branch renders instead).
-function useProductOwnership(activeProducts: readonly AdminProductView[]) {
+export function useProductOwnership(
+  activeProducts: readonly AdminProductView[],
+) {
   const trpc = useTRPC();
 
   const productIds = useMemo(
