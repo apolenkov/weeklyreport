@@ -17,7 +17,7 @@ interface PlanAttempt {
   readonly owner: symbol;
 }
 
-export function planAttemptInput(state: OverviewPlanState) {
+function planAttemptInput(state: OverviewPlanState) {
   return state.mode === "resolve"
     ? overviewPlanInput(state)
     : { recordId: state.item.recordId ?? "" };
