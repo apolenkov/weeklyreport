@@ -10,7 +10,15 @@ import {
 } from "@customreport/shared";
 
 import type { AppLogger } from "../../lib/logger";
+import { AdminSelfLockoutError } from "./admin-errors.js";
 import type { AdminRepository } from "./admin-shared";
+
+const SELF_LOCKOUT_MESSAGE =
+  "You cannot deactivate, delete, or remove the admin role from your own account. Ask another administrator.";
+
+function assertNotSelf(userId: string, actorId: string): void {
+  if (userId === actorId) throw new AdminSelfLockoutError(SELF_LOCKOUT_MESSAGE);
+}
 
 export class SnapshotAdminService {
   constructor(
@@ -33,20 +41,28 @@ export class SnapshotAdminService {
     return adminSnapshotSchema.parse(await this.repository.getSnapshot());
   }
 
-  async upsertUser(user: AdminUser): Promise<AdminSnapshot> {
+  async upsertUser(user: AdminUser, actorId: string): Promise<AdminSnapshot> {
     const parsedUser = adminUserSchema.parse(user);
+    if (parsedUser.id === actorId && parsedUser.role !== "admin") {
+      throw new AdminSelfLockoutError(SELF_LOCKOUT_MESSAGE);
+    }
     await this.repository.upsertUser(parsedUser);
     this.logger.info("upserted user", { userId: parsedUser.id });
     return this.getSnapshot();
   }
 
-  async removeUser(userId: string): Promise<AdminSnapshot> {
+  async removeUser(userId: string, actorId: string): Promise<AdminSnapshot> {
+    assertNotSelf(userId, actorId);
     await this.repository.removeUser(userId);
     return this.getSnapshot();
   }
 
   // Durable isActive only; Redis session revocation is the caller's job.
-  async deactivateUser(userId: string): Promise<{ success: true }> {
+  async deactivateUser(
+    userId: string,
+    actorId: string,
+  ): Promise<{ success: true }> {
+    assertNotSelf(userId, actorId);
     await this.repository.deactivateUser(userId);
     return { success: true };
   }

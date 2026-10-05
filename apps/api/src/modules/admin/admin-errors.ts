@@ -104,3 +104,20 @@ export class AdminReopenRequestAlreadyProcessedError extends Error {
     this.name = "AdminReopenRequestAlreadyProcessedError";
   }
 }
+
+// An administrator tried to deactivate, delete, or demote their own account →
+// BAD_REQUEST; the message is fixed and safe to surface verbatim.
+export class AdminSelfLockoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminSelfLockoutError";
+  }
+}
+
+// The write would leave the project without an active administrator → CONFLICT.
+export class AdminLastAdminError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminLastAdminError";
+  }
+}

@@ -13,12 +13,29 @@ import { reconcileProjectAssignment } from "../../lib/project-assignment.js";
 import { lockUserAndAssertActivityAssignments } from "../../lib/user-activity-assignment.js";
 import { buildTransition } from "../period/index.js";
 import {
+  AdminLastAdminError,
   AdminUserConflictError,
   AdminUserNotFoundError,
   AdminUserPublishedHistoryError,
   AdminUserReportingGroupRequiredError,
 } from "./admin-shared.js";
 import { resolveLifecycle } from "./snapshot-lifecycle.js";
+
+// Locks every active administrator, so two concurrent demotions serialize, and
+// rejects the write when the target is the only one left.
+async function assertNotLastActiveAdmin(
+  tx: PrismaTypes.TransactionClient,
+  userId: string,
+): Promise<void> {
+  const admins = await tx.$queryRaw<{ id: string }[]>`
+    SELECT "id" FROM "User" WHERE "role" = 'admin' AND "isActive" = true ORDER BY "id" FOR UPDATE
+  `;
+  if (admins.length === 1 && admins[0]?.id === userId) {
+    throw new AdminLastAdminError(
+      "This is the last active administrator. Make another user an active administrator first.",
+    );
+  }
+}
 
 // Single-entity writes only — never touch rows absent from the payload
 // (closes concurrent-insert data loss from admin-recovery reconcile).
@@ -51,6 +68,9 @@ export async function upsertUser(
   });
   try {
     await prisma.$transaction(async (tx) => {
+      // Admin set first, then the user row: deactivate/delete take the same
+      // order, so concurrent demotions cannot deadlock.
+      if (user.role !== "admin") await assertNotLastActiveAdmin(tx, user.id);
       await lockUserAndAssertActivityAssignments(tx, {
         userId: user.id,
         role: user.role,
@@ -117,7 +137,10 @@ export async function removeUser(
   try {
     // deleteMany makes removal idempotent: an already-absent id is a no-op
     // rather than a P2025 failure.
-    await prisma.user.deleteMany({ where: { id: userId } });
+    await prisma.$transaction(async (tx) => {
+      await assertNotLastActiveAdmin(tx, userId);
+      await tx.user.deleteMany({ where: { id: userId } });
+    });
   } catch (error: unknown) {
     const prismaError = error as { code?: string };
     if (prismaError.code === "P2003") {
@@ -148,9 +171,12 @@ export async function deactivateUser(
   userId: string,
 ): Promise<void> {
   try {
-    await prisma.user.update({
-      where: { id: userId },
-      data: { isActive: false },
+    await prisma.$transaction(async (tx) => {
+      await assertNotLastActiveAdmin(tx, userId);
+      await tx.user.update({
+        where: { id: userId },
+        data: { isActive: false },
+      });
     });
   } catch (error: unknown) {
     // Only a missing row (P2025) becomes a typed NOT_FOUND; any other failure

@@ -162,9 +162,11 @@ function RoleField({
   onFormChange,
   activeGroups,
   groups,
+  roleLocked,
 }: FormBinding & {
   readonly activeGroups: readonly AdminGroupView[];
   readonly groups: readonly AdminGroupView[];
+  readonly roleLocked: boolean;
 }) {
   return (
     <div>
@@ -176,6 +178,8 @@ function RoleField({
         name="role"
         autoComplete="off"
         value={form.role}
+        disabled={roleLocked}
+        aria-describedby={roleLocked ? "user-role-hint" : undefined}
         onChange={(e) =>
           onFormChange(
             withRole(form, e.target.value as DbRole, activeGroups, groups),
@@ -188,6 +192,15 @@ function RoleField({
         <option value="admin">{ROLE_LABEL.admin}</option>
         <option value="viewer">{ROLE_LABEL.viewer}</option>
       </select>
+      {roleLocked && (
+        <p
+          id="user-role-hint"
+          className="mt-1 text-xs text-[var(--color-muted-foreground)]"
+        >
+          You cannot remove the admin role from your own account. Ask another
+          administrator.
+        </p>
+      )}
     </div>
   );
 }
@@ -237,10 +250,12 @@ export function UserEditDialogFields({
   groupOptions,
   activeGroups,
   groups,
+  roleLocked,
 }: FormBinding & {
   readonly groupOptions: readonly AdminGroupView[];
   readonly activeGroups: readonly AdminGroupView[];
   readonly groups: readonly AdminGroupView[];
+  readonly roleLocked: boolean;
 }) {
   return (
     <div className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
@@ -250,6 +265,7 @@ export function UserEditDialogFields({
         onFormChange={onFormChange}
         activeGroups={activeGroups}
         groups={groups}
+        roleLocked={roleLocked}
       />
       <GroupField
         form={form}

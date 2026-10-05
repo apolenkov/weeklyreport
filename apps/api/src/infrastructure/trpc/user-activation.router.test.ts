@@ -84,7 +84,7 @@ describe("admin.deactivateUser — session revocation wiring", () => {
       { success: true },
     );
 
-    expect(deactivateUser).toHaveBeenCalledWith(TARGET_ID);
+    expect(deactivateUser).toHaveBeenCalledWith(TARGET_ID, USER_ID);
     expect(revokeSession).toHaveBeenCalledWith(TARGET_ID);
     const dbOrder = deactivateUser.mock.invocationCallOrder[0] ?? Infinity;
     const revokeOrder = revokeSession.mock.invocationCallOrder[0] ?? 0;
@@ -118,7 +118,7 @@ describe("admin.deactivateUser — session revocation wiring", () => {
       caller.deactivateUser({ userId: TARGET_ID }),
     ).rejects.toThrow();
     // The DB deactivation ran; only the mandatory revocation failed loud.
-    expect(deactivateUser).toHaveBeenCalledWith(TARGET_ID);
+    expect(deactivateUser).toHaveBeenCalledWith(TARGET_ID, USER_ID);
   });
 });
 
@@ -189,7 +189,7 @@ describe("admin user activation — app-router composition", () => {
     await expect(
       caller.admin.deactivateUser({ userId: TARGET_ID }),
     ).resolves.toEqual({ success: true });
-    expect(deactivateUser).toHaveBeenCalledWith(TARGET_ID);
+    expect(deactivateUser).toHaveBeenCalledWith(TARGET_ID, USER_ID);
     expect(revokeSession).toHaveBeenCalledWith(TARGET_ID);
   });
 });

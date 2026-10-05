@@ -53,7 +53,7 @@ function LeadStateBadges({ lead }: { readonly lead: LeadInfo }) {
       </span>
       {lead.status === "submitted" ||
       lead.reviewState === "changes-requested" ? (
-        <span className="inline-flex rounded-[var(--radius-pill)] bg-[var(--color-surface-muted)] px-2.5 py-0.5 text-xs font-medium text-[var(--color-foreground)]">
+        <span className="inline-flex rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-2.5 py-0.5 text-xs font-medium text-[var(--color-foreground)]">
           {lead.reviewLabel}
         </span>
       ) : null}
@@ -80,11 +80,11 @@ function LeadRowToggle({
       type="button"
       aria-expanded={expanded}
       aria-controls={detailId}
-      aria-label={`${expanded ? "Less details" : "Details"} for ${leadName}`}
+      aria-label={`${expanded ? "Hide details" : "Details"} for ${leadName}`}
       onClick={onToggle}
       className="inline-flex h-[var(--dashboard-action-h)] w-[var(--dashboard-summary-action-w)] items-center justify-center gap-1 rounded-[var(--radius-pill)] px-2 text-xs font-semibold text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)]"
     >
-      {expanded ? "Less" : "Details"}
+      {expanded ? "Hide" : "Details"}
       <ChevronDown
         aria-hidden="true"
         className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`}

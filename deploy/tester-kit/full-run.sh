@@ -138,8 +138,8 @@ bash "$HERE/dogfood.sh" --out "$WR_RUN_DIR/dogfood" "${JEV_ARG[@]+"${JEV_ARG[@]}
 
 phase "e2e"
 if [ "$E2E" = 1 ]; then
-  # e2e/setup hard-codes http://localhost:3000, dev.runtimeTarget and its own database reset; it cannot target this stand.
-  echo "skipped: e2e/setup has no base-URL parameter and needs dev auth (the stand uses SAML)" | tee "$WR_RUN_DIR/e2e.txt"
+  # e2e takes E2E_BASE_URL, but it still signs in through dev-login, calls dev.runtimeTarget and resets its own database; the SAML stand has none of these.
+  echo "skipped: e2e needs dev auth and dev.runtimeTarget (the stand uses SAML); E2E_BASE_URL only retargets a dev-mode app" | tee "$WR_RUN_DIR/e2e.txt"
 fi
 
 phase "collect logs"

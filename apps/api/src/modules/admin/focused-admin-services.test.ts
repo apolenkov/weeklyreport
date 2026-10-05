@@ -100,22 +100,28 @@ describe("focused admin services", () => {
   it("adds and removes users", async () => {
     const service = new SnapshotAdminService(createRepository(initialSnapshot));
 
-    const withLead = await service.upsertUser({
-      email: leadSession.email,
-      id: leadSession.userId,
-      name: leadSession.name,
-      lastName: "Lead",
-      firstName: "1",
-      middleName: null,
-      position: null,
-      role: "lead",
-      reportingGroupId: GROUP_ID,
-      isActive: true,
-    });
+    const withLead = await service.upsertUser(
+      {
+        email: leadSession.email,
+        id: leadSession.userId,
+        name: leadSession.name,
+        lastName: "Lead",
+        firstName: "1",
+        middleName: null,
+        position: null,
+        role: "lead",
+        reportingGroupId: GROUP_ID,
+        isActive: true,
+      },
+      "admin-actor",
+    );
 
     expect(withLead.users).toHaveLength(2);
 
-    const withoutLead = await service.removeUser(leadSession.userId);
+    const withoutLead = await service.removeUser(
+      leadSession.userId,
+      "admin-actor",
+    );
 
     expect(withoutLead.users).toHaveLength(1);
   });
@@ -315,18 +321,21 @@ describe("focused admin services", () => {
         createRepository(initialSnapshot),
       );
 
-      const result = await service.upsertUser({
-        id: "77777777-7777-4777-8777-777777777777",
-        email: "newlead@customreport.local",
-        name: "New Lead",
-        lastName: "New",
-        firstName: "Lead",
-        middleName: null,
-        position: null,
-        role: "lead",
-        reportingGroupId: GROUP_ID,
-        isActive: true,
-      });
+      const result = await service.upsertUser(
+        {
+          id: "77777777-7777-4777-8777-777777777777",
+          email: "newlead@customreport.local",
+          name: "New Lead",
+          lastName: "New",
+          firstName: "Lead",
+          middleName: null,
+          position: null,
+          role: "lead",
+          reportingGroupId: GROUP_ID,
+          isActive: true,
+        },
+        "admin-actor",
+      );
 
       expect(result.users).toHaveLength(2);
       expect(
@@ -339,31 +348,37 @@ describe("focused admin services", () => {
         createRepository(initialSnapshot),
       );
 
-      await service.upsertUser({
-        id: leadSession.userId,
-        email: leadSession.email,
-        name: "Old Name",
-        lastName: "Old",
-        firstName: "Name",
-        middleName: null,
-        position: null,
-        role: "lead",
-        reportingGroupId: GROUP_ID,
-        isActive: true,
-      });
+      await service.upsertUser(
+        {
+          id: leadSession.userId,
+          email: leadSession.email,
+          name: "Old Name",
+          lastName: "Old",
+          firstName: "Name",
+          middleName: null,
+          position: null,
+          role: "lead",
+          reportingGroupId: GROUP_ID,
+          isActive: true,
+        },
+        "admin-actor",
+      );
 
-      const result = await service.upsertUser({
-        id: leadSession.userId,
-        email: "updated@customreport.local",
-        name: "Updated Name",
-        lastName: "Updated",
-        firstName: "Name",
-        middleName: null,
-        position: null,
-        role: "lead",
-        reportingGroupId: GROUP_ID,
-        isActive: true,
-      });
+      const result = await service.upsertUser(
+        {
+          id: leadSession.userId,
+          email: "updated@customreport.local",
+          name: "Updated Name",
+          lastName: "Updated",
+          firstName: "Name",
+          middleName: null,
+          position: null,
+          role: "lead",
+          reportingGroupId: GROUP_ID,
+          isActive: true,
+        },
+        "admin-actor",
+      );
 
       expect(result.users).toHaveLength(2); // not 3 — updated, not duplicated
       const updated = result.users.find((u) => u.id === leadSession.userId);
@@ -376,30 +391,36 @@ describe("focused admin services", () => {
         createRepository(initialSnapshot),
       );
 
-      await service.upsertUser({
-        id: "77777777-7777-4777-8777-777777777777",
-        email: "a@test.com",
-        name: "Alpha",
-        lastName: "Alpha",
-        firstName: "Test",
-        middleName: null,
-        position: null,
-        role: "lead",
-        reportingGroupId: GROUP_ID,
-        isActive: true,
-      });
-      const result = await service.upsertUser({
-        id: "88888888-8888-4888-8888-888888888888",
-        email: "z@test.com",
-        name: "Zulu",
-        lastName: "Zulu",
-        firstName: "Test",
-        middleName: null,
-        position: null,
-        role: "lead",
-        reportingGroupId: GROUP_ID,
-        isActive: true,
-      });
+      await service.upsertUser(
+        {
+          id: "77777777-7777-4777-8777-777777777777",
+          email: "a@test.com",
+          name: "Alpha",
+          lastName: "Alpha",
+          firstName: "Test",
+          middleName: null,
+          position: null,
+          role: "lead",
+          reportingGroupId: GROUP_ID,
+          isActive: true,
+        },
+        "admin-actor",
+      );
+      const result = await service.upsertUser(
+        {
+          id: "88888888-8888-4888-8888-888888888888",
+          email: "z@test.com",
+          name: "Zulu",
+          lastName: "Zulu",
+          firstName: "Test",
+          middleName: null,
+          position: null,
+          role: "lead",
+          reportingGroupId: GROUP_ID,
+          isActive: true,
+        },
+        "admin-actor",
+      );
 
       expect(result.users.map((user) => user.name)).toEqual([
         "Alpha",
@@ -480,7 +501,7 @@ describe("removeUser — DB deletion via repository", () => {
     const service = new SnapshotAdminService(
       createRepository(snapshotWithLead),
     );
-    const result = await service.removeUser(leadSession.userId);
+    const result = await service.removeUser(leadSession.userId, "admin-actor");
 
     expect(result.users).toHaveLength(1);
     expect(
@@ -524,7 +545,7 @@ describe("removeUser — DB deletion via repository", () => {
     const service = new SnapshotAdminService(
       createRepository(snapshotWithMultipleUsers),
     );
-    const result = await service.removeUser(leadSession.userId);
+    const result = await service.removeUser(leadSession.userId, "admin-actor");
 
     expect(result.users).toHaveLength(2);
     expect(
@@ -539,6 +560,7 @@ describe("removeUser — DB deletion via repository", () => {
     const service = new SnapshotAdminService(createRepository(initialSnapshot));
     const result = await service.removeUser(
       "99999999-9999-4999-8999-999999999999",
+      "admin-actor",
     );
 
     expect(result.users).toHaveLength(1);

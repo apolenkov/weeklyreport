@@ -31,4 +31,10 @@ describe("AuthErrorPage — query parameters", () => {
       screen.queryByText("An authentication error occurred."),
     ).not.toBeInTheDocument();
   });
+
+  it("uses the login page surface and wordmark (R78)", async () => {
+    await renderPage();
+    expect(screen.getByText("Weekly Report")).toBeInTheDocument();
+    expect(screen.getByRole("main")).toHaveClass("bg-[var(--color-card)]");
+  });
 });

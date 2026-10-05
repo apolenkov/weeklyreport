@@ -194,9 +194,10 @@ describe("GroupsTab — a11y regression", () => {
       "max-h-[90vh]",
       "overflow-hidden",
     );
-    expect(screen.getByTestId("group-dialog-body")).toHaveClass(
-      "overflow-y-auto",
-    );
+    const body = screen.getByTestId("group-dialog-body");
+    expect(body).toHaveClass("overflow-y-auto");
+    // Chromium does not clip a scrolling <fieldset>; the scroll box must be a div.
+    expect(body.tagName).toBe("DIV");
   });
 
   describe("backdrop click closes the dialog", () => {
