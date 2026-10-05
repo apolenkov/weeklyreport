@@ -1,4 +1,4 @@
-export type ReasonKind = "dev-only" | "external" | "needs-failure";
+type ReasonKind = "dev-only" | "external" | "needs-failure";
 
 export interface Reason {
   kind: ReasonKind;

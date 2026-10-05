@@ -266,16 +266,3 @@ export function waitForState(
 })()`),
   );
 }
-
-/** Waits, driven by DOM mutations, until `selector` matches an element; false when it never does. */
-export function waitForSelector(
-  browser: Browser,
-  selector: string,
-  ms = RETURN_WAIT_MS,
-): boolean {
-  return (
-    browser.evaluate(
-      `(${UNTIL})(() => !!document.querySelector(${JSON.stringify(selector)}), ${ms})`,
-    ) === true
-  );
-}
