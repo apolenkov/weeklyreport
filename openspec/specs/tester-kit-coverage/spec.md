@@ -1,4 +1,10 @@
-## ADDED Requirements
+# tester-kit-coverage Specification
+
+## Purpose
+
+Defines how the tester-kit proves coverage of its own scenarios: guarded lifecycle fixtures, per-procedure success evidence, and isolation and reset of the stand between runs.
+
+## Requirements
 
 ### Requirement: Procedure coverage counts successful calls
 
