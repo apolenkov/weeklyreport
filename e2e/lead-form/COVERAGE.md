@@ -1,6 +1,6 @@
 # Lead form regression coverage
 
-The suite is node:test driving the pinned agent-browser CLI 0.38.1 (verified at
+The suite is node:test driving the pinned agent-browser CLI 0.38.2 (verified at
 start-up by `e2e/setup/agent-browser-version.ts`). Run it with `pnpm test:e2e`
 against the running web/API; it resets and seeds `customreport_e2e` with Redis
 DB 15 before every test. The denominator is the controls a Lead can reach
