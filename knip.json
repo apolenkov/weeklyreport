@@ -9,6 +9,8 @@
         "prisma/**/*.ts",
         "scripts/**/*.test.ts",
         "scripts/gates/*.ts",
+        "scripts/full-run/analyze.ts",
+        "scripts/full-run/explain.ts",
         "scripts/ui-crawl/crawl.ts",
         "scripts/ui-crawl/merge.ts",
         "vitest.*.config.ts"
