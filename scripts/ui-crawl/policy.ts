@@ -16,6 +16,7 @@ const DANGEROUS = [
   /\b(request changes|reset|wipe|revoke|discard|send|sign out|log ?out)\b/i,
   /\b(export|download|retry|replay|restore|merge)\b/i,
   /\b(deactivate|disable|suspend|ban|add new user)\b/i,
+  /\b(detach|attach|unlink|assign|unassign|transfer|toggle)\b/i,
 ];
 
 /** Names of controls that a reviewed synthetic scenario allows to be pressed despite DANGEROUS. */

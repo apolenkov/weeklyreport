@@ -115,13 +115,18 @@ deploy/tester-kit/full-run.sh --walk-args "--roles lead --max-pages 3"   # пр�
 
 Что происходит:
 
-1. Postgres стенда перезапускается с `pg_stat_statements` и `auto_explain` (`log_min_duration=50ms`, JSON, без analyze)
-   и журналом всех запросов (`log_statement=all`, файл `pgdata/log/wr-run.log`); у api в pod появляется `NODE_V8_COVERAGE=/cov` (emptyDir).
-   Чарт продукта не имеет точки расширения для этого, поэтому включение сделано `ALTER SYSTEM` и `kubectl patch` в самом скрипте
-   (идемпотентно; `start.sh` при повторном запуске вернёт чарт к исходному виду). Продукт и схема не меняются.
+1. Сбор включён в `values-tester.yaml`, а не в скрипте: `postgres.args` (`pg_stat_statements`, `auto_explain` с `log_min_duration=50ms`,
+   JSON, без analyze, журнал всех запросов `log_statement=all` в `pgdata/log/wr-run.log`) и `api.extraEnv.NODE_V8_COVERAGE`
+   (каталог `cov` тома pdfdata: том переживает перезапуск контейнера, который сбрасывает покрытие на диск; `full-run.sh` очищает его после сбора).
+   Обе точки расширения чарта (`postgres.args`, `api.extraEnv`) по умолчанию пусты и в проде не используются. `start.sh` применяет values;
+   `full-run.sh` лишь проверяет, что сбор включён, и иначе просит запустить `start.sh`. Ни `ALTER SYSTEM`, ни `kubectl patch` не остаётся:
+   стенд после прогона в том же виде, что задан values. Журнал всех запросов нужен для поиска N+1; значения в нём синтетические.
 2. `reset.sh` вызывает хуки `WR_PRE_RESET_HOOK` / `WR_POST_RESET_HOOK`: перед каждой очисткой базы собираются журнал api, счётчики Prometheus,
    покрытие V8 и статистика Postgres, после загрузки демо-данных статистика обнуляется. Так ни один отрезок не теряется, а отрезки не пересекаются.
 3. `walk.sh --quick` (все роли, 1280 и 375), пауза 70 с под лимит запросов, затем `walk.sh --full --states returned --widths 1280`.
+   Потом `dogfood.sh`: вход четырёх ролей, ключевые страницы (скриншот, снимок, консоль, ошибки страницы) и Jev вторым судьёй;
+   Jev даёт сигналы (нажал, ушёл со страницы, застрял, упавшие запросы), их сверяют со скриншотом. Исследовательский проход навыка `dogfood` агент
+   дописывает в `dogfood/dogfood-notes.md`, он попадает в раздел отчёта. `TYPESAFE_API_KEY` не задан: Jev пропускается.
 4. e2e не запускается: `e2e/setup` жёстко привязан к `http://localhost:3000`, `dev.runtimeTarget`, dev-входу и собственному сбросу базы,
    а стенд работает на SAML и порту 8080. Нужен параметр базового URL и вход через SAML.
 5. `explain.ts` до финального сброса: `EXPLAIN (ANALYZE, BUFFERS)` самых тяжёлых запросов на данных стенда и пробный индекс в транзакции с откатом.
