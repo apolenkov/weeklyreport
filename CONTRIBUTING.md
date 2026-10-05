@@ -38,7 +38,7 @@ Subject ≤ 100 chars. Body is free-form (multi-line line length unrestricted).
 
 `pnpm install` installs lefthook git hooks (the `prepare` script, `lefthook.yml`):
 
-- pre-commit — `prettier --check`, ESLint and Stylelint on staged files, `pnpm typecheck`;
+- pre-commit — `prettier --check`, ESLint and Stylelint on staged files (skipped in CI, for agents (`AGENT_*`) and during merges);
 - commit-msg — commitlint (`commitlint.config.ts`): Conventional Commits (plus `merge:` and
   GitLab `Merge branch …`), scope from the list;
 - pre-push — light: `format:check`, `typecheck`, `spec:check`; full lint and tests run in the CI
