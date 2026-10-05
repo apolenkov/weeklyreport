@@ -55,10 +55,9 @@ repush of a mutable tag cannot silently change what a rebuild deploys.
 The web image's two dev-auth build args MUST default to `false` in
 `Dockerfile.web`: `ARG NEXT_PUBLIC_AUTH_STUB` and `ARG
 NEXT_PUBLIC_DEV_ROLE_SWITCHER`. An un-argumented build (a direct
-`docker build`, a CI job, or a compose file that omits `build.args`) then
+`docker build`, or a CI job that omits `--build-arg`) then
 never inlines the dev-auth stub or dev role switcher into a
-production-labeled bundle. Environments that need either flag on (the dev
-`docker-compose.yml`) MUST pass it explicitly via `build.args`.
+production-labeled bundle. Environments that need either flag on MUST pass it explicitly as a build argument; local development uses the native source run, which sets both flags in its process environment.
 
 #### Scenario: An un-argumented build ships the safe default
 
@@ -66,9 +65,7 @@ production-labeled bundle. Environments that need either flag on (the dev
 - **THEN** the built image was compiled with `NEXT_PUBLIC_AUTH_STUB=false`
   and `NEXT_PUBLIC_DEV_ROLE_SWITCHER=false`
 
-#### Scenario: The dev compose file still opts in explicitly
+#### Scenario: Native development opts in explicitly
 
-- **WHEN** `docker-compose.yml` (dev) builds the `web` service
-- **THEN** its `build.args` explicitly set both flags to `"true"`
-- **AND** the resulting dev image still shows the dev role switcher and
-  auth stub
+- **WHEN** the native web dev server starts with both flags set to `true`
+- **THEN** the dev role switcher and auth stub are shown

@@ -15,19 +15,15 @@ const integrationEnvironment = read(".env.test.example");
 const productionValues = read(
   "deploy/helm/weeklyreport/values.production.example.yaml",
 );
-const compose = read("docker-compose.yml");
-const devCompose = read("docker-compose.dev.yml");
-const observabilityCompose = read("docker-compose.observability.yml");
-const errorsCompose = read("docker-compose.errors.yml");
-const environmentDocs = read("docs/environment.md");
+const dashboardProviders =
+  "deploy/helm/weeklyreport/observability/grafana/provisioning/dashboards";
 const operationalDashboardProvider = read(
-  "deploy/grafana/provisioning/dashboards/customreport.yml",
+  `${dashboardProviders}/customreport.yml`,
 );
 const productDashboardProvider = read(
-  "deploy/grafana/provisioning/dashboards/product-telemetry.yml",
+  `${dashboardProviders}/product-telemetry.yml`,
 );
-const productionPrometheus = read("deploy/prometheus-otel-lgtm.yml");
-const developmentPrometheus = read("deploy/prometheus-otel-lgtm.dev.yml");
+const localDependencies = read("deploy/local-dev/deps.yaml");
 const localBootstrap = read("prisma/operations/bootstrap-local.ts");
 const apiBootstrap = read("apps/api/src/bootstrap/api-bootstrap.ts");
 const caddyReadme = read("deploy/helm/weeklyreport/README.md");
@@ -72,11 +68,10 @@ const assertLocalBootstrapContract = (
     assert.ok(localBootstrap.includes(script));
   }
   assert.match(
-    compose,
-    /postgresql:\/\/customreport:localdev@postgres:5432\/customreport_e2e/u,
+    localDependencies,
+    /name: POSTGRES_DB, value: customreport_e2e/u,
   );
-  assert.match(compose, /POSTGRES_DB: customreport_e2e/u);
-  assert.match(compose, /pg_isready -U customreport -d postgres/u);
+  assert.match(localDependencies, /name: POSTGRES_PASSWORD, value: localdev/u);
   assert.ok(localEnvironment.includes("POSTGRES_DB=customreport_e2e"));
 };
 
@@ -117,7 +112,6 @@ const assertNativeApiEnvironment = (
 test("API source development uses the supported TypeScript loader", () => {
   const apiDevCommand = apiPackageJson.scripts.dev;
   assertNativeApiEnvironment(apiDevCommand, read(".env.example"), apiBootstrap);
-  assert.match(compose, /API_HOST: 0\.0\.0\.0/);
 });
 
 test("native API environment guard rejects a planted public listener", () => {
@@ -156,12 +150,6 @@ test("native Web dev and build load the root environment contract", () => {
     "Web-local env examples create a second, unsupported configuration source",
   );
   assert.doesNotMatch(localEnvironment, /^NEXT_PUBLIC_API_URL=/mu);
-  assert.match(compose, /target: installer/u);
-  assert.equal(
-    compose.split("\n").some((line) => line.trim() === "args:"),
-    false,
-    "the installer dev target must not advertise builder-only arguments",
-  );
 });
 
 test("native Web environment guard rejects a planted split-brain script", () => {
@@ -199,8 +187,7 @@ test("native Web uses the standard NODE_ENV for each Next command", () => {
 });
 
 test("Mailpit is the one local SMTP service name", () => {
-  assert.match(compose, /\n {2}mailpit:\n/);
-  assert.match(compose, /SMTP_HOST: mailpit/);
+  assert.match(localDependencies, /name: mailpit\n/);
   assert.match(read(".env.example"), /^SMTP_HOST=localhost$/m);
   assert.match(read(".env.example"), /^SMTP_PORT=1025$/m);
 });
@@ -253,68 +240,6 @@ test("the enforcing CSP policy reports violations to the required collector", ()
   );
 });
 
-test("local observability has an explicit Grafana secret contract", () => {
-  assert.match(localEnvironment, /^GRAFANA_PORT=3003$/m);
-  assert.match(localEnvironment, /^GRAFANA_ADMIN_USER=admin$/m);
-  assert.match(
-    localEnvironment,
-    /^GRAFANA_ADMIN_PASSWORD=\S+$/m,
-    "the copied local environment must render observability:up",
-  );
-  assert.match(
-    observabilityCompose,
-    /GRAFANA_ADMIN_PASSWORD:\?GRAFANA_ADMIN_PASSWORD must be set/,
-  );
-  assert.match(
-    onboarding,
-    /pnpm observability:up[\s\S]*GRAFANA_ADMIN_PASSWORD/,
-  );
-  assert.match(
-    operations,
-    /observability overlay[\s\S]*GRAFANA_ADMIN_PASSWORD[\s\S]*no password default/i,
-  );
-  assert.match(environmentDocs, /`GRAFANA_PORT`[\s\S]*`GRAFANA_ADMIN_USER`/u);
-  assert.match(environmentDocs, /host ports are loopback-only/u);
-});
-
-test("local observability extends one Compose project without duplicate ports", () => {
-  const composeCommand = packageJson.scripts["observability:compose"] ?? "";
-  const downCommand = packageJson.scripts["observability:down"] ?? "";
-
-  assert.doesNotMatch(composeCommand, /--project-name/u);
-  assert.match(
-    downCommand,
-    /rm --stop --force otel-lgtm bugsink postgres-exporter redis-exporter/u,
-  );
-  assert.match(
-    devCompose,
-    /OTEL_EXPORTER_OTLP_ENDPOINT: http:\/\/otel-lgtm:4318/u,
-  );
-  assert.doesNotMatch(devCompose, /host\.docker\.internal/u);
-  assert.match(environmentDocs, /reuses its PostgreSQL, Redis, and Mailpit/u);
-});
-
-test("local Bugsink overlay has an explicit secret contract", () => {
-  assert.match(localEnvironment, /^BUGSINK_PORT=8000$/m);
-  assert.match(
-    localEnvironment,
-    /^BUGSINK_SECRET_KEY=localdev-insecure-key-for-local-dev-only-change-in-prod-2025$/m,
-  );
-  assert.match(errorsCompose, /BUGSINK_PORT:-8000/u);
-  assert.match(
-    errorsCompose,
-    /BUGSINK_SECRET_KEY:\?BUGSINK_SECRET_KEY must be set/u,
-  );
-  assert.match(
-    environmentDocs,
-    /`BUGSINK_SECRET_KEY`[\s\S]*no Compose fallback[\s\S]*local-only/u,
-  );
-  assert.match(
-    operations,
-    /Bugsink errors overlay[\s\S]*BUGSINK_PORT[\s\S]*BUGSINK_SECRET_KEY[\s\S]*not part of the production Helm release/u,
-  );
-});
-
 test("integration environment documents its guarded target boundary", () => {
   assert.match(integrationEnvironment, /Guarded disposable E2E target/u);
   assert.match(
@@ -330,18 +255,6 @@ test("integration environment documents its guarded target boundary", () => {
 
 test("Grafana providers own non-overlapping current dashboard roots", () => {
   assert.match(
-    observabilityCompose,
-    /dashboards\/customreport\/operations\/customreport-dashboard\.json/,
-  );
-  assert.match(
-    observabilityCompose,
-    /dashboards\/customreport\/operations\/trpc-latency-dashboard\.json/,
-  );
-  assert.match(
-    observabilityCompose,
-    /dashboards\/customreport\/product\/product-telemetry-dashboard\.json/,
-  );
-  assert.match(
     operationalDashboardProvider,
     /path: \/var\/lib\/grafana\/dashboards\/customreport\/operations/,
   );
@@ -353,21 +266,6 @@ test("Grafana providers own non-overlapping current dashboard roots", () => {
     operationalDashboardProvider + productDashboardProvider,
     /path: \/var\/lib\/grafana\/dashboards\/customreport\s*$/m,
   );
-  assert.match(productionPrometheus, /cluster: customreport-production/);
-  assert.match(developmentPrometheus, /cluster: customreport-local/);
-  assert.match(
-    operations,
-    /two non-overlapping dashboard roots[\s\S]*cluster=customreport-production[\s\S]*cluster=customreport-local/,
-  );
-});
-
-test("development Compose uses the canonical Sentry variable names", () => {
-  assert.match(devCompose, /SENTRY_DSN: \$\{SENTRY_DSN:-\}/);
-  assert.match(
-    devCompose,
-    /NEXT_PUBLIC_SENTRY_DSN: \$\{NEXT_PUBLIC_SENTRY_DSN:-\}/,
-  );
-  assert.doesNotMatch(devCompose, /SENTRY_DSN_[A-Z]/);
 });
 
 test("production documents the browser DSN as a build-time input", () => {
@@ -549,7 +447,7 @@ test("external production controls remain blocked until external read-back", () 
   );
   assert.match(
     operationsText,
-    /docker-compose\.observability\.yml[\s\S]*deploy\/prometheus-otel-lgtm\.yml[\s\S]*deploy\/alert-rules\.yml[\s\S]*template/i,
+    /deploy\/helm\/weeklyreport\/observability\/[\s\S]*template/i,
   );
   assert.match(
     operationsText,

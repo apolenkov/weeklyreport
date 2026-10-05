@@ -1,0 +1,202 @@
+# Local development dependencies in the OrbStack Kubernetes namespace wr-dev.
+# Disposable synthetic data only; production is the Helm chart. OrbStack
+# publishes LoadBalancer services on localhost, so `pnpm dev` reaches them at
+# the same ports as before: Postgres 5432, Redis 6379, Mailpit 1025/8025,
+# Gotenberg 3010. The pg-init ConfigMap is created by up.sh from
+# deploy/postgres/init-pg-stat-statements.sql.
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+spec:
+  type: LoadBalancer
+  selector: { app: postgres }
+  ports:
+    - { name: pg, port: 5432, targetPort: 5432 }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels: { app: postgres }
+  template:
+    metadata:
+      labels: { app: postgres }
+    spec:
+      containers:
+        - name: postgres
+          image: pgvector/pgvector:0.8.7-pg15-bookworm@sha256:47af0b65960b14f1c6945aa4ccae37836c632e9a6fe0eea9160936e616e5b2e9
+          # pg_stat_statements mines real slow-query stats; statements over
+          # 200ms are logged to the pod log.
+          args:
+            - -c
+            - shared_preload_libraries=pg_stat_statements
+            - -c
+            - pg_stat_statements.track=all
+            - -c
+            - pg_stat_statements.max=10000
+            - -c
+            - log_min_duration_statement=200
+          env:
+            - { name: POSTGRES_USER, value: customreport }
+            - { name: POSTGRES_PASSWORD, value: localdev }
+            - { name: POSTGRES_DB, value: customreport_e2e }
+            - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
+          ports:
+            - { containerPort: 5432 }
+          readinessProbe:
+            exec:
+              command: [pg_isready, -U, customreport, -d, postgres]
+            periodSeconds: 5
+          volumeMounts:
+            - { name: data, mountPath: /var/lib/postgresql/data }
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d/01-pg-stat-statements.sql
+              subPath: init-pg-stat-statements.sql
+              readOnly: true
+      volumes:
+        - name: init
+          configMap: { name: pg-init }
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests: { storage: 2Gi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+spec:
+  type: LoadBalancer
+  selector: { app: redis }
+  ports:
+    - { name: redis, port: 6379, targetPort: 6379 }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis
+spec:
+  serviceName: redis
+  replicas: 1
+  selector:
+    matchLabels: { app: redis }
+  template:
+    metadata:
+      labels: { app: redis }
+    spec:
+      containers:
+        - name: redis
+          image: redis:7.4.11-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+          args:
+            - redis-server
+            - --maxmemory-policy
+            - noeviction
+            - --maxmemory
+            - 200mb
+            - --appendonly
+            - "yes"
+          ports:
+            - { containerPort: 6379 }
+          readinessProbe:
+            exec:
+              command: [redis-cli, ping]
+            periodSeconds: 5
+          volumeMounts:
+            - { name: data, mountPath: /data }
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources:
+          requests: { storage: 1Gi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mailpit
+spec:
+  type: LoadBalancer
+  selector: { app: mailpit }
+  ports:
+    - { name: smtp, port: 1025, targetPort: 1025 }
+    - { name: http, port: 8025, targetPort: 8025 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mailpit
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: mailpit }
+  template:
+    metadata:
+      labels: { app: mailpit }
+    spec:
+      containers:
+        - name: mailpit
+          image: axllent/mailpit:v1.31.3@sha256:ed9b00c609e77e99c79b93f1178255ebc271868920f2c69a8d166bd5634ed10d
+          env:
+            - { name: MP_SMTP_AUTH_ALLOW_INSECURE, value: "true" }
+            - { name: MP_MAX_MESSAGES, value: "5000" }
+          ports:
+            - { containerPort: 1025 }
+            - { containerPort: 8025 }
+          readinessProbe:
+            httpGet: { path: /livez, port: 8025 }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gotenberg
+spec:
+  type: LoadBalancer
+  selector: { app: gotenberg }
+  ports:
+    - { name: http, port: 3010, targetPort: 3000 }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gotenberg
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: gotenberg }
+  template:
+    metadata:
+      labels: { app: gotenberg }
+    spec:
+      containers:
+        - name: gotenberg
+          image: gotenberg/gotenberg:8.37.0-chromium@sha256:0d28ae9a96441588ef739623726bd500ad0720b77266c6f1351a13e333fbd61c
+          # Conversions are serialized and the clear-* flags keep the shared
+          # browser stateless. The renderer must reach the host-run web on
+          # the OrbStack host alias, so the allow-list is pinned to that alias
+          # and the private-IP deny is lifted; the public-IP deny stays.
+          env:
+            - { name: API_TIMEOUT, value: 150s }
+            - { name: CHROMIUM_MAX_CONCURRENCY, value: "1" }
+            - { name: CHROMIUM_CLEAR_COOKIES, value: "true" }
+            - { name: CHROMIUM_CLEAR_STORAGE, value: "true" }
+            - { name: CHROMIUM_CLEAR_CACHE, value: "true" }
+            - name: CHROMIUM_ALLOW_LIST
+              value: '^http://host\.internal:[0-9]+/'
+            - { name: CHROMIUM_DENY_PRIVATE_IPS, value: "false" }
+            - { name: CHROMIUM_DENY_PUBLIC_IPS, value: "true" }
+          ports:
+            - { containerPort: 3000 }
+          readinessProbe:
+            httpGet: { path: /health, port: 3000 }
+            periodSeconds: 10
+          resources:
+            limits: { memory: 1Gi }

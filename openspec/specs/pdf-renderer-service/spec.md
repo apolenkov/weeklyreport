@@ -63,7 +63,7 @@ The render request MUST attach the worker's short-lived export token so the
 print route's token verification resolves the pdf-export session. The
 credential MUST be scoped to the configured print origin via the
 renderer's `cookies` field with `domain` set to the print origin's host
-(probe-verified, including a single-label compose hostname), and MUST NOT
+(probe-verified, including a single-label cluster hostname), and MUST NOT
 be sent to any other origin or persisted by the renderer
 between conversions (`CHROMIUM_CLEAR_COOKIES`, `CHROMIUM_CLEAR_STORAGE`,
 and `CHROMIUM_CLEAR_CACHE` enabled, or equivalent per-request isolation).
