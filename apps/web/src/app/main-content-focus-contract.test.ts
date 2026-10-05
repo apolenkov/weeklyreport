@@ -15,6 +15,7 @@ const OUTLINE_LONGHANDS = new Set([
 const MAIN_CONTENT_ROUTES = [
   "src/app/login-page.client.tsx",
   "src/app/auth/error/page.tsx",
+  "src/app/not-found.tsx",
   "src/app/(app)/admin/page.tsx",
   "src/app/(app)/head/dashboard/page.tsx",
   "src/app/(app)/head/report/page.tsx",

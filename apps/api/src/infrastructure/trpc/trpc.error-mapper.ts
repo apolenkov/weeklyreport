@@ -3,12 +3,14 @@ import { TRPCError } from "@trpc/server";
 import {
   AdminAccessError,
   AdminGroupProductConflictError,
+  AdminLastAdminError,
   AdminPeriodAlreadyArchivedError,
   AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
   AdminPeriodStaleStateError,
   AdminReopenRequestAlreadyProcessedError,
   AdminReopenRequestNotFoundError,
+  AdminSelfLockoutError,
   AdminSnapshotConflictError,
   AdminUserActivityAssignmentConflictError,
   AdminUserConflictError,
@@ -175,6 +177,9 @@ export const DOMAIN_ERROR_CODES: readonly (readonly [
   [AdminUserConflictError, "CONFLICT"],
   // Targeted activate/deactivate on an absent user id (P2025) → NOT_FOUND.
   [AdminUserNotFoundError, "NOT_FOUND"],
+  // Self-lockout is a client mistake; the last-admin rule is a state conflict.
+  [AdminSelfLockoutError, "BAD_REQUEST"],
+  [AdminLastAdminError, "CONFLICT"],
   [AdminUserActivityAssignmentConflictError, "CONFLICT"],
   // Published reports retain their publisher identity; deactivation is the
   // supported offboarding path, so a hard delete is a state conflict.
