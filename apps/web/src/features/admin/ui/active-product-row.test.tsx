@@ -28,6 +28,8 @@ const product: AdminProductView = {
   status: "active",
 };
 
+const groups = { group: undefined, isLoading: false, isError: false };
+
 const owner: AdminUserView = {
   id: LEAD_ID,
   name: "Alice Lead",
@@ -61,6 +63,7 @@ function renderRow(options: RenderRowOptions = {}) {
     <ActiveProductRow
       product={product}
       owner={owner}
+      groups={groups}
       assignedCount={3}
       countsError={false}
       isExpanded={options.isExpanded ?? false}
@@ -107,6 +110,7 @@ describe("ActiveProductRow controls", () => {
       <ActiveProductRow
         product={product}
         owner={owner}
+        groups={groups}
         assignedCount={3}
         countsError={false}
         isExpanded={false}
@@ -135,6 +139,7 @@ describe("ActiveProductRow controls", () => {
       <ActiveProductRow
         product={product}
         owner={owner}
+        groups={groups}
         assignedCount={3}
         countsError={false}
         isExpanded

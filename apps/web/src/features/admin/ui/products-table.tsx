@@ -2,6 +2,7 @@
 
 import type { AdminProductView, AdminUserView } from "../model/admin-types";
 import { ActiveProductRow } from "./active-product-row";
+import { useProductOwnership } from "./use-group-products";
 
 interface ProductsTableProps {
   readonly activeProducts: readonly AdminProductView[];
@@ -36,6 +37,8 @@ export function ProductsTable({
   isArchiving,
   isSaving,
 }: ProductsTableProps) {
+  const { owningGroupByProductId, ownershipLoading, ownershipError } =
+    useProductOwnership(activeProducts);
   return (
     <>
       <div className="space-y-3" data-testid="products-table">
@@ -49,6 +52,11 @@ export function ProductsTable({
             key={product.id}
             product={product}
             owner={getUserById(product.leadOwnerId)}
+            groups={{
+              group: owningGroupByProductId.get(product.id),
+              isLoading: ownershipLoading,
+              isError: ownershipError,
+            }}
             assignedCount={stageCountByProject.get(product.id) ?? 0}
             countsError={countsError}
             isExpanded={expandedId === product.id}

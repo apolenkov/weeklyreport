@@ -10,6 +10,15 @@ export interface LiveAccess {
   // Set only when the caller passed `activeReportId`: the user's own section
   // of that report, or null when they have none.
   readonly reportSectionId: string | null;
+  // Set only when the caller asked for viewer groups and the user is a viewer.
+  readonly viewerGroupIds: readonly string[] | null;
+}
+
+export interface LiveAccessScope {
+  // Look up the user's own section of this report in the same read.
+  readonly activeReportId?: string | undefined;
+  // Read the viewer's group grants in the same read.
+  readonly withViewerGroups?: boolean;
 }
 
 // Single source of truth for the revoked/deactivated decision across every
@@ -17,12 +26,13 @@ export interface LiveAccess {
 // isActive read — see openspec/specs/jwt-session-integrity (two-tier gate).
 // The same read returns the live role and group (with its name) so callers
 // never trust the JWT copies after an admin change, and, given the active
-// report, the user's own section id: one round trip instead of three.
+// report, the user's own section id (and, on request, a viewer's group grants):
+// one round trip instead of three.
 export async function readLiveAccess(
   userId: string,
   prisma: PrismaService,
   sessionRevocation: Pick<SessionRevocationService, "isRevoked">,
-  activeReportId?: string,
+  { activeReportId, withViewerGroups = false }: LiveAccessScope = {},
 ): Promise<LiveAccess | null> {
   const revoked = await sessionRevocation.isRevoked(userId).catch(() => false);
   if (revoked) {
@@ -44,6 +54,9 @@ export async function readLiveAccess(
             },
           }
         : {}),
+      ...(withViewerGroups
+        ? { viewerGroupAccess: { select: { groupId: true } } }
+        : {}),
     },
   });
   // A missing row (hard-deleted account) bars as well as isActive=false.
@@ -58,6 +71,10 @@ export async function readLiveAccess(
       ("authoredReportSections" in userRow
         ? userRow.authoredReportSections.at(0)?.id
         : undefined) ?? null,
+    viewerGroupIds:
+      userRow.role === "viewer" && "viewerGroupAccess" in userRow
+        ? userRow.viewerGroupAccess.map((grant) => grant.groupId)
+        : null,
   };
 }
 
