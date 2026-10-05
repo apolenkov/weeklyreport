@@ -21,7 +21,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 command -v agent-browser >/dev/null || { echo "Missing tool: agent-browser (see README.md)" >&2; exit 1; }
-[ "$JEV" = 0 ] || [ -n "${TYPESAFE_API_KEY:-}" ] || { echo "TYPESAFE_API_KEY is not set: pass --no-jev" >&2; exit 1; }
+if [ "$JEV" = 1 ] && [ -z "${TYPESAFE_API_KEY:-}" ]; then echo "TYPESAFE_API_KEY is not set: Jev is skipped" >&2; JEV=0; fi
 . "$STATE_DIR/secrets.env"
 mkdir -p "$OUT"
 BASE="http://localhost:$APP_PORT"
@@ -77,7 +77,7 @@ for entry in $ROLES; do
     [ "$final" = "$page" ] || detail="$detail; landed on $final"
     jevnote=-
     if [ "$JEV" = 1 ]; then
-      npx -y @jkudish/jev-browser run \
+      npx -y @jkudish/jev-browser@0.8.3 run \
         "Read this page as a first-time $role user: scroll once to see it all. Do not click, open menus or change anything." \
         "$BASE$page" --no-typing --max-steps 3 --max-seconds 90 \
         --cookie-file "customreport_session=@$cookie" --screenshot "$dir/$slug.jev.jpg" >"$dir/$slug.jev.json" 2>"$dir/$slug.jev.err" || true
