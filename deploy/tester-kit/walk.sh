@@ -12,7 +12,9 @@
 # (draft, submitted, returned, published, archived, closed, reopened), covers filters pairwise and
 # writes coverage per page and an element x state matrix. Each state is prepared by reset.sh on the
 # guarded synthetic database; a final synthetic pass runs the lifecycle actions on that state's
-# prepared report; the stand is reset to the demo seed at the end, also after a failure.
+# prepared report; the stand is reset to the demo seed at the end, also after a failure. The admin
+# tabs follow the report lifecycle only in Periods and Reopen: admin walks every tab in the first state
+# and just those two in the others.
 # Default output: ~/.local/state/wr-tester/crawl-<time>/ (report.md, report.json, shots/, video/).
 set -euo pipefail
 . "$(dirname "$0")/env.sh"
@@ -21,6 +23,7 @@ RESET=0
 FULL=0
 STATES=draft,submitted,returned,published,archived,closed,reopened
 ARGS=()
+ROLES=lead,head,viewer,admin
 OUT=""
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -29,6 +32,7 @@ while [ $# -gt 0 ]; do
     --quick) shift ;;
     --states) STATES=${2:?--states needs a value}; shift 2 ;;
     --out) OUT=${2:?--out needs a value}; shift 2 ;;
+    --roles) ROLES=${2:?--roles needs a value}; shift 2 ;;
     *) ARGS+=("$1"); shift ;;
   esac
 done
@@ -44,7 +48,7 @@ pf_start keycloak keycloak "$KC_PORT" 8080
 cd "$REPO"
 if [ "$FULL" = 0 ]; then
   OUT=${OUT:-$STATE_DIR/crawl-$(date +%Y%m%d-%H%M%S)}
-  node --experimental-strip-types scripts/ui-crawl/crawl.ts --quick \
+  node --experimental-strip-types scripts/ui-crawl/crawl.ts --quick --roles "$ROLES" \
     --url "http://localhost:$APP_PORT" --secrets "$STATE_DIR/secrets.env" \
     --out "$OUT" "${ARGS[@]+"${ARGS[@]}"}"
   if [ "$RESET" = 1 ]; then bash "$HERE/reset.sh" --yes; fi
@@ -79,15 +83,26 @@ crawl() { # crawl <state> <pass> <manifest> <extra args...>
     "${ARGS[@]+"${ARGS[@]}"}" "$@" || FAILED=1
 }
 
+# Admin tabs do not depend on the report lifecycle (except Periods and Reopen): every role walks every
+# state, admin walks all tabs in the first state only and just those two tabs in the others.
+without_admin() { echo ",$1," | sed 's/,admin,/,/; s/^,//; s/,$//'; }
 IFS=, read -r -a STATE_LIST <<<"$STATES"
+FIRST=1
 for state in "${STATE_LIST[@]}"; do
   manifest="$OUT/fixtures/$state.json"
   echo "== state: $state"
   bash "$HERE/reset.sh" --yes --crawl-state "$state" --manifest "$manifest"
   # read pass: nothing is written; every role at every width
-  crawl "$state" read "$manifest"
+  READ_ROLES=$ROLES
+  [ "$FIRST" = 1 ] || READ_ROLES=$(without_admin "$ROLES")
+  FIRST=0
+  [ -z "$READ_ROLES" ] || crawl "$state" read "$manifest" --roles "$READ_ROLES"
+  case ",$ROLES," in
+    *,admin,*) [ "$READ_ROLES" = "$ROLES" ] || crawl "$state" read-admin "$manifest" --roles admin --admin-state-tabs --max-pages 2 ;;
+  esac
   # synthetic pass: Lead and Head run the lifecycle actions on the prepared report, last in this state
-  crawl "$state" synthetic "$manifest" --synthetic --roles lead,head --widths 1280
+  SYNTH_ROLES=$(echo ",$ROLES," | tr ',' '\n' | { grep -xE 'lead|head' || true; } | paste -sd, -)
+  [ -z "$SYNTH_ROLES" ] || crawl "$state" synthetic "$manifest" --synthetic --roles "$SYNTH_ROLES" --widths 1280
 done
 node --experimental-strip-types scripts/ui-crawl/merge.ts "$OUT"
 echo "Full walk report: $OUT/report.md"

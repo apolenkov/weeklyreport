@@ -23,6 +23,7 @@ const SYNTHETIC_ORIGIN = "http://localhost:8080";
 const OPTIONS = {
   quick: { type: "boolean", default: false },
   full: { type: "boolean", default: false },
+  "admin-state-tabs": { type: "boolean", default: false },
   synthetic: { type: "boolean", default: false },
   url: { type: "string", default: SYNTHETIC_ORIGIN },
   out: { type: "string" },
@@ -47,6 +48,8 @@ export type Cli = Readonly<{
   parallel: number;
   secrets: string;
   fixtureManifest: string | null;
+  /** Walk only the admin tabs that follow the report lifecycle. */
+  adminStateTabs: boolean;
 }>;
 
 function argumentsFor(argv: readonly string[]) {
@@ -168,7 +171,11 @@ export function parseCli(argv: readonly string[]): Cli {
       allowSynthetic: manifest !== null && values.synthetic,
       fixtureReportId: manifest?.reportId ?? null,
       entrypoints: manifest
-        ? stateEntryPaths(role ?? roles[0] ?? "lead", manifest.state)
+        ? stateEntryPaths(
+            role ?? roles[0] ?? "lead",
+            manifest.state,
+            values["admin-state-tabs"],
+          )
         : [],
       url,
       out: values.out ?? join(OUT_ROOT, `crawl-${stamp}`),
@@ -180,6 +187,7 @@ export function parseCli(argv: readonly string[]): Cli {
     parallel: values.synthetic ? 1 : parallel,
     secrets: values.secrets,
     fixtureManifest: values["fixture-manifest"] ?? null,
+    adminStateTabs: values["admin-state-tabs"],
   };
 }
 
