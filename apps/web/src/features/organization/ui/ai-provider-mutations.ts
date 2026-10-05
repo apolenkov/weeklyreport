@@ -115,10 +115,9 @@ type AiProviderMutationsInput = Readonly<{
   setOperationFailed: Dispatch<SetStateAction<boolean>>;
 }>;
 
-export const useAiProviderMutations = ({
+const useAiProviderDraftMutations = ({
   trpc,
   refresh,
-  onActivationPendingChange,
   setSavedRevision,
   setMessage,
   setOperationFailed,
@@ -164,6 +163,36 @@ export const useAiProviderMutations = ({
       },
     }),
   );
+  const discard = useMutation(
+    trpc.admin.aiProvider.discard.mutationOptions({
+      onMutate: () => {
+        setMessage(null);
+        setOperationFailed(false);
+      },
+      onSuccess: () => {
+        setSavedRevision(null);
+        setMessage("Discarded AI provider attempt.");
+        setOperationFailed(false);
+        refresh();
+      },
+      onError: (error) => {
+        setMessage(error.message);
+        setOperationFailed(true);
+      },
+    }),
+  );
+
+  return { save, test, discard };
+};
+
+const useAiProviderLifecycleMutations = ({
+  trpc,
+  refresh,
+  onActivationPendingChange,
+  setSavedRevision,
+  setMessage,
+  setOperationFailed,
+}: AiProviderMutationsInput) => {
   const activate = useMutation(
     trpc.admin.aiProvider.activate.mutationOptions({
       onMutate: () => {
@@ -228,24 +257,10 @@ export const useAiProviderMutations = ({
       },
     }),
   );
-  const discard = useMutation(
-    trpc.admin.aiProvider.discard.mutationOptions({
-      onMutate: () => {
-        setMessage(null);
-        setOperationFailed(false);
-      },
-      onSuccess: () => {
-        setSavedRevision(null);
-        setMessage("Discarded AI provider attempt.");
-        setOperationFailed(false);
-        refresh();
-      },
-      onError: (error) => {
-        setMessage(error.message);
-        setOperationFailed(true);
-      },
-    }),
-  );
-
-  return { save, test, activate, disable, restore, discard };
+  return { activate, disable, restore };
 };
+
+export const useAiProviderMutations = (input: AiProviderMutationsInput) => ({
+  ...useAiProviderDraftMutations(input),
+  ...useAiProviderLifecycleMutations(input),
+});

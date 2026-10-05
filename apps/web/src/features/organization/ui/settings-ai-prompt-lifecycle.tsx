@@ -60,18 +60,17 @@ const canDiscardRevision = (
   busy: boolean,
 ): boolean => isDisposable(selected) && isCurrentServing(selected) && !busy;
 
-export function SettingsAiPromptLifecycle({
-  featureKey,
-  selected,
-  base,
-  selectedInstructions,
-  dirty,
+function usePromptLifecycleMutations({
   active,
   onSelectionChange,
   onDirtyChange,
   onRefresh,
-  children,
-}: PromptLifecycleProps) {
+}: Readonly<{
+  active: AiPromptBundleRead | null;
+  onSelectionChange: (bundle: AiPromptBundleRead | null) => void;
+  onDirtyChange: (dirty: boolean) => void;
+  onRefresh: () => Promise<unknown>;
+}>) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const refreshQueries = useCallback(async () => {
@@ -121,7 +120,27 @@ export function SettingsAiPromptLifecycle({
       onError: () => toast.error("AI prompt attempt could not be discarded."),
     }),
   );
+  return { draft, activate, restore, discard };
+}
 
+export function SettingsAiPromptLifecycle({
+  featureKey,
+  selected,
+  base,
+  selectedInstructions,
+  dirty,
+  active,
+  onSelectionChange,
+  onDirtyChange,
+  onRefresh,
+  children,
+}: PromptLifecycleProps) {
+  const { draft, activate, restore, discard } = usePromptLifecycleMutations({
+    active,
+    onSelectionChange,
+    onDirtyChange,
+    onRefresh,
+  });
   const busy =
     draft.isPending ||
     activate.isPending ||

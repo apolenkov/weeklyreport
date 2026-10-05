@@ -18,17 +18,81 @@ import {
   TYPE_LABELS,
 } from "./feedback-record-card";
 
-export function ProductFeedbackPage() {
-  const { user } = useSession();
-  const inbox = useProductFeedbackInbox(() =>
-    toast.error("Feedback could not be loaded."),
-  );
-  const scopeLabel = useMemo(() => {
-    if (user?.role === "admin") return "All Weekly Report feedback";
-    if (user?.role === "head") return "Your reporting group and your feedback";
-    return "Your feedback";
-  }, [user?.role]);
+async function runAction(
+  action: () => Promise<void>,
+  success: string,
+  failure: string,
+): Promise<void> {
+  try {
+    await action();
+    toast.success(success);
+  } catch (error) {
+    toast.error(failure);
+    throw error;
+  }
+}
 
+type Inbox = ReturnType<typeof useProductFeedbackInbox>;
+
+function FeedbackFilters({ inbox }: { readonly inbox: Inbox }) {
+  return (
+    <section
+      aria-label="Feedback filters"
+      className="mb-5 grid gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 md:grid-cols-3"
+    >
+      <label className="grid gap-1 text-sm font-medium">
+        Search
+        <input
+          autoComplete="off"
+          className="rounded-lg border border-[var(--color-border)] bg-transparent px-3 py-2 font-normal placeholder:text-[var(--color-muted-foreground)]"
+          name="feedbackSearch"
+          onChange={(event) => inbox.setSearch(event.target.value)}
+          placeholder="Message or author"
+          type="search"
+          value={inbox.search}
+        />
+      </label>
+      <label className="grid gap-1 text-sm font-medium">
+        Status
+        <select
+          className="rounded-lg border border-[var(--color-border)] bg-transparent px-3 py-2 font-normal"
+          name="feedbackStatus"
+          onChange={(event) =>
+            inbox.setStatus(event.target.value as FeedbackStatus | "all")
+          }
+          value={inbox.status}
+        >
+          <option value="all">All statuses</option>
+          {FEEDBACK_STATUSES.map((status) => (
+            <option key={status} value={status}>
+              {STATUS_LABELS[status]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="grid gap-1 text-sm font-medium">
+        Type
+        <select
+          className="rounded-lg border border-[var(--color-border)] bg-transparent px-3 py-2 font-normal"
+          name="feedbackType"
+          onChange={(event) =>
+            inbox.setType(event.target.value as FeedbackType | "all")
+          }
+          value={inbox.type}
+        >
+          <option value="all">All types</option>
+          {FEEDBACK_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {TYPE_LABELS[type]}
+            </option>
+          ))}
+        </select>
+      </label>
+    </section>
+  );
+}
+
+function FeedbackInboxBody({ inbox }: { readonly inbox: Inbox }) {
   const changeStatus = async (id: string, status: FeedbackStatus) => {
     try {
       await inbox.changeStatus(id, status);
@@ -38,95 +102,8 @@ export function ProductFeedbackPage() {
     }
   };
 
-  const runAction = async (
-    action: () => Promise<void>,
-    success: string,
-    failure: string,
-  ) => {
-    try {
-      await action();
-      toast.success(success);
-    } catch (error) {
-      toast.error(failure);
-      throw error;
-    }
-  };
-
   return (
-    <main
-      id="main-content"
-      tabIndex={-1}
-      className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8"
-    >
-      <div className="mb-6 flex items-start gap-3">
-        <div className="rounded-xl bg-[var(--color-starbucks-accent)]/10 p-3 text-[var(--color-starbucks-accent)]">
-          <MessageSquareText aria-hidden="true" className="size-5" />
-        </div>
-        <div>
-          <h1 className="text-2xl font-semibold text-[var(--color-ink)]">
-            Feedback
-          </h1>
-          <p className="mt-1 max-w-[65ch] text-sm text-[var(--color-ink-muted)]">
-            {scopeLabel}. Use Agentation to mark elements, text, page areas, or
-            proposed layout changes and send structured context to an agent.
-          </p>
-        </div>
-      </div>
-
-      <section
-        aria-label="Feedback filters"
-        className="mb-5 grid gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 md:grid-cols-3"
-      >
-        <label className="grid gap-1 text-sm font-medium">
-          Search
-          <input
-            autoComplete="off"
-            className="rounded-lg border border-[var(--color-border)] bg-transparent px-3 py-2 font-normal placeholder:text-[var(--color-muted-foreground)]"
-            name="feedbackSearch"
-            onChange={(event) => inbox.setSearch(event.target.value)}
-            placeholder="Message or author"
-            type="search"
-            value={inbox.search}
-          />
-        </label>
-        <label className="grid gap-1 text-sm font-medium">
-          Status
-          <select
-            className="rounded-lg border border-[var(--color-border)] bg-transparent px-3 py-2 font-normal"
-            name="feedbackStatus"
-            onChange={(event) =>
-              inbox.setStatus(event.target.value as FeedbackStatus | "all")
-            }
-            value={inbox.status}
-          >
-            <option value="all">All statuses</option>
-            {FEEDBACK_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {STATUS_LABELS[status]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="grid gap-1 text-sm font-medium">
-          Type
-          <select
-            className="rounded-lg border border-[var(--color-border)] bg-transparent px-3 py-2 font-normal"
-            name="feedbackType"
-            onChange={(event) =>
-              inbox.setType(event.target.value as FeedbackType | "all")
-            }
-            value={inbox.type}
-          >
-            <option value="all">All types</option>
-            {FEEDBACK_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {TYPE_LABELS[type]}
-              </option>
-            ))}
-          </select>
-        </label>
-      </section>
-
+    <>
       {inbox.view === "loading" && (
         <div className="flex items-center justify-center gap-2 py-16 text-sm text-[var(--color-ink-muted)]">
           <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
@@ -192,6 +169,45 @@ export function ProductFeedbackPage() {
           ))}
         </div>
       )}
+    </>
+  );
+}
+
+export function ProductFeedbackPage() {
+  const { user } = useSession();
+  const inbox = useProductFeedbackInbox(() =>
+    toast.error("Feedback could not be loaded."),
+  );
+  const scopeLabel = useMemo(() => {
+    if (user?.role === "admin") return "All Weekly Report feedback";
+    if (user?.role === "head") return "Your reporting group and your feedback";
+    return "Your feedback";
+  }, [user?.role]);
+
+  return (
+    <main
+      id="main-content"
+      tabIndex={-1}
+      className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8"
+    >
+      <div className="mb-6 flex items-start gap-3">
+        <div className="rounded-xl bg-[var(--color-starbucks-accent)]/10 p-3 text-[var(--color-starbucks-accent)]">
+          <MessageSquareText aria-hidden="true" className="size-5" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-semibold text-[var(--color-ink)]">
+            Feedback
+          </h1>
+          <p className="mt-1 max-w-[65ch] text-sm text-[var(--color-ink-muted)]">
+            {scopeLabel}. Use Agentation to mark elements, text, page areas, or
+            proposed layout changes and send structured context to an agent.
+          </p>
+        </div>
+      </div>
+
+      <FeedbackFilters inbox={inbox} />
+
+      <FeedbackInboxBody inbox={inbox} />
     </main>
   );
 }
