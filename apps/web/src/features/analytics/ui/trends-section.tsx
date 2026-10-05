@@ -73,7 +73,7 @@ export function TrendsSection(props: TrendsSectionProps) {
   const { headingId, title } = props;
 
   return (
-    <section aria-labelledby={headingId} className="card-surface p-4 sm:p-6">
+    <section className="card-surface p-4 sm:p-6">
       <h2 id={headingId} className="mb-3 text-lg font-medium">
         {title}
       </h2>
