@@ -46,15 +46,11 @@ const requireValue = (
   return value;
 };
 
-export function runLocalBootstrap(
-  profileValue: string | undefined,
+function assertGuardedTargets(
+  databaseUrl: string,
+  e2eDatabaseUrl: string,
   environment: LocalBootstrapEnvironment,
-  spawn: LocalBootstrapSpawn = (command, args, options) =>
-    spawnSync(command, [...args], options),
 ): void {
-  const profile = parseSeedProfile(profileValue);
-  const databaseUrl = requireValue(environment, "DATABASE_URL");
-  const e2eDatabaseUrl = requireValue(environment, "E2E_DATABASE_URL");
   assertE2eRuntimeDestructiveTarget(
     "bootstrap-local:application",
     databaseUrl,
@@ -85,6 +81,18 @@ export function runLocalBootstrap(
       "[bootstrap-local] DATABASE_URL and E2E_DATABASE_URL must identify the same guarded local database.",
     );
   }
+}
+
+export function runLocalBootstrap(
+  profileValue: string | undefined,
+  environment: LocalBootstrapEnvironment,
+  spawn: LocalBootstrapSpawn = (command, args, options) =>
+    spawnSync(command, [...args], options),
+): void {
+  const profile = parseSeedProfile(profileValue);
+  const databaseUrl = requireValue(environment, "DATABASE_URL");
+  const e2eDatabaseUrl = requireValue(environment, "E2E_DATABASE_URL");
+  assertGuardedTargets(databaseUrl, e2eDatabaseUrl, environment);
 
   const steps = [
     {

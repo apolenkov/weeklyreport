@@ -298,25 +298,5 @@
     "max-lines-per-function": {
       "count": 1
     }
-  },
-  "packages/shared/src/schemas/report/report.schema.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "prisma/operations/bootstrap-local.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "prisma/seeds/profiles/seed-profile-journeys.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  },
-  "prisma/seeds/profiles/seed-profile-validator.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
   }
 }
