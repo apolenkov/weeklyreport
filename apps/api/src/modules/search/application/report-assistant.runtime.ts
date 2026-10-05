@@ -22,7 +22,7 @@ export type ReportAssistantConfig = Readonly<{
 
 export type ReportAssistantClock = Readonly<{ now: Date }>;
 
-export const providerUnavailable = (
+const providerUnavailable = (
   error: ReportAssistantProviderError,
 ): ReportAssistantOutcome =>
   reportAssistantOutcomeSchema.parse({
