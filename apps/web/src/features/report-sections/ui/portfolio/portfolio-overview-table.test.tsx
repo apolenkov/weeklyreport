@@ -361,3 +361,20 @@ describe("PortfolioOverviewTable — scope-adaptive (by lead)", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("PortfolioOverviewTable jump affordance (R60)", () => {
+  it("shows the product jump chevron without hover", () => {
+    render(
+      <PortfolioOverviewTable
+        products={[makeProduct({ id: "p1" })]}
+        mountedProductIds={new Set(["p1"])}
+        onNavigate={NOOP_NAVIGATE}
+      />,
+    );
+
+    const chevron = screen
+      .getByRole("button", { name: /Product Alpha/u })
+      .querySelector("[aria-hidden='true'].opacity-60");
+    expect(chevron).not.toBeNull();
+  });
+});
