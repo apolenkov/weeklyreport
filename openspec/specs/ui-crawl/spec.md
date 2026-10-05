@@ -1,4 +1,10 @@
-## ADDED Requirements
+# ui-crawl Specification
+
+## Purpose
+
+Defines how the tester-kit crawler walks the running UI in quick and full modes, records which controls and lifecycle states were actually exercised, and reports unexplored coverage instead of hiding it.
+
+## Requirements
 
 ### Requirement: Explicit quick and full modes
 

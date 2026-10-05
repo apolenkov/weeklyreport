@@ -16,6 +16,59 @@ type AiProviderRetainedRevisionsProps = Readonly<{
   onDiscard: (revisionId: string) => void;
 }>;
 
+function RetainedRevisionRow({
+  revision,
+  busy,
+  restorePending,
+  discardPending,
+  onRequest,
+}: Readonly<{
+  revision: AiProviderControlRead["revisions"][number];
+  busy: boolean;
+  restorePending: boolean;
+  discardPending: boolean;
+  onRequest: (action: "restore" | "discard") => void;
+}>) {
+  return (
+    <div className="flex flex-col gap-2 border-t border-[var(--color-border)] py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between">
+      <div className="text-[var(--color-muted-foreground)]">
+        <span className="font-medium text-[var(--color-foreground)]">
+          {profileLabel(revision.generation.profile)}
+        </span>{" "}
+        · {revision.lifecycle} · {revision.embeddings.model} /{" "}
+        {revision.embeddings.dimensions}
+        {revision.lifecycle === "preparing" && (
+          <span data-testid="ai-retained-preparation-progress">
+            {" "}
+            · {revision.progress.completed}/{revision.progress.total} complete ·{" "}
+            {revision.progress.failed} failed · {revision.progress.elapsedMs} ms
+          </span>
+        )}
+      </div>
+      {revision.lifecycle === "superseded" && (
+        <button
+          type="button"
+          className="btn-press min-h-[var(--touch-target-min)] shrink-0 rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={busy}
+          onClick={() => onRequest("restore")}
+        >
+          {restorePending ? "Restoring…" : "Restore"}
+        </button>
+      )}
+      {(revision.lifecycle === "draft" || revision.lifecycle === "failed") && (
+        <button
+          type="button"
+          className="btn-press min-h-[var(--touch-target-min)] shrink-0 rounded-[var(--radius-pill)] border border-[var(--color-destructive)] px-4 py-2 text-sm font-semibold text-[var(--color-destructive)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-status-blocked-bg)] hover:bg-[var(--color-status-blocked-bg)] disabled:cursor-not-allowed disabled:opacity-50"
+          disabled={busy}
+          onClick={() => onRequest("discard")}
+        >
+          {discardPending ? "Discarding…" : "Discard"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function AiProviderRetainedRevisions({
   revisions,
   activeRevisionId,
@@ -46,55 +99,16 @@ export function AiProviderRetainedRevisions({
         </p>
       </div>
       {retained.map((revision) => (
-        <div
-          className="flex flex-col gap-2 border-t border-[var(--color-border)] py-2.5 text-sm sm:flex-row sm:items-center sm:justify-between"
+        <RetainedRevisionRow
           key={revision.id}
-        >
-          <div className="text-[var(--color-muted-foreground)]">
-            <span className="font-medium text-[var(--color-foreground)]">
-              {profileLabel(revision.generation.profile)}
-            </span>{" "}
-            · {revision.lifecycle} · {revision.embeddings.model} /{" "}
-            {revision.embeddings.dimensions}
-            {revision.lifecycle === "preparing" && (
-              <span data-testid="ai-retained-preparation-progress">
-                {" "}
-                · {revision.progress.completed}/{revision.progress.total}{" "}
-                complete · {revision.progress.failed} failed ·{" "}
-                {revision.progress.elapsedMs} ms
-              </span>
-            )}
-          </div>
-          {revision.lifecycle === "superseded" && (
-            <button
-              type="button"
-              className="btn-press min-h-[var(--touch-target-min)] shrink-0 rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={busy}
-              onClick={() =>
-                setConfirmation({ action: "restore", revisionId: revision.id })
-              }
-            >
-              {restorePendingRevisionId === revision.id
-                ? "Restoring…"
-                : "Restore"}
-            </button>
-          )}
-          {(revision.lifecycle === "draft" ||
-            revision.lifecycle === "failed") && (
-            <button
-              type="button"
-              className="btn-press min-h-[var(--touch-target-min)] shrink-0 rounded-[var(--radius-pill)] border border-[var(--color-destructive)] px-4 py-2 text-sm font-semibold text-[var(--color-destructive)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-status-blocked-bg)] hover:bg-[var(--color-status-blocked-bg)] disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={busy}
-              onClick={() =>
-                setConfirmation({ action: "discard", revisionId: revision.id })
-              }
-            >
-              {discardPendingRevisionId === revision.id
-                ? "Discarding…"
-                : "Discard"}
-            </button>
-          )}
-        </div>
+          revision={revision}
+          busy={busy}
+          restorePending={restorePendingRevisionId === revision.id}
+          discardPending={discardPendingRevisionId === revision.id}
+          onRequest={(action) =>
+            setConfirmation({ action, revisionId: revision.id })
+          }
+        />
       ))}
       <ConfirmationDialog
         open={confirmation !== null}

@@ -6,7 +6,15 @@ import {
   type FeedbackStatus,
   type FeedbackType,
 } from "@customreport/shared";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { z } from "zod";
 
 type FilterValue<T extends string> = T | "all";
@@ -51,6 +59,49 @@ function fromResponse(parsed: FeedbackResponse): FeedbackInboxItem {
     ...(agentationSessionId ? { agentationSessionId } : {}),
     ...(agentationAnnotationId ? { agentationAnnotationId } : {}),
   };
+}
+
+function useFeedbackMutations(
+  setItems: Dispatch<SetStateAction<FeedbackInboxItem[]>>,
+) {
+  // Routes through `mutate` so the server-returned record (incl. updatedAt)
+  // replaces the row instead of a local status-only patch.
+  const changeStatus = (id: string, nextStatus: FeedbackStatus) =>
+    mutate(id, "/status", { status: nextStatus });
+
+  const mutate = async (id: string, path: string, body: unknown) => {
+    const response = await fetch(
+      `/api/v1/feedback/${encodeURIComponent(id)}${path}`,
+      {
+        method: path === "/status" ? "PATCH" : path === "" ? "PUT" : "POST",
+        credentials: SAME_ORIGIN,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      },
+    );
+    if (!response.ok) throw new Error(FEEDBACK_UPDATE_ERROR);
+    const parsed = feedbackResponseSchema.parse(await response.json());
+    setItems((current) =>
+      current.map((item) => (item.id === id ? fromResponse(parsed) : item)),
+    );
+  };
+
+  const editOriginal = (id: string, comment: string) =>
+    mutate(id, "", { comment });
+  const reply = (id: string, content: string) =>
+    mutate(id, "/replies", { content });
+  const dismiss = (id: string, reason: string) =>
+    mutate(id, "/dismiss", { reason });
+  const deleteFeedback = async (id: string) => {
+    const response = await fetch(`/api/v1/feedback/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+      credentials: SAME_ORIGIN,
+    });
+    if (!response.ok) throw new Error("Feedback delete failed");
+    setItems((current) => current.filter((item) => item.id !== id));
+  };
+
+  return { changeStatus, editOriginal, reply, dismiss, deleteFeedback };
 }
 
 export function useProductFeedbackInbox(onError: () => void) {
@@ -107,42 +158,8 @@ export function useProductFeedbackInbox(onError: () => void) {
     );
   }, [items, search, status, type]);
 
-  // Routes through `mutate` so the server-returned record (incl. updatedAt)
-  // replaces the row instead of a local status-only patch.
-  const changeStatus = (id: string, nextStatus: FeedbackStatus) =>
-    mutate(id, "/status", { status: nextStatus });
-
-  const mutate = async (id: string, path: string, body: unknown) => {
-    const response = await fetch(
-      `/api/v1/feedback/${encodeURIComponent(id)}${path}`,
-      {
-        method: path === "/status" ? "PATCH" : path === "" ? "PUT" : "POST",
-        credentials: SAME_ORIGIN,
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify(body),
-      },
-    );
-    if (!response.ok) throw new Error(FEEDBACK_UPDATE_ERROR);
-    const parsed = feedbackResponseSchema.parse(await response.json());
-    setItems((current) =>
-      current.map((item) => (item.id === id ? fromResponse(parsed) : item)),
-    );
-  };
-
-  const editOriginal = (id: string, comment: string) =>
-    mutate(id, "", { comment });
-  const reply = (id: string, content: string) =>
-    mutate(id, "/replies", { content });
-  const dismiss = (id: string, reason: string) =>
-    mutate(id, "/dismiss", { reason });
-  const deleteFeedback = async (id: string) => {
-    const response = await fetch(`/api/v1/feedback/${encodeURIComponent(id)}`, {
-      method: "DELETE",
-      credentials: SAME_ORIGIN,
-    });
-    if (!response.ok) throw new Error("Feedback delete failed");
-    setItems((current) => current.filter((item) => item.id !== id));
-  };
+  const { changeStatus, editOriginal, reply, dismiss, deleteFeedback } =
+    useFeedbackMutations(setItems);
 
   const view = loading
     ? "loading"

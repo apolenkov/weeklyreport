@@ -20,9 +20,9 @@ import {
   ADMIN_USER_ID,
   LEAD_1_ID,
   LEAD_OLGA_ID,
-  PUBLISHED_REPORT_ID,
 } from "../support/seed-constants.js";
 import type { SeedProfile } from "./seed-profile-contract.js";
+import { loadDemoFacts } from "./seed-profile-journey-facts.js";
 import { SEED_PROFILE_SCOPES } from "./seed-profile-scope.js";
 
 const CANONICAL_ROLE_COUNT = 4;
@@ -142,78 +142,8 @@ async function runDemoJourney(
 ): Promise<void> {
   await runMinimalJourney(prisma, draftLeadId, profileLabel);
   const scope = SEED_PROFILE_SCOPES.demo;
-  const [roles, health, sections, published, reminders, assignments, reopen] =
-    await Promise.all([
-      prisma.user.groupBy({
-        by: ["role"],
-        where: { id: { in: [...scope.userIds] } },
-      }),
-      prisma.projectStatus.groupBy({
-        by: ["status"],
-        where: {
-          reportSection: { reportId: { in: [...scope.reportIds] } },
-          projectId: { in: [...scope.projectIds] },
-        },
-      }),
-      prisma.reportSection.groupBy({
-        by: ["status"],
-        where: { reportId: { in: [...scope.reportIds] } },
-      }),
-      prisma.report.findUnique({
-        where: { id: PUBLISHED_REPORT_ID },
-        select: { periodState: true },
-      }),
-      prisma.reminderRule.findMany({
-        where: {
-          reportId: { in: [...scope.reportIds] },
-          status: "active",
-        },
-        select: {
-          id: true,
-          kind: true,
-          fireAt: true,
-          deadline: true,
-          timezone: true,
-          report: { select: { deadline: true } },
-          policy: {
-            select: {
-              kind: true,
-              offsetMinutes: true,
-              timezone: true,
-              active: true,
-              validFrom: true,
-              validUntil: true,
-            },
-          },
-        },
-      }),
-      prisma.stageAssignment.findMany({
-        where: { projectId: { in: [...scope.projectIds] } },
-        select: { userId: true, project: { select: { leadId: true } } },
-      }),
-      prisma.reopenRequest.findMany({
-        where: {
-          status: "pending",
-          reportSection: { reportId: { in: [...scope.reportIds] } },
-        },
-        select: {
-          id: true,
-          reportSection: {
-            select: {
-              status: true,
-              report: {
-                select: {
-                  id: true,
-                  archived: true,
-                  periodState: true,
-                  periodStatus: true,
-                },
-              },
-            },
-          },
-        },
-      }),
-    ]);
+  const { roles, health, sections, published, reminders, assignments, reopen } =
+    await loadDemoFacts(prisma, scope);
   const roleSet = new Set(roles.map(({ role }) => role));
   const healthSet = new Set(health.map(({ status }) => String(status)));
   const sectionSet = new Set(sections.map(({ status }) => status));

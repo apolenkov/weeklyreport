@@ -112,6 +112,10 @@ function drainQueuedSave(
   });
 }
 
+// TODO(TASK-308): the hook exceeds max-lines-per-function (suppressed in
+// eslint-suppressions.json) because lead-form-draft-module keeps AutosaveLiveState
+// in this file and the file is at its max-lines limit; relax that requirement or
+// slim the hook.
 export function useLeadFormAutosave(
   args: UseLeadFormAutosaveArgs,
 ): AutosaveController {

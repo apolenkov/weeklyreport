@@ -3,29 +3,27 @@ import { useEffect, useRef, useState } from "react";
 
 import type {
   KanbanItem,
-  StatusOverviewCreateTarget,
   StatusOverviewEditorSlot,
-  StatusOverviewEditTarget,
-  StatusOverviewItem,
   StatusOverviewModel,
 } from "../../../../report-sections";
-import { buildConfirmCarriedItemPatch } from "../../../../report-sections";
 import {
-  createOverviewComposerState,
-  findEditableItem,
   OverviewEditorDialog,
   type OverviewItemDialogState,
 } from "./lead-status-overview-item-editor";
-import {
-  buildPriorPlanSeed,
-  overviewEditorRecoveryReason,
-  overviewSubmissionIsAcknowledged,
-} from "./overview-editor-recovery";
+import { overviewEditorRecoveryReason } from "./overview-editor-recovery";
 import { useRetainedOverviewState } from "./overview-input-provider";
-import { overviewMoveEditorItem, saveOverviewItem } from "./overview-item-save";
-import { abandonedSaveRestorePatch } from "./overview-save-restore";
+import { saveOverviewItem } from "./overview-item-save";
+import {
+  closeOverviewDialog,
+  driveOverviewSubmission,
+  overviewSaveFailure,
+} from "./overview-item-submission";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
 import { useOverviewFocusReturn } from "./use-overview-focus-return";
+import {
+  useOverviewCreateOpeners,
+  useOverviewEditOpeners,
+} from "./use-overview-openers";
 
 type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
 
@@ -44,140 +42,28 @@ export function useOverviewItemEditor(
   const rememberFocus = useOverviewFocusReturn(dialog !== null);
 
   useEffect(() => {
-    const submission = dialog?.submission;
-    if (!editor || !dialog || !submission) return;
-    if (!submission.saveArmed) {
-      setDialog((current) =>
-        current?.submission?.attempt === submission.attempt
-          ? {
-              ...current,
-              submission: { ...current.submission, saveArmed: true },
-            }
-          : current,
-      );
-      return;
-    }
-    const autosave = editor.draft.autosave;
-    const active =
-      autosave.dirty ||
-      autosave.isInFlight ||
-      autosave.state === "pending" ||
-      autosave.state === "saving" ||
-      autosave.state === "error";
-    if (active && !submission.activityObserved) {
-      setDialog((current) =>
-        current?.submission?.attempt === submission.attempt
-          ? {
-              ...current,
-              submission: { ...current.submission, activityObserved: true },
-            }
-          : current,
-      );
-    }
-    if (!recoveryReason && startedAttempt.current !== submission.attempt) {
-      startedAttempt.current = submission.attempt;
-      const attempt = submission.attempt;
-      queueMicrotask(() => {
-        if (startedAttempt.current === attempt) void editor.draft.save();
-      });
-    }
-    const acknowledged =
-      startedAttempt.current === submission.attempt &&
-      autosave.state !== "error" &&
-      !recoveryReason &&
-      overviewSubmissionIsAcknowledged(editor, dialog);
-    if (acknowledged) {
-      startedAttempt.current = null;
-      setDialog((current) =>
-        current?.submission?.attempt === submission.attempt ? null : current,
-      );
-    }
+    driveOverviewSubmission({
+      editor,
+      dialog,
+      recoveryReason,
+      setDialog,
+      startedAttempt,
+    });
   }, [dialog, editor, recoveryReason, setDialog]);
-  const openEditItem = (
-    target: StatusOverviewEditTarget,
-    week: "current" | "next",
-    options: {
-      visibleItem?: KanbanItem | undefined;
-      promotionTarget?: "current" | "next" | undefined;
-      focusKey?: string | undefined;
-    } = {},
-  ): void => {
-    const { visibleItem, promotionTarget, focusKey } = options;
-    if (!editor || isReadOnly || dialog) return;
-    const item = findEditableItem(editor, target);
-    if (!item) return;
-    const sourceRecord = editor.draft.section.items.find(
-      (row) => row.id === item.id,
-    );
-    const sourceItem = sourceRecord
-      ? { ...item, nextStepText: sourceRecord.nextStepText ?? null }
-      : item;
-    rememberFocus(focusKey);
-    startedAttempt.current = null;
-    const dialogItem = visibleItem ?? item;
-    setDialog({
-      ...createOverviewComposerState(editor, target, dialogItem),
-      week,
-      mode: "edit",
-      stableId:
-        editor.draft.section.items.find((row) => row.id === item.id)
-          ?.stableId ?? null,
-      target,
-      item: dialogItem,
-      ...(promotionTarget
-        ? {
-            promotion: {
-              target: promotionTarget,
-              commandId: crypto.randomUUID(),
-              sourceItem,
-              pending: false,
-            },
-          }
-        : {}),
-    });
+  const openers = {
+    editor,
+    model,
+    output,
+    dialog,
+    isReadOnly,
+    setDialog,
+    rememberFocus,
+    resetAttempt: () => {
+      startedAttempt.current = null;
+    },
   };
-  const editItem = (target: StatusOverviewEditTarget): void => {
-    openEditItem(target, target.source);
-  };
-  const addItem = (target: StatusOverviewCreateTarget): void => {
-    if (!editor || isReadOnly || dialog) return;
-    const unit = model.units.find(
-      (candidate) =>
-        candidate.kind === target.unitKind && candidate.id === target.unitId,
-    );
-    if (!unit || unit.historical) return;
-    rememberFocus();
-    startedAttempt.current = null;
-    setDialog({
-      ...createOverviewComposerState(editor, target, null),
-      mode: "create",
-      target,
-    });
-  };
-  const planItem = (item: StatusOverviewItem): void => {
-    if (
-      !editor ||
-      isReadOnly ||
-      dialog ||
-      !item.canResolve ||
-      item.source !== "previous"
-    )
-      return;
-    const planned = buildPriorPlanSeed(
-      output,
-      editor.draft.section,
-      model,
-      item,
-    );
-    if (!planned) return;
-    rememberFocus();
-    startedAttempt.current = null;
-    setDialog({
-      ...createOverviewComposerState(editor, planned.target, planned.seed),
-      mode: "create",
-      target: planned.target,
-    });
-  };
+  const { editItem, moveItem, confirmItem } = useOverviewEditOpeners(openers);
+  const { addItem, planItem } = useOverviewCreateOpeners(openers);
   const save = (updatedItem: KanbanItem): void => {
     saveOverviewItem(
       {
@@ -193,38 +79,9 @@ export function useOverviewItemEditor(
       updatedItem,
     );
   };
-  const moveItem = (
-    item: StatusOverviewItem,
-    target: "current" | "next",
-    focusKey?: string,
-  ): void => {
-    if (!editor || isReadOnly || dialog || !item.editTarget) return;
-    const move = overviewMoveEditorItem(
-      editor,
-      { text: item.text, editTarget: item.editTarget },
-      target,
-    );
-    openEditItem(item.editTarget, target, {
-      visibleItem: move.item,
-      promotionTarget: move.promotion,
-      focusKey,
-    });
-  };
-  const confirmItem = (item: StatusOverviewItem): void => {
-    if (!editor || isReadOnly || dialog || !item.recordId) return;
-    const patch = buildConfirmCarriedItemPatch(
-      editor.draft.section,
-      item.recordId,
-    );
-    if (patch) editor.draft.apply(patch);
-  };
   return {
     dialog,
-    error:
-      error ??
-      (dialog?.submission && editor?.draft.autosave.state === "error"
-        ? "Save failed. Your update is still here; try saving again."
-        : null),
+    error: error ?? overviewSaveFailure(editor, dialog),
     recoveryReason,
     editItem,
     addItem,
@@ -237,14 +94,9 @@ export function useOverviewItemEditor(
       ),
     save,
     close: () => {
-      const restore =
-        editor && dialog && !recoveryReason
-          ? abandonedSaveRestorePatch(editor, dialog)
-          : null;
-      if (editor && restore) editor.draft.apply(restore);
+      closeOverviewDialog({ editor, dialog, recoveryReason, setDialog });
       startedAttempt.current = null;
       promotionAttempt.current = null;
-      setDialog(null);
       setError(null);
     },
   };

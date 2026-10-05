@@ -32,6 +32,52 @@ interface UnifiedActivitySectionProps {
   readonly onMoveToNextWeek?: ((id: string) => void) | undefined;
 }
 
+function useActivityCreation({
+  entries,
+  readOnly,
+  addSignal,
+  products,
+  activities,
+  onWeekItemsChange,
+}: Pick<
+  UnifiedActivitySectionProps,
+  "entries" | "products" | "activities" | "onWeekItemsChange"
+> & { readonly readOnly: boolean; readonly addSignal: number }) {
+  const defaultProduct = products?.[0];
+  const defaultActivityId = defaultProduct ? undefined : activities?.[0]?.id;
+  const creation = useEditableListDialog<KanbanItem>({
+    readOnly,
+    addSignal,
+    seedProductId: defaultProduct?.id,
+    seedActivityId: defaultActivityId,
+    requireSeed: true,
+  });
+  const isCreating =
+    creation.dialogState.open && creation.dialogState.mode === "create";
+  const currentItems = entries
+    .filter((entry) => entry.week === "current")
+    .map((entry) => entry.item);
+
+  function saveCreated(next: KanbanItem): void {
+    if (readOnly) return;
+    onWeekItemsChange?.("current", [...currentItems, next]);
+    creation.close();
+  }
+
+  const seed =
+    creation.dialogState.open && creation.dialogState.mode === "create"
+      ? creation.dialogState
+      : undefined;
+  return {
+    dialogKey: creation.dialogKey,
+    close: creation.close,
+    isCreating,
+    saveCreated,
+    defaultProductId: seed?.seedProductId,
+    defaultActivityId: seed?.seedActivityId,
+  };
+}
+
 // Opt-in by-state view (AppSettings.unifiedActivityView).
 export function UnifiedActivitySection({
   entries,
@@ -53,26 +99,14 @@ export function UnifiedActivitySection({
     readOnly,
     onWeekItemsChange,
   });
-  const defaultProduct = products?.[0];
-  const defaultActivityId = defaultProduct ? undefined : activities?.[0]?.id;
-  const creation = useEditableListDialog<KanbanItem>({
+  const creation = useActivityCreation({
+    entries,
     readOnly,
     addSignal,
-    seedProductId: defaultProduct?.id,
-    seedActivityId: defaultActivityId,
-    requireSeed: true,
+    products,
+    activities,
+    onWeekItemsChange,
   });
-  const isCreating =
-    creation.dialogState.open && creation.dialogState.mode === "create";
-  const currentItems = entries
-    .filter((entry) => entry.week === "current")
-    .map((entry) => entry.item);
-
-  function saveCreated(next: KanbanItem): void {
-    if (readOnly) return;
-    onWeekItemsChange?.("current", [...currentItems, next]);
-    creation.close();
-  }
 
   return (
     <div className="space-y-5" data-testid="unified-activity-section">
@@ -106,22 +140,18 @@ export function UnifiedActivitySection({
       />
       <ItemEditDialog
         key={creation.dialogKey}
-        open={isCreating}
+        open={creation.isCreating}
         item={null}
         products={products ?? []}
         activities={activities}
         week="current"
         currentUserName={currentUserName}
-        defaultProductId={
-          isCreating ? creation.dialogState.seedProductId : undefined
-        }
-        defaultActivityId={
-          isCreating ? creation.dialogState.seedActivityId : undefined
-        }
+        defaultProductId={creation.defaultProductId}
+        defaultActivityId={creation.defaultActivityId}
         stagesForProduct={stagesForProduct}
         ownPeriodRanks={ownPeriodRanks}
         risks={risks}
-        onSave={saveCreated}
+        onSave={creation.saveCreated}
         onCancel={creation.close}
       />
     </div>

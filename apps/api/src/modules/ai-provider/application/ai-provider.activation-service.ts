@@ -81,16 +81,7 @@ export class AiProviderActivationService {
           resolveProfileFromRevision(previous),
         )
       : true;
-    this.dependencies.audit.record({
-      event: "ai_provider.activation_requested",
-      actorId,
-      revisionId,
-      profile: generationProfile,
-    });
-    this.dependencies.metrics.recordActivation({
-      profile: generationProfile,
-      result: "requested",
-    });
+    this.recordActivationRequested(actorId, revisionId, generationProfile);
     const requested = { actorId, revisionId };
     if (changed && !this.dependencies.preparation)
       return failActivation(
@@ -133,6 +124,51 @@ export class AiProviderActivationService {
         requested,
       );
     }
+    return this.commitActivation({
+      revisionId,
+      actorId,
+      operation,
+      generationProfile,
+      changed,
+      readyRevision,
+      requested,
+    });
+  }
+
+  private recordActivationRequested(
+    actorId: string,
+    revisionId: string,
+    profile: ReturnType<typeof toSharedProfile>,
+  ): void {
+    this.dependencies.audit.record({
+      event: "ai_provider.activation_requested",
+      actorId,
+      revisionId,
+      profile,
+    });
+    this.dependencies.metrics.recordActivation({
+      profile,
+      result: "requested",
+    });
+  }
+
+  private async commitActivation({
+    revisionId,
+    actorId,
+    operation,
+    generationProfile,
+    changed,
+    readyRevision,
+    requested,
+  }: {
+    revisionId: string;
+    actorId: string;
+    operation: "activate" | "restore";
+    generationProfile: ReturnType<typeof toSharedProfile>;
+    changed: boolean;
+    readyRevision: Awaited<ReturnType<typeof requirePreparedRevision>>;
+    requested: RequestedActivation;
+  }): Promise<AiProviderControlRead> {
     const activated = await this.dependencies.repository.activateRevision(
       revisionId,
       now(),
@@ -149,14 +185,13 @@ export class AiProviderActivationService {
             sourceGeneration: readyRevision.preparationSourceGeneration,
           },
     );
-    if (!activated) {
+    if (!activated)
       return failActivation(
         this.dependencies,
         generationProfile,
         "AI provider activation lost a lifecycle race",
         { requested, errorClass: AiProviderConflictError },
       );
-    }
     this.dependencies.audit.record({
       event: "ai_provider.activation_succeeded",
       actorId,

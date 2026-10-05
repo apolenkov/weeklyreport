@@ -74,6 +74,113 @@ const activationStepDetail = (
   return "Locked until testing passes";
 };
 
+type ProviderLifecycle = AiProviderConfigurationRead["lifecycle"] | "none";
+
+function SetupWorkflow({
+  lifecycle,
+  providerAvailable,
+}: Readonly<{ lifecycle: ProviderLifecycle; providerAvailable: boolean }>) {
+  return (
+    <ol
+      className="mt-4 grid gap-2 text-sm sm:grid-cols-3"
+      aria-label="AI provider setup workflow"
+    >
+      {[
+        {
+          label: "Configure",
+          detail: lifecycle === "none" ? "Required" : "Saved",
+        },
+        {
+          label: "Test capabilities",
+          detail:
+            lifecycle === "draft" || lifecycle === "failed"
+              ? "Required before activation"
+              : lifecycle === "none"
+                ? "Save a draft first"
+                : "Completed or in progress",
+        },
+        {
+          label: "Activate",
+          detail: activationStepDetail(lifecycle, providerAvailable),
+        },
+      ].map(({ label, detail }, index) => (
+        <li
+          key={label}
+          className="flex min-h-11 items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-2 text-[var(--color-muted-foreground)]"
+        >
+          <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-hover)] text-xs font-semibold text-[var(--color-foreground)]">
+            {index + 1}
+          </span>
+          <span className="min-w-0">
+            <span className="block text-[var(--color-foreground)]">
+              {label}
+            </span>
+            <span className="block text-xs">{detail}</span>
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function ActiveProviderSummary({
+  revision,
+  providerAvailable,
+  showActiveActions,
+  disablePending,
+  onEdit,
+  onDisable,
+}: Readonly<{
+  revision: AiProviderConfigurationRead;
+  providerAvailable: boolean;
+  showActiveActions: boolean;
+  disablePending: boolean;
+  onEdit: () => void;
+  onDisable: () => void;
+}>) {
+  return (
+    <div
+      className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-[var(--radius-sm)] bg-[var(--color-surface-hover)]/60 p-4"
+      data-testid="ai-provider-active-summary"
+    >
+      <div className="min-w-0 text-sm text-[var(--color-muted-foreground)]">
+        <p className="font-semibold text-[var(--color-foreground)]">
+          {profileLabel(revision.generation.profile)}
+        </p>
+        <p className="mt-1 break-words">
+          Generation: {revision.generation.answerModel} · Embeddings:{" "}
+          {revision.embeddings.model}
+        </p>
+        <p className="mt-1">
+          Credentials are saved securely and remain masked.
+        </p>
+      </div>
+      {showActiveActions && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+            onClick={onEdit}
+          >
+            <Pencil aria-hidden="true" className="size-4" />
+            Edit configuration
+          </button>
+          {providerAvailable && (
+            <button
+              type="button"
+              className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={onDisable}
+              disabled={disablePending}
+            >
+              Disable
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function AiProviderStateSummary({
   lifecycle,
   availability,
@@ -120,86 +227,20 @@ export function AiProviderStateSummary({
         <p className="mt-3 text-sm font-medium text-[var(--color-foreground)]">
           Next: {state.next}
         </p>
-        <ol
-          className="mt-4 grid gap-2 text-sm sm:grid-cols-3"
-          aria-label="AI provider setup workflow"
-        >
-          {[
-            {
-              label: "Configure",
-              detail: lifecycle === "none" ? "Required" : "Saved",
-            },
-            {
-              label: "Test capabilities",
-              detail:
-                lifecycle === "draft" || lifecycle === "failed"
-                  ? "Required before activation"
-                  : lifecycle === "none"
-                    ? "Save a draft first"
-                    : "Completed or in progress",
-            },
-            {
-              label: "Activate",
-              detail: activationStepDetail(lifecycle, providerAvailable),
-            },
-          ].map(({ label, detail }, index) => (
-            <li
-              key={label}
-              className="flex min-h-11 items-center gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border)] px-3 py-2 text-[var(--color-muted-foreground)]"
-            >
-              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-hover)] text-xs font-semibold text-[var(--color-foreground)]">
-                {index + 1}
-              </span>
-              <span className="min-w-0">
-                <span className="block text-[var(--color-foreground)]">
-                  {label}
-                </span>
-                <span className="block text-xs">{detail}</span>
-              </span>
-            </li>
-          ))}
-        </ol>
+        <SetupWorkflow
+          lifecycle={lifecycle}
+          providerAvailable={providerAvailable}
+        />
       </section>
       {active && (
-        <div
-          className="mb-5 flex flex-wrap items-center justify-between gap-4 rounded-[var(--radius-sm)] bg-[var(--color-surface-hover)]/60 p-4"
-          data-testid="ai-provider-active-summary"
-        >
-          <div className="min-w-0 text-sm text-[var(--color-muted-foreground)]">
-            <p className="font-semibold text-[var(--color-foreground)]">
-              {profileLabel(revision.generation.profile)}
-            </p>
-            <p className="mt-1 break-words">
-              Generation: {revision.generation.answerModel} · Embeddings:{" "}
-              {revision.embeddings.model}
-            </p>
-            <p className="mt-1">
-              Credentials are saved securely and remain masked.
-            </p>
-          </div>
-          {showActiveActions && (
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center gap-2 rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
-                onClick={onEdit}
-              >
-                <Pencil aria-hidden="true" className="size-4" />
-                Edit configuration
-              </button>
-              {providerAvailable && (
-                <button
-                  type="button"
-                  className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] disabled:cursor-not-allowed disabled:opacity-50"
-                  onClick={onDisable}
-                  disabled={disablePending}
-                >
-                  Disable
-                </button>
-              )}
-            </div>
-          )}
-        </div>
+        <ActiveProviderSummary
+          revision={revision}
+          providerAvailable={providerAvailable}
+          showActiveActions={showActiveActions}
+          disablePending={disablePending}
+          onEdit={onEdit}
+          onDisable={onDisable}
+        />
       )}
     </>
   );

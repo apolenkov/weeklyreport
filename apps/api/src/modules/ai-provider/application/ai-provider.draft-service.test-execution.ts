@@ -23,15 +23,11 @@ const resultObjectFrom = (value: unknown): Record<string, unknown> =>
     ? { ...(value as Record<string, unknown>) }
     : {};
 
-export const executeAiProviderTest = async (
+const runProviderTest = (
   dependencies: AiProviderServiceDependencies,
-  revisionId: string,
-  actorId = "worker",
-  executionClaim?: AiProviderExecutionClaim,
-): Promise<AiProviderConfigurationRead> => {
-  const revision = await requireRevision(dependencies, revisionId);
-  const tester = dependencies.tester;
-  if (!tester) throw new Error("AI provider capability tester is not wired");
+  tester: NonNullable<AiProviderServiceDependencies["tester"]>,
+  revision: Awaited<ReturnType<typeof requireRevision>>,
+) => {
   const profile = compositeProfileFromRevision(revision);
   const generationCredential = dependencies.codec.decrypt(
     {
@@ -43,7 +39,7 @@ export const executeAiProviderTest = async (
     },
     { revisionId: revision.id, role: "generation" },
   );
-  const test = await tester.test(
+  return tester.test(
     profile,
     {
       generation: generationCredential,
@@ -58,6 +54,45 @@ export const executeAiProviderTest = async (
       reasoningCustomValue: revision.reasoningCustomValue,
     },
   );
+};
+
+type TestResultRecord = Parameters<
+  AiProviderServiceDependencies["repository"]["setTestResult"]
+>[0];
+
+const persistTestResult = (
+  dependencies: AiProviderServiceDependencies,
+  executionClaim: AiProviderExecutionClaim | undefined,
+  record: TestResultRecord,
+) => {
+  if (!executionClaim) return dependencies.repository.setTestResult(record);
+  const { status } = record;
+  const outcome =
+    status === "passed"
+      ? ("passed" as const)
+      : status === "inconclusive"
+        ? ("inconclusive" as const)
+        : ("incompatible" as const);
+  return dependencies.repository.setClaimedTestResult({
+    ...record,
+    executionId: executionClaim.id,
+    executionAttempt: executionClaim.attempt,
+    outcome,
+    failureCode: null,
+    checks: providerChecksFor(record.result as Record<string, unknown>),
+  });
+};
+
+export const executeAiProviderTest = async (
+  dependencies: AiProviderServiceDependencies,
+  revisionId: string,
+  actorId = "worker",
+  executionClaim?: AiProviderExecutionClaim,
+): Promise<AiProviderConfigurationRead> => {
+  const revision = await requireRevision(dependencies, revisionId);
+  const tester = dependencies.tester;
+  if (!tester) throw new Error("AI provider capability tester is not wired");
+  const test = await runProviderTest(dependencies, tester, revision);
   const capabilityPassed = completeCapabilityResult(test.result);
   const embeddingDimensions = capabilityPassed
     ? (test.embeddingDimensions ?? revision.embeddingDimensions)
@@ -79,41 +114,17 @@ export const executeAiProviderTest = async (
   if (!providerStatus) throw new Error("Provider capability result is invalid");
   const status = providerStatus;
   const result = { ...resultObjectFrom(test.result), status };
-  const checks = providerChecksFor(result);
-  const outcome =
-    status === "passed"
-      ? ("passed" as const)
-      : status === "inconclusive"
-        ? ("inconclusive" as const)
-        : ("incompatible" as const);
-  const tested = executionClaim
-    ? await dependencies.repository.setClaimedTestResult({
-        executionId: executionClaim.id,
-        executionAttempt: executionClaim.attempt,
-        id: revisionId,
-        result,
-        status,
-        embeddingDimensions,
-        testedAt: now(),
-        currentLifecycle: revision.lifecycle,
-        outcome,
-        failureCode: null,
-        checks,
-        generationCompatibilityIdentity,
-        embeddingScopeIdentity,
-        compositeTestIdentity,
-      })
-    : await dependencies.repository.setTestResult({
-        id: revisionId,
-        result,
-        status,
-        embeddingDimensions,
-        testedAt: now(),
-        currentLifecycle: revision.lifecycle,
-        generationCompatibilityIdentity,
-        embeddingScopeIdentity,
-        compositeTestIdentity,
-      });
+  const tested = await persistTestResult(dependencies, executionClaim, {
+    id: revisionId,
+    result,
+    status,
+    embeddingDimensions,
+    testedAt: now(),
+    currentLifecycle: revision.lifecycle,
+    generationCompatibilityIdentity,
+    embeddingScopeIdentity,
+    compositeTestIdentity,
+  });
   if (!tested) {
     const current = await requireRevision(dependencies, revisionId);
     return safeRevision(current, dependencies.codec);

@@ -25,6 +25,36 @@ function statusClass(status: AdminReminderExecutionView["status"]): string {
   }
 }
 
+function ExecutionRow({
+  execution,
+}: {
+  readonly execution: AdminReminderExecutionView;
+}) {
+  return (
+    <tr data-testid={`reminder-execution-${execution.id}`}>
+      <td className="px-3 py-3 font-medium text-[var(--color-foreground)]">
+        {execution.recipientEmail}
+      </td>
+      <td className="whitespace-nowrap px-3 py-3 text-[var(--color-muted-foreground)]">
+        {formatDateTime(execution.scheduledFor)}
+      </td>
+      <td className="px-3 py-3">
+        <span
+          className={`inline-flex rounded-[var(--radius-pill)] px-2 py-1 text-xs font-semibold ${statusClass(execution.status)}`}
+        >
+          {STATUS_LABELS[execution.status]}
+        </span>
+      </td>
+      <td className="whitespace-nowrap px-3 py-3 text-[var(--color-muted-foreground)]">
+        {execution.sentAt ? formatDateTime(execution.sentAt) : "—"}
+      </td>
+      <td className="max-w-[18rem] px-3 py-3 text-[var(--color-destructive)]">
+        {execution.errorMessage ?? "—"}
+      </td>
+    </tr>
+  );
+}
+
 export function ReminderExecutionList({
   executions,
 }: ReminderExecutionListProps) {
@@ -80,30 +110,7 @@ export function ReminderExecutionList({
             </thead>
             <tbody className="divide-y divide-[var(--color-border)]">
               {executions.map((execution) => (
-                <tr
-                  key={execution.id}
-                  data-testid={`reminder-execution-${execution.id}`}
-                >
-                  <td className="px-3 py-3 font-medium text-[var(--color-foreground)]">
-                    {execution.recipientEmail}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-3 text-[var(--color-muted-foreground)]">
-                    {formatDateTime(execution.scheduledFor)}
-                  </td>
-                  <td className="px-3 py-3">
-                    <span
-                      className={`inline-flex rounded-[var(--radius-pill)] px-2 py-1 text-xs font-semibold ${statusClass(execution.status)}`}
-                    >
-                      {STATUS_LABELS[execution.status]}
-                    </span>
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-3 text-[var(--color-muted-foreground)]">
-                    {execution.sentAt ? formatDateTime(execution.sentAt) : "—"}
-                  </td>
-                  <td className="max-w-[18rem] px-3 py-3 text-[var(--color-destructive)]">
-                    {execution.errorMessage ?? "—"}
-                  </td>
-                </tr>
+                <ExecutionRow key={execution.id} execution={execution} />
               ))}
             </tbody>
           </table>

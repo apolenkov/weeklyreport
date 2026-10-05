@@ -28,6 +28,34 @@ const operationInput: PlannerInput = {
   timeZone: "UTC",
 };
 
+/** Returns the lane failure when the planner probe fails, otherwise null. */
+const probePlanner = async (
+  planner: OpenAiCompatiblePlannerAdapter,
+): Promise<GenerationLaneResult | null> => {
+  try {
+    const rawPlan = await planner.plan(operationInput);
+    const parsedPlan = searchPlanSchema.safeParse(rawPlan);
+    if (!parsedPlan.success) {
+      throw new OpenAiCompatibleProtocolError(
+        "Planner returned incompatible tool arguments",
+      );
+    }
+    return null;
+  } catch (error) {
+    const authenticationFailure = isAuthenticationFailure(error);
+    return {
+      status: failureStatus(error),
+      capabilities: [
+        failureResult(
+          authenticationFailure ? "authentication" : "structured_planner",
+          error,
+        ),
+      ],
+      connectionFailed: isConnectionFailure(error),
+    };
+  }
+};
+
 export const generationLane = async (
   transport: OpenAiCompatibleTransport,
   profile: ResolvedCompositeProviderProfile["generation"],
@@ -56,28 +84,8 @@ export const generationLane = async (
       : {}),
     prompts,
   });
-  try {
-    const rawPlan = await planner.plan(operationInput);
-    const parsedPlan = searchPlanSchema.safeParse(rawPlan);
-    if (!parsedPlan.success) {
-      throw new OpenAiCompatibleProtocolError(
-        "Planner returned incompatible tool arguments",
-      );
-    }
-  } catch (error) {
-    const connectionFailure = isConnectionFailure(error);
-    const authenticationFailure = isAuthenticationFailure(error);
-    return {
-      status: failureStatus(error),
-      capabilities: [
-        failureResult(
-          authenticationFailure ? "authentication" : "structured_planner",
-          error,
-        ),
-      ],
-      connectionFailed: connectionFailure,
-    };
-  }
+  const plannerFailure = await probePlanner(planner);
+  if (plannerFailure) return plannerFailure;
   const authentication: CapabilityProbeResult = {
     capability: "authentication",
     status: "passed",
