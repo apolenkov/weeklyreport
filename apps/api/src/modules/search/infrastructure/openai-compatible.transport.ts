@@ -2,7 +2,10 @@ import type {
   ReportAssistantProviderOperation,
   ReportAssistantTokenUsage,
 } from "../application/report-assistant.ports.js";
-import { ReportAssistantProviderError } from "../application/report-assistant.ports.js";
+import {
+  PROVIDER_RESPONSE_INCOMPLETE,
+  ReportAssistantProviderError,
+} from "../application/report-assistant.ports.js";
 import {
   ProviderResponseTooLargeError,
   readProviderResponseBody,
@@ -36,6 +39,7 @@ export type OpenAiCompatibleChatRequest = Readonly<{
 
 export type OpenAiCompatibleChatResponse = Readonly<{
   choices?: readonly Readonly<{
+    finish_reason?: unknown;
     message?: Readonly<{
       content?: unknown;
       tool_calls?: readonly Readonly<{
@@ -250,7 +254,24 @@ export class OpenAiCompatibleTransport {
       },
       { operation, signal },
     );
-    return asObject(value, "Provider chat response");
+    const response: OpenAiCompatibleChatResponse = asObject(
+      value,
+      "Provider chat response",
+    );
+    // A reasoning model can spend the whole budget thinking and return no
+    // content or tool call; classify it instead of failing later in parsing.
+    if (response.choices?.some((choice) => choice.finish_reason === "length")) {
+      throw new ReportAssistantProviderError(
+        operation,
+        new Error(PROVIDER_RESPONSE_INCOMPLETE),
+        {
+          statusCode: undefined,
+          retryable: false,
+          providerCode: PROVIDER_RESPONSE_INCOMPLETE,
+        },
+      );
+    }
+    return response;
   }
 
   async embeddings(

@@ -20,6 +20,9 @@ export interface ReportAssistantResourceGuardPort {
 export type ReportAssistantProviderOperation =
   "planner" | "planner repair" | "answer" | "citation repair" | "embedding";
 
+/** Provider code for a generation cut off by the output-token limit. */
+export const PROVIDER_RESPONSE_INCOMPLETE = "provider_response_incomplete";
+
 export class ReportAssistantProviderError extends Error {
   readonly operation: ReportAssistantProviderOperation;
   readonly statusCode: number | undefined;

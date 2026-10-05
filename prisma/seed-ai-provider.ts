@@ -204,7 +204,8 @@ const prepareSeedRevision = (config: SeedProviderConfig): PreparedRevision => {
       baseUrl: config.baseUrl,
       plannerModel: config.model,
       answerModel: config.model,
-      reasoningMode: "provider_default",
+      // Reasoning models spend the planner budget thinking and return no tool call.
+      reasoningMode: "off",
       credential: config.apiKey,
     },
     embeddings: { mode: "reuse_generation", model: config.embeddingModel },
