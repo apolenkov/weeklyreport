@@ -2,26 +2,14 @@
 
 import { useEffect, useId, useState } from "react";
 
-import type { StatusOverviewUnitKind } from "../model/status-overview";
 import { buildStatusOverviewLineage } from "../model/status-overview-lineage";
 import { ReportHealthPulseView } from "./report-health-pulse";
-import { StatusOverviewActivityEditor } from "./status-overview-activity-editor";
 import { STATUS_OVERVIEW_COLUMN_HEADER_IDS } from "./status-overview-layout";
 import type { StatusOverviewProps } from "./status-overview-props";
-import {
-  STATUS_OVERVIEW_DESKTOP_GRID,
-  StatusOverviewUnitRow,
-} from "./status-overview-row";
+import { STATUS_OVERVIEW_DESKTOP_GRID } from "./status-overview-row";
+import { UNIT_GROUPS, UnitGroup } from "./status-overview-unit-group";
 
 export type { StatusOverviewProps } from "./status-overview-props";
-
-const UNIT_GROUPS: readonly {
-  readonly kind: StatusOverviewUnitKind;
-  readonly label: string;
-}[] = [
-  { kind: "product", label: "Products" },
-  { kind: "activity", label: "Project activities" },
-];
 
 function ColumnHeading({
   id,
@@ -76,23 +64,90 @@ function buildAddItemHandler(
   };
 }
 
-export function StatusOverview({
-  model,
-  onEditItem,
-  onAddItem,
-  onPlanItem,
-  onMoveItem,
-  onConfirmItem,
-  onResolvePlan,
-  onRestorePlan,
-  detailsHref,
+function StatusOverviewHeader({
+  idPrefix,
+  previousPlanSource,
   autosaveStatus,
-  editorSlot,
-  health,
-  activityFieldsEditable,
-  onActivityFieldsChange,
-  onActivityFieldsPendingChange,
-}: StatusOverviewProps) {
+  detailsHref,
+}: {
+  readonly idPrefix: string;
+  readonly previousPlanSource: StatusOverviewProps["model"]["previousPlanSource"];
+  readonly autosaveStatus: StatusOverviewProps["autosaveStatus"];
+  readonly detailsHref: StatusOverviewProps["detailsHref"];
+}) {
+  return (
+    <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h2
+          id={`${idPrefix}-heading`}
+          tabIndex={-1}
+          data-overview-focus-heading
+          className="text-xl font-semibold tracking-[-0.02em] text-[var(--color-foreground)]"
+        >
+          Status overview
+        </h2>
+        <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+          Prior commitments, current delivery, and the next plan in one view.
+        </p>
+      </div>
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        {previousPlanSource ? (
+          <span className="text-xs text-[var(--color-muted-foreground)]">
+            Prior plan: {previousPlanSource}
+          </span>
+        ) : null}
+        {autosaveStatus ? (
+          <p
+            role="status"
+            aria-live="polite"
+            className="text-xs font-medium text-[var(--color-muted-foreground)]"
+          >
+            {autosaveStatus}
+          </p>
+        ) : null}
+        {detailsHref ? (
+          <a
+            href={detailsHref}
+            className="inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] px-3 text-xs font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+          >
+            Risks &amp; decisions
+          </a>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function ColumnHeadings({
+  periods,
+}: {
+  readonly periods: StatusOverviewProps["model"]["periods"];
+}) {
+  return (
+    <div className={`mb-1 hidden ${STATUS_OVERVIEW_DESKTOP_GRID}`}>
+      <div />
+      <ColumnHeading
+        id={STATUS_OVERVIEW_COLUMN_HEADER_IDS.previouslyPlanned}
+        label="Previously planned"
+        period={periods.previouslyPlanned}
+      />
+      <ColumnHeading
+        id={STATUS_OVERVIEW_COLUMN_HEADER_IDS.currentWeek}
+        label="Current week"
+        period={periods.currentWeek}
+      />
+      <ColumnHeading
+        id={STATUS_OVERVIEW_COLUMN_HEADER_IDS.nextWeek}
+        label="Next week"
+        period={periods.nextWeek}
+      />
+    </div>
+  );
+}
+
+export function StatusOverview(props: StatusOverviewProps) {
+  const { model, onAddItem, detailsHref, autosaveStatus, editorSlot, health } =
+    props;
   const idPrefix = useId();
   const { closeInspection, healthPanelId, inspection, setInspection } =
     useHealthInspection(idPrefix);
@@ -119,45 +174,12 @@ export function StatusOverview({
       data-testid="status-overview"
       className="min-w-0 max-w-full"
     >
-      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2
-            id={`${idPrefix}-heading`}
-            tabIndex={-1}
-            data-overview-focus-heading
-            className="text-xl font-semibold tracking-[-0.02em] text-[var(--color-foreground)]"
-          >
-            Status overview
-          </h2>
-          <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-            Prior commitments, current delivery, and the next plan in one view.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center justify-end gap-3">
-          {model.previousPlanSource ? (
-            <span className="text-xs text-[var(--color-muted-foreground)]">
-              Prior plan: {model.previousPlanSource}
-            </span>
-          ) : null}
-          {autosaveStatus ? (
-            <p
-              role="status"
-              aria-live="polite"
-              className="text-xs font-medium text-[var(--color-muted-foreground)]"
-            >
-              {autosaveStatus}
-            </p>
-          ) : null}
-          {detailsHref ? (
-            <a
-              href={detailsHref}
-              className="inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] px-3 text-xs font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
-            >
-              Risks &amp; decisions
-            </a>
-          ) : null}
-        </div>
-      </div>
+      <StatusOverviewHeader
+        idPrefix={idPrefix}
+        previousPlanSource={model.previousPlanSource}
+        autosaveStatus={autosaveStatus}
+        detailsHref={detailsHref}
+      />
 
       {health ? (
         <ReportHealthPulseView
@@ -166,24 +188,7 @@ export function StatusOverview({
         />
       ) : null}
 
-      <div className={`mb-1 hidden ${STATUS_OVERVIEW_DESKTOP_GRID}`}>
-        <div />
-        <ColumnHeading
-          id={STATUS_OVERVIEW_COLUMN_HEADER_IDS.previouslyPlanned}
-          label="Previously planned"
-          period={model.periods.previouslyPlanned}
-        />
-        <ColumnHeading
-          id={STATUS_OVERVIEW_COLUMN_HEADER_IDS.currentWeek}
-          label="Current week"
-          period={model.periods.currentWeek}
-        />
-        <ColumnHeading
-          id={STATUS_OVERVIEW_COLUMN_HEADER_IDS.nextWeek}
-          label="Next week"
-          period={model.periods.nextWeek}
-        />
-      </div>
+      <ColumnHeadings periods={model.periods} />
 
       {model.units.length === 0 ? (
         <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
@@ -191,79 +196,22 @@ export function StatusOverview({
         </div>
       ) : (
         <div className="min-w-0 overflow-hidden rounded-[var(--radius)] border-y border-[var(--color-border-subtle)] bg-[var(--color-card)]">
-          {UNIT_GROUPS.map((group) => {
-            const units = model.units.filter(
-              (unit) => unit.kind === group.kind,
-            );
-            if (units.length === 0) return null;
-            const groupId = `${idPrefix}-${group.kind}-heading`;
-            return (
-              <section
-                key={group.kind}
-                aria-labelledby={groupId}
-                className="border-t border-[var(--color-border-subtle)] first:border-t-0"
-              >
-                <div className="flex items-center justify-between gap-3 bg-[var(--color-surface-muted)] px-4 py-2">
-                  <h3
-                    id={groupId}
-                    className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--color-foreground)]"
-                  >
-                    {group.label}
-                  </h3>
-                  <span className="text-xs tabular-nums text-[var(--color-muted-foreground)]">
-                    {units.length}
-                  </span>
-                </div>
-                {units.map((unit, index) => {
-                  return (
-                    <div key={unit.key} className="min-w-0">
-                      <StatusOverviewUnitRow
-                        unit={unit}
-                        health={health?.units.find(
-                          (entry) => entry.key === unit.key,
-                        )}
-                        healthPanelId={healthPanelId}
-                        healthExpanded={inspection?.key === unit.key}
-                        onInspect={(key, opener) =>
-                          setInspection({ key, opener })
-                        }
-                        onCloseHealth={closeInspection}
-                        rows={lineage.get(unit.key) ?? []}
-                        periods={model.periods}
-                        expanded={expandedKeys.has(unit.key)}
-                        onToggle={() => toggle(unit.key)}
-                        panelId={`${idPrefix}-${group.kind}-${String(index)}`}
-                        onEditItem={onEditItem}
-                        onAddItem={addItem}
-                        onPlanItem={onPlanItem}
-                        onMoveItem={onMoveItem}
-                        onConfirmItem={onConfirmItem}
-                        onResolvePlan={onResolvePlan}
-                        onRestorePlan={onRestorePlan}
-                        editorSlot={
-                          editorSlot?.unitKey === unit.key
-                            ? editorSlot
-                            : undefined
-                        }
-                      />
-                      {group.kind === "activity" &&
-                      activityFieldsEditable === true &&
-                      !unit.historical &&
-                      onActivityFieldsChange !== undefined &&
-                      unit.activityFields !== undefined ? (
-                        <StatusOverviewActivityEditor
-                          activityId={unit.id}
-                          values={unit.activityFields}
-                          onChange={onActivityFieldsChange}
-                          onPendingChange={onActivityFieldsPendingChange}
-                        />
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </section>
-            );
-          })}
+          {UNIT_GROUPS.map((group) => (
+            <UnitGroup
+              key={group.kind}
+              group={group}
+              idPrefix={idPrefix}
+              overview={props}
+              lineage={lineage}
+              inspectionKey={inspection?.key}
+              healthPanelId={healthPanelId}
+              onInspect={(key, opener) => setInspection({ key, opener })}
+              onCloseHealth={closeInspection}
+              expandedKeys={expandedKeys}
+              onToggle={toggle}
+              onAddItem={addItem}
+            />
+          ))}
         </div>
       )}
     </section>
