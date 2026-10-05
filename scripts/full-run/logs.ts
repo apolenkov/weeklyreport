@@ -4,6 +4,8 @@ export type Entry = Readonly<Record<string, unknown>>;
 
 export interface ProcedureUse {
   calls: number;
+  /** Calls that finished with `status: success`: a rejected input or a failed handler is not an exercised procedure. */
+  ok: number;
   roles: Set<string>;
 }
 export interface Interval {
@@ -57,18 +59,27 @@ function trpcEntries(lines: readonly string[], stage: string): Entry[] {
   return found;
 }
 
-/** tRPC procedures called, from the `trpc request start` log lines. */
+function entryFor(
+  used: Map<string, ProcedureUse>,
+  procedure: string,
+): ProcedureUse {
+  const use = used.get(procedure) ?? { calls: 0, ok: 0, roles: new Set() };
+  used.set(procedure, use);
+  return use;
+}
+
+/** tRPC procedures called (`trpc request start`) and finished successfully (`trpc request end`). */
 export function procedureCalls(
   lines: readonly string[],
 ): Map<string, ProcedureUse> {
   const used = new Map<string, ProcedureUse>();
   for (const e of trpcEntries(lines, "start")) {
-    const path = text(e.procedure);
-    const use = used.get(path) ?? { calls: 0, roles: new Set<string>() };
+    const use = entryFor(used, text(e.procedure));
     use.calls += 1;
     use.roles.add(typeof e.role === "string" ? e.role : "anonymous");
-    used.set(path, use);
   }
+  for (const e of trpcEntries(lines, "end"))
+    if (e.status === "success") entryFor(used, text(e.procedure)).ok += 1;
   return used;
 }
 

@@ -4,9 +4,11 @@ import {
   familySkipReason,
   fullControlReason,
   fullFamilyKey,
+  fullPageKey,
+  matchControl,
   rowSkipReason,
 } from "./full-plan.ts";
-import type { FullControl } from "./full-probe.ts";
+import type { FullControl, FullProbe } from "./full-probe.ts";
 
 function control(
   name: string,
@@ -43,14 +45,34 @@ describe("full crawl page families", () => {
     expect(fullFamilyKey(`http://x/lead/report/${id}`)).toBe(
       "/lead/report/:id",
     );
-    expect(fullFamilyKey("http://x/admin?tab=users&b=x")).toBe(
-      "/admin?b=x&tab=users",
+    expect(fullFamilyKey("http://x/admin?tab=jobs&b=x")).toBe(
+      "/admin?b=x&tab=jobs",
     );
     expect(
       fullFamilyKey(`http://x/head/report/${id}?authorId=${id}&source=status`),
     ).toBe("/head/report/:id");
     expect(fullFamilyKey("http://x/admin?tab=jobs")).not.toBe(
       fullFamilyKey("http://x/admin?tab=users"),
+    );
+  });
+
+  it("treats the default admin views as the bare page", () => {
+    const bare = fullPageKey("http://x/admin");
+    expect(fullPageKey("http://x/admin?tab=users")).toBe(bare);
+    expect(fullFamilyKey("http://x/admin?tab=users")).toBe(
+      fullFamilyKey("http://x/admin"),
+    );
+    expect(fullPageKey("http://x/admin?tab=ai&aiTab=provider")).toBe(
+      fullPageKey("http://x/admin?tab=ai"),
+    );
+    expect(
+      fullPageKey("http://x/admin?tab=ai&aiTab=provider&aiFeature=x"),
+    ).toBe(fullPageKey("http://x/admin?tab=ai"));
+    expect(
+      fullPageKey("http://x/admin?tab=settings&settingsTab=identity"),
+    ).toBe(fullPageKey("http://x/admin?tab=settings"));
+    expect(fullPageKey("http://x/admin?tab=ai&aiTab=features")).not.toBe(
+      fullPageKey("http://x/admin?tab=ai"),
     );
   });
 
@@ -88,5 +110,33 @@ describe("full walk write guard", () => {
         "dangerous: unaudited write action",
       );
     expect(fullControlReason(control("Open details"))).toBeNull();
+  });
+});
+
+function probeOf(...controls: FullControl[]): FullProbe {
+  return { controls, signature: "s", surface: null } as unknown as FullProbe;
+}
+
+describe("matching a planned control to the live page", () => {
+  const edit = (path: string) => control("Edit", { elementId: path });
+
+  it("finds the same element id first", () => {
+    const planned = edit("tr:1/button");
+    const live = probeOf(edit("tr:1/button"), edit("tr:2/button"));
+    expect(matchControl(live, planned, live)).toBe(live.controls[0]);
+  });
+
+  it("follows the control when a re-render shifts the DOM paths", () => {
+    const planned = edit("tr:2/button");
+    const before = probeOf(edit("tr:1/button"), planned);
+    const after = probeOf(edit("div:1/tr:1/button"), edit("div:1/tr:2/button"));
+    expect(matchControl(after, planned, before)).toBe(after.controls[1]);
+  });
+
+  it("calls a control gone when the list changed length", () => {
+    const planned = edit("tr:2/button");
+    const before = probeOf(edit("tr:1/button"), planned);
+    const after = probeOf(edit("div:1/tr:1/button"));
+    expect(matchControl(after, planned, before)).toBeUndefined();
   });
 });

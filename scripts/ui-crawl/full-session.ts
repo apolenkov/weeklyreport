@@ -39,6 +39,8 @@ export interface FullSession {
   readonly representatives: Map<string, string>;
   /** Controls already pressed or recorded: a later walk of the same page does not repeat them. */
   readonly done: Set<string>;
+  /** The last probe of a page that no press has changed since: the next control is looked up in it. */
+  probeCache: FullProbe | null;
   presses: number;
   limited: boolean;
   mutated: boolean;
@@ -108,10 +110,11 @@ export function restoreOrRebase(
 
 /** After a write the page is reloaded and its new content becomes the baseline of a fresh walk; finished controls are not repeated. */
 export function rebaseAfterWrite(session: FullSession): FullProbe {
-  settle(session.ctx, session.home.url);
+  settle(session.ctx, session.home.url, "rebase");
   const probe = readFullProbe(session.ctx.browser);
   session.home = { ...session.home, probe };
   session.mutated = false;
+  session.probeCache = null;
   session.visited.clear();
   return probe;
 }
@@ -132,7 +135,12 @@ export function recordSkip(
   );
 }
 
-type Effect = Readonly<{ press: PressResult; probe: FullProbe; index: number }>;
+/** A press that was made: `unchanged` says it left the page exactly as it was. */
+type Effect = Readonly<{
+  press: PressResult;
+  index: number;
+  unchanged: boolean;
+}>;
 
 function noteMutation(session: FullSession, press: PressResult): void {
   if (!isSyntheticMutation(press.logs)) return;
@@ -170,6 +178,15 @@ function failure(
   return press?.status === "ok" ? null : (press?.status ?? "no result");
 }
 
+/** A select can change a value that neither the text nor a checked flag shows, so it always counts as changed. */
+function leftAsItWas(control: FullControl, press: PressResult): boolean {
+  return (
+    control.tag !== "select" &&
+    press.before === press.after &&
+    !press.urlChanged
+  );
+}
+
 /** Each attempted action keeps its own screenshot and request/console evidence. */
 export function executeControl(
   session: FullSession,
@@ -202,8 +219,16 @@ export function executeControl(
   );
   if (press) noteMutation(session, press);
   if (reason || !press) return null;
+  return { press, index, unchanged: leftAsItWas(control, press) };
+}
+
+/** The page after an effect: its controls are the next frame's plan, its links feed the page queue. */
+export function observeEffect(
+  session: FullSession,
+  frame: FullFrame,
+): FullProbe {
   const probe = readFullProbe(session.ctx.browser);
   for (const link of probe.links) session.links.add(link);
   if (probe.url !== frame.probe.url) session.links.add(probe.url);
-  return { press, probe, index };
+  return probe;
 }
