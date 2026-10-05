@@ -190,23 +190,13 @@ function publishedHistoryRows(
   });
 }
 
-async function queryMyHistoryPageInTransaction(
+function queryLiveHistoryRows(
   prisma: Prisma.TransactionClient,
   authorId: string,
-  pagination: {
-    readonly cursor?: string | undefined;
-    readonly limit: number;
-  },
-): Promise<MyHistoryResult> {
-  const { limit } = pagination;
-  const cursor = pagination.cursor
-    ? decodeMyHistoryCursor(pagination.cursor)
-    : undefined;
-  // Both source reads must share one database snapshot. Running them in
-  // parallel on the root client allows a publish between statements to make
-  // the merged page omit or duplicate a report (and invalidate its cursor).
-  // Repeatable Read gives the cursor a stable view for the whole merge.
-  const liveRows = await prisma.reportSection.findMany({
+  cursor: Parameters<typeof keysetWhere>[0],
+  limit: number,
+) {
+  return prisma.reportSection.findMany({
     where: {
       authorId,
       report: { periodStatus: { not: "published" } },
@@ -235,6 +225,25 @@ async function queryMyHistoryPageInTransaction(
       },
     },
   });
+}
+
+async function queryMyHistoryPageInTransaction(
+  prisma: Prisma.TransactionClient,
+  authorId: string,
+  pagination: {
+    readonly cursor?: string | undefined;
+    readonly limit: number;
+  },
+): Promise<MyHistoryResult> {
+  const { limit } = pagination;
+  const cursor = pagination.cursor
+    ? decodeMyHistoryCursor(pagination.cursor)
+    : undefined;
+  // Both source reads must share one database snapshot. Running them in
+  // parallel on the root client allows a publish between statements to make
+  // the merged page omit or duplicate a report (and invalidate its cursor).
+  // Repeatable Read gives the cursor a stable view for the whole merge.
+  const liveRows = await queryLiveHistoryRows(prisma, authorId, cursor, limit);
   const publishedReports = await prisma.report.findMany({
     where: {
       status: "published",

@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useCallback, useState } from "react";
+import type { ComponentProps } from "react";
 
 import { SdlcTooltipProvider } from "../../../../../shared/ui/feedback/sdlc-tooltip";
 import {
@@ -21,27 +21,13 @@ import {
   type OverviewItemDialogState,
 } from "./lead-status-overview-item-editor";
 import { OpenWorkRegister } from "./open-work-register";
+import { openWorkOutsideTimeline } from "./open-work-register-model";
+import { overviewItemActions } from "./overview-plan-presentation";
 import {
-  openWorkDisabledReason,
-  openWorkOutsideTimeline,
-} from "./open-work-register-model";
-import { buildActivityFieldsChange } from "./overview-activity-fields";
-import {
-  overviewItemActions,
-  overviewPlanPresentation,
-} from "./overview-plan-presentation";
-import { useCompletionPresentation } from "./presentation/use-completion-presentation";
-import type { LeadFormEditorHandle } from "./use-lead-form-editor";
-import { useOpenWorkRegister } from "./use-open-work-register";
-import {
-  buildOverviewEditorSlot,
-  useOverviewItemEditor,
-} from "./use-overview-item-editor";
-import { useOverviewPlanActions } from "./use-overview-plan-actions";
-import { useSaveStatus } from "./use-save-status";
-
-type AvailableEditor = LeadFormEditorHandle;
-type ReadyEditor = Extract<AvailableEditor, { status: "ready" }>;
+  type AvailableEditor,
+  type ReadyEditor,
+  useOverviewController,
+} from "./use-overview-controller";
 
 interface OverviewDialogSlice {
   readonly dialog: OverviewItemDialogState | null;
@@ -53,39 +39,6 @@ interface OverviewDialogSlice {
     focusKey?: string,
   ) => void;
   readonly confirmItem: (item: StatusOverviewItem) => void;
-}
-
-const FALLBACK_AUTOSAVE = {
-  state: "idle" as const,
-  lastSavedAt: null,
-  dirty: false,
-  currentPayloadMatchesSavedBaseline: false,
-  isInFlight: false,
-  forceSave: () => Promise.resolve(),
-};
-const FALLBACK_READINESS = {
-  canOpenConfirmation: false,
-  submitPending: false,
-  blockingIssues: [],
-  willAutoPromote: [],
-  unsetStatuses: [],
-  autosaveState: "idle" as const,
-};
-
-function useOverviewCompletion(
-  editor: ReadyEditor | null,
-  isReadOnly: boolean,
-) {
-  return useCompletionPresentation({
-    autosave: editor?.view.autosave ?? FALLBACK_AUTOSAVE,
-    products: editor?.view.viewModel.products ?? [],
-    activityCount: editor?.view.viewModel.activityOptions.length ?? 0,
-    onQuickAdd: editor?.view.draftActions.onQuickAdd ?? (() => undefined),
-    handleSubmit: editor?.view.writeActions.handleSubmit ?? (() => undefined),
-    readiness: editor?.view.submitReadiness ?? FALLBACK_READINESS,
-    isSlidesMode: false,
-    isReadOnly,
-  });
 }
 
 function OverviewRefreshWarning({
@@ -151,6 +104,43 @@ function OverviewDialogs({ editor }: { readonly editor: ReadyEditor | null }) {
   );
 }
 
+function useOverviewDetailsHref(
+  readyEditor: ReadyEditor | null,
+  targetReportId: string,
+) {
+  const searchParams = useSearchParams();
+  return readyEditor
+    ? "#report-details"
+    : buildStatusOverviewDetailsHref(targetReportId, searchParams);
+}
+
+function OverviewOpenWork({
+  openWork,
+  model,
+  blocker,
+  onOpen,
+}: {
+  readonly openWork: ComponentProps<typeof OpenWorkRegister>["query"];
+  readonly model: ReturnType<typeof projectStatusOverview>;
+  readonly blocker: string | null;
+  readonly onOpen: ComponentProps<typeof OpenWorkRegister>["onOpen"];
+}) {
+  return (
+    <OpenWorkRegister
+      query={{
+        ...openWork,
+        openItems: openWorkOutsideTimeline(
+          openWork.openItems,
+          model.units.flatMap((unit) => unit.columns.previouslyPlanned.items),
+        ),
+      }}
+      actionsDisabled={blocker !== null}
+      disabledReason={blocker}
+      onOpen={onOpen}
+    />
+  );
+}
+
 function overviewDirectActions(enabled: boolean, dialog: OverviewDialogSlice) {
   return enabled
     ? { onMoveItem: dialog.moveItem, onConfirmItem: dialog.confirmItem }
@@ -170,128 +160,68 @@ export function LeadStatusOverviewContent({
   readonly refreshError: boolean;
   readonly onRefresh: () => void;
 }) {
-  const searchParams = useSearchParams();
-  const [pendingActivityIds, setPendingActivityIds] = useState<
-    ReadonlySet<string>
-  >(() => new Set());
-  const onActivityFieldsPendingChange = useCallback(
-    (activityId: string, pending: boolean): void => {
-      setPendingActivityIds((current) => {
-        if (current.has(activityId) === pending) return current;
-        const next = new Set(current);
-        if (pending) next.add(activityId);
-        else next.delete(activityId);
-        return next;
-      });
-    },
-    [],
-  );
-  const readyEditor = editor.status === "ready" ? editor : null;
-  const isReadOnly = readyEditor?.view.viewModel.isReadOnly ?? true;
-  const canEdit = readyEditor !== null && !isReadOnly;
-  const completion = useOverviewCompletion(readyEditor, isReadOnly);
-  const model = projectStatusOverview(output, {
-    currentSection: readyEditor?.draft.section,
-    currentItemsEditable: canEdit,
-  });
-  const dialog = useOverviewItemEditor(
+  const {
     readyEditor,
-    model,
-    targetReportId,
-    output,
-  );
-  const plan = useOverviewPlanActions(
-    readyEditor,
-    output,
-    model,
-    dialog.dialog !== null,
-  );
-  const planPresentation = overviewPlanPresentation(plan, model);
-  const editorSlot =
-    planPresentation.slot ??
-    buildOverviewEditorSlot(
-      readyEditor,
-      dialog.recoveryReason ? null : dialog.dialog,
-      {
-        onSave: dialog.save,
-        onCancel: dialog.close,
-        onWeekChange: dialog.changeWeek,
-      },
-    );
-  const pendingInput =
-    dialog.dialog !== null ||
-    plan.dialog !== null ||
-    pendingActivityIds.size > 0;
-  const saveStatus = useSaveStatus(readyEditor, pendingInput, plan.pending);
-  const canStartAction = canEdit && !pendingInput;
-  const openWork = useOpenWorkRegister(
-    targetReportId,
-    readyEditor?.draft.section.items ?? output.current.section.items,
-  );
-  const openWorkBlocker = openWorkDisabledReason(
     canEdit,
+    canStartAction,
+    completion,
+    model,
+    dialog,
+    plan,
+    planPresentation,
+    editorSlot,
     pendingInput,
-    plan.blockedReason,
-  );
-  const onActivityFieldsChange = buildActivityFieldsChange(readyEditor);
-  const overview = (
-    <div
-      className="min-w-0 space-y-6"
-      data-testid="lead-status-overview-page"
-      data-layout-key="report-page"
-      data-layout-stability="position-width"
-    >
-      {readyEditor ? (
-        <ReadyOverviewHeader
-          editor={readyEditor}
-          pendingInput={pendingInput}
-          completionActions={completion.completionActions}
-          completionSentinelRef={completion.sentinelRef}
-        />
-      ) : null}
-      <EditorAvailabilityNotice editor={editor} />
-      <OverviewRefreshWarning failed={refreshError} onRetry={onRefresh} />
-      {planPresentation.recovery}
-      <OverviewEditorRecovery dialog={dialog} />
-      <OverviewEditorError error={dialog.error} />
-      <StatusOverview
-        model={model}
-        health={projectReportHealthPulse(
-          model.units,
-          readyEditor?.draft.section ?? output.current.section,
-        )}
-        editorSlot={editorSlot}
-        {...overviewItemActions(canStartAction, dialog, plan)}
-        {...overviewDirectActions(canStartAction, dialog)}
-        detailsHref={
-          readyEditor
-            ? "#report-details"
-            : buildStatusOverviewDetailsHref(targetReportId, searchParams)
-        }
-        activityFieldsEditable={canEdit}
-        onActivityFieldsChange={onActivityFieldsChange}
-        onActivityFieldsPendingChange={onActivityFieldsPendingChange}
-        autosaveStatus={saveStatus}
-      />
-      <OpenWorkRegister
-        query={{
-          ...openWork,
-          openItems: openWorkOutsideTimeline(
-            openWork.openItems,
-            model.units.flatMap((unit) => unit.columns.previouslyPlanned.items),
-          ),
-        }}
-        actionsDisabled={openWorkBlocker !== null}
-        disabledReason={openWorkBlocker}
-        onOpen={plan.openWork}
-      />
-      <LeadOverviewDetails editor={readyEditor} pendingInput={pendingInput} />
-    </div>
-  );
-
+    saveStatus,
+    openWork,
+    openWorkBlocker,
+    onActivityFieldsChange,
+    onActivityFieldsPendingChange,
+  } = useOverviewController({ targetReportId, output, editor });
+  const detailsHref = useOverviewDetailsHref(readyEditor, targetReportId);
   return (
     <SdlcTooltipProvider>
-      {overview}
+      <div
+        className="min-w-0 space-y-6"
+        data-testid="lead-status-overview-page"
+        data-layout-key="report-page"
+        data-layout-stability="position-width"
+      >
+        {readyEditor ? (
+          <ReadyOverviewHeader
+            editor={readyEditor}
+            pendingInput={pendingInput}
+            completionActions={completion.completionActions}
+            completionSentinelRef={completion.sentinelRef}
+          />
+        ) : null}
+        <EditorAvailabilityNotice editor={editor} />
+        <OverviewRefreshWarning failed={refreshError} onRetry={onRefresh} />
+        {planPresentation.recovery}
+        <OverviewEditorRecovery dialog={dialog} />
+        <OverviewEditorError error={dialog.error} />
+        <StatusOverview
+          model={model}
+          health={projectReportHealthPulse(
+            model.units,
+            readyEditor?.draft.section ?? output.current.section,
+          )}
+          editorSlot={editorSlot}
+          {...overviewItemActions(canStartAction, dialog, plan)}
+          {...overviewDirectActions(canStartAction, dialog)}
+          detailsHref={detailsHref}
+          activityFieldsEditable={canEdit}
+          onActivityFieldsChange={onActivityFieldsChange}
+          onActivityFieldsPendingChange={onActivityFieldsPendingChange}
+          autosaveStatus={saveStatus}
+        />
+        <OverviewOpenWork
+          openWork={openWork}
+          model={model}
+          blocker={openWorkBlocker}
+          onOpen={plan.openWork}
+        />
+        <LeadOverviewDetails editor={readyEditor} pendingInput={pendingInput} />
+      </div>
       <OverviewDialogs editor={readyEditor} />
     </SdlcTooltipProvider>
   );

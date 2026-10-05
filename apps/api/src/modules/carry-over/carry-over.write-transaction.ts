@@ -74,6 +74,24 @@ export function mapPrismaToExecution(row: {
   return { execution, records };
 }
 
+// Persist carried rows for EVERY target section on the create path — the
+// inserts are idempotent (skipDuplicates + upstream lineage filtering).
+async function persistCarriedRowsForAllSections(
+  tx: Prisma.TransactionClient,
+  sections: readonly ReportSectionReadModel[],
+): Promise<void> {
+  for (const targetSection of sections) {
+    const { insertedItems, insertedDecisions } =
+      await persistCarriedRowsForSection(tx, targetSection);
+    if (insertedItems + insertedDecisions > 0) {
+      await tx.reportSection.update({
+        where: { id: targetSection.reportSectionId },
+        data: { version: { increment: 1 } },
+      });
+    }
+  }
+}
+
 // Re-check editability inside the txn; concurrent winner → resolve, don't insert phantom.
 export async function writeCarryOver(
   tx: Prisma.TransactionClient,
@@ -128,18 +146,7 @@ export async function writeCarryOver(
     ),
   );
 
-  // Persist carried rows for EVERY target section on the create path — the
-  // inserts are idempotent (skipDuplicates + upstream lineage filtering).
-  for (const targetSection of writableTargetSections) {
-    const { insertedItems, insertedDecisions } =
-      await persistCarriedRowsForSection(tx, targetSection);
-    if (insertedItems + insertedDecisions > 0) {
-      await tx.reportSection.update({
-        where: { id: targetSection.reportSectionId },
-        data: { version: { increment: 1 } },
-      });
-    }
-  }
+  await persistCarriedRowsForAllSections(tx, writableTargetSections);
 
   const persistedTargetSections = await readTargetSections(
     tx,

@@ -42,6 +42,23 @@ const confirmationCopy: Record<
   },
 };
 
+function DiscardButton({
+  busy,
+  pending,
+  onClick,
+}: Readonly<{ busy: boolean; pending: boolean; onClick: () => void }>) {
+  return (
+    <button
+      type="button"
+      className="btn-press min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-destructive)] px-4 py-2 text-sm font-semibold text-[var(--color-destructive)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] hover:bg-[var(--color-status-blocked-bg)] disabled:opacity-50"
+      disabled={busy}
+      onClick={onClick}
+    >
+      {pending ? "Discarding…" : "Discard"}
+    </button>
+  );
+}
+
 export function PromptActions({
   busy,
   canDraft,
@@ -97,14 +114,11 @@ export function PromptActions({
         {restorePending ? "Restoring…" : "Restore"}
       </button>
       {canDiscard && (
-        <button
-          type="button"
-          className="btn-press min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-destructive)] px-4 py-2 text-sm font-semibold text-[var(--color-destructive)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] hover:bg-[var(--color-status-blocked-bg)] disabled:opacity-50"
-          disabled={busy}
+        <DiscardButton
+          busy={busy}
+          pending={discardPending}
           onClick={() => setConfirmation("discard")}
-        >
-          {discardPending ? "Discarding…" : "Discard"}
-        </button>
+        />
       )}
       {dirty && (
         <span className="text-xs text-[var(--color-muted-foreground)]">

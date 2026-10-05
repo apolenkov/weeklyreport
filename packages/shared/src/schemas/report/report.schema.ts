@@ -88,27 +88,9 @@ interface ReportIdentitySection {
   readonly decisions: readonly { readonly id?: string | undefined }[];
 }
 
-/**
- * Keeps every report snapshot collection addressable without ambiguity.
- * Record ids are namespaced by their frozen collection type: an item and a
- * risk may legitimately share a database id, while two items may not.
- */
-function addReportIdentityIssues(
-  report: { readonly sections: readonly ReportIdentitySection[] },
-  context: z.RefinementCtx,
-): void {
-  const firstSectionIndexes = new Map(
-    report.sections
-      .map((section, index) => [section.reportSectionId, index] as const)
-      .toReversed(),
-  );
-  const firstAuthorIndexes = new Map(
-    report.sections
-      .map((section, index) => [section.authorId, index] as const)
-      .toReversed(),
-  );
-  const firstRecordLocations = new Map(
-    report.sections
+function indexFirstRecordLocations(sections: readonly ReportIdentitySection[]) {
+  return new Map(
+    sections
       .flatMap((section, sectionIndex) =>
         (
           [
@@ -131,6 +113,28 @@ function addReportIdentityIssues(
       )
       .toReversed(),
   );
+}
+
+/**
+ * Keeps every report snapshot collection addressable without ambiguity.
+ * Record ids are namespaced by their frozen collection type: an item and a
+ * risk may legitimately share a database id, while two items may not.
+ */
+function addReportIdentityIssues(
+  report: { readonly sections: readonly ReportIdentitySection[] },
+  context: z.RefinementCtx,
+): void {
+  const firstSectionIndexes = new Map(
+    report.sections
+      .map((section, index) => [section.reportSectionId, index] as const)
+      .toReversed(),
+  );
+  const firstAuthorIndexes = new Map(
+    report.sections
+      .map((section, index) => [section.authorId, index] as const)
+      .toReversed(),
+  );
+  const firstRecordLocations = indexFirstRecordLocations(report.sections);
 
   report.sections.forEach((section, sectionIndex) => {
     const previousSection = firstSectionIndexes.get(section.reportSectionId);

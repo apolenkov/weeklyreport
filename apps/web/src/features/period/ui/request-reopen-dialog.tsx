@@ -94,29 +94,13 @@ function RequestReopenDialogContent({
         onKeyDown={handleKeyDown}
       >
         <ReopenDialogHeader headingId={headingId} />
-        <div className="mt-4">
-          <RecordTextareaField
-            id="reopen-reason"
-            label="Reason (optional)"
-            value={reason}
-            onChange={setReason}
-            placeholder="e.g. Forgot to add the carry-over from last week…"
-            minHeightPx={80}
-            characterLimit={MAX_REOPEN_REASON_LENGTH}
-            fill={false}
-            focusOnMount
-            textareaRef={reasonRef}
-            disabled={pending}
-          />
-        </div>
-        {error && (
-          <p
-            role="alert"
-            className="mt-2 text-xs text-[var(--color-destructive)]"
-          >
-            {error}
-          </p>
-        )}
+        <ReopenReasonField
+          reason={reason}
+          onChange={setReason}
+          pending={pending}
+          error={error}
+          textareaRef={reasonRef}
+        />
         <ReopenDialogFootnote />
         <ReopenDialogActions
           pending={pending}
@@ -127,6 +111,48 @@ function RequestReopenDialogContent({
       </ReopenDialogShell>
       {discardDialog}
     </DocumentBodyPortal>
+  );
+}
+
+function ReopenReasonField({
+  reason,
+  onChange,
+  pending,
+  error,
+  textareaRef,
+}: {
+  readonly reason: string;
+  readonly onChange: (reason: string) => void;
+  readonly pending: boolean;
+  readonly error: string | null | undefined;
+  readonly textareaRef: RefObject<HTMLTextAreaElement | null>;
+}) {
+  return (
+    <>
+      <div className="mt-4">
+        <RecordTextareaField
+          id="reopen-reason"
+          label="Reason (optional)"
+          value={reason}
+          onChange={onChange}
+          placeholder="e.g. Forgot to add the carry-over from last week…"
+          minHeightPx={80}
+          characterLimit={MAX_REOPEN_REASON_LENGTH}
+          fill={false}
+          focusOnMount
+          textareaRef={textareaRef}
+          disabled={pending}
+        />
+      </div>
+      {error && (
+        <p
+          role="alert"
+          className="mt-2 text-xs text-[var(--color-destructive)]"
+        >
+          {error}
+        </p>
+      )}
+    </>
   );
 }
 

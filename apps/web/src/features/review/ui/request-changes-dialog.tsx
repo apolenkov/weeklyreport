@@ -22,6 +22,112 @@ interface RequestChangesDialogProps {
 
 const EMPTY_REASON_ERROR = "Enter a reason for the lead.";
 
+function FormActions({
+  isPending,
+  onCancel,
+}: {
+  readonly isPending: boolean;
+  readonly onCancel: () => void;
+}) {
+  return (
+    <div className="mt-2 flex justify-end gap-3">
+      <button
+        type="button"
+        onClick={onCancel}
+        className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] max-md:min-h-[var(--touch-target-min)]"
+      >
+        Cancel
+      </button>
+      <button
+        type="submit"
+        disabled={isPending}
+        data-interaction-effect="mutation-required"
+        className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-destructive)] px-4 py-2 text-sm font-semibold text-[var(--color-destructive-foreground)] transition-opacity max-md:min-h-[var(--touch-target-min)] disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {isPending ? "Requesting…" : "Request changes"}
+      </button>
+    </div>
+  );
+}
+
+function RequestChangesForm({
+  id,
+  reason,
+  error,
+  isPending,
+  subjectName,
+  onReasonChange,
+  onSubmit,
+  onCancel,
+}: {
+  readonly id: string;
+  readonly reason: string;
+  readonly error: string | null;
+  readonly isPending: boolean;
+  readonly subjectName: string | undefined;
+  readonly onReasonChange: (next: string) => void;
+  readonly onSubmit: () => void;
+  readonly onCancel: () => void;
+}) {
+  const errorId = `${id}-error`;
+  const hintId = `${id}-hint`;
+  const counterId = `${id}-counter`;
+  return (
+    <form
+      className="flex flex-col gap-3"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit();
+      }}
+    >
+      <h3
+        id={`${id}-title`}
+        className="text-lg font-semibold text-[var(--color-foreground)]"
+      >
+        {subjectName
+          ? `Request changes from ${subjectName}`
+          : "Request changes"}
+      </h3>
+      <label
+        htmlFor={`${id}-reason`}
+        className="text-sm font-medium text-[var(--color-foreground)]"
+      >
+        Reason for the lead
+      </label>
+      <textarea
+        id={`${id}-reason`}
+        name="request-changes-reason"
+        autoComplete="off"
+        rows={4}
+        maxLength={REVIEW_COMMENT_MAX_LENGTH}
+        value={reason}
+        onChange={(event) => onReasonChange(event.target.value)}
+        aria-invalid={error ? "true" : "false"}
+        aria-describedby={`${error ? errorId : hintId} ${counterId}`}
+        placeholder="What should the lead change?…"
+        className="w-full resize-y rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+      />
+      <div className="flex items-start justify-between gap-2 text-xs">
+        <p
+          id={error ? errorId : hintId}
+          role={error ? "alert" : undefined}
+          className={
+            error
+              ? "text-[var(--color-destructive)]"
+              : "text-[var(--color-muted-foreground)]"
+          }
+        >
+          {error ?? "The lead sees this note on the returned section."}
+        </p>
+        <p id={counterId} className="text-[var(--color-muted-foreground)]">
+          {reason.trim().length} / {REVIEW_COMMENT_MAX_LENGTH}
+        </p>
+      </div>
+      <FormActions isPending={isPending} onCancel={onCancel} />
+    </form>
+  );
+}
+
 // Collects the mandatory reason before a changes_requested verdict is sent.
 // Server rejections stay inline with the typed text so nothing is lost.
 export function RequestChangesDialog({
@@ -33,9 +139,6 @@ export function RequestChangesDialog({
 }: RequestChangesDialogProps) {
   const trpc = useTRPC();
   const id = useId();
-  const errorId = `${id}-error`;
-  const hintId = `${id}-hint`;
-  const counterId = `${id}-counter`;
   const surfaceRef = useRef<HTMLDivElement>(null);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -90,77 +193,19 @@ export function RequestChangesDialog({
       ariaLabelledBy={`${id}-title`}
       testId="request-changes-dialog"
     >
-      <form
-        className="flex flex-col gap-3"
-        onSubmit={(event) => {
-          event.preventDefault();
-          submit();
+      <RequestChangesForm
+        id={id}
+        reason={reason}
+        error={error}
+        isPending={isPending}
+        subjectName={subjectName}
+        onReasonChange={(next) => {
+          setReason(next);
+          setError(null);
         }}
-      >
-        <h3
-          id={`${id}-title`}
-          className="text-lg font-semibold text-[var(--color-foreground)]"
-        >
-          {subjectName
-            ? `Request changes from ${subjectName}`
-            : "Request changes"}
-        </h3>
-        <label
-          htmlFor={`${id}-reason`}
-          className="text-sm font-medium text-[var(--color-foreground)]"
-        >
-          Reason for the lead
-        </label>
-        <textarea
-          id={`${id}-reason`}
-          name="request-changes-reason"
-          autoComplete="off"
-          rows={4}
-          maxLength={REVIEW_COMMENT_MAX_LENGTH}
-          value={reason}
-          onChange={(event) => {
-            setReason(event.target.value);
-            setError(null);
-          }}
-          aria-invalid={error ? "true" : "false"}
-          aria-describedby={`${error ? errorId : hintId} ${counterId}`}
-          placeholder="What should the lead change?…"
-          className="w-full resize-y rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-        />
-        <div className="flex items-start justify-between gap-2 text-xs">
-          <p
-            id={error ? errorId : hintId}
-            role={error ? "alert" : undefined}
-            className={
-              error
-                ? "text-[var(--color-destructive)]"
-                : "text-[var(--color-muted-foreground)]"
-            }
-          >
-            {error ?? "The lead sees this note on the returned section."}
-          </p>
-          <p id={counterId} className="text-[var(--color-muted-foreground)]">
-            {reason.trim().length} / {REVIEW_COMMENT_MAX_LENGTH}
-          </p>
-        </div>
-        <div className="mt-2 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={closeIfIdle}
-            className="btn-press rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] max-md:min-h-[var(--touch-target-min)]"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={isPending}
-            data-interaction-effect="mutation-required"
-            className="btn-press rounded-[var(--radius-pill)] bg-[var(--color-destructive)] px-4 py-2 text-sm font-semibold text-[var(--color-destructive-foreground)] transition-opacity max-md:min-h-[var(--touch-target-min)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isPending ? "Requesting…" : "Request changes"}
-          </button>
-        </div>
-      </form>
+        onSubmit={submit}
+        onCancel={closeIfIdle}
+      />
     </DialogSurface>
   );
 }

@@ -1,0 +1,104 @@
+import type { StatusOverviewUnitKind } from "../model/status-overview";
+import type { buildStatusOverviewLineage } from "../model/status-overview-lineage";
+import type { OpenHealthDetail } from "./report-health-pulse";
+import { StatusOverviewActivityEditor } from "./status-overview-activity-editor";
+import type { StatusOverviewProps } from "./status-overview-props";
+import { StatusOverviewUnitRow } from "./status-overview-row";
+
+export const UNIT_GROUPS: readonly {
+  readonly kind: StatusOverviewUnitKind;
+  readonly label: string;
+}[] = [
+  { kind: "product", label: "Products" },
+  { kind: "activity", label: "Project activities" },
+];
+
+interface UnitGroupProps {
+  readonly group: (typeof UNIT_GROUPS)[number];
+  readonly idPrefix: string;
+  readonly overview: StatusOverviewProps;
+  readonly lineage: ReturnType<typeof buildStatusOverviewLineage>;
+  readonly inspectionKey: string | undefined;
+  readonly healthPanelId: string;
+  readonly onInspect: OpenHealthDetail;
+  readonly onCloseHealth: () => void;
+  readonly expandedKeys: ReadonlySet<string>;
+  readonly onToggle: (key: string) => void;
+  readonly onAddItem: StatusOverviewProps["onAddItem"];
+}
+
+export function UnitGroup({
+  group,
+  idPrefix,
+  overview,
+  lineage,
+  inspectionKey,
+  healthPanelId,
+  onInspect,
+  onCloseHealth,
+  expandedKeys,
+  onToggle,
+  onAddItem,
+}: UnitGroupProps) {
+  const { model, health, editorSlot } = overview;
+  const units = model.units.filter((unit) => unit.kind === group.kind);
+  if (units.length === 0) return null;
+  const groupId = `${idPrefix}-${group.kind}-heading`;
+  return (
+    <section
+      aria-labelledby={groupId}
+      className="border-t border-[var(--color-border-subtle)] first:border-t-0"
+    >
+      <div className="flex items-center justify-between gap-3 bg-[var(--color-surface-muted)] px-4 py-2">
+        <h3
+          id={groupId}
+          className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--color-foreground)]"
+        >
+          {group.label}
+        </h3>
+        <span className="text-xs tabular-nums text-[var(--color-muted-foreground)]">
+          {units.length}
+        </span>
+      </div>
+      {units.map((unit, index) => (
+        <div key={unit.key} className="min-w-0">
+          <StatusOverviewUnitRow
+            unit={unit}
+            health={health?.units.find((entry) => entry.key === unit.key)}
+            healthPanelId={healthPanelId}
+            healthExpanded={inspectionKey === unit.key}
+            onInspect={onInspect}
+            onCloseHealth={onCloseHealth}
+            rows={lineage.get(unit.key) ?? []}
+            periods={model.periods}
+            expanded={expandedKeys.has(unit.key)}
+            onToggle={() => onToggle(unit.key)}
+            panelId={`${idPrefix}-${group.kind}-${String(index)}`}
+            onEditItem={overview.onEditItem}
+            onAddItem={onAddItem}
+            onPlanItem={overview.onPlanItem}
+            onMoveItem={overview.onMoveItem}
+            onConfirmItem={overview.onConfirmItem}
+            onResolvePlan={overview.onResolvePlan}
+            onRestorePlan={overview.onRestorePlan}
+            editorSlot={
+              editorSlot?.unitKey === unit.key ? editorSlot : undefined
+            }
+          />
+          {group.kind === "activity" &&
+          overview.activityFieldsEditable === true &&
+          !unit.historical &&
+          overview.onActivityFieldsChange !== undefined &&
+          unit.activityFields !== undefined ? (
+            <StatusOverviewActivityEditor
+              activityId={unit.id}
+              values={unit.activityFields}
+              onChange={overview.onActivityFieldsChange}
+              onPendingChange={overview.onActivityFieldsPendingChange}
+            />
+          ) : null}
+        </div>
+      ))}
+    </section>
+  );
+}

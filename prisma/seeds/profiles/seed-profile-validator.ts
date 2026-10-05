@@ -155,20 +155,9 @@ function assertCountBounds(
   }
 }
 
-export async function validateSeedProfile(
-  prisma: PrismaClient,
-  profile: SeedProfile,
-): Promise<SeedProfileSnapshot> {
+function loadProfileRecords(prisma: PrismaClient, profile: SeedProfile) {
   const scope = SEED_PROFILE_SCOPES[profile];
-  const [
-    counts,
-    users,
-    projects,
-    reports,
-    itemRecords,
-    riskRecords,
-    decisionRecords,
-  ] = await Promise.all([
+  return Promise.all([
     collectScopedSeedCounts(prisma, profile),
     prisma.user.findMany({
       where: { id: { in: [...scope.userIds] } },
@@ -229,6 +218,21 @@ export async function validateSeedProfile(
       select: { reportSectionId: true, id: true, stableId: true, text: true },
     }),
   ]);
+}
+
+export async function validateSeedProfile(
+  prisma: PrismaClient,
+  profile: SeedProfile,
+): Promise<SeedProfileSnapshot> {
+  const [
+    counts,
+    users,
+    projects,
+    reports,
+    itemRecords,
+    riskRecords,
+    decisionRecords,
+  ] = await loadProfileRecords(prisma, profile);
 
   assertCountBounds(profile, counts);
   assertProjectGroupIntegrity(profile, users, projects);

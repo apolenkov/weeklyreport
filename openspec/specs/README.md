@@ -236,6 +236,8 @@ Authority model:
 - [web-trpc-test-harness](./web-trpc-test-harness/spec.md) — Gives component and hook tests one shared tRPC proxy factory and cache-filter contract.
 - [dependency-vulnerability-scanning](./dependency-vulnerability-scanning/spec.md) — Requires a recurring server-side dependency-vulnerability scan independent of push and branch-protection state.
 - [dependency-integrity](./dependency-integrity/spec.md) — Installs and runs published dependency artifacts without repository-local rewrites of third-party package contents.
+- [ui-crawl](./ui-crawl/spec.md) — The tester-kit crawler walks the running UI in quick and full modes and reports exercised controls, lifecycle states and unexplored coverage. `[roles: Shared]`
+- [tester-kit-coverage](./tester-kit-coverage/spec.md) — The tester-kit proves its own coverage with guarded lifecycle fixtures, per-procedure success evidence and reset between runs. `[roles: Shared]`
 
 ### Lint, tooling, and repository process
 
