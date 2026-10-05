@@ -23,7 +23,10 @@ import {
   vi,
 } from "vitest";
 
-import { assertE2eRuntimeDestructiveTarget } from "../../../../../prisma/guards/_destructive-guard.js";
+import {
+  assertE2eRuntimeDestructiveTarget,
+  assertRedisDbMatchesDatabase,
+} from "../../../../../prisma/guards/_destructive-guard.js";
 import { AdminBullmqJobsQueue } from "../../infrastructure/bullmq/admin-jobs-queue.adapter.js";
 import { getBullMQOptions } from "../../infrastructure/bullmq/bullmq-options";
 import { PdfExportReconciliationScheduler } from "../../infrastructure/bullmq/pdf-export-reconciliation.scheduler.js";
@@ -74,16 +77,9 @@ const REDIS_ENV = {
 } as unknown as EnvConfig;
 
 function assertSafeRedisMutation(): void {
-  assertE2eRuntimeDestructiveTarget(
-    SCRIPT_NAME,
-    requireEnv(process.env, "E2E_DATABASE_URL"),
-    process.env,
-  );
-  if (REDIS_ENV.REDIS_DB !== 15) {
-    throw new Error(
-      `[${SCRIPT_NAME}] REDIS_DB must be exactly 15 before Redis access.`,
-    );
-  }
+  const databaseUrl = requireEnv(process.env, "E2E_DATABASE_URL");
+  assertE2eRuntimeDestructiveTarget(SCRIPT_NAME, databaseUrl, process.env);
+  assertRedisDbMatchesDatabase(SCRIPT_NAME, databaseUrl, REDIS_ENV.REDIS_DB);
 }
 
 assertSafeRedisMutation();
@@ -164,7 +160,7 @@ describe("JobsService — pdf-export generation retry (Postgres + BullMQ integra
     const options = {
       ...getBullMQOptions(REDIS_ENV),
       // Each case owns a unique BullMQ prefix, so obliterate touches only
-      // keys this test created on Redis DB 15.
+      // keys this test created on its assigned Redis DB.
       prefix: `test-pdf-retry-${randomUUID()}`,
     };
     queue = new Queue<unknown, unknown>(QUEUE_NAME, options);
@@ -220,7 +216,7 @@ describe("JobsService — pdf-export generation retry (Postgres + BullMQ integra
     allocated = {};
     await collect(() => owned.worker?.close());
     // Obliterate is the one destructive Redis call — the disposable-target
-    // and DB-15 guards must hold immediately before it, not just at setup.
+    // and Redis-DB guards must hold immediately before it, not just at setup.
     await collect(async () => {
       if (owned.queue) {
         assertSafeRedisMutation();
