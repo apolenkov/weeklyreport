@@ -8,7 +8,10 @@ export type AiRuntimeFailure = NonNullable<
 
 /** Best-effort memory of the latest request-path failure; never throws. */
 export interface AiRuntimeHealth {
-  recordFailure(outcome: AiRuntimeFailure["outcome"]): Promise<void>;
+  recordFailure(
+    outcome: AiRuntimeFailure["outcome"],
+    occurredAt?: Date,
+  ): Promise<void>;
   recordSuccess(): Promise<void>;
   lastFailure(): Promise<AiRuntimeFailure | null>;
 }

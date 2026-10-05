@@ -89,7 +89,7 @@ The admin provider control read MUST expose the latest request-path failure (`pr
 
 - **WHEN** a Lead request ends in a provider failure while the active revision passed its tests
 - **THEN** the Admin AI readiness strip reads `Provider Failing` and explains the failure
-- **AND** it returns to `Ready` after the next answered request
+- **AND** the next read of the admin control after an answered request returns it to `Ready`
 
 ### Requirement: OpenAI-compatible provider responses are bounded before parsing
 

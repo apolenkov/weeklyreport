@@ -18,7 +18,11 @@ export class ReportAssistantHealthTelemetry implements ReportAssistantTelemetry 
       event.outcome === "provider_unavailable" ||
       event.outcome === "provider_response_incomplete"
     ) {
-      void this.health.recordFailure(event.outcome);
+      // A request that started on a previous revision must not blame the new one.
+      void this.health.recordFailure(
+        event.outcome,
+        new Date(Date.now() - event.latencyMs),
+      );
     }
   }
 }

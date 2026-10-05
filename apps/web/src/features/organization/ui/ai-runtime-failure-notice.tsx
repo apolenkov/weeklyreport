@@ -4,7 +4,7 @@ type RuntimeFailure = NonNullable<AiProviderControlRead["runtimeFailure"]>;
 
 const GUIDANCE: Record<RuntimeFailure["outcome"], string> = {
   provider_unavailable:
-    "Report chat did not get a timely answer from the AI provider. Check its endpoint, credentials and network.",
+    "Report chat did not get a timely answer from the AI provider (slow, rate-limited or unreachable). Check its endpoint, credentials and load.",
   provider_response_incomplete:
     "The AI provider cut report chat answers short. Turn its reasoning off or lower it in the provider configuration.",
 };
