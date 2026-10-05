@@ -12,6 +12,7 @@ import {
   type ProcedureUse,
   text,
 } from "./logs.ts";
+import { PROCEDURE_REASONS } from "./reasons.ts";
 
 const GREP = process.env.GREP_BIN ?? "grep";
 
@@ -20,10 +21,15 @@ export interface Procedure {
   type: string;
 }
 export interface ProcedureRow extends Procedure {
+  /** At least one call reached the api, even if it was rejected. */
   called: boolean;
+  /** At least one call finished successfully: only these count as exercised. */
+  exercised: boolean;
   calls: number;
   roles: string[];
   screens: string[];
+  /** Where the successful calls came from: the interface, the synthetic scenario, or both. */
+  via: "ui" | "scenario" | "ui+scenario" | "";
   reason: string;
 }
 export interface RouteRow {
@@ -52,30 +58,38 @@ function webSources(path: string): string[] {
   }
 }
 
-function reason(p: Procedure, sources: readonly string[]): string {
-  if (p.path.startsWith("dev."))
-    return "dev-only: refuses unless AUTH_DEV_MODE=true, the stand runs it off";
-  if (sources.length === 0)
-    return "no web caller found (not reachable from the interface)";
-  if (p.type === "mutation")
-    return "mutation behind a control the crawler skips as dangerous or that needs a specific state/data";
-  return "web caller exists, but the crawler did not reach the screen (state, filter or role)";
+function reason(p: Procedure, called: boolean): string {
+  const known = PROCEDURE_REASONS[p.path];
+  if (known) return `${known.kind}: ${known.why}`;
+  return called
+    ? "unclassified: called, but every call failed"
+    : "unclassified: never called";
 }
 
+function via(ok: number, scenarioOk: number): ProcedureRow["via"] {
+  if (ok === 0) return "";
+  if (scenarioOk === 0) return "ui";
+  return scenarioOk >= ok ? "scenario" : "ui+scenario";
+}
+
+/** `scenarioOk` is the number of successful calls the synthetic scenario made per procedure. */
 export function procedureRows(
   procedures: readonly Procedure[],
   used: ReadonlyMap<string, ProcedureUse>,
+  scenarioOk: ReadonlyMap<string, number> = new Map(),
 ): ProcedureRow[] {
   return procedures.map((p) => {
     const use = used.get(p.path);
-    const sources = webSources(p.path);
+    const ok = use?.ok ?? 0;
     return {
       ...p,
       called: use !== undefined,
+      exercised: ok > 0,
       calls: use?.calls ?? 0,
       roles: [...(use?.roles ?? [])].toSorted((a, b) => a.localeCompare(b)),
-      screens: sources.slice(0, SCREENS_PER_PROCEDURE),
-      reason: use ? "" : reason(p, sources),
+      screens: webSources(p.path).slice(0, SCREENS_PER_PROCEDURE),
+      via: via(ok, scenarioOk.get(p.path) ?? 0),
+      reason: ok > 0 ? "" : reason(p, use !== undefined),
     };
   });
 }

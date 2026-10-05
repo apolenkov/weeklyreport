@@ -101,7 +101,7 @@ function describeDiff(expected: FullProbe, actual: FullProbe): string {
 }
 
 function replayFrame(ctx: Ctx, home: FullHome, frame: FullFrame): void {
-  settle(ctx, home.url);
+  settle(ctx, home.url, "replay");
   restoreSelections(ctx, home);
   const reloaded = awaitFullProbe(ctx.browser, home.probe.signature);
   if (reloaded.signature !== home.probe.signature)

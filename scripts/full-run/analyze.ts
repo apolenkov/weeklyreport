@@ -27,6 +27,7 @@ import {
   tableSection,
 } from "./render.ts";
 import { openRun } from "./run-dir.ts";
+import { scenarioOk, scenarioSection } from "./scenario-summary.ts";
 
 const runPath = process.argv[2];
 if (!runPath) throw new Error("usage: analyze.ts <run-dir>");
@@ -45,11 +46,11 @@ const used = procedureCalls(apiLines);
 for (const [k, v] of metrics) {
   const path = /^\w+ \/trpc\/(.+)$/.exec(k)?.[1];
   if (path && !used.has(path))
-    used.set(path, { calls: v, roles: new Set(["(metrics only)"]) });
+    used.set(path, { calls: v, ok: 0, roles: new Set(["(metrics only)"]) });
 }
 
 const procedures = JSON.parse(run.read("procedures.json")) as Procedure[];
-const rows = procedureRows(procedures, used);
+const rows = procedureRows(procedures, used, scenarioOk(run));
 const routes = routeRows(apiLines, metrics);
 const errors = errorSummary(apiLines);
 const coverage = coverageByRouter(
@@ -89,6 +90,7 @@ const md = [
   ...explainSection(explain),
   ...nPlusOneSection(groups),
   ...crawlSection(crawlSummary(run, "quick"), crawlSummary(run, "full")),
+  ...scenarioSection(run),
   ...dogfoodSection(run),
   ...(run.exists("e2e.txt")
     ? ["", "## 11. e2e", "", run.read("e2e.txt").trim()]
@@ -117,7 +119,7 @@ writeFileSync(
     1,
   ),
 );
-const calledCount = rows.filter((r) => r.called).length;
+const calledCount = rows.filter((r) => r.exercised).length;
 console.log(
-  `procedures ${String(calledCount)}/${String(rows.length)}; report ${join(runPath, "report.md")}`,
+  `procedures exercised ${String(calledCount)}/${String(rows.length)}; report ${join(runPath, "report.md")}`,
 );

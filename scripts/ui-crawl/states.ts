@@ -197,18 +197,23 @@ const ADMIN_TABS = [
   "ai",
   "settings",
 ] as const;
+/** The admin tabs whose content follows the report lifecycle; the others look the same in every state. */
+const STATE_ADMIN_TABS = ["periods", "reopen"] as const;
 const TRENDS_PATH = "/reports/trends";
 
 /** Explicit entries prevent UUID collapsing or link discovery from hiding a state. */
 export function stateEntryPaths(
   role: string,
   state: CrawlState,
+  stateTabsOnly = false,
 ): readonly string[] {
   const archive =
     state === "archived" || state === "closed" ? "?archive=1" : "";
   const report = `${CRAWL_REPORT_ID}${archive}`;
   if (role === "admin") {
-    return [...ADMIN_TABS.map((tab) => `/admin?tab=${tab}`), "/pdf-exports"];
+    return stateTabsOnly
+      ? STATE_ADMIN_TABS.map((tab) => `/admin?tab=${tab}`)
+      : [...ADMIN_TABS.map((tab) => `/admin?tab=${tab}`), "/pdf-exports"];
   }
   if (role === "head") {
     return [

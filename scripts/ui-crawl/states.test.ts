@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { readStateManifest } from "./states.ts";
+import { readStateManifest, stateEntryPaths } from "./states.ts";
 
 const readBack = {
   version: 1,
@@ -73,5 +73,17 @@ describe("crawl fixture evidence boundary", () => {
         },
       }),
     ).toThrow();
+  });
+});
+
+describe("admin entry pages per state", () => {
+  it("walks every tab once and only the lifecycle tabs in later states", () => {
+    const all = stateEntryPaths("admin", "returned");
+    expect(all).toContain("/admin?tab=users");
+    expect(all).toContain("/pdf-exports");
+    expect(stateEntryPaths("admin", "published", true)).toEqual([
+      "/admin?tab=periods",
+      "/admin?tab=reopen",
+    ]);
   });
 });

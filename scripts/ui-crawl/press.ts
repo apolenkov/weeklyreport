@@ -42,7 +42,30 @@ function signedOut(ctx: Ctx, url: string): boolean {
 }
 
 /** Reload the page or reopen its URL, signing in again if the browser lost its session. */
-export function settle(ctx: Ctx, url: string | null): number {
+export function settle(
+  ctx: Ctx,
+  url: string | null,
+  why: SettleReason,
+): number {
+  const started = performance.now();
+  try {
+    return load(ctx, url);
+  } finally {
+    // the speed profile tells which caller the reload time belongs to
+    const key = `settle:${why}`;
+    const entry = ctx.browser.profile.get(key) ?? { calls: 0, ms: 0 };
+    ctx.browser.profile.set(key, {
+      calls: entry.calls + 1,
+      ms: entry.ms + performance.now() - started,
+    });
+  }
+}
+
+/** Why a page was reloaded or reopened: the speed profile groups the time by this. */
+export type SettleReason =
+  "visit" | "navigate" | "reload" | "hung" | "replay" | "rebase";
+
+function load(ctx: Ctx, url: string | null): number {
   const reservedAt = pace("trpc", PAGE_LOAD_COST);
   const start = performance.now();
   const load = [
@@ -76,7 +99,7 @@ function restore(
   const urlChanged =
     outcome.after.split("|")[0] !== outcome.before.split("|")[0];
   if (urlChanged) {
-    settle(ctx, target.url);
+    settle(ctx, target.url, "navigate");
     return "navigate";
   }
   if (outcome.after === outcome.before) return "none";
@@ -86,7 +109,7 @@ function restore(
   const again = repress(ctx.browser, control.selector, control.name);
   settleRate("trpc", reservedAt, REPRESS_COST, takeRequests(ctx.browser));
   if (again === outcome.before) return "toggle";
-  settle(ctx, null);
+  settle(ctx, null, "reload");
   return "reload";
 }
 
@@ -165,7 +188,7 @@ export function runBatch(
     } catch {
       // no dialog was open
     }
-    settle(ctx, target.url);
+    settle(ctx, target.url, "hung");
     return {
       outcome: {
         results: recoverResults(ctx.browser),
