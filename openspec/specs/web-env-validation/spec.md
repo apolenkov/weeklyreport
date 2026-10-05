@@ -83,12 +83,12 @@ enabled product feedback without an inbox-role list containing admin.
 
 #### Scenario: Empty-string DSN passes the build assert
 
-- **GIVEN** `NEXT_PUBLIC_SENTRY_DSN=""` at build time (as `docker-compose.dev.yml`
-  supplies via `${NEXT_PUBLIC_SENTRY_DSN:-}` when the host value is unset)
+- **GIVEN** `NEXT_PUBLIC_SENTRY_DSN=""` at build time (as an unset host
+  value interpolated into a build argument yields)
 - **WHEN** `next.config.ts` runs the client-env assert during `next build`
 - **THEN** the assert passes because the schema's `""`→unset preprocess maps the
   empty string to absent before `z.url()` runs, rather than rejecting it and
-  breaking the docker dev build
+  breaking the build
 
 ### Requirement: A typed accessor is the single client-env read seam and preserves inlining
 

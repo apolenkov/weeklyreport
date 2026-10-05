@@ -90,9 +90,9 @@ helper MUST follow the same check.
 
 ### Requirement: DATABASE_URL and POSTGRES_DB must be consistent
 
-Every Compose file and environment example used by a destructive disposable-database workflow MUST use the same accepted database name in both `POSTGRES_DB` and the raw final path segment of `DATABASE_URL`. The guard MUST validate the resolved URL itself; a safe-looking `POSTGRES_DB` value cannot override a different URL target.
+Every dependency manifest and environment example used by a destructive disposable-database workflow MUST use the same accepted database name in both `POSTGRES_DB` and the raw final path segment of `DATABASE_URL`. The guard MUST validate the resolved URL itself; a safe-looking `POSTGRES_DB` value cannot override a different URL target.
 
-Consumer surface: destructive workflow Compose files and environment examples,
+Consumer surface: destructive workflow dependency manifests (`deploy/local-dev/deps.yaml`) and environment examples,
 plus `prisma/guards/_destructive-guard.ts` —
 `assertE2eRuntimeDestructiveTarget`.
 

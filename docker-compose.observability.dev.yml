@@ -1,9 +1,0 @@
-# Dev companion to docker-compose.observability.yml — MUST be composed LAST
-# (see the observability:* scripts in package.json): it swaps the prod-true
-# prometheus config for the dev-true one, whose api target is the published
-# host port. Compose replaces volume entries by container path, and the last
-# -f file wins.
-services:
-  otel-lgtm:
-    volumes:
-      - ./deploy/prometheus-otel-lgtm.dev.yml:/otel-lgtm/prometheus.yaml:ro

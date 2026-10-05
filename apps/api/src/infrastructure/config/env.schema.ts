@@ -32,7 +32,7 @@ const envObjectSchema = z.object({
   FRONTEND_URL: z.url(),
   // Base URL the reminder scheduler embeds in notification email links
   // (`reminders.scheduler.ts`). Required so prod emails never link to
-  // localhost; in dev/compose it is set to the same web origin as FRONTEND_URL.
+  // localhost; in local dev it is set to the same web origin as FRONTEND_URL.
   APP_BASE_URL: z.url(),
   // Optional CSV of additional allowed origins for CORS (e.g. prod host +
   // admin host on one API instance). Wildcards (*) are rejected in
@@ -156,7 +156,7 @@ const envObjectSchema = z.object({
   // Internal Gotenberg render service endpoint. Required fail-closed like
   // PDF_BASE_URL, but the check is syntactic only: no DNS or reachability
   // probe runs here, so host-source `pnpm dev` keeps booting while the
-  // compose-internal hostname is unresolvable (renderer health stays a
+  // cluster-internal hostname is unresolvable (renderer health stays a
   // separate lazy signal, never a boot dependency).
   GOTENBERG_URL: z.url(),
   // Directory where the BullMQ worker writes generated PDFs and

@@ -17,9 +17,10 @@
   },
   "scripts": {
     "dev": "turbo run dev",
+    "deps:up": "bash deploy/local-dev/up.sh",
+    "deps:down": "bash deploy/local-dev/down.sh",
     "dev:feedback": "AUTH_DEV_MODE=true NEXT_PUBLIC_DEV_ROLE_SWITCHER=true PRODUCT_FEEDBACK_ENABLED=true NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED=true NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES=admin turbo run dev",
     "agentation:mcp": "node --env-file=.env node_modules/agentation-mcp/dist/cli.js server --mcp-only --http-url http://127.0.0.1:3002/api/v1/agentation",
-    "dev:watch": "docker compose -f docker-compose.yml -f docker-compose.dev.yml up --watch",
     "build": "turbo run build",
     "lint": "pnpm lint:eslint && pnpm lint:stylelint && pnpm lint:runtime-node && pnpm lint:cleanliness && pnpm lint:knip",
     "format": "prettier --write .",
@@ -42,11 +43,6 @@
     "db:seed:profile": "tsx prisma/seeds/profiles/seed-profile.ts",
     "db:seed:verify": "tsx prisma/seeds/profiles/seed-profile-proof.ts",
     "db:reset:hard": "pnpm --filter @customreport/api exec tsx ../../prisma/operations/reset-hard.ts",
-    "db:reset:hard:docker": "docker compose -f docker-compose.yml -f docker-compose.dev.yml exec -T api pnpm --dir /app/apps/api exec tsx ../../prisma/operations/reset-hard.ts",
-    "observability:compose": "docker compose -f docker-compose.yml -f docker-compose.observability.yml -f docker-compose.errors.yml -f docker-compose.observability.dev.yml",
-    "observability:up": "pnpm observability:compose up -d postgres redis mailpit otel-lgtm bugsink",
-    "observability:down": "pnpm observability:compose rm --stop --force otel-lgtm bugsink postgres-exporter redis-exporter",
-    "observability:logs": "pnpm observability:compose logs --tail=100 otel-lgtm",
     "logs": "tail -f apps/api/.logs/app.log",
     "logs:errors": "tail -f apps/api/.logs/app.log | grep -E '\"level\":\"(error|warn)\"'"
   },
