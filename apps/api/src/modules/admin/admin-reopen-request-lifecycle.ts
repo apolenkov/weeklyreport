@@ -22,13 +22,9 @@ import {
 // Group-scoped list/count + race-safe decide for reopen requests.
 const REQUEST_NOT_FOUND = "Reopen request not found.";
 
-// Scope is ReportSectionWhereInput, so it nests under reportSection.
-export async function listReopenRequests(
-  prisma: PrismaService,
+function buildReopenListFilters(
   input: ListReopenRequestsInput,
-): Promise<ReopenRequestRow[]> {
-  const statusFilter = input.status === "all" ? {} : { status: input.status };
-  const scope = groupScopeFilter(input.session, "reportSection");
+): Prisma.ReopenRequestWhereInput[] {
   const cursorFilter: Prisma.ReopenRequestWhereInput | undefined = input.cursor
     ? {
         OR: [
@@ -65,9 +61,19 @@ export async function listReopenRequests(
         ],
       }
     : undefined;
-  const additionalFilters = [cursorFilter, searchFilter].filter(
+  return [cursorFilter, searchFilter].filter(
     (filter): filter is Prisma.ReopenRequestWhereInput => filter !== undefined,
   );
+}
+
+// Scope is ReportSectionWhereInput, so it nests under reportSection.
+export async function listReopenRequests(
+  prisma: PrismaService,
+  input: ListReopenRequestsInput,
+): Promise<ReopenRequestRow[]> {
+  const statusFilter = input.status === "all" ? {} : { status: input.status };
+  const scope = groupScopeFilter(input.session, "reportSection");
+  const additionalFilters = buildReopenListFilters(input);
   const rows = await prisma.reopenRequest.findMany({
     where: {
       ...statusFilter,

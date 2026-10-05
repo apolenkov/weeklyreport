@@ -92,34 +92,12 @@ export const activateAiProviderRevision = async (
         id,
         now,
       );
-      const activatedCandidate =
-        await transaction.aiProviderConfiguration.updateMany({
-          where: {
-            id,
-            lifecycle: {
-              in: [
-                AiProviderLifecycle.validated,
-                AiProviderLifecycle.preparing,
-                AiProviderLifecycle.active,
-                AiProviderLifecycle.superseded,
-              ],
-            },
-          },
-          data: {
-            ...preparationEvidence,
-            lifecycle: AiProviderLifecycle.active,
-            activatedAt: now,
-          },
-        });
-      if (activatedCandidate.count !== 1) throw new ActivationRaceError();
-      const pointer = await transaction.aiProviderControl.updateMany({
-        where: {
-          id: "singleton",
-          activeConfigurationId: control.activeConfigurationId,
-        },
-        data: { activeConfigurationId: id, enabled: true },
+      await promoteCandidate(transaction, {
+        id,
+        now,
+        previousActiveId: control.activeConfigurationId,
+        preparationEvidence,
       });
-      if (pointer.count !== 1) throw new ActivationRaceError();
       return true;
     });
   } catch (error) {
@@ -129,6 +107,50 @@ export const activateAiProviderRevision = async (
 };
 
 class ActivationRaceError extends Error {}
+
+const promoteCandidate = async (
+  transaction: Prisma.TransactionClient,
+  {
+    id,
+    now,
+    previousActiveId,
+    preparationEvidence,
+  }: Readonly<{
+    id: string;
+    now: Date;
+    previousActiveId: string | null;
+    preparationEvidence: PreparationEvidence;
+  }>,
+): Promise<void> => {
+  const activatedCandidate =
+    await transaction.aiProviderConfiguration.updateMany({
+      where: {
+        id,
+        lifecycle: {
+          in: [
+            AiProviderLifecycle.validated,
+            AiProviderLifecycle.preparing,
+            AiProviderLifecycle.active,
+            AiProviderLifecycle.superseded,
+          ],
+        },
+      },
+      data: {
+        ...preparationEvidence,
+        lifecycle: AiProviderLifecycle.active,
+        activatedAt: now,
+      },
+    });
+  if (activatedCandidate.count !== 1) throw new ActivationRaceError();
+  const pointer = await transaction.aiProviderControl.updateMany({
+    where: {
+      id: "singleton",
+      activeConfigurationId: previousActiveId,
+    },
+    data: { activeConfigurationId: id, enabled: true },
+  });
+  if (pointer.count !== 1) throw new ActivationRaceError();
+};
 
 const resolvePreparationEvidence = async (
   transaction: Prisma.TransactionClient,
