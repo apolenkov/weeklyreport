@@ -18,7 +18,10 @@ import {
   vi,
 } from "vitest";
 
-import { assertE2eRuntimeDestructiveTarget } from "../../../../../prisma/guards/_destructive-guard.js";
+import {
+  assertE2eRuntimeDestructiveTarget,
+  assertRedisDbMatchesDatabase,
+} from "../../../../../prisma/guards/_destructive-guard.js";
 import { getBullMQOptions } from "../../infrastructure/bullmq/bullmq-options";
 import { PdfExportReconciliationScheduler } from "../../infrastructure/bullmq/pdf-export-reconciliation.scheduler.js";
 import type { EnvConfig } from "../../infrastructure/config/env.schema";
@@ -522,16 +525,9 @@ describe("orphan scan (real Postgres + BullMQ)", () => {
   } as unknown as EnvConfig;
 
   function assertSafeRedisMutation(): void {
-    assertE2eRuntimeDestructiveTarget(
-      SCRIPT_NAME,
-      requireEnv(process.env, "E2E_DATABASE_URL"),
-      process.env,
-    );
-    if (REDIS_ENV.REDIS_DB !== 15) {
-      throw new Error(
-        `[${SCRIPT_NAME}] REDIS_DB must be exactly 15 before Redis access.`,
-      );
-    }
+    const databaseUrl = requireEnv(process.env, "E2E_DATABASE_URL");
+    assertE2eRuntimeDestructiveTarget(SCRIPT_NAME, databaseUrl, process.env);
+    assertRedisDbMatchesDatabase(SCRIPT_NAME, databaseUrl, REDIS_ENV.REDIS_DB);
   }
 
   let prisma: ReturnType<typeof createTestPrisma>;
@@ -556,7 +552,7 @@ describe("orphan scan (real Postgres + BullMQ)", () => {
     queue = new Queue<unknown, unknown>(QUEUE_NAME, {
       ...getBullMQOptions(REDIS_ENV),
       // A unique BullMQ prefix per case keeps obliterate scoped to the keys
-      // this test created on Redis DB 15.
+      // this test created on its assigned Redis DB.
       prefix: `test-pdf-orphan-${randomUUID()}`,
     });
     allocated.queue = queue;
@@ -597,7 +593,7 @@ describe("orphan scan (real Postgres + BullMQ)", () => {
     const owned = allocated;
     allocated = {};
     // Obliterate is the one destructive Redis call — the disposable-target
-    // and DB-15 guards must hold immediately before it, not just at setup.
+    // and Redis-DB guards must hold immediately before it, not just at setup.
     await collect(async () => {
       if (owned.queue) {
         assertSafeRedisMutation();

@@ -6,7 +6,7 @@ import type {
   AiProviderDraft,
   AiProviderPreparationProgress,
 } from "@customreport/shared";
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
 
 import { ENV_CONFIG } from "../../../infrastructure/config/config.module.js";
 import { AiProviderPrometheusMetrics } from "../../../infrastructure/metrics/ai-provider.metrics.js";
@@ -35,6 +35,10 @@ import type {
   AiProviderExecutionClaim,
   AiProviderTestEnqueuer,
 } from "./ai-provider.service-types.js";
+import {
+  AI_RUNTIME_HEALTH,
+  type AiRuntimeHealth,
+} from "./ai-runtime-health.js";
 
 export type {
   AiProviderCapabilityRuntimeConfig,
@@ -78,6 +82,9 @@ export class AiProviderConfigurationService {
     metrics: AiProviderMetricsSink = NOOP_METRICS,
     @Inject(AI_PROVIDER_TEST_ENQUEUER)
     testEnqueuer?: AiProviderTestEnqueuer,
+    @Optional()
+    @Inject(AI_RUNTIME_HEALTH)
+    runtimeHealth?: AiRuntimeHealth,
   ) {
     const audit: AiProviderAuditSink = {
       record: (event) => logger.info("ai_provider.audit", { ...event }),
@@ -92,6 +99,7 @@ export class AiProviderConfigurationService {
       ...(tester ? { tester } : {}),
       ...(preparation ? { preparation } : {}),
       ...(testEnqueuer ? { testEnqueuer } : {}),
+      ...(runtimeHealth ? { runtimeHealth } : {}),
     } satisfies AiProviderServiceDependencies;
     this.reader = new AiProviderReadService(dependencies);
     this.drafts = new AiProviderDraftService(dependencies);

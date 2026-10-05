@@ -4,10 +4,12 @@
 # Steps: start the stand when it is not running (start.sh, with the image already deployed) or when the
 # collection of pg_stat_statements/auto_explain/statement log (Postgres) and V8 coverage (api) is off in
 # values-tester.yaml, reset, walk --quick (all roles, 1280+375), walk --full for the chosen states
-# (default: returned at 1280; "all" is the 6-7 hour night mode), the synthetic API scenario (handlers the
+# (default: returned at 1280; "all" is the night mode, about 2 hours (7 x 16 min estimate)), the synthetic API scenario (handlers the
 # crawler skips as dangerous), the human-like pass, collect api/web/postgres logs, coverage and
 # statistics, build report.md, reset the stand again.
 # Evidence: ~/.local/state/wr-tester/full-run-<time>/ (override with --out).
+# e2e (pnpm test:e2e) is not run: it needs dev-login and dev.runtimeTarget on a source run (customreport_e2e), the stand uses SAML;
+# the e2e step only writes e2e.txt with this reason, and --no-e2e skips that note. Browser checks on the stand are walk.sh and this script.
 set -euo pipefail
 . "$(dirname "$0")/env.sh"
 

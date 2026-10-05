@@ -22,6 +22,7 @@ import {
 } from "../../../shared/lib/navigation/scalar-search-param";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { AiProviderCard } from "./ai-provider-card";
+import { AiRuntimeFailureNotice } from "./ai-runtime-failure-notice";
 import { SettingsAiFeatureDetail } from "./settings-ai-feature-detail";
 
 const sameFeatureKey = (left: unknown, right: unknown): boolean =>
@@ -72,7 +73,9 @@ function aiReadiness({
     provider: providerUnavailable
       ? "Unavailable"
       : providerReady
-        ? "Ready"
+        ? provider.runtimeFailure
+          ? "Failing"
+          : "Ready"
         : "Setup required",
     features: `${readyFeatures}/${features.length} ready`,
   };
@@ -171,6 +174,8 @@ export function AiTab() {
           </span>
         </p>
       </div>
+
+      <AiRuntimeFailureNotice provider={providerQ.data} />
 
       {catalogQ.isError && (
         <div className="flex flex-wrap items-center gap-3" role="alert">

@@ -57,7 +57,7 @@ export function LeadReportAssistantBody({
           <div className="space-y-3">
             <Alert variant="destructive">
               <AlertCircle aria-hidden="true" />
-              <AlertTitle>
+              <AlertTitle className="line-clamp-none">
                 The assistant could not complete that search.
               </AlertTitle>
               <AlertDescription>

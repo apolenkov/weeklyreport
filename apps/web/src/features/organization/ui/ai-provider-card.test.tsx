@@ -57,6 +57,7 @@ const control = (
 ): AiProviderControlRead => ({
   enabled: active?.lifecycle === "active",
   availability: active ? "available" : "not_configured",
+  runtimeFailure: null,
   activeRevisionId: active?.id ?? null,
   profileCapabilities: AI_PROVIDER_PROFILE_CAPABILITIES.map(
     ({ profile, roles }) => ({ profile, roles: [...roles] }),

@@ -33,7 +33,11 @@ const outcomeAction = (
     return { kind: "edit", label: "Edit question" };
   if (kind === "semantic_index_pending")
     return { kind: "retry", label: "Check again" };
-  if (kind === "provider_unavailable" || kind === "resource_limited") {
+  if (
+    kind === "provider_unavailable" ||
+    kind === "provider_response_incomplete" ||
+    kind === "resource_limited"
+  ) {
     return { kind: "retry", label: "Try again" };
   }
   return null;
@@ -45,6 +49,9 @@ const outcomeGuidance = (kind: AssistantOutcome["kind"]): string => {
   if (kind === "result_set_too_large") return "Narrow the question below.";
   if (kind === "semantic_index_pending") return "Check again below.";
   if (kind === "provider_unavailable") return "Try again below.";
+  if (kind === "provider_response_incomplete") {
+    return "Try again below. If it keeps happening, tell an administrator the AI provider cuts answers short.";
+  }
   if (kind === "resource_limited") return "Try again shortly below.";
   return "An administrator must configure AI before the assistant can work.";
 };
@@ -72,6 +79,9 @@ const outcomeMessage = (outcome: AssistantOutcome): string => {
     }
     return "The AI service is temporarily unavailable. Try the same question again in a moment.";
   }
+  if (outcome.kind === "provider_response_incomplete") {
+    return "The AI service stopped before it finished the answer.";
+  }
   if (outcome.kind === "ai_not_configured") {
     return "The report assistant is not configured yet. Ask an administrator to configure an AI provider.";
   }
@@ -90,7 +100,9 @@ function AssistantOutcomeMessage({
   return (
     <Alert className="border-[var(--color-border)] bg-[var(--color-surface-hover)]">
       <AlertCircle className="text-[var(--color-primary)]" aria-hidden="true" />
-      <AlertTitle>{outcomeMessage(outcome)}</AlertTitle>
+      <AlertTitle className="line-clamp-none">
+        {outcomeMessage(outcome)}
+      </AlertTitle>
       <AlertDescription>
         <span className="text-[var(--color-muted-foreground)]">
           {outcomeGuidance(outcome.kind)}

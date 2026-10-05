@@ -105,6 +105,7 @@ function renderTab(opts?: {
   users?: AdminUserView[];
   productFilter?: string | null;
   countsError?: boolean;
+  fetchOwnership?: () => unknown;
 }) {
   const { proxy, captured } = createMockTRPC([
     {
@@ -112,6 +113,10 @@ function renderTab(opts?: {
       query: opts?.countsError
         ? Promise.reject(new Error("counts failed"))
         : [],
+    },
+    {
+      path: ["admin", "listProductGroupOwnership"],
+      query: opts?.fetchOwnership ?? [],
     },
     { path: ["admin", "saveProject"], mutation: true },
     { path: ["admin", "deleteProject"], mutation: true },
@@ -144,6 +149,21 @@ function renderTab(opts?: {
   );
   return { ...result, captured };
 }
+
+describe("ProductsTab — group ownership", () => {
+  it("loads every row's owning group with one batched query", async () => {
+    const fetchOwnership = vi.fn(() => []);
+    renderTab({
+      products: [mockProduct, secondProduct],
+      fetchOwnership,
+    });
+
+    await waitFor(() => {
+      expect(screen.getAllByTestId("product-group-chips-stub")).toHaveLength(2);
+      expect(fetchOwnership).toHaveBeenCalledTimes(1);
+    });
+  });
+});
 
 describe("ProductsTab — deep-link panel state", () => {
   beforeEach(() => {
