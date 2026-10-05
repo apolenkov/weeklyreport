@@ -34,7 +34,7 @@ function BulkRevokeSection({
         aria-expanded={expanded}
         aria-controls="bulk-actions-panel"
         onClick={() => setExpanded((prev) => !prev)}
-        className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-muted-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)]"
+        className="flex min-h-8 items-center gap-1.5 text-xs font-semibold text-[var(--color-muted-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)]"
       >
         <span aria-hidden="true">{expanded ? "▾" : "▸"}</span>
         Bulk actions
