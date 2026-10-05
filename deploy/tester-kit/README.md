@@ -113,7 +113,7 @@ deploy/tester-kit/walk.sh --full --states draft,published --roles lead,head --wi
 
 ```bash
 deploy/tester-kit/full-run.sh                      # быстрый обход + полный обход состояния returned на 1280
-deploy/tester-kit/full-run.sh --states all         # ночной режим: все 7 состояний, 6–7 часов
+deploy/tester-kit/full-run.sh --states all         # все 7 состояний, около 2 часов (оценка: 7 × 16 минут)
 deploy/tester-kit/full-run.sh --walk-args "--roles lead --max-pages 3"   # пробный короткий прогон
 ```
 
