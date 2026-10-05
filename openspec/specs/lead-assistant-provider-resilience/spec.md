@@ -61,6 +61,36 @@ Every supported provider profile and the OpenAI-compatible transport MUST preser
 - **THEN** the request is not resent through that other revision
 - **AND** only an explicit admin activation can change the global provider
 
+### Requirement: A generation cut off by the output limit is a distinct outcome
+
+When a planner, planner-repair, answer, or citation-repair response ends because the provider reached its output-token limit (`finish_reason` `length`, as happens when a reasoning model spends the whole budget thinking), the transport MUST classify it as a non-retryable provider failure with a safe code and MUST NOT parse or return the partial body. `leadForm.assistant` MUST return `{ "kind": "provider_response_incomplete" }`, which the Lead chat renders with a retry control and a note that an administrator can adjust the provider.
+
+#### Scenario: Reasoning consumes the planner budget
+
+- **WHEN** the provider returns empty content and no tool call with `finish_reason` `length`
+- **THEN** the assistant returns `provider_response_incomplete` instead of a technical error
+- **AND** the capability probes record the same classification
+
+### Requirement: The Lead gets an outcome inside a bounded request time
+
+`leadForm.assistant` MUST finish within 12 seconds of acquiring its lease, independent of the per-call provider timeout. When that bound passes first, it MUST cancel provider work and return `{ "kind": "provider_unavailable" }`.
+
+#### Scenario: Provider is slow or unreachable
+
+- **WHEN** planner and answer calls together exceed the request bound
+- **THEN** the procedure returns `provider_unavailable` after at most 12 seconds
+- **AND** the lease is released
+
+### Requirement: Admin AI status shows request-time provider failure
+
+The admin provider control read MUST expose the latest request-path failure (`provider_unavailable` or `provider_response_incomplete`, with its time) of the active provider, retained for 15 minutes, cleared by the next answered request, and ignored when it predates the current activation. The Admin AI tab MUST show the provider as `Failing` with guidance while such a failure is present.
+
+#### Scenario: Chat fails after capability tests passed
+
+- **WHEN** a Lead request ends in a provider failure while the active revision passed its tests
+- **THEN** the Admin AI readiness strip reads `Provider Failing` and explains the failure
+- **AND** it returns to `Ready` after the next answered request
+
 ### Requirement: OpenAI-compatible provider responses are bounded before parsing
 
 The OpenAI-compatible transport MUST apply one product-defined maximum response

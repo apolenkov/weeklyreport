@@ -23,6 +23,7 @@ import {
   AesGcmCredentialCodec,
   type StoredCredential,
 } from "../infrastructure/credential-codec.js";
+import type { AiRuntimeHealth } from "./ai-runtime-health.js";
 
 export type { AiProviderTestEnqueuer } from "../infrastructure/ai-provider-test.queue.js";
 
@@ -131,6 +132,7 @@ export type AiProviderServiceDependencies = Readonly<{
   tester?: AiProviderCapabilityTester;
   preparation?: AiProviderPreparationCoordinator;
   testEnqueuer?: AiProviderTestEnqueuer;
+  runtimeHealth?: AiRuntimeHealth;
   audit: AiProviderAuditSink;
   metrics: AiProviderMetricsSink;
 }>;

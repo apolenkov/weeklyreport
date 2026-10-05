@@ -23,8 +23,14 @@ import type {
   ReportAssistantPlannerPort,
   ReportAssistantResourceGuardPort,
 } from "./report-assistant.ports.js";
-import { ReportAssistantProviderError } from "./report-assistant.ports.js";
-import { ReportAssistantService } from "./report-assistant.service.js";
+import {
+  PROVIDER_RESPONSE_INCOMPLETE,
+  ReportAssistantProviderError,
+} from "./report-assistant.ports.js";
+import {
+  REPORT_ASSISTANT_REQUEST_DEADLINE_MS,
+  ReportAssistantService,
+} from "./report-assistant.service.js";
 import type {
   ReportAssistantTelemetry,
   ReportAssistantTelemetryEvent,
@@ -824,6 +830,47 @@ describe("ReportAssistantService", () => {
       kind: "provider_unavailable",
       rateLimit: { retryAfterSeconds: 43 },
     });
+  });
+
+  it("returns provider_response_incomplete when the provider cut generation short", async () => {
+    const harness = createHarness(basePlan);
+    harness.answerer.mockRejectedValue(
+      new ReportAssistantProviderError("answer", new Error("length"), {
+        statusCode: undefined,
+        retryable: false,
+        providerCode: PROVIDER_RESPONSE_INCOMPLETE,
+      }),
+    );
+
+    await expect(harness.service.answer(request, ACTOR_ID)).resolves.toEqual({
+      kind: "provider_response_incomplete",
+    });
+  });
+
+  it("returns provider_unavailable once the request deadline passes", async () => {
+    vi.useFakeTimers();
+    try {
+      const events: ReportAssistantTelemetryEvent[] = [];
+      const harness = createHarness(basePlan, {
+        telemetry: { record: (event) => events.push(event) },
+      });
+      harness.answerer.mockImplementation(
+        (_input, signal?: AbortSignal) =>
+          new Promise((_resolve, reject) => {
+            signal?.addEventListener("abort", () => reject(signal.reason));
+          }),
+      );
+
+      const pending = harness.service.answer(request, ACTOR_ID);
+      await vi.advanceTimersByTimeAsync(REPORT_ASSISTANT_REQUEST_DEADLINE_MS);
+
+      await expect(pending).resolves.toEqual({ kind: "provider_unavailable" });
+      expect(events.map((event) => event.outcome)).toEqual([
+        "provider_unavailable",
+      ]);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("preserves non-retryable provider failures as technical errors", async () => {

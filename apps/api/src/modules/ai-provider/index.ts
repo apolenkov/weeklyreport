@@ -18,6 +18,10 @@ export {
   toSharedProfile,
 } from "./application/ai-provider.service-types.js";
 export {
+  AI_RUNTIME_HEALTH,
+  type AiRuntimeHealth,
+} from "./application/ai-runtime-health.js";
+export {
   ProviderUrlPolicyError,
   type ResolvedCompositeProviderProfile,
   type ResolvedProviderProfile,
@@ -34,6 +38,7 @@ export {
   AiProviderTestBullmqEnqueuer,
   type AiProviderTestEnqueuer,
 } from "./infrastructure/ai-provider-test.queue.js";
+export { RedisAiRuntimeHealth } from "./infrastructure/ai-runtime-health.redis.js";
 export {
   AesGcmCredentialCodec,
   CredentialCodecError,

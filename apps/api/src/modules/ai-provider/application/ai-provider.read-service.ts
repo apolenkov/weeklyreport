@@ -29,7 +29,19 @@ export class AiProviderReadService {
       state: result.active?.lifecycle ?? "not_configured",
     };
     this.dependencies.metrics.recordState(metrics);
-    return result;
+    return { ...result, runtimeFailure: await this.runtimeFailure(result) };
+  }
+
+  // A failure older than the current activation belongs to a replaced provider.
+  private async runtimeFailure(
+    control: AiProviderControlRead,
+  ): Promise<AiProviderControlRead["runtimeFailure"]> {
+    const failure = await this.dependencies.runtimeHealth?.lastFailure();
+    const activatedAt = control.active?.activatedAt;
+    if (!failure || control.availability !== "available" || !activatedAt) {
+      return null;
+    }
+    return new Date(failure.occurredAt) > activatedAt ? failure : null;
   }
 
   async availability(): Promise<AiProviderAvailabilityRead> {
