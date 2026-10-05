@@ -43,6 +43,12 @@ Every supported provider profile and the OpenAI-compatible transport MUST preser
 - **THEN** `leadForm.assistant` returns `{ "kind": "provider_unavailable" }`
 - **AND** retrieval data, prompts, provider response bodies, endpoint details, and secrets are absent from the client response
 
+#### Scenario: Provider is unreachable
+
+- **WHEN** a request-path provider call fails with a timeout or transport failure that carries no HTTP status
+- **THEN** the call is not repeated and `leadForm.assistant` returns `{ "kind": "provider_unavailable" }` after at most one connect or request timeout
+- **AND** only HTTP 429 and HTTP 5xx responses are retried within the bounded retry budget
+
 #### Scenario: Provider rejects a non-retryable request
 
 - **WHEN** the active provider returns a non-retryable HTTP 4xx response

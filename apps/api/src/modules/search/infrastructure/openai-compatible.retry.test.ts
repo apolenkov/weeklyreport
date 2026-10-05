@@ -21,6 +21,12 @@ const rateLimit = (retryAfterMs: number): ReportAssistantProviderError =>
     },
   );
 
+const networkFailure = (): ReportAssistantProviderError =>
+  new ReportAssistantProviderError("planner", new TypeError("fetch failed"), {
+    statusCode: undefined,
+    retryable: true,
+  });
+
 afterEach(() => vi.useRealTimers());
 
 describe("withTransientRetry", () => {
@@ -61,6 +67,14 @@ describe("withTransientRetry", () => {
     expect(settled).toBe("rejected");
     await vi.advanceTimersByTimeAsync(5000);
     await result;
+    expect(action).toHaveBeenCalledOnce();
+  });
+
+  it("fails fast on a network failure instead of repeating the connect wait", async () => {
+    const failure = networkFailure();
+    const action = vi.fn<() => Promise<string>>().mockRejectedValue(failure);
+
+    await expect(withTransientRetry(action)).rejects.toBe(failure);
     expect(action).toHaveBeenCalledOnce();
   });
 

@@ -12,6 +12,7 @@ import {
   seedTestData,
   TEST_IDS,
 } from "../../test-utils/prisma-test-helper";
+import { AdminPrismaRepository } from "../admin/admin.prisma-repository";
 import {
   buildAssembledReportFromPrismaRow,
   reportFullIncludeForSnapshot,
@@ -264,5 +265,36 @@ describe("WeeklyReportService with Prisma (integration)", () => {
     expect(section.decisions.map((decision) => decision.text)).toEqual([
       "Upgrade PostgreSQL",
     ]);
+  });
+
+  // TASK-145.60: an admin detach leaves the staffed product without a
+  // GroupProduct owner; the report must keep loading for every role.
+  it("keeps loading the report after the staffed product is detached from its group", async () => {
+    const data = await seedSubmittedReport();
+    await new AdminPrismaRepository(prisma as never).detachProductFromGroup({
+      groupId: expectDefined(data.lead.reportingGroupId),
+      productId: data.project.id,
+    });
+    expect(
+      await prisma.groupProduct.count({
+        where: { productId: data.project.id },
+      }),
+    ).toBe(0);
+
+    const result = await service.getWeeklyReport(data.report.id, adminSession);
+
+    expect(result.status).toBe("active");
+    if (result.status !== "active") throw new Error("expected active");
+    expect(
+      expectDefined(result.leadSections[0]).projects[0]?.ownerGroupId,
+    ).toBeNull();
+
+    // A scoped role reads through the group filter, not the admin bypass.
+    const headResult = await service.getWeeklyReport(data.report.id, {
+      ...adminSession,
+      role: "head",
+      reportingGroupId: TEST_IDS.group,
+    });
+    expect(headResult.status).toBe("active");
   });
 });

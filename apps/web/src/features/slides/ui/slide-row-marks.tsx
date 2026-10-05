@@ -89,7 +89,7 @@ function StageWatermark({ stageName }: { readonly stageName: string }) {
   if (!Icon) return null;
   return (
     <span {...tooltip} className="inline-flex shrink-0">
-      <Icon className="h-[11px] w-[11px]" />
+      <Icon className="h-4 w-4" />
     </span>
   );
 }
@@ -130,7 +130,7 @@ export function StageLegend({
         if (!Icon) return null;
         return (
           <span key={stageName} className="inline-flex items-center gap-1">
-            <Icon aria-hidden="true" className="h-[11px] w-[11px]" />
+            <Icon aria-hidden="true" className="h-4 w-4" />
             {stageName}
           </span>
         );

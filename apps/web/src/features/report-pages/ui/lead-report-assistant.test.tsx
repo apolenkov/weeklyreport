@@ -214,6 +214,10 @@ describe("LeadReportAssistant", () => {
       ),
     ).toBeInTheDocument();
     fireEvent.change(question, { target: { value: "A temporary question" } });
+    // R66: the dismiss control is a full-size touch target, not a bare glyph.
+    expect(screen.getByRole("button", { name: "Close" })).toHaveClass(
+      "size-11",
+    );
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
 
     await waitFor(() =>

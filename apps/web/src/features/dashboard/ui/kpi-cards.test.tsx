@@ -3,7 +3,7 @@
 // a11y regression coverage for apps/web/src/features/dashboard/ui/kpi-cards.tsx.
 import "@testing-library/jest-dom/vitest";
 
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type { KpiData } from "../model/dashboard";
@@ -35,6 +35,25 @@ describe("KpiCards — a11y regression", () => {
       "Deadline: Thu, 5:00 PM",
       "Risks: 2 blocked, 1 at risk, 4 decisions",
     ]);
+  });
+
+  it("uses singular noun forms when a count is 1", () => {
+    render(
+      <KpiCards
+        data={{
+          ...baseData,
+          blockedCount: 1,
+          atRiskCount: 1,
+          decisionCount: 1,
+        }}
+      />,
+    );
+
+    const risksRegion = screen.getByRole("region", {
+      name: "Risks: 1 blocked, 1 at risk, 1 decision",
+    });
+    expect(within(risksRegion).getByText("decision")).toBeVisible();
+    expect(within(risksRegion).queryByText("decisions")).toBeNull();
   });
 
   it("reflects updated counts when data changes", () => {

@@ -41,16 +41,24 @@ function renderRow(timestamp: number): string {
     </table>,
   );
   const cells = screen.getByTestId("jobs-row-job-1").querySelectorAll("td");
-  return cells[TIMESTAMP_CELL_INDEX]?.textContent ?? "";
+  // ICU separates the meridiem with a narrow no-break space.
+  return (cells[TIMESTAMP_CELL_INDEX]?.textContent ?? "").replaceAll(
+    /\s/g,
+    " ",
+  );
 }
 
 describe("JobsTableRow timestamp cell", () => {
   it("renders an epoch-milliseconds timestamp", () => {
-    expect(renderRow(Date.UTC(2026, 6, 26, 9, 5))).toBe("26.07.2026, 09:05");
+    expect(renderRow(Date.UTC(2026, 6, 26, 9, 5))).toBe(
+      "Jul 26, 2026, 9:05 AM",
+    );
   });
 
   it("renders a midnight timestamp with a two-digit hour", () => {
-    expect(renderRow(Date.UTC(2026, 11, 31, 0, 0))).toBe("31.12.2026, 00:00");
+    expect(renderRow(Date.UTC(2026, 11, 31, 0, 0))).toBe(
+      "Dec 31, 2026, 12:00 AM",
+    );
   });
 
   it.each([[0], [-1], [Number.NaN], [Number.POSITIVE_INFINITY]])(

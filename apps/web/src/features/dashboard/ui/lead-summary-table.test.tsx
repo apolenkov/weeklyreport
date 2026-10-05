@@ -180,6 +180,39 @@ describe("LeadSummaryTable action queue", () => {
     expect(row).toHaveTextContent("No recent edit · Needs attention");
   });
 
+  // R77: the Submissions card counts every lead in the report; the queue lists
+  // only the leads in the viewer's scope, so the badge must state the gap
+  // instead of contradicting the card.
+  it("states that the queue covers fewer leads than the Submissions card", () => {
+    render(
+      <LeadSummaryTable
+        leads={[makeLead()]}
+        expectedLeads={3}
+        reportId="10000000-0000-4000-8000-000000000001"
+        onMutated={vi.fn()}
+      />,
+    );
+
+    const badge = screen.getByText("1 of 3 leads");
+    expect(badge).toHaveAttribute(
+      "title",
+      "Queue lists the 1 lead in your scope; the Submissions card counts all 3",
+    );
+  });
+
+  it("keeps the plain count when every expected lead is listed", () => {
+    render(
+      <LeadSummaryTable
+        leads={[makeLead()]}
+        expectedLeads={1}
+        reportId="10000000-0000-4000-8000-000000000001"
+        onMutated={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("1 lead")).not.toHaveAttribute("title");
+  });
+
   it("renders an empty queue without a second roster", () => {
     render(
       <LeadSummaryTable

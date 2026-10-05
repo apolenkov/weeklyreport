@@ -34,8 +34,14 @@ export type PageProbe = Readonly<{
 
 const MIN_TARGET = 24;
 
-/** Visible controls, page links and geometry issues (overflow, clipping, overlap, obstruction, small targets). */
-export const PAGE_PROBE = String.raw`(() => {
+/**
+ * Visible controls, page links and, when `geometry` is set, geometry issues (overflow, clipping, overlap,
+ * obstruction, small targets). Without it the probe skips the costly layout checks: enough to find and compare controls.
+ */
+export const pageProbeScript = (
+  geometry: boolean,
+): string => String.raw`(() => {
+  const GEOM = ${geometry};
   const short = (v, n = 90) => { const t = String(v ?? '').replace(/\s+/g, ' ').trim(); return t.length > n ? t.slice(0, n - 1) + '…' : t; };
   const path = (el) => {
     if (!el || el === document.documentElement) return 'html';
@@ -64,26 +70,26 @@ export const PAGE_PROBE = String.raw`(() => {
   const sel = 'button, a[href], input:not([type=hidden]), select, textarea, summary, [role=button], [role=link], [role=tab], [role=switch], [role=checkbox], [role=radio], [role=menuitem], [role=combobox]';
   const all = [...document.querySelectorAll(sel)].filter((el) => !el.closest('[inert], [aria-hidden=true]') && visible(el) && el.getBoundingClientRect().width > 2);
   const geometry = [];
-  if (document.documentElement.scrollWidth > innerWidth + 2) geometry.push({kind: 'page-overflow-x', target: location.pathname, detail: 'scrollWidth ' + document.documentElement.scrollWidth + ' > viewport ' + innerWidth});
+  if (GEOM && document.documentElement.scrollWidth > innerWidth + 2) geometry.push({kind: 'page-overflow-x', target: location.pathname, detail: 'scrollWidth ' + document.documentElement.scrollWidth + ' > viewport ' + innerWidth});
   const controls = all.map((el) => {
     const r = el.getBoundingClientRect();
     const cs = getComputedStyle(el);
-    const clipped = (el.scrollWidth > el.clientWidth + 2 && !['visible', 'clip'].includes(cs.overflowX) && el.tagName !== 'INPUT') || (el.scrollHeight > el.clientHeight + 2 && !['visible', 'clip'].includes(cs.overflowY) && el.tagName !== 'TEXTAREA' && el.tagName !== 'SELECT');
+    const clipped = GEOM && ((el.scrollWidth > el.clientWidth + 2 && !['visible', 'clip'].includes(cs.overflowX) && el.tagName !== 'INPUT') || (el.scrollHeight > el.clientHeight + 2 && !['visible', 'clip'].includes(cs.overflowY) && el.tagName !== 'TEXTAREA' && el.tagName !== 'SELECT'));
     const x = Math.max(0, Math.min(innerWidth - 1, r.left + r.width / 2));
     const y = Math.max(0, Math.min(innerHeight - 1, r.top + r.height / 2));
-    const top = r.bottom > 0 && r.top < innerHeight ? document.elementFromPoint(x, y) : null;
+    const top = GEOM && r.bottom > 0 && r.top < innerHeight ? document.elementFromPoint(x, y) : null;
     const reachable = !top || top === el || el.contains(top) || top.contains(el) || top.closest('label')?.control === el;
     const nameText = name(el);
-    if (clipped && !intentional(el)) geometry.push({kind: 'control-clipped', target: short(nameText, 60), detail: 'content ' + el.scrollWidth + 'x' + el.scrollHeight + ' in box ' + el.clientWidth + 'x' + el.clientHeight});
+    if (GEOM && clipped && !intentional(el)) geometry.push({kind: 'control-clipped', target: short(nameText, 60), detail: 'content ' + el.scrollWidth + 'x' + el.scrollHeight + ' in box ' + el.clientWidth + 'x' + el.clientHeight});
     if (!reachable) geometry.push({kind: 'control-obstructed', target: nameText, detail: 'covered by ' + path(top)});
-    if ((r.width < ${MIN_TARGET} || r.height < ${MIN_TARGET}) && !['checkbox', 'radio'].includes(el.type ?? '')) geometry.push({kind: 'target-under-${MIN_TARGET}', target: nameText, detail: Math.round(r.width) + 'x' + Math.round(r.height)});
+    if (GEOM && (r.width < ${MIN_TARGET} || r.height < ${MIN_TARGET}) && !['checkbox', 'radio'].includes(el.type ?? '')) geometry.push({kind: 'target-under-${MIN_TARGET}', target: nameText, detail: Math.round(r.width) + 'x' + Math.round(r.height)});
     return {selector: path(el), tag: el.tagName.toLowerCase(), role: role(el), name: nameText, type: el.getAttribute('type'),
       href: el.tagName === 'A' ? el.href : null, disabled: el.matches(':disabled') || el.getAttribute('aria-disabled') === 'true',
       bounds: {x: Math.round(r.x), y: Math.round(r.y), width: Math.round(r.width), height: Math.round(r.height)}, clipped, obstructedBy: reachable ? null : path(top),
       selected: el.checked === true || ['aria-checked', 'aria-selected', 'aria-pressed'].some((a) => el.getAttribute(a) === 'true') || el.getAttribute('data-state') === 'on',
       alternatives: el.tagName === 'SELECT' ? [...el.options].filter((o) => !o.disabled && o.value !== el.value).map((o) => o.value) : []};
   });
-  for (let i = 0; i < controls.length; i++) for (let j = i + 1; j < controls.length; j++) {
+  if (GEOM) for (let i = 0; i < controls.length; i++) for (let j = i + 1; j < controls.length; j++) {
     const a = controls[i].bounds, b = controls[j].bounds;
     const w = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
     const h = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
@@ -93,6 +99,8 @@ export const PAGE_PROBE = String.raw`(() => {
   const links = [...new Set([...document.querySelectorAll('a[href]')].map((a) => a.href.split('#')[0]).filter(Boolean))];
   return {url: location.href, title: document.title, viewport: {width: innerWidth, height: innerHeight}, controls, links, geometry};
 })()`;
+
+export const PAGE_PROBE = pageProbeScript(true);
 
 /** Compact fingerprint of observable UI state: URL, open dialogs and menus, expanded flags, text. */
 const STATE_SIGNATURE = `(() => {

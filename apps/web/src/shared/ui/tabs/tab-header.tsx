@@ -38,13 +38,13 @@ export function TabHeader({
           ) : null}
         </div>
         {description ? (
-          <p className="text-sm text-[var(--color-muted-foreground)]">
+          <p className="max-w-[65ch] text-sm text-[var(--color-muted-foreground)]">
             {description}
           </p>
         ) : null}
       </div>
       {(search || actions) && (
-        <div className="flex flex-shrink-0 flex-wrap items-center gap-2 xl:flex-nowrap">
+        <div className="flex flex-shrink-0 flex-wrap items-center gap-3 xl:flex-nowrap">
           {search}
           {actions}
         </div>
@@ -59,6 +59,7 @@ export interface TabSearchProps {
   readonly placeholder?: string;
   readonly testId?: string;
   readonly ariaLabel?: string;
+  readonly disabled?: boolean;
 }
 
 export function TabSearch({
@@ -67,16 +68,18 @@ export function TabSearch({
   placeholder,
   testId,
   ariaLabel,
+  disabled = false,
 }: TabSearchProps) {
   return (
     <input
       type="search"
+      disabled={disabled}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder ?? "Search…"}
       data-testid={testId}
       aria-label={ariaLabel ?? placeholder ?? "Search"}
-      className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-1.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] sm:w-64"
+      className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-1.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] disabled:cursor-not-allowed disabled:opacity-50 sm:w-64"
     />
   );
 }

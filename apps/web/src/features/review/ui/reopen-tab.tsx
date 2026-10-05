@@ -117,7 +117,7 @@ function ReopenTabHeader({
         <TabSearch
           value={search}
           onChange={setSearch}
-          placeholder="Search by lead, email, week or note…"
+          placeholder="Lead, email, or week…"
           testId="reopen-search"
         />
       }

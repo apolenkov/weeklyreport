@@ -21,16 +21,29 @@ function BulkRevokeSection({
   readonly submittedCount: number;
   readonly onOpen: () => void;
 }) {
+  // Explicit button disclosure: <details>/<summary> reads as a false affordance
+  // to tooling and carries no aria-expanded state for screen readers.
+  const [expanded, setExpanded] = useState(false);
   return (
     <section
       aria-label="Bulk actions"
       className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-muted)] px-4 py-3"
     >
-      <details>
-        <summary className="cursor-pointer text-xs font-semibold text-[var(--color-muted-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)]">
-          Bulk actions
-        </summary>
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+      <button
+        type="button"
+        aria-expanded={expanded}
+        aria-controls="bulk-actions-panel"
+        onClick={() => setExpanded((prev) => !prev)}
+        className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-muted-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)]"
+      >
+        <span aria-hidden="true">{expanded ? "▾" : "▸"}</span>
+        Bulk actions
+      </button>
+      {expanded ? (
+        <div
+          id="bulk-actions-panel"
+          className="mt-3 flex flex-wrap items-center justify-between gap-3"
+        >
           <p className="text-xs text-[var(--color-muted-foreground)]">
             Destructive actions affect every submitted lead.
           </p>
@@ -44,7 +57,7 @@ function BulkRevokeSection({
             Revoke all ({submittedCount})
           </button>
         </div>
-      </details>
+      ) : null}
     </section>
   );
 }

@@ -669,3 +669,15 @@ confirmation GET.
 - **WHEN** a delete or clear callback identifies an older annotation after a
   newer delivery candidate is current
 - **THEN** the newer candidate, observer, and alert remain unchanged
+
+### Requirement: Feedback inbox scope is the validated role allowlist
+
+The `/feedback` page and its navigation entry MUST both derive from the same
+validated inbox-role allowlist (admin by default). A role outside the allowlist
+MUST see the in-page denial wall and MUST NOT see a Feedback navigation entry.
+Widening the audience is a deployment configuration change, not a code default.
+
+#### Scenario: A head with the default allowlist
+
+- **WHEN** the allowlist is admin only and a head opens `/feedback`
+- **THEN** the denial wall renders and the head's navigation has no Feedback entry

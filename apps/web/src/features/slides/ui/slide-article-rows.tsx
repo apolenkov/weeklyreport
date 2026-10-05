@@ -53,7 +53,9 @@ function RowBody({
   readonly buttonRef: RefObject<HTMLButtonElement | null>;
   readonly children: ReactNode;
 }) {
-  const bodyClassName = `${expanded ? "" : "line-clamp-2"} min-h-[34px] whitespace-normal break-words`;
+  // R16: on the single-column mobile deck a two-line clamp cuts most
+  // headlines mid-thought; allow four lines below md, keep two on desktop.
+  const bodyClassName = `${expanded ? "" : "line-clamp-4 md:line-clamp-2"} min-h-[34px] whitespace-normal break-words`;
   return (
     <button
       ref={buttonRef}

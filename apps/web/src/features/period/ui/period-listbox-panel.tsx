@@ -53,7 +53,7 @@ export function ArchivedBadge() {
 
 // Neutral submitted marker comes only from the current lead's submittedAt;
 // head/viewer navigators omit it.
-export function SubmittedBadge() {
+function SubmittedBadge() {
   return (
     <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-success)] px-1.5 py-0.5 text-xs font-semibold text-[var(--color-primary)]">
       Submitted

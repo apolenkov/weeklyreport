@@ -130,8 +130,10 @@ export function AlertBar({ pendingLeads, reportId, ruleId }: AlertBarProps) {
       <AlertIcon />
       <div className="flex flex-1 flex-col gap-1 text-sm">
         <span>
-          <strong>{pendingLeads.length}</strong> lead
-          {pluralSuffix(pendingLeads.length)} haven&apos;t started
+          <strong>{pendingLeads.length}</strong>{" "}
+          {pendingLeads.length === 1
+            ? "lead hasn't started"
+            : "leads haven't started"}
         </span>
       </div>
       <button

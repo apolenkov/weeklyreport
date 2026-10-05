@@ -23,6 +23,21 @@ unique-constraint error surface to the caller.
   `AdminGroupProductConflictError`
 - **AND** neither call surfaces a raw unhandled database error
 
+### Requirement: Detaching a product never breaks report reads
+
+`admin.detachProductFromGroup` MAY leave a product without a `GroupProduct`
+owner (detach then attach is the supported way to move a product). The live
+report read MUST keep succeeding for every role when a staffed product has no
+owner: the product's frozen `ownerGroupId` is `null`, and the cross-group
+signal treats `null` as "no foreign owner".
+
+#### Scenario: Staffed product detached from its only group
+
+- **GIVEN** a product with a stage assignment in an open report
+- **WHEN** an administrator detaches it from its group
+- **THEN** `weeklyReport.get` for the open report still succeeds
+- **AND** the product's `ownerGroupId` in the lead section is `null`
+
 ### Requirement: User-create races resolve cleanly, never as a raw 500
 
 `upsertUser`'s create branch MUST catch a unique-constraint violation on the

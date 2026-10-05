@@ -47,8 +47,10 @@ const PRODUCT_CARD_INTERACTIVE =
   "cursor-pointer hover:shadow-[var(--shadow-portfolio-card-hover)]";
 const PRODUCT_CHEVRON_BASE =
   "flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-card)_55%,transparent)] text-[13px] font-semibold text-[var(--color-primary)] shadow-sm transition-opacity";
+// R60: keep the jump affordance visible without hover — a reveal-on-hover-only
+// chevron leaves touch/keyboard users guessing that tiles are actionable.
 const PRODUCT_CHEVRON_REVEAL =
-  "opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100";
+  "opacity-60 group-hover:opacity-100 group-focus-visible:opacity-100";
 const STATUS_BADGE_CLASS =
   "flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-bold";
 
@@ -108,7 +110,7 @@ export function LeadOverviewCard({
         </span>
       </div>
       <span
-        className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-card)_55%,transparent)] text-[13px] font-semibold text-[var(--color-primary)] opacity-0 shadow-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+        className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-card)_55%,transparent)] text-[13px] font-semibold text-[var(--color-primary)] opacity-60 shadow-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
         aria-hidden="true"
       >
         ↓

@@ -12,7 +12,7 @@ export const identity = (c: ProbedControl): string =>
   `${c.tag}|${c.role ?? ""}|${c.name}`;
 
 /** Row-repeated controls ("Inspect health for X") share a family: only the first few are pressed. */
-function controlFamily(control: ProbedControl): string {
+export function controlFamily(control: ProbedControl): string {
   const [first = "", ...rest] = control.name.split(" ");
   // plain lowercase words are the label; names, codes and numbers are row data
   const shape = [first, ...rest.map((w) => (/^[a-z()]+$/.test(w) ? w : "*"))]

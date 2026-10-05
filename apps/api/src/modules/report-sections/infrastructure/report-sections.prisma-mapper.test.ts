@@ -176,7 +176,7 @@ describe("mapPrismaToReportSection — ownerGroupId freeze", () => {
     );
   });
 
-  it("fails closed when a project has no GroupProduct owner", () => {
+  it("maps a project without a GroupProduct owner to a null owner", () => {
     const assignment = fullOwnedStageAssignment();
     const row = baseRow({
       author: {
@@ -193,9 +193,7 @@ describe("mapPrismaToReportSection — ownerGroupId freeze", () => {
       },
     });
 
-    expect(() => mapRow(row)).toThrow(
-      `Project ${OWNED_PROJECT} must have exactly one GroupProduct owner, found 0`,
-    );
+    expect(mapRow(row).projects[0]?.ownerGroupId).toBeNull();
   });
 
   it("fails closed when a loaded row violates the single GroupProduct owner invariant", () => {
@@ -222,7 +220,7 @@ describe("mapPrismaToReportSection — ownerGroupId freeze", () => {
     });
 
     expect(() => mapRow(row)).toThrow(
-      `Project ${OWNED_PROJECT} must have exactly one GroupProduct owner, found 2`,
+      `Project ${OWNED_PROJECT} must have at most one GroupProduct owner, found 2`,
     );
   });
 });

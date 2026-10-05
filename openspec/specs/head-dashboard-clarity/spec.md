@@ -263,3 +263,22 @@ placeholder.
 - **THEN** the KPI card does not render a numeric "Last week 0/0" comparison
 - **AND** it renders no last-week text at all, neither a number nor a
   placeholder constant
+
+### Requirement: A product card header names the source of its red status
+
+The Blocked & At Risk product card header MUST render its status as the same
+pill chip used by the issue rows. When the header is red only because of the
+product-level "flagged red" roll-up (no blocked row backs it), its label MUST
+read "Flagged red" rather than "Blocked", so the header never contradicts its
+at-risk rows.
+
+#### Scenario: A flag-only red product shows at-risk rows
+
+- **WHEN** a product is flagged red and its only concrete row is at risk
+- **THEN** the header chip reads "Flagged red"
+- **AND** the row badge reads "At risk"
+
+#### Scenario: A blocked row backs the red header
+
+- **WHEN** at least one of a product's rows is blocked
+- **THEN** the header chip reads "Blocked"

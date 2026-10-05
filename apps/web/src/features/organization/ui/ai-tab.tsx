@@ -148,6 +148,28 @@ export function AiTab() {
         <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
           Configure a provider, test it, then enable report features.
         </p>
+        <p
+          role="status"
+          aria-label="AI readiness"
+          className="mt-3 flex flex-wrap gap-x-6 gap-y-1 text-sm"
+        >
+          <span>
+            <span className="text-[var(--color-muted-foreground)]">
+              Provider{" "}
+            </span>
+            <strong className="font-semibold text-[var(--color-foreground)]">
+              {readiness.provider}
+            </strong>
+          </span>
+          <span>
+            <span className="text-[var(--color-muted-foreground)]">
+              Features{" "}
+            </span>
+            <strong className="font-semibold text-[var(--color-foreground)]">
+              {readiness.features}
+            </strong>
+          </span>
+        </p>
       </div>
 
       {catalogQ.isError && (
@@ -180,32 +202,8 @@ export function AiTab() {
             variant="line"
             className="grid w-full grid-cols-2 justify-start border-b border-[var(--color-border)] group-data-[orientation=horizontal]/tabs:h-auto sm:inline-flex sm:w-fit sm:min-w-max"
           >
-            <TabsTrigger
-              value="provider"
-              aria-label="Provider"
-              className="min-w-0 flex-col py-2 whitespace-normal sm:flex-row sm:py-1 sm:whitespace-nowrap"
-            >
-              <span>Provider</span>
-              <span
-                className="text-xs font-medium text-[var(--color-muted-foreground)] sm:ml-2"
-                aria-live="polite"
-              >
-                {readiness.provider}
-              </span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="features"
-              aria-label="Features"
-              className="min-w-0 flex-col py-2 whitespace-normal sm:flex-row sm:py-1 sm:whitespace-nowrap"
-            >
-              <span>Features</span>
-              <span
-                className="text-xs font-medium text-[var(--color-muted-foreground)] sm:ml-2"
-                aria-live="polite"
-              >
-                {readiness.features}
-              </span>
-            </TabsTrigger>
+            <TabsTrigger value="provider">Provider</TabsTrigger>
+            <TabsTrigger value="features">Features</TabsTrigger>
           </TabsList>
         </div>
 

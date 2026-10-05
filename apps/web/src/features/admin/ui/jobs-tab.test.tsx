@@ -195,6 +195,8 @@ describe("JobsTab — BullMQ DLQ admin UI", () => {
         /No failed email reminder jobs\. Queue is clean\./,
       ),
     ).toBeInTheDocument();
+    // R54: nothing to search in an empty queue.
+    expect(screen.getByTestId("jobs-search")).toBeDisabled();
   });
 
   it("opens on the first queue that has failed jobs and keeps it after a count refresh", async () => {

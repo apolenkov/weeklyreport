@@ -91,7 +91,7 @@ function ReopenRequestMeta({
           r.report.periodEnd,
           r.report.weekLabel,
         )}
-        {" · submitted "}
+        {" · requested "}
         {formatDateTime(r.createdAt)}
       </div>
     </div>

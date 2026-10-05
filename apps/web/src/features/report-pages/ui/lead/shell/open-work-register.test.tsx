@@ -219,3 +219,26 @@ describe("OpenWorkRegister", () => {
     );
   });
 });
+
+describe("OpenWorkRegister item titles (R56)", () => {
+  it("puts the period in the card title so identical texts stay distinguishable", () => {
+    render(
+      <OpenWorkRegister
+        query={{
+          openItems: [item("paused")],
+          terminalItems: [],
+          isLoading: false,
+          isComplete: true,
+          error: null,
+          retry: vi.fn(),
+        }}
+        actionsDisabled={false}
+        disabledReason={null}
+        onOpen={vi.fn()}
+      />,
+    );
+
+    const title = screen.getByText(/Provider rollout/, { selector: "p" });
+    expect(title).toHaveTextContent("Provider rollout · Jul 6–12, 2026");
+  });
+});

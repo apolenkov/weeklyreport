@@ -158,6 +158,27 @@ describe("DashboardPage progressive readiness", () => {
     expect(screen.queryByText("Loading review data…")).not.toBeInTheDocument();
   });
 
+  it("exposes Bulk actions as a button disclosure with aria-expanded", () => {
+    setQueryState("review.dashboard", { data: [] });
+    setQueryState("weeklyReport.get", { data: ACTIVE_WEEKLY });
+    render(<DashboardPage />);
+
+    const toggle = screen.getByRole("button", { name: "Bulk actions" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(
+      screen.queryByRole("button", { name: /Revoke all/ }),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(
+      screen.getByRole("button", { name: "Revoke all (2)" }),
+    ).toBeVisible();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+  });
+
   it("keeps self-contained panels visible while weekly context is pending", () => {
     setQueryState("review.dashboard", { data: [] });
     setQueryState("weeklyReport.get", {

@@ -162,6 +162,7 @@ export function LeadOverviewToolbarControls({
             <RecordVisibilityToggle
               value={toolbarVisibility}
               onChange={onVisibilityChange}
+              desktopLabels
             />
             <LeadReportViewModeToggle
               mode="report"
@@ -248,6 +249,7 @@ function ToolbarViewCluster({
         value={toolbarVisibility}
         onChange={onVisibilityChange}
         disabled={isForeignSlidesDeck}
+        desktopLabels={desktopLabels}
       />
       <LeadReportViewModeToggle
         mode={isSlidesMode ? "slides" : "report"}

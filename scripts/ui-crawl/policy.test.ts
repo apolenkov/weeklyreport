@@ -43,5 +43,16 @@ describe("ui-crawl policy", () => {
     expect(skipReason({ ...base, name: "Deactivate Ivan" })).toBe(
       "dangerous: deactivate",
     );
+    for (const verb of [
+      "Detach",
+      "Attach",
+      "Unlink",
+      "Assign",
+      "Unassign",
+      "Toggle",
+    ])
+      expect(skipReason({ ...base, name: `${verb} product` })).toBe(
+        `dangerous: ${verb.toLowerCase()}`,
+      );
   });
 });

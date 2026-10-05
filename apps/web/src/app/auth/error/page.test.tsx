@@ -25,8 +25,10 @@ describe("AuthErrorPage — query parameters", () => {
 
   it("ignores repeated reason values", async () => {
     await renderPage(["session_expired", "unauthorized"]);
+    // R76: the fallback must add a next step, not repeat the heading.
+    expect(screen.getByText(/contact your administrator/i)).toBeInTheDocument();
     expect(
-      screen.getByText("An authentication error occurred."),
-    ).toBeInTheDocument();
+      screen.queryByText("An authentication error occurred."),
+    ).not.toBeInTheDocument();
   });
 });
