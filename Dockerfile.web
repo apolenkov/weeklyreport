@@ -59,7 +59,7 @@ RUN test -n "$API_URL" \
   test -n "$NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES" \
   || { echo "NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES build arg is required" >&2; exit 1; }
 # Dev-auth flags default OFF so an un-argumented build (a direct `docker build`,
-# a CI job, or a compose file that omits build.args) never inlines the auth stub
+# or a CI job that omits --build-arg) never inlines the auth stub
 # or dev role switcher into a production-labeled bundle. The CI image build
 # passes explicit disabled values at the builder boundary.
 ARG NEXT_PUBLIC_AUTH_STUB=false

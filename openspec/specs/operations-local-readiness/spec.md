@@ -2,20 +2,20 @@
 
 ## Purpose
 
-Ensure repository-owned development Compose and production Helm operations instructions agree with their service graphs and recovery entrypoints while keeping external production dependencies explicit.
+Ensure repository-owned local dependency manifests and production Helm operations instructions agree with their service graphs and recovery entrypoints while keeping external production dependencies explicit.
 
 ## Requirements
 
 ### Requirement: Repository-owned operations instructions are executable
 
 The repository-owned development and production instructions, including
-development Compose, production Helm, SMTP, database, backup, and restore surfaces, MUST agree with the
+the local dependency manifest, production Helm, SMTP, database, backup, and restore surfaces, MUST agree with the
 checked-in service graph, required environment variables, routes, credentials,
 and ownership declarations.
 
 #### Scenario: A documented environment is rendered
 
-- **WHEN** the documented development environment is supplied to Compose, or the documented production values are supplied to Helm
+- **WHEN** the documented development environment is supplied to the native processes, or the documented production values are supplied to Helm
 - **THEN** configuration rendering succeeds without a missing required input or duplicate application port owner
 
 #### Scenario: Native development starts from the repository root
@@ -35,7 +35,7 @@ and ownership declarations.
 
 #### Scenario: Development database configuration is rendered
 
-- **WHEN** the development Compose stack is rendered
+- **WHEN** the local dependency manifest is read
 - **THEN** every database consumer uses the same fixed local-only credential without interpolating an arbitrary password into a URL
 - **AND** application consumers target exact disposable PostgreSQL `customreport_e2e`
 - **AND** the guarded local bootstrap creates the configured `POSTGRES_DB`
@@ -56,14 +56,13 @@ and ownership declarations.
 
 #### Scenario: Development services publish host ports
 
-- **WHEN** a development Compose file publishes PostgreSQL, Redis, Mailpit, API, or Web to the host
-- **THEN** every published port binds explicitly to the loopback interface
+- **WHEN** the local dependency manifest publishes PostgreSQL, Redis, Mailpit, or Gotenberg to the host
+- **THEN** each is a LoadBalancer Service that OrbStack exposes on localhost only, at the documented port
 
 #### Scenario: Native development listeners start
 
 - **WHEN** the native API and Web development processes bind their configured ports
 - **THEN** both listen only on `127.0.0.1` and a port collision fails without terminating an unrelated process
-- **AND** container development binds those processes explicitly inside the private Compose network
 
 #### Scenario: Production database identity is unsafe for a connection URL
 
@@ -131,27 +130,3 @@ The repository-owned operations documentation and readiness checks MUST identify
 
 - **WHEN** all repository-owned operations checks pass but an external receiver or recovery target has no read-back proof
 - **THEN** local readiness is PASS and the external prerequisite remains BLOCKED rather than being reported as complete
-
-### Requirement: Local error tracking uses the reviewed single-user contract
-
-The repository-owned Bugsink overlay MUST enable its local-only single-user
-mode through the reviewed image's `SINGLE_USER` setting and MUST NOT retain
-unsupported compatibility aliases.
-
-#### Scenario: The local Bugsink container starts
-
-- **WHEN** Compose renders the current error-tracking overlay
-- **THEN** `SINGLE_USER` is explicitly enabled
-- **AND** no obsolete single-user environment alias is present
-
-### Requirement: Local error-tracking state survives container replacement
-
-The repository-owned Bugsink overlay MUST mount its named data volume at the
-runtime image's canonical `/data` path so its SQLite database remains outside
-the replaceable container filesystem.
-
-#### Scenario: The Bugsink container is replaced
-
-- **WHEN** the error-tracking container is recreated with its named volume
-- **THEN** the SQLite database remains available at `/data/db.sqlite3`
-- **AND** the mounted state remains readable after container replacement

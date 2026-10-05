@@ -16,11 +16,8 @@
 /docs/operations.md @apolenkov
 /docs/sdlc.md @apolenkov
 
-# Local development and observability configuration
-/docker-compose.yml @apolenkov
-/docker-compose.dev.yml @apolenkov
-/docker-compose.observability*.yml @apolenkov
-/docker-compose.errors.yml @apolenkov
+# Local development dependencies (Kubernetes namespace wr-dev)
+/deploy/local-dev/ @apolenkov
 
 # Shared and contract-boundary packages
 /packages/shared/ @apolenkov

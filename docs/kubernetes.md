@@ -4,8 +4,8 @@ The production stack is delivered to a Kubernetes cluster as the Helm chart in
 `deploy/helm/weeklyreport/`. Helm is the sole production deployment and
 rollback surface. Rendered manifests are checked against independent production
 contracts and the API runtime schema; chart `values.schema.json` and
-`values.production.example.yaml` define operator inputs. Development and local
-observability continue to use their existing Compose recipes.
+`values.production.example.yaml` define operator inputs. Local development dependencies
+run from `deploy/local-dev/` (`pnpm deps:up`) in the OrbStack namespace `wr-dev`.
 
 **Status.** The chart lints, renders, and passes the gate tests. It was
 installed on a local OrbStack cluster on 2026-10-01 and the read-back passed:
@@ -265,8 +265,11 @@ The chart ships no monitoring stack. A scraper must reach `api:3001/metrics`
 over the pod network (`api.podAnnotations` takes any annotations it needs); the
 public edge returns 404 for `/metrics`. CronJob and restart alerts need
 kube-state-metrics. Everything logs JSON to stdout; log rotation is the
-kubelet's, not the chart's. `deploy/grafana/**` and `deploy/alert-rules.yml`
-are importable artefacts, unverified against cluster label names.
+kubelet's, not the chart's. `observability/alert-rules.yml` and `observability/grafana/**` in the chart
+directory (`deploy/helm/weeklyreport/observability/`, excluded from the chart
+package by `.helmignore`) are the monitoring handover for DevOps: importable
+artefacts, unverified against cluster label names. Check the label names in the
+cluster before importing them.
 
 ## Not part of this change
 

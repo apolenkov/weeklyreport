@@ -70,7 +70,7 @@ weeklyreport
 
 - Node.js **26.10.0 Current** (`>=26.0.0 <27.0.0`, версия `.nvmrc`)
 - pnpm **11.28.3** (`npm install -g pnpm@11.28.3`; Node 26 не поставляет Corepack)
-- Docker (для локальных Postgres и Redis и локальной сборки образов)
+- OrbStack с включённым Kubernetes и `kubectl` (локальные Postgres, Redis, Mailpit и Gotenberg живут в namespace `wr-dev`)
 
 ## Быстрый старт
 
@@ -80,10 +80,10 @@ pnpm install
 
 # 2. Окружение: скопировать пример и при необходимости поправить
 cp .env.example .env
-# Для `pnpm dev` достаточно значений из примера и локальных Postgres/Redis.
+# Для `pnpm dev` достаточно значений из примера и локальных зависимостей.
 
-# 3. Поднять локальные зависимости
-docker compose up -d postgres redis
+# 3. Поднять локальные зависимости (Postgres, Redis, Mailpit, Gotenberg в Kubernetes)
+pnpm deps:up
 
 # 4. Создать точную disposable-базу, применить миграции и залить профиль
 PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' \
