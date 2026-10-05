@@ -107,20 +107,20 @@ function toStageSet(project: StageAssignmentRow["project"]) {
   return [...byStageId.values()].sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
-function requireSingleOwnerGroupId(
+// An unowned product (detached by an admin, or never attached) is a legal
+// admin state: the report still loads and the owner stays null, which the
+// cross-group signal treats as "no foreign owner". More than one edge is
+// impossible under GroupProduct_productId_key and stays a hard failure.
+function resolveOwnerGroupId(
   project: StageAssignmentRow["project"],
-): string {
+): string | null {
   const ownerGroupIds = project.groupProducts.map((edge) => edge.groupId);
-  if (ownerGroupIds.length !== 1) {
+  if (ownerGroupIds.length > 1) {
     throw new Error(
-      `Project ${project.id} must have exactly one GroupProduct owner, found ${ownerGroupIds.length}`,
+      `Project ${project.id} must have at most one GroupProduct owner, found ${ownerGroupIds.length}`,
     );
   }
-  const [ownerGroupId] = ownerGroupIds;
-  if (ownerGroupId === undefined) {
-    throw new Error(`Project ${project.id} has no GroupProduct owner`);
-  }
-  return ownerGroupId;
+  return ownerGroupIds[0] ?? null;
 }
 
 function toProjectView(group: AuthorProjectGroup, ctx: ProjectViewContext) {
@@ -150,7 +150,7 @@ function toProjectView(group: AuthorProjectGroup, ctx: ProjectViewContext) {
     stageSet: toStageSet(project),
     // Freeze the explicit product owner so a published-snapshot read can
     // detect cross-group access without a live project re-query.
-    ownerGroupId: requireSingleOwnerGroupId(project),
+    ownerGroupId: resolveOwnerGroupId(project),
   };
 }
 
