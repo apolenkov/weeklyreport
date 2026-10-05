@@ -21,22 +21,23 @@ const cell = (s: string): string => {
 const num = (n: number | null): string => (n === null ? "n/a" : String(n));
 
 export function procedureSection(rows: readonly ProcedureRow[]): string[] {
-  const called = rows.filter((r) => r.called).length;
-  const reachable = rows.filter((r) => r.called || r.screens.length > 0);
-  const calledReachable = reachable.filter((r) => r.called).length;
+  const exercised = rows.filter((r) => r.exercised);
+  const attempted = rows.filter((r) => r.called && !r.exercised).length;
+  const viaUi = exercised.filter((r) => r.via !== "scenario").length;
+  const viaScenario = exercised.filter((r) => r.via !== "ui").length;
   const out = [
     "## 1. tRPC procedures",
     "",
-    "Method: the api logs one `trpc request start` line per call (procedure, role), Prometheus counters back it up; V8 function coverage cannot name a procedure because the production build has no source maps, so it is kept as a per-router cross-check below. Procedures are enumerated from the real `createAppRouter`; the screen is the web source that calls the procedure.",
+    "Method: the api logs one `trpc request start` and one `trpc request end` line per call (procedure, role, status); a procedure counts as exercised only when a call ended with `status: success`. `ui` means the call came from the interface, `scenario` from the synthetic API scenario (`scenario.ts`, run on a freshly reset stand), and the table says which. V8 function coverage cannot name a procedure because the production build has no source maps, so it is kept as a per-router cross-check below. Procedures are enumerated from the real `createAppRouter`; the screen is the web source that calls the procedure.",
     "",
-    `Total: **${num(rows.length)}**, called: **${num(called)}**, not called: **${num(rows.length - called)}**. Of those with a web caller or a call: **${num(calledReachable)}/${num(reachable.length)}**.`,
+    `Total: **${num(rows.length)}**, exercised: **${num(exercised.length)}** (from the interface: ${num(viaUi)}, from the scenario: ${num(viaScenario)}), called but failing: **${num(attempted)}**, not exercised: **${num(rows.length - exercised.length)}**, each with its reason below.`,
     "",
-    "| procedure | type | called | calls | roles | screen (web source) | reason if not called |",
-    "|---|---|---|---|---|---|---|",
+    "| procedure | type | exercised | via | calls | roles | screen (web source) | reason if not exercised |",
+    "|---|---|---|---|---|---|---|---|",
   ];
   for (const r of rows)
     out.push(
-      `| ${r.path} | ${r.type} | ${r.called ? "yes" : "NO"} | ${num(r.calls)} | ${r.roles.join(", ")} | ${cell(r.screens.join("; "))} | ${r.reason} |`,
+      `| ${r.path} | ${r.type} | ${r.exercised ? "yes" : "NO"} | ${r.via || "-"} | ${num(r.calls)} | ${r.roles.join(", ")} | ${cell(r.screens.join("; "))} | ${r.reason} |`,
     );
   return out;
 }
