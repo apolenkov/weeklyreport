@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { familySkipReason, fullFamilyKey, rowSkipReason } from "./full-plan.ts";
+import {
+  familySkipReason,
+  fullControlReason,
+  fullFamilyKey,
+  rowSkipReason,
+} from "./full-plan.ts";
 import type { FullControl } from "./full-probe.ts";
 
 function control(
@@ -69,5 +74,19 @@ describe("full crawl page families", () => {
     expect(rowSkipReason(control("Edit", { row: row("r2") }), seen)).toBe(
       "representative-row: covered by r1",
     );
+  });
+});
+
+describe("full walk write guard", () => {
+  it("skips controls that write relations, the checkbox toggle included", () => {
+    for (const name of [
+      "Toggle Учёт ресурсов",
+      "Detach product",
+      "Assign lead",
+    ])
+      expect(fullControlReason(control(name))).toBe(
+        "dangerous: unaudited write action",
+      );
+    expect(fullControlReason(control("Open details"))).toBeNull();
   });
 });

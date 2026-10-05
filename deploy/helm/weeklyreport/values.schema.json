@@ -152,6 +152,12 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
+        "args": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "runAsUser": {
           "type": "integer",
           "minimum": 1
@@ -223,6 +229,12 @@
         },
         "resources": {
           "type": "object"
+        },
+        "extraEnv": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
         },
         "podAnnotations": {
           "type": "object",

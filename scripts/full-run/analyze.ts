@@ -7,6 +7,7 @@ import { PROCEDURES_SHOWN } from "./constants.ts";
 import { coverageByRouter } from "./coverage.ts";
 import { crawlSummary } from "./crawl-summary.ts";
 import { loadExplain, loadStatistics, nPlusOne } from "./database.ts";
+import { dogfoodSection } from "./dogfood-summary.ts";
 import { intervals, metricsCalls, procedureCalls } from "./logs.ts";
 import { OWN_QUERIES } from "./pg.ts";
 import {
@@ -88,11 +89,12 @@ const md = [
   ...explainSection(explain),
   ...nPlusOneSection(groups),
   ...crawlSection(crawlSummary(run, "quick"), crawlSummary(run, "full")),
+  ...dogfoodSection(run),
   ...(run.exists("e2e.txt")
-    ? ["", "## 10. e2e", "", run.read("e2e.txt").trim()]
+    ? ["", "## 11. e2e", "", run.read("e2e.txt").trim()]
     : []),
   "",
-  "## 11. What to improve",
+  "## 12. What to improve",
   "",
   improve,
   "",

@@ -88,7 +88,7 @@ export function findFullControl(
 export function fullControlReason(control: FullControl): string | null {
   if (control.role === "textbox") return "input: requires a named scenario";
   if (
-    /^(activate|enable|move|plan this work|mark|save|apply|create|confirm)\b/i.test(
+    /^(activate|enable|move|plan this work|mark|save|apply|create|confirm|toggle|detach|attach|unlink|assign|unassign|transfer)\b/i.test(
       control.name,
     )
   )

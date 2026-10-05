@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # One-command full test run of the tester stand with evidence for performance review.
 #   full-run.sh [--states returned|all|<list>] [--widths-full 1280] [--out <dir>] [--no-e2e] [--walk-args "<crawler args>"]
-# Steps: enable pg_stat_statements/auto_explain/statement log in Postgres and V8 coverage in the api pod
-# (kubectl patches, no product change), reset, walk --quick (all roles, 1280+375), walk --full for the
+# Steps: check that pg_stat_statements/auto_explain/statement log (Postgres) and V8 coverage (api) are on
+# through values-tester.yaml, reset, walk --quick (all roles, 1280+375), walk --full for the
 # chosen states (default: returned at 1280; "all" is the 6-7 hour night mode), collect api/web/postgres
 # logs, coverage and statistics, build report.md, reset the stand again.
 # Evidence: ~/.local/state/wr-tester/full-run-<time>/ (override with --out).
@@ -50,9 +50,10 @@ hook_pre() {
     sleep 1
   done
   for _ in $(seq 1 60); do
-    kubectl -n "$NS" exec deploy/api -c api -- tar cf - -C /cov . 2>/dev/null | tar xf - -C "$dir/cov-$seg" 2>/dev/null && break
+    kubectl -n "$NS" exec deploy/api -c api -- tar cf - -C /app/data/pdfs/cov . 2>/dev/null | tar xf - -C "$dir/cov-$seg" 2>/dev/null && break
     sleep 2
   done
+  kubectl -n "$NS" exec deploy/api -c api -- sh -c 'rm -rf /app/data/pdfs/cov/*' || true
   echo "Segment $seg collected: $(ls "$dir/cov-$seg" | wc -l | tr -d ' ') coverage files"
 }
 
@@ -103,39 +104,11 @@ SELF="$HERE/full-run.sh"
 export WR_PRE_RESET_HOOK="bash '$SELF' hook-pre"
 export WR_POST_RESET_HOOK="bash '$SELF' hook-post"
 
-phase "enable observability"
-# Postgres: preload libraries, statement log and auto_explain through ALTER SYSTEM, then restart the pod.
-if ! PG -c 'SHOW shared_preload_libraries' | grep -q 'pg_stat_statements.*auto_explain' \
-  || [ "$(PG -c 'SHOW logging_collector')" != on ]; then
-  PG -c "ALTER SYSTEM SET shared_preload_libraries = pg_stat_statements, auto_explain" -c "ALTER SYSTEM SET logging_collector = on"
-  kubectl -n "$NS" delete pod postgres-0 --wait=true >/dev/null
-  kubectl -n "$NS" rollout status statefulset/postgres --timeout=300s
-  until PG -c 'SELECT 1' >/dev/null 2>&1; do sleep 2; done
-fi
-# The settings of the preloaded libraries exist only after the restart.
-PG <<'SQL'
-ALTER SYSTEM SET pg_stat_statements.track = 'all';
-ALTER SYSTEM SET auto_explain.log_min_duration = '50ms';
-ALTER SYSTEM SET auto_explain.log_analyze = off;
-ALTER SYSTEM SET auto_explain.log_format = 'json';
-ALTER SYSTEM SET auto_explain.log_nested_statements = on;
-ALTER SYSTEM SET log_directory = 'log';
-ALTER SYSTEM SET log_filename = 'wr-run.log';
-ALTER SYSTEM SET log_truncate_on_rotation = on;
-ALTER SYSTEM SET log_rotation_age = 0;
-ALTER SYSTEM SET log_rotation_size = 0;
-ALTER SYSTEM SET log_line_prefix = '%m [%p] ';
-ALTER SYSTEM SET log_statement = 'all';
-SELECT pg_reload_conf();
-SQL
-# Api: V8 coverage into an emptyDir (the chart has no extension point; the patch is idempotent).
-if ! kubectl -n "$NS" get deploy api -o json | grep -q NODE_V8_COVERAGE; then
-  kubectl -n "$NS" patch deploy api --type=json -p '[
-   {"op":"add","path":"/spec/template/spec/volumes/-","value":{"name":"cov","emptyDir":{}}},
-   {"op":"add","path":"/spec/template/spec/containers/0/volumeMounts/-","value":{"name":"cov","mountPath":"/cov"}},
-   {"op":"add","path":"/spec/template/spec/containers/0/env/-","value":{"name":"NODE_V8_COVERAGE","value":"/cov"}}]' >/dev/null
-  kubectl -n "$NS" rollout status deploy/api --timeout=300s
-fi
+phase "check observability settings (values-tester.yaml)"
+# Collection is configured by values-tester.yaml (postgres.args, api.extraEnv); start.sh applies it.
+PG -c 'SHOW shared_preload_libraries' | grep -q 'pg_stat_statements.*auto_explain' \
+  && kubectl -n "$NS" exec deploy/api -c api -- printenv NODE_V8_COVERAGE >/dev/null \
+  || { echo "Collection is off: run start.sh to apply values-tester.yaml" >&2; exit 1; }
 
 phase "reset to the demo seed"
 memory_wait
@@ -157,6 +130,11 @@ sleep 70
 phase "walk --full (states $STATES, widths $WIDTHS_FULL)"
 memory_wait
 bash "$HERE/walk.sh" --full --states "$STATES" --widths "$WIDTHS_FULL" --out "$WR_RUN_DIR/full" "${WALK_ARGS[@]+"${WALK_ARGS[@]}"}" || phase "full walk exited non-zero"
+
+phase "human-like pass (dogfood.sh, 4 roles, Jev as second judge)"
+memory_wait
+if [ -n "${TYPESAFE_API_KEY:-}" ]; then JEV_ARG=(); else JEV_ARG=(--no-jev); echo "TYPESAFE_API_KEY not set: Jev skipped" | tee -a "$TIMINGS"; fi
+bash "$HERE/dogfood.sh" --out "$WR_RUN_DIR/dogfood" "${JEV_ARG[@]+"${JEV_ARG[@]}"}" || phase "dogfood exited non-zero"
 
 phase "e2e"
 if [ "$E2E" = 1 ]; then

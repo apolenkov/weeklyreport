@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { jevSignals } from "./dogfood-summary.ts";
 import {
   intervals,
   mappedRoutes,
@@ -119,5 +120,34 @@ describe("statistics merge", () => {
   it("drops the stats extension's own queries from the top list", () => {
     const own = { ...stmt(1, 99), query: "SELECT * FROM pg_stat_statements" };
     expect(top([own, stmt(1, 1)], "total_exec_time")).toHaveLength(1);
+  });
+});
+
+describe("jev second-judge signals", () => {
+  const doc = (extra: Record<string, unknown>): string =>
+    JSON.stringify({ final_url: "http://x/reports", steps: [], ...extra });
+
+  it("is quiet for a read-only visit with only prefetch aborts", () => {
+    const raw = doc({
+      steps: [{ executed_action: "scroll_down", stuck: 0.2 }],
+      console_events: [
+        { type: "request_failed", text: "GET /a?_rsc=1 net::ERR_ABORTED" },
+      ],
+    });
+    expect(jevSignals(raw, "/reports")).toEqual([]);
+  });
+
+  it("flags clicks, leaving the page, getting stuck and real failures", () => {
+    const raw = doc({
+      final_url: "http://x/lead/report/1",
+      steps: [{ executed_action: "click_e6", stuck: 0.9 }],
+      console_events: [{ type: "request_failed", text: "GET /x 500" }],
+    });
+    expect(jevSignals(raw, "/reports?a=1")).toEqual([
+      "clicked click_e6",
+      "left the page for /lead/report/1",
+      "stuck 0.90",
+      "1 console events, first: GET /x 500",
+    ]);
   });
 });

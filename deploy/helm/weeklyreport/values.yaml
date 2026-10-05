@@ -26,6 +26,8 @@ secrets:
 api:
   # Extra pod annotations, for example prometheus.io/* for a scraper.
   podAnnotations: {}
+  # Extra environment for a test stand, for example NODE_V8_COVERAGE. Empty in production.
+  extraEnv: {}
   runAsUser: 1000
   resources:
     requests: { memory: 512Mi, cpu: 100m }
@@ -47,6 +49,8 @@ gotenberg:
     limits: { memory: 1Gi }
 
 postgres:
+  # Extra server arguments, for example `-c shared_preload_libraries=...` on a test stand.
+  args: []
   runAsUser: 999
   resources:
     requests: { memory: 256Mi, cpu: 100m }
