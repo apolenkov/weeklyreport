@@ -5,7 +5,7 @@
 # images.tag and the IdP certificate; secrets come from setup.sh.
 
 images:
-  registry: gitlab.example.org:5005/acme/weeklyreport
+  registry: wr
   tag: REPLACE_WITH_GIT_SHA
 
 secrets:
