@@ -171,16 +171,13 @@ function SubsectionRow({
       {!empty && (
         <div className={`grid ${GRID_TEMPLATE} mt-1.5`}>
           {COLUMNS.map(({ key, label, icon: Icon, accent }) => {
-            // On a phone an empty cell shrinks to one "label —" line instead of
-            // a ruled heading above a lone dash.
+            // On a phone an empty cell drops its heading and shows one
+            // "No <label>" line instead of a ruled heading above a lone dash.
             const cellEmpty = subsection.columns[key].length === 0;
             return (
-              <div
-                key={key}
-                className={`min-w-0 ${cellEmpty ? "max-sm:flex max-sm:items-baseline max-sm:gap-2" : ""}`}
-              >
+              <div key={key} className="min-w-0">
                 <h4
-                  className={`mb-1.5 flex items-center gap-1.5 border-b-2 pb-1 text-xs font-semibold sm:hidden ${accent} ${cellEmpty ? "max-sm:mb-0 max-sm:border-b-0 max-sm:pb-0" : ""}`}
+                  className={`mb-1.5 flex items-center gap-1.5 border-b-2 pb-1 text-xs font-semibold sm:hidden ${accent} ${cellEmpty ? "max-sm:hidden" : ""}`}
                 >
                   <Icon aria-hidden="true" className="h-3.5 w-3.5" />
                   {label}
