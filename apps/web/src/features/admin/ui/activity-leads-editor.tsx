@@ -11,7 +11,8 @@ interface LeadToggleRowProps {
   readonly lead: AdminUserView;
   readonly activityName: string;
   readonly checked: boolean;
-  readonly lockedHint: string | undefined;
+  readonly hint: string | undefined;
+  readonly locked: boolean;
   readonly mutating: boolean;
   readonly onToggle: (leadId: string, nextChecked: boolean) => void;
 }
@@ -20,12 +21,13 @@ function LeadToggleRow({
   lead,
   activityName,
   checked,
-  lockedHint,
+  hint,
+  locked,
   mutating,
   onToggle,
 }: LeadToggleRowProps) {
   const hintId = `activity-lead-hint-${lead.id}`;
-  const disabled = mutating || lockedHint !== undefined;
+  const disabled = mutating || locked;
 
   return (
     <li>
@@ -34,7 +36,7 @@ function LeadToggleRow({
           "flex items-start gap-2 rounded-sm px-1 py-0.5 text-sm text-[var(--color-foreground)] hover:bg-[var(--color-muted)]",
           disabled ? "cursor-not-allowed opacity-70" : "cursor-pointer",
         ].join(" ")}
-        title={lockedHint}
+        title={hint}
       >
         <input
           type="checkbox"
@@ -42,14 +44,14 @@ function LeadToggleRow({
           disabled={disabled}
           onChange={(e) => onToggle(lead.id, e.target.checked)}
           aria-label={`Toggle ${shortName(lead)} on ${activityName}`}
-          aria-describedby={lockedHint ? hintId : undefined}
+          aria-describedby={hint ? hintId : undefined}
           className="h-4 w-4 rounded border-[var(--color-border)] text-[var(--color-starbucks-accent)] focus:ring-2 focus:ring-[var(--color-ring)]"
         />
         <span className="min-w-0">
           <span>{shortName(lead)}</span>
-          {lockedHint && (
+          {hint && (
             <span id={hintId} className={HINT_CLASS}>
-              {lockedHint}
+              {hint}
             </span>
           )}
         </span>
@@ -80,7 +82,7 @@ export function ActivityLeadsEditor({
         Detaching also clears that lead&apos;s status on open periods. Leads
         outside the activity&apos;s reporting group are locked here.
       </p>
-      {state.activeLeads.length === 0 ? (
+      {state.visibleLeads.length === 0 ? (
         <div className="py-1 text-xs text-[var(--color-muted-foreground)]">
           No active leads yet. Create one in the Users tab first.
         </div>
@@ -89,21 +91,29 @@ export function ActivityLeadsEditor({
           className="max-h-40 space-y-1 overflow-y-auto pr-1"
           data-testid="activity-leads-list"
         >
-          {state.activeLeads.map((lead) => (
-            <LeadToggleRow
-              key={lead.id}
-              lead={lead}
-              activityName={activity.name}
-              checked={state.attachedIds.has(lead.id)}
-              lockedHint={
-                state.isOutOfGroup(lead)
-                  ? `Belongs to ${lead.department}`
-                  : undefined
-              }
-              mutating={state.mutating}
-              onToggle={state.toggle}
-            />
-          ))}
+          {state.visibleLeads.map((lead) => {
+            const attached = state.attachedIds.has(lead.id);
+            // A hint explains state but does not lock the row by itself: an
+            // attached lead must stay detachable even when deactivated.
+            const locked = !attached && state.isOutOfGroup(lead);
+            const hint = locked
+              ? `Belongs to ${lead.department}`
+              : lead.isActive
+                ? undefined
+                : "Inactive";
+            return (
+              <LeadToggleRow
+                key={lead.id}
+                lead={lead}
+                activityName={activity.name}
+                checked={attached}
+                hint={hint}
+                locked={locked}
+                mutating={state.mutating}
+                onToggle={state.toggle}
+              />
+            );
+          })}
         </ul>
       )}
     </fieldset>

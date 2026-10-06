@@ -51,14 +51,20 @@ function useActivityLeadMutations() {
 // activity's group, so out-of-group leads are listed but locked — hiding them
 // would read as "the lead vanished" after a group move.
 export function useActivityLeads({ activity, users }: ActivityLeadsArgs) {
-  const activeLeads = useMemo(
-    () => users.filter((user) => user.role === "lead" && user.isActive),
-    [users],
-  );
-
   const attachedIds = useMemo(
     () => new Set(activity.leadIds),
     [activity.leadIds],
+  );
+
+  // An attached lead stays listed after deactivation so the edge can still be
+  // removed; inactive leads that were never attached are not candidates.
+  const visibleLeads = useMemo(
+    () =>
+      users.filter(
+        (user) =>
+          user.role === "lead" && (user.isActive || attachedIds.has(user.id)),
+      ),
+    [users, attachedIds],
   );
 
   const { attach, detach, mutating } = useActivityLeadMutations();
@@ -67,18 +73,24 @@ export function useActivityLeads({ activity, users }: ActivityLeadsArgs) {
     lead.groupId !== activity.groupId;
 
   function toggle(leadId: string, nextChecked: boolean): void {
-    const lead = activeLeads.find((candidate) => candidate.id === leadId);
+    if (!nextChecked) {
+      // Detach only removes an existing edge, so it stays allowed for a lead
+      // deactivated while attached.
+      if (attachedIds.has(leadId)) {
+        detach({ activityId: activity.id, leadId });
+      }
+      return;
+    }
+    const lead = visibleLeads.find(
+      (candidate) => candidate.id === leadId && candidate.isActive,
+    );
     if (!lead) return;
-    if (nextChecked && isOutOfGroup(lead)) {
+    if (isOutOfGroup(lead)) {
       toast.error(`${lead.name} belongs to another reporting group.`);
       return;
     }
-    if (nextChecked) {
-      attach({ activityId: activity.id, leadId });
-    } else {
-      detach({ activityId: activity.id, leadId });
-    }
+    attach({ activityId: activity.id, leadId });
   }
 
-  return { activeLeads, attachedIds, isOutOfGroup, mutating, toggle };
+  return { visibleLeads, attachedIds, isOutOfGroup, mutating, toggle };
 }
