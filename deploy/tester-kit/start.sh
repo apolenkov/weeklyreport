@@ -1,19 +1,18 @@
 #!/usr/bin/env bash
 # Start the tester stand in the local Kubernetes cluster (namespace wr-tester).
-#   start.sh [--tag <git-sha>] [--registry <repo-prefix>] [--local]
-# --local uses wr/* images already built on this machine (tag defaults to the newest one).
-# Registry login, if the registry needs it: REGISTRY_USER=... REGISTRY_PASSWORD=... start.sh
+#   start.sh [--tag <git-sha>] [--registry <repo-prefix>]
+# Uses wr/* images built on this machine by build-images.sh (tag defaults to the newest one).
+# --registry <prefix> pulls from a registry instead; login: REGISTRY_USER=... REGISTRY_PASSWORD=...
 set -euo pipefail
 . "$(dirname "$0")/env.sh"
 
-REGISTRY=gitlab.example.org:5005/acme/weeklyreport
+REGISTRY=wr
 TAG=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --tag) TAG=${2:?--tag needs a value}; shift 2 ;;
     --registry) REGISTRY=${2:?--registry needs a value}; shift 2 ;;
-    --local) REGISTRY=wr; shift ;;
-    *) echo "Usage: $0 [--tag <sha>] [--registry <prefix>] [--local]" >&2; exit 2 ;;
+    *) echo "Usage: $0 [--tag <sha>] [--registry <prefix>]" >&2; exit 2 ;;
   esac
 done
 
@@ -36,7 +35,13 @@ if [ -z "$TAG" ]; then
     TAG=$(git -C "$REPO" rev-parse HEAD)
   fi
 fi
-[ -n "$TAG" ] || { echo "No image tag: pass --tag <git-sha>." >&2; exit 1; }
+[ -n "$TAG" ] || { echo "No wr/* images on this machine: run deploy/tester-kit/build-images.sh first." >&2; exit 1; }
+if [ "$REGISTRY" = wr ]; then
+  for image in api migrate web backup; do
+    docker image inspect "wr/$image:$TAG" >/dev/null 2>&1 \
+      || { echo "Image wr/$image:$TAG is missing: run deploy/tester-kit/build-images.sh --tag $TAG." >&2; exit 1; }
+  done
+fi
 echo "Context: $CTX | namespace: $NS | images: $REGISTRY/*:$TAG"
 
 bash "$HERE/setup.sh"
