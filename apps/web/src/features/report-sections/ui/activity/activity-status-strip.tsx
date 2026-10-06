@@ -157,7 +157,7 @@ export function ActivityStatusStrip({
       data-testid="activity-status-strip"
       className="rounded-[var(--radius)] border border-[var(--card-surface-border)] bg-[var(--card-surface-gradient)] p-4 shadow-[0_1px_2px_var(--color-border-subtle)]"
     >
-      <h2 className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
+      <h2 className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-primary)]">
         Project Activities
       </h2>
       <ul className="mt-3 space-y-2">
