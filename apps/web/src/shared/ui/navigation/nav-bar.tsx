@@ -30,7 +30,7 @@ export function NavBar() {
 
   return (
     <header className="w-full bg-[var(--color-card)]" data-testid="nav-bar">
-      <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-4 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] sm:px-6 lg:px-8">
+      <div className="mx-auto grid max-w-7xl grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-4 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:px-6 lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:px-8">
         <NavBrand
           role={model.role}
           homeLabel={model.homeLabel}
@@ -49,6 +49,13 @@ export function NavBar() {
         <NavRightRail
           sessionLoading={model.sessionLoading}
           hasUser={model.userName !== null}
+          menu={
+            <MobileNav
+              links={model.visibleLinks}
+              pathname={pathname}
+              role={model.role}
+            />
+          }
         />
       </div>
 
@@ -59,12 +66,6 @@ export function NavBar() {
           data-testid="nav-accent"
         />
       </div>
-
-      <MobileNav
-        links={model.visibleLinks}
-        pathname={pathname}
-        role={model.role}
-      />
     </header>
   );
 }

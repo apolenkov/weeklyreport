@@ -84,7 +84,10 @@ signed-in user's existing display name and role at 375 CSS pixels. Long names
 MUST wrap without pushing the Menu, development role-switcher, or Sign out
 controls outside the viewport. Navigation actions MUST occupy the trailing
 side of the mobile header and preserve their existing accessible names and
-keyboard operation. Desktop navigation MUST retain its centered main links.
+keyboard operation. The Menu trigger MUST sit inside that header rail as a
+44 CSS pixel icon control named "Open navigation menu", not as a separate row
+below the header, and its panel MUST open from the trailing edge. Desktop
+navigation MUST retain its centered main links.
 
 #### Scenario: Mobile navigation contains a long user name
 

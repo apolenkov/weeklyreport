@@ -13,6 +13,7 @@ import { useState } from "react";
 
 import { MobileNavLinks } from "./mobile-nav-links";
 import type { NavLink } from "./nav-links";
+import { NAV_RAIL_BUTTON_CLASS } from "./nav-logout-button";
 
 export function MobileNav({
   links,
@@ -26,27 +27,25 @@ export function MobileNav({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="flex items-center border-t border-[var(--color-border)] px-4 py-2 sm:hidden">
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetTrigger
-          className="inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-md px-2 text-sm font-medium text-[var(--color-foreground)] hover:bg-[var(--color-muted)]"
-          aria-label="Open navigation menu"
-        >
-          <Menu size={20} aria-hidden="true" />
-          <span>Menu</span>
-        </SheetTrigger>
-        <SheetContent side="left" className="w-72 p-0">
-          <SheetHeader className="border-b border-[var(--color-border)] p-4">
-            <SheetTitle>Menu</SheetTitle>
-          </SheetHeader>
-          <MobileNavLinks
-            links={links}
-            pathname={pathname}
-            role={role}
-            onNavigate={() => setOpen(false)}
-          />
-        </SheetContent>
-      </Sheet>
-    </div>
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger
+        className={`${NAV_RAIL_BUTTON_CLASS} sm:hidden`}
+        aria-label="Open navigation menu"
+        title="Menu"
+      >
+        <Menu size={16} aria-hidden="true" />
+      </SheetTrigger>
+      <SheetContent side="right" className="w-72 p-0">
+        <SheetHeader className="border-b border-[var(--color-border)] p-4">
+          <SheetTitle>Menu</SheetTitle>
+        </SheetHeader>
+        <MobileNavLinks
+          links={links}
+          pathname={pathname}
+          role={role}
+          onNavigate={() => setOpen(false)}
+        />
+      </SheetContent>
+    </Sheet>
   );
 }

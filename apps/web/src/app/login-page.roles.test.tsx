@@ -151,6 +151,18 @@ describe("Landing page — last-role placeholder", () => {
     expect(skeleton).toHaveClass("min-h-40");
   });
 
+  it("leaves the status line empty before hydration so it is written only once", async () => {
+    const LoginPageClient = await loadLoginPageClient();
+    const container = document.createElement("div");
+    container.innerHTML = renderToStaticMarkup(
+      <LoginPageClient initialOrg={STUB_ORG} />,
+    );
+
+    const status = container.querySelector("[data-testid='last-role-status']");
+    expect(status).toHaveClass("min-h-8");
+    expect(status).toBeEmptyDOMElement();
+  });
+
   it("does not render last-role-hint section in production mode (no AUTH_STUB)", async () => {
     vi.stubEnv("NEXT_PUBLIC_AUTH_STUB", "false");
 

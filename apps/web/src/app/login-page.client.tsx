@@ -100,12 +100,17 @@ function HeroPanel({
   );
 }
 
+// Stays empty until the stored role is read so the centered line is written
+// once instead of being replaced (and shifted) by the resume text.
 function LastRoleStatus({
   lastRole,
+  lastRoleLoaded,
 }: {
   readonly lastRole: LastRoleRecord | null;
+  readonly lastRoleLoaded: boolean;
 }) {
   if (!AUTH_STUB) return <p>Secure organization sign-in</p>;
+  if (!lastRoleLoaded) return null;
   return (
     <p>
       {lastRole
@@ -134,9 +139,13 @@ function SignInPanel({
         <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold leading-tight tracking-[-0.02em] lg:sr-only">
           Weekly Report
         </h1>
-        <p className="mb-10 mt-2 text-[15px] lg:hidden text-[var(--color-muted-foreground)]">
+        <p className="mb-8 mt-2 text-[15px] lg:hidden text-[var(--color-muted-foreground)]">
           Status Reporting System
         </p>
+
+        <h2 className="mb-5 font-[family-name:var(--font-display)] text-xl font-semibold tracking-[-0.01em] text-[var(--color-foreground)]">
+          Sign in
+        </h2>
 
         {sessionError ? (
           <div
@@ -158,7 +167,7 @@ function SignInPanel({
           className="mt-6 flex min-h-8 items-start justify-center text-xs leading-4 tracking-[0.02em] text-[var(--color-muted-foreground)]"
           data-testid="last-role-status"
         >
-          <LastRoleStatus lastRole={lastRole} />
+          <LastRoleStatus lastRole={lastRole} lastRoleLoaded={lastRoleLoaded} />
         </div>
 
         {AUTH_STUB && (
@@ -167,12 +176,20 @@ function SignInPanel({
           </div>
         )}
 
-        <div className="mx-auto my-10 h-px w-full max-w-[320px] bg-[var(--color-border-subtle)]" />
+        {/* The hero already names the organization from lg up, so the footer
+            keeps only the build version there. */}
+        <div className={APP_VERSION ? undefined : "lg:hidden"}>
+          <div className="mx-auto my-10 h-px w-full max-w-[320px] bg-[var(--color-border-subtle)]" />
 
-        <p className="text-xs tracking-[0.02em] text-[var(--color-muted-foreground)]">
-          {orgFullName}
-          {APP_VERSION && <> · v{APP_VERSION}</>}
-        </p>
+          <p className="text-xs tracking-[0.02em] text-[var(--color-muted-foreground)]">
+            <span className="lg:hidden">{orgFullName}</span>
+            {APP_VERSION && (
+              <>
+                <span className="lg:hidden"> · </span>v{APP_VERSION}
+              </>
+            )}
+          </p>
+        </div>
       </div>
     </div>
   );
