@@ -31,6 +31,29 @@ describe("resolveAllowedOrigins", () => {
       }),
     ).toEqual(["http://a.example.com"]);
   });
+
+  it("canonicalizes application URLs to the origin a browser sends", () => {
+    expect(
+      resolveAllowedOrigins({
+        FRONTEND_URL: "https://App.example.test/",
+        FRONTEND_URLS:
+          " https://app.example.test:443/path , https://admin.example.test:8443 ",
+      }),
+    ).toEqual(["https://app.example.test", "https://admin.example.test:8443"]);
+  });
+
+  it.each([
+    "not-a-url",
+    "ftp://files.example.test",
+    "https://user:pass@app.example.test",
+  ])("rejects an entry that cannot form an HTTP(S) origin (%s)", (entry) => {
+    expect(() =>
+      resolveAllowedOrigins({
+        FRONTEND_URL: "http://localhost:3000",
+        FRONTEND_URLS: entry,
+      }),
+    ).toThrow(/origin/i);
+  });
 });
 
 describe("logOtelDecision", () => {

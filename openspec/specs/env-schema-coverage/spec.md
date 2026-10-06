@@ -173,6 +173,34 @@ local consumer behavior.
 - **WHEN** `validateEnv()` runs
 - **THEN** validation fails even when telemetry export is currently disabled
 
+### Requirement: Frontend URL configuration canonicalizes to HTTP(S) origins for CORS
+
+`FRONTEND_URL` and each `FRONTEND_URLS` CSV entry are application URLs — a
+configured path stays available to application redirects — but CORS
+authorization compares only each entry's canonical `http`/`https` origin
+against the browser `Origin` header. The schema MUST reject a `FRONTEND_URL`
+or a `FRONTEND_URLS` entry that cannot form a canonical HTTP(S) origin — a
+non-HTTP(S) scheme, embedded credentials, a wildcard, or an opaque origin —
+in every environment, so a malformed entry fails boot rather than silently
+narrowing the explicit allowlist.
+
+#### Scenario: Equivalent application URLs canonicalize to one allowed origin
+
+- **GIVEN** `FRONTEND_URL` is `https://App.example.test/` and `FRONTEND_URLS`
+  carries `https://app.example.test:443/path`
+- **WHEN** the CORS allowlist is resolved
+- **THEN** both entries yield the single canonical origin
+  `https://app.example.test`
+- **AND** a browser `Origin: https://app.example.test` is allowed while an
+  unrelated domain or port is not
+
+#### Scenario: A non-canonicalizable entry fails boot
+
+- **GIVEN** `FRONTEND_URLS` contains a wildcard, malformed, credentialed, or
+  non-HTTP(S) entry
+- **WHEN** `validateEnv()` runs in any `NODE_ENV`
+- **THEN** validation fails with an issue naming `FRONTEND_URLS`
+
 ### Requirement: API listener ownership is explicit
 
 `API_HOST` MUST be required and accept only `127.0.0.1` or `0.0.0.0`. Native
