@@ -56,6 +56,19 @@ user defaults to `viewer`. Roles are assigned only by the admin.
 - **THEN** its role still comes from its own query parameter, not
   `SamlProfileSchema`
 
+### Requirement: The asserted identity is nonblank
+
+The `nameID` attribute SHALL be non-empty and contain at least one
+non-whitespace character; a blank `nameID` MUST fail assertion verification
+before any user lookup or provisioning. Valid identifiers are stored exactly
+as asserted — never trimmed, case-folded, or normalized.
+
+#### Scenario: whitespace-only identity is refused
+
+- **WHEN** an assertion presents a `nameID` of whitespace characters only
+- **THEN** the profile is rejected as an invalid assertion
+- **AND** no user lookup or provisioning is attempted
+
 ### Requirement: Account key is the corporate email
 
 The account SHALL be keyed by the corporate email, which is also the `samlId`;
