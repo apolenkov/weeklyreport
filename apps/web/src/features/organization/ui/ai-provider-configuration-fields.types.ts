@@ -5,12 +5,17 @@ import type {
 
 export const CUSTOM_PROVIDER_PROFILE = "custom-openai-compatible" as const;
 
-export const profileLabel = (profile: AiProviderProfile): string => {
-  if (profile === CUSTOM_PROVIDER_PROFILE) return "Custom OpenAI-compatible";
-  return profile === "openrouter"
-    ? "OpenRouter"
-    : profile.charAt(0).toUpperCase() + profile.slice(1);
+const PROFILE_LABELS: Readonly<Record<AiProviderProfile, string>> = {
+  mistral: "Mistral",
+  openrouter: "OpenRouter",
+  openai: "OpenAI",
+  groq: "Groq",
+  jina: "Jina",
+  [CUSTOM_PROVIDER_PROFILE]: "Custom OpenAI-compatible",
 };
+
+export const profileLabel = (profile: AiProviderProfile): string =>
+  PROFILE_LABELS[profile];
 
 export interface AiProviderFormState {
   generation: {
