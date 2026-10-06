@@ -1,6 +1,4 @@
 #wr-roles {
-  --wr-role-accent: #1e90ff;
-
   margin-bottom: 1.25rem;
 }
 
@@ -17,10 +15,10 @@
 
 .wr-role-button {
   min-height: 44px;
-  border: 1px solid var(--wr-role-accent);
+  border: 1px solid currentcolor;
   border-radius: 6px;
   background: transparent;
-  color: var(--wr-role-accent);
+  color: inherit;
   font: inherit;
   font-weight: 600;
   cursor: pointer;
@@ -28,8 +26,7 @@
 
 .wr-role-button:hover,
 .wr-role-button:focus-visible {
-  background: var(--wr-role-accent);
-  color: #fff;
+  background: color-mix(in srgb, currentcolor 18%, transparent);
 }
 
 @media (width <= 420px) {
