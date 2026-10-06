@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  aggregateTrafficLight,
   type AnalyticsPeriod,
   CANONICAL_STATUS_PRECEDENCE,
   type CanonicalStatus,
@@ -11,10 +10,13 @@ import {
 } from "@customreport/shared";
 
 import { formatPeriodRangeWithYear } from "../../../shared/lib/format/format-date";
+import { compareBySeverityThenName } from "../../../shared/lib/status/status-order";
 import { statusLabel } from "../../../shared/lib/status/status-presentation";
 import { SlideStatusBadge } from "../../../shared/ui/feedback/slide-status-badge";
 import {
   AnalyticsTable,
+  ColumnHeader,
+  DataCell,
   StickyColumnHeader,
   StickyRowHeader,
 } from "./analytics-table";
@@ -79,8 +81,8 @@ function HistoryCell({
   readonly latest: boolean;
 }) {
   return (
-    <td
-      className={`whitespace-nowrap px-3 py-2 ${latest ? "bg-[var(--color-surface-muted)]" : ""}`}
+    <DataCell
+      className={`whitespace-nowrap ${latest ? "bg-[var(--color-surface-muted)]" : ""}`}
     >
       <SlideStatusBadge
         status={trafficLightToCanonical(statuses[index] ?? null)}
@@ -92,7 +94,7 @@ function HistoryCell({
           current={trafficLightToCanonical(statuses[index])}
         />
       ) : null}
-    </td>
+    </DataCell>
   );
 }
 
@@ -110,21 +112,15 @@ export function TrafficLightHistoryTable({
     );
   }
 
-  const rankedRows = rows
-    .map((row) => {
-      const worst = trafficLightToCanonical(
-        aggregateTrafficLight(row.statuses),
-      );
-      return {
-        row,
-        rank: Math.max(
-          CANONICAL_STATUS_PRECEDENCE["on-track"],
-          CANONICAL_STATUS_PRECEDENCE[worst],
-        ),
-      };
-    })
-    .toSorted((a, b) => b.rank - a.rank);
   const latestIndex = periods.length - 1;
+  // Same order as the report overview: latest status by severity, then name.
+  const rankedRows = rows
+    .map((row) => ({
+      row,
+      status: trafficLightToCanonical(row.statuses[latestIndex]),
+      name: row.projectName,
+    }))
+    .toSorted(compareBySeverityThenName);
   const displayPeriods = periods
     .map((period, index) => ({ period, index }))
     .toReversed();
@@ -139,28 +135,30 @@ export function TrafficLightHistoryTable({
       <AnalyticsTable
         headingId={headingId}
         caption="Traffic-light history data"
+        dataColumns={periods.length}
         showScrollHint={periods.length > 1}
       >
         <thead>
-          <tr className="border-b text-left">
+          <tr>
             <StickyColumnHeader>Project</StickyColumnHeader>
             {displayPeriods.map(({ period, index }) => (
-              <th
+              <ColumnHeader
                 key={period.periodEnd}
-                scope="col"
-                className={`whitespace-nowrap px-3 py-2 ${index === latestIndex ? "bg-[var(--color-surface-muted)]" : ""}`}
+                className={
+                  index === latestIndex ? "bg-[var(--color-surface-muted)]" : ""
+                }
               >
                 {formatPeriodRangeWithYear(
                   period.periodStart,
                   period.periodEnd,
                 )}
-              </th>
+              </ColumnHeader>
             ))}
           </tr>
         </thead>
         <tbody>
           {rankedRows.map(({ row }) => (
-            <tr key={row.projectId} className="border-b last:border-0">
+            <tr key={row.projectId}>
               <StickyRowHeader>{row.projectName}</StickyRowHeader>
               {displayPeriods.map(({ period, index }) => (
                 <HistoryCell

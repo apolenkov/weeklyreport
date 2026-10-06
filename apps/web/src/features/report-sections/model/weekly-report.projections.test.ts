@@ -79,8 +79,8 @@ describe("statusLabelFor", () => {
       ]),
     ).toBe("At risk \u00B7 Иванов В.П., Кузнецова М.А.");
   });
-  it('falls back to "unassigned" when no leads', () => {
-    expect(statusLabelFor("on-track", [])).toBe("On track \u00B7 unassigned");
+  it('falls back to "Unassigned" when no leads', () => {
+    expect(statusLabelFor("on-track", [])).toBe("On track \u00B7 Unassigned");
   });
 
   it("shortens every product lead while preserving source names, ids, and order", () => {

@@ -102,7 +102,7 @@ function StageConnector({ isOwnEdge }: { readonly isOwnEdge: boolean }) {
       aria-hidden="true"
       data-testid="sdlc-stage-connector"
       data-own-edge={isOwnEdge}
-      className="hidden shrink-0 items-center justify-center xl:flex"
+      className="hidden shrink-0 items-center justify-center lg:flex"
       style={{
         height: STAGE_CHIP_BOX_HEIGHT,
         color: isOwnEdge
@@ -135,7 +135,7 @@ function StageStep({
       {showConnector && <StageConnector isOwnEdge={isOwnEdge} />}
       <div
         data-testid="sdlc-stage-row"
-        className="w-full min-w-0 xl:w-[var(--sdlc-stage-width)] xl:flex-none"
+        className="w-full min-w-0 lg:max-w-[var(--sdlc-stage-width)] lg:flex-1 lg:basis-0"
       >
         <StageChip
           stage={stage}
@@ -173,7 +173,7 @@ function StagesRow({
   return (
     <div
       data-testid="sdlc-stages"
-      className="grid w-full min-w-0 grid-cols-2 items-start gap-x-2 gap-y-3 pb-1 md:grid-cols-4 xl:flex xl:flex-nowrap xl:justify-center xl:gap-1"
+      className="grid w-full min-w-0 grid-cols-2 items-start gap-x-2 gap-y-3 pb-1 md:grid-cols-4 lg:flex lg:flex-nowrap lg:justify-center lg:gap-1"
       style={SDLC_STAGES_STYLE}
     >
       {visibleStages.map((stage, index) => (

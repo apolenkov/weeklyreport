@@ -25,6 +25,9 @@ function statusClass(status: AdminReminderExecutionView["status"]): string {
   }
 }
 
+const HEAD_CELL_CLASS =
+  "px-3 py-3 font-semibold text-[var(--color-foreground)]";
+
 function ExecutionRow({
   execution,
 }: {
@@ -32,7 +35,7 @@ function ExecutionRow({
 }) {
   return (
     <tr data-testid={`reminder-execution-${execution.id}`}>
-      <td className="px-3 py-3 font-medium text-[var(--color-foreground)]">
+      <td className="px-3 py-3 text-[var(--color-foreground)]">
         {execution.recipientEmail}
       </td>
       <td className="whitespace-nowrap px-3 py-3 text-[var(--color-muted-foreground)]">
@@ -48,7 +51,9 @@ function ExecutionRow({
       <td className="whitespace-nowrap px-3 py-3 text-[var(--color-muted-foreground)]">
         {execution.sentAt ? formatDateTime(execution.sentAt) : "—"}
       </td>
-      <td className="max-w-[18rem] px-3 py-3 text-[var(--color-destructive)]">
+      <td
+        className={`max-w-[18rem] px-3 py-3 ${execution.errorMessage ? "text-[var(--color-destructive)]" : "text-[var(--color-muted-foreground)]"}`}
+      >
         {execution.errorMessage ?? "—"}
       </td>
     </tr>
@@ -89,21 +94,21 @@ export function ReminderExecutionList({
         <div className="overflow-x-auto">
           <table className="w-full min-w-[44rem] text-left text-sm">
             <caption className="sr-only">Reminder delivery activity</caption>
-            <thead className="text-xs uppercase tracking-wide text-[var(--color-muted-foreground)]">
-              <tr>
-                <th scope="col" className="px-3 py-2 font-semibold">
+            <thead>
+              <tr className="border-b border-[var(--color-border)] bg-[var(--color-background)]">
+                <th scope="col" className={HEAD_CELL_CLASS}>
                   Recipient
                 </th>
-                <th scope="col" className="px-3 py-2 font-semibold">
+                <th scope="col" className={HEAD_CELL_CLASS}>
                   Scheduled
                 </th>
-                <th scope="col" className="px-3 py-2 font-semibold">
+                <th scope="col" className={HEAD_CELL_CLASS}>
                   Status
                 </th>
-                <th scope="col" className="px-3 py-2 font-semibold">
+                <th scope="col" className={HEAD_CELL_CLASS}>
                   Sent
                 </th>
-                <th scope="col" className="px-3 py-2 font-semibold">
+                <th scope="col" className={HEAD_CELL_CLASS}>
                   Error
                 </th>
               </tr>

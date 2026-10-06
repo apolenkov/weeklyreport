@@ -122,9 +122,9 @@ function SectionsToolbar({
 }: SectionsToolbarProps & { readonly reviewEnabled: boolean }) {
   return (
     <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <span className="text-xs font-bold text-[var(--color-muted-foreground)]">
+      <h2 className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-primary)]">
         Sections
-      </span>
+      </h2>
       {reviewEnabled ? (
         <div className="flex max-w-full flex-nowrap items-center gap-2 overflow-x-auto">
           {canReviewAny ? (

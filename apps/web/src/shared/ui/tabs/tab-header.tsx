@@ -28,9 +28,7 @@ export function TabHeader({
     >
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-            {title}
-          </h2>
+          <h2 className="section-title">{title}</h2>
           {count !== undefined && count !== null ? (
             <span className="inline-flex items-center rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-0.5 font-[family-name:var(--font-sans)] text-[12px] font-semibold tabular-nums text-[var(--color-muted-foreground)]">
               {count}
