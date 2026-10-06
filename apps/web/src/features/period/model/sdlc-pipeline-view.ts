@@ -32,8 +32,8 @@ export interface ProductPipelineView {
   readonly hiddenColors: { border: string; text: string };
 }
 
-// Health/completeness always use the RAW pre-floor product + full stage list;
-// visibilityMode only narrows which chips render.
+// Completeness reads the RAW pre-floor product; health reads the risk-floored
+// product plus crossAuthors. visibilityMode only narrows which chips render.
 export function deriveProductPipelineView(args: {
   readonly product: Product;
   readonly rawProducts: readonly Product[] | undefined;
