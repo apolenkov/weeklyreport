@@ -229,6 +229,24 @@ const SAVE_BUTTONS = `Array.from(document.getElementsByTagName('div'))
   .filter(button => ['Save draft now', 'Retry saving draft', 'Saving draft', 'Draft saved'].includes(button.getAttribute('aria-label')))
   .filter(button => button.getClientRects().length > 0)`;
 
+// A click that edits the draft marks it dirty a moment later. Saving before then
+// sees a clean draft, clicks nothing and the edit is lost on reload; wait a
+// bounded time for the dirty state (or a save already running), then save.
+const DIRTY_WAIT_MS = 3000;
+
+export async function saveChanges(session?: string): Promise<void> {
+  await command(["eval", "window.__saveWaitFrom = performance.now()"], session);
+  await command(
+    [
+      "wait",
+      "--fn",
+      `(() => { const buttons = ${SAVE_BUTTONS}; const changed = buttons.length === 1 && (!buttons[0].disabled || buttons[0].getAttribute('aria-busy') === 'true'); return changed || performance.now() - window.__saveWaitFrom > ${DIRTY_WAIT_MS}; })()`,
+    ],
+    session,
+  );
+  await saveDraft(session);
+}
+
 export async function saveDraft(session?: string): Promise<void> {
   await command(
     [
