@@ -8,10 +8,15 @@ import {
   TooltipTrigger,
 } from "@customreport/ui/components/ui/tooltip";
 
-import { ToolbarIconButton } from "../../../shared/ui/report-shell/toolbar-icon-button";
 import { usePdfExportJob } from "./use-pdf-export-job";
 
 const DISABLED_REASON = "Publish or re-publish the report to export PDF.";
+// Below lg the control is a labelled pill with a visible short reason (a
+// tooltip never opens on touch); from lg it is the compact icon circle with the
+// tooltip and the sr-only reason.
+const DISABLED_CAPTION = "Available after publish";
+const EXPORT_BUTTON_CLASS =
+  "btn-press inline-flex h-[var(--toolbar-control-h)] shrink-0 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border px-3 lg:w-[var(--toolbar-control-h)] lg:px-0 font-[family-name:var(--font-sans)] text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed";
 const RECOVERY_MESSAGE = "Recovery required — export outcome unknown";
 const DISABLED_TRIGGER_CLASS =
   "inline-flex shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1";
@@ -43,16 +48,18 @@ function ExportActionButton({
   readonly describedBy?: string | undefined;
 }) {
   return (
-    <ToolbarIconButton
+    <button
+      type="button"
       aria-label="Export PDF"
       onClick={onExport}
       disabled={disabled}
       aria-busy={isGenerating}
       aria-describedby={describedBy}
-      className={className}
+      className={`${EXPORT_BUTTON_CLASS} ${className}`}
     >
       {isGenerating ? <ExportSpinnerIcon /> : <ExportPdfIcon />}
-    </ToolbarIconButton>
+      <span className="lg:sr-only">Export PDF</span>
+    </button>
   );
 }
 
@@ -111,9 +118,18 @@ export function ExportPdfButton({
         />
       )}
       {!isExportable ? (
-        <span id={disabledReasonId} className="sr-only">
-          {DISABLED_REASON}
-        </span>
+        <>
+          <span id={disabledReasonId} className="sr-only">
+            {DISABLED_REASON}
+          </span>
+          <span
+            aria-hidden="true"
+            data-testid="export-pdf-disabled-caption"
+            className="text-xs text-[var(--color-muted-foreground)] lg:hidden"
+          >
+            {DISABLED_CAPTION}
+          </span>
+        </>
       ) : null}
       {fallbackUrl !== null ? (
         <a href={fallbackUrl} download className={FALLBACK_LINK_CLASS}>

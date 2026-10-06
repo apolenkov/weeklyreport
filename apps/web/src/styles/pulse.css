@@ -44,7 +44,6 @@
     "opsz" 14,
     "wght" 420;
   margin-bottom: 0.4em;
-  margin-left: 0.4em;
 }
 
 .pulse-strong {
@@ -133,24 +132,6 @@
     120% 100% at 50% 50%,
     rgba(0, 0, 0, 1) 30%,
     rgba(0, 0, 0, 0.3) 80%,
-    transparent 100%
-  );
-}
-
-/* Hairline at the bottom of the dark column — a quiet horizon. */
-.pulse-bg::after {
-  content: "";
-  position: absolute;
-  left: 8%;
-  right: 8%;
-  bottom: 6%;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(251, 191, 36, 0.4) 30%,
-    rgba(251, 191, 36, 0.55) 50%,
-    rgba(251, 191, 36, 0.4) 70%,
     transparent 100%
   );
 }

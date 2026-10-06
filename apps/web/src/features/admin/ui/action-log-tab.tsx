@@ -182,7 +182,7 @@ export function ActionLogTab({
   );
   const pagination = useActionLogPagination();
   const visibleRows = useActionLogRows(pagination.items, search, userNames);
-  const loadedCount = `${pagination.items.length} loaded${pagination.hasNextPage ? "+" : ""}`;
+  const loadedCount = `${pagination.items.length} loaded${pagination.hasNextPage ? " · more available" : ""}`;
   const count = search.trim()
     ? `${visibleRows.length} matches · ${loadedCount}`
     : loadedCount;

@@ -10,6 +10,16 @@ export function formatTimestamp(value: string): string {
   return formatDateTime(date);
 }
 
+const SHORT_ID_TAIL = 8;
+const SHORT_ID_MAX = 16;
+
+/** Keeps the distinctive tail of a long id; the full value belongs in a title or copy action. */
+export function shortId(value: string): string {
+  return value.length <= SHORT_ID_MAX
+    ? value
+    : `…${value.slice(-SHORT_ID_TAIL)}`;
+}
+
 export function truncate(value: string, max: number): string {
   if (value.length <= max) return value;
   return `${value.slice(0, max - 1).trimEnd()}…`;

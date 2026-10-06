@@ -5,6 +5,8 @@ import type { LeadVelocityOutput } from "@customreport/shared";
 import { formatPeriodRangeWithYear } from "../../../shared/lib/format/format-date";
 import {
   AnalyticsTable,
+  ColumnHeader,
+  DataCell,
   StickyColumnHeader,
   StickyRowHeader,
 } from "./analytics-table";
@@ -32,32 +34,29 @@ export function LeadSubmissionsTable({
     <AnalyticsTable
       headingId={headingId}
       caption="Lead submissions"
+      dataColumns={displayData.length}
       showScrollHint={rows.length > 1}
     >
       <thead>
-        <tr className="border-b text-left">
+        <tr>
           <StickyColumnHeader>Lead</StickyColumnHeader>
           {displayData.map((point) => (
-            <th
-              key={point.periodEnd}
-              scope="col"
-              className="whitespace-nowrap px-3 py-2"
-            >
+            <ColumnHeader key={point.periodEnd}>
               {formatPeriodRangeWithYear(point.periodStart, point.periodEnd)}
-            </th>
+            </ColumnHeader>
           ))}
         </tr>
       </thead>
       <tbody>
         {series.map((lead) => (
-          <tr key={lead.dataKey} className="border-b last:border-0">
+          <tr key={lead.dataKey}>
             <StickyRowHeader>{lead.name}</StickyRowHeader>
             {displayData.map((point) => {
               const submitted = Number(point[lead.dataKey] ?? 0) > 0;
               return (
-                <td
+                <DataCell
                   key={point.periodEnd}
-                  className={`whitespace-nowrap px-3 py-2 ${submitted ? "" : "text-muted-foreground"}`}
+                  className={`whitespace-nowrap ${submitted ? "" : "text-muted-foreground"}`}
                 >
                   {submitted ? (
                     <>
@@ -66,7 +65,7 @@ export function LeadSubmissionsTable({
                   ) : (
                     "Missing"
                   )}
-                </td>
+                </DataCell>
               );
             })}
           </tr>

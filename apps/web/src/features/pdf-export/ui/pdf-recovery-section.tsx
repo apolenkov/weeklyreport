@@ -2,6 +2,7 @@
 
 import type { PdfRecoveryJob } from "@customreport/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -108,7 +109,7 @@ function PdfRecoveryEmptyState() {
       data-testid="pdf-recovery-empty"
       className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]"
     >
-      No PDF exports awaiting recovery.
+      No failed exports. Every PDF export has finished.
     </div>
   );
 }
@@ -209,8 +210,8 @@ export function PdfRecoverySection() {
       data-testid="pdf-recovery-section"
     >
       <TabHeader
-        title="PDF export recovery"
-        description="Exports that failed terminally or were quarantined after losing their queue job. Retry dispatches a fresh generation."
+        title="Failed exports"
+        description="PDF exports that did not finish are listed here. Retry starts a fresh attempt."
         count={list.data ? jobs.length : undefined}
       />
       {list.isLoading ? (
@@ -227,6 +228,15 @@ export function PdfRecoverySection() {
           onRetry={retry.retry}
         />
       )}
+      <p className="text-sm text-[var(--color-muted-foreground)]">
+        <Link
+          href="/reports"
+          className="font-semibold text-[var(--color-starbucks-accent)] underline underline-offset-2 hover:text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+        >
+          Exports are generated from a report
+        </Link>
+        . Open one and choose Export PDF.
+      </p>
     </section>
   );
 }

@@ -72,4 +72,14 @@ describe("UserRowActions self-protection", () => {
       await screen.findByRole("menuitem", { name: /Delete user/ }),
     ).toHaveAttribute("aria-disabled", "true");
   });
+
+  it("marks the overflow trigger as open while its menu is shown", async () => {
+    renderRow(ADMIN, "someone-else");
+    const trigger = screen.getByRole("button", {
+      name: /^More actions for Petrov/,
+    });
+    await userEvent.click(trigger);
+    expect(trigger).toHaveAttribute("data-state", "open");
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+  });
 });

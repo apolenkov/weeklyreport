@@ -98,10 +98,10 @@ export function FeedbackRecordCard({
             </span>
             <span className="truncate">{item.url}</span>
           </div>
-          <p className="whitespace-pre-wrap text-sm text-[var(--color-ink)]">
+          <p className="whitespace-pre-wrap text-sm text-[var(--color-foreground)]">
             {item.message}
           </p>
-          <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
+          <p className="mt-3 text-xs text-[var(--color-muted-foreground)]">
             {item.authorName} · Submitted {formatSubmitted(item.createdAt)}
             {item.updatedAt.getTime() === item.createdAt.getTime()
               ? null

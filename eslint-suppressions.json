@@ -1,7 +1,1 @@
-{
-  "apps/web/src/features/report-sections/model/autosave/use-lead-form-autosave.ts": {
-    "max-lines-per-function": {
-      "count": 1
-    }
-  }
-}
+{}

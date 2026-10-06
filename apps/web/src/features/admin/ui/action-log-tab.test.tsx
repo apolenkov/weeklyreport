@@ -117,23 +117,29 @@ describe("ActionLogTab pagination", () => {
     renderTab(list);
     const user = userEvent.setup();
 
-    expect(await screen.findByText("20 loaded+")).toBeInTheDocument();
+    expect(
+      await screen.findByText("20 loaded · more available"),
+    ).toBeInTheDocument();
     const search = screen.getByRole("searchbox", {
       name: "Search loaded actions",
     });
 
     await user.type(search, "matching-user");
-    expect(screen.getByText("2 matches · 20 loaded+")).toBeInTheDocument();
+    expect(
+      screen.getByText("2 matches · 20 loaded · more available"),
+    ).toBeInTheDocument();
 
     await user.clear(search);
     await user.type(search, "no-such-action");
-    expect(screen.getByText("0 matches · 20 loaded+")).toBeInTheDocument();
+    expect(
+      screen.getByText("0 matches · 20 loaded · more available"),
+    ).toBeInTheDocument();
     expect(
       screen.getByText("No loaded actions match the search."),
     ).toBeInTheDocument();
 
     await user.clear(search);
-    expect(screen.getByText("20 loaded+")).toBeInTheDocument();
+    expect(screen.getByText("20 loaded · more available")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Load more" }));
     expect(await screen.findByText("21 loaded")).toBeInTheDocument();
     expect(screen.getByText("next-page-user")).toBeInTheDocument();

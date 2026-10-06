@@ -419,6 +419,9 @@ async function swipeOpenPeriodListbox(direction: "left" | "right") {
 void test("period listbox touch swipes move between Current and read-only history", async () => {
   await openReadOnlyReport("slides");
   await command(["set", "viewport", "400", "800"]);
+  // The native swipe always starts at (200, 400). The compact mobile header puts the open
+  // listbox above that point, so push the page down until the origin falls inside it.
+  await command(["eval", "document.body.style.paddingTop = '48px'"]);
   await findRole("switch", ARCHIVE_NAME, "click");
   await assertAttribute("switch", ARCHIVE_NAME, "aria-checked", "true");
   await openPeriodPicker();

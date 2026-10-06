@@ -86,7 +86,7 @@ function UserOverflowMenu({
         <button
           ref={triggerRef}
           type="button"
-          className={`${ROUTINE_ACTION_CLASS} px-0 text-[var(--color-muted-foreground)] hover:border-[var(--color-border-accent-hover)] hover:text-[var(--color-foreground)]`}
+          className={`${ROUTINE_ACTION_CLASS} px-0 text-[var(--color-muted-foreground)] hover:border-[var(--color-border-accent-hover)] hover:text-[var(--color-foreground)] data-[state=open]:border-[var(--color-border-accent-hover)] data-[state=open]:bg-[var(--color-muted)] data-[state=open]:text-[var(--color-foreground)]`}
           aria-label={`More actions for ${user.name}`}
         >
           <MoreHorizontal aria-hidden="true" className="h-4 w-4" />
@@ -96,7 +96,8 @@ function UserOverflowMenu({
       <DropdownMenuContent
         align="end"
         aria-label="User actions"
-        className="min-w-44"
+        sideOffset={8}
+        className="min-w-44 shadow-lg"
       >
         <DropdownMenuItem
           variant="destructive"

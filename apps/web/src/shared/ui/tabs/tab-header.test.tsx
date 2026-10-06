@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { TabHeader } from "./tab-header";
+import { TabHeader, TabSearch } from "./tab-header";
 
 describe("TabHeader responsive composition", () => {
   it("keeps content stacked and actions wrappable below xl", () => {
@@ -20,7 +20,11 @@ describe("TabHeader responsive composition", () => {
 
     expect(header).toHaveClass("flex-col", "xl:flex-row");
     expect(header).not.toHaveClass("sm:flex-row");
-    expect(actionGroup).toHaveClass("flex-wrap", "xl:flex-nowrap");
+    expect(actionGroup).toHaveClass(
+      "flex-wrap",
+      "max-sm:grid-cols-1",
+      "xl:flex-nowrap",
+    );
     expect(actionGroup).not.toHaveClass("sm:flex-nowrap");
   });
 
@@ -35,5 +39,21 @@ describe("TabHeader responsive composition", () => {
     expect(screen.getByText(/A long description line/)).toHaveClass(
       "max-w-[65ch]",
     );
+  });
+});
+
+describe("TabSearch caption", () => {
+  it("names the field by its visible label instead of an aria-label", () => {
+    render(
+      <TabSearch
+        value=""
+        onChange={() => undefined}
+        label="Filter this list"
+        placeholder="Product name…"
+      />,
+    );
+
+    const field = screen.getByRole("searchbox", { name: "Filter this list" });
+    expect(field).not.toHaveAttribute("aria-label");
   });
 });

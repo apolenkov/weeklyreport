@@ -10,6 +10,7 @@ import {
   formatPeriodRangeWithYear,
   formatWeekLabel,
 } from "../../../shared/lib/format/format-date";
+import { compareBySeverityThenName } from "../../../shared/lib/status/status-order";
 import { statusLabel } from "../../../shared/lib/status/status-presentation";
 import { reportHasContent } from "./report-content";
 import {
@@ -75,9 +76,10 @@ export function mapWeeklyReport(
   api: WeeklyReportReadModel,
 ): MapWeeklyReportResult {
   const context = buildWeeklyReportProjectionContext(api);
-  const projections = api.portfolioOverview.map((overview) =>
-    projectWeeklyProduct(overview, context),
-  );
+  // Overview tiles and the section list share this one severity order.
+  const projections = api.portfolioOverview
+    .map((overview) => projectWeeklyProduct(overview, context))
+    .toSorted((a, b) => compareBySeverityThenName(a.product, b.product));
   return assembleWeeklyReport(api, buildWeeklyReportPeriod(api), projections);
 }
 

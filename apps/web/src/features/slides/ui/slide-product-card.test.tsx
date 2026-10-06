@@ -169,4 +169,47 @@ describe("SlideProductCard status presentation", () => {
     expect(screen.getByText("Weekly operations")).toBeInTheDocument();
     expect(screen.getByText("Coverage remains staffed")).toBeInTheDocument();
   });
+  it("collapses an empty cell to one labelled dash line on phones", () => {
+    const card: GridProductCard = {
+      id: "p1",
+      name: "Alpha",
+      status: "green",
+      noData: false,
+      subsections: [
+        {
+          kind: "product-level",
+          id: "p1-product",
+          name: "Product-level",
+          note: null,
+          linkedProducts: [],
+          status: null,
+          showStages: false,
+          columns: {
+            current: [
+              {
+                id: "row-1",
+                text: "Shipped the release",
+                authorId: "a1",
+                tone: "neutral",
+                hoverLabel: "Shipped the release",
+                stageNames: [],
+              },
+            ],
+            next: [],
+            risks: [],
+            decisions: [],
+          },
+        },
+      ],
+    };
+    render(<SlideProductCard card={card} authorsById={authorsById} />);
+
+    const risks = screen.getByRole("heading", { name: "Risks" });
+    expect(risks).toHaveClass("max-sm:hidden");
+    const empty = screen.getByLabelText("No Risks");
+    expect(empty).toHaveTextContent("—");
+    expect(empty).toHaveTextContent("No risks");
+    const current = screen.getByRole("heading", { name: "Current work" });
+    expect(current).not.toHaveClass("max-sm:hidden");
+  });
 });

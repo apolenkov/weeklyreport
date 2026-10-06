@@ -8,15 +8,16 @@ import {
   copyToClipboard,
   formatTimestamp,
   humanizeProcedure,
+  shortId,
   statusLabel,
   truncate,
 } from "../model/action-log-format";
 import { serializeActionLogEvent } from "../model/action-log-model";
 import { CorrelationCell } from "./action-log-correlation-cell";
 
-const MAX_USER_ID_LENGTH = 18;
-const MAX_TARGET_ID_LENGTH = 26;
 const COLUMN_COUNT = 6;
+
+const MAX_USER_ID_LENGTH = 18;
 
 function UserCell({
   row,
@@ -50,8 +51,11 @@ function ProcedureCell({ row }: { readonly row: AdminActionLogEvent }) {
         {humanizeProcedure(row.procedure)}
       </div>
       {row.targetId ? (
-        <div className="font-mono text-xs text-[var(--color-muted-foreground)]">
-          {truncate(row.targetId, MAX_TARGET_ID_LENGTH)}
+        <div
+          className="font-mono text-xs text-[var(--color-muted-foreground)]"
+          title={row.targetId}
+        >
+          {shortId(row.targetId)}
         </div>
       ) : null}
     </td>

@@ -7,7 +7,8 @@ import { toast } from "sonner";
 
 import { logoutThenRedirect } from "../../lib/navigation/logout-then-redirect";
 
-const LOGOUT_BUTTON_CLASS =
+// Shared by every icon action in the header rail so they keep one footprint.
+export const NAV_RAIL_BUTTON_CLASS =
   "inline-flex h-[var(--toolbar-control-h)] min-w-[var(--toolbar-control-h)] w-10 items-center justify-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] px-0 text-[12px] font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-foreground)]";
 
 export function NavLogoutButton() {
@@ -30,7 +31,7 @@ export function NavLogoutButton() {
       data-testid="nav-logout"
       aria-label="Sign out"
       title="Sign out"
-      className={LOGOUT_BUTTON_CLASS}
+      className={NAV_RAIL_BUTTON_CLASS}
     >
       {pending ? (
         <LoaderCircle

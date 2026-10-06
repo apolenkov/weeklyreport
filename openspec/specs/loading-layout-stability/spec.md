@@ -52,3 +52,13 @@ widths, the placeholder MUST remain contained without horizontal page overflow.
 
 - **WHEN** the slide skeleton renders at a supported compact width
 - **THEN** its article shell remains within the viewport and every placeholder column is reachable without document-level clipping
+
+### Requirement: Sign-in column holds its geometry while the last role loads
+
+In the development sign-in column of the landing page, the heading, primary action, status line, and role card MUST keep the same position and size (within 1 CSS pixel) between the server-rendered skeleton and the resolved last-role or role-picker card at 375 and 1440 CSS pixels. The status line MUST stay empty until the stored role is read, so its text is written once and does not shift as the resume text replaces the default text.
+
+#### Scenario: A returning visitor opens the landing page
+
+- **WHEN** the stored last role resolves after hydration
+- **THEN** the role card keeps the skeleton's reserved height and the status line text appears without moving any other control
+- **AND** the page records no layout-shift entry
