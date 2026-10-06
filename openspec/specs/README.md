@@ -64,6 +64,7 @@ This index maps every durable capability to one canonical home. Product capabili
 - [lead-form-loaded-view-model](./lead-form-loaded-view-model/spec.md) — One view model derives cross-author visibility, activity alarms, and loaded lead-form affordances. `[roles: Lead]`
 - [lead-form-write-actions](./lead-form-write-actions/spec.md) — Lead writes share one action boundary while preserving conflicts, optimistic locking, and user-visible side effects. `[roles: Lead]`
 - [lead-item-card-uniformity](./lead-item-card-uniformity/spec.md) — Lead item cards keep uniform height and expose truncated content through a full-text tooltip. `[roles: Lead]`
+- [lead-plan-verdict](./lead-plan-verdict/spec.md) — Each prior-week planned item gets a one-action verdict recorded on the selected week without editing the prior week, with confirm-all and a review counter. `[roles: Lead]`
 - [lead-pipeline-card](./lead-pipeline-card/spec.md) — Product health remains risk-derived and distinct from the lead's own Mine-scope stage completeness. `[roles: Lead]`
 - [lead-report-controls-integrity](./lead-report-controls-integrity/spec.md) — Lead report controls avoid no-ops, accidental dialogs, clipped popovers, stale busy states, and mismatched summary populations. `[roles: Lead]`
 - [unified-report-authoring](./unified-report-authoring/spec.md) — Lead report authoring keeps inline editing, lineage, recovery, and progress semantics coherent across sections. `[roles: Lead]`
