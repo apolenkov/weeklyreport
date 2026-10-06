@@ -15,9 +15,7 @@ export function AdminQueryIssue({
       role="alert"
     >
       <div className="space-y-1">
-        <h2 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
-          Could not load this tab
-        </h2>
+        <h2 className="section-title">Could not load this tab</h2>
         <p className="text-sm text-[var(--color-muted-foreground)]">
           {description}
         </p>

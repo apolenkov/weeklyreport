@@ -256,4 +256,33 @@ describe("mapWeeklyReport", () => {
     expect(result.period.periodStatus).toBe("reopened");
     expect(result.period.isCurrent).toBe(false);
   });
+
+  it("orders overview tiles and sections alike: Blocked, At risk, On track, no updates, then name", () => {
+    const overview = (
+      productId: string,
+      productName: string,
+      worstStatus: "green" | "yellow" | "red" | null,
+    ) => ({
+      productId,
+      productName,
+      worstStatus,
+      stageCount: 1,
+      leadNames: [],
+      leadIds: [],
+    });
+    const result = mapWeeklyReport(
+      baseReport({
+        portfolioOverview: [
+          overview("a0000000-0000-4000-8000-000000000001", "Alpha", null),
+          overview("a0000000-0000-4000-8000-000000000002", "Бета", "green"),
+          overview("a0000000-0000-4000-8000-000000000003", "Gamma", "red"),
+          overview("a0000000-0000-4000-8000-000000000004", "Альфа", "green"),
+          overview("a0000000-0000-4000-8000-000000000005", "Delta", "yellow"),
+        ],
+      }),
+    );
+    const expected = ["Gamma", "Delta", "Альфа", "Бета", "Alpha"];
+    expect(result.portfolio.map(({ name }) => name)).toEqual(expected);
+    expect(result.products.map(({ name }) => name)).toEqual(expected);
+  });
 });

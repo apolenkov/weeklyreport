@@ -188,6 +188,18 @@ describe("RemindersTab — delivery activity", () => {
     expect(activity).toHaveTextContent("Failed");
     expect(activity).toHaveTextContent("SMTP unavailable");
   });
+
+  it("styles the table like the other admin tables: plain-case semibold headers, regular e-mail", () => {
+    renderTab({ executions: [{ ...executionBase }] });
+
+    const header = screen.getByRole("columnheader", { name: "Recipient" });
+    expect(header).toHaveClass("font-semibold");
+    expect(header.closest("thead")?.className).not.toContain("uppercase");
+    const email = screen.getByRole("cell", {
+      name: executionBase.recipientEmail,
+    });
+    expect(email).not.toHaveClass("font-medium");
+  });
 });
 
 describe("RemindersTab — plain-language cards", () => {

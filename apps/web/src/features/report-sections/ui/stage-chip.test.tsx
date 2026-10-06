@@ -134,8 +134,8 @@ describe("StageChip — stretched row status visualization", () => {
     expect(
       screen.getByRole("img", { name: /Development: On track/ }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Dev")).toHaveClass("lg:hidden");
-    expect(screen.getByText("Development")).toHaveClass("hidden", "lg:inline");
+    expect(screen.getByText("Dev")).toHaveClass("xl:hidden");
+    expect(screen.getByText("Development")).toHaveClass("hidden", "xl:inline");
   });
 
   it("keeps the status glyph derived from the displayed status", () => {

@@ -88,7 +88,7 @@ describe("TrafficLightHistoryTable", () => {
     expect(region).toHaveFocus();
   });
 
-  it("stably puts worst Red and Yellow projects first without changing input rows", () => {
+  it("orders projects by latest status severity, then name, without changing input rows", () => {
     const rows: TrafficLightHistoryOutput["rows"] = [
       {
         projectId: "green-a",
@@ -129,12 +129,12 @@ describe("TrafficLightHistoryTable", () => {
       screen.getAllByRole("rowheader").map((header) => header.textContent),
     ).toEqual([
       "Red A",
-      "Red B",
       "Yellow A",
-      "Yellow B",
       "Green A",
-      "Empty",
       "Green B",
+      "Yellow B",
+      "Empty",
+      "Red B",
     ]);
     expect(rows).toEqual(original);
   });
@@ -398,12 +398,11 @@ describe("PeriodComparisonTable", () => {
     expect(screen.getByRole("cell", { name: "No status" })).toBeVisible();
     expect(screen.getByRole("cell", { name: "On track" })).toBeVisible();
     expect(screen.getByRole("table").querySelector(".font-mono")).toBeNull();
-    // zero risk count renders as the literal '0'
+    // a known zero is the literal '0' in all three risk columns, never a dash
     const zeros = screen.getAllByText("0");
-    expect(zeros.length).toBeGreaterThanOrEqual(2);
-    // zero risk change is a dash in the normal foreground color, not grey 0
-    const dash = screen.getByText("\u2014");
-    expect(dash.className).not.toContain("text-muted-foreground");
+    expect(zeros).toHaveLength(3);
+    expect(screen.queryByText("\u2014")).toBeNull();
+    expect(zeros[2]?.className).not.toContain("text-muted-foreground");
   });
 
   it.each([
@@ -411,13 +410,13 @@ describe("PeriodComparisonTable", () => {
       periodA: { periodStart: "2026-08-17", periodEnd: "2026-08-23" },
       periodB: { periodStart: "2026-08-24", periodEnd: "2026-08-30" },
       explanation:
-        "Periods Aug 17–23, 2026 (previous) and Aug 24–30, 2026 (latest). Risk change is latest minus previous.",
+        "Latest period Aug 24–30, 2026 compared with previous period Aug 17–23, 2026. Risk change is latest minus previous.",
     },
     {
       periodA: { periodStart: "2026-08-24", periodEnd: "2026-08-30" },
       periodB: { periodStart: "2026-08-31", periodEnd: "2026-09-06" },
       explanation:
-        "Periods Aug 24–30, 2026 (previous) and Aug 31–Sep 6, 2026 (latest). Risk change is latest minus previous.",
+        "Latest period Aug 31–Sep 6, 2026 compared with previous period Aug 24–30, 2026. Risk change is latest minus previous.",
     },
   ])(
     "identifies $periodA → $periodB and labels the positive risk change",
@@ -660,8 +659,6 @@ describe("Native table affordances", () => {
           "sticky",
           "left-0",
           "bg-[var(--color-background)]",
-          "w-36",
-          "max-w-36",
           "whitespace-normal",
           "break-words",
         );
@@ -697,7 +694,7 @@ describe("Native table affordances", () => {
       screen.getByText(/Scroll horizontally/, {
         selector: "#comparison-heading-scroll-hint",
       }),
-    ).toHaveClass("text-xs", "sm:hidden");
+    ).toHaveClass("text-xs", "xl:hidden");
     await userEvent.tab();
     await userEvent.tab();
     await userEvent.tab();
@@ -787,9 +784,103 @@ describe("Trends real frozen ranges", () => {
       ).toBeVisible();
       expect(
         screen.getByText(
-          `Periods ${label} (previous) and — (latest). Risk change is latest minus previous.`,
+          `Latest period — compared with previous period ${label}. Risk change is latest minus previous.`,
         ),
       ).toBeVisible();
     },
   );
+});
+
+describe("Trends table layout", () => {
+  const periodPair = {
+    periodA: { periodStart: "2026-08-17", periodEnd: "2026-08-23" },
+    periodB: { periodStart: "2026-08-24", periodEnd: "2026-08-30" },
+  };
+  const row = (
+    projectName: string,
+    statusA: "green" | "red" | null,
+    statusB: "green" | "red" | null,
+    riskDelta = 0,
+  ) => ({
+    projectId: projectName,
+    projectName,
+    statusA,
+    statusB,
+    riskCountA: 0,
+    riskCountB: 0,
+    riskDelta,
+  });
+
+  it("shares one fixed grid, a light row border and right-aligned numbers", () => {
+    render(
+      <PeriodComparisonTable
+        headingId="comparison-heading"
+        {...periodPair}
+        rows={[row("Alpha", "green", "red", 1)]}
+      />,
+    );
+    const table = screen.getByRole("table");
+    expect(table).toHaveClass("table-fixed", "tabular-nums");
+    expect(table.className).toContain("[&_tr]:border-[var(--color-border)]");
+    expect(table.querySelectorAll("col")).toHaveLength(6);
+    expect(
+      screen.getByRole("columnheader", { name: "Risk change" }),
+    ).toHaveClass("text-right");
+    expect(screen.getByText("+1")).toHaveClass("text-right");
+  });
+
+  it("keeps hyphenated project names whole instead of wrapping at the hyphen", () => {
+    render(
+      <PeriodComparisonTable
+        headingId="comparison-heading"
+        {...periodPair}
+        rows={[row("Platform e-commerce", "green", "red")]}
+      />,
+    );
+    expect(screen.getByText("e-commerce")).toHaveClass("inline-block");
+  });
+
+  it("orders comparison rows by latest status severity, then name", () => {
+    render(
+      <PeriodComparisonTable
+        headingId="comparison-heading"
+        {...periodPair}
+        rows={[
+          row("Beta", "green", "green", 0),
+          row("Zulu", "green", "red", 2),
+          row("Alpha", "red", "green", -1),
+        ]}
+      />,
+    );
+    expect(
+      screen.getAllByRole("rowheader").map((header) => header.textContent),
+    ).toEqual(["Zulu", "Alpha", "Beta"]);
+  });
+
+  it("folds an unchanged comparison behind a disclosure", () => {
+    const { container } = render(
+      <PeriodComparisonTable
+        headingId="comparison-heading"
+        {...periodPair}
+        rows={[row("Alpha", "green", "green"), row("Beta", null, null)]}
+      />,
+    );
+    const details = container.querySelector("details");
+    expect(details).not.toBeNull();
+    expect(details).not.toHaveAttribute("open");
+    expect(details?.querySelector("summary")).toHaveTextContent(
+      "No status or risk changes between these periods.",
+    );
+  });
+
+  it("leaves a comparison with changes unfolded", () => {
+    const { container } = render(
+      <PeriodComparisonTable
+        headingId="comparison-heading"
+        {...periodPair}
+        rows={[row("Alpha", "green", "red", 1)]}
+      />,
+    );
+    expect(container.querySelector("details")).toBeNull();
+  });
 });

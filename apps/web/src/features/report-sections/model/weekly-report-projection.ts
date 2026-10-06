@@ -98,7 +98,7 @@ export function projectWeeklyProduct(
   const leads =
     overview.leadNames.length > 0
       ? overview.leadNames.map(shortNameFromName).join(" · ")
-      : "unassigned";
+      : "Unassigned";
   const identity = {
     id: overview.productId,
     initials: initialsFromName(overview.productName),

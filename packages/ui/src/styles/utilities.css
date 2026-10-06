@@ -10,6 +10,15 @@
   animation: skeleton-shimmer 1.8s ease-in-out infinite;
 }
 
+/* One heading style for card, tab and table-section titles. */
+.section-title {
+  font-family: var(--font-sans);
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+  color: var(--color-foreground);
+}
+
 .card-surface {
   overflow: hidden;
   border-radius: var(--radius);
