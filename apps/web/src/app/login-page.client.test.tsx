@@ -134,6 +134,28 @@ describe("Landing identity", () => {
   });
 });
 
+describe("Sign-in column", () => {
+  it("titles the column with a level-two heading below the single h1", async () => {
+    const LoginPageClient = await loadLoginPageClient();
+    render(<LoginPageClient initialOrg={STUB_ORG} />);
+
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent(
+      "Sign in",
+    );
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+  });
+
+  it("drops the footer organization name from lg up because the hero names it", async () => {
+    const LoginPageClient = await loadLoginPageClient();
+    render(<LoginPageClient initialOrg={STUB_ORG} />);
+
+    const footerName = screen.getByText("Example Software Department");
+    expect(footerName).toHaveClass("lg:hidden");
+    // Without a build version nothing is left to show, so the divider goes too.
+    expect(footerName.closest("div")).toHaveClass("lg:hidden");
+  });
+});
+
 describe("Dev-mode role picker (AUTH_STUB=true, no stored hint)", () => {
   it("shows the direct role picker instead of collapsing the block", async () => {
     vi.stubEnv("NEXT_PUBLIC_AUTH_STUB", "true");

@@ -137,22 +137,4 @@
   );
 }
 
-/* Hairline at the bottom of the dark column — a quiet horizon. */
-.pulse-bg::after {
-  content: "";
-  position: absolute;
-  left: 8%;
-  right: 8%;
-  bottom: 6%;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(251, 191, 36, 0.4) 30%,
-    rgba(251, 191, 36, 0.55) 50%,
-    rgba(251, 191, 36, 0.4) 70%,
-    transparent 100%
-  );
-}
-
 /* The tagline cycler uses the opacity transition above; no keyframes needed. */

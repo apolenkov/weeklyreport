@@ -1,7 +1,12 @@
 import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 
-import { QUEUE_ROW_GRID_CLASS } from "./lead-row-format";
+import {
+  QUEUE_ACTION_CELL_CLASS,
+  QUEUE_ACTIONS_CLASS,
+  QUEUE_META_CLASS,
+  QUEUE_ROW_GRID_CLASS,
+} from "./lead-row-format";
 
 const PANEL_HEIGHT_CLASS = {
   kpi: "h-24",
@@ -25,15 +30,19 @@ function LeadsQueueSkeleton() {
           className="min-w-0 overflow-hidden rounded-[var(--radius)] border border-[var(--color-border)]"
         >
           <div className={QUEUE_ROW_GRID_CLASS}>
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-4 w-16 max-lg:hidden" />
-            <Skeleton className="h-4 w-24 max-lg:hidden" />
-            <Skeleton className="h-4 w-24 max-lg:hidden" />
-            <div className="w-[var(--dashboard-summary-action-w)]">
-              <Skeleton className="h-[var(--dashboard-action-h)] w-full" />
+            <Skeleton className="h-9 w-3/4" />
+            <Skeleton className="h-6 w-20 justify-self-end lg:justify-self-start" />
+            <div className={QUEUE_META_CLASS}>
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-24" />
             </div>
-            <div className="w-[var(--dashboard-summary-action-w)]">
-              <Skeleton className="h-[var(--dashboard-action-h)] w-full" />
+            <div className={QUEUE_ACTIONS_CLASS}>
+              <div className={QUEUE_ACTION_CELL_CLASS}>
+                <Skeleton className="h-[var(--dashboard-action-h)] w-full" />
+              </div>
+              <div className={QUEUE_ACTION_CELL_CLASS}>
+                <Skeleton className="h-[var(--dashboard-action-h)] w-full" />
+              </div>
             </div>
           </div>
         </li>

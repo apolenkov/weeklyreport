@@ -301,7 +301,8 @@ describe("NavBar — role-aware visibility", () => {
 
     expect(screen.getByTestId("nav-bar").firstElementChild).toHaveClass(
       "grid-cols-[minmax(0,1fr)_auto]",
-      "sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]",
+      "sm:grid-cols-[minmax(0,1fr)_auto_auto]",
+      "lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]",
     );
   });
 
@@ -349,14 +350,21 @@ describe("NavBar — role-aware visibility", () => {
     expect(identity.lastElementChild).toHaveClass("hidden", "lg:block");
   });
 
-  it("keeps a visible mobile menu label and the existing action names", () => {
+  it("puts the named menu trigger in the header rail without an extra strip", () => {
     setRole("lead");
-    render(<NavBar />);
+    const { container } = render(<NavBar />);
 
     const menu = screen.getByRole("button", {
       name: "Open navigation menu",
     });
-    expect(within(menu).getByText("Menu")).not.toHaveClass("sr-only");
+    expect(menu).toHaveAttribute("title", "Menu");
+    expect(menu).toHaveClass("sm:hidden", "w-10");
+    expect(menu.parentElement).toBe(
+      screen.getByRole("button", { name: "Sign out" }).parentElement,
+    );
+    expect(menu.closest('[data-testid="nav-bar"]')?.lastElementChild).toBe(
+      container.querySelector('[data-testid="nav-accent"]')?.parentElement,
+    );
     expect(screen.getByRole("button", { name: "Sign out" })).toHaveAttribute(
       "title",
       "Sign out",
@@ -400,7 +408,7 @@ describe("NavBar — role-aware visibility", () => {
     expect(
       container.querySelector('[aria-label="Main navigation"]'),
     ).toBeEmptyDOMElement();
-    expect(container.querySelectorAll('[aria-hidden="true"]')).toHaveLength(6);
+    expect(container.querySelectorAll('[aria-hidden="true"]')).toHaveLength(5);
   });
 
   it("hidden links are absent from the DOM (filtered before render — not CSS-hidden)", () => {

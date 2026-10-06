@@ -86,7 +86,7 @@ function StatusDot({ status }: { readonly status: SlideTrafficStatus }) {
     <>
       <span
         aria-hidden="true"
-        className={`inline-block h-2 w-2 shrink-0 rounded-full ${statusDotClassName(canonical)}`}
+        className={`mr-1.5 inline-block h-2 w-2 shrink-0 rounded-full align-middle ${statusDotClassName(canonical)}`}
       />
       <span className="sr-only">{statusLabel(canonical, "screen")}</span>
     </>
@@ -127,12 +127,16 @@ function SubsectionHeader({
   }
   return (
     <div className="min-w-0 text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
-      <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-        <CornerDownRight aria-hidden="true" className="h-3 w-3" />
+      {/* Inline flow keeps the marker glued to the first word of a long name. */}
+      <div className="min-w-0">
+        <CornerDownRight
+          aria-hidden="true"
+          className="mr-1.5 inline h-3 w-3 align-middle"
+        />
         <StatusDot status={subsection.status} />
         {subsection.name}
         {subsection.linkedProducts.length > 0 && (
-          <span className="min-w-0 break-words font-normal normal-case tracking-normal">
+          <span className="ml-1.5 min-w-0 break-words font-normal normal-case tracking-normal">
             Linked products:{" "}
             {subsection.linkedProducts
               .map((product) => product.productName)
@@ -166,23 +170,31 @@ function SubsectionRow({
       <SubsectionHeader subsection={subsection} />
       {!empty && (
         <div className={`grid ${GRID_TEMPLATE} mt-1.5`}>
-          {COLUMNS.map(({ key, label, icon: Icon, accent }) => (
-            <div key={key} className="min-w-0">
-              <h4
-                className={`mb-1.5 flex items-center gap-1.5 border-b-2 pb-1 text-xs font-semibold sm:hidden ${accent}`}
+          {COLUMNS.map(({ key, label, icon: Icon, accent }) => {
+            // On a phone an empty cell shrinks to one "label —" line instead of
+            // a ruled heading above a lone dash.
+            const cellEmpty = subsection.columns[key].length === 0;
+            return (
+              <div
+                key={key}
+                className={`min-w-0 ${cellEmpty ? "max-sm:flex max-sm:items-baseline max-sm:gap-2" : ""}`}
               >
-                <Icon aria-hidden="true" className="h-3.5 w-3.5" />
-                {label}
-              </h4>
-              <SlideCell
-                rows={subsection.columns[key]}
-                authorsById={authorsById}
-                showStages={subsection.showStages}
-                label={label}
-                onRowActivate={onRowActivate}
-              />
-            </div>
-          ))}
+                <h4
+                  className={`mb-1.5 flex items-center gap-1.5 border-b-2 pb-1 text-xs font-semibold sm:hidden ${accent} ${cellEmpty ? "max-sm:mb-0 max-sm:border-b-0 max-sm:pb-0" : ""}`}
+                >
+                  <Icon aria-hidden="true" className="h-3.5 w-3.5" />
+                  {label}
+                </h4>
+                <SlideCell
+                  rows={subsection.columns[key]}
+                  authorsById={authorsById}
+                  showStages={subsection.showStages}
+                  label={label}
+                  onRowActivate={onRowActivate}
+                />
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

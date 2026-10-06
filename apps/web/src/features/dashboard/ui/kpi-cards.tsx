@@ -104,6 +104,8 @@ function RiskStat({
   );
 }
 
+const RISKS_CARD_CLASS = `${KPI_CARD_CLASS} sm:col-span-2 lg:col-span-1`;
+
 function RisksCard({
   blockedCount,
   atRiskCount,
@@ -115,13 +117,13 @@ function RisksCard({
 }) {
   return (
     <section
-      className={KPI_CARD_CLASS}
+      className={RISKS_CARD_CLASS}
       style={{ borderLeft: "3px solid var(--color-destructive)" }}
       aria-label={`Risks: ${blockedCount} blocked, ${atRiskCount} at risk, ${decisionCount} ${pluralize(decisionCount, "decision", "decisions")}`}
     >
       <div className="min-w-0">
         <p className={KPI_CAPTION_CLASS}>Risks &amp; Blockers</p>
-        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-0.5">
           <RiskStat
             count={blockedCount}
             countClassName="text-lg font-bold tabular-nums text-[var(--color-destructive)]"
@@ -146,7 +148,7 @@ function RisksCard({
 // Slim horizontal strip so three signals sit above content without tall cards.
 export function KpiCards({ data }: KpiCardsProps) {
   return (
-    <div className="grid gap-3 sm:grid-cols-3">
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <SubmissionsCard
         submitted={data.submitted}
         total={data.total}

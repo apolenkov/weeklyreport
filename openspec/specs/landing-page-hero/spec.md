@@ -89,7 +89,8 @@ plus a display line) provided the combined reading is "Weekly Report".
 The landing-page hero MUST NOT render a decorative pulse/heartbeat
 animation: no animated ECG/heartbeat trace and no breathing-weight
 animation on the brand wordmark. The brand wordmark MUST render static.
-A static background (gradient base, dot grid, hairline) is permitted.
+A static background (gradient base, dot grid) is permitted; it MUST NOT carry
+a free-floating rule detached from the hero text stack.
 This requirement does NOT govern the tagline fade transition, which
 remains covered by the "Tagline Rotation Animates Without Layout Shift"
 requirement.
@@ -111,7 +112,9 @@ requirement.
 The sign-in panel in `apps/web/src/app/login-page.client.tsx` MUST visibly label
 the available development-role choices as sign-in options. Each role choice
 MUST have a minimum height of 44 CSS pixels and readable 14 CSS pixel text.
-The desktop organization caption MUST have a text contrast ratio of at least
+The sign-in column MUST carry a visible "Sign in" level-two heading, and from
+1024 CSS pixels up the organization name MUST appear only once (in the hero
+caption), not again in the column footer. The desktop organization caption MUST have a text contrast ratio of at least
 4.5:1 against its composed hero background, including the gradient and static
 overlays. Existing sign-in destinations and environment gates MUST remain unchanged.
 

@@ -1,5 +1,7 @@
 "use client";
 
+import type { ReactNode } from "react";
+
 import { webEnv } from "../../lib/runtime/web-env";
 import { DevRoleSwitcher } from "../auth-runtime/role-switcher";
 import { NavLogoutButton } from "./nav-logout-button";
@@ -35,9 +37,12 @@ function RightRailSkeleton() {
 export function NavRightRail({
   sessionLoading,
   hasUser,
+  menu,
 }: {
   readonly sessionLoading: boolean;
   readonly hasUser: boolean;
+  // Compact-viewport navigation trigger; sits last so it ends the rail.
+  readonly menu?: ReactNode;
 }) {
   // The rail contains actions only; identity lives in the left home mark and
   // the expanded navigation text. Keep it limited to currently available actions.
@@ -49,6 +54,7 @@ export function NavRightRail({
         <>
           {shouldRenderDevRoleSwitcher() && <DevRoleSwitcher />}
           {hasUser && <NavLogoutButton />}
+          {hasUser && menu}
         </>
       )}
     </div>
