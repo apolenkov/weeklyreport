@@ -3,7 +3,10 @@ import type {
   ResolvePlanInput,
 } from "@customreport/shared";
 
-import { moveToNextWeekPatch } from "./lead-actions/lead-item-actions";
+import {
+  hasOtherPlacement,
+  moveToNextWeekPatch,
+} from "./lead-actions/lead-item-actions";
 
 type SectionItem = ReportSectionReadModel["items"][number];
 
@@ -17,6 +20,12 @@ export interface PlanVerdictRequest {
   readonly prior: { readonly reportId: string; readonly item: SectionItem };
   /** The selected week's record with the same `stableId`, if one exists. */
   readonly linked: SectionItem | null;
+  /**
+   * Every selected-week record with this `stableId`, `linked` included. Lets a
+   * Next verdict see a separate Next record next to a carried Current one.
+   * Omitted: `linked` is taken as the only record.
+   */
+  readonly siblings?: readonly SectionItem[] | undefined;
 }
 
 type ResolvePlanFields = Omit<
@@ -112,8 +121,12 @@ function continuePatch(linked: SectionItem): Partial<SectionItem> {
 
 // A record holds one week placement per `stableId`, so Next is either the
 // record itself moved, or the commitment it already carries.
-function nextPatch(linked: SectionItem): Partial<SectionItem> | null {
-  if (linked.type === "next") return null;
+function nextPatch(
+  linked: SectionItem,
+  siblings: readonly SectionItem[],
+): Partial<SectionItem> | null {
+  if (linked.type === "next" || hasOtherPlacement(siblings, linked, "next"))
+    return null;
   return linked.nextStepText?.trim()
     ? { carriedOver: false }
     : {
@@ -147,7 +160,7 @@ function linkedPatch(
         carriedOver: false,
       };
     case "next":
-      return nextPatch(linked);
+      return nextPatch(linked, request.siblings ?? [linked]);
     case "wont_do":
       return null;
   }

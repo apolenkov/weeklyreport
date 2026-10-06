@@ -33,6 +33,24 @@ const cannotMove = (item: LeadItem): boolean =>
   item.resolution != null ||
   Boolean(item.nextStepText?.trim());
 
+// A stableId holds at most one active record per week placement, so moving an
+// item into `target` is unsafe while another record already sits there.
+export function hasOtherPlacement(
+  items: readonly LeadItem[],
+  item: LeadItem,
+  target: LeadItem["type"],
+): boolean {
+  return (
+    item.stableId != null &&
+    items.some(
+      (candidate) =>
+        candidate.id !== item.id &&
+        candidate.stableId === item.stableId &&
+        candidate.type === target,
+    )
+  );
+}
+
 export function buildMoveItemPatch(
   section: ReportSectionReadModel,
   itemId: string,
@@ -41,17 +59,7 @@ export function buildMoveItemPatch(
   if (section.status !== "draft") return null;
   const item = section.items.find((candidate) => candidate.id === itemId);
   if (!item || item.type === target || cannotMove(item)) return null;
-  if (
-    item.stableId &&
-    section.items.some(
-      (candidate) =>
-        candidate.id !== item.id &&
-        candidate.stableId === item.stableId &&
-        candidate.type === target,
-    )
-  ) {
-    return null;
-  }
+  if (hasOtherPlacement(section.items, item, target)) return null;
   return {
     kind: "item-patch",
     itemId,

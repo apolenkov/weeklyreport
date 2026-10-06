@@ -7,7 +7,6 @@ import {
 } from "@customreport/ui/components/ui/dropdown-menu";
 import { Check } from "lucide-react";
 
-import { shortItemLabel } from "../../../shared/lib/format/short-label";
 import { itemStatusToWorkflow } from "../model/item-status";
 import type {
   StatusOverviewEditTarget,
@@ -92,7 +91,7 @@ export function StatusControl({
   onConfirmItem,
 }: Pick<ActionProps, "item" | "onSetStatus" | "onConfirmItem">) {
   const unplanned = item.continuity === "unplanned" ? " · Unplanned" : "";
-  const label = `Status of ${shortItemLabel(item.text)}: ${statusOverviewProgressLabel(item)}${unplanned}`;
+  const label = `Status of ${item.text}: ${statusOverviewProgressLabel(item)}${unplanned}`;
   const carried = item.needsConfirmation === true;
   const icon = (
     <ProgressIcon

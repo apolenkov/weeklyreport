@@ -59,7 +59,6 @@ describe("OpenWorkRegister collapse", () => {
           openItems: [item("paused"), item("postponed")],
           terminalItems: [],
           isLoading: false,
-          isComplete: true,
           error: null,
           retry: vi.fn(),
         }}
@@ -85,7 +84,6 @@ describe("OpenWorkRegister collapse", () => {
           openItems: [],
           terminalItems: [],
           isLoading: false,
-          isComplete: true,
           error: null,
           retry: vi.fn(),
         }}
@@ -106,7 +104,6 @@ describe("OpenWorkRegister disabled actions (R64)", () => {
           openItems: [item("postponed")],
           terminalItems: [],
           isLoading: false,
-          isComplete: true,
           error: null,
           retry: vi.fn(),
         }}
@@ -138,7 +135,6 @@ describe("OpenWorkRegister disabled reason with terminal history only", () => {
           openItems: [],
           terminalItems: [terminal],
           isLoading: false,
-          isComplete: true,
           error: null,
           retry: vi.fn(),
         }}
@@ -151,6 +147,68 @@ describe("OpenWorkRegister disabled reason with terminal history only", () => {
       "Reopen the report to plan this work.",
     );
   });
+
+  it("folds terminal-only history into the single register disclosure line", () => {
+    const base = item("paused");
+    const terminal: OpenWorkRegisterItem = {
+      ...base,
+      action: { kind: "reopen", label: "Reopen in this report" },
+    };
+    const { container } = render(
+      <OpenWorkRegister
+        query={{
+          openItems: [],
+          terminalItems: [terminal],
+          isLoading: false,
+          error: null,
+          retry: vi.fn(),
+        }}
+        actionsDisabled={false}
+        disabledReason={null}
+        onOpen={vi.fn()}
+      />,
+    );
+    const disclosures = container.querySelectorAll("details");
+    expect(disclosures).toHaveLength(1);
+    // The same top-level disclosure as the open-work line, not a separate
+    // bordered "history" block.
+    expect(disclosures[0]).not.toHaveClass("border-t");
+    expect(screen.getByText("Completed and cancelled work (1)")).toHaveClass(
+      "text-[var(--color-foreground)]",
+    );
+    expect(disclosures[0]).not.toHaveAttribute("open");
+    fireEvent.click(screen.getByText("Completed and cancelled work (1)"));
+    expect(
+      screen.getByRole("button", { name: /Reopen in this report/ }),
+    ).toBeEnabled();
+  });
+
+  it("nests terminal history inside the open-work disclosure when both exist", () => {
+    const base = item("paused");
+    const terminal: OpenWorkRegisterItem = {
+      ...base,
+      key: "50000000-0000-4000-8000-000000000030",
+      action: { kind: "reopen", label: "Reopen in this report" },
+    };
+    const { container } = render(
+      <OpenWorkRegister
+        query={{
+          openItems: [item("postponed")],
+          terminalItems: [terminal],
+          isLoading: false,
+          error: null,
+          retry: vi.fn(),
+        }}
+        actionsDisabled={false}
+        disabledReason={null}
+        onOpen={vi.fn()}
+      />,
+    );
+    const outer = container.querySelector("section > details");
+    expect(outer).not.toBeNull();
+    expect(outer?.querySelectorAll("details")).toHaveLength(1);
+    expect(container.querySelectorAll("section > details")).toHaveLength(1);
+  });
 });
 
 describe("OpenWorkRegister", () => {
@@ -162,7 +220,6 @@ describe("OpenWorkRegister", () => {
           openItems: [item("paused"), item("postponed")],
           terminalItems: [],
           isLoading: false,
-          isComplete: true,
           error: null,
           retry: vi.fn(),
         }}
@@ -223,7 +280,6 @@ describe("OpenWorkRegister", () => {
           openItems: [],
           terminalItems: [terminal],
           isLoading: false,
-          isComplete: true,
           error: null,
           retry: vi.fn(),
         }}
@@ -275,7 +331,6 @@ describe("OpenWorkRegister", () => {
           openItems: [automatic],
           terminalItems: [],
           isLoading: false,
-          isComplete: true,
           error: null,
           retry: vi.fn(),
         }}
@@ -312,7 +367,6 @@ describe("OpenWorkRegister item titles (R56)", () => {
           openItems: [item("paused")],
           terminalItems: [],
           isLoading: false,
-          isComplete: true,
           error: null,
           retry: vi.fn(),
         }}

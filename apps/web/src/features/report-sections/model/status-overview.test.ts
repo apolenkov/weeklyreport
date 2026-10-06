@@ -996,6 +996,19 @@ describe("statusOverviewItemActions", () => {
     ).toEqual({ primary: null, secondary: [], recovery: [] });
   });
 
+  it("leaves a pending Previous verdict to the rail, with no replan", () => {
+    expect(
+      statusOverviewItemActions(
+        overviewActionItem({
+          source: "previous",
+          editTarget: null,
+          canResolve: true,
+          verdict: "pending",
+        }),
+      ),
+    ).toEqual({ primary: null, secondary: [], recovery: [] });
+  });
+
   it("keeps a resolved item restorable without competing primaries", () => {
     expect(
       statusOverviewItemActions(

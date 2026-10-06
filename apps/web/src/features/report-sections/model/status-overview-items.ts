@@ -298,10 +298,13 @@ function secondaryActionsFor(
 
 function recoveryActionsFor(item: StatusOverviewItem): RecoveryAction[] {
   const actions: RecoveryAction[] = [];
+  // A pending verdict is answered on the rail: one verdict per action, so the
+  // replan icon would offer a second way to answer the same row.
   if (
     item.source === "previous" &&
     item.canResolve &&
-    item.workflowStatus !== "done"
+    item.workflowStatus !== "done" &&
+    item.verdict !== "pending"
   )
     actions.push("replan");
   if (item.canRestore) actions.push("restore");

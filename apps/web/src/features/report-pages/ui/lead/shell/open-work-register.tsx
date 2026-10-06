@@ -82,6 +82,29 @@ function OpenWorkList({
   );
 }
 
+const SUMMARY =
+  "min-h-[var(--touch-target-min)] cursor-pointer rounded-[var(--radius-sm)] py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
+
+function TerminalWorkBody({
+  items,
+  disabled,
+  onOpen,
+}: {
+  readonly items: readonly OpenWorkRegisterItem[];
+  readonly disabled: boolean;
+  readonly onOpen: (item: OpenWorkRegisterItem) => void;
+}) {
+  return (
+    <>
+      <p className="mb-3 text-sm text-[var(--color-muted-foreground)]">
+        Reopening creates a new occurrence in this report. Historical reports
+        remain unchanged.
+      </p>
+      <OpenWorkList items={items} disabled={disabled} onOpen={onOpen} />
+    </>
+  );
+}
+
 function TerminalWorkHistory({
   items,
   disabled,
@@ -94,14 +117,10 @@ function TerminalWorkHistory({
   if (items.length === 0) return null;
   return (
     <details className="border-t border-[var(--color-border-subtle)] pt-2">
-      <summary className="min-h-[var(--touch-target-min)] cursor-pointer rounded-[var(--radius-sm)] py-3 text-sm font-semibold text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]">
+      <summary className={`${SUMMARY} text-[var(--color-primary)]`}>
         Completed and cancelled work ({items.length})
       </summary>
-      <p className="mb-3 text-sm text-[var(--color-muted-foreground)]">
-        Reopening creates a new occurrence in this report. Historical reports
-        remain unchanged.
-      </p>
-      <OpenWorkList items={items} disabled={disabled} onOpen={onOpen} />
+      <TerminalWorkBody items={items} disabled={disabled} onOpen={onOpen} />
     </details>
   );
 }
@@ -152,6 +171,51 @@ function OpenWorkRow({
   );
 }
 
+function summaryLabel(query: OpenWorkRegisterQuery): string {
+  const open = query.openItems.length;
+  if (open === 0) {
+    return `Completed and cancelled work (${query.terminalItems.length})`;
+  }
+  return `${open} earlier open ${open === 1 ? "item" : "items"}`;
+}
+
+function RegisterBody({
+  query,
+  disabled,
+  onOpen,
+}: {
+  readonly query: OpenWorkRegisterQuery;
+  readonly disabled: boolean;
+  readonly onOpen: (item: OpenWorkRegisterItem) => void;
+}) {
+  if (query.openItems.length === 0) {
+    return (
+      <TerminalWorkBody
+        items={query.terminalItems}
+        disabled={disabled}
+        onOpen={onOpen}
+      />
+    );
+  }
+  return (
+    <>
+      <p className="text-sm text-[var(--color-muted-foreground)]">
+        Resume or replan work without changing its published history.
+      </p>
+      <OpenWorkList
+        items={query.openItems}
+        disabled={disabled}
+        onOpen={onOpen}
+      />
+      <TerminalWorkHistory
+        items={query.terminalItems}
+        disabled={disabled}
+        onOpen={onOpen}
+      />
+    </>
+  );
+}
+
 export function OpenWorkRegister({
   query,
   actionsDisabled,
@@ -180,34 +244,20 @@ export function OpenWorkRegister({
           </button>
         </div>
       ) : null}
-      {openCount > 0 ? (
+      {hasItems ? (
         <details>
-          <summary className="min-h-[var(--touch-target-min)] cursor-pointer rounded-[var(--radius-sm)] py-3 text-sm font-semibold text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]">
-            {openCount} earlier open {openCount === 1 ? "item" : "items"}
+          <summary className={`${SUMMARY} text-[var(--color-foreground)]`}>
+            {summaryLabel(query)}
           </summary>
           <div className="space-y-3 pb-4">
-            <p className="text-sm text-[var(--color-muted-foreground)]">
-              Resume or replan work without changing its published history.
-            </p>
-            <OpenWorkList
-              items={query.openItems}
-              disabled={actionsDisabled}
-              onOpen={onOpen}
-            />
-            <TerminalWorkHistory
-              items={query.terminalItems}
+            <RegisterBody
+              query={query}
               disabled={actionsDisabled}
               onOpen={onOpen}
             />
           </div>
         </details>
-      ) : (
-        <TerminalWorkHistory
-          items={query.terminalItems}
-          disabled={actionsDisabled}
-          onOpen={onOpen}
-        />
-      )}
+      ) : null}
       {hasItems && disabledReason ? (
         <p
           role="status"
