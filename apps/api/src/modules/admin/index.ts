@@ -21,6 +21,8 @@ export {
   AdminReportingGroupNotFoundError,
   AdminSelfLockoutError,
   AdminSnapshotConflictError,
+  AdminStageAssignmentNotFoundError,
+  AdminStageAssignmentReferenceNotFoundError,
   AdminUserActivityAssignmentConflictError,
   AdminUserConflictError,
   AdminUserNotFoundError,

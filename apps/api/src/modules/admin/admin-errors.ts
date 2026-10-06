@@ -146,3 +146,20 @@ export class AdminLastAdminError extends Error {
     this.name = "AdminLastAdminError";
   }
 }
+
+// Targeted delete on an absent stage-assignment id (P2025) → NOT_FOUND.
+export class AdminStageAssignmentNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminStageAssignmentNotFoundError";
+  }
+}
+
+// A stage-assignment write naming an absent user, stage, or project (P2003 on
+// the corresponding FK) → NOT_FOUND; no assignment row is persisted.
+export class AdminStageAssignmentReferenceNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminStageAssignmentReferenceNotFoundError";
+  }
+}

@@ -1,10 +1,19 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { createNullLogger } from "../../lib/logger.js";
 import {
   createRepository,
   initialSnapshot,
 } from "./__tests__/focused-admin-harness.js";
+import {
+  AdminStageAssignmentNotFoundError,
+  AdminStageAssignmentReferenceNotFoundError,
+} from "./admin-shared";
+import {
+  deleteStageAssignment,
+  saveStageAssignment,
+} from "./admin-stage.queries";
 import { ProjectAdminService } from "./project-admin.service.js";
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
@@ -93,5 +102,153 @@ describe("ProjectAdminService — stage assignments", () => {
     await expect(
       service.listStageAssignments(PROJECT_ID_2),
     ).resolves.toHaveLength(1);
+  });
+});
+
+// Query boundary: a valid-but-absent reference fails the FK (P2003) and a
+// missing assignment row fails the delete (P2025). Only scoped constraint
+// violations translate; every other failure propagates unchanged.
+describe("stage-assignment queries — missing reference classification", () => {
+  const INPUT = {
+    userId: USER_ID,
+    stageId: STAGE_ID,
+    projectId: PROJECT_ID,
+  };
+
+  function foreignKey(constraint: string): unknown {
+    return {
+      code: "P2003",
+      message: `Foreign key constraint violated on the constraint: \`${constraint}\``,
+    };
+  }
+
+  function lockedTx(stageAssignment: object): object {
+    return {
+      $executeRaw: vi.fn(() => Promise.resolve(1)),
+      report: { findMany: vi.fn(() => Promise.resolve([])) },
+      stageAssignment,
+    };
+  }
+
+  it.each([
+    {
+      constraint: "StageAssignment_userId_fkey",
+      message: "The referenced user does not exist.",
+    },
+    {
+      constraint: "StageAssignment_stageId_fkey",
+      message: "The referenced stage does not exist.",
+    },
+    {
+      constraint: "StageAssignment_projectId_fkey",
+      message: "The referenced project does not exist.",
+    },
+  ] as const)(
+    "saveStageAssignment translates a missing-reference $constraint into NOT_FOUND",
+    async ({ constraint, message }) => {
+      const tx = lockedTx({
+        upsert: vi.fn(() => Promise.reject(foreignKey(constraint))),
+      });
+      const prisma = {
+        $transaction: vi.fn((run: (t: unknown) => Promise<unknown>) => run(tx)),
+      } as unknown as PrismaService;
+
+      await expect(saveStageAssignment(prisma, INPUT)).rejects.toMatchObject({
+        name: "AdminStageAssignmentReferenceNotFoundError",
+        message,
+      });
+      await expect(saveStageAssignment(prisma, INPUT)).rejects.toBeInstanceOf(
+        AdminStageAssignmentReferenceNotFoundError,
+      );
+    },
+  );
+
+  it("saveStageAssignment translates a missing reference on the P2002 retry transaction too", async () => {
+    const firstTx = lockedTx({
+      upsert: vi.fn(() =>
+        Promise.reject({
+          code: "P2002",
+          message:
+            "Unique constraint failed on the constraint: `StageAssignment_stageId_projectId_key`",
+        }),
+      ),
+    });
+    const secondTx = lockedTx({
+      update: vi.fn(() =>
+        Promise.reject(foreignKey("StageAssignment_userId_fkey")),
+      ),
+    });
+    const prisma = {
+      $transaction: vi
+        .fn()
+        .mockImplementationOnce((run: (t: unknown) => Promise<unknown>) =>
+          run(firstTx),
+        )
+        .mockImplementationOnce((run: (t: unknown) => Promise<unknown>) =>
+          run(secondTx),
+        ),
+    } as unknown as PrismaService;
+
+    await expect(saveStageAssignment(prisma, INPUT)).rejects.toMatchObject({
+      name: "AdminStageAssignmentReferenceNotFoundError",
+      message: "The referenced user does not exist.",
+    });
+  });
+
+  it("saveStageAssignment re-throws a P2003 on an unrelated constraint unchanged", async () => {
+    const original = foreignKey("SomeOtherTable_fkey");
+    const tx = lockedTx({
+      upsert: vi.fn(() => Promise.reject(original)),
+    });
+    const prisma = {
+      $transaction: vi.fn((run: (t: unknown) => Promise<unknown>) => run(tx)),
+    } as unknown as PrismaService;
+
+    await expect(saveStageAssignment(prisma, INPUT)).rejects.toBe(original);
+  });
+
+  it("saveStageAssignment re-throws a non-constraint failure unchanged", async () => {
+    const original = new Error("connection reset");
+    const tx = lockedTx({
+      upsert: vi.fn(() => Promise.reject(original)),
+    });
+    const prisma = {
+      $transaction: vi.fn((run: (t: unknown) => Promise<unknown>) => run(tx)),
+    } as unknown as PrismaService;
+
+    await expect(saveStageAssignment(prisma, INPUT)).rejects.toBe(original);
+  });
+
+  it("deleteStageAssignment translates a missing-row P2025 into NOT_FOUND", async () => {
+    const tx = lockedTx({
+      delete: vi.fn(() => Promise.reject({ code: "P2025" })),
+    });
+    const prisma = {
+      $transaction: vi.fn((run: (t: unknown) => Promise<unknown>) => run(tx)),
+    } as unknown as PrismaService;
+
+    await expect(
+      deleteStageAssignment(prisma, "assignment-1"),
+    ).rejects.toMatchObject({
+      name: "AdminStageAssignmentNotFoundError",
+      message: "Stage assignment assignment-1 was not found.",
+    });
+    await expect(
+      deleteStageAssignment(prisma, "assignment-1"),
+    ).rejects.toBeInstanceOf(AdminStageAssignmentNotFoundError);
+  });
+
+  it("deleteStageAssignment re-throws a non-P2025 failure unchanged", async () => {
+    const original = new Error("connection reset");
+    const tx = lockedTx({
+      delete: vi.fn(() => Promise.reject(original)),
+    });
+    const prisma = {
+      $transaction: vi.fn((run: (t: unknown) => Promise<unknown>) => run(tx)),
+    } as unknown as PrismaService;
+
+    await expect(deleteStageAssignment(prisma, "assignment-1")).rejects.toBe(
+      original,
+    );
   });
 });
