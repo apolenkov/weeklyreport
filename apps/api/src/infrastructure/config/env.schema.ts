@@ -22,11 +22,16 @@ import {
 import { REPORT_ASSISTANT_ENV_KEYS } from "./report-assistant-env-keys.js";
 
 const MIN_JWT_SECRET_LENGTH = 32;
+const MAX_TCP_PORT = 65_535;
 const MAX_REDIS_LOGICAL_DATABASE = 15;
 const MIN_SIMILARITY_THRESHOLD = 0;
 const MAX_SIMILARITY_THRESHOLD = 1;
 const positiveIntegerEnv = z.coerce.number().int().positive();
 const explicitNumberEnv = z.string().trim().min(1).transform(Number);
+// Listener/peer TCP ports: port 0 stays invalid — the deployment contract
+// requires an explicit listener — and anything above 65535 is rejected at the
+// config boundary instead of failing the first network operation.
+const tcpPortEnv = z.coerce.number().int().min(1).max(MAX_TCP_PORT);
 
 // FRONTEND_URL/FRONTEND_URLS configure application URLs whose paths may matter
 // for redirects, but CORS authorization compares only the canonical HTTP(S)
@@ -49,7 +54,7 @@ export const canonicalHttpOrigin = (value: string): string | null => {
 // of running on a silent (e.g. localhost) default. See env-schema-coverage spec.
 const envObjectSchema = z.object({
   DATABASE_URL: z.url().startsWith("postgresql://"),
-  PORT: z.coerce.number().int().positive(),
+  PORT: tcpPortEnv,
   API_HOST: z.enum(["127.0.0.1", "0.0.0.0"]),
   NODE_ENV: z.enum(["development", "production", "test"]),
   // Application URL for redirects; must still canonicalize to an HTTP(S)
@@ -97,7 +102,7 @@ const envObjectSchema = z.object({
   REDIS_HOST: z.string().refine((value) => value.trim().length > 0, {
     message: "REDIS_HOST must not be blank",
   }),
-  REDIS_PORT: z.coerce.number().int().positive(),
+  REDIS_PORT: tcpPortEnv,
   REDIS_DB: explicitNumberEnv.pipe(
     z.number().int().min(0).max(MAX_REDIS_LOGICAL_DATABASE),
   ),
@@ -156,7 +161,7 @@ const envObjectSchema = z.object({
   // SMTP (email reminders). The fields stay optional for dev/test; the
   // production fence below requires host, port, and sender together.
   SMTP_HOST: z.string().optional(),
-  SMTP_PORT: z.coerce.number().int().positive().optional(),
+  SMTP_PORT: tcpPortEnv.optional(),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
   SMTP_FROM: z.string().optional(),
