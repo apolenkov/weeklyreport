@@ -1,0 +1,36 @@
+#wr-roles {
+  margin-bottom: 1.25rem;
+}
+
+#wr-roles-title {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+
+.wr-roles-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.wr-role-button {
+  min-height: 44px;
+  border: 1px solid currentcolor;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wr-role-button:hover,
+.wr-role-button:focus-visible {
+  background: color-mix(in srgb, currentcolor 18%, transparent);
+}
+
+@media (width <= 420px) {
+  .wr-roles-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

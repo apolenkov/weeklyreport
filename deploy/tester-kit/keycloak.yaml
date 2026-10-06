@@ -48,11 +48,23 @@ spec:
                 mountPath: /opt/keycloak/data/import,
                 readOnly: true,
               }
+            - {
+                name: theme,
+                mountPath: /opt/keycloak/themes/weeklyreport-test,
+                readOnly: true,
+              }
       volumes:
         - name: realm
           secret:
             secretName: keycloak-realm
             items: [{ key: realm.json, path: realm.json }]
+        - name: theme
+          configMap:
+            name: keycloak-theme
+            items:
+              - { key: theme.properties, path: login/theme.properties }
+              - { key: roles.js, path: login/resources/js/roles.js }
+              - { key: roles.css, path: login/resources/css/roles.css }
 ---
 apiVersion: v1
 kind: Service
