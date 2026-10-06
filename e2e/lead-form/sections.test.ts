@@ -24,6 +24,7 @@ import {
   LEAD_FORM_FIXTURE,
   modalScopeScript,
   roleText,
+  saveChanges,
   saveDraft,
   type Scope,
   scopeCount,
@@ -747,7 +748,7 @@ void test("risk severity escalates and downgrades without opening editor", async
   await createRisk(ACTIVITY, "E2E direct severity risk");
   await expandSupport("Risks & Blockers");
   await click(`Escalate risk for ${ACTIVITY.name} to blocked`);
-  await saveDraft();
+  await saveChanges();
   assert.equal(scopeCount(await snapshot(), "dialog"), 0);
   assert.equal(
     await isVisible(
@@ -764,7 +765,7 @@ void test("risk severity escalates and downgrades without opening editor", async
     true,
   );
   await click(`Downgrade risk for ${ACTIVITY.name} to at risk`);
-  await saveDraft();
+  await saveChanges();
   await persistedReload(ACTIVITY.name);
   await expandSupport("Risks & Blockers");
   assert.equal(
@@ -850,7 +851,7 @@ async function createDecision(parent: ParentCase, text: string): Promise<void> {
   else assert.equal(scopeCount(await snapshot(), "group", "SDLC Stages"), 0);
   await click("Save decision");
   await waitNoModals();
-  await saveDraft();
+  await saveChanges();
 }
 
 for (const parent of PARENTS) {
@@ -892,7 +893,7 @@ async function createPublishedLineageDraft(
   await fill("Description *", nextText);
   await click("Save update");
   await command(["wait", "--fn", NO_INLINE_EDITORS]);
-  await saveDraft();
+  await saveChanges();
   await click("+ Add decision");
   await assertModal("Add decision");
   assert.equal(scopeCount(await snapshot(), "combobox", "Product"), 1);
@@ -901,7 +902,7 @@ async function createPublishedLineageDraft(
   await fill("Impact *", "E2E original published impact");
   await click("Save decision");
   await waitNoModals();
-  await saveDraft();
+  await saveChanges();
   await click("Submit");
   await waitModal("Confirm submission", "alertdialog");
   await scopedClick(
@@ -969,7 +970,7 @@ async function editPublishedDecision(decisionText: string): Promise<void> {
   await fill("Impact *", impact);
   await click("Save decision");
   await waitNoModals();
-  await saveDraft();
+  await saveChanges();
   await reload();
   await waitText(MINIMAL_CURRENT_TEXT);
   await expandSupport("Decisions");
