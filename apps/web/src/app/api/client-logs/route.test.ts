@@ -20,6 +20,28 @@ function makeRequest(
   });
 }
 
+function makeStreamRequest(
+  chunks: readonly Uint8Array[],
+  headers: Record<string, string>,
+  onCancel?: () => void,
+): NextRequest {
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const chunk of chunks) controller.enqueue(chunk);
+      // Deliberately left open: a bounded reader must not wait for EOF.
+    },
+    cancel() {
+      onCancel?.();
+    },
+  });
+  return new NextRequest("http://web.test/api/client-logs", {
+    method: "POST",
+    headers,
+    duplex: "half",
+    body: stream,
+  });
+}
+
 describe("client-logs proxy route", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -99,5 +121,63 @@ describe("client-logs proxy route", () => {
     expect(res.status).toBe(413);
     expect(textSpy).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a chunked stream crossing the limit without waiting for EOF", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const onCancel = vi.fn();
+    const chunk = new Uint8Array(64 * 1024).fill(120);
+
+    const res = await POST(
+      makeStreamRequest(
+        [chunk, chunk, chunk],
+        { "content-type": "application/json" },
+        onCancel,
+      ),
+    );
+
+    expect(res.status).toBe(413);
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("does not let a small declared Content-Length bypass the stream bound", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const onCancel = vi.fn();
+    const chunk = new Uint8Array(64 * 1024).fill(120);
+
+    const res = await POST(
+      makeStreamRequest(
+        [chunk, chunk, chunk],
+        { "content-type": "application/json", "content-length": "1" },
+        onCancel,
+      ),
+    );
+
+    expect(res.status).toBe(413);
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("forwards a body of exactly the byte limit unchanged", async () => {
+    const payload = "é".repeat(64 * 1024); // 2 bytes each — exactly 128 KiB.
+    const fetchMock = vi.fn<typeof fetch>(() =>
+      Promise.resolve(new Response(null, { status: 204 })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await POST(
+      makeRequest({ "content-type": "application/json" }, payload),
+    );
+
+    expect(res.status).toBe(204);
+    const call = fetchMock.mock.calls[0];
+    expect(call).toBeDefined();
+    if (!call) throw new TypeError("Expected fetch call");
+    const [, init] = call;
+    if (!init) throw new TypeError("Expected fetch options");
+    expect(init.body).toBe(payload);
   });
 });
