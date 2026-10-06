@@ -356,10 +356,10 @@ async function recoverWork(
 
 void test("Overview shows product and activity lineage in all three weeks", async () => {
   await openLeadReport();
-  await waitText("PROJECT ACTIVITIES");
+  await waitText("Project activities");
   const headings = await snapshot();
-  assert.equal(scopeCount(headings, "heading", "PRODUCTS"), 1);
-  assert.equal(scopeCount(headings, "heading", "PROJECT ACTIVITIES"), 1);
+  assert.equal(scopeCount(headings, "heading", "Products"), 1);
+  assert.equal(scopeCount(headings, "heading", "Project activities"), 1);
   assert.ok(
     (
       await weekBlock(
