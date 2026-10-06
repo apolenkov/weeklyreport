@@ -1,0 +1,39 @@
+#wr-roles {
+  --wr-role-accent: #1e90ff;
+
+  margin-bottom: 1.25rem;
+}
+
+#wr-roles-title {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+
+.wr-roles-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.wr-role-button {
+  min-height: 44px;
+  border: 1px solid var(--wr-role-accent);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--wr-role-accent);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.wr-role-button:hover,
+.wr-role-button:focus-visible {
+  background: var(--wr-role-accent);
+  color: #fff;
+}
+
+@media (width <= 420px) {
+  .wr-roles-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
