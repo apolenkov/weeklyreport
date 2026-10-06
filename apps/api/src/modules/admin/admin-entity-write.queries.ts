@@ -3,6 +3,7 @@ import {
   type AdminReportPeriod,
   type AdminUser,
   composeName,
+  normalizeEmail,
 } from "@customreport/shared";
 import type { Prisma as PrismaTypes } from "@prisma/client";
 import { Prisma } from "@prisma/client";
@@ -67,6 +68,10 @@ export async function upsertUser(
     firstName: user.firstName,
     middleName: user.middleName,
   });
+  // Live email identity is case-insensitive (the snapshot comparator and the
+  // lower(email) unique index agree): writes persist the canonical form.
+  // samlId stays the verbatim external identity — never case-folded.
+  const email = normalizeEmail(user.email);
   try {
     await prisma.$transaction(async (tx) => {
       // Admin set first, then the user row: deactivate/delete take the same
@@ -81,7 +86,7 @@ export async function upsertUser(
         where: { id: user.id },
         create: {
           id: user.id,
-          email: user.email,
+          email,
           name,
           lastName: user.lastName,
           firstName: user.firstName,
@@ -92,7 +97,7 @@ export async function upsertUser(
           reportingGroupId,
         },
         update: {
-          email: user.email,
+          email,
           name,
           lastName: user.lastName,
           firstName: user.firstName,

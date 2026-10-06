@@ -9,6 +9,9 @@ datasource db {
 
 model User {
   id                       String                    @id @default(uuid())
+  // Live email identity is case-insensitive: besides this exact-case unique,
+  // migrations own UNIQUE INDEX "User_email_lower_key" on lower(email),
+  // matching the snapshot comparator. `samlId` stays a verbatim external key.
   email                    String                    @unique
   name                     String
   // Structured ФИО parts (surname-first). `name` stays the stored,

@@ -1,4 +1,8 @@
-import { type AdminSnapshot, composeName } from "@customreport/shared";
+import {
+  type AdminSnapshot,
+  composeName,
+  normalizeEmail,
+} from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
 import { AdminLastAdminError } from "../admin-errors.js";
@@ -20,11 +24,14 @@ export async function upsertUsers(
       firstName: user.firstName,
       middleName: user.middleName,
     });
+    // Same canonicalization as the live admin write: restore persists the
+    // case-insensitive email identity while samlId stays verbatim.
+    const email = normalizeEmail(user.email);
     if (currentUserIds.has(user.id)) {
       await tx.user.update({
         where: { id: user.id },
         data: {
-          email: user.email,
+          email,
           name,
           lastName: user.lastName,
           firstName: user.firstName,
@@ -39,7 +46,7 @@ export async function upsertUsers(
       await tx.user.create({
         data: {
           id: user.id,
-          email: user.email,
+          email,
           name,
           lastName: user.lastName,
           firstName: user.firstName,

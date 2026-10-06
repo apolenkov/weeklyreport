@@ -63,6 +63,14 @@ function validateUniqueKey<Row>(
   });
 }
 
+/**
+ * Canonical user email identity: trimmed and case-folded. The snapshot
+ * comparator, live write boundaries, and case-insensitive lookups all share
+ * this one function so two persisted users can never differ only by case.
+ */
+export const normalizeEmail = (email: string): string =>
+  email.trim().toLowerCase();
+
 function validateIds(
   rows: readonly { readonly id: string }[],
   collection: SnapshotCollectionName,
@@ -90,7 +98,7 @@ function validateUniqueIdentities(
   validateUniqueKey(
     snapshot.users,
     { collection: "users", field: "email", label: "User email" },
-    (user) => user.email.trim().toLowerCase(),
+    (user) => normalizeEmail(user.email),
     context,
   );
   validateUniqueKey(

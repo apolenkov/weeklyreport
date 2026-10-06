@@ -205,6 +205,33 @@ describe("buildUserSession — admin SAML login", () => {
     expect(updateMock).toHaveBeenCalledTimes(1);
     expect(session.role).toBe("head");
   });
+
+  // Email identity is case-insensitive end to end: the lookup folds both
+  // sides and the provisioned row stores the canonical normalized form, so a
+  // case-variant assertion can never mint a second account.
+  it("resolves the email case-insensitively and stores the normalized form", async () => {
+    const prisma = fakePrisma({ existingUser: null });
+    const profile: SamlProfile = {
+      samlId: "saml-new-2",
+      email: "  NewComer@CustomReport.LOCAL  ",
+      displayName: "New Comer",
+      role: "viewer",
+    };
+
+    await buildUserSession(prisma, profile, failIfProvisioned);
+
+    expect(vi.mocked(prisma.user.findFirst)).toHaveBeenCalledWith({
+      where: {
+        email: { equals: "newcomer@customreport.local", mode: "insensitive" },
+      },
+    });
+    const createMock = vi.mocked(prisma.user.create);
+    const data = createMock.mock.calls[0]?.[0] as
+      { data: { email: string; samlId: string } } | undefined;
+    expect(data?.data.email).toBe("newcomer@customreport.local");
+    // The external identity stays verbatim — only the email is normalized.
+    expect(data?.data.samlId).toBe("saml-new-2");
+  });
 });
 
 // Two concurrent first-logins of the same NEW identity both miss the fast-path
@@ -333,8 +360,20 @@ describe("buildUserSession — samlId identity cross-check", () => {
 
   function fakePrisma(existingSamlId: string) {
     const findFirst = vi.fn(
-      ({ where }: { where: { email?: string; samlId?: string } }) => {
-        if (where.email === EXISTING_USER.email) {
+      ({
+        where,
+      }: {
+        where: {
+          email?: string | { equals: string; mode?: string };
+          samlId?: string;
+        };
+      }) => {
+        // Mirror the production insensitive email lookup: fold both sides.
+        const queriedEmail =
+          typeof where.email === "string"
+            ? where.email
+            : where.email?.equals.toLowerCase();
+        if (queriedEmail === EXISTING_USER.email.toLowerCase()) {
           return Promise.resolve({ ...EXISTING_USER, samlId: existingSamlId });
         }
         return Promise.resolve(null);
@@ -396,5 +435,35 @@ describe("buildUserSession — samlId identity cross-check", () => {
 
     expect(session.userId).toBe(EXISTING_USER.id);
     expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it("a case-variant email resolves the same account instead of minting a second one", async () => {
+    const { prisma } = fakePrisma("saml-shared");
+    const profile: SamlProfile = {
+      samlId: "saml-shared",
+      email: EXISTING_USER.email.toUpperCase(),
+      displayName: "Original Owner",
+      role: "lead",
+    };
+
+    const session = await buildUserSession(prisma, profile, failIfProvisioned);
+
+    expect(session.userId).toBe(EXISTING_USER.id);
+    expect(prisma.user.create).not.toHaveBeenCalled();
+  });
+
+  it("a case-variant email under a foreign samlId is refused, never adopted", async () => {
+    const { prisma } = fakePrisma("saml-original-owner");
+    const profile: SamlProfile = {
+      samlId: "saml-new-idp-identity",
+      email: EXISTING_USER.email.toUpperCase(),
+      displayName: "New Identity",
+      role: "lead",
+    };
+
+    await expect(
+      buildUserSession(prisma, profile, failIfProvisioned),
+    ).rejects.toThrow(SamlIdentityMismatchError);
+    expect(prisma.user.create).not.toHaveBeenCalled();
   });
 });
