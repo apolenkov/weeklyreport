@@ -45,6 +45,59 @@ function item(status: "paused" | "postponed"): OpenWorkRegisterItem {
   };
 }
 
+function expandRegister(count: number) {
+  fireEvent.click(
+    screen.getByText(`${count} earlier open ${count === 1 ? "item" : "items"}`),
+  );
+}
+
+describe("OpenWorkRegister collapse", () => {
+  it("renders one collapsed disclosure line with the count and reveals items on expand", () => {
+    render(
+      <OpenWorkRegister
+        query={{
+          openItems: [item("paused"), item("postponed")],
+          terminalItems: [],
+          isLoading: false,
+          isComplete: true,
+          error: null,
+          retry: vi.fn(),
+        }}
+        actionsDisabled={false}
+        disabledReason={null}
+        onOpen={vi.fn()}
+      />,
+    );
+    const summary = screen.getByText("2 earlier open items");
+    expect(summary).toBeVisible();
+    expect(summary.closest("details")).not.toHaveAttribute("open");
+    expect(
+      screen.queryByText("Provider rollout", { exact: false }),
+    ).not.toBeVisible();
+    fireEvent.click(summary);
+    expect(screen.getByText(/Provider rollout/)).toBeVisible();
+  });
+
+  it("renders nothing when no earlier work exists", () => {
+    const { container } = render(
+      <OpenWorkRegister
+        query={{
+          openItems: [],
+          terminalItems: [],
+          isLoading: false,
+          isComplete: true,
+          error: null,
+          retry: vi.fn(),
+        }}
+        actionsDisabled={false}
+        disabledReason={null}
+        onOpen={vi.fn()}
+      />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+});
+
 describe("OpenWorkRegister disabled actions (R64)", () => {
   it("keeps a disabled action readable instead of fading it with opacity", () => {
     render(
@@ -62,6 +115,7 @@ describe("OpenWorkRegister disabled actions (R64)", () => {
         onOpen={vi.fn()}
       />,
     );
+    expandRegister(1);
     const button = screen.getByRole("button", { name: /Replan deferred work/ });
     expect(button).toBeDisabled();
     expect(button.className).not.toContain("disabled:opacity");
@@ -89,6 +143,7 @@ describe("OpenWorkRegister", () => {
         onOpen={onOpen}
       />,
     );
+    expandRegister(2);
 
     expect(screen.getAllByText(/Published · Jul 6–12, 2026/)).toHaveLength(2);
     expect(screen.getByText("Pause reason: Waiting for legal")).toBeVisible();
@@ -201,6 +256,7 @@ describe("OpenWorkRegister", () => {
         onOpen={onOpen}
       />,
     );
+    expandRegister(1);
 
     expect(screen.getByText(/Paused · Published/)).toBeInTheDocument();
     expect(
@@ -237,6 +293,7 @@ describe("OpenWorkRegister item titles (R56)", () => {
         onOpen={vi.fn()}
       />,
     );
+    expandRegister(1);
 
     const title = screen.getByText(/Provider rollout/, { selector: "p" });
     expect(title).toHaveTextContent("Provider rollout · Jul 6–12, 2026");

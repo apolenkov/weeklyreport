@@ -95,11 +95,13 @@ describe("StatusOverview", () => {
       .getByText("Work item 1")
       .closest<HTMLElement>("[data-overview-item-preview]");
     if (!preview) throw new Error("Expected the item preview");
-    await user.click(within(preview).getByText("More actions"));
     await user.click(
       within(preview).getByRole("button", {
-        name: "Move to next week: Work item 1",
+        name: "More actions for Work item 1",
       }),
+    );
+    await user.click(
+      screen.getByRole("menuitem", { name: "Move to next week: Work item 1" }),
     );
     expect(onMoveItem).toHaveBeenCalledWith(
       expect.objectContaining({ recordId: "item-1" }),
@@ -108,11 +110,12 @@ describe("StatusOverview", () => {
     );
   });
 
-  it("routes carried Current work through the same canonical progress editor", async () => {
+  it("confirms carried Current work through the status icon, with no Confirm button", async () => {
     const user = userEvent.setup();
     const onConfirmItem = vi.fn();
     const onResolvePlan = vi.fn();
     const onEditItem = vi.fn();
+    const onSetStatus = vi.fn();
     const unit = model.units[0];
     if (!unit) throw new Error("Expected one overview unit");
     const carried = { ...overviewItem(1), needsConfirmation: true };
@@ -133,18 +136,18 @@ describe("StatusOverview", () => {
         onConfirmItem={onConfirmItem}
         onResolvePlan={onResolvePlan}
         onEditItem={onEditItem}
+        onSetStatus={onSetStatus}
         onMoveItem={vi.fn()}
       />,
     );
 
-    // The carried primary keeps the confirm anchor so the submit-readiness
-    // deep link still resolves, but it opens the canonical editor like every
-    // other Update progress control.
-    const progress = screen.getByRole("button", {
-      name: "Update progress for Work item 1",
+    // The status icon keeps the confirm anchor so the submit-readiness deep
+    // link still resolves, and it opens the status menu.
+    const status = screen.getByRole("button", {
+      name: "Status of Work item 1: Continued · not updated this week",
     });
-    expect(progress).toHaveAttribute("id", "confirm:current:item-1");
-    expect(progress).toHaveAttribute(
+    expect(status).toHaveAttribute("id", "confirm:current:item-1");
+    expect(status).toHaveAttribute(
       "data-overview-focus",
       "confirm:current:item-1",
     );
@@ -153,35 +156,35 @@ describe("StatusOverview", () => {
         name: "Confirm Work item 1 for this week",
       }),
     ).toBeNull();
-    await user.click(progress);
-    expect(onEditItem).toHaveBeenCalledWith({
-      recordId: "item-1",
-      source: "current",
-    });
-    expect(onConfirmItem).not.toHaveBeenCalled();
+    await user.click(status);
+    await user.click(screen.getByRole("menuitem", { name: "Done" }));
+    expect(onSetStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ recordId: "item-1" }),
+      "done",
+      "confirm:current:item-1",
+    );
+    expect(onEditItem).not.toHaveBeenCalled();
     expect(onResolvePlan).not.toHaveBeenCalled();
 
     const preview = screen
       .getByText("Work item 1")
       .closest<HTMLElement>("[data-overview-item-preview]");
     if (!preview) throw new Error("Expected the item preview");
-    await user.click(within(preview).getByText("More actions"));
-    expect(
+    await user.click(
       within(preview).getByRole("button", {
-        name: "Edit details: Work item 1",
+        name: "More actions for Work item 1",
       }),
+    );
+    expect(
+      screen.getByRole("menuitem", { name: "Edit details: Work item 1" }),
     ).toBeVisible();
     expect(
-      within(preview).getByRole("button", {
-        name: "Move to next week: Work item 1",
-      }),
+      screen.getByRole("menuitem", { name: "Move to next week: Work item 1" }),
     ).toBeVisible();
-    // The unconfirmed carry offers no terminal outcome entry: Update progress
-    // through the canonical editor is the only way to clear it.
+    // The unconfirmed carry offers no terminal outcome entry: choosing a
+    // status in the icon menu is the way to clear it.
     expect(
-      within(preview).queryByRole("button", {
-        name: "Update status: Work item 1",
-      }),
+      screen.queryByRole("menuitem", { name: "Update status: Work item 1" }),
     ).toBeNull();
   });
 
@@ -201,22 +204,19 @@ describe("StatusOverview", () => {
       .getByText("Work item 1")
       .closest<HTMLElement>("[data-overview-item-preview]");
     if (!preview) throw new Error("Expected the item preview");
-    // Exactly one primary; the outcome path stays inside the quiet overflow.
+    // The outcome path stays inside the quiet overflow, never beside the text.
     expect(
-      within(preview).getByRole("button", {
-        name: "Update progress for Work item 1",
-      }),
-    ).toBeInTheDocument();
+      within(preview).queryByRole("button", { name: /Update status/ }),
+    ).toBeNull();
 
-    await user.click(within(preview).getByText("More actions"));
-    const updateStatus = within(preview).getByRole("button", {
-      name: "Update status: Work item 1",
-    });
-    // The entry is confined to the disclosure — never a standalone control.
-    expect(updateStatus.closest("details")).toContainElement(
-      within(preview).getByText("More actions"),
+    await user.click(
+      within(preview).getByRole("button", {
+        name: "More actions for Work item 1",
+      }),
     );
-    await user.click(updateStatus);
+    await user.click(
+      screen.getByRole("menuitem", { name: "Update status: Work item 1" }),
+    );
 
     expect(onResolvePlan).toHaveBeenCalledWith(
       expect.objectContaining({ recordId: "item-1" }),
@@ -276,15 +276,13 @@ describe("StatusOverview", () => {
     );
 
     expect(screen.getByText(/Won't do · No longer needed/)).toBeVisible();
-    expect(
-      screen.queryByRole("button", { name: /Update progress/ }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /Status of/ })).toBeNull();
     expect(
       screen.queryByRole("button", { name: /Confirm .* for this week/ }),
     ).toBeNull();
     expect(screen.queryByRole("button", { name: /^Edit / })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Move / })).toBeNull();
-    expect(screen.queryByText("More actions")).toBeNull();
+    expect(screen.queryByRole("button", { name: /More actions/ })).toBeNull();
     expect(onConfirmItem).not.toHaveBeenCalled();
     expect(onResolvePlan).not.toHaveBeenCalled();
   });
@@ -423,9 +421,7 @@ describe("StatusOverview", () => {
         }}
       />,
     );
-    expect(
-      screen.getByText("No blocked, at-risk or missing statuses reported."),
-    ).toBeVisible();
+    expect(screen.getByText(/1 current unit healthy/)).toBeVisible();
     healthy.unmount();
 
     render(
@@ -434,7 +430,7 @@ describe("StatusOverview", () => {
         health={{ units: [], blocked: 0, atRisk: 0, missing: 0, total: 0 }}
       />,
     );
-    expect(screen.getByText("No current reporting units.")).toBeVisible();
+    expect(screen.getByText(/No current reporting units\./)).toBeVisible();
     expect(screen.queryByText("On track")).toBeNull();
   });
 
@@ -566,16 +562,10 @@ describe("StatusOverview", () => {
     const text = screen.getByText("Work item 1");
     const preview = text.closest<HTMLElement>("[data-overview-item-preview]");
     if (!preview) throw new Error("Expected the item preview");
-    await user.click(within(preview).getByText("More actions"));
-    const edit = within(preview).getByRole("button", {
-      name: "Edit details: Work item 1",
-    });
-    expect(edit.closest("li")).not.toHaveClass("rounded-[var(--radius-sm)]");
-    expect(edit).toHaveAccessibleName("Edit details: Work item 1");
-    expect(edit).toHaveTextContent("Edit details");
-    expect(edit).toHaveAttribute("data-overview-focus", "edit:current:item-1");
-    expect(text.tagName).toBe("BUTTON");
-    expect(text).toHaveAccessibleName("Edit item: Work item 1");
+    expect(text.closest("li")).not.toHaveClass("rounded-[var(--radius-sm)]");
+    expect(text.closest("button")).toHaveAccessibleName(
+      "Edit item: Work item 1",
+    );
 
     await user.click(text);
     expect(onEditItem).toHaveBeenCalledWith({
@@ -584,6 +574,15 @@ describe("StatusOverview", () => {
     });
     onEditItem.mockClear();
 
+    await user.click(
+      within(preview).getByRole("button", {
+        name: "More actions for Work item 1",
+      }),
+    );
+    const edit = screen.getByRole("menuitem", {
+      name: "Edit details: Work item 1",
+    });
+    expect(edit).toHaveTextContent("Edit details");
     await user.click(edit);
 
     expect(onEditItem).toHaveBeenCalledWith({
@@ -926,28 +925,40 @@ describe("StatusOverview", () => {
     );
   });
 
-  it("opens the canonical editor from the single Update progress action", async () => {
+  it("opens a status menu from the icon and the canonical editor from the text", async () => {
     const user = userEvent.setup();
     const onEditItem = vi.fn();
     const onResolvePlan = vi.fn();
+    const onSetStatus = vi.fn();
     render(
       <StatusOverview
         model={model}
         onEditItem={onEditItem}
         onResolvePlan={onResolvePlan}
+        onSetStatus={onSetStatus}
       />,
     );
 
-    const progress = screen.getByRole("button", {
-      name: "Update progress for Work item 1",
+    const status = screen.getByRole("button", {
+      name: "Status of Work item 1: In progress",
     });
-    expect(progress).toHaveAttribute(
+    expect(status).toHaveAttribute(
       "data-overview-focus",
       "edit:current:item-1",
     );
 
-    await user.click(progress);
+    await user.click(status);
+    await user.click(screen.getByRole("menuitem", { name: "Paused" }));
+    expect(onSetStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ recordId: "item-1" }),
+      "paused",
+      "edit:current:item-1",
+    );
+    expect(onEditItem).not.toHaveBeenCalled();
 
+    await user.click(
+      screen.getByRole("button", { name: "Edit item: Work item 1" }),
+    );
     expect(onEditItem).toHaveBeenCalledWith({
       recordId: "item-1",
       source: "current",
@@ -1030,7 +1041,6 @@ describe("StatusOverview", () => {
     expect(
       screen.queryByRole("button", { name: /Edit update: Work item 1/ }),
     ).toBeNull();
-    expect(screen.queryByText("In progress")).toBeNull();
     expect(screen.getByText(/Won't do · The dependency closed/)).toBeVisible();
     const restore = screen.getByRole("button", {
       name: "Restore Work item 1",
@@ -1172,25 +1182,27 @@ describe("StatusOverview", () => {
     },
   );
 
-  it("keeps progress and continuity readable outside the edit action", () => {
-    render(<StatusOverview model={model} onEditItem={vi.fn()} />);
+  it("shows progress as the status icon and keeps the row grid", () => {
+    render(
+      <StatusOverview
+        model={model}
+        onEditItem={vi.fn()}
+        onSetStatus={vi.fn()}
+      />,
+    );
 
-    const progress = screen.getByRole("button", {
-      name: "Update progress for Work item 1",
+    const status = screen.getByRole("button", {
+      name: "Status of Work item 1: In progress",
     });
-    expect(progress).toHaveAccessibleName("Update progress for Work item 1");
-    expect(progress).toHaveTextContent("Update progress");
-    expect(progress).toHaveAttribute(
+    expect(status).toHaveAttribute(
       "data-overview-focus",
       "edit:current:item-1",
     );
-    expect(progress.closest("[data-overview-item-preview]")).toHaveTextContent(
-      "In progress",
-    );
-    expect(
-      progress.closest("[data-overview-item-preview]"),
-    ).not.toHaveTextContent("Not in prior plan");
-    const row = progress.closest("article")?.firstElementChild;
+    const preview = status.closest("[data-overview-item-preview]");
+    expect(preview).not.toHaveTextContent("In progress");
+    expect(preview).not.toHaveTextContent("Update progress");
+    expect(preview).not.toHaveTextContent("Not in prior plan");
+    const row = status.closest("article")?.firstElementChild;
     expect(row).toHaveClass("min-[80rem]:grid-cols-[repeat(4,minmax(0,1fr))]");
   });
 
@@ -1315,7 +1327,9 @@ describe("StatusOverview", () => {
       />,
     );
     expect(
-      screen.getByRole("form", { name: "Weekly fields for Incident duty" }),
+      screen.getByRole("button", {
+        name: "Edit weekly fields for Incident duty",
+      }),
     ).toBeInTheDocument();
 
     rerender(
@@ -1331,7 +1345,55 @@ describe("StatusOverview", () => {
     expect(screen.getByText("Work item 1")).toBeVisible();
     expect(screen.getByText("Historical")).toBeVisible();
     expect(screen.queryByRole("form", { name: /Weekly fields/ })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /Edit weekly fields/ }),
+    ).toBeNull();
     expect(screen.queryByText("Save weekly fields")).toBeNull();
+    expect(onActivityFieldsChange).not.toHaveBeenCalled();
+  });
+
+  it("discloses Activity weekly fields only from the edit control and returns focus on cancel", async () => {
+    const user = userEvent.setup();
+    const onActivityFieldsChange = vi.fn();
+    const activity = model.units[0];
+    if (!activity) throw new Error("Expected one overview unit");
+    const fields = {
+      titleOverride: null,
+      description: "Partner blocks API access",
+      catalogueName: "Incident duty",
+    };
+    render(
+      <StatusOverview
+        model={{ ...model, units: [{ ...activity, activityFields: fields }] }}
+        activityFieldsEditable
+        onActivityFieldsChange={onActivityFieldsChange}
+      />,
+    );
+
+    expect(screen.queryByRole("form", { name: /Weekly fields/ })).toBeNull();
+    expect(screen.queryByRole("textbox", { name: /Weekly title/ })).toBeNull();
+    expect(screen.getByText("Partner blocks API access")).toBeVisible();
+
+    const edit = screen.getByRole("button", {
+      name: "Edit weekly fields for Incident duty",
+    });
+    await user.click(edit);
+    expect(
+      screen.getByRole("form", { name: "Weekly fields for Incident duty" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("button", {
+        name: "Edit weekly fields for Incident duty",
+      }),
+    ).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("form", { name: /Weekly fields/ })).toBeNull();
+    expect(
+      screen.getByRole("button", {
+        name: "Edit weekly fields for Incident duty",
+      }),
+    ).toHaveFocus();
     expect(onActivityFieldsChange).not.toHaveBeenCalled();
   });
 

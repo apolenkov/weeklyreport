@@ -163,64 +163,59 @@ export function OpenWorkRegister({
   readonly disabledReason: string | null;
   readonly onOpen: (item: OpenWorkRegisterItem) => void;
 }) {
+  const openCount = query.openItems.length;
+  const hasItems = openCount + query.terminalItems.length > 0;
+  if (!hasItems && !query.error) return null;
   return (
     <section
-      aria-labelledby="open-work-register-title"
+      aria-label="Open work from earlier periods"
       aria-busy={query.isLoading}
-      className="card-surface space-y-3 p-4"
+      className="card-surface px-4"
     >
-      <div className="space-y-1">
-        <h2
-          id="open-work-register-title"
-          className="text-base font-semibold text-[var(--color-foreground)]"
-        >
-          Open work from earlier periods
-        </h2>
-        <p className="text-sm text-[var(--color-muted-foreground)]">
-          Resume or replan work without changing its published history.
-        </p>
-      </div>
-      {query.isLoading ? (
-        <p
-          role="status"
-          className="text-sm text-[var(--color-muted-foreground)]"
-        >
-          Checking earlier periods…
-        </p>
-      ) : null}
       {query.error ? (
-        <div role="alert" className="space-y-2 text-sm">
+        <div role="alert" className="space-y-2 py-3 text-sm">
           <p>{query.error}</p>
           <button type="button" className={ACTION_BUTTON} onClick={query.retry}>
             Retry open work
           </button>
         </div>
       ) : null}
-      {query.openItems.length > 0 ? (
-        <OpenWorkList
-          items={query.openItems}
+      {openCount > 0 ? (
+        <details>
+          <summary className="min-h-[var(--touch-target-min)] cursor-pointer rounded-[var(--radius-sm)] py-3 text-sm font-semibold text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]">
+            {openCount} earlier open {openCount === 1 ? "item" : "items"}
+          </summary>
+          <div className="space-y-3 pb-4">
+            <p className="text-sm text-[var(--color-muted-foreground)]">
+              Resume or replan work without changing its published history.
+            </p>
+            <OpenWorkList
+              items={query.openItems}
+              disabled={actionsDisabled}
+              onOpen={onOpen}
+            />
+            <TerminalWorkHistory
+              items={query.terminalItems}
+              disabled={actionsDisabled}
+              onOpen={onOpen}
+            />
+            {disabledReason ? (
+              <p
+                role="status"
+                className="text-sm text-[var(--color-muted-foreground)]"
+              >
+                {disabledReason}
+              </p>
+            ) : null}
+          </div>
+        </details>
+      ) : (
+        <TerminalWorkHistory
+          items={query.terminalItems}
           disabled={actionsDisabled}
           onOpen={onOpen}
         />
-      ) : query.isComplete ? (
-        <p className="text-sm text-[var(--color-muted-foreground)]">
-          No unresolved work from earlier periods.
-        </p>
-      ) : null}
-      <TerminalWorkHistory
-        items={query.terminalItems}
-        disabled={actionsDisabled}
-        onOpen={onOpen}
-      />
-      {disabledReason &&
-      query.openItems.length + query.terminalItems.length > 0 ? (
-        <p
-          role="status"
-          className="text-sm text-[var(--color-muted-foreground)]"
-        >
-          {disabledReason}
-        </p>
-      ) : null}
+      )}
     </section>
   );
 }

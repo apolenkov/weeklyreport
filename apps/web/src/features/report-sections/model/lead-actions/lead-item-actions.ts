@@ -59,6 +59,15 @@ export function buildMoveItemPatch(
   };
 }
 
+// The submit blocker (UNCONFIRMED_CARRIED_ITEM) and the review counter share
+// this predicate so the counter reaches zero exactly when the blocker clears.
+export function isUnconfirmedCarried(item: {
+  readonly type: LeadItem["type"];
+  readonly carriedOver?: boolean | undefined;
+}): boolean {
+  return item.type === "current" && item.carriedOver === true;
+}
+
 export function buildConfirmCarriedItemPatch(
   section: ReportSectionReadModel,
   itemId: string,
@@ -67,6 +76,17 @@ export function buildConfirmCarriedItemPatch(
   const item = section.items.find((candidate) => candidate.id === itemId);
   return item?.type === "current" && item.carriedOver
     ? { kind: "item-patch", itemId, patch: { carriedOver: false } }
+    : null;
+}
+
+// One patch clears the marker on every pending continuation; rows without it
+// (already decided) stay untouched. Null when nothing is pending.
+export function buildConfirmAllCarriedPatch(
+  section: ReportSectionReadModel,
+): DraftPatch | null {
+  if (section.status !== "draft") return null;
+  return section.items.some(isUnconfirmedCarried)
+    ? { kind: "confirm-carried" }
     : null;
 }
 

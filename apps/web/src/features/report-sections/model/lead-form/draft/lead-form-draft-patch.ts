@@ -10,6 +10,7 @@ import type {
   RiskEntry,
 } from "../../types";
 import {
+  confirmCarriedDraft,
   mergeActivityStatusDraft,
   mergeDecisionDraft,
   mergeItemsDraft,
@@ -37,6 +38,7 @@ export type DraftPatch =
       readonly week: "current" | "next";
       readonly items: readonly KanbanItem[];
     }
+  | { readonly kind: "confirm-carried" }
   | {
       readonly kind: "item-patch";
       readonly itemId: string;
@@ -64,6 +66,8 @@ export function applyDraftPatch(
       return mergeDecisionDraft(section, patch.decisions);
     case "week-items":
       return mergeItemsDraft(section, patch.week, patch.items);
+    case "confirm-carried":
+      return confirmCarriedDraft(section);
     case "item-patch":
       return patchDraftItem(section, patch.itemId, patch.patch);
   }

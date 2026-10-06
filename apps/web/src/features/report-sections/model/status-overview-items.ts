@@ -248,8 +248,8 @@ type SecondaryAction = "edit" | "move";
 type RecoveryAction = "replan" | "restore";
 
 export interface StatusOverviewActionModel {
-  /** The single primary control; absent on read-only and terminal items. */
-  readonly primary: "progress" | null;
+  /** The status menu on the icon; absent on read-only, terminal and derived items. */
+  readonly primary: "status" | null;
   /** Entries of the quiet overflow disclosure, in display order. */
   readonly secondary: readonly SecondaryAction[];
   /** Conditional standalone actions: historical replan, restore. */
@@ -260,13 +260,9 @@ function primaryActionFor(
   item: StatusOverviewItem,
   editable: boolean,
 ): StatusOverviewActionModel["primary"] {
-  // A carried item keeps the primary even without an edit target: the
-  // confirmation patch is the only path that clears carriedOver there.
-  if (item.needsConfirmation === true && item.source === "current")
-    return "progress";
-  if (!editable) return null;
-  if (item.canResolve && item.workflowStatus !== "done") return "progress";
-  return null;
+  // The linked Next projection renders the Current record's status, so the
+  // status is changed on the Current item, never from the projection.
+  return editable && item.editTarget?.focusNextStep !== true ? "status" : null;
 }
 
 function secondaryActionsFor(
@@ -294,10 +290,10 @@ function recoveryActionsFor(item: StatusOverviewItem): RecoveryAction[] {
 }
 
 /**
- * One primary progress interaction for editable active items, Edit and week
+ * One primary status interaction for editable active items, Edit and week
  * movement inside one secondary overflow, and conditional recovery actions.
- * Previous stays informational; an unconfirmed carried item keeps the same
- * primary so confirming goes through the canonical progress path.
+ * Previous stays informational; choosing a status also confirms a carried
+ * item, so there is no separate confirm action.
  */
 export function statusOverviewItemActions(
   item: StatusOverviewItem,
