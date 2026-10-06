@@ -16,7 +16,7 @@ export function TrackedWorkComments({
 }: {
   readonly item: StatusOverviewItem;
 }) {
-  const comments: readonly RecordCommentView[] = item.comments ?? [];
+  const comments: readonly RecordCommentView[] = item.comments;
   if (comments.length === 0) return null;
   return (
     <div

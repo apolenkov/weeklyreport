@@ -37,7 +37,7 @@ export function PreviewMetadata({
 }: {
   readonly item: StatusOverviewItem;
 }) {
-  const resolution = item.resolution ?? null;
+  const resolution = item.resolution;
   return (
     <>
       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--color-muted-foreground)]">

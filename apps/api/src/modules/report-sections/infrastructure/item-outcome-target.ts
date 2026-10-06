@@ -39,24 +39,14 @@ function receiptMatches(
     readonly userId: string;
     readonly operation: OutcomeCommandOperation;
     readonly requestHash: string;
-    readonly legacyPromotionHash: string | null;
   },
 ): boolean {
-  const {
-    reportSectionId,
-    userId,
-    operation,
-    requestHash,
-    legacyPromotionHash,
-  } = expected;
+  const { reportSectionId, userId, operation, requestHash } = expected;
   return (
     receipt.reportSectionId === reportSectionId &&
     receipt.actorId === userId &&
     (operation !== "restore" || receipt.outcome === "restore") &&
-    (receipt.requestHash === requestHash ||
-      (receipt.outcome === "promote" &&
-        legacyPromotionHash !== null &&
-        receipt.requestHash === legacyPromotionHash))
+    receipt.requestHash === requestHash
   );
 }
 
@@ -90,17 +80,12 @@ export async function loadOutcomeTarget(
     where: { id: command.commandId },
   });
   if (receipt) {
-    const legacyPromotionHash =
-      operation === "promote" && (command as PromotePlanInput).target !== "next"
-        ? outcomeCommandHash(command, "restore")
-        : null;
     if (
       !receiptMatches(receipt, {
         reportSectionId: row.id,
         userId,
         operation,
         requestHash,
-        legacyPromotionHash,
       })
     ) {
       throw new LeadFormConstraintError(

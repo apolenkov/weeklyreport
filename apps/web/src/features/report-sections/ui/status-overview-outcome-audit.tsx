@@ -25,8 +25,8 @@ function supersededText(event: {
 }
 
 export function OutcomeAudit({ item }: { readonly item: StatusOverviewItem }) {
-  const resolution = item.resolution ?? null;
-  const events = item.outcomeHistory ?? [];
+  const resolution = item.resolution;
+  const events = item.outcomeHistory;
   if (resolution === null && events.length === 0) return null;
   return (
     <details className="text-xs text-[var(--color-muted-foreground)]">

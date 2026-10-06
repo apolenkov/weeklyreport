@@ -779,6 +779,8 @@ function overviewActionItem(
     tag: "delivery",
     stageNames: [],
     pausedReason: null,
+    outcomeHistory: [],
+    comments: [],
     resolution: null,
     canResolve: true,
     canRestore: false,
