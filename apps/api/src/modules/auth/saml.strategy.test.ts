@@ -57,6 +57,38 @@ describe("verifySamlProfile", () => {
     }
   });
 
+  it.each(["", " ".repeat(3), "\t\n ", "\u00A0".repeat(2)])(
+    "rejects a blank nameID %j before provisioning",
+    (nameID) => {
+      const result = verifySamlProfile({
+        nameID,
+        email: "blank-id@example.com",
+        displayName: "Blank Id",
+      });
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.error.message).toContain(
+          "missing required nameID/email attribute",
+        );
+      }
+    },
+  );
+
+  it("preserves a nonblank opaque nameID exactly", () => {
+    const nameID = "IdP-Subject/Case=Sensitive 7f";
+    const result = verifySamlProfile({
+      nameID,
+      email: "opaque@example.com",
+      displayName: "Opaque",
+      role: "admin",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.profile.samlId).toBe(nameID);
+      expect(result.profile.role).toBe("viewer");
+    }
+  });
+
   it("rejects a missing profile", () => {
     const result = verifySamlProfile(null);
     expect(result.ok).toBe(false);

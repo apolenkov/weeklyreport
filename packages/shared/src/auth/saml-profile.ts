@@ -9,7 +9,13 @@ import { type Role } from "../schemas/auth/auth.js";
  */
 export const SamlProfileSchema = z
   .object({
-    nameID: z.string().min(1),
+    // nameID is an opaque stable identity: reject blanks, never trim or fold.
+    nameID: z
+      .string()
+      .min(1)
+      .refine((value) => value.trim().length > 0, {
+        message: "nameID must contain non-whitespace characters",
+      }),
     email: z.email(),
     displayName: z.string().optional(),
   })
