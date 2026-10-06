@@ -7,6 +7,7 @@ set -euo pipefail
 
 . "$(dirname "$0")/env.sh"
 APP_ORIGIN=${APP_ORIGIN:-http://localhost:$APP_PORT}
+KC_ORIGIN=${KC_ORIGIN:-http://localhost:$KC_PORT}
 
 mkdir -p "$STATE_DIR"
 chmod 700 "$STATE_DIR"
@@ -40,7 +41,7 @@ fi
 set -a
 source ./secrets.env
 set +a
-export APP_ORIGIN
+export APP_ORIGIN KC_ORIGIN
 
 # Generate IDP cert for Kubernetes Secret
 export IDP_CERT_B64=$(openssl x509 -in idp.crt -outform der | base64 | tr -d '\n')
@@ -68,7 +69,8 @@ kubectl -n "$NS" create secret generic keycloak-realm \
 
 # Deploy Keycloak and Mailpit
 echo "Deploying Keycloak and Mailpit..."
-kubectl -n "$NS" apply -f "$HERE/keycloak.yaml" -f "$HERE/mailpit.yaml"
+envsubst '$KC_ORIGIN' < "$HERE/keycloak.yaml" | kubectl -n "$NS" apply -f -
+kubectl -n "$NS" apply -f "$HERE/mailpit.yaml"
 
 # Wait for deployments
 echo "Waiting for deployments..."
