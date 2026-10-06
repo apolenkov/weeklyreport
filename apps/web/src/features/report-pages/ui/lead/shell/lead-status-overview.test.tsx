@@ -373,129 +373,7 @@ async function chooseUpdateProgress(
 }
 
 describe("LeadForm Overview", () => {
-  it("plans an authoritative prior-only lineage through the canonical item editor", async () => {
-    const user = userEvent.setup();
-    const stableId = "a0000000-0000-4000-8000-000000000030";
-    const predecessorItem: ReportSectionReadModel["items"][number] = {
-      id: "a0000000-0000-4000-8000-000000000031",
-      stableId,
-      projectId: PROJECT_ID,
-      activityId: null,
-      type: "next",
-      text: "Authoritative prior plan",
-      tag: "delivery",
-      workflowStatus: "paused",
-      pausedReason: "Waiting for approval",
-      carriedOver: false,
-      priorityRank: 4,
-      stageNames: ["Development"],
-    };
-    const saveDraft = vi.fn(
-      (input: unknown, current: ReportSectionReadModel) => {
-        const draft = input as {
-          readonly version: number;
-          readonly items: ReportSectionReadModel["items"];
-        };
-        return Promise.resolve({
-          ...current,
-          version: draft.version + 1,
-          items: draft.items,
-        });
-      },
-    );
-    render(
-      <Wrapper predecessorItem={predecessorItem} saveDraft={saveDraft}>
-        <LeadForm reportId={REPORT_ID} mode="overview" />
-      </Wrapper>,
-    );
-
-    await user.click(
-      await screen.findByRole("button", { name: /^Plan this work/ }),
-    );
-    expect(
-      screen.getByRole("form", {
-        name: "Current week update for Payments",
-      }),
-    ).toBeVisible();
-    expect(
-      screen.getAllByRole("form", {
-        name: "Current week update for Payments",
-      }),
-    ).toHaveLength(1);
-    expect(screen.getByRole("radio", { name: "Current week" })).toBeChecked();
-    expect(screen.getByRole("radio", { name: "Next week" })).toBeVisible();
-    expect(screen.getByRole("textbox", { name: /Description/ })).toHaveValue(
-      "Authoritative prior plan",
-    );
-    expect(screen.getByRole("button", { name: /Paused/ })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(screen.getByLabelText(/Pause reason/)).toHaveValue(
-      "Waiting for approval",
-    );
-    expect(screen.getAllByText("Authoritative prior plan")).toHaveLength(2);
-    expect(saveDraft).not.toHaveBeenCalled();
-
-    await user.click(screen.getByRole("radio", { name: "Next week" }));
-    await user.click(screen.getByRole("button", { name: "Save update" }));
-
-    await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
-    const occurrences = (
-      saveDraft.mock.calls[0]?.[0] as {
-        readonly items: ReportSectionReadModel["items"];
-      }
-    ).items.filter((candidate) => candidate.stableId === stableId);
-    expect(occurrences[0]?.id).not.toBe(predecessorItem.id);
-    expect(occurrences).toEqual([
-      expect.objectContaining({
-        stableId,
-        type: "next",
-        text: "Authoritative prior plan",
-        workflowStatus: "paused",
-        pausedReason: "Waiting for approval",
-        priorityRank: 4,
-        tag: "delivery",
-        projectId: PROJECT_ID,
-        stageNames: ["Development"],
-      }),
-    ]);
-    expect(screen.getAllByText("Authoritative prior plan")).toHaveLength(2);
-  });
-
-  it("cancels prior planning without a write and returns focus to Plan this work", async () => {
-    const user = userEvent.setup();
-    const predecessorItem: ReportSectionReadModel["items"][number] = {
-      id: "a0000000-0000-4000-8000-000000000032",
-      stableId: "a0000000-0000-4000-8000-000000000033",
-      projectId: PROJECT_ID,
-      activityId: null,
-      type: "next",
-      text: "Cancel this prior plan",
-      tag: "delivery",
-      workflowStatus: "planned",
-      carriedOver: false,
-      stageNames: ["Development"],
-    };
-    const saveDraft = vi.fn();
-    render(
-      <Wrapper predecessorItem={predecessorItem} saveDraft={saveDraft}>
-        <LeadForm reportId={REPORT_ID} mode="overview" />
-      </Wrapper>,
-    );
-
-    const plan = await screen.findByRole("button", { name: /^Plan this work/ });
-    await user.click(plan);
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
-
-    expect(saveDraft).not.toHaveBeenCalled();
-    expect(
-      await screen.findByRole("button", { name: /^Plan this work/ }),
-    ).toHaveFocus();
-    expect(screen.getByText("Cancel this prior plan")).toBeInTheDocument();
-  });
-
-  it("keeps an authoritative prior-only row informational with only replanning", async () => {
+  it("keeps an authoritative prior-only row informational with only the verdict rail", async () => {
     const predecessorItem: ReportSectionReadModel["items"][number] = {
       id: "a0000000-0000-4000-8000-000000000034",
       stableId: "a0000000-0000-4000-8000-000000000035",
@@ -517,11 +395,11 @@ describe("LeadForm Overview", () => {
     await screen.findByText("Resolve this prior plan");
     const preview = await itemPreview("Resolve this prior plan");
     // Previously planned stays read-only: no progress, edit or move controls on
-    // the row — only the verdict rail (which writes the selected week) and
-    // explicit replanning.
+    // the row — only the verdict rail (which writes the selected week).
+    // Replanning lives in the earlier open work register, not beside the rail.
     expect(
-      within(preview).getByRole("button", { name: /^Plan this work/ }),
-    ).toBeVisible();
+      within(preview).queryByRole("button", { name: /^Plan this work/ }),
+    ).toBeNull();
     expect(
       within(preview).queryByRole("button", {
         name: /Status of|Edit item|Quick move/,

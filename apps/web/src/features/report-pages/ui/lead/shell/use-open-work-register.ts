@@ -21,7 +21,6 @@ export interface OpenWorkRegisterQuery {
   readonly openItems: readonly OpenWorkRegisterItem[];
   readonly terminalItems: readonly OpenWorkRegisterItem[];
   readonly isLoading: boolean;
-  readonly isComplete: boolean;
   readonly error: string | null;
   readonly retry: () => void;
 }
@@ -82,12 +81,6 @@ export function useOpenWorkRegister(
     () => projectOpenWorkRegister(occurrences, currentItems),
     [currentItems, occurrences],
   );
-  const isComplete =
-    !isLoading &&
-    !isFetchingNextPage &&
-    !hasNextPage &&
-    !pageFailed &&
-    !cursorLoop;
   const error = cursorLoop
     ? "Earlier periods returned a repeated cursor. The open-work register may be incomplete."
     : pageFailed
@@ -100,7 +93,6 @@ export function useOpenWorkRegister(
     openItems: register.openItems,
     terminalItems: register.terminalItems,
     isLoading: isLoading || isFetchingNextPage,
-    isComplete,
     error,
     retry: () => {
       void refetch();

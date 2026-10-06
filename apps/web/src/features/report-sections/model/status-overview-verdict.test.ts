@@ -211,6 +211,22 @@ describe("planVerdictWrite with a linked occurrence", () => {
     ).toEqual({ kind: "already-recorded" });
   });
 
+  it("never creates a second Next when a separate Next record exists", () => {
+    const linked = carried();
+    const nextRecord = item({
+      id: PRIOR_ID,
+      type: "next",
+      workflowStatus: "planned",
+    });
+    const result = planVerdictWrite({
+      verdict: "next",
+      prior: { reportId: REPORT_ID, item: item() },
+      linked,
+      siblings: [linked, nextRecord],
+    });
+    expect(result).toEqual({ kind: "already-recorded" });
+  });
+
   it("does not duplicate a Next commitment carried on the Current record", () => {
     const linked = carried({ nextStepText: "Phase two" });
     const result = write("next", linked);

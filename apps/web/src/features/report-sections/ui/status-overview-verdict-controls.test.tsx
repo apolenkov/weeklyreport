@@ -69,10 +69,24 @@ describe("verdict rail on a pending Previously planned item", () => {
     expect(new Set(shapes).size).toBe(shapes.length);
   });
 
-  it("keeps every control at the minimum touch target", () => {
+  it("offers no replan icon next to the pending rail", () => {
     setup();
+    expect(screen.queryByRole("button", { name: /Plan this work/ })).toBeNull();
+  });
+
+  it("keeps every button and overflow menu item at the minimum touch target", async () => {
+    const { user } = setup();
     for (const button of screen.getAllByRole("button"))
       expect(button.className).toContain("var(--touch-target-min)");
+    await user.click(
+      screen.getByRole("button", {
+        name: "More actions for Ship the importer",
+      }),
+    );
+    const items = await screen.findAllByRole("menuitem");
+    expect(items.length).toBeGreaterThan(0);
+    for (const menuItem of items)
+      expect(menuItem.className).toContain("var(--touch-target-min)");
   });
 
   it.each(["done", "continue", "next"] as const)(

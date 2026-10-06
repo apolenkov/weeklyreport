@@ -27,6 +27,24 @@ const item: StatusOverviewItem = {
 const STATUS_BUTTON = "Status of Original text: In progress";
 
 describe("StatusOverviewItemPreview at rest", () => {
+  it("names the status icon with the full update text, like Edit item", () => {
+    const text = `A long update ${"that keeps going ".repeat(8)}to the end`;
+    render(
+      <StatusOverviewItemPreview
+        item={{ ...item, text }}
+        onEditItem={vi.fn()}
+        onSetStatus={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: `Status of ${text}: In progress` }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: `Edit item: ${text}` }),
+    ).toBeVisible();
+  });
+
   it("shows the status icon, the text and a short stage badge only", () => {
     render(
       <StatusOverviewItemPreview
