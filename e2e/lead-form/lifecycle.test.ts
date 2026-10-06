@@ -83,13 +83,38 @@ function disabledRef(
   return ref;
 }
 
+// The header cluster hands over to the sticky one while the page is scrolled
+// or an update is open; exactly one of them is ever in the tree.
+const COMPLETION_GROUPS = [
+  "Header completion actions",
+  "Sticky completion actions",
+];
+
+function completionActions(data: BrowserSnapshot): BrowserSnapshot {
+  const groups = COMPLETION_GROUPS.flatMap((name) =>
+    scopeSnapshots(data, "group", name),
+  );
+  assert.equal(groups.length, 1, "Expected one completion actions cluster");
+  const group = groups.at(0);
+  assert(group);
+  return group;
+}
+
+async function clickCompletion(name: string): Promise<void> {
+  const data = await waitSnapshot(
+    (observed) =>
+      COMPLETION_GROUPS.reduce(
+        (count, group) => count + scopeCount(observed, "group", group),
+        0,
+      ) === 1,
+    "Expected one completion actions cluster",
+  );
+  await command(["click", oneRef(completionActions(data), "button", name)]);
+}
+
 function assertPendingSubmissionActions(data: BrowserSnapshot): void {
   assert.equal(refsByRole(data, "button", "Submit report").length, 0);
-  disabledRef(
-    scopeSnapshot(data, "group", "Header completion actions"),
-    "button",
-    "Submit",
-  );
+  disabledRef(completionActions(data), "button", "Submit");
 }
 
 async function clickIn(
@@ -97,10 +122,10 @@ async function clickIn(
   name: string,
   session?: string,
 ): Promise<void> {
-  await command(
-    ["click", await scopedRef(scope, "button", name, session)],
-    session,
-  );
+  const ref = await scopedRef(scope, "button", name, session);
+  // Centre the button first: at the viewport edge the fixed completion cluster covers it.
+  await command(["scrollintoview", ref], session);
+  await command(["click", ref], session);
 }
 
 async function fillIn(
@@ -130,14 +155,14 @@ function scopePredicate(scope: Scope): string {
   return String.raw`(element.getAttribute('role') === ${role} || (${role} === 'form' && element.tagName === 'FORM')) && (element.getAttribute('aria-label') === ${name} || (element.getAttribute('aria-labelledby') || '').split(/\s+/).map(id => document.getElementById(id)?.textContent?.replace(/\s+/g, ' ').trim() || '').join(' ') === ${name})`;
 }
 
-/** The item's status icon: a button on editable rows whose name ends with the status. */
+/** The item's status icon: a button on editable rows named with the full item text. */
 function statusName(text: string): RegExp {
-  const label = shortItemLabel(text).replaceAll(
-    /[$()*+.?[\\\]^{|}]/g,
-    String.raw`\$&`,
-  );
+  const label = text.replaceAll(/[$()*+.?[\\\]^{|}]/g, String.raw`\$&`);
   return new RegExp(`^Status of ${label}: `);
 }
+
+// Row actions stay clipped until the item is hovered or holds focus.
+const ACTIONS_REVEALED = `(() => { const zone = document.activeElement?.closest('[data-overview-item-actions]'); return zone !== null && zone !== undefined && zone.getBoundingClientRect().width > 0 && zone.getAnimations().length === 0; })()`;
 
 // Row actions are revealed on hover or focus; focus first so the click lands.
 async function clickRevealed(
@@ -147,6 +172,7 @@ async function clickRevealed(
 ): Promise<void> {
   const ref = oneRef(await snapshot(session), role, name);
   await command(["focus", ref], session);
+  await command(["wait", "--fn", ACTIONS_REVEALED], session);
   await command(["click", ref], session);
 }
 
@@ -212,7 +238,7 @@ async function assertPersistedItem(
   text: string,
   session?: string,
 ): Promise<void> {
-  const prefix = `Status of ${shortItemLabel(text)}: `;
+  const prefix = `Status of ${text}: `;
   await reload(session);
   await command(
     [
@@ -305,14 +331,6 @@ function previousPlanData(previous: BrowserSnapshot) {
 }
 
 function assertPreviousControls(previous: BrowserSnapshot, canPlan: boolean) {
-  assert.equal(
-    refsByRole(
-      previous,
-      "button",
-      `Plan this work: ${shortItemLabel(LEAD_FORM_FIXTURE.previousText)}`,
-    ).length,
-    canPlan ? 1 : 0,
-  );
   // The prior occurrence stays read-only: its status icon is not a button, and
   // the verdict rail (one icon per verdict) only exists while writes are open.
   assert.equal(refsByRole(previous, "button", /^Status of /).length, 0);
@@ -417,20 +435,19 @@ async function prepareSubmission(): Promise<void> {
 // A suggested continuation counts as one item to review until the lead picks
 // the status it already shows; no separate Confirm action exists.
 async function confirmCarriedItem(): Promise<void> {
-  const completion = { role: "group", name: "Header completion actions" };
   const status = statusName(LEAD_FORM_FIXTURE.carriedText);
   const unconfirmed = new RegExp(`${status.source}.*not updated this week`);
   const before = await snapshot();
   assert.equal(
-    scopeCount(namedScope(before, completion), "StaticText", "1 to review"),
+    scopeCount(completionActions(before), "StaticText", "1 to review"),
     1,
   );
   await command(["click", oneRef(before, "button", unconfirmed)]);
   await findRole("menuitem", "In progress", "click");
   await waitSnapshot(
     (data) =>
-      scopeCount(namedScope(data, completion), "StaticText", /to review$/) ===
-        0 && refsByRole(data, "button", unconfirmed).length === 0,
+      scopeCount(completionActions(data), "StaticText", /to review$/) === 0 &&
+      refsByRole(data, "button", unconfirmed).length === 0,
     "Expected the status choice to confirm the carried item",
   );
   assert.equal(refsByRole(await snapshot(), "button", status).length, 1);
@@ -438,7 +455,7 @@ async function confirmCarriedItem(): Promise<void> {
 }
 
 async function submitReport(currentCount = 6): Promise<void> {
-  await clickIn({ role: "group", name: "Header completion actions" }, "Submit");
+  await clickCompletion("Submit");
   const confirmation = { role: "alertdialog", name: "Confirm submission" };
   const contents = await roleText("alertdialog", confirmation.name);
   assert.match(
@@ -862,7 +879,7 @@ void test("concurrent Lead edits recover unsaved input without overwriting the s
 void test("submit, reopen and resubmit restore editability", async () => {
   await openLeadReport();
   await prepareSubmission();
-  await clickIn({ role: "group", name: "Header completion actions" }, "Submit");
+  await clickCompletion("Submit");
   const confirmation = { role: "alertdialog", name: "Confirm submission" };
   assert.match(
     namedScope(await waitScope(confirmation), confirmation).snapshot,

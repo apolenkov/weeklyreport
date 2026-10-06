@@ -82,7 +82,7 @@ function UnitName({
 }) {
   if (!health) {
     return (
-      <p className="break-words font-semibold leading-5 text-[var(--color-foreground)]">
+      <p className="min-w-0 break-words font-semibold leading-5 text-[var(--color-foreground)]">
         {unit.name}
       </p>
     );
@@ -93,7 +93,7 @@ function UnitName({
       aria-expanded={healthExpanded}
       aria-controls={healthExpanded ? healthPanelId : undefined}
       onClick={(event) => onInspect(unit.key, event.currentTarget)}
-      className="min-h-[var(--touch-target-min)] max-w-full rounded-[var(--radius-sm)] text-left font-semibold leading-5 break-words text-[var(--color-primary)] underline decoration-[var(--color-border-strong)] underline-offset-4 hover:decoration-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+      className="min-h-[var(--touch-target-min)] min-w-0 max-w-full rounded-[var(--radius-sm)] text-left font-semibold leading-5 break-words text-[var(--color-primary)] underline decoration-[var(--color-border-strong)] underline-offset-4 hover:decoration-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
     >
       {unit.name}
     </button>
