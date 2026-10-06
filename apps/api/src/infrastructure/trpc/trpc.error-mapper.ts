@@ -15,6 +15,8 @@ import {
   AdminReportingGroupNotFoundError,
   AdminSelfLockoutError,
   AdminSnapshotConflictError,
+  AdminStageAssignmentNotFoundError,
+  AdminStageAssignmentReferenceNotFoundError,
   AdminUserActivityAssignmentConflictError,
   AdminUserConflictError,
   AdminUserNotFoundError,
@@ -196,6 +198,10 @@ export const DOMAIN_ERROR_CODES: readonly (readonly [
   // A non-viewer write without a reporting group is a validation failure on
   // the admin input — BAD_REQUEST, never a silently manufactured group.
   [AdminUserReportingGroupRequiredError, "BAD_REQUEST"],
+  // A stage-assignment write naming an absent row (P2025) or an absent
+  // user/stage/project reference (P2003) → NOT_FOUND; nothing is persisted.
+  [AdminStageAssignmentNotFoundError, "NOT_FOUND"],
+  [AdminStageAssignmentReferenceNotFoundError, "NOT_FOUND"],
   // Project Activity admin writes: a missing activity/group/product/lead is
   // NOT_FOUND; a business-rule violation (group mismatch, non-lead attach,
   // archived target) is BAD_REQUEST.

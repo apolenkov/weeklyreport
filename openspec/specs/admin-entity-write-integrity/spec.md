@@ -301,3 +301,31 @@ remain a success.
 - **GIVEN** a project or reporting group row that is already archived
 - **WHEN** the archive write runs again
 - **THEN** it succeeds idempotently and no physical deletion occurs
+
+### Requirement: Missing stage-assignment targets and references fail as typed NOT_FOUND
+
+`saveStageAssignment` MUST translate a foreign-key violation (`P2003`) on one
+of the assignment's own reference constraints (`userId`, `stageId`,
+`projectId`) — including on the fresh retry transaction after a lost
+unique-constraint race — into a typed not-found domain error so the caller
+receives `NOT_FOUND` with a fixed safe message, and MUST NOT persist a
+partial assignment. A `P2003` on any other constraint and every other
+persistence failure MUST propagate unchanged. `deleteStageAssignment` MUST
+translate a missing-row failure (`P2025`) into a typed not-found domain
+error. Malformed (non-UUID) input MUST keep being rejected by input
+validation before persistence.
+
+#### Scenario: Saving an assignment with an absent reference
+
+- **GIVEN** a validated `userId`/`stageId`/`projectId` tuple where the named
+  user, stage, or project does not exist
+- **WHEN** `saveStageAssignment` is called
+- **THEN** the call fails with `NOT_FOUND` and a fixed safe message
+- **AND** no `StageAssignment` row is persisted
+- **AND** no raw database error reaches the caller
+
+#### Scenario: Deleting an absent assignment
+
+- **GIVEN** no `StageAssignment` row exists for a validated UUID
+- **WHEN** `deleteStageAssignment` is called for it
+- **THEN** the call fails with `NOT_FOUND` and a fixed safe message

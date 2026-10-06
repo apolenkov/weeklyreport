@@ -16,6 +16,8 @@ import {
   AdminReportingGroupNotFoundError,
   AdminSelfLockoutError,
   AdminSnapshotConflictError,
+  AdminStageAssignmentNotFoundError,
+  AdminStageAssignmentReferenceNotFoundError,
   AdminUserActivityAssignmentConflictError,
   AdminUserConflictError,
   AdminUserNotFoundError,
@@ -624,6 +626,16 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
       name: "AdminUserReportingGroupRequiredError",
       make: () => new AdminUserReportingGroupRequiredError("m"),
       code: "BAD_REQUEST",
+    },
+    {
+      name: "AdminStageAssignmentNotFoundError",
+      make: () => new AdminStageAssignmentNotFoundError("m"),
+      code: "NOT_FOUND",
+    },
+    {
+      name: "AdminStageAssignmentReferenceNotFoundError",
+      make: () => new AdminStageAssignmentReferenceNotFoundError("m"),
+      code: "NOT_FOUND",
     },
     {
       name: "ProjectActivityNotFoundError",
