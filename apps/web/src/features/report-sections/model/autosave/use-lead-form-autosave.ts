@@ -72,6 +72,7 @@ export function useLeadFormAutosave(
   // Every effect dep must be a primitive or a stable identity — never the args
   // object — or an unrelated re-render restarts the timer and stretches the
   // debounce window indefinitely.
+  // armDebounce announces "pending" and owns the timer: its setState belongs to this effect on purpose.
   useEffect(() => {
     if (!dirty || !reportSectionId) return;
     return engine.armDebounce(payloadKey, reportSectionId, debounceMs);
