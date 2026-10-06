@@ -8,12 +8,14 @@ import { describe, expect, it } from "vitest";
 
 const MODULE_DIR = path.dirname(fileURLToPath(import.meta.url));
 const HOOK_FILE = "use-lead-form-autosave.ts";
+const ENGINE_FILE = "autosave-live-state.ts";
 
 // openspec/specs/lead-form-draft-module: render-refreshed mutable state must
 // not be exposed through a cross-file ref/accessor protocol. The module's
-// single mutable live-state holder stays private to the hook file; sibling
-// modules receive ordinary values and callbacks only. A file-internal ref that
-// never crosses the boundary (the save-echo ledger) remains permitted.
+// single mutable live-state holder stays private to the engine file, which
+// exposes intent operations only; the hook and sibling modules receive
+// ordinary values and callbacks. A file-internal ref that never crosses the
+// boundary (the save-echo ledger) remains permitted.
 const SMUGGLED_PROTOCOL = /AutosaveRefs|autosave-refs|\bgetRefs\b|\bsetRefs\b/;
 const LIVE_HOLDER_TYPE = /\bAutosaveLiveState\b/;
 
@@ -25,6 +27,14 @@ export function exposesLiveStateProtocol(text: string): boolean {
 
 export function referencesLiveHolder(text: string): boolean {
   return LIVE_HOLDER_TYPE.test(text);
+}
+
+function exportedNames(text: string): (string | undefined)[] {
+  return [
+    ...text.matchAll(
+      /^export\s+(?:async\s+)?(?:function|const|class|interface|type)\s+(\w+)/gm,
+    ),
+  ].map((match) => match[1]);
 }
 
 function productionSources(): { file: string; text: string }[] {
@@ -85,23 +95,22 @@ describe("lead-form autosave — no cross-file live-state protocol", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("keeps the live holder type inside the hook file", () => {
-    const offenders = sources
-      .filter(
-        ({ file, text }) => file !== HOOK_FILE && referencesLiveHolder(text),
-      )
+  it("keeps the live holder type inside the engine file", () => {
+    const holders = sources
+      .filter(({ text }) => referencesLiveHolder(text))
       .map(({ file }) => file);
-    expect(offenders).toEqual([]);
+    expect(holders).toEqual([ENGINE_FILE]);
+  });
+
+  it("exports no holder, ref or accessor from the engine file", () => {
+    const engine = sources.find(({ file }) => file === ENGINE_FILE);
+    expect(engine).toBeDefined();
+    expect(exportedNames(engine?.text ?? "")).toEqual(["createAutosaveEngine"]);
   });
 
   it("exports nothing but the hook from the module entry point", () => {
     const hook = sources.find(({ file }) => file === HOOK_FILE);
     expect(hook).toBeDefined();
-    const exported = [
-      ...(hook?.text ?? "").matchAll(
-        /^export\s+(?:async\s+)?(?:function|const|class|interface|type)\s+(\w+)/gm,
-      ),
-    ].map((match) => match[1]);
-    expect(exported).toEqual(["useLeadFormAutosave"]);
+    expect(exportedNames(hook?.text ?? "")).toEqual(["useLeadFormAutosave"]);
   });
 });
