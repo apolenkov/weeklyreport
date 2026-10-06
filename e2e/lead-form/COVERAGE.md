@@ -3,7 +3,11 @@
 The suite is node:test driving the pinned agent-browser CLI 0.38.2 (verified at
 start-up by `e2e/setup/agent-browser-version.ts`). Run it with `pnpm test:e2e`
 against the running web/API; it resets and seeds `customreport_e2e` with Redis
-DB 15 before every test. The denominator is the controls a Lead can reach
+DB 15 before every test, so exactly one e2e process may use that database at a
+time: a second process (another session, an agent, an IDE run) wipes it
+mid-test and shows up as `P2025` seeder failures or fields that lose their
+value. A second runner takes a lane database (`customreport_e2e_lane_a_test`
+with Redis DB 1) and its own dev ports. The denominator is the controls a Lead can reach
 through `/lead/report` and `/lead/report/<reportId>`, including Report, Slides
 and their dialogs. Head actions appear only where they complete a Lead
 lifecycle scenario.
@@ -82,6 +86,11 @@ and fill confirmations use `alertdialog`. Risk and Decision cards are plain
 `div` elements, not `article` roles; choose their named action buttons or unique
 Slides disclosure records instead of inventing semantic containers.
 The native decision date input has no implicit ARIA role. Its `Deadline` label identifies the native field; interactions use fresh `spinbutton` refs from the scoped dialog and stable `aria-valuemin`/`aria-valuemax` ranges, without inventing locale-specific segment names. The test presses digits or Backspace, blurs through the named Impact field and reads the label-associated ISO value to assert save/clear before Save and after reload. Read-only DOM assertions do not mutate the field. Await observable conditions and save acknowledgements, never timeout sleeps.
+
+A click that edits the draft turns the save control dirty only after the next
+render, so a test that saves right after such a click uses `saveChanges` (a
+bounded wait for the dirty state) instead of `saveDraft`, otherwise the helper
+sees a clean draft, clicks nothing and the reload drops the edit.
 
 Shared `waitScope`, `waitClosed` and `waitButton` use bounded observed AX
 snapshot polling because the CLI has no role-wait command; no fixed sleeps are
