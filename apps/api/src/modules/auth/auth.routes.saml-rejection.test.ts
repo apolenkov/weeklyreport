@@ -33,12 +33,12 @@ function makeRes() {
   return res as unknown as Response & typeof res;
 }
 
-function makeDeps() {
+function makeDeps(frontendUrl = FRONTEND_URL) {
   const loginFail = vi.fn();
   return {
     deps: {
       auditLogger: { ...createNullAuditLogger(), loginFail },
-      frontendUrl: FRONTEND_URL,
+      frontendUrl,
     },
     loginFail,
   };
@@ -49,34 +49,43 @@ describe("SAML authentication callback", () => {
     metricsRegistry.resetMetrics();
   });
 
-  it("audits, meters, and redirects a rejected assertion", async () => {
-    const req = makeReq();
-    const res = makeRes();
-    const next = vi.fn();
-    const { deps, loginFail } = makeDeps();
+  it.each([FRONTEND_URL, `${FRONTEND_URL}/`])(
+    "audits, meters, and redirects a rejected assertion (frontendUrl %s)",
+    async (frontendUrl) => {
+      const req = makeReq();
+      const res = makeRes();
+      const next = vi.fn();
+      const { deps, loginFail } = makeDeps(frontendUrl);
 
-    createSamlAuthenticationCallback(
-      deps,
-      req,
-      res,
-      next,
-    )(null, false, { message: "invalid_assertion" });
+      createSamlAuthenticationCallback(
+        deps,
+        req,
+        res,
+        next,
+      )(null, false, { message: "invalid_assertion" });
 
-    expect(loginFail).toHaveBeenCalledTimes(1);
-    expect(loginFail).toHaveBeenCalledWith({
-      userId: "anonymous",
-      role: null,
-      ip: "127.0.0.1",
-      reason: "invalid_assertion",
-    });
-    expect(await metricsRegistry.metrics()).toContain(
-      'cr_login_attempts_total{method="saml",outcome="fail"} 1',
-    );
-    expect(res.redirect).toHaveBeenCalledWith(
-      `${FRONTEND_URL}/auth/error?reason=invalid_assertion`,
-    );
-    expect(next).not.toHaveBeenCalled();
-  });
+      expect(loginFail).toHaveBeenCalledTimes(1);
+      expect(loginFail).toHaveBeenCalledWith({
+        userId: "anonymous",
+        role: null,
+        ip: "127.0.0.1",
+        reason: "invalid_assertion",
+      });
+      expect(await metricsRegistry.metrics()).toContain(
+        'cr_login_attempts_total{method="saml",outcome="fail"} 1',
+      );
+      expect(res.redirect).toHaveBeenCalledTimes(1);
+      const location = res.redirect.mock.calls[0]?.[0] as string;
+      const target = new URL(location);
+      expect(target.origin).toBe(FRONTEND_URL);
+      expect(target.pathname).toBe("/auth/error");
+      expect(target.searchParams.get("reason")).toBe("invalid_assertion");
+      expect(location).toBe(
+        `${FRONTEND_URL}/auth/error?reason=invalid_assertion`,
+      );
+      expect(next).not.toHaveBeenCalled();
+    },
+  );
 
   it("audits and meters a production-parser signature rejection before provisioning", async () => {
     const req = makeReq();

@@ -51,7 +51,14 @@ function rejectSamlAssertion(
     reason: "invalid_assertion",
   });
   loginAttemptsTotal.inc({ method: "saml", outcome: "fail" });
-  res.redirect(`${deps.frontendUrl}/auth/error?reason=invalid_assertion`);
+  // FRONTEND_URL is a validated URL but may carry a trailing slash; resolve
+  // the fixed error path against it instead of concatenating.
+  res.redirect(
+    new URL(
+      "/auth/error?reason=invalid_assertion",
+      deps.frontendUrl,
+    ).toString(),
+  );
 }
 
 export function createSamlAuthenticationCallback(
