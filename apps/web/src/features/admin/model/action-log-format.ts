@@ -20,9 +20,20 @@ export function shortId(value: string): string {
     : `…${value.slice(-SHORT_ID_TAIL)}`;
 }
 
+const graphemeSegmenter = new Intl.Segmenter(undefined, {
+  granularity: "grapheme",
+});
+
+// `max` stays a UTF-16 code-unit budget for display width; whole graphemes are
+// accumulated until the next one would cross `max - 1`, so an emoji or a
+// combining sequence is never halved into a lone surrogate.
 export function truncate(value: string, max: number): string {
   if (value.length <= max) return value;
-  return `${value.slice(0, max - 1).trimEnd()}…`;
+  const graphemes = [...graphemeSegmenter.segment(value)];
+  const firstOver = graphemes.find(
+    ({ segment, index }) => index + segment.length > max - 1,
+  );
+  return `${value.slice(0, firstOver?.index ?? 0).trimEnd()}…`;
 }
 
 function humanizeProcedureSegment(segment: string): string {
