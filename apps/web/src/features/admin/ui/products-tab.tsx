@@ -1,9 +1,15 @@
 "use client";
 
+import { Search } from "lucide-react";
+
 import { ConfirmDeleteDialog } from "../../../shared/ui/dialogs/confirm-delete-dialog";
 import { PlusIcon } from "../../../shared/ui/icons/action-icons";
 import { SearchInput } from "../../../shared/ui/search/search-input";
-import { TabHeader, TabSearch } from "../../../shared/ui/tabs/tab-header";
+import {
+  FieldCaption,
+  TabHeader,
+  TabSearch,
+} from "../../../shared/ui/tabs/tab-header";
 import type { AdminProductView, AdminUserView } from "../model/admin-types";
 import type { ProductFormData } from "../model/product-form";
 import { ProductEditDialog } from "./product-edit-dialog";
@@ -144,22 +150,30 @@ function ProductsTabHeader({
   return (
     <TabHeader
       title="Products"
-      description="Active products + archived. Use the global search to deep-link into reports."
+      description="Active and archived products. Filter narrows this list; Search reports opens any product or report."
       count={`${activeCount} active · ${archivedCount} archived`}
       search={
         <>
           <TabSearch
             value={localSearch}
             onChange={onLocalSearchChange}
-            placeholder="Filter products…"
+            label="Filter this list"
+            placeholder="Product name…"
             testId="products-local-search"
-            ariaLabel="Filter products by name"
           />
-          <div className="w-72">
-            <SearchInput
-              scope="all"
-              placeholder="Search all products and reports…"
-            />
+          <div className="flex flex-col gap-1 sm:w-72">
+            <FieldCaption>Search reports</FieldCaption>
+            <div className="relative">
+              <SearchInput
+                scope="all"
+                placeholder="Any product or report…"
+                className="[&_input]:pl-9"
+              />
+              <Search
+                aria-hidden="true"
+                className="pointer-events-none absolute z-10 left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--color-muted-foreground)]"
+              />
+            </div>
           </div>
         </>
       }

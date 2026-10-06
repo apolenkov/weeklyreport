@@ -4,9 +4,8 @@ import { Check, Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { copyToClipboard, truncate } from "../model/action-log-format";
+import { copyToClipboard, shortId } from "../model/action-log-format";
 
-const MAX_REFERENCE_ID_LENGTH = 14;
 const COPY_FEEDBACK_MS = 1500;
 
 export function CorrelationCell({ value }: { readonly value: string }) {
@@ -41,32 +40,30 @@ export function CorrelationCell({ value }: { readonly value: string }) {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => void handleCopy()}
-        title={`${value} (click to copy)`}
-        className="inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] px-1.5 py-0.5 font-mono text-xs text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] focus:bg-[var(--color-surface-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
-        aria-label={`Copy reference id ${value}`}
-      >
-        <span>{truncate(value, MAX_REFERENCE_ID_LENGTH)}</span>
-        <span
-          className={`inline-flex items-center gap-1 text-xs ${
-            copied
-              ? "text-[var(--color-primary)]"
-              : "text-[var(--color-muted-foreground)]"
-          }`}
-          aria-hidden="true"
+      <div className="flex items-center gap-2">
+        <code
+          className="font-mono text-xs text-[var(--color-foreground)]"
+          title={value}
+        >
+          {shortId(value)}
+        </code>
+        <button
+          type="button"
+          onClick={() => void handleCopy()}
+          className="btn-press inline-flex min-h-7 items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] px-2.5 text-xs font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-border-accent-hover)] hover:text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+          aria-label={`Copy reference id ${value}`}
         >
           {copied ? (
-            <>
-              <Check className="size-3" />
-              <span>Copied</span>
-            </>
+            <Check
+              aria-hidden="true"
+              className="size-3.5 text-[var(--color-primary)]"
+            />
           ) : (
-            <Copy className="size-3" />
+            <Copy aria-hidden="true" className="size-3.5" />
           )}
-        </span>
-      </button>
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
       {copied ? (
         <span
           className="sr-only"

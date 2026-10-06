@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   formatTimestamp,
   humanizeProcedure,
+  shortId,
   statusLabel,
 } from "./action-log-format";
 
@@ -89,4 +90,11 @@ describe("humanizeProcedure", () => {
       expect(humanizeProcedure(procedure)).toBe(procedure);
     },
   );
+});
+
+describe("shortId", () => {
+  it("keeps short ids whole and shows the distinctive tail of long ones", () => {
+    expect(shortId("singleton")).toBe("singleton");
+    expect(shortId("a0000000-0000-4000-8000-000000000401")).toBe("…00000401");
+  });
 });

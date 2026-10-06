@@ -38,7 +38,7 @@ function FeedbackFilters({ inbox }: { readonly inbox: Inbox }) {
   return (
     <section
       aria-label="Feedback filters"
-      className="mb-5 grid gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4 md:grid-cols-3"
+      className="mb-5 grid gap-3 md:grid-cols-3"
     >
       <label className="grid gap-1 text-sm font-medium">
         Search
@@ -105,7 +105,7 @@ function FeedbackInboxBody({ inbox }: { readonly inbox: Inbox }) {
   return (
     <>
       {inbox.view === "loading" && (
-        <div className="flex items-center justify-center gap-2 py-16 text-sm text-[var(--color-ink-muted)]">
+        <div className="flex items-center justify-center gap-2 py-16 text-sm text-[var(--color-muted-foreground)]">
           <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
           Loading feedback…
         </div>
@@ -126,7 +126,7 @@ function FeedbackInboxBody({ inbox }: { readonly inbox: Inbox }) {
         </div>
       )}
       {inbox.view === "empty" && (
-        <div className="rounded-xl border border-dashed border-[var(--color-border)] p-12 text-center text-sm text-[var(--color-ink-muted)]">
+        <div className="rounded-xl border border-dashed border-[var(--color-border)] p-12 text-center text-sm text-[var(--color-muted-foreground)]">
           No feedback matches these filters.
         </div>
       )}
@@ -188,26 +188,28 @@ export function ProductFeedbackPage() {
     <main
       id="main-content"
       tabIndex={-1}
-      className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8"
+      className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8"
     >
       <div className="mb-6 flex items-start gap-3">
         <div className="rounded-xl bg-[var(--color-starbucks-accent)]/10 p-3 text-[var(--color-starbucks-accent)]">
           <MessageSquareText aria-hidden="true" className="size-5" />
         </div>
         <div>
-          <h1 className="text-2xl font-semibold text-[var(--color-ink)]">
+          <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
             Feedback
           </h1>
-          <p className="mt-1 max-w-[65ch] text-sm text-[var(--color-ink-muted)]">
+          <p className="mt-1 max-w-[65ch] text-sm text-[var(--color-muted-foreground)]">
             {scopeLabel}. Use Agentation to mark elements, text, page areas, or
             proposed layout changes and send structured context to an agent.
           </p>
         </div>
       </div>
 
-      <FeedbackFilters inbox={inbox} />
+      <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-sm">
+        <FeedbackFilters inbox={inbox} />
 
-      <FeedbackInboxBody inbox={inbox} />
+        <FeedbackInboxBody inbox={inbox} />
+      </div>
     </main>
   );
 }
