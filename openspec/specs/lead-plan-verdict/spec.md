@@ -1,10 +1,10 @@
-# Spec Delta
+# lead-plan-verdict Specification
 
 ## Purpose
 
 Defines the one-action verdict a lead gives to every prior-week item that was planned for the selected week, and how that verdict is recorded without ever changing the prior week.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Each prior-week planned item MUST receive one verdict in one action
 
