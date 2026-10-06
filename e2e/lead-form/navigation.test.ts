@@ -24,6 +24,7 @@ import {
 import { registerE2eHooks } from "./fixtures.js";
 import {
   LEAD_FORM_FIXTURE,
+  oneRef,
   OPEN_WORK_FIXTURE,
   roleText,
   saveDraft,
@@ -56,6 +57,13 @@ const FOREIGN_SUPPORT = {
   ],
 } as const;
 type Snapshot = Awaited<ReturnType<typeof snapshot>>;
+
+// Every write control an editable Overview exposes: report actions, the item
+// status icon and title, the revealed quick move and overflow menu, and the
+// Activity weekly-fields edit control.
+const EARLIER_OPEN_WORK_LINE = /^\d+ earlier open items?$/;
+const OVERVIEW_WRITE_CONTROL =
+  /^(?:Save draft now|Retry saving draft|Submit(?: report)?$|Add item to |Status of |Edit item: |Quick move to |More actions for |Edit weekly fields for )/;
 
 function namedRefs(
   data: Snapshot,
@@ -261,17 +269,12 @@ void test("Report and Slides preserve the selected period and record visibility"
   await waitText("Submitted");
   const history = await snapshot();
   assert.equal(
-    namedRefs(history, "button", (name) =>
-      /^(?:Save draft now|Retry saving draft|Submit(?: report)?$|Add item to |Update progress for |Edit item: )/.test(
-        name,
-      ),
-    ).length,
+    namedRefs(history, "button", (name) => OVERVIEW_WRITE_CONTROL.test(name))
+      .length,
     0,
   );
-  assert.equal(
-    scopeCount(history, "DisclosureTriangle", /^More actions for /),
-    0,
-  );
+  // The verdict rail is a write control of the selected week only.
+  assert.equal(scopeCount(history, "group", /^Verdict for /), 0);
   await clickViewMode("Slides");
   await waitText("Viewing past period. This form is read-only.");
   assert.equal(
@@ -815,14 +818,14 @@ async function assertOverviewEditingUnavailable(): Promise<void> {
     ),
   );
   assert.equal(
-    namedRefs(data, "button", (name) =>
-      /^(?:Save draft now|Retry saving draft|Submit(?: report)?$|Add item to |Update progress for |\+ Add )/.test(
-        name,
-      ),
+    namedRefs(
+      data,
+      "button",
+      (name) => OVERVIEW_WRITE_CONTROL.test(name) || name.startsWith("+ Add "),
     ).length,
     0,
   );
-  assert.equal(scopeCount(data, "DisclosureTriangle", /^More actions for /), 0);
+  assert.equal(scopeCount(data, "group", /^Verdict for /), 0);
   await assertNoEditors();
 }
 
@@ -898,8 +901,23 @@ void test("open-work read failure recovers through Retry open work", async () =>
     await command(["network", "unroute", route]);
   }
   await findRole("button", "Retry open work", "click");
-  await waitText(OPEN_WORK_FIXTURE.paused);
   await assertScope("region", "Open work from earlier periods");
+  // Earlier open work rests as one collapsed disclosure line with its count.
+  const register = scopeSnapshot(
+    await waitSnapshot(
+      (data) =>
+        scopeCount(data, "DisclosureTriangle", EARLIER_OPEN_WORK_LINE) === 1,
+      "Expected the collapsed earlier open work disclosure",
+    ),
+    "region",
+    "Open work from earlier periods",
+  );
+  assert.ok(!register.snapshot.includes(OPEN_WORK_FIXTURE.paused));
+  await command([
+    "click",
+    oneRef(register, "DisclosureTriangle", EARLIER_OPEN_WORK_LINE),
+  ]);
+  await waitText(OPEN_WORK_FIXTURE.paused);
   assert.equal(
     refsByRole(await snapshot(), "button", "Retry open work").length,
     0,

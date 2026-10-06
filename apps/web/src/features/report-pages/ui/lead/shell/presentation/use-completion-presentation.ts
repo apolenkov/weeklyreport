@@ -25,6 +25,7 @@ export interface CompletionPresentation {
     readonly onSubmit: () => void;
     readonly submitDisabled: boolean;
     readonly submitDisabledReason: string | undefined;
+    readonly pendingReviewCount: number;
   };
   readonly headerActionsVisible: boolean;
   readonly readiness: LeadSubmitReadiness;
@@ -42,6 +43,7 @@ export function useCompletionPresentation(
     onSubmit: input.handleSubmit,
     submitDisabled: !input.readiness.canOpenConfirmation,
     submitDisabledReason: input.readiness.blockingIssues[0]?.label,
+    pendingReviewCount: input.readiness.pendingReviewCount,
   };
   const showCompletionSurface = !input.isSlidesMode && !input.isReadOnly;
 

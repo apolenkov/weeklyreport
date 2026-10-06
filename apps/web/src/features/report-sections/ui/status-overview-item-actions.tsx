@@ -15,6 +15,7 @@ import type {
 } from "../model/status-overview";
 import { statusOverviewItemActions } from "../model/status-overview-items";
 import { choicesForWeek } from "./item-status-choices";
+import type { VerdictHandler } from "./status-overview-item-handlers";
 import { ProgressIcon } from "./status-overview-item-icons";
 import { statusOverviewProgressLabel } from "./status-overview-item-metadata";
 
@@ -42,6 +43,7 @@ export interface ActionProps {
     ((item: StatusOverviewItem, focusKey?: string) => void) | undefined;
   readonly onRestorePlan?:
     ((item: StatusOverviewItem, focusKey?: string) => void) | undefined;
+  readonly onVerdict?: VerdictHandler | undefined;
 }
 
 const FOCUS_RING =
@@ -89,7 +91,8 @@ export function StatusControl({
   onSetStatus,
   onConfirmItem,
 }: Pick<ActionProps, "item" | "onSetStatus" | "onConfirmItem">) {
-  const label = `Status of ${shortItemLabel(item.text)}: ${statusOverviewProgressLabel(item)}`;
+  const unplanned = item.continuity === "unplanned" ? " · Unplanned" : "";
+  const label = `Status of ${shortItemLabel(item.text)}: ${statusOverviewProgressLabel(item)}${unplanned}`;
   const carried = item.needsConfirmation === true;
   const icon = (
     <ProgressIcon

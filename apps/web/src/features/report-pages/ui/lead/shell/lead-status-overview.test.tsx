@@ -516,8 +516,9 @@ describe("LeadForm Overview", () => {
 
     await screen.findByText("Resolve this prior plan");
     const preview = await itemPreview("Resolve this prior plan");
-    // Previously planned stays read-only: no progress, edit, move, or
-    // outcome controls on the row — only explicit replanning.
+    // Previously planned stays read-only: no progress, edit or move controls on
+    // the row — only the verdict rail (which writes the selected week) and
+    // explicit replanning.
     expect(
       within(preview).getByRole("button", { name: /^Plan this work/ }),
     ).toBeVisible();
@@ -529,9 +530,12 @@ describe("LeadForm Overview", () => {
     expect(
       within(preview).queryByRole("button", { name: /Update status/ }),
     ).toBeNull();
-    expect(
-      within(preview).queryByRole("button", { name: /More actions/ }),
-    ).toBeNull();
+    for (const verdict of ["Done", "Continue", "Next week", "Paused"])
+      expect(
+        within(preview).getByRole("button", {
+          name: `${verdict} — Resolve this prior plan`,
+        }),
+      ).toBeVisible();
     expect(
       within(preview).queryByRole("button", { name: /Move .* week/ }),
     ).toBeNull();

@@ -14,9 +14,9 @@
 
 ## 3. Previously planned verdict controls
 
-- [ ] 3.1 Render verdict icons (`Done`, `Continue`, `Next week`, `Paused` + reason, overflow `Won't do`) on Previously planned items that are decidable, with the colour-plus-shape state vocabulary from `status-presentation-model` / `web-status-color-tokens`; verified by component tests and a colour-independence check (shape differs per verdict).
+- [x] 3.1 Render verdict icons (`Done`, `Continue`, `Next week`, `Paused` + reason, overflow `Won't do`) on Previously planned items that are decidable, with the colour-plus-shape state vocabulary from `status-presentation-model` / `web-status-color-tokens`; verified by component tests and a colour-independence check (shape differs per verdict).
 - [ ] 3.2 Show the verdict as an icon stamp on the frozen prior item and keep the prior occurrence untouched; verified by an API test that the prior-week row and its snapshot are unchanged after each verdict.
-- [ ] 3.3 Add the `n to review` indicator to the existing sticky Save/Submit cluster and keep the end-of-form explanation in flow; verified by `lead-completion-guidance` tests and a 375 screenshot with no overlap.
+- [x] 3.3 Add the `n to review` indicator to the existing sticky Save/Submit cluster and keep the end-of-form explanation in flow; verified by `lead-completion-guidance` tests and a 375 screenshot with no overlap.
 
 ## 4. Collapsed blocks and weekly fields
 

@@ -63,14 +63,15 @@ const model: StatusOverviewModel = {
 };
 
 describe("StatusOverview", () => {
-  it("marks only unplanned Current items", () => {
+  it("names only the unplanned Current item as unplanned, without a badge", () => {
     render(<StatusOverview model={model} />);
-    expect(screen.getAllByText("Unplanned")).toHaveLength(1);
+    expect(screen.queryByText("Unplanned")).toBeNull();
     const preview = screen
       .getByText("Work item 1")
       .closest<HTMLElement>("[data-overview-item-preview]");
     if (!preview) throw new Error("Expected the item preview");
-    expect(within(preview).getByText("Unplanned")).toBeTruthy();
+    expect(within(preview).getByLabelText(/· Unplanned$/)).toBeTruthy();
+    expect(screen.getAllByLabelText(/· Unplanned$/)).toHaveLength(1);
   });
 
   it("uses one clear item grammar without linked-step or drag controls", async () => {
@@ -144,7 +145,7 @@ describe("StatusOverview", () => {
     // The status icon keeps the confirm anchor so the submit-readiness deep
     // link still resolves, and it opens the status menu.
     const status = screen.getByRole("button", {
-      name: "Status of Work item 1: Continued · not updated this week",
+      name: "Status of Work item 1: Continued · not updated this week · Unplanned",
     });
     expect(status).toHaveAttribute("id", "confirm:current:item-1");
     expect(status).toHaveAttribute(
@@ -940,7 +941,7 @@ describe("StatusOverview", () => {
     );
 
     const status = screen.getByRole("button", {
-      name: "Status of Work item 1: In progress",
+      name: "Status of Work item 1: In progress · Unplanned",
     });
     expect(status).toHaveAttribute(
       "data-overview-focus",
@@ -1192,7 +1193,7 @@ describe("StatusOverview", () => {
     );
 
     const status = screen.getByRole("button", {
-      name: "Status of Work item 1: In progress",
+      name: "Status of Work item 1: In progress · Unplanned",
     });
     expect(status).toHaveAttribute(
       "data-overview-focus",

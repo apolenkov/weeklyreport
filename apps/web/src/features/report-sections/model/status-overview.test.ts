@@ -534,6 +534,94 @@ describe("projectStatusOverview", () => {
     ]);
   });
 
+  it("derives the verdict of a Previous item from the selected week's record", () => {
+    const ids = [31, 32, 33, 34].map(
+      (n) => `10000000-0000-4000-8000-0000000000${String(n)}`,
+    );
+    const stable = [41, 42, 43].map(
+      (n) => `10000000-0000-4000-8000-0000000000${String(n)}`,
+    );
+    const parent = { projectId: CURRENT_PRODUCT };
+    const projects = [
+      {
+        projectId: CURRENT_PRODUCT,
+        projectName: "Payments",
+        trafficLight: "green" as const,
+      },
+    ];
+    const currentSection = makeReportSectionFixture({
+      projects,
+      items: [
+        {
+          ...item({
+            id: ids[0] ?? "",
+            stableId: stable[0] ?? "",
+            ...parent,
+            type: "current",
+            text: "Shipped",
+          }),
+          workflowStatus: "done" as const,
+        },
+        {
+          ...item({
+            id: ids[1] ?? "",
+            stableId: stable[1] ?? "",
+            ...parent,
+            type: "current",
+            text: "Suggested",
+          }),
+          workflowStatus: "planned" as const,
+          carriedOver: true,
+        },
+      ],
+    });
+    const previousSection = {
+      ...makeReportSectionFixture({
+        projects,
+        items: stable.map((stableId, index) =>
+          item({
+            id: ids[index + 1] ?? "",
+            stableId,
+            ...parent,
+            type: "next",
+            text: ["Shipped plan", "Suggested plan", "Open plan"][index] ?? "",
+          }),
+        ),
+      }),
+      status: "submitted" as const,
+    };
+    const output = {
+      current: {
+        reportId: currentSection.reportId,
+        periodStart: new Date("2026-08-31T00:00:00.000Z"),
+        periodEnd: new Date("2026-09-06T00:00:00.000Z"),
+        section: currentSection,
+      },
+      predecessor: {
+        availability: "available" as const,
+        source: "submitted" as const,
+        reportId: previousSection.reportId,
+        periodStart: new Date("2026-08-24T00:00:00.000Z"),
+        periodEnd: new Date("2026-08-30T00:00:00.000Z"),
+        section: previousSection,
+      },
+    };
+    const verdicts = (editable: boolean) =>
+      projectStatusOverview(output, {
+        currentItemsEditable: editable,
+      }).units[0]?.columns.previouslyPlanned.items.map(
+        (entry) => entry.verdict,
+      );
+
+    expect(verdicts(true)).toEqual(["done", "pending", "pending"]);
+    expect(verdicts(false)).toEqual(["done", undefined, undefined]);
+    expect(
+      projectStatusOverview(output, {
+        currentItemsEditable: true,
+      }).units[0]?.columns.currentWeek.items.map((entry) => entry.verdict),
+    ).toEqual([undefined, undefined]);
+  });
+
   // MOVE-ORDER: reuse the collection order and preserve text/status plus the
   // linked source identity — no re-sorting, no fractional index, no date sort.
   it("reuses the collection order for continuation and promotion", () => {

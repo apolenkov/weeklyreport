@@ -199,14 +199,6 @@ export function OpenWorkRegister({
               disabled={actionsDisabled}
               onOpen={onOpen}
             />
-            {disabledReason ? (
-              <p
-                role="status"
-                className="text-sm text-[var(--color-muted-foreground)]"
-              >
-                {disabledReason}
-              </p>
-            ) : null}
           </div>
         </details>
       ) : (
@@ -216,6 +208,14 @@ export function OpenWorkRegister({
           onOpen={onOpen}
         />
       )}
+      {hasItems && disabledReason ? (
+        <p
+          role="status"
+          className="pb-3 text-sm text-[var(--color-muted-foreground)]"
+        >
+          {disabledReason}
+        </p>
+      ) : null}
     </section>
   );
 }

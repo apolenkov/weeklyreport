@@ -24,6 +24,7 @@ import {
   waitText,
 } from "./browser.js";
 import { registerE2eHooks } from "./fixtures.js";
+import { assertFocused } from "./focus.js";
 import {
   clickBackdrop,
   LEAD_FORM_FIXTURE,
@@ -54,6 +55,8 @@ const WEEKLY_FORM = {
   role: "form",
   name: `Weekly fields for ${LEAD_FORM_FIXTURE.activityName}`,
 };
+const ACTIVITY_ARTICLE = `Activity ${LEAD_FORM_FIXTURE.activityName}`;
+const WEEKLY_EDIT = `Edit weekly fields for ${LEAD_FORM_FIXTURE.activityName}`;
 const VIEW_MODE = { role: "group", name: "View mode" };
 
 interface Scope {
@@ -127,6 +130,33 @@ function scopePredicate(scope: Scope): string {
   return String.raw`(element.getAttribute('role') === ${role} || (${role} === 'form' && element.tagName === 'FORM')) && (element.getAttribute('aria-label') === ${name} || (element.getAttribute('aria-labelledby') || '').split(/\s+/).map(id => document.getElementById(id)?.textContent?.replace(/\s+/g, ' ').trim() || '').join(' ') === ${name})`;
 }
 
+/** The item's status icon: a button on editable rows whose name ends with the status. */
+function statusName(text: string): RegExp {
+  const label = shortItemLabel(text).replaceAll(
+    /[$()*+.?[\\\]^{|}]/g,
+    String.raw`\$&`,
+  );
+  return new RegExp(`^Status of ${label}: `);
+}
+
+// Row actions are revealed on hover or focus; focus first so the click lands.
+async function clickRevealed(
+  role: string,
+  name: string | RegExp,
+  session?: string,
+): Promise<void> {
+  const ref = oneRef(await snapshot(session), role, name);
+  await command(["focus", ref], session);
+  await command(["click", ref], session);
+}
+
+/** Opens the canonical item editor from the row's overflow menu. */
+async function openItemEditor(text: string, session?: string): Promise<void> {
+  const label = shortItemLabel(text);
+  await clickRevealed("button", `More actions for ${label}`, session);
+  await findRole("menuitem", `Edit details: ${label}`, "click", { session });
+}
+
 async function clickPoint(x: number, y: number): Promise<void> {
   await command([
     "mouse",
@@ -173,11 +203,7 @@ async function saveActivityUpdate(text: string): Promise<void> {
   await clickIn(ACTIVITY_FORM, "Save update");
   await waitClosed(ACTIVITY_FORM);
   assert.equal(
-    refsByRole(
-      await snapshot(),
-      "button",
-      `Update progress for ${shortItemLabel(text)}`,
-    ).length,
+    refsByRole(await snapshot(), "button", statusName(text)).length,
     1,
   );
 }
@@ -186,22 +212,18 @@ async function assertPersistedItem(
   text: string,
   session?: string,
 ): Promise<void> {
-  const name = `Update progress for ${shortItemLabel(text)}`;
+  const prefix = `Status of ${shortItemLabel(text)}: `;
   await reload(session);
   await command(
     [
       "wait",
       "--fn",
-      `Array.from(document.getElementsByTagName('button')).some(element => element.getAttribute('aria-label') === ${JSON.stringify(name)})`,
+      `Array.from(document.getElementsByTagName('button')).some(element => (element.getAttribute('aria-label') ?? '').startsWith(${JSON.stringify(prefix)}))`,
     ],
     session,
   );
   assert.equal(
-    refsByRole(
-      await snapshot(session),
-      "button",
-      `Update progress for ${shortItemLabel(text)}`,
-    ).length,
+    refsByRole(await snapshot(session), "button", statusName(text)).length,
     1,
   );
 }
@@ -291,10 +313,27 @@ function assertPreviousControls(previous: BrowserSnapshot, canPlan: boolean) {
     ).length,
     canPlan ? 1 : 0,
   );
+  // The prior occurrence stays read-only: its status icon is not a button, and
+  // the verdict rail (one icon per verdict) only exists while writes are open.
+  assert.equal(refsByRole(previous, "button", /^Status of /).length, 0);
   assert.equal(
-    refsByRole(previous, "button", /^Update progress for /).length,
-    0,
+    scopeCount(
+      previous,
+      "group",
+      `Verdict for ${LEAD_FORM_FIXTURE.previousText}`,
+    ),
+    canPlan ? 1 : 0,
   );
+  for (const verdict of ["Done", "Continue", "Next week", "Paused"]) {
+    assert.equal(
+      refsByRole(
+        previous,
+        "button",
+        `${verdict} — ${LEAD_FORM_FIXTURE.previousText}`,
+      ).length,
+      canPlan ? 1 : 0,
+    );
+  }
 }
 
 async function saveConcurrentLeadUpdate(
@@ -304,12 +343,7 @@ async function saveConcurrentLeadUpdate(
 ): Promise<void> {
   await openLeadReport("overview", session);
   await command(["network", "requests"], session);
-  await findRole(
-    "button",
-    `Update progress for ${shortItemLabel(LEAD_FORM_FIXTURE.currentText)}`,
-    "click",
-    { session },
-  );
+  await openItemEditor(LEAD_FORM_FIXTURE.currentText, session);
   await command(
     ["fill", await scopedRef(form, "textbox", "Description *", session), text],
     session,
@@ -376,18 +410,31 @@ async function prepareSubmission(): Promise<void> {
     await clickIn(form, "Save update");
     await waitClosed(form);
   }
-  await findRole(
-    "button",
-    `Update progress for ${LEAD_FORM_FIXTURE.carriedText}`,
-    "click",
-  );
-  const carriedForm = {
-    role: "form",
-    name: "Current week update for CRM-Data Lake",
-  };
-  await clickIn(carriedForm, "Save update");
-  await waitClosed(carriedForm);
+  await confirmCarriedItem();
   await waitText("This report is ready to submit.");
+}
+
+// A suggested continuation counts as one item to review until the lead picks
+// the status it already shows; no separate Confirm action exists.
+async function confirmCarriedItem(): Promise<void> {
+  const completion = { role: "group", name: "Header completion actions" };
+  const status = statusName(LEAD_FORM_FIXTURE.carriedText);
+  const unconfirmed = new RegExp(`${status.source}.*not updated this week`);
+  const before = await snapshot();
+  assert.equal(
+    scopeCount(namedScope(before, completion), "StaticText", "1 to review"),
+    1,
+  );
+  await command(["click", oneRef(before, "button", unconfirmed)]);
+  await findRole("menuitem", "In progress", "click");
+  await waitSnapshot(
+    (data) =>
+      scopeCount(namedScope(data, completion), "StaticText", /to review$/) ===
+        0 && refsByRole(data, "button", unconfirmed).length === 0,
+    "Expected the status choice to confirm the carried item",
+  );
+  assert.equal(refsByRole(await snapshot(), "button", status).length, 1);
+  await saveDraft();
 }
 
 async function submitReport(currentCount = 6): Promise<void> {
@@ -421,13 +468,11 @@ async function assertSubmitted(): Promise<void> {
     0,
   );
   assert.equal(
-    refsByRole(
-      data,
-      "button",
-      `Update progress for ${shortItemLabel(LEAD_FORM_FIXTURE.currentText)}`,
-    ).length,
+    refsByRole(data, "button", statusName(LEAD_FORM_FIXTURE.currentText))
+      .length,
     0,
   );
+  assert.equal(refsByRole(data, "button", /^More actions for /).length, 0);
 }
 
 function headLeadRow(data: BrowserSnapshot): BrowserSnapshot {
@@ -531,6 +576,14 @@ void test("draft changes persist after reload", async () => {
   await saveDraft();
   await assertSavePost();
   await assertPersistedItem("E2E persisted draft item");
+  // The row title opens the canonical editor with the saved text.
+  await findRole("button", "Edit item: E2E persisted draft item", "click");
+  assert.equal(
+    await inputValue(ACTIVITY_FORM, "Description *"),
+    "E2E persisted draft item",
+  );
+  await clickIn(ACTIVITY_FORM, "Cancel");
+  await waitClosed(ACTIVITY_FORM);
 });
 
 void test("save failure preserves local changes and recovers", async () => {
@@ -557,12 +610,23 @@ void test("failed autosave retries through the draft action and persists", async
   const text = "E2E draft coordinator retry";
   await openLeadReport();
   await command(["network", "requests"]);
+  // The weekly fields stay closed until the Activity's edit control opens them.
+  assert.equal(scopeCount(await snapshot(), "form", WEEKLY_FORM.name), 0);
+  await findRole("button", WEEKLY_EDIT, "click");
   await command(["network", "route", SAVE_ROUTE, "--abort"]);
   try {
     await fillIn(WEEKLY_FORM, "Description", text);
     await clickIn(WEEKLY_FORM, "Save weekly fields");
+    await waitClosed(WEEKLY_FORM);
     await waitText("Draft save failed. Use Save to retry.");
-    assert.equal(await inputValue(WEEKLY_FORM, "Description"), text);
+    // The unsaved value stays visible as read-only text in the Activity header.
+    assert.ok(
+      scopeSnapshot(
+        await snapshot(),
+        "article",
+        ACTIVITY_ARTICLE,
+      ).snapshot.includes(text),
+    );
     const ref = oneRef(await snapshot(), "button", "Retry saving draft");
     const state = await command(["is", "enabled", ref]);
     assert.equal(state.enabled, true);
@@ -572,8 +636,13 @@ void test("failed autosave retries through the draft action and persists", async
   await saveDraft();
   await assertSavePost();
   await reload();
-  await waitScope(WEEKLY_FORM);
+  await waitText(text);
+  await findRole("button", WEEKLY_EDIT, "click");
   assert.equal(await inputValue(WEEKLY_FORM, "Description"), text);
+  // Cancel closes the form and returns focus to the edit control.
+  await clickIn(WEEKLY_FORM, "Cancel");
+  await waitClosed(WEEKLY_FORM);
+  await assertFocused(WEEKLY_EDIT);
 });
 
 void test("pending canonical save locks write actions until connectivity returns", async () => {
@@ -596,10 +665,7 @@ void test("pending canonical save locks write actions until connectivity returns
       disabledRef(namedScope(await snapshot(), ACTIVITY_FORM), "button", name);
     const pending = await snapshot();
     assert.equal(refsByRole(pending, "button", /^Add item to /).length, 0);
-    assert.equal(
-      refsByRole(pending, "button", /^Update progress for /).length,
-      0,
-    );
+    assert.equal(refsByRole(pending, "button", /^Status of /).length, 0);
     assertPendingSubmissionActions(pending);
     assert.equal(await reportActionsDisabled(), true);
     await command(["press", "Escape"]);
@@ -702,19 +768,12 @@ void test("accepted navigation retains pending input without changing the saved 
   await clickIn({ role: "alertdialog", name: "Discard changes?" }, "Discard");
   await waitClosed(ACTIVITY_FORM);
   await reload();
-  await waitScope(WEEKLY_FORM);
+  await waitButton(WEEKLY_EDIT);
   const persisted = await snapshot();
   assert(persisted.snapshot.includes(LEAD_FORM_FIXTURE.currentText));
   assert(!persisted.snapshot.includes(text));
   assert.equal(scopeCount(persisted, "form", ACTIVITY_FORM.name), 0);
-  assert.equal(
-    refsByRole(
-      persisted,
-      "button",
-      `Update progress for ${shortItemLabel(text)}`,
-    ).length,
-    0,
-  );
+  assert.equal(refsByRole(persisted, "button", statusName(text)).length, 0);
   assert.equal(await postCount("reports.saveDraft"), 0);
 });
 
@@ -731,11 +790,7 @@ void test("concurrent Lead edits recover unsaved input without overwriting the s
   const initialPrevious = previousMarketingPlan(await snapshot());
   const previous = previousPlanData(initialPrevious);
   assertPreviousControls(initialPrevious, true);
-  await findRole(
-    "button",
-    `Update progress for ${shortItemLabel(LEAD_FORM_FIXTURE.currentText)}`,
-    "click",
-  );
+  await openItemEditor(LEAD_FORM_FIXTURE.currentText);
   await fillIn(form, "Description *", localText);
   await command(["network", "requests"]);
   await command(["network", "requests", "--clear"]);
@@ -783,7 +838,7 @@ void test("concurrent Lead edits recover unsaved input without overwriting the s
     assert.deepEqual(previousPlanData(retainedPrevious), previous);
     assertPreviousControls(retainedPrevious, false);
     assert.equal(refsByRole(data, "button", /^Add item to /).length, 0);
-    assert.equal(refsByRole(data, "button", /^Update progress for /).length, 0);
+    assert.equal(refsByRole(data, "button", /^Status of /).length, 0);
     assertPendingSubmissionActions(data);
     assert.equal(await reportActionsDisabled(), true);
     await clickIn(recovery, "Cancel");
@@ -1199,11 +1254,7 @@ void test("item description and pause reason limits accept corrected boundary va
   );
   await saveActivityUpdate(description);
   await assertPersistedItem(description);
-  await findRole(
-    "button",
-    `Update progress for ${shortItemLabel(description)}`,
-    "click",
-  );
+  await openItemEditor(description);
   assert.equal(await inputValue(ACTIVITY_FORM, "Description *"), description);
   assert.equal(await inputValue(ACTIVITY_FORM, "Pause reason *"), reason);
   await clickIn(ACTIVITY_FORM, "Cancel");
@@ -1349,6 +1400,7 @@ for (const kind of ["risk", "decision"] as const) {
 
 void test("weekly title and description limits disable invalid saves and persist boundaries", async () => {
   await openLeadReport();
+  await findRole("button", WEEKLY_EDIT, "click");
   for (const [label, limit] of [
     ["Weekly title", MAX_ACTIVITY_NAME_LENGTH],
     ["Description", SAFE_TEXT_MAX_LENGTH],
@@ -1387,19 +1439,16 @@ void test("weekly title and description limits disable invalid saves and persist
     );
   }
   await clickIn(WEEKLY_FORM, "Save weekly fields");
+  await waitClosed(WEEKLY_FORM);
   await saveDraft();
   await reload();
-  await waitScope(WEEKLY_FORM);
-  // The form renders before the saved values hydrate; wait for both.
-  await command([
-    "wait",
-    "--fn",
-    `[${MAX_ACTIVITY_NAME_LENGTH}, ${SAFE_TEXT_MAX_LENGTH}].every(length => Array.from(document.querySelectorAll('input, textarea')).some(field => field.value === 'x'.repeat(length)))`,
-  ]);
-  assert.equal(
-    await inputValue(WEEKLY_FORM, "Weekly title"),
-    "x".repeat(MAX_ACTIVITY_NAME_LENGTH),
-  );
+  // The saved title now names the Activity and its edit control; the
+  // description shows read-only in its header before the form is reopened.
+  const savedTitle = "x".repeat(MAX_ACTIVITY_NAME_LENGTH);
+  await waitButton(`Edit weekly fields for ${savedTitle}`);
+  await waitText("x".repeat(SAFE_TEXT_MAX_LENGTH));
+  await findRole("button", `Edit weekly fields for ${savedTitle}`, "click");
+  assert.equal(await inputValue(WEEKLY_FORM, "Weekly title"), savedTitle);
   assert.equal(
     await inputValue(WEEKLY_FORM, "Description"),
     "x".repeat(SAFE_TEXT_MAX_LENGTH),

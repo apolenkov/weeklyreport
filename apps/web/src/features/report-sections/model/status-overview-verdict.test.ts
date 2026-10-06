@@ -7,6 +7,7 @@ import {
   type PlanVerdict,
   type PlanVerdictWrite,
   planVerdictWrite,
+  priorVerdictState,
 } from "./status-overview-verdict";
 
 type SectionItem = ReportSectionReadModel["items"][number];
@@ -316,4 +317,67 @@ describe("planVerdictWrite without an occurrence in the selected week", () => {
       }).kind,
     ).toBe("blocked");
   });
+});
+
+describe("priorVerdictState", () => {
+  const prior = item();
+
+  it("is pending without an occurrence or while the carry is unconfirmed", () => {
+    expect(priorVerdictState(prior, null, true)).toBe("pending");
+    expect(priorVerdictState(prior, carried(), true)).toBe("pending");
+  });
+
+  it("shows nothing for a read-only lead until a verdict exists", () => {
+    expect(priorVerdictState(prior, null, false)).toBeNull();
+    expect(priorVerdictState(prior, carried(), false)).toBeNull();
+    expect(
+      priorVerdictState(prior, carried({ carriedOver: false }), false),
+    ).toBe("continue");
+  });
+
+  it("shows nothing for a cancelled prior plan", () => {
+    const cancelled = item({
+      resolution: { kind: "wont_do" } as SectionItem["resolution"],
+    });
+    expect(priorVerdictState(cancelled, null, true)).toBeNull();
+  });
+
+  it.each([
+    [{ workflowStatus: "done" }, "done"],
+    [{ workflowStatus: "paused", pausedReason: "Waiting" }, "paused"],
+    [{ workflowStatus: "postponed" }, "next"],
+    [{ type: "next" }, "next"],
+    [{ workflowStatus: "in_progress" }, "continue"],
+    [{ workflowStatus: "planned" }, "continue"],
+    [{ resolution: { kind: "wont_do" } }, "wont_do"],
+  ] as const)(
+    "reads a confirmed occurrence %j as %s",
+    (overrides, expected) => {
+      const linked = carried({
+        ...(overrides as Partial<SectionItem>),
+        carriedOver: false,
+      });
+      expect(priorVerdictState(prior, linked, true)).toBe(expected);
+    },
+  );
+
+  // The stamp must be what the lead chose: write, apply, read back.
+  it.each(["done", "continue", "paused", "next"] as const)(
+    "round-trips %s through the written patch",
+    (verdict) => {
+      for (const linked of [
+        carried(),
+        carried({ workflowStatus: "in_progress" }),
+        carried({ workflowStatus: "paused", pausedReason: "x" }),
+        carried({ type: "next", carriedOver: false }),
+      ]) {
+        const result = write(verdict, linked, "Waiting");
+        const after =
+          result.kind === "item-patch"
+            ? appliedItem(linked, result.patch)
+            : linked;
+        expect(priorVerdictState(prior, after, true)).toBe(verdict);
+      }
+    },
+  );
 });

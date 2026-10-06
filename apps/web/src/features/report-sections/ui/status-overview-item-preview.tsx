@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import { shortItemLabel } from "../../../shared/lib/format/short-label";
 import type {
@@ -13,11 +13,12 @@ import { ItemBadges, ResolutionNote } from "./status-overview-item-metadata";
 import { ItemActionZone } from "./status-overview-item-overflow";
 import { OutcomeAudit } from "./status-overview-outcome-audit";
 import { TrackedWorkComments } from "./status-overview-record-comments";
+import { VerdictRail, VerdictStamp } from "./status-overview-verdict-controls";
 
 const LONG_UPDATE_LENGTH = 120;
 
 function previewTextClassName(expanded: boolean, canCollapse: boolean): string {
-  return `${expanded || !canCollapse ? "block" : "line-clamp-2"} min-w-0 break-words text-sm leading-5 [overflow-wrap:anywhere]`;
+  return `${expanded || !canCollapse ? "block" : "line-clamp-2"} min-w-0 break-words text-sm leading-5`;
 }
 
 function PreviewText({
@@ -85,12 +86,24 @@ function TextDisclosure({
 }
 
 export function StatusOverviewItemPreview(props: ActionProps) {
-  const { item, onSetStatus, onConfirmItem } = props;
+  const { item, onSetStatus, onConfirmItem, onVerdict } = props;
   const [expanded, setExpanded] = useState(false);
+  const preview = useRef<HTMLDivElement>(null);
+  const verdict = item.source === "previous" ? item.verdict : undefined;
+  // The rail is replaced by the stamp once a verdict lands: move focus there.
+  const focusStamp = () =>
+    requestAnimationFrame(() =>
+      (
+        preview.current?.querySelector<HTMLElement>("[data-verdict-stamp]") ??
+        preview.current
+      )?.focus(),
+    );
   return (
     <div
+      ref={preview}
+      tabIndex={-1}
       data-overview-item-preview
-      className="group/item flex min-w-0 items-start gap-1 md:h-full"
+      className="group/item flex min-w-0 items-start gap-1 focus:outline-none md:h-full"
     >
       <StatusControl
         item={item}
@@ -103,6 +116,14 @@ export function StatusOverviewItemPreview(props: ActionProps) {
           expanded={expanded}
           onEditItem={props.onEditItem}
         />
+        <ItemBadges item={item} />
+        {verdict === "pending" && onVerdict ? (
+          <VerdictRail
+            item={item}
+            onVerdict={onVerdict}
+            onDecided={focusStamp}
+          />
+        ) : null}
         <OutcomeAudit item={item} />
         <TrackedWorkComments item={item} />
         <TextDisclosure
@@ -111,8 +132,10 @@ export function StatusOverviewItemPreview(props: ActionProps) {
           onToggle={() => setExpanded(!expanded)}
         />
       </div>
-      <div className="flex min-h-[var(--touch-target-min)] shrink-0 items-center gap-1">
-        <ItemBadges item={item} />
+      <div className="flex min-h-[var(--touch-target-min)] shrink-0 items-center">
+        {verdict !== undefined && verdict !== "pending" ? (
+          <VerdictStamp verdict={verdict} />
+        ) : null}
         <ItemActionZone {...props} />
       </div>
     </div>

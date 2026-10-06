@@ -125,6 +125,34 @@ describe("OpenWorkRegister disabled actions (R64)", () => {
   });
 });
 
+describe("OpenWorkRegister disabled reason with terminal history only", () => {
+  it("explains disabled reopen actions when no open items exist", () => {
+    const base = item("paused");
+    const terminal: OpenWorkRegisterItem = {
+      ...base,
+      action: { kind: "reopen", label: "Reopen in this report" },
+    };
+    render(
+      <OpenWorkRegister
+        query={{
+          openItems: [],
+          terminalItems: [terminal],
+          isLoading: false,
+          isComplete: true,
+          error: null,
+          retry: vi.fn(),
+        }}
+        actionsDisabled
+        disabledReason="Reopen the report to plan this work."
+        onOpen={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Reopen the report to plan this work.",
+    );
+  });
+});
+
 describe("OpenWorkRegister", () => {
   it("shows source provenance, pause/deferral reason, and explicit actions", () => {
     const onOpen = vi.fn<(item: OpenWorkRegisterItem) => void>();

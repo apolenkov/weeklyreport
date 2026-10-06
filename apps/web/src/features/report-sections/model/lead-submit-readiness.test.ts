@@ -173,7 +173,7 @@ describe("deriveLeadSubmitReadiness", () => {
     expect(readiness.blockingIssues).toEqual([
       {
         id: `submit-validation:UNCONFIRMED_CARRIED_ITEM:${CARRIED_ITEM_ID}`,
-        label: 'Update progress for "Implement the report".',
+        label: 'Review "Implement the report".',
         overviewFocus: `confirm:current:${CARRIED_ITEM_ID}`,
       },
     ]);

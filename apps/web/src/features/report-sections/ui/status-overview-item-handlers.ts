@@ -5,7 +5,15 @@ import type {
   StatusOverviewEditTarget,
   StatusOverviewItem,
 } from "../model/status-overview";
+import type { PlanVerdict } from "../model/status-overview-verdict";
 import type { StatusOverviewEditorSlot } from "./status-overview-editor-slot";
+
+/** Records a verdict for a Previously planned item; resolves to a failure message, or null when recorded. */
+export type VerdictHandler = (
+  item: StatusOverviewItem,
+  verdict: PlanVerdict,
+  reason?: string,
+) => Promise<string | null>;
 
 /** Overview row callbacks threaded from the shell into every timeline lane. */
 export interface ItemHandlers {
@@ -34,6 +42,7 @@ export interface ItemHandlers {
     ((item: StatusOverviewItem, focusKey?: string) => void) | undefined;
   readonly onRestorePlan?:
     ((item: StatusOverviewItem, focusKey?: string) => void) | undefined;
+  readonly onVerdict?: VerdictHandler | undefined;
   /** Linked Next commitment on the same Current item (never a type-flip). The
    * promise form is the audited replacement path, which reports its own
    * failure so the editor can retain the chosen text. */

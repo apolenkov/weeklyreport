@@ -7,6 +7,7 @@ import type {
   StatusOverviewUnit,
   StatusOverviewUnitKind,
 } from "./status-overview";
+import { priorVerdictState } from "./status-overview-verdict";
 
 type SectionItem = ReportSectionReadModel["items"][number];
 
@@ -52,13 +53,14 @@ interface PlanFacts {
 interface ItemProjectionContext {
   readonly input: StatusOverviewProjectionSource;
   readonly priorIds: ReadonlySet<string>;
-  readonly currentStableIds: ReadonlySet<string>;
+  /** The selected week's record per `stableId`; Current wins over Next. */
+  readonly currentByStableId: ReadonlyMap<string, SectionItem>;
 }
 
 function canResolvePlan(
   { source, stableId, recordId, resolution }: PlanFacts,
   input: StatusOverviewProjectionSource,
-  currentStableIds: ReadonlySet<string>,
+  currentStableIds: ReadonlyMap<string, SectionItem>,
 ): boolean {
   if (
     !input.currentItemsEditable ||
@@ -121,11 +123,20 @@ function canRestorePlan(
   );
 }
 
+function verdictField(
+  prior: SectionItem,
+  linked: SectionItem | null,
+  input: StatusOverviewProjectionSource,
+): Pick<StatusOverviewItem, "verdict"> {
+  const verdict = priorVerdictState(prior, linked, input.currentItemsEditable);
+  return verdict === null ? {} : { verdict };
+}
+
 function toOverviewItem(
   item: SectionItem,
   source: StatusOverviewItem["source"],
   index: number,
-  { input, priorIds, currentStableIds }: ItemProjectionContext,
+  { input, priorIds, currentByStableId }: ItemProjectionContext,
 ): StatusOverviewItem {
   const stableId = stableIdentity(item);
   const recordId = item.id ?? null;
@@ -152,13 +163,16 @@ function toOverviewItem(
     // so its comments stay.
     comments:
       source === "next" && nextStep !== null ? [] : (item.comments ?? []),
-    canResolve: canResolvePlan(facts, input, currentStableIds),
+    canResolve: canResolvePlan(facts, input, currentByStableId),
     canRestore: canRestorePlan(facts, input),
     workflowStatus: overviewWorkflowStatus(item, nextStep),
     needsConfirmation:
       source === "current" && item.type === "current" && item.carriedOver,
     continuity:
       source === "current" ? priorContinuity(item, input, priorIds) : null,
+    ...(source === "previous" && stableId !== null
+      ? verdictField(item, currentByStableId.get(stableId) ?? null, input)
+      : {}),
   };
 }
 
@@ -194,13 +208,18 @@ export function buildStatusOverviewColumns(
         return stableId === null ? [] : [stableId];
       }),
   );
-  const currentStableIds = new Set(
-    input.currentSection.items.flatMap((item) => {
-      const stableId = stableIdentity(item);
-      return stableId === null ? [] : [stableId];
-    }),
-  );
-  const context = { input, priorIds, currentStableIds };
+  const currentByStableId = new Map<string, SectionItem>();
+  for (const item of input.currentSection.items) {
+    const stableId = stableIdentity(item);
+    if (stableId === null) continue;
+    const known = currentByStableId.get(stableId);
+    if (
+      known === undefined ||
+      (known.type === "next" && item.type === "current")
+    )
+      currentByStableId.set(stableId, item);
+  }
+  const context = { input, priorIds, currentByStableId };
   const project = (
     items: readonly SectionItem[],
     source: StatusOverviewItem["source"],

@@ -1,4 +1,5 @@
 import type { StatusOverviewItem } from "../model/status-overview";
+import type { PlanVerdict } from "../model/status-overview-verdict";
 
 // Compact status glyphs for the Overview. Every icon is decorative: the
 // adjacent accessible name keeps the meaning, and each status has its own
@@ -104,4 +105,32 @@ export function ProgressIcon({
       ) : null}
     </Glyph>
   );
+}
+
+const NEXT_WEEK_SHAPE = (
+  <>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M8 12h8M13 9l3 3-3 3" />
+  </>
+);
+
+// Each verdict keeps the shape of the canonical status it records; Next week
+// has no status of its own, so it gets the one arrow glyph.
+const VERDICT_STATUS: Readonly<
+  Record<Exclude<PlanVerdict, "next">, ProgressIconStatus>
+> = {
+  done: "done",
+  continue: "in_progress",
+  paused: "paused",
+  wont_do: "wont_do",
+};
+
+export function VerdictIcon({ verdict }: { readonly verdict: PlanVerdict }) {
+  if (verdict === "next")
+    return (
+      <Glyph className={`${ICON_CLASS} ${NEUTRAL_TONE}`}>
+        {NEXT_WEEK_SHAPE}
+      </Glyph>
+    );
+  return <ProgressIcon status={VERDICT_STATUS[verdict]} />;
 }

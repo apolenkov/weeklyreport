@@ -37,25 +37,19 @@ function stageBadgeText(stageNames: readonly string[]): string {
   return rest.length > 0 ? `${short} +${String(rest.length)}` : short;
 }
 
-/** Corner badges at rest: the stage and the unplanned marker. */
+/** Stage badge at rest; the unplanned meaning lives in the status icon name. */
 export function ItemBadges({ item }: { readonly item: StatusOverviewItem }) {
+  if (item.stageNames.length === 0) return null;
   const stages = item.stageNames.join(", ");
   return (
-    <>
-      {item.continuity === "unplanned" ? (
-        <span className={BADGE_CLASS}>Unplanned</span>
-      ) : null}
-      {item.stageNames.length > 0 ? (
-        <span
-          role="img"
-          title={stages}
-          aria-label={`Stages: ${stages}`}
-          className={BADGE_CLASS}
-        >
-          {stageBadgeText(item.stageNames)}
-        </span>
-      ) : null}
-    </>
+    <span
+      role="img"
+      title={stages}
+      aria-label={`Stages: ${stages}`}
+      className={BADGE_CLASS}
+    >
+      {stageBadgeText(item.stageNames)}
+    </span>
   );
 }
 
