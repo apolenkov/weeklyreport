@@ -47,6 +47,8 @@ export IDP_CERT_B64=$(openssl x509 -in idp.crt -outform der | base64 | tr -d '\n
 export IDP_KEY_B64=$(openssl pkcs8 -topk8 -nocrypt -in idp.key -outform der | base64 | tr -d '\n')
 envsubst < "$HERE/realm.template.json" > realm.json
 printf '%s' "$IDP_CERT_B64" > idp-cert.b64
+# Login theme with role buttons; the passwords come from secrets.env, outside Git.
+envsubst '${PW_LEAD1} ${PW_HEAD} ${PW_VIEWER} ${PW_ADMIN}' < "$HERE/keycloak-theme/roles.js.tpl" > roles.js
 
 # Create namespace
 echo "Creating namespace $NS..."
@@ -64,6 +66,12 @@ kubectl -n "$NS" create secret generic weeklyreport-secrets \
 kubectl -n "$NS" create secret generic keycloak-realm \
   --from-file=realm.json \
   --from-literal=ADMIN_PASSWORD="$KC_ADMIN_PASSWORD" \
+  --dry-run=client -o yaml | kubectl apply -f -
+
+kubectl -n "$NS" create configmap keycloak-theme \
+  --from-file=theme.properties="$HERE/keycloak-theme/theme.properties" \
+  --from-file=roles.js \
+  --from-file=roles.css="$HERE/keycloak-theme/roles.css" \
   --dry-run=client -o yaml | kubectl apply -f -
 
 # Deploy Keycloak and Mailpit
