@@ -59,8 +59,8 @@ Paths below are relative to the repository root. To keep the tables readable:
 `button: Name` identifies the accessibility role and exact accessible name,
 unless marked as a pattern. The node:test harness drives agent-browser CLI role
 locators and freshly observed accessibility-tree refs. Scope repeated names to the named unit `article`,
-week `group`, form or dialog. Chrome AX exposes the headings `PRODUCTS` /
-`PROJECT ACTIVITIES` and week prefixes `PREVIOUSLY PLANNED`, `CURRENT WEEK` and
+week `group`, form or dialog. Chrome AX exposes the headings `Products` /
+`Project activities` and week prefixes `PREVIOUSLY PLANNED`, `CURRENT WEEK` and
 `NEXT WEEK`; week groups include the date/period because ColumnHeading labels
 both lines. Scope by those observed prefixes, not exact bare or title-case week
 names. Forms/radios retain their actual title-case accessible labels. Report
