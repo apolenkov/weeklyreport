@@ -8,7 +8,7 @@ Own lead-form draft state, reconciliation, serialization, save classification, o
 
 ### Requirement: The lead-form draft flow is one deep module
 
-The lead-form draft lifecycle (draft state, reconciliation, save and save-echo classification, optimistic-lock versioning, submit readiness, submit, merge application) MUST be owned by one module exposing one handle (`draft`, `dirty`, `version`, `save`, `submit`, `submitReadiness`, `apply`, plus the named branching handlers with their pending-request values); the form MUST NOT thread live data between hooks through cross-file mutable-ref protocols (the autosave engine's single mutable live-state holder lives in one engine module, stays private to it, and is exposed to the rest of the module only through intent operations, never as a ref, getter, or setter), and downstream components MUST NOT receive whole hook return types as props.
+The lead-form draft lifecycle (draft state, reconciliation, save and save-echo classification, optimistic-lock versioning, submit readiness, submit, merge application) MUST be owned by one module exposing one handle (`draft`, `dirty`, `version`, `save`, `submit`, `submitReadiness`, `apply`, plus the named branching handlers with their pending-request values); the form MUST NOT thread live data between hooks through cross-file mutable-ref protocols (the autosave engine's single mutable live-state holder lives in one engine module, stays private to it, and is exposed to the rest of the module only through intent operations, never as a shared ref or field accessor), and downstream components MUST NOT receive whole hook return types as props.
 
 #### Scenario: Draft interactions are unit-testable through the handle
 
