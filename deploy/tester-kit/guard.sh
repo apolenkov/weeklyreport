@@ -3,7 +3,7 @@ tester_guard() {
   local context
   context=$(kubectl config current-context)
   case "$context" in orbstack|docker-desktop) ;; *) echo "Refusing non-local context: $context" >&2; return 1 ;; esac
-  [ "$NS" = wr-tester ] || { echo "Synthetic writes require namespace wr-tester" >&2; return 1; }
+  case "$NS" in wr-tester | wr-tester-*) ;; *) echo "Synthetic writes require a wr-tester* namespace" >&2; return 1 ;; esac
   kubectl -n "$NS" exec deploy/api -- node -e '
     const u = new URL(process.env.DATABASE_URL);
     if (u.pathname !== "/customreport_e2e" || !["pgbouncer", "postgres"].includes(u.hostname)) throw Error("Unknown tester database");
