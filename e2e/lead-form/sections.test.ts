@@ -92,8 +92,19 @@ async function ref(role: string, name: string): Promise<string> {
   return match;
 }
 
+// Centre the button before clicking: at the viewport edge the fixed completion
+// cluster covers it and agent-browser refuses to click through.
+async function clickRef(target: string, session?: string): Promise<void> {
+  await command(["scrollintoview", target], session);
+  await command(["click", target], session);
+}
+
 async function click(name: string, session?: string): Promise<void> {
-  await findRole("button", name, "click", { session });
+  const matches = refsByRole(await snapshot(session), "button", name);
+  assert.equal(matches.length, 1, `Expected one button: ${name}`);
+  const target = matches.at(0);
+  assert.ok(target);
+  await clickRef(target, session);
 }
 
 async function scopedClick(
@@ -101,10 +112,7 @@ async function scopedClick(
   name: string,
   session?: string,
 ): Promise<void> {
-  await command(
-    ["click", await scopedRef(scope, "button", name, session)],
-    session,
-  );
+  await clickRef(await scopedRef(scope, "button", name, session), session);
 }
 
 async function select(name: string, value: string): Promise<void> {

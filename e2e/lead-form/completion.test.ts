@@ -111,24 +111,6 @@ async function clickScoped(
   await command(["click", await scopedRef(scope, role, name)]);
 }
 
-// Item actions (overflow, quick move, replan) stay in the accessibility tree
-// but are visually hidden until hover or focus within the item, and a hidden
-// control is not clickable. Focus reveals it the way a keyboard user would.
-async function clickRevealed(
-  scope: { role: string; name: string | RegExp },
-  role: string,
-  name: string,
-): Promise<void> {
-  const ref = await scopedRef(scope, role, name);
-  await command(["focus", ref]);
-  await command([
-    "wait",
-    "--fn",
-    `(() => { const control = document.activeElement; const zone = control?.closest('[data-overview-item-actions]'); return zone !== null && zone !== undefined && getComputedStyle(zone).opacity === '1' && zone.getBoundingClientRect().width >= control.getBoundingClientRect().width; })()`,
-  ]);
-  await command(["click", ref]);
-}
-
 // The status icon is the item's one primary control; its name carries the
 // current status, so focus is matched on the stable prefix.
 async function assertStatusFocused(text: string): Promise<void> {
@@ -150,15 +132,17 @@ async function pendingReviewCounters(): Promise<string[]> {
 }
 
 async function openEarlierWork(): Promise<void> {
-  await waitSnapshot(
-    (data) =>
-      refsByRole(data, "DisclosureTriangle", EARLIER_OPEN_WORK).length === 1,
+  // <summary> exposes no snapshot ref, so the summary is found by role and name.
+  const data = await waitSnapshot(
+    (observed) =>
+      scopeCount(observed, "DisclosureTriangle", EARLIER_OPEN_WORK) === 1,
     "Expected the collapsed earlier open work disclosure",
   );
-  await command([
-    "click",
-    await refFor("DisclosureTriangle", EARLIER_OPEN_WORK),
-  ]);
+  const name = /DisclosureTriangle "(\d+ earlier open items?)"/u.exec(
+    data.snapshot,
+  )?.[1];
+  assert(name, "Missing earlier open work summary name");
+  await findRole("DisclosureTriangle", name, "click");
   await waitText("E2E paused work");
 }
 
@@ -761,15 +745,16 @@ void test("past-report picker searches and restores focus without changing the d
 
 void test("published lineage disables Fill from without a write", async () => {
   await openLeadReport();
-  const formName = `Current week update for ${LEAD_FORM_FIXTURE.productName}`;
-  await clickRevealed(
+  const verdict = `Continue — ${LEAD_FORM_FIXTURE.previousText}`;
+  await clickScoped(
     { role: "article", name: `Product ${LEAD_FORM_FIXTURE.productName}` },
     "button",
-    `Plan this work: ${LEAD_FORM_FIXTURE.previousText}`,
+    verdict,
   );
-  await findRole("form", formName, "text");
-  await findRole("button", "Save update", "click");
-  await waitClosed({ role: "form", name: formName });
+  await waitSnapshot(
+    (data) => scopeCount(data, "button", verdict) === 0,
+    "Expected the verdict rail to close after Continue",
+  );
   await saveDraft();
   await reload();
   await waitButton("Fill from most recent submitted period");

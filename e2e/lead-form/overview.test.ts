@@ -102,20 +102,30 @@ async function namedRef(
   return ref;
 }
 
+// Centre the control before clicking: at the viewport edge the fixed completion
+// cluster covers it and agent-browser refuses to click through.
+async function clickRef(ref: string): Promise<void> {
+  await command(["scrollintoview", ref]);
+  await command(["click", ref]);
+}
+
+async function clickRole(role: string, name: string): Promise<void> {
+  await clickRef(await namedRef(role, name));
+}
+
 async function cancelUpdate(week: Week, parent: string = ACTIVITY) {
-  await command([
-    "click",
+  await clickRef(
     await namedRef("button", "Cancel", {
       role: "form",
       name: `${week} update for ${parent}`,
     }),
-  ]);
+  );
 }
 
 async function discardChanges() {
   const scope = { role: "alertdialog", name: "Discard changes?" };
   await waitScope(scope);
-  await command(["click", await namedRef("button", "Discard", scope)]);
+  await clickRef(await namedRef("button", "Discard", scope));
   await waitClosed(scope);
 }
 
@@ -127,7 +137,7 @@ async function expandUnit(
   const article = scopeSnapshot(data, "article", `${kind} ${parent}`);
   const more = refsByRole(article, "button", /^\+\d+ more$/);
   assert.ok(more.length <= 1);
-  if (more[0]) await command(["click", more[0]]);
+  if (more[0]) await clickRef(more[0]);
 }
 
 function weekGroups(
@@ -209,12 +219,12 @@ async function assertPlacement(week: Week, text: string): Promise<void> {
 
 // The status icon's accessible name is the item's only status text at rest.
 function statusButtonName(text: string): RegExp {
-  return new RegExp(`^Status of ${escapePattern(shortItemLabel(text))}: `, "u");
+  return new RegExp(`^Status of ${escapePattern(text)}: `, "u");
 }
 
 function statusLabelPattern(text: string, status: string): RegExp {
   return new RegExp(
-    `"Status of ${escapePattern(shortItemLabel(text))}: ${escapePattern(status)}(?: · Unplanned)?"`,
+    `"Status of ${escapePattern(text)}: ${escapePattern(status)}(?: · Unplanned)?"`,
     "u",
   );
 }
@@ -251,23 +261,32 @@ async function statusButtonCount(text: string): Promise<number> {
   return refsByRole(await snapshot(), "button", statusButtonName(text)).length;
 }
 
+// A linked Next projection shows its status as a read-only image, so one
+// status icon of either kind is what rules out a duplicate continuation.
+async function statusIconCount(text: string): Promise<number> {
+  const icon = new RegExp(
+    `(?:button|image) "Status of ${escapePattern(text)}: `,
+    "gu",
+  );
+  return Array.from((await snapshot()).snapshot.matchAll(icon)).length;
+}
+
 async function chooseStatus(
   column: Week,
   text: string,
   status: string,
   parent: string = ACTIVITY,
 ): Promise<void> {
-  await command([
-    "click",
+  await clickRef(
     await weekControl(column, text, "button", statusButtonName(text), parent),
-  ]);
-  await findRole("menuitem", status, "click");
+  );
+  await clickRole("menuitem", status);
 }
 
 async function revealClick(ref: string): Promise<void> {
   await command(["focus", ref]);
   await command(["wait", "--fn", ACTIONS_REVEALED]);
-  await command(["click", ref]);
+  await clickRef(ref);
 }
 
 async function moreAction(
@@ -286,7 +305,7 @@ async function moreAction(
       parent,
     ),
   );
-  await findRole("menuitem", `${action}: ${label}`, "click");
+  await clickRole("menuitem", `${action}: ${label}`);
 }
 
 async function quickMove(
@@ -314,10 +333,9 @@ function editItemName(text: string): string | RegExp {
 }
 
 async function openEditor(week: Week, text: string, parent: string = ACTIVITY) {
-  await command([
-    "click",
+  await clickRef(
     await weekControl(week, text, "button", editItemName(text), parent),
-  ]);
+  );
   await namedBlock("form", `${week} update for ${parent}`);
 }
 
@@ -325,18 +343,18 @@ async function saveUpdate(
   week: Week,
   parent: string = ACTIVITY,
 ): Promise<void> {
-  await findRole("button", "Save update", "click");
+  await clickRole("button", "Save update");
   await waitClosed({ role: "form", name: `${week} update for ${parent}` });
   await saveDraft();
 }
 
 async function startActivity(text: string, week: Week = "Current week") {
-  await findRole("button", `Add item to ${ACTIVITY}`, "click");
+  await clickRole("button", `Add item to ${ACTIVITY}`);
   await namedBlock("form", `Current week update for ${ACTIVITY}`);
   await fill("Description *", text);
   if (week === "Next week") {
-    await findRole("radio", week, "click");
-    await findRole("button", "Planned", "click");
+    await clickRole("radio", week);
+    await clickRole("button", "Planned");
   }
 }
 
@@ -346,7 +364,7 @@ async function addActivity(text: string, week: Week = "Current week") {
 }
 
 async function pressSaveShortcut(label: string): Promise<void> {
-  await command(["click", await namedRef("textbox", label)]);
+  await clickRef(await namedRef("textbox", label));
   await command([
     "press",
     process.platform === "darwin" ? "Meta+Enter" : "Control+Enter",
@@ -541,7 +559,7 @@ async function openWorkOutcome(text: string, action: string): Promise<void> {
   );
   const ref = refs[0];
   assert.ok(ref);
-  await command(["click", ref]);
+  await clickRef(ref);
   await waitText("Resolve plan");
 }
 
@@ -551,13 +569,13 @@ async function recoverWork(
   outcome: "Continue" | "Plan next",
 ) {
   await openWorkOutcome(text, action);
-  await findRole("button", outcome, "click");
+  await clickRole("button", outcome);
   const recovered = `${text} recovered`;
   await fill(
     outcome === "Continue" ? "This period's update" : "Next-period commitment",
     recovered,
   );
-  await findRole("button", "Save outcome", "click");
+  await clickRole("button", "Save outcome");
   await waitClosed({ role: "form", name: "Resolve plan" });
   await reloadOverview();
   await assertNotInRegister(text);
@@ -698,13 +716,13 @@ void test("overview disclosures reveal long updates and additional rows", async 
   );
   const more = refs[0];
   assert.ok(more);
-  await command(["click", more]);
+  await clickRef(more);
   const expand = await namedRef(
     "button",
     `Show full update: ${shortItemLabel(LONG_UPDATE)}`,
   );
   assert.equal(await getAttr(expand, "aria-expanded"), "false");
-  await command(["click", expand]);
+  await clickRef(expand);
   const collapse = await namedRef(
     "button",
     `Show less: ${shortItemLabel(LONG_UPDATE)}`,
@@ -713,7 +731,7 @@ void test("overview disclosures reveal long updates and additional rows", async 
   assert.ok(
     (await weekBlock("Current week", LONG_UPDATE)).includes(LONG_UPDATE),
   );
-  await command(["click", collapse]);
+  await clickRef(collapse);
   assert.equal(
     await getAttr(
       await namedRef(
@@ -724,7 +742,7 @@ void test("overview disclosures reveal long updates and additional rows", async 
     ),
     "false",
   );
-  await findRole("button", "Show less", "click");
+  await clickRole("button", "Show less");
   const collapsed = await snapshot();
   const scope = scopeSnapshot(collapsed, "article", `Activity ${ACTIVITY}`);
   const moreAfter = refsByRole(scope, "button", /^\+\d+ more$/);
@@ -765,7 +783,7 @@ void test("health inspection preserves pending input and restores focus", async 
   await expandHealth();
   const pulse = `Inspect health for ${PRODUCT}`;
   const detailLabel = `Health details for ${PRODUCT}`;
-  await findRole("button", pulse, "click");
+  await clickRole("button", pulse);
   const detail = await namedBlock("region", detailLabel);
   assert.ok(detail.includes(`All stages for ${PRODUCT}`));
   for (const label of [
@@ -784,7 +802,7 @@ void test("health inspection preserves pending input and restores focus", async 
     "Митигация: фолбэк через очередь повтора + эскалация партнёру",
   ])
     assert.ok(detail.includes(text));
-  await findRole("button", "Close health details", "click");
+  await clickRole("button", "Close health details");
   assert.equal(
     (
       await command([
@@ -795,7 +813,7 @@ void test("health inspection preserves pending input and restores focus", async 
     pulse,
   );
   assert.equal(await value("Description *"), pending);
-  await findRole("button", PRODUCT, "click");
+  await clickRole("button", PRODUCT);
   await namedBlock("region", detailLabel);
   await command([
     "wait",
@@ -825,7 +843,7 @@ void test("activity health stays stage-free and historical health stays read-onl
   await openLeadReport();
   const before = await writeCount();
   const product = await roleText("article", `Product ${PRODUCT}`);
-  await findRole("button", ACTIVITY, "click");
+  await clickRole("button", ACTIVITY);
   const data = await snapshot();
   const detail = scopeSnapshot(
     data,
@@ -838,17 +856,17 @@ void test("activity health stays stage-free and historical health stays read-onl
     ),
   );
   assert.equal(scopeCount(detail, "list", `All stages for ${ACTIVITY}`), 0);
-  await findRole("button", "Close health details", "click");
+  await clickRole("button", "Close health details");
   assert.equal(await roleText("article", `Product ${PRODUCT}`), product);
   await historyText(LEAD_FORM_FIXTURE.previousReportId);
-  await findRole("button", PRODUCT, "click");
+  await clickRole("button", PRODUCT);
   const historical = await namedBlock(
     "region",
     `Health details for ${PRODUCT}`,
   );
   assert.ok(historical.includes("Read-only inspection."));
   assert.doesNotMatch(historical, /- (?:textbox|checkbox|radio|combobox)\b/u);
-  await findRole("button", "Close health details", "click");
+  await clickRole("button", "Close health details");
   assert.equal(await writeCount(), before);
 });
 
@@ -860,7 +878,7 @@ void test("the item editor saves current and next week through the canonical for
     await openEditor(week, text);
     const updated = `${text} updated`;
     await fill("Description *", updated);
-    await findRole("button", "In progress", "click");
+    await clickRole("button", "In progress");
     await pressSaveShortcut("Description *");
     await waitClosed({ role: "form", name: `${week} update for ${ACTIVITY}` });
     await saveDraft();
@@ -873,10 +891,9 @@ void test("the item editor saves current and next week through the canonical for
     await cancelUpdate(week);
     await waitClosed({ role: "form", name: `${week} update for ${ACTIVITY}` });
   }
-  await findRole(
+  await clickRole(
     "button",
     `Add item to ${LEAD_FORM_FIXTURE.singleStageProductName}`,
-    "click",
   );
   await fill("Description *", "E2E canonical product stages");
   await saveUpdate("Current week", LEAD_FORM_FIXTURE.singleStageProductName);
@@ -897,14 +914,14 @@ void test("More actions and Quick move edit details and move between current and
   const text = "E2E reversible week placement";
   await addActivity(text);
   await moreAction("Current week", text, "Edit details");
-  await findRole("radio", "Next week", "click");
+  await clickRole("radio", "Next week");
   await fill("Description *", `${text} discarded`);
   await command(["press", "Escape"]);
   await discardChanges();
   await reloadOverview();
   assert.ok((await weekBlock("Current week", text)).includes(text));
   await moreAction("Current week", text, "Edit details");
-  await findRole("radio", "Next week", "click");
+  await clickRole("radio", "Next week");
   await namedBlock("form", `Next week update for ${ACTIVITY}`);
   await saveUpdate("Next week");
   await reloadOverview();
@@ -971,9 +988,9 @@ for (const week of ["Current week", "Next week"] as const) {
       await openLeadReport();
       const text = `E2E ${week} ${status} status`;
       await startActivity(text, week);
-      await findRole("button", status, "click");
+      await clickRole("button", status);
       if (status === "Paused") {
-        await findRole("button", "Save update", "click");
+        await clickRole("button", "Save update");
         await waitText("A reason is required to pause an item.");
         await fill("Pause reason *", "E2E waiting on a dependency");
       }
@@ -1031,18 +1048,18 @@ void test("leaving Paused clears the saved reason", async () => {
   await openLeadReport();
   const text = "E2E pause reason is cleared";
   await startActivity(text);
-  await findRole("button", "Paused", "click");
+  await clickRole("button", "Paused");
   await fill("Pause reason *", "E2E reason to clear");
   await saveUpdate("Current week");
   await openEditor("Current week", text);
-  await findRole("button", "In progress", "click");
+  await clickRole("button", "In progress");
   await saveUpdate("Current week");
   await reloadOverview();
   assert.ok(
     !(await weekBlock("Current week", text)).includes("E2E reason to clear"),
   );
   await openEditor("Current week", text);
-  await findRole("button", "Paused", "click");
+  await clickRole("button", "Paused");
   assert.equal(await value("Pause reason *"), "");
   await cancelUpdate("Current week");
   await discardChanges();
@@ -1094,7 +1111,7 @@ void test("Resolve plan records Done immediately with retained audit", async () 
   const text = "E2E terminal completed result";
   await addActivity(text);
   await moreAction("Current week", text, "Update status");
-  await findRole("button", "Done", "click");
+  await clickRole("button", "Done");
   await waitClosed({ role: "form", name: "Resolve plan" });
   await reloadOverview();
   await assertStatus("Current week", text, "Done");
@@ -1114,7 +1131,7 @@ void test("Resolve plan completes a Next plan in Current with retained audit", a
   const text = "E2E completed next-period plan";
   await addActivity(text, "Next week");
   await moreAction("Next week", text, "Update status");
-  await findRole("button", "Done", "click");
+  await clickRole("button", "Done");
   await waitClosed({ role: "form", name: "Resolve plan" });
   await reloadOverview();
   await assertPlacement("Current week", text);
@@ -1137,21 +1154,20 @@ for (const week of ["Current week", "Next week"] as const) {
     await addActivity(text, week);
     await moreAction(week, text, "Update status");
     const before = await writeCount();
-    await command([
-      "click",
+    await clickRef(
       await namedRef("button", "Cancel", {
         role: "form",
         name: "Resolve plan",
       }),
-    ]);
+    );
     await waitClosed({ role: "form", name: "Resolve plan" });
     assert.equal(await writeCount(), before);
     await moreAction(week, text, "Update status");
-    await findRole("button", "Won't do", "click");
-    await findRole("button", "Save outcome", "click");
+    await clickRole("button", "Won't do");
+    await clickRole("button", "Save outcome");
     await waitText("Explain why this plan will not be done.");
     await fill("Why won't this be done?", "E2E superseded requirement");
-    await findRole("button", "Save outcome", "click");
+    await clickRole("button", "Save outcome");
     await waitClosed({ role: "form", name: "Resolve plan" });
     await reloadOverview();
     await assertStatus(week, text, "Won't do");
@@ -1202,7 +1218,7 @@ void test("open work Done records the changed result and readable prior text", a
   await openLeadReport();
   await openWorkOutcome(OPEN_WORK_FIXTURE.continue, "Continue work");
   await fill("This period's update", "E2E finished recovered historical work");
-  await findRole("button", "Done", "click");
+  await clickRole("button", "Done");
   await waitClosed({ role: "form", name: "Resolve plan" });
   await reloadOverview();
   await assertStatus(
@@ -1336,7 +1352,7 @@ async function fillVerdictReason(label: string, reason: string) {
     await verdictControl("textbox", `${label} reason — ${PREVIOUS_TEXT}`),
     reason,
   ]);
-  await command(["click", await verdictControl("button", "Save")]);
+  await clickRef(await verdictControl("button", "Save"));
 }
 
 void test("Previously planned offers one verdict per item, with Won't do in the overflow", async () => {
@@ -1357,10 +1373,9 @@ void test("Previously planned offers one verdict per item, with Won't do in the 
     scopeCount(rail, "button", `More actions for ${PREVIOUS_TEXT}`),
     1,
   );
-  await command([
-    "click",
+  await clickRef(
     await verdictControl("button", `More actions for ${PREVIOUS_TEXT}`),
-  ]);
+  );
   assert.equal(
     scopeCount(await snapshot(), "menuitem", `Won't do — ${PREVIOUS_TEXT}`),
     1,
@@ -1377,10 +1392,9 @@ for (const [verdict, column, status] of [
     await openLeadReport();
     const previous = await historyText(LEAD_FORM_FIXTURE.previousReportId);
     await openLeadReport();
-    await command([
-      "click",
+    await clickRef(
       await verdictControl("button", `${verdict} — ${PREVIOUS_TEXT}`),
-    ]);
+    );
     await assertDecided(verdict);
     await assertStatus(column, PREVIOUS_TEXT, status, PRODUCT);
     await reloadOverview();
@@ -1399,13 +1413,10 @@ void test("Previously planned Paused verdict needs a reason and writes the selec
   const previous = await historyText(LEAD_FORM_FIXTURE.previousReportId);
   await openLeadReport();
   const reason = "E2E verdict pause reason";
-  await command([
-    "click",
-    await verdictControl("button", `Paused — ${PREVIOUS_TEXT}`),
-  ]);
+  await clickRef(await verdictControl("button", `Paused — ${PREVIOUS_TEXT}`));
   await waitVerdictReason("Paused");
   const before = await writeCount("leadForm.resolvePlan");
-  await command(["click", await verdictControl("button", "Save")]);
+  await clickRef(await verdictControl("button", "Save"));
   await waitText("Add a one-line reason.");
   assert.equal(await writeCount("leadForm.resolvePlan"), before);
   await fillVerdictReason("Paused", reason);
@@ -1430,11 +1441,10 @@ void test("Previously planned Won't do verdict keeps its reason and leaves the p
   const previous = await historyText(LEAD_FORM_FIXTURE.previousReportId);
   await openLeadReport();
   const reason = "E2E verdict won't do reason";
-  await command([
-    "click",
+  await clickRef(
     await verdictControl("button", `More actions for ${PREVIOUS_TEXT}`),
-  ]);
-  await findRole("menuitem", `Won't do — ${PREVIOUS_TEXT}`, "click");
+  );
+  await clickRole("menuitem", `Won't do — ${PREVIOUS_TEXT}`);
   await fillVerdictReason("Won't do", reason);
   await assertDecided("Won't do");
   await reloadOverview();
@@ -1463,21 +1473,16 @@ void test("earlier open work is one collapsed line that expands to its items", a
     assert.ok((await openWorkRow(text)).snapshot.includes(action), text);
 });
 
-void test("Previous historical replan creates active work without changing its plan", async () => {
+void test("Previous verdict then an explicit edit replans active work without changing its plan", async () => {
   await openLeadReport();
   const previous = await historyText(LEAD_FORM_FIXTURE.previousReportId);
   await openLeadReport();
   const text = LEAD_FORM_FIXTURE.previousText;
-  await revealClick(
-    await weekControl(
-      "Previously planned",
-      text,
-      "button",
-      `Plan this work: ${shortItemLabel(text)}`,
-      PRODUCT,
-    ),
-  );
-  await namedBlock("form", `Current week update for ${PRODUCT}`);
+  // The verdict rail replaced the replan icon: Continue creates the active
+  // occurrence, which the lead then rewrites through the canonical editor.
+  await clickRef(await verdictControl("button", `Continue — ${text}`));
+  await assertDecided("Continue");
+  await openEditor("Current week", text, PRODUCT);
   await fill("Description *", "E2E explicitly replanned prior work");
   await saveUpdate("Current week", PRODUCT);
   await reloadOverview();
@@ -1541,7 +1546,7 @@ void test("carried work confirms through the status icon without duplicate conti
     "Planned",
     parent,
   );
-  assert.equal(await statusButtonCount(LEAD_FORM_FIXTURE.explicitNextText), 1);
+  assert.equal(await statusIconCount(LEAD_FORM_FIXTURE.explicitNextText), 1);
 });
 
 void test("carried work still confirms when its editor is saved", async () => {
@@ -1567,7 +1572,7 @@ void test("Confirm all as continue confirms every suggested continuation in one 
     (await weekBlock("Current week", text, parent)).includes(CARRIED_MARKER),
   );
   assert.ok(pending(await snapshot()) > 0);
-  await findRole("button", "Confirm all as continue", "click");
+  await clickRole("button", "Confirm all as continue");
   await waitSnapshot(
     (data) =>
       pending(data) === 0 &&
@@ -1622,10 +1627,7 @@ for (const week of ["Current week", "Next week"] as const) {
       ).length,
       0,
     );
-    assert.equal(
-      await statusButtonCount(LEAD_FORM_FIXTURE.explicitNextText),
-      1,
-    );
+    assert.equal(await statusIconCount(LEAD_FORM_FIXTURE.explicitNextText), 1);
     await findRole("DisclosureTriangle", "History · 1", "click");
     const row = await weekBlock(
       week,
@@ -1675,7 +1677,7 @@ void test("Parent and stages retains pending outcome details and saves the chose
   await waitOpenWork();
   const before = await writeCount();
   await openWorkOutcome(OPEN_WORK_FIXTURE.continue, "Continue work");
-  await findRole("button", "Continue", "click");
+  await clickRole("button", "Continue");
   await waitText("Parent and stages");
   const initial = scopeSnapshot(await snapshot(), "form", "Resolve plan");
   assert.equal(refsByRole(initial, "combobox", "Parent").length, 0);
@@ -1686,7 +1688,7 @@ void test("Parent and stages retains pending outcome details and saves the chose
   await findRole("DisclosureTriangle", "Parent and stages", "click");
   await command(["select", await namedRef("combobox", "Parent"), PRODUCT]);
   await waitText("SDLC Stages");
-  await findRole("checkbox", "Development", "click");
+  await clickRole("checkbox", "Development");
   assert.equal(await stageChecked("Development"), true);
   const chosenParent = await selectedParent();
   assert.match(chosenParent, /^product:/u);
@@ -1703,7 +1705,7 @@ void test("Parent and stages retains pending outcome details and saves the chose
   assert.equal(await value("This period's update"), result);
   assert.equal(await value("Next step (optional)"), nextStep);
   assert.equal(await writeCount(), before);
-  await findRole("button", "Save outcome", "click");
+  await clickRole("button", "Save outcome");
   await waitText("Plan outcome saved");
   await waitClosed({ role: "form", name: "Resolve plan" });
   await reloadOverview();
@@ -1711,7 +1713,7 @@ void test("Parent and stages retains pending outcome details and saves the chose
   assert.ok(active.includes("Development"));
   await assertStatus("Current week", result, "In progress", PRODUCT);
   await assertStatus("Next week", nextStep, "Planned", PRODUCT);
-  assert.equal(await statusButtonCount(nextStep), 1);
+  assert.equal(await statusIconCount(nextStep), 1);
   await openEditor("Current week", result, PRODUCT);
   assert.equal(await stageChecked("Development"), true);
   assert.equal(await value("Description *"), result);
@@ -1732,12 +1734,12 @@ void test("outcome and restore failures retain inputs and retry with audit", asy
   const reason = "E2E cancellation input retained after a transport failure";
   await addActivity(text);
   await moreAction("Current week", text, "Update status");
-  await findRole("button", "Won't do", "click");
+  await clickRole("button", "Won't do");
   await fill("Why won't this be done?", reason);
   const resolveRoute = "**/trpc/*leadForm.resolvePlan*";
   await command(["network", "route", resolveRoute, "--abort"]);
   try {
-    await findRole("button", "Save outcome", "click");
+    await clickRole("button", "Save outcome");
     assert.ok((await waitPlanFailure("Resolve plan")).includes(text));
     assert.equal(await value("Why won't this be done?"), reason);
     const unresolved = await weekBlock("Current week", text);
@@ -1747,7 +1749,7 @@ void test("outcome and restore failures retain inputs and retry with audit", asy
   } finally {
     await command(["network", "unroute", resolveRoute]);
   }
-  await findRole("button", "Save outcome", "click");
+  await clickRole("button", "Save outcome");
   await waitText("Plan outcome saved");
   await waitClosed({ role: "form", name: "Resolve plan" });
   await reloadOverview();
@@ -1778,7 +1780,7 @@ void test("outcome and restore failures retain inputs and retry with audit", asy
   } finally {
     await command(["network", "unroute", restoreRoute]);
   }
-  await findRole("button", "Restore plan", "click");
+  await clickRole("button", "Restore plan");
   await waitText("Plan restored");
   await waitClosed({ role: "form", name: "Restore plan" });
   await reloadOverview();
@@ -1801,7 +1803,7 @@ void test("Continue outcome limits preserve a result and optional next step of 5
   const previous = await historyText(OPEN_WORK_FIXTURE.archiveReportId);
   await openLeadReport();
   await openWorkOutcome(OPEN_WORK_FIXTURE.continue, "Continue work");
-  await findRole("button", "Continue", "click");
+  await clickRole("button", "Continue");
   const result = await fillOutcomeBoundary(
     "This period's update",
     "E2E current outcome boundary ",
@@ -1815,11 +1817,7 @@ void test("Continue outcome limits preserve a result and optional next step of 5
   await waitClosed({ role: "form", name: "Resolve plan" });
   await reloadOverview();
   await weekBlock("Next week", nextStep);
-  await findRole(
-    "button",
-    `Show full update: ${shortItemLabel(nextStep)}`,
-    "click",
-  );
+  await clickRole("button", `Show full update: ${shortItemLabel(nextStep)}`);
   assert.equal(
     await getAttr(
       await namedRef("button", `Show less: ${shortItemLabel(nextStep)}`),
@@ -1830,7 +1828,7 @@ void test("Continue outcome limits preserve a result and optional next step of 5
   const next = await weekBlock("Next week", nextStep);
   assert.ok(next.includes(nextStep));
   await assertStatus("Next week", nextStep, "Planned");
-  assert.equal(await statusButtonCount(nextStep), 1);
+  assert.equal(await statusIconCount(nextStep), 1);
   await openEditor("Current week", result);
   assert.equal(await value("Description *"), result);
   await cancelUpdate("Current week");
@@ -1846,12 +1844,12 @@ void test("Plan next outcome limit preserves a commitment of 500 characters", as
   const previous = await historyText(OPEN_WORK_FIXTURE.archiveReportId);
   await openLeadReport();
   await openWorkOutcome(OPEN_WORK_FIXTURE.planned, "Plan this work");
-  await findRole("button", "Plan next", "click");
+  await clickRole("button", "Plan next");
   const commitment = await fillOutcomeBoundary(
     "Next-period commitment",
     "E2E next outcome boundary ",
   );
-  await findRole("button", "Save outcome", "click");
+  await clickRole("button", "Save outcome");
   await waitText("Plan outcome saved");
   await waitClosed({ role: "form", name: "Resolve plan" });
   await reloadOverview();
@@ -1870,12 +1868,12 @@ void test("Won't do outcome limit preserves a reason of 500 characters in histor
   const text = "E2E cancellation boundary target";
   await addActivity(text);
   await moreAction("Current week", text, "Update status");
-  await findRole("button", "Won't do", "click");
+  await clickRole("button", "Won't do");
   const reason = await fillOutcomeBoundary(
     "Why won't this be done?",
     "E2E cancellation reason boundary ",
   );
-  await findRole("button", "Save outcome", "click");
+  await clickRole("button", "Save outcome");
   await waitText("Plan outcome saved");
   await waitClosed({ role: "form", name: "Resolve plan" });
   await reloadOverview();
@@ -1900,7 +1898,7 @@ void test("historical plan item limit retains input without changing saved work"
   const savedData = await roleText("region", "Status overview");
   const savedWork = await roleText("region", REGISTER_NAME);
   await openWorkOutcome(OPEN_WORK_FIXTURE.continue, "Continue work");
-  await findRole("button", "Continue", "click");
+  await clickRole("button", "Continue");
   const result = "E2E item limit keeps this historical result unsaved";
   const nextStep = "E2E item limit keeps this next commitment unsaved";
   await fill("This period's update", result);
@@ -1908,7 +1906,7 @@ void test("historical plan item limit retains input without changing saved work"
   const scope = { role: "form", name: "Resolve plan" };
   const before = await writeCount("leadForm.resolvePlan");
   for (const attempt of [1, 2]) {
-    await command(["click", await namedRef("button", "Save outcome", scope)]);
+    await clickRef(await namedRef("button", "Save outcome", scope));
     await waitText(ITEM_LIMIT_MESSAGE);
     await waitText("Save outcome");
     const form = scopeSnapshot(await snapshot(), scope.role, scope.name);
@@ -1925,7 +1923,7 @@ void test("historical plan item limit retains input without changing saved work"
       null,
     );
   }
-  await command(["click", await namedRef("button", "Cancel", scope)]);
+  await clickRef(await namedRef("button", "Cancel", scope));
   await waitClosed(scope);
   await reloadOverview();
   await expandOpenWork();
