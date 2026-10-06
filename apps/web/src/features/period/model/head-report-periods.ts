@@ -18,15 +18,18 @@ function historyEntryToPeriod(
   activeReportId: string | null,
   lifecycleCandidate: PrependCandidate | undefined,
 ): ReportPeriod {
+  const live = lifecycleCandidate?.data;
   return toNavigationPeriod({
     id: entry.reportId,
-    periodStart: entry.periodStart,
-    periodEnd: entry.periodEnd,
-    archived: lifecycleCandidate?.data.archived ?? entry.archived,
+    // A live lifecycle candidate owns the current envelope: a reopened period
+    // may be re-dated while the compiled entry keeps the frozen snapshot.
+    periodStart: live?.periodStart ?? entry.periodStart,
+    periodEnd: live?.periodEnd ?? entry.periodEnd,
+    archived: live?.archived ?? entry.archived,
     isCurrent: entry.reportId === activeReportId,
     periodState:
-      lifecycleCandidate?.data.periodState ??
-      (entry.archived ? "archived" : "published"),
+      live?.periodState ??
+      (entry.archived ? "archived" : entry.reopened ? "open" : "published"),
   });
 }
 
