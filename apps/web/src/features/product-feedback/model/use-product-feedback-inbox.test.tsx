@@ -62,7 +62,9 @@ describe("useProductFeedbackInbox mutations", () => {
   });
 
   it("uses the workbench contracts and replaces records without a loading flash", async () => {
-    fetchMock.mockResolvedValueOnce(response({ feedback: [feedback] }));
+    fetchMock.mockResolvedValueOnce(
+      response({ feedback: [feedback], total: 1 }),
+    );
     const onError = vi.fn();
     const { result } = renderHook(() => useProductFeedbackInbox(onError));
     await waitFor(() => expect(result.current.view).toBe("ready"));
@@ -132,7 +134,9 @@ describe("useProductFeedbackInbox mutations", () => {
   });
 
   it("applies the server-returned record on status change, not a local patch", async () => {
-    fetchMock.mockResolvedValueOnce(response({ feedback: [feedback] }));
+    fetchMock.mockResolvedValueOnce(
+      response({ feedback: [feedback], total: 1 }),
+    );
     const { result } = renderHook(() => useProductFeedbackInbox(vi.fn()));
     await waitFor(() => expect(result.current.view).toBe("ready"));
 
@@ -160,7 +164,7 @@ describe("useProductFeedbackInbox mutations", () => {
 
   it("keeps current records visible when a mutation fails", async () => {
     fetchMock
-      .mockResolvedValueOnce(response({ feedback: [feedback] }))
+      .mockResolvedValueOnce(response({ feedback: [feedback], total: 1 }))
       .mockResolvedValueOnce(response({}, false));
     const onError = vi.fn();
     const { result } = renderHook(() => useProductFeedbackInbox(onError));
@@ -171,5 +175,106 @@ describe("useProductFeedbackInbox mutations", () => {
     ).rejects.toThrow("Feedback update failed");
     expect(result.current.view).toBe("ready");
     expect(result.current.items[0]?.message).toBe(feedback.message);
+  });
+});
+
+describe("useProductFeedbackInbox loaded scope", () => {
+  const fetchMock = vi.fn<typeof fetch>();
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("exposes loadedCount, total and hasMore from the bounded response", async () => {
+    fetchMock.mockResolvedValueOnce(
+      response({ feedback: [feedback], total: 150 }),
+    );
+    const { result } = renderHook(() => useProductFeedbackInbox(vi.fn()));
+
+    await waitFor(() => expect(result.current.view).toBe("ready"));
+    expect(result.current.loadedCount).toBe(1);
+    expect(result.current.total).toBe(150);
+    expect(result.current.hasMore).toBe(true);
+  });
+
+  it("reports a full scope without truncation when total fits the page", async () => {
+    fetchMock.mockResolvedValueOnce(
+      response({ feedback: [feedback], total: 1 }),
+    );
+    const { result } = renderHook(() => useProductFeedbackInbox(vi.fn()));
+
+    await waitFor(() => expect(result.current.view).toBe("ready"));
+    expect(result.current.loadedCount).toBe(1);
+    expect(result.current.total).toBe(1);
+    expect(result.current.hasMore).toBe(false);
+  });
+
+  it("starts empty when the scoped total is zero", async () => {
+    fetchMock.mockResolvedValueOnce(response({ feedback: [], total: 0 }));
+    const { result } = renderHook(() => useProductFeedbackInbox(vi.fn()));
+
+    await waitFor(() => expect(result.current.view).toBe("empty"));
+    expect(result.current.loadedCount).toBe(0);
+    expect(result.current.total).toBe(0);
+    expect(result.current.hasMore).toBe(false);
+  });
+
+  it("keeps loaded counts when filters match nothing in the loaded slice", async () => {
+    fetchMock.mockResolvedValueOnce(
+      response({ feedback: [feedback], total: 150 }),
+    );
+    const { result } = renderHook(() => useProductFeedbackInbox(vi.fn()));
+    await waitFor(() => expect(result.current.view).toBe("ready"));
+
+    act(() => {
+      result.current.setSearch("no such text");
+    });
+
+    expect(result.current.view).toBe("empty");
+    expect(result.current.loadedCount).toBe(1);
+    expect(result.current.total).toBe(150);
+    expect(result.current.hasMore).toBe(true);
+  });
+
+  it("keeps total when a mutation replaces a loaded record", async () => {
+    fetchMock.mockResolvedValueOnce(
+      response({ feedback: [feedback], total: 150 }),
+    );
+    const { result } = renderHook(() => useProductFeedbackInbox(vi.fn()));
+    await waitFor(() => expect(result.current.view).toBe("ready"));
+
+    const changed = { ...feedback, status: "resolved" as const };
+    fetchMock.mockResolvedValueOnce(response(changed));
+    await act(() => result.current.changeStatus(feedback.id, "resolved"));
+
+    expect(result.current.loadedCount).toBe(1);
+    expect(result.current.total).toBe(150);
+    expect(result.current.hasMore).toBe(true);
+  });
+
+  it("decrements total only after an acknowledged delete", async () => {
+    fetchMock.mockResolvedValueOnce(
+      response({ feedback: [feedback], total: 150 }),
+    );
+    const { result } = renderHook(() => useProductFeedbackInbox(vi.fn()));
+    await waitFor(() => expect(result.current.view).toBe("ready"));
+
+    fetchMock.mockResolvedValueOnce(response({}, false));
+    await expect(
+      act(() => result.current.deleteFeedback(feedback.id)),
+    ).rejects.toThrow("Feedback delete failed");
+    expect(result.current.total).toBe(150);
+    expect(result.current.loadedCount).toBe(1);
+
+    fetchMock.mockResolvedValueOnce(response({}, true));
+    await act(() => result.current.deleteFeedback(feedback.id));
+    expect(result.current.total).toBe(149);
+    expect(result.current.loadedCount).toBe(0);
+    expect(result.current.hasMore).toBe(true);
   });
 });

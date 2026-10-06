@@ -22,6 +22,7 @@ const FEEDBACK_UPDATE_ERROR = "Feedback update failed";
 const SAME_ORIGIN = "same-origin";
 const feedbackInboxSchema = z.object({
   feedback: z.array(feedbackResponseSchema),
+  total: z.number().int().nonnegative(),
 });
 interface FeedbackInboxItem {
   readonly id: string;
@@ -61,8 +62,15 @@ function fromResponse(parsed: FeedbackResponse): FeedbackInboxItem {
   };
 }
 
+interface InboxSnapshot {
+  readonly items: FeedbackInboxItem[];
+  readonly total: number;
+}
+
+const EMPTY_INBOX: InboxSnapshot = { items: [], total: 0 };
+
 function useFeedbackMutations(
-  setItems: Dispatch<SetStateAction<FeedbackInboxItem[]>>,
+  setInbox: Dispatch<SetStateAction<InboxSnapshot>>,
 ) {
   // Routes through `mutate` so the server-returned record (incl. updatedAt)
   // replaces the row instead of a local status-only patch.
@@ -81,9 +89,12 @@ function useFeedbackMutations(
     );
     if (!response.ok) throw new Error(FEEDBACK_UPDATE_ERROR);
     const parsed = feedbackResponseSchema.parse(await response.json());
-    setItems((current) =>
-      current.map((item) => (item.id === id ? fromResponse(parsed) : item)),
-    );
+    setInbox((current) => ({
+      ...current,
+      items: current.items.map((item) =>
+        item.id === id ? fromResponse(parsed) : item,
+      ),
+    }));
   };
 
   const editOriginal = (id: string, comment: string) =>
@@ -98,14 +109,19 @@ function useFeedbackMutations(
       credentials: SAME_ORIGIN,
     });
     if (!response.ok) throw new Error("Feedback delete failed");
-    setItems((current) => current.filter((item) => item.id !== id));
+    // The merged list is bounded server-side, so an acknowledged delete also
+    // shrinks the reported scope total by one.
+    setInbox((current) => ({
+      items: current.items.filter((item) => item.id !== id),
+      total: Math.max(0, current.total - 1),
+    }));
   };
 
   return { changeStatus, editOriginal, reply, dismiss, deleteFeedback };
 }
 
 export function useProductFeedbackInbox(onError: () => void) {
-  const [items, setItems] = useState<FeedbackInboxItem[]>([]);
+  const [inbox, setInbox] = useState<InboxSnapshot>(EMPTY_INBOX);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [search, setSearch] = useState("");
@@ -132,7 +148,10 @@ export function useProductFeedbackInbox(onError: () => void) {
       );
       if (!response.ok) throw new Error("Feedback request failed");
       const payload = feedbackInboxSchema.parse(await response.json());
-      setItems(payload.feedback.map(fromResponse));
+      setInbox({
+        items: payload.feedback.map(fromResponse),
+        total: payload.total,
+      });
     } catch {
       setError(true);
       onErrorRef.current();
@@ -148,7 +167,7 @@ export function useProductFeedbackInbox(onError: () => void) {
 
   const filteredItems = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    return items.filter(
+    return inbox.items.filter(
       (item) =>
         (status === "all" || item.status === status) &&
         (type === "all" || item.type === type) &&
@@ -156,10 +175,10 @@ export function useProductFeedbackInbox(onError: () => void) {
           item.message.toLowerCase().includes(needle) ||
           item.authorName.toLowerCase().includes(needle)),
     );
-  }, [items, search, status, type]);
+  }, [inbox.items, search, status, type]);
 
   const { changeStatus, editOriginal, reply, dismiss, deleteFeedback } =
-    useFeedbackMutations(setItems);
+    useFeedbackMutations(setInbox);
 
   const view = loading
     ? "loading"
@@ -171,6 +190,11 @@ export function useProductFeedbackInbox(onError: () => void) {
 
   return {
     items: filteredItems,
+    loadedCount: inbox.items.length,
+    total: inbox.total,
+    // The API merges at most `limit` newest records; `total` is the whole
+    // scoped set, so the UI can say filters only reach the loaded slice.
+    hasMore: inbox.total > inbox.items.length,
     search,
     setSearch,
     status,
