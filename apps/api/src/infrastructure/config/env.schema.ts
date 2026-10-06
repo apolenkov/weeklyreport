@@ -1,6 +1,11 @@
 import { z } from "zod";
 
 import {
+  AI_PROVIDER_KEY_MATERIAL_MESSAGE,
+  AiProviderKeyMaterialError,
+  parseAiProviderKeyMaterial,
+} from "../../lib/ai-provider-key-material.js";
+import {
   allowedOrigins,
   ProviderUrlPolicyError,
 } from "../../lib/ai-provider-url-policy.js";
@@ -85,11 +90,25 @@ const envObjectSchema = z.object({
 
   // The provider and prompt control plane is database-backed. Deployment
   // configuration owns only credential encryption, endpoint allowlisting,
-  // and bounded runtime limits.
+  // and bounded runtime limits. The master key must carry a valid shape at
+  // boot — 64 hex chars or canonical padded base64 of exactly 32 bytes — so
+  // a malformed deployment string fails here, not inside the codec later.
   [REPORT_ASSISTANT_ENV_KEYS.providerConfigEncryptionKey]: z
     .string()
     .trim()
-    .min(1),
+    .min(1)
+    .refine(
+      (value) => {
+        try {
+          parseAiProviderKeyMaterial(value);
+          return true;
+        } catch (error) {
+          if (error instanceof AiProviderKeyMaterialError) return false;
+          throw error;
+        }
+      },
+      { message: AI_PROVIDER_KEY_MATERIAL_MESSAGE },
+    ),
   [REPORT_ASSISTANT_ENV_KEYS.providerConfigKeyVersion]: positiveIntegerEnv,
   [REPORT_ASSISTANT_ENV_KEYS.providerAllowedOrigins]: z.string().trim().min(1),
   // Explicit owner approval for sending report-derived content to an

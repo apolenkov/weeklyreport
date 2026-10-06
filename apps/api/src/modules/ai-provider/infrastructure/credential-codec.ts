@@ -11,7 +11,11 @@ import {
   maskedCredentialSchema,
 } from "@customreport/shared";
 
-const AES_KEY_BYTES = 32;
+import {
+  AiProviderKeyMaterialError,
+  parseAiProviderKeyMaterial,
+} from "../../../lib/ai-provider-key-material.js";
+
 const AES_NONCE_BYTES = 12;
 const BASE64_QUANTUM = 4;
 const EMPTY_CREDENTIAL_MESSAGE = "Provider credential must be non-empty";
@@ -44,17 +48,17 @@ export class CredentialCodecError extends Error {
   }
 }
 
+// Constructor validation stays a defensive boundary even though env
+// validation runs the same parser earlier at boot.
 const decodeKey = (material: string): Buffer => {
-  const value = material.trim();
-  const hex = /^[0-9a-f]{64}$/iu.test(value)
-    ? Buffer.from(value, "hex")
-    : Buffer.from(value, "base64");
-  if (hex.length !== AES_KEY_BYTES) {
-    throw new CredentialCodecError(
-      "AI provider encryption key must encode exactly 32 bytes",
-    );
+  try {
+    return parseAiProviderKeyMaterial(material);
+  } catch (error) {
+    if (error instanceof AiProviderKeyMaterialError) {
+      throw new CredentialCodecError(error.message);
+    }
+    throw error;
   }
-  return hex;
 };
 
 const assertKeyVersion = (keyVersion: number): void => {
