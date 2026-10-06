@@ -21,9 +21,11 @@ import type {
   StoredAiPromptBundleRevision,
 } from "../infrastructure/ai-prompt.repository.js";
 import {
+  type AiComposedPromptSet,
   type AiFeaturePromptCatalog,
   aiFeaturePromptCatalog,
   type AiFeaturePromptCatalogEntry,
+  AiPromptCompositionLimitError,
   composePromptSet,
 } from "./ai-feature-prompt-catalog.js";
 import { AiPromptLifecycleService } from "./ai-prompt.lifecycle-service.js";
@@ -40,6 +42,26 @@ import {
   NOOP_AI_PROMPT_METRICS,
   promptAvailability,
 } from "./ai-prompt.service-support.js";
+
+// Only the aggregate-size overflow is a user-correctable draft problem; every
+// other composer failure (schema, tampered core snapshot) stays an internal
+// invariant error.
+const composeDraftPrompts = (
+  entry: AiFeaturePromptCatalogEntry,
+  promptContents: Parameters<typeof composePromptSet>[1],
+  lockedCoreSnapshot: Parameters<typeof composePromptSet>[2],
+): AiComposedPromptSet => {
+  try {
+    return composePromptSet(entry, promptContents, lockedCoreSnapshot);
+  } catch (error) {
+    if (error instanceof AiPromptCompositionLimitError) {
+      throw new AiPromptConfigurationError(
+        "The combined prompt instructions exceed the total size limit; shorten the editable guidance",
+      );
+    }
+    throw error;
+  }
+};
 
 export class AiPromptService {
   private readonly lifecycle: AiPromptLifecycleService;
@@ -105,7 +127,7 @@ export class AiPromptService {
     composedFromRevision(entry, base);
     const promptContents = aiPromptContentsSchema.parse(input.promptContents);
     const lockedCoreSnapshot = lockedCoreFrom(base.lockedCoreSnapshot);
-    const composed = composePromptSet(
+    const composed = composeDraftPrompts(
       entry,
       promptContents,
       lockedCoreSnapshot,

@@ -81,6 +81,18 @@ const defaultEditableInstructions: AiPromptContents = {
     "Keep supported claims unchanged while repairing only citation formatting.",
 };
 
+/**
+ * Thrown when a schema-valid edit still overflows the canonical serialized
+ * bundle cap. Kept distinct so callers can separate a user-correctable draft
+ * from corrupt stored state or infrastructure failures.
+ */
+export class AiPromptCompositionLimitError extends Error {
+  constructor() {
+    super("Composed report-assistant prompts exceed the size limit");
+    this.name = "AiPromptCompositionLimitError";
+  }
+}
+
 const canonicalContent = (
   featureKey: AiFeatureKey,
   slots: readonly AiPromptSlot[],
@@ -149,7 +161,7 @@ export const composePromptSet = (
     effectivePrompts,
   );
   if (serialized.length > AI_PROMPT_BUNDLE_EFFECTIVE_LIMIT) {
-    throw new Error("Composed report-assistant prompts exceed the size limit");
+    throw new AiPromptCompositionLimitError();
   }
   return {
     featureKey: entry.featureKey,
