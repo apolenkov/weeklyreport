@@ -188,6 +188,7 @@ export {
   MAX_RECORDS_PER_SECTION_SAVE,
   MAX_WEEK_LABEL_LENGTH,
   myHistoryEntrySchema,
+  normalizeEmail,
   paginationInputSchema,
   PDF_EXPORT_QUEUE_NAME,
   pdfExportJobSchema,

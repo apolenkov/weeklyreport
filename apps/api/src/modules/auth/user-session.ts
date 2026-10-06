@@ -1,4 +1,5 @@
 import type { DbRole, UserSession } from "@customreport/shared";
+import { normalizeEmail } from "@customreport/shared";
 import type { Prisma, PrismaClient } from "@prisma/client";
 
 import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
@@ -75,8 +76,13 @@ async function resolveExistingUser(
   prisma: PrismaClient,
   profile: SamlProfile,
 ): Promise<ExistingUser> {
+  // Email identity is case-insensitive, so the lookup folds both sides — a
+  // stored mixed-case row stays reachable and a case-variant assertion can
+  // never slip a second account past the email match.
   const existingByEmail = await prisma.user.findFirst({
-    where: { email: profile.email },
+    where: {
+      email: { equals: normalizeEmail(profile.email), mode: "insensitive" },
+    },
   });
   if (isSamlIdentityMismatch(existingByEmail, profile)) {
     throw new SamlIdentityMismatchError(
@@ -89,12 +95,14 @@ async function resolveExistingUser(
   );
 }
 
-// `User.email` and `User.samlId` are each `@unique`; either colliding means a
-// concurrent first-login raced us. The shared guard also reads the pg-adapter
-// error shape and checks both the constraint metadata and indexed columns.
+// `User.email` (exact and lower()) and `User.samlId` are each `@unique`;
+// either colliding means a concurrent first-login raced us. The shared guard
+// also reads the pg-adapter error shape and checks both the constraint
+// metadata and indexed columns.
 function isUserUniqueViolation(error: unknown): boolean {
   return (
     isUniqueViolation(error, { index: "User_email_key", columns: ["email"] }) ||
+    isUniqueViolation(error, { index: "User_email_lower_key" }) ||
     isUniqueViolation(error, { index: "User_samlId_key", columns: ["samlId"] })
   );
 }
@@ -126,7 +134,7 @@ async function createUserOrAdoptRaceWinner(
     return await prisma.user.create({
       data: {
         samlId: profile.samlId,
-        email: profile.email,
+        email: normalizeEmail(profile.email),
         name: profile.displayName,
         lastName: profile.displayName.trim() || profile.email,
         firstName: SAML_STUB_FIRST_NAME_PLACEHOLDER,
