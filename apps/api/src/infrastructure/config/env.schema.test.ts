@@ -159,6 +159,54 @@ describe("envSchema — no defaults, every product var required", () => {
     }
   });
 
+  const BASE64_KEY =
+    COMPLETE[REPORT_ASSISTANT_ENV_KEYS.providerConfigEncryptionKey];
+
+  it.each([
+    ["64-char lowercase hex", "a".repeat(64)],
+    ["64-char uppercase hex", "A".repeat(64)],
+    ["canonical padded base64", BASE64_KEY],
+    ["outer-trimmed base64", `  ${BASE64_KEY}  `],
+  ])("accepts %s encryption key material", (_label, value) => {
+    expect(
+      envSchema.safeParse({
+        ...COMPLETE,
+        [REPORT_ASSISTANT_ENV_KEYS.providerConfigEncryptionKey]: value,
+      }).success,
+    ).toBe(true);
+  });
+
+  it.each([
+    ["invalid character", `!${BASE64_KEY.slice(1)}`],
+    [
+      "interior whitespace",
+      `${BASE64_KEY.slice(0, 20)} ${BASE64_KEY.slice(21)}`,
+    ],
+    ["missing padding", BASE64_KEY.slice(0, -1)],
+    ["excess padding", `${BASE64_KEY}=`],
+    ["base64 of 31 bytes", Buffer.alloc(31, 1).toString("base64")],
+  ])(
+    "rejects malformed encryption key material: %s without echoing it",
+    (_label, value) => {
+      const result = envSchema.safeParse({
+        ...COMPLETE,
+        [REPORT_ASSISTANT_ENV_KEYS.providerConfigEncryptionKey]: value,
+      });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        const issues = result.error.issues.filter((issue) =>
+          issue.path.includes(
+            REPORT_ASSISTANT_ENV_KEYS.providerConfigEncryptionKey,
+          ),
+        );
+        expect(issues.length).toBeGreaterThan(0);
+        for (const issue of issues) {
+          expect(issue.message).not.toContain(value.trim());
+        }
+      }
+    },
+  );
+
   describe.each([
     ["REDIS_DB", "15"],
     ["DB_POOL_IDLE_TIMEOUT_MS", "10000"],

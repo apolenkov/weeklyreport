@@ -82,4 +82,31 @@ describe("AesGcmCredentialCodec", () => {
     );
     expect(() => new AesGcmCredentialCodec(KEY, 0)).toThrow(/version/i);
   });
+
+  it.each([
+    ["lowercase hex", "a".repeat(64)],
+    ["uppercase hex", "A".repeat(64)],
+    ["outer-trimmed base64", `  ${KEY}  `],
+  ])("accepts %s key material", (_label, material) => {
+    const codec = new AesGcmCredentialCodec(material, 7);
+    const encrypted = codec.encrypt("sk-provider-secret", context);
+    expect(codec.decrypt(encrypted, context)).toBe("sk-provider-secret");
+  });
+
+  it.each([
+    ["invalid character", `!${KEY.slice(1)}`],
+    ["interior whitespace", `${KEY.slice(0, 20)} ${KEY.slice(21)}`],
+    ["missing padding", KEY.slice(0, -1)],
+    ["excess padding", `${KEY}=`],
+  ])("rejects malformed base64 key encoding: %s", (_label, material) => {
+    expect(() => new AesGcmCredentialCodec(material, 7)).toThrow(
+      CredentialCodecError,
+    );
+    try {
+      new AesGcmCredentialCodec(material, 7);
+      expect.unreachable();
+    } catch (error) {
+      expect((error as Error).message).not.toContain(material.trim());
+    }
+  });
 });
