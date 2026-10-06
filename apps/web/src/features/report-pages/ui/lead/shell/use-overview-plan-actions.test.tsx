@@ -143,6 +143,7 @@ function currentOverviewItem(): StatusOverviewItem {
     tag: item.tag,
     stageNames: item.stageNames,
     pausedReason: null,
+    comments: [],
     resolution: null,
     outcomeHistory: [],
     canResolve: true,

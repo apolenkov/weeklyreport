@@ -338,38 +338,6 @@ describe("loadOutcomeTarget", () => {
     ).rejects.toBeInstanceOf(LeadFormConstraintError);
   });
 
-  it("replays a legacy omitted-target promotion receipt as explicit Current", async () => {
-    const promotion: PromotePlanInput = {
-      reportSectionId: SECTION_ID,
-      version: 2,
-      commandId: COMMAND_ID,
-      recordId: RECORD_ID,
-      target: "current",
-    };
-    const legacyPromotion: PromotePlanInput = {
-      reportSectionId: promotion.reportSectionId,
-      version: promotion.version,
-      commandId: promotion.commandId,
-      recordId: promotion.recordId,
-    };
-    const { transaction } = createTransaction({
-      row: baseRow({ version: 2 }),
-      receipt: {
-        reportSectionId: SECTION_ID,
-        stableId: RECORD_ID,
-        actorId: AUTHOR_ID,
-        requestHash: outcomeCommandHash(legacyPromotion, "restore"),
-        outcome: "promote",
-      },
-    });
-
-    await expect(
-      loadOutcomeTarget(transaction as never, promotion, AUTHOR_ID, "promote"),
-    ).resolves.toMatchObject({
-      replay: { stableId: RECORD_ID, replayed: true },
-    });
-  });
-
   it("fails a stale command before any item or outcome-event write", async () => {
     const { transaction } = createTransaction({ row: baseRow({ version: 2 }) });
 

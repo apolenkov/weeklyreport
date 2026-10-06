@@ -71,12 +71,12 @@ export interface StatusOverviewItem {
   readonly tag: string;
   readonly stageNames: readonly string[];
   readonly pausedReason: string | null;
-  /** Server-owned cancellation metadata; absent on legacy read models. */
-  readonly resolution?: ItemResolution | null | undefined;
-  /** Server-owned append-only outcome audit; absent on legacy read models. */
-  readonly outcomeHistory?: readonly ItemOutcomeEvent[] | undefined;
-  /** Scoped review comments on this record; absent on legacy read models. */
-  readonly comments?: readonly RecordCommentView[] | undefined;
+  /** Server-owned cancellation metadata. */
+  readonly resolution: ItemResolution | null;
+  /** Server-owned append-only outcome audit. */
+  readonly outcomeHistory: readonly ItemOutcomeEvent[];
+  /** Scoped review comments on this record. */
+  readonly comments: readonly RecordCommentView[];
   readonly canResolve: boolean;
   readonly canRestore: boolean;
   readonly workflowStatus: ReportSectionReadModel["items"][number]["workflowStatus"];
