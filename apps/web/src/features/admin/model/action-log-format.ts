@@ -11,7 +11,7 @@ export function formatTimestamp(value: string): string {
 }
 
 const SHORT_ID_TAIL = 8;
-const SHORT_ID_MAX = 12;
+const SHORT_ID_MAX = 16;
 
 /** Keeps the distinctive tail of a long id; the full value belongs in a title or copy action. */
 export function shortId(value: string): string {
