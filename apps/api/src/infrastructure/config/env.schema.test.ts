@@ -230,6 +230,30 @@ describe("envSchema — no defaults, every product var required", () => {
     });
   });
 
+  describe.each(["PORT", "REDIS_PORT", "SMTP_PORT"] as const)(
+    "TCP port range for %s",
+    (key) => {
+      it.each(["1", "65535"])("accepts boundary port %s", (value) => {
+        expect(envSchema.parse({ ...COMPLETE, [key]: value })[key]).toBe(
+          Number(value),
+        );
+      });
+
+      it.each(["0", "65536", "999999", "1.5", "not-a-number", ""])(
+        "rejects an out-of-range port %j",
+        (value) => {
+          const result = envSchema.safeParse({ ...COMPLETE, [key]: value });
+          expect(result.success).toBe(false);
+          if (!result.success) {
+            expect(
+              result.error.issues.map((issue) => issue.path),
+            ).toContainEqual([key]);
+          }
+        },
+      );
+    },
+  );
+
   it.each(["", " ".repeat(3), "\t\n"])(
     "rejects blank REDIS_HOST %j",
     (REDIS_HOST) => {

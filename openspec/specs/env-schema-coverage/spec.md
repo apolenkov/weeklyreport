@@ -201,6 +201,28 @@ narrowing the explicit allowlist.
 - **WHEN** `validateEnv()` runs in any `NODE_ENV`
 - **THEN** validation fails with an issue naming `FRONTEND_URLS`
 
+### Requirement: Configured TCP ports stay within the valid range
+
+`PORT`, `REDIS_PORT`, and `SMTP_PORT` MUST be integers in the inclusive range
+1–65535. A non-integer, zero, negative, or above-range value MUST fail
+startup validation with an issue naming the field, so a malformed port is
+rejected at the configuration boundary instead of at the first network
+operation. Port `0` is not a valid configuration: the deployment contract
+requires an explicit listener.
+
+#### Scenario: Boundary ports are accepted
+
+- **GIVEN** `PORT`, `REDIS_PORT`, or `SMTP_PORT` is `1` or `65535`
+- **WHEN** `validateEnv()` runs
+- **THEN** the value is accepted
+
+#### Scenario: An out-of-range port fails boot
+
+- **GIVEN** `PORT`, `REDIS_PORT`, or `SMTP_PORT` is `0`, `65536`, a fraction,
+  or blank
+- **WHEN** `validateEnv()` runs
+- **THEN** validation fails with an issue naming the port field
+
 ### Requirement: API listener ownership is explicit
 
 `API_HOST` MUST be required and accept only `127.0.0.1` or `0.0.0.0`. Native
