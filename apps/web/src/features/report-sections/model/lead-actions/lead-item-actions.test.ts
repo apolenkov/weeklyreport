@@ -6,6 +6,7 @@ import { expectDefined } from "../../../../test-utils/expect-defined";
 import { makeReportSectionFixture } from "../../../../test-utils/report-section-fixtures";
 import { applyDraftPatch } from "../lead-form/draft/lead-form-draft-patch";
 import {
+  buildConfirmAllCarriedPatch,
   buildConfirmCarriedItemPatch,
   buildMoveItemPatch,
   continuationConflict,
@@ -295,6 +296,78 @@ describe("buildConfirmCarriedItemPatch", () => {
     ).toBeNull();
     expect(
       buildConfirmCarriedItemPatch(section(next), crypto.randomUUID()),
+    ).toBeNull();
+  });
+});
+
+function sectionOf(
+  items: readonly LeadItem[],
+  status: "draft" | "submitted" = "draft",
+): ReportSectionReadModel {
+  return { ...section(carriedItem(), status), items: [...items] };
+}
+
+describe("buildConfirmAllCarriedPatch", () => {
+  function pending(index: number): LeadItem {
+    return {
+      ...carriedItem(),
+      id: `1000000${index}-1111-4111-8111-111111111111`,
+      stableId: `2000000${index}-2222-4222-8222-222222222222`,
+    };
+  }
+
+  it("clears the marker on all N pending continuations in one patch", () => {
+    const original = sectionOf([
+      pending(1),
+      pending(2),
+      pending(3),
+      pending(4),
+    ]);
+    const patch = expectDefined(buildConfirmAllCarriedPatch(original));
+    const confirmed = applyDraftPatch(original, patch);
+
+    expect(confirmed.items).toHaveLength(4);
+    expect(confirmed.items.map((item) => item.carriedOver)).toEqual([
+      false,
+      false,
+      false,
+      false,
+    ]);
+    expect(confirmed.items.map((item) => item.id)).toEqual(
+      original.items.map((item) => item.id),
+    );
+  });
+
+  it("leaves decided, Next and cancelled rows unchanged", () => {
+    const decided = { ...pending(1), carriedOver: false, text: "Decided" };
+    const next = { ...pending(2), type: "next" as const, carriedOver: false };
+    const paused = {
+      ...pending(3),
+      carriedOver: false,
+      workflowStatus: "paused" as const,
+      pausedReason: "Waiting",
+    };
+    const original = sectionOf([decided, pending(4), next, paused]);
+    const confirmed = applyDraftPatch(
+      original,
+      expectDefined(buildConfirmAllCarriedPatch(original)),
+    );
+
+    expect(confirmed.items[0]).toBe(original.items[0]);
+    expect(confirmed.items[2]).toBe(original.items[2]);
+    expect(confirmed.items[3]).toBe(original.items[3]);
+    expect(confirmed.items[1]).toEqual({
+      ...original.items[1],
+      carriedOver: false,
+    });
+  });
+
+  it("is unavailable with nothing pending or outside a draft", () => {
+    const decided = { ...pending(1), carriedOver: false };
+    expect(buildConfirmAllCarriedPatch(sectionOf([decided]))).toBeNull();
+    expect(buildConfirmAllCarriedPatch(sectionOf([]))).toBeNull();
+    expect(
+      buildConfirmAllCarriedPatch(sectionOf([pending(1)], "submitted")),
     ).toBeNull();
   });
 });

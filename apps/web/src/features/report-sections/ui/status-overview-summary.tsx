@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import {
   statusDotClassName,
@@ -106,22 +106,33 @@ export function StatusOverviewUnitSummary({
   healthExpanded,
   healthPanelId,
   onInspect,
+  headerAction,
 }: {
   readonly unit: StatusOverviewUnit;
   readonly health?: ReportHealthUnit | undefined;
   readonly healthExpanded: boolean;
   readonly healthPanelId: string;
   readonly onInspect: OpenHealthDetail;
+  readonly headerAction?: ReactNode;
 }) {
+  const description = unit.activityFields?.description;
   return (
     <div className="min-w-0 space-y-2">
-      <UnitName
-        unit={unit}
-        health={health}
-        healthExpanded={healthExpanded}
-        healthPanelId={healthPanelId}
-        onInspect={onInspect}
-      />
+      <div className="flex min-w-0 items-start justify-between gap-2">
+        <UnitName
+          unit={unit}
+          health={health}
+          healthExpanded={healthExpanded}
+          healthPanelId={healthPanelId}
+          onInspect={onInspect}
+        />
+        {headerAction}
+      </div>
+      {description ? (
+        <p className="whitespace-pre-wrap break-words text-sm text-[var(--color-foreground)]">
+          {description}
+        </p>
+      ) : null}
       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
         <StatusBadge
           unit={health ? { ...unit, status: health.status } : unit}

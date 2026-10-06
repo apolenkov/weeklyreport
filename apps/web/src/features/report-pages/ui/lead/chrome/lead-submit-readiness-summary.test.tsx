@@ -13,6 +13,7 @@ const ready: LeadSubmitReadiness = {
   unsetStatuses: [],
   willAutoPromote: [],
   blockingIssues: [],
+  pendingReviewCount: 0,
   autosaveState: "saved",
   submitPending: false,
   canOpenConfirmation: true,
@@ -117,6 +118,33 @@ describe("LeadSubmitReadinessSummary", () => {
       }),
     );
     expect(document.getElementById("report-details")).toHaveFocus();
+  });
+
+  it("announces the review counter while continuations are pending", () => {
+    render(
+      <LeadSubmitReadinessSummary
+        readiness={{
+          ...ready,
+          pendingReviewCount: 2,
+          blockingIssues: [
+            {
+              id: "submit-validation:UNCONFIRMED_CARRIED_ITEM:a",
+              label: 'Update progress for "A".',
+            },
+            {
+              id: "submit-validation:UNCONFIRMED_CARRIED_ITEM:b",
+              label: 'Update progress for "B".',
+            },
+          ],
+          canOpenConfirmation: false,
+        }}
+        onSubmit={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "2 to review. Complete the items below before submitting.",
+    );
   });
 
   it("links a carried-item blocker to its exact Overview progress control", async () => {
@@ -261,7 +289,11 @@ describe("LeadSubmitReadinessSummary", () => {
     };
     render(
       <>
-        <StatusOverview model={model} onEditItem={vi.fn()} />
+        <StatusOverview
+          model={model}
+          onEditItem={vi.fn()}
+          onSetStatus={vi.fn()}
+        />
         <LeadSubmitReadinessSummary
           readiness={{
             ...ready,
@@ -281,7 +313,7 @@ describe("LeadSubmitReadinessSummary", () => {
 
     const disclosure = screen.getByRole("button", { name: "+1 more" });
     const progress = screen.getByRole("button", {
-      name: "Update progress for Third carried work",
+      name: "Status of Third carried work: Continued · not updated this week",
       hidden: true,
     });
     expect(disclosure).toHaveAttribute("aria-expanded", "false");

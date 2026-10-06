@@ -1,4 +1,7 @@
-import type { LeadStatusOverviewOutput } from "@customreport/shared";
+import type {
+  ItemWorkflowStatus,
+  LeadStatusOverviewOutput,
+} from "@customreport/shared";
 import type { SetStateAction } from "react";
 
 import type {
@@ -8,7 +11,10 @@ import type {
   StatusOverviewItem,
   StatusOverviewModel,
 } from "../../../../report-sections";
-import { buildConfirmCarriedItemPatch } from "../../../../report-sections";
+import {
+  buildConfirmCarriedItemPatch,
+  buildSetItemStatusPatch,
+} from "../../../../report-sections";
 import {
   createOverviewComposerState,
   findEditableItem,
@@ -136,7 +142,25 @@ export function useOverviewEditOpeners({
     );
     if (patch) editor.draft.apply(patch);
   };
-  return { editItem, moveItem, confirmItem };
+  // A status the draft can take directly is patched in place; one that needs
+  // more input (a pause reason, a next step to clear, a covering risk) opens
+  // the canonical editor on the same item instead.
+  const setItemStatus = (
+    item: StatusOverviewItem,
+    status: ItemWorkflowStatus,
+    focusKey?: string,
+  ): void => {
+    if (!editor || isReadOnly || dialog || !item.recordId || !item.editTarget)
+      return;
+    const patch = buildSetItemStatusPatch(
+      editor.draft.section,
+      item.recordId,
+      status,
+    );
+    if (patch) editor.draft.apply(patch);
+    else openEditItem(item.editTarget, item.editTarget.source, { focusKey });
+  };
+  return { editItem, moveItem, confirmItem, setItemStatus };
 }
 
 export function useOverviewCreateOpeners({

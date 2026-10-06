@@ -1,3 +1,5 @@
+import type { ItemWorkflowStatus } from "@customreport/shared";
+
 import type { ReportHealthPulse } from "../model/report-health-pulse";
 import type {
   StatusOverviewCreateTarget,
@@ -25,6 +27,13 @@ export interface StatusOverviewProps {
       ) => void)
     | undefined;
   readonly onConfirmItem?: ((item: StatusOverviewItem) => void) | undefined;
+  readonly onSetStatus?:
+    | ((
+        item: StatusOverviewItem,
+        status: ItemWorkflowStatus,
+        focusKey?: string,
+      ) => void)
+    | undefined;
   readonly onResolvePlan?:
     ((item: StatusOverviewItem, focusKey?: string) => void) | undefined;
   readonly onRestorePlan?:

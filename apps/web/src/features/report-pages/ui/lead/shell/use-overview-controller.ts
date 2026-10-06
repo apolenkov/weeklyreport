@@ -29,6 +29,7 @@ const FALLBACK_READINESS = {
   canOpenConfirmation: false,
   submitPending: false,
   blockingIssues: [],
+  pendingReviewCount: 0,
   willAutoPromote: [],
   unsetStatuses: [],
   autosaveState: "idle" as const,

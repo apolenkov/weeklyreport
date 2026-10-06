@@ -791,47 +791,39 @@ function overviewActionItem(
 }
 
 describe("statusOverviewItemActions", () => {
-  it("gives an editable active item one primary progress action and one quiet overflow", () => {
+  it("gives an editable active item one status menu and one quiet overflow", () => {
     expect(statusOverviewItemActions(overviewActionItem({}))).toEqual({
-      primary: "progress",
+      primary: "status",
       secondary: ["edit", "move"],
       recovery: [],
     });
   });
 
-  it("keeps the same primary progress action on unconfirmed carried items", () => {
+  it("keeps the same status menu on unconfirmed carried items", () => {
     for (const workflowStatus of ["planned", "in_progress"] as const) {
       expect(
         statusOverviewItemActions(
           overviewActionItem({ needsConfirmation: true, workflowStatus }),
         ),
       ).toEqual({
-        primary: "progress",
+        primary: "status",
         secondary: ["edit", "move"],
         recovery: [],
       });
     }
   });
 
-  it("keeps a carried item confirmable even when it is already done", () => {
-    expect(
-      statusOverviewItemActions(
-        overviewActionItem({
-          needsConfirmation: true,
-          workflowStatus: "done",
-        }),
-      ).primary,
-    ).toBe("progress");
-  });
-
-  it("withholds the primary progress action from done and read-only items", () => {
+  it("keeps the status menu on a done item so it can be reopened", () => {
     expect(
       statusOverviewItemActions(overviewActionItem({ workflowStatus: "done" })),
     ).toEqual({
-      primary: null,
+      primary: "status",
       secondary: ["edit"],
       recovery: [],
     });
+  });
+
+  it("withholds the status menu from read-only items", () => {
     expect(
       statusOverviewItemActions(
         overviewActionItem({ canResolve: false, editTarget: null }),
@@ -839,7 +831,7 @@ describe("statusOverviewItemActions", () => {
     ).toEqual({ primary: null, secondary: [], recovery: [] });
   });
 
-  it("keeps an uneditable carried item confirmable through the same primary", () => {
+  it("withholds the status menu from an uneditable carried item", () => {
     expect(
       statusOverviewItemActions(
         overviewActionItem({
@@ -851,13 +843,13 @@ describe("statusOverviewItemActions", () => {
         }),
       ),
     ).toEqual({
-      primary: "progress",
+      primary: null,
       secondary: [],
       recovery: ["restore"],
     });
   });
 
-  it("keeps paused and postponed items on the same single primary action", () => {
+  it("keeps paused and postponed items on the same status menu", () => {
     for (const workflowStatus of ["paused", "postponed"] as const) {
       expect(
         statusOverviewItemActions(
@@ -868,14 +860,14 @@ describe("statusOverviewItemActions", () => {
           }),
         ),
       ).toEqual({
-        primary: "progress",
+        primary: "status",
         secondary: ["edit", "move"],
         recovery: [],
       });
     }
   });
 
-  it("keeps the linked next-step projection movable but not separately editable", () => {
+  it("keeps the linked next-step projection movable, with no status of its own", () => {
     expect(
       statusOverviewItemActions(
         overviewActionItem({
@@ -889,7 +881,7 @@ describe("statusOverviewItemActions", () => {
         }),
       ),
     ).toEqual({
-      primary: "progress",
+      primary: null,
       secondary: ["move"],
       recovery: [],
     });

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ItemWorkflowStatus } from "@customreport/shared";
 import { useSearchParams } from "next/navigation";
 import type { ComponentProps } from "react";
 
@@ -39,6 +40,11 @@ interface OverviewDialogSlice {
     focusKey?: string,
   ) => void;
   readonly confirmItem: (item: StatusOverviewItem) => void;
+  readonly setItemStatus: (
+    item: StatusOverviewItem,
+    status: ItemWorkflowStatus,
+    focusKey?: string,
+  ) => void;
 }
 
 function OverviewRefreshWarning({
@@ -143,7 +149,11 @@ function OverviewOpenWork({
 
 function overviewDirectActions(enabled: boolean, dialog: OverviewDialogSlice) {
   return enabled
-    ? { onMoveItem: dialog.moveItem, onConfirmItem: dialog.confirmItem }
+    ? {
+        onMoveItem: dialog.moveItem,
+        onConfirmItem: dialog.confirmItem,
+        onSetStatus: dialog.setItemStatus,
+      }
     : {};
 }
 

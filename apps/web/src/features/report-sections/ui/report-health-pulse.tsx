@@ -26,6 +26,61 @@ export function healthLocations(unit: ReportHealthUnit): string {
   return "";
 }
 
+function healthyLabel(total: number): string {
+  if (total === 0) return "No current reporting units.";
+  const subject = total === 1 ? "1 current unit" : `all ${total} current units`;
+  return `${subject} healthy`;
+}
+
+function HealthyLine({ total }: { readonly total: number }) {
+  return (
+    <p className="min-h-[var(--touch-target-min)] py-3 text-sm text-[var(--color-muted-foreground)]">
+      <span className="font-semibold text-[var(--color-foreground)]">
+        Report health
+      </span>
+      {" · "}
+      {healthyLabel(total)}
+    </p>
+  );
+}
+
+function HealthAttentionList({
+  units,
+  onInspect,
+}: {
+  readonly units: readonly ReportHealthUnit[];
+  readonly onInspect: OpenHealthDetail;
+}) {
+  return (
+    <ul className="mt-3 grid min-w-0 gap-2 lg:grid-cols-2">
+      {units.map((unit) => (
+        <li key={unit.key} className="min-w-0">
+          <button
+            type="button"
+            onClick={(event: MouseEvent<HTMLButtonElement>) =>
+              onInspect(unit.key, event.currentTarget)
+            }
+            className="flex min-h-[var(--touch-target-min)] w-full min-w-0 flex-wrap items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] px-3 py-2 text-left hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+            aria-label={`Inspect health for ${unit.name}`}
+          >
+            <span className="min-w-0 flex-1 break-words">
+              <span className="block text-sm font-semibold text-[var(--color-primary)]">
+                {unit.name}
+              </span>
+              {healthLocations(unit) ? (
+                <span className="block text-xs text-[var(--color-muted-foreground)]">
+                  {healthLocations(unit)}
+                </span>
+              ) : null}
+            </span>
+            <SlideStatusBadge status={unit.status} labelVariant="screen" />
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function ReportHealthPulseView({
   health,
   onInspect,
@@ -44,63 +99,37 @@ export function ReportHealthPulseView({
   return (
     <section
       aria-label="Report health"
-      className="mb-5 min-w-0 rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-card)] p-4"
+      className="mb-5 min-w-0 rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-card)] px-4"
     >
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="font-semibold text-[var(--color-foreground)]">
-          Report health
-        </h3>
-        <p className="text-xs text-[var(--color-muted-foreground)]">
-          {countLabel(
-            health.total,
-            "current reporting unit",
-            "current reporting units",
-          )}{" "}
-          · Products and activities
-        </p>
-      </div>
-      <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-        {health.blocked} blocked · {health.atRisk} at risk · {health.missing}{" "}
-        with missing status
-      </p>
-      {attention.length > 0 ? (
-        <ul className="mt-3 grid min-w-0 gap-2 lg:grid-cols-2">
-          {attention.map((unit) => (
-            <li key={unit.key} className="min-w-0">
-              <button
-                type="button"
-                onClick={(event: MouseEvent<HTMLButtonElement>) =>
-                  onInspect(unit.key, event.currentTarget)
-                }
-                className="flex min-h-[var(--touch-target-min)] w-full min-w-0 flex-wrap items-center justify-between gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] px-3 py-2 text-left hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
-                aria-label={`Inspect health for ${unit.name}`}
-              >
-                <span className="min-w-0 flex-1 break-words">
-                  <span className="block text-sm font-semibold text-[var(--color-primary)]">
-                    {unit.name}
-                  </span>
-                  {healthLocations(unit) ? (
-                    <span className="block text-xs text-[var(--color-muted-foreground)]">
-                      {healthLocations(unit)}
-                    </span>
-                  ) : null}
-                </span>
-                <SlideStatusBadge status={unit.status} labelVariant="screen" />
-              </button>
-            </li>
-          ))}
-        </ul>
+      {attention.length === 0 ? (
+        <HealthyLine total={health.total} />
       ) : (
-        <p className="mt-3 text-sm text-[var(--color-muted-foreground)]">
-          {health.total === 0
-            ? "No current reporting units."
-            : "No blocked, at-risk or missing statuses reported."}
-        </p>
+        <details>
+          <summary className="min-h-[var(--touch-target-min)] cursor-pointer rounded-[var(--radius-sm)] py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]">
+            <span className="font-semibold text-[var(--color-foreground)]">
+              Report health
+            </span>
+            {" · "}
+            <span className="text-[var(--color-muted-foreground)]">
+              {`${health.blocked} of ${health.total} blocked · ${health.atRisk} of ${health.total} at risk · ${health.missing} of ${health.total} missing status`}
+            </span>
+          </summary>
+          <p className="text-xs text-[var(--color-muted-foreground)]">
+            {countLabel(
+              health.total,
+              "current reporting unit",
+              "current reporting units",
+            )}{" "}
+            · Products and activities
+          </p>
+          <HealthAttentionList units={attention} onInspect={onInspect} />
+          <p className="my-3 text-xs text-[var(--color-muted-foreground)]">
+            Select any unit name below to inspect its health. Missing status can
+            overlap with a problem. Status changes come from Risks &amp;
+            Blockers.
+          </p>
+        </details>
       )}
-      <p className="mt-3 text-xs text-[var(--color-muted-foreground)]">
-        Select any unit name below to inspect its health. Missing status can
-        overlap with a problem. Status changes come from Risks &amp; Blockers.
-      </p>
     </section>
   );
 }

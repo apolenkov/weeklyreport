@@ -80,6 +80,7 @@ const READINESS = {
   unsetStatuses: [],
   willAutoPromote: [],
   blockingIssues: [],
+  pendingReviewCount: 0,
   autosaveState: "idle",
   submitPending: false,
   canOpenConfirmation: true,

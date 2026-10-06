@@ -5,15 +5,19 @@ import type {
   StatusOverviewEditTarget,
   StatusOverviewItem,
 } from "../model/status-overview";
-import { PreviewActions } from "./status-overview-item-actions";
-import { PreviewMetadata } from "./status-overview-item-metadata";
+import {
+  type ActionProps,
+  StatusControl,
+} from "./status-overview-item-actions";
+import { ItemBadges, ResolutionNote } from "./status-overview-item-metadata";
+import { ItemActionZone } from "./status-overview-item-overflow";
 import { OutcomeAudit } from "./status-overview-outcome-audit";
 import { TrackedWorkComments } from "./status-overview-record-comments";
 
 const LONG_UPDATE_LENGTH = 120;
 
 function previewTextClassName(expanded: boolean, canCollapse: boolean): string {
-  return `${expanded || !canCollapse ? "block" : "line-clamp-2"} min-h-10 break-words text-sm leading-5 [overflow-wrap:anywhere]`;
+  return `${expanded || !canCollapse ? "block" : "line-clamp-2"} min-w-0 break-words text-sm leading-5 [overflow-wrap:anywhere]`;
 }
 
 function PreviewText({
@@ -32,7 +36,6 @@ function PreviewText({
   const canonicalTitle =
     onEditItem !== undefined &&
     editTarget !== null &&
-    !editTarget.focusNextStep &&
     item.resolution == null &&
     item.workflowStatus !== "done";
   return (
@@ -40,18 +43,19 @@ function PreviewText({
       {canonicalTitle ? (
         <button
           type="button"
+          aria-label={`Edit item: ${item.text}`}
           data-overview-focus={`title:${item.source}:${item.stableId ?? item.key}`}
           onClick={() => onEditItem(editTarget)}
-          className={`${textClassName} min-h-[var(--touch-target-min)] -mx-1 w-[calc(100%+0.5rem)] rounded-[var(--radius-sm)] px-1 text-left hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]`}
+          className="-mx-1 flex min-h-[var(--touch-target-min)] w-[calc(100%+0.5rem)] items-center rounded-[var(--radius-sm)] px-1 text-left hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
         >
-          <span className="sr-only">Edit item:</span> {item.text}
+          <span className={textClassName}>{item.text}</span>
         </button>
       ) : (
-        <p className={textClassName}>{item.text}</p>
+        <div className="flex min-h-[var(--touch-target-min)] items-center">
+          <p className={textClassName}>{item.text}</p>
+        </div>
       )}
-      <div className="mt-1 min-w-0 space-y-1">
-        <PreviewMetadata item={item} />
-      </div>
+      <ResolutionNote item={item} />
     </div>
   );
 }
@@ -80,55 +84,37 @@ function TextDisclosure({
   );
 }
 
-export function StatusOverviewItemPreview({
-  item,
-  onEditItem,
-  onPlanItem,
-  onMoveItem,
-  onConfirmItem,
-  onResolvePlan,
-  onRestorePlan,
-}: {
-  readonly item: StatusOverviewItem;
-  readonly onEditItem?:
-    ((target: StatusOverviewEditTarget) => void) | undefined;
-  readonly onPlanItem?: ((item: StatusOverviewItem) => void) | undefined;
-  readonly onMoveItem?:
-    | ((
-        item: StatusOverviewItem,
-        target: "current" | "next",
-        focusKey?: string,
-      ) => void)
-    | undefined;
-  readonly onConfirmItem?: ((item: StatusOverviewItem) => void) | undefined;
-  readonly onResolvePlan?:
-    ((item: StatusOverviewItem, focusKey?: string) => void) | undefined;
-  readonly onRestorePlan?:
-    ((item: StatusOverviewItem, focusKey?: string) => void) | undefined;
-}) {
+export function StatusOverviewItemPreview(props: ActionProps) {
+  const { item, onSetStatus, onConfirmItem } = props;
   const [expanded, setExpanded] = useState(false);
   return (
     <div
       data-overview-item-preview
-      className="group/item min-w-0 space-y-1.5 md:flex md:h-full md:flex-col"
+      className="group/item flex min-w-0 items-start gap-1 md:h-full"
     >
-      <PreviewText item={item} expanded={expanded} onEditItem={onEditItem} />
-      <OutcomeAudit item={item} />
-      <TrackedWorkComments item={item} />
-      <TextDisclosure
+      <StatusControl
         item={item}
-        expanded={expanded}
-        onToggle={() => setExpanded(!expanded)}
-      />
-      <PreviewActions
-        item={item}
-        onEditItem={onEditItem}
-        onPlanItem={onPlanItem}
-        onMoveItem={onMoveItem}
+        onSetStatus={onSetStatus}
         onConfirmItem={onConfirmItem}
-        onResolvePlan={onResolvePlan}
-        onRestorePlan={onRestorePlan}
       />
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <PreviewText
+          item={item}
+          expanded={expanded}
+          onEditItem={props.onEditItem}
+        />
+        <OutcomeAudit item={item} />
+        <TrackedWorkComments item={item} />
+        <TextDisclosure
+          item={item}
+          expanded={expanded}
+          onToggle={() => setExpanded(!expanded)}
+        />
+      </div>
+      <div className="flex min-h-[var(--touch-target-min)] shrink-0 items-center gap-1">
+        <ItemBadges item={item} />
+        <ItemActionZone {...props} />
+      </div>
     </div>
   );
 }
