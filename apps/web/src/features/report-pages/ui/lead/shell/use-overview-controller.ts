@@ -12,6 +12,7 @@ import {
   useOverviewItemEditor,
 } from "./use-overview-item-editor";
 import { useOverviewPlanActions } from "./use-overview-plan-actions";
+import { useOverviewVerdictActions } from "./use-overview-verdict-actions";
 import { useSaveStatus } from "./use-save-status";
 
 export type AvailableEditor = LeadFormEditorHandle;
@@ -29,6 +30,7 @@ const FALLBACK_READINESS = {
   canOpenConfirmation: false,
   submitPending: false,
   blockingIssues: [],
+  pendingReviewCount: 0,
   willAutoPromote: [],
   unsetStatuses: [],
   autosaveState: "idle" as const,
@@ -100,6 +102,7 @@ export function useOverviewController({
     model,
     dialog.dialog !== null,
   );
+  const verdict = useOverviewVerdictActions(readyEditor, output);
   const planPresentation = overviewPlanPresentation(plan, model);
   const editorSlot =
     planPresentation.slot ??
@@ -135,6 +138,7 @@ export function useOverviewController({
     model,
     dialog,
     plan,
+    verdict,
     planPresentation,
     editorSlot,
     pendingInput,

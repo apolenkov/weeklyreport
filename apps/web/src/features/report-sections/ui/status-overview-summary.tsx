@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import {
   statusDotClassName,
@@ -82,7 +82,7 @@ function UnitName({
 }) {
   if (!health) {
     return (
-      <p className="break-words font-semibold leading-5 text-[var(--color-foreground)]">
+      <p className="min-w-0 break-words font-semibold leading-5 text-[var(--color-foreground)]">
         {unit.name}
       </p>
     );
@@ -93,7 +93,7 @@ function UnitName({
       aria-expanded={healthExpanded}
       aria-controls={healthExpanded ? healthPanelId : undefined}
       onClick={(event) => onInspect(unit.key, event.currentTarget)}
-      className="min-h-[var(--touch-target-min)] max-w-full rounded-[var(--radius-sm)] text-left font-semibold leading-5 break-words text-[var(--color-primary)] underline decoration-[var(--color-border-strong)] underline-offset-4 hover:decoration-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+      className="min-h-[var(--touch-target-min)] min-w-0 max-w-full rounded-[var(--radius-sm)] text-left font-semibold leading-5 break-words text-[var(--color-primary)] underline decoration-[var(--color-border-strong)] underline-offset-4 hover:decoration-current focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
     >
       {unit.name}
     </button>
@@ -106,22 +106,33 @@ export function StatusOverviewUnitSummary({
   healthExpanded,
   healthPanelId,
   onInspect,
+  headerAction,
 }: {
   readonly unit: StatusOverviewUnit;
   readonly health?: ReportHealthUnit | undefined;
   readonly healthExpanded: boolean;
   readonly healthPanelId: string;
   readonly onInspect: OpenHealthDetail;
+  readonly headerAction?: ReactNode;
 }) {
+  const description = unit.activityFields?.description;
   return (
     <div className="min-w-0 space-y-2">
-      <UnitName
-        unit={unit}
-        health={health}
-        healthExpanded={healthExpanded}
-        healthPanelId={healthPanelId}
-        onInspect={onInspect}
-      />
+      <div className="flex min-w-0 items-start justify-between gap-2">
+        <UnitName
+          unit={unit}
+          health={health}
+          healthExpanded={healthExpanded}
+          healthPanelId={healthPanelId}
+          onInspect={onInspect}
+        />
+        {headerAction}
+      </div>
+      {description ? (
+        <p className="whitespace-pre-wrap break-words text-sm text-[var(--color-foreground)]">
+          {description}
+        </p>
+      ) : null}
       <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1.5">
         <StatusBadge
           unit={health ? { ...unit, status: health.status } : unit}

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ItemWorkflowStatus } from "@customreport/shared";
 import { useSearchParams } from "next/navigation";
 import type { ComponentProps } from "react";
 
@@ -11,6 +12,10 @@ import {
   type StatusOverviewItem,
 } from "../../../../report-sections";
 import { LeadFormDialogs } from "../chrome/lead-form-dialogs";
+import {
+  LEAD_STICKY_COMPLETION_CLEARANCE_CLASS,
+  LeadStickyCompletionActions,
+} from "../chrome/lead-sticky-completion-actions";
 import { EditorAvailabilityNotice } from "./lead-editor-availability-notice";
 import { LeadOverviewDetails } from "./lead-overview-details";
 export { buildStatusOverviewDetailsHref } from "./lead-status-overview-content-helpers";
@@ -23,6 +28,7 @@ import {
 import { OpenWorkRegister } from "./open-work-register";
 import { openWorkOutsideTimeline } from "./open-work-register-model";
 import { overviewItemActions } from "./overview-plan-presentation";
+import type { CompletionPresentation } from "./presentation/use-completion-presentation";
 import {
   type AvailableEditor,
   type ReadyEditor,
@@ -39,6 +45,11 @@ interface OverviewDialogSlice {
     focusKey?: string,
   ) => void;
   readonly confirmItem: (item: StatusOverviewItem) => void;
+  readonly setItemStatus: (
+    item: StatusOverviewItem,
+    status: ItemWorkflowStatus,
+    focusKey?: string,
+  ) => void;
 }
 
 function OverviewRefreshWarning({
@@ -81,12 +92,22 @@ function OverviewEditorRecovery({
   );
 }
 
-function OverviewEditorError({ error }: { readonly error: string | null }) {
-  if (!error) return null;
+function OverviewEditorNotices({
+  dialog,
+  error,
+}: {
+  readonly dialog: OverviewDialogSlice;
+  readonly error: string | null;
+}) {
   return (
-    <p role="alert" className="text-sm text-[var(--color-destructive)]">
-      {error}
-    </p>
+    <>
+      <OverviewEditorRecovery dialog={dialog} />
+      {error ? (
+        <p role="alert" className="text-sm text-[var(--color-destructive)]">
+          {error}
+        </p>
+      ) : null}
+    </>
   );
 }
 
@@ -141,10 +162,72 @@ function OverviewOpenWork({
   );
 }
 
-function overviewDirectActions(enabled: boolean, dialog: OverviewDialogSlice) {
+type OverviewVerdictSlice = Pick<
+  ComponentProps<typeof StatusOverview>,
+  "onVerdict" | "onConfirmAll" | "pendingReviewCount"
+>;
+
+function overviewDirectActions(
+  enabled: boolean,
+  dialog: OverviewDialogSlice,
+  verdict: OverviewVerdictSlice,
+) {
   return enabled
-    ? { onMoveItem: dialog.moveItem, onConfirmItem: dialog.confirmItem }
+    ? {
+        onMoveItem: dialog.moveItem,
+        onConfirmItem: dialog.confirmItem,
+        onSetStatus: dialog.setItemStatus,
+        onVerdict: verdict.onVerdict,
+        onConfirmAll: verdict.onConfirmAll,
+        pendingReviewCount: verdict.pendingReviewCount,
+      }
     : {};
+}
+
+function OverviewHeader({
+  editor,
+  pendingInput,
+  completion,
+}: {
+  readonly editor: ReadyEditor | null;
+  readonly pendingInput: boolean;
+  readonly completion: Pick<
+    CompletionPresentation,
+    "completionActions" | "headerActionsVisible" | "sentinelRef"
+  >;
+}) {
+  if (!editor) return null;
+  return (
+    <ReadyOverviewHeader
+      editor={editor}
+      pendingInput={pendingInput}
+      completionActions={completion.completionActions}
+      completionSentinelRef={completion.sentinelRef}
+      showCompletionActions={completion.headerActionsVisible}
+    />
+  );
+}
+
+function OverviewSticky({
+  completion: { showStickyCompletion, completionActions: actions },
+  pending,
+}: {
+  readonly completion: Pick<
+    CompletionPresentation,
+    "showStickyCompletion" | "completionActions"
+  >;
+  readonly pending: boolean;
+}) {
+  if (!showStickyCompletion) return null;
+  // Same guard as the header cluster: no submit with an open update.
+  return (
+    <LeadStickyCompletionActions
+      actions={{
+        ...actions,
+        submitDisabled: actions.submitDisabled || pending,
+      }}
+    />
+  );
 }
 
 export function LeadStatusOverviewContent({
@@ -168,6 +251,7 @@ export function LeadStatusOverviewContent({
     model,
     dialog,
     plan,
+    verdict,
     planPresentation,
     editorSlot,
     pendingInput,
@@ -181,24 +265,20 @@ export function LeadStatusOverviewContent({
   return (
     <SdlcTooltipProvider>
       <div
-        className="min-w-0 space-y-6"
+        className={`min-w-0 space-y-6 ${completion.showStickyCompletion ? LEAD_STICKY_COMPLETION_CLEARANCE_CLASS : ""}`}
         data-testid="lead-status-overview-page"
         data-layout-key="report-page"
         data-layout-stability="position-width"
       >
-        {readyEditor ? (
-          <ReadyOverviewHeader
-            editor={readyEditor}
-            pendingInput={pendingInput}
-            completionActions={completion.completionActions}
-            completionSentinelRef={completion.sentinelRef}
-          />
-        ) : null}
+        <OverviewHeader
+          editor={readyEditor}
+          pendingInput={pendingInput}
+          completion={completion}
+        />
         <EditorAvailabilityNotice editor={editor} />
         <OverviewRefreshWarning failed={refreshError} onRetry={onRefresh} />
         {planPresentation.recovery}
-        <OverviewEditorRecovery dialog={dialog} />
-        <OverviewEditorError error={dialog.error} />
+        <OverviewEditorNotices dialog={dialog} error={dialog.error} />
         <StatusOverview
           model={model}
           health={projectReportHealthPulse(
@@ -207,7 +287,7 @@ export function LeadStatusOverviewContent({
           )}
           editorSlot={editorSlot}
           {...overviewItemActions(canStartAction, dialog, plan)}
-          {...overviewDirectActions(canStartAction, dialog)}
+          {...overviewDirectActions(canStartAction, dialog, verdict)}
           detailsHref={detailsHref}
           activityFieldsEditable={canEdit}
           onActivityFieldsChange={onActivityFieldsChange}
@@ -222,6 +302,7 @@ export function LeadStatusOverviewContent({
         />
         <LeadOverviewDetails editor={readyEditor} pendingInput={pendingInput} />
       </div>
+      <OverviewSticky completion={completion} pending={pendingInput} />
       <OverviewDialogs editor={readyEditor} />
     </SdlcTooltipProvider>
   );

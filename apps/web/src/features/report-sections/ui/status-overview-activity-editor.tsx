@@ -1,15 +1,12 @@
 "use client";
 
-import {
-  MAX_ACTIVITY_NAME_LENGTH,
-  SAFE_TEXT_MAX_LENGTH,
-} from "@customreport/shared";
+import { useEffect, useRef } from "react";
 
 import {
   ActivityDescriptionField,
   ActivityFieldActions,
+  activityFieldErrors,
   ActivityTitleField,
-  limitError,
   normalize,
   type StatusOverviewActivityFieldsChange,
   type StatusOverviewActivityFieldsValue,
@@ -29,6 +26,7 @@ export function StatusOverviewActivityEditor({
   values,
   onChange,
   onPendingChange,
+  onClose,
 }: {
   readonly activityId: string;
   readonly values: StatusOverviewActivityFieldsValue;
@@ -38,19 +36,16 @@ export function StatusOverviewActivityEditor({
   ) => void;
   readonly onPendingChange?:
     ((activityId: string, pending: boolean) => void) | undefined;
+  /** Called after Save or Cancel so the parent can close the form. */
+  readonly onClose: () => void;
 }) {
+  const formRef = useRef<HTMLFormElement>(null);
+  useEffect(() => formRef.current?.focus(), []);
   const draft = useActivityFieldsDraft(activityId, values, onPendingChange);
-  const titleError = limitError(
-    "Weekly title",
+  const { titleError, descriptionError, invalid } = activityFieldErrors(
     draft.title,
-    MAX_ACTIVITY_NAME_LENGTH,
-  );
-  const descriptionError = limitError(
-    "Description",
     draft.description,
-    SAFE_TEXT_MAX_LENGTH,
   );
-  const invalid = titleError !== undefined || descriptionError !== undefined;
 
   const save = (): void => {
     if (invalid) return;
@@ -59,11 +54,14 @@ export function StatusOverviewActivityEditor({
       description: normalize(draft.description),
     });
     draft.markClean();
+    onClose();
   };
 
   return (
     <form
-      className="min-w-0 border-t border-[var(--color-border-subtle)] bg-[color-mix(in_srgb,var(--color-card)_88%,transparent)] px-4 py-3"
+      ref={formRef}
+      tabIndex={-1}
+      className="min-w-0 border-t border-[var(--color-border-subtle)] focus:outline-none bg-[color-mix(in_srgb,var(--color-card)_88%,transparent)] px-4 py-3"
       aria-label={`Weekly fields for ${values.catalogueName}`}
       onSubmit={(event) => {
         event.preventDefault();
@@ -92,7 +90,10 @@ export function StatusOverviewActivityEditor({
         activityId={activityId}
         dirty={draft.dirty}
         invalid={invalid}
-        onCancel={draft.cancel}
+        onCancel={() => {
+          draft.cancel();
+          onClose();
+        }}
         onReset={draft.reset}
       />
     </form>

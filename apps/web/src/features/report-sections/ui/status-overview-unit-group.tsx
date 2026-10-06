@@ -1,7 +1,15 @@
-import type { StatusOverviewUnitKind } from "../model/status-overview";
+import type {
+  StatusOverviewUnit,
+  StatusOverviewUnitKind,
+} from "../model/status-overview";
 import type { buildStatusOverviewLineage } from "../model/status-overview-lineage";
 import type { OpenHealthDetail } from "./report-health-pulse";
 import { StatusOverviewActivityEditor } from "./status-overview-activity-editor";
+import {
+  type ActivityFieldsDisclosure,
+  ActivityFieldsEditButton,
+  useActivityFieldsDisclosure,
+} from "./status-overview-activity-fields";
 import type { StatusOverviewProps } from "./status-overview-props";
 import { StatusOverviewUnitRow } from "./status-overview-row";
 
@@ -27,6 +35,47 @@ interface UnitGroupProps {
   readonly onAddItem: StatusOverviewProps["onAddItem"];
 }
 
+function canEditActivityFields(
+  overview: StatusOverviewProps,
+  unit: StatusOverviewUnit,
+): boolean {
+  return (
+    unit.kind === "activity" &&
+    overview.activityFieldsEditable === true &&
+    !unit.historical &&
+    overview.onActivityFieldsChange !== undefined &&
+    unit.activityFields !== undefined
+  );
+}
+
+function ActivityFieldsForm({
+  overview,
+  unit,
+  disclosure,
+}: {
+  readonly overview: StatusOverviewProps;
+  readonly unit: StatusOverviewUnit;
+  readonly disclosure: ActivityFieldsDisclosure;
+}) {
+  if (
+    !canEditActivityFields(overview, unit) ||
+    !disclosure.isOpen(unit.id) ||
+    overview.onActivityFieldsChange === undefined ||
+    unit.activityFields === undefined
+  ) {
+    return null;
+  }
+  return (
+    <StatusOverviewActivityEditor
+      activityId={unit.id}
+      values={unit.activityFields}
+      onChange={overview.onActivityFieldsChange}
+      onPendingChange={overview.onActivityFieldsPendingChange}
+      onClose={() => disclosure.setOpen(unit.id, false)}
+    />
+  );
+}
+
 export function UnitGroup({
   group,
   idPrefix,
@@ -41,6 +90,7 @@ export function UnitGroup({
   onAddItem,
 }: UnitGroupProps) {
   const { model, health, editorSlot } = overview;
+  const disclosure = useActivityFieldsDisclosure();
   const units = model.units.filter((unit) => unit.kind === group.kind);
   if (units.length === 0) return null;
   const groupId = `${idPrefix}-${group.kind}-heading`;
@@ -79,24 +129,28 @@ export function UnitGroup({
             onPlanItem={overview.onPlanItem}
             onMoveItem={overview.onMoveItem}
             onConfirmItem={overview.onConfirmItem}
+            onSetStatus={overview.onSetStatus}
             onResolvePlan={overview.onResolvePlan}
             onRestorePlan={overview.onRestorePlan}
+            onVerdict={overview.onVerdict}
             editorSlot={
               editorSlot?.unitKey === unit.key ? editorSlot : undefined
             }
+            headerAction={
+              canEditActivityFields(overview, unit) ? (
+                <ActivityFieldsEditButton
+                  activityId={unit.id}
+                  name={unit.name}
+                  disclosure={disclosure}
+                />
+              ) : undefined
+            }
           />
-          {group.kind === "activity" &&
-          overview.activityFieldsEditable === true &&
-          !unit.historical &&
-          overview.onActivityFieldsChange !== undefined &&
-          unit.activityFields !== undefined ? (
-            <StatusOverviewActivityEditor
-              activityId={unit.id}
-              values={unit.activityFields}
-              onChange={overview.onActivityFieldsChange}
-              onPendingChange={overview.onActivityFieldsPendingChange}
-            />
-          ) : null}
+          <ActivityFieldsForm
+            overview={overview}
+            unit={unit}
+            disclosure={disclosure}
+          />
         </div>
       ))}
     </section>

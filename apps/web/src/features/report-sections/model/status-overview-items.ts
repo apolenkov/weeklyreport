@@ -7,6 +7,7 @@ import type {
   StatusOverviewUnit,
   StatusOverviewUnitKind,
 } from "./status-overview";
+import { priorVerdictState } from "./status-overview-verdict";
 
 type SectionItem = ReportSectionReadModel["items"][number];
 
@@ -52,13 +53,14 @@ interface PlanFacts {
 interface ItemProjectionContext {
   readonly input: StatusOverviewProjectionSource;
   readonly priorIds: ReadonlySet<string>;
-  readonly currentStableIds: ReadonlySet<string>;
+  /** The selected week's record per `stableId`; Current wins over Next. */
+  readonly currentByStableId: ReadonlyMap<string, SectionItem>;
 }
 
 function canResolvePlan(
   { source, stableId, recordId, resolution }: PlanFacts,
   input: StatusOverviewProjectionSource,
-  currentStableIds: ReadonlySet<string>,
+  currentStableIds: ReadonlyMap<string, SectionItem>,
 ): boolean {
   if (
     !input.currentItemsEditable ||
@@ -121,11 +123,20 @@ function canRestorePlan(
   );
 }
 
+function verdictField(
+  prior: SectionItem,
+  linked: SectionItem | null,
+  input: StatusOverviewProjectionSource,
+): Pick<StatusOverviewItem, "verdict"> {
+  const verdict = priorVerdictState(prior, linked, input.currentItemsEditable);
+  return verdict === null ? {} : { verdict };
+}
+
 function toOverviewItem(
   item: SectionItem,
   source: StatusOverviewItem["source"],
   index: number,
-  { input, priorIds, currentStableIds }: ItemProjectionContext,
+  { input, priorIds, currentByStableId }: ItemProjectionContext,
 ): StatusOverviewItem {
   const stableId = stableIdentity(item);
   const recordId = item.id ?? null;
@@ -152,13 +163,16 @@ function toOverviewItem(
     // so its comments stay.
     comments:
       source === "next" && nextStep !== null ? [] : (item.comments ?? []),
-    canResolve: canResolvePlan(facts, input, currentStableIds),
+    canResolve: canResolvePlan(facts, input, currentByStableId),
     canRestore: canRestorePlan(facts, input),
     workflowStatus: overviewWorkflowStatus(item, nextStep),
     needsConfirmation:
       source === "current" && item.type === "current" && item.carriedOver,
     continuity:
       source === "current" ? priorContinuity(item, input, priorIds) : null,
+    ...(source === "previous" && stableId !== null
+      ? verdictField(item, currentByStableId.get(stableId) ?? null, input)
+      : {}),
   };
 }
 
@@ -194,13 +208,18 @@ export function buildStatusOverviewColumns(
         return stableId === null ? [] : [stableId];
       }),
   );
-  const currentStableIds = new Set(
-    input.currentSection.items.flatMap((item) => {
-      const stableId = stableIdentity(item);
-      return stableId === null ? [] : [stableId];
-    }),
-  );
-  const context = { input, priorIds, currentStableIds };
+  const currentByStableId = new Map<string, SectionItem>();
+  for (const item of input.currentSection.items) {
+    const stableId = stableIdentity(item);
+    if (stableId === null) continue;
+    const known = currentByStableId.get(stableId);
+    if (
+      known === undefined ||
+      (known.type === "next" && item.type === "current")
+    )
+      currentByStableId.set(stableId, item);
+  }
+  const context = { input, priorIds, currentByStableId };
   const project = (
     items: readonly SectionItem[],
     source: StatusOverviewItem["source"],
@@ -248,8 +267,8 @@ type SecondaryAction = "edit" | "move";
 type RecoveryAction = "replan" | "restore";
 
 export interface StatusOverviewActionModel {
-  /** The single primary control; absent on read-only and terminal items. */
-  readonly primary: "progress" | null;
+  /** The status menu on the icon; absent on read-only, terminal and derived items. */
+  readonly primary: "status" | null;
   /** Entries of the quiet overflow disclosure, in display order. */
   readonly secondary: readonly SecondaryAction[];
   /** Conditional standalone actions: historical replan, restore. */
@@ -260,13 +279,9 @@ function primaryActionFor(
   item: StatusOverviewItem,
   editable: boolean,
 ): StatusOverviewActionModel["primary"] {
-  // A carried item keeps the primary even without an edit target: the
-  // confirmation patch is the only path that clears carriedOver there.
-  if (item.needsConfirmation === true && item.source === "current")
-    return "progress";
-  if (!editable) return null;
-  if (item.canResolve && item.workflowStatus !== "done") return "progress";
-  return null;
+  // The linked Next projection renders the Current record's status, so the
+  // status is changed on the Current item, never from the projection.
+  return editable && item.editTarget?.focusNextStep !== true ? "status" : null;
 }
 
 function secondaryActionsFor(
@@ -283,10 +298,13 @@ function secondaryActionsFor(
 
 function recoveryActionsFor(item: StatusOverviewItem): RecoveryAction[] {
   const actions: RecoveryAction[] = [];
+  // A pending verdict is answered on the rail: one verdict per action, so the
+  // replan icon would offer a second way to answer the same row.
   if (
     item.source === "previous" &&
     item.canResolve &&
-    item.workflowStatus !== "done"
+    item.workflowStatus !== "done" &&
+    item.verdict !== "pending"
   )
     actions.push("replan");
   if (item.canRestore) actions.push("restore");
@@ -294,10 +312,10 @@ function recoveryActionsFor(item: StatusOverviewItem): RecoveryAction[] {
 }
 
 /**
- * One primary progress interaction for editable active items, Edit and week
+ * One primary status interaction for editable active items, Edit and week
  * movement inside one secondary overflow, and conditional recovery actions.
- * Previous stays informational; an unconfirmed carried item keeps the same
- * primary so confirming goes through the canonical progress path.
+ * Previous stays informational; choosing a status also confirms a carried
+ * item, so there is no separate confirm action.
  */
 export function statusOverviewItemActions(
   item: StatusOverviewItem,

@@ -14,8 +14,10 @@ export function ReadyOverviewHeader({
   pendingInput,
   completionActions,
   completionSentinelRef,
+  showCompletionActions,
 }: {
   readonly pendingInput: boolean;
+  readonly showCompletionActions: boolean;
   readonly editor: ReadyEditor;
   readonly completionActions: ComponentProps<
     typeof LeadFormHeaderActions
@@ -36,7 +38,7 @@ export function ReadyOverviewHeader({
         )}
         completionActions={completionActions}
         completionSentinelRef={completionSentinelRef}
-        showCompletionActions
+        showCompletionActions={showCompletionActions}
         isSlidesMode={false}
         isForeignSlidesDeck={editor.view.data.isForeignSlidesDeck}
         isSubmitted={editor.view.isSubmitted}

@@ -17,6 +17,7 @@ import {
   buildStatusOverviewUnit,
   collectOrderedStatusOverviewUnitIds,
 } from "./status-overview-projector";
+import type { PriorVerdictState } from "./status-overview-verdict";
 
 export type StatusOverviewSection = Pick<
   ReportSectionReadModel,
@@ -83,6 +84,8 @@ export interface StatusOverviewItem {
   /** True only for the live Current occurrence awaiting explicit lead confirmation. */
   readonly needsConfirmation?: boolean;
   readonly continuity: "continued" | "unplanned" | null;
+  /** Previous items only: pending (rail) or the accepted verdict (stamp). */
+  readonly verdict?: PriorVerdictState;
 }
 
 type StatusOverviewColumn =

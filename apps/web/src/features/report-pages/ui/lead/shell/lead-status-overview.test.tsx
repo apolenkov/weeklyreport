@@ -351,9 +351,13 @@ async function chooseMove(
   destination: "this week" | "next week",
 ) {
   const preview = await itemPreview(text);
-  await user.click(await within(preview).findByText("More actions"));
   await user.click(
     await within(preview).findByRole("button", {
+      name: `More actions for ${text}`,
+    }),
+  );
+  await user.click(
+    await screen.findByRole("menuitem", {
       name: `Move to ${destination}: ${text}`,
     }),
   );
@@ -364,134 +368,12 @@ async function chooseUpdateProgress(
   text: string,
 ) {
   await user.click(
-    await screen.findByRole("button", { name: `Update progress for ${text}` }),
+    await screen.findByRole("button", { name: `Edit item: ${text}` }),
   );
 }
 
 describe("LeadForm Overview", () => {
-  it("plans an authoritative prior-only lineage through the canonical item editor", async () => {
-    const user = userEvent.setup();
-    const stableId = "a0000000-0000-4000-8000-000000000030";
-    const predecessorItem: ReportSectionReadModel["items"][number] = {
-      id: "a0000000-0000-4000-8000-000000000031",
-      stableId,
-      projectId: PROJECT_ID,
-      activityId: null,
-      type: "next",
-      text: "Authoritative prior plan",
-      tag: "delivery",
-      workflowStatus: "paused",
-      pausedReason: "Waiting for approval",
-      carriedOver: false,
-      priorityRank: 4,
-      stageNames: ["Development"],
-    };
-    const saveDraft = vi.fn(
-      (input: unknown, current: ReportSectionReadModel) => {
-        const draft = input as {
-          readonly version: number;
-          readonly items: ReportSectionReadModel["items"];
-        };
-        return Promise.resolve({
-          ...current,
-          version: draft.version + 1,
-          items: draft.items,
-        });
-      },
-    );
-    render(
-      <Wrapper predecessorItem={predecessorItem} saveDraft={saveDraft}>
-        <LeadForm reportId={REPORT_ID} mode="overview" />
-      </Wrapper>,
-    );
-
-    await user.click(
-      await screen.findByRole("button", { name: /^Plan this work/ }),
-    );
-    expect(
-      screen.getByRole("form", {
-        name: "Current week update for Payments",
-      }),
-    ).toBeVisible();
-    expect(
-      screen.getAllByRole("form", {
-        name: "Current week update for Payments",
-      }),
-    ).toHaveLength(1);
-    expect(screen.getByRole("radio", { name: "Current week" })).toBeChecked();
-    expect(screen.getByRole("radio", { name: "Next week" })).toBeVisible();
-    expect(screen.getByRole("textbox", { name: /Description/ })).toHaveValue(
-      "Authoritative prior plan",
-    );
-    expect(screen.getByRole("button", { name: /Paused/ })).toHaveAttribute(
-      "aria-pressed",
-      "true",
-    );
-    expect(screen.getByLabelText(/Pause reason/)).toHaveValue(
-      "Waiting for approval",
-    );
-    expect(screen.getAllByText("Authoritative prior plan")).toHaveLength(2);
-    expect(saveDraft).not.toHaveBeenCalled();
-
-    await user.click(screen.getByRole("radio", { name: "Next week" }));
-    await user.click(screen.getByRole("button", { name: "Save update" }));
-
-    await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
-    const occurrences = (
-      saveDraft.mock.calls[0]?.[0] as {
-        readonly items: ReportSectionReadModel["items"];
-      }
-    ).items.filter((candidate) => candidate.stableId === stableId);
-    expect(occurrences[0]?.id).not.toBe(predecessorItem.id);
-    expect(occurrences).toEqual([
-      expect.objectContaining({
-        stableId,
-        type: "next",
-        text: "Authoritative prior plan",
-        workflowStatus: "paused",
-        pausedReason: "Waiting for approval",
-        priorityRank: 4,
-        tag: "delivery",
-        projectId: PROJECT_ID,
-        stageNames: ["Development"],
-      }),
-    ]);
-    expect(screen.getAllByText("Authoritative prior plan")).toHaveLength(2);
-  });
-
-  it("cancels prior planning without a write and returns focus to Plan this work", async () => {
-    const user = userEvent.setup();
-    const predecessorItem: ReportSectionReadModel["items"][number] = {
-      id: "a0000000-0000-4000-8000-000000000032",
-      stableId: "a0000000-0000-4000-8000-000000000033",
-      projectId: PROJECT_ID,
-      activityId: null,
-      type: "next",
-      text: "Cancel this prior plan",
-      tag: "delivery",
-      workflowStatus: "planned",
-      carriedOver: false,
-      stageNames: ["Development"],
-    };
-    const saveDraft = vi.fn();
-    render(
-      <Wrapper predecessorItem={predecessorItem} saveDraft={saveDraft}>
-        <LeadForm reportId={REPORT_ID} mode="overview" />
-      </Wrapper>,
-    );
-
-    const plan = await screen.findByRole("button", { name: /^Plan this work/ });
-    await user.click(plan);
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
-
-    expect(saveDraft).not.toHaveBeenCalled();
-    expect(
-      await screen.findByRole("button", { name: /^Plan this work/ }),
-    ).toHaveFocus();
-    expect(screen.getByText("Cancel this prior plan")).toBeInTheDocument();
-  });
-
-  it("keeps an authoritative prior-only row informational with only replanning", async () => {
+  it("keeps an authoritative prior-only row informational with only the verdict rail", async () => {
     const predecessorItem: ReportSectionReadModel["items"][number] = {
       id: "a0000000-0000-4000-8000-000000000034",
       stableId: "a0000000-0000-4000-8000-000000000035",
@@ -512,18 +394,26 @@ describe("LeadForm Overview", () => {
 
     await screen.findByText("Resolve this prior plan");
     const preview = await itemPreview("Resolve this prior plan");
-    // Previously planned stays read-only: no progress, edit, move, or
-    // outcome controls on the row — only explicit replanning.
+    // Previously planned stays read-only: no progress, edit or move controls on
+    // the row — only the verdict rail (which writes the selected week).
+    // Replanning lives in the earlier open work register, not beside the rail.
     expect(
-      within(preview).getByRole("button", { name: /^Plan this work/ }),
-    ).toBeVisible();
+      within(preview).queryByRole("button", { name: /^Plan this work/ }),
+    ).toBeNull();
     expect(
-      within(preview).queryByRole("button", { name: /Update progress/ }),
+      within(preview).queryByRole("button", {
+        name: /Status of|Edit item|Quick move/,
+      }),
     ).toBeNull();
     expect(
       within(preview).queryByRole("button", { name: /Update status/ }),
     ).toBeNull();
-    expect(within(preview).queryByText("More actions")).toBeNull();
+    for (const verdict of ["Done", "Continue", "Next week", "Paused"])
+      expect(
+        within(preview).getByRole("button", {
+          name: `${verdict} — Resolve this prior plan`,
+        }),
+      ).toBeVisible();
     expect(
       within(preview).queryByRole("button", { name: /Move .* week/ }),
     ).toBeNull();
@@ -724,15 +614,18 @@ describe("LeadForm Overview", () => {
       }
     ).items.find((item) => item.text === "Next work");
     expect(done).toMatchObject({ type: "next", workflowStatus: "done" });
-    // A terminal item no longer offers the progress primary.
+    // A terminal item's text no longer opens the editor; its status icon
+    // names the state and no metadata line carries stage text.
     expect(
-      screen.queryByRole("button", { name: "Update progress for Next work" }),
+      screen.queryByRole("button", { name: "Edit item: Next work" }),
     ).toBeNull();
-    // The metadata line renders an icon per fact, so the progress and stage
-    // labels are separate nodes rather than one "Done · Development" string.
     const preview = await itemPreview("Next work");
-    expect(preview).toHaveTextContent("Done");
-    expect(preview).toHaveTextContent("Development");
+    expect(
+      within(preview).getByRole("button", {
+        name: "Status of Next work: Done",
+      }),
+    ).toBeVisible();
+    expect(within(preview).queryByText("Development")).toBeNull();
   });
 
   it("reaches the terminal outcome composer through More actions for a committed Current item", async () => {
@@ -747,7 +640,7 @@ describe("LeadForm Overview", () => {
     const preview = await itemPreview("Current work");
     await user.click(
       await within(preview).findByRole("button", {
-        name: "Update progress for Current work",
+        name: "Edit item: Current work",
       }),
     );
     const editor = await screen.findByRole("form", {
@@ -766,9 +659,13 @@ describe("LeadForm Overview", () => {
     await user.click(screen.getByRole("button", { name: "Discard" }));
 
     const settled = await itemPreview("Current work");
-    await user.click(await within(settled).findByText("More actions"));
     await user.click(
       await within(settled).findByRole("button", {
+        name: "More actions for Current work",
+      }),
+    );
+    await user.click(
+      await screen.findByRole("menuitem", {
         name: "Update status: Current work",
       }),
     );
@@ -867,7 +764,7 @@ describe("LeadForm Overview", () => {
     );
     await user.click(
       await screen.findByRole("button", {
-        name: "Update progress for Current work",
+        name: "Edit item: Current work",
       }),
     );
     const text = screen.getByRole("textbox", { name: /Description/ });
@@ -905,7 +802,7 @@ describe("LeadForm Overview", () => {
       );
       await user.click(
         await screen.findByRole("button", {
-          name: "Update progress for Current work",
+          name: "Edit item: Current work",
         }),
       );
       const text = screen.getByRole("textbox", { name: /Description/ });
@@ -995,7 +892,7 @@ describe("LeadForm Overview", () => {
     );
     await user.click(
       await screen.findByRole("button", {
-        name: "Update progress for Current work",
+        name: "Edit item: Current work",
       }),
     );
     const description = screen.getByRole("textbox", { name: /Description/ });
@@ -1047,7 +944,7 @@ describe("LeadForm Overview", () => {
       );
       await user.click(
         await screen.findByRole("button", {
-          name: "Update progress for Current work",
+          name: "Edit item: Current work",
         }),
       );
       const description = screen.getByRole("textbox", { name: /Description/ });
@@ -1084,7 +981,7 @@ describe("LeadForm Overview", () => {
       ).toContain(expected);
       expect(
         await screen.findByRole("button", {
-          name: `Update progress for ${expected}`,
+          name: `Edit item: ${expected}`,
         }),
       ).toBeInTheDocument();
     },
@@ -1132,6 +1029,11 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
 
+    expect(screen.queryByTestId(`activity-title-${ACTIVITY_ID}`)).toBeNull();
+    const editButton = await screen.findByTestId(
+      `activity-fields-edit-${ACTIVITY_ID}`,
+    );
+    await user.click(editButton);
     const title = await screen.findByTestId(`activity-title-${ACTIVITY_ID}`);
     await user.type(title, "Unsaved weekly title");
 
@@ -1148,6 +1050,9 @@ describe("LeadForm Overview", () => {
     await user.click(
       screen.getByTestId(`activity-fields-cancel-${ACTIVITY_ID}`),
     );
+    expect(
+      screen.getByTestId(`activity-fields-edit-${ACTIVITY_ID}`),
+    ).toHaveFocus();
     expect(
       within(screen.getByTestId("status-overview")).getByRole("status"),
     ).toHaveTextContent("Draft saved");
@@ -1174,7 +1079,7 @@ describe("LeadForm Overview", () => {
 
       await user.click(
         await screen.findByRole("button", {
-          name: `Update progress for ${initial}`,
+          name: `Edit item: ${initial}`,
         }),
       );
       expect(screen.queryByTestId("lead-submit-readiness")).toBeNull();
@@ -1192,7 +1097,7 @@ describe("LeadForm Overview", () => {
       expect(await screen.findByText(updated)).toBeInTheDocument();
       expect(
         await screen.findByRole("button", {
-          name: `Update progress for ${updated}`,
+          name: `Edit item: ${updated}`,
         }),
       ).toHaveFocus();
       expect(await screen.findByTestId("lead-submit-readiness")).toBeVisible();
@@ -1290,7 +1195,7 @@ describe("LeadForm Overview", () => {
     ]);
     expect(
       screen.getAllByRole("button", {
-        name: "Update progress for Current work",
+        name: "Edit item: Current work",
       }),
     ).toHaveLength(2);
     expect(
@@ -1316,14 +1221,14 @@ describe("LeadForm Overview", () => {
     );
     await user.click(
       await screen.findByRole("button", {
-        name: "Update progress for Current work",
+        name: "Edit item: Current work",
       }),
     );
     await user.type(screen.getByLabelText(/Description \*/i), " unsaved");
     await user.keyboard("{Escape}");
     await user.click(screen.getByRole("button", { name: "Discard" }));
     expect(
-      screen.getByRole("button", { name: "Update progress for Current work" }),
+      screen.getByRole("button", { name: "Edit item: Current work" }),
     ).toHaveFocus();
     expect(
       within(screen.getByTestId("status-overview")).getByRole("status"),
@@ -1342,7 +1247,7 @@ describe("LeadForm Overview", () => {
     );
     await user.click(
       await screen.findByRole("button", {
-        name: "Update progress for Current work",
+        name: "Edit item: Current work",
       }),
     );
     const description = screen.getByRole("textbox", { name: /Description/ });
@@ -1364,12 +1269,12 @@ describe("LeadForm Overview", () => {
 
     expect(
       await screen.findByRole("button", {
-        name: "Update progress for Current work",
+        name: "Edit item: Current work",
       }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole("button", {
-        name: "Update progress for Never saved text",
+        name: "Edit item: Never saved text",
       }),
     ).not.toBeInTheDocument();
     expect(
@@ -1408,7 +1313,7 @@ describe("LeadForm Overview", () => {
       expect(board.queryAllByText("Phantom item")).toHaveLength(0),
     );
     expect(
-      screen.getByRole("button", { name: "Update progress for Current work" }),
+      screen.getByRole("button", { name: "Edit item: Current work" }),
     ).toBeInTheDocument();
   });
 
@@ -1421,7 +1326,7 @@ describe("LeadForm Overview", () => {
     );
     await user.click(
       await screen.findByRole("button", {
-        name: "Update progress for Current work",
+        name: "Edit item: Current work",
       }),
     );
     // "Edit details" is also the row's menu label; scope to the editor form.
@@ -1446,7 +1351,7 @@ describe("LeadForm Overview", () => {
       screen.queryByRole("region", { name: "Unsaved update recovery" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Update progress for Current work" }),
+      screen.getByRole("button", { name: "Edit item: Current work" }),
     ).toHaveFocus();
   });
 
@@ -1475,7 +1380,7 @@ describe("LeadForm Overview", () => {
     );
     await user.click(
       await screen.findByRole("button", {
-        name: "Update progress for Current work",
+        name: "Edit item: Current work",
       }),
     );
     const editor = screen.getByRole("form", {
@@ -1565,9 +1470,8 @@ describe("LeadForm Overview", () => {
     );
 
     const preview = await itemPreview("Current work");
-    await user.click(await within(preview).findByText("More actions"));
     const opener = await within(preview).findByRole("button", {
-      name: "Move to next week: Current work",
+      name: "Quick move to next week: Current work",
     });
     expect(opener).toHaveAttribute(
       "data-overview-focus",
@@ -1577,16 +1481,16 @@ describe("LeadForm Overview", () => {
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(saveDraft).not.toHaveBeenCalled();
-    // The Move origin sits inside the closed disclosure, so focus falls back
-    // by stable identity to the item's first visible control.
+    // The Move origin is the revealed quick-move control, still in the tree.
     const settled = await itemPreview("Current work");
     expect(
-      within(settled).getByRole("button", { name: "Edit item: Current work" }),
+      within(settled).getByRole("button", {
+        name: "Quick move to next week: Current work",
+      }),
     ).toHaveFocus();
-    expect(document.activeElement?.closest("details:not([open])")).toBeNull();
   });
 
-  it("returns focus to Update progress after cancelling the editor", async () => {
+  it("returns focus to the item text after cancelling the editor", async () => {
     const user = userEvent.setup();
     const saveDraft = vi.fn();
     const resolvePlan = vi.fn(() => Promise.resolve({}));
@@ -1597,7 +1501,7 @@ describe("LeadForm Overview", () => {
     );
 
     const opener = await screen.findByRole("button", {
-      name: "Update progress for Next work",
+      name: "Edit item: Next work",
     });
     await user.click(opener);
     await user.click(screen.getByRole("button", { name: "Cancel" }));
@@ -1606,7 +1510,7 @@ describe("LeadForm Overview", () => {
     expect(resolvePlan).not.toHaveBeenCalled();
     expect(
       await screen.findByRole("button", {
-        name: "Update progress for Next work",
+        name: "Edit item: Next work",
       }),
     ).toHaveFocus();
   });
@@ -1632,16 +1536,17 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
 
-    const progress = await screen.findByRole("button", {
-      name: "Update progress for Current work",
+    const status = await screen.findByRole("button", {
+      name: "Status of Current work: Continued · not updated this week",
     });
-    // The submit-readiness deep link still resolves to this control.
-    expect(progress).toHaveAttribute(
+    // The submit-readiness deep link still resolves to the status icon.
+    expect(status).toHaveAttribute(
       "data-overview-focus",
       "confirm:current:a0000000-0000-4000-8000-000000000011",
     );
-    expect(screen.getByText("Continued · not updated this week")).toBeVisible();
-    await user.click(progress);
+    await user.click(
+      screen.getByRole("button", { name: "Edit item: Current work" }),
+    );
     const editor = screen.getByRole("form", {
       name: "Current week update for Payments",
     });
@@ -1663,11 +1568,12 @@ describe("LeadForm Overview", () => {
     expect(saved).toMatchObject({ carriedOver: false });
     await pollUntil(() =>
       expect(
-        screen.queryByText("Continued · not updated this week"),
+        screen.queryByRole("button", {
+          name: "Status of Current work: Continued · not updated this week",
+        }),
       ).toBeNull(),
     );
-    // The confirm anchor is gone after the marker clears; focus return falls
-    // back to the same row's first control through the existing plumbing.
+    // Focus returns to the text control that opened the editor.
     expect(
       await screen.findByRole("button", { name: "Edit item: Current work" }),
     ).toHaveFocus();
@@ -1699,11 +1605,13 @@ describe("LeadForm Overview", () => {
     );
 
     expect(
-      await screen.findByText("Planned · not updated this week"),
+      await screen.findByRole("button", {
+        name: "Status of Current work: Planned · not updated this week",
+      }),
     ).toBeVisible();
     await user.click(
       screen.getByRole("button", {
-        name: "Update progress for Current work",
+        name: "Edit item: Current work",
       }),
     );
     await user.click(screen.getByRole("button", { name: "In progress" }));
@@ -1721,6 +1629,78 @@ describe("LeadForm Overview", () => {
     });
   });
 
+  it("confirms carried work from the status menu in the draft, with no editor", async () => {
+    const user = userEvent.setup();
+    const saveDraft = vi.fn();
+    render(
+      <Wrapper currentCarriedOver saveDraft={saveDraft}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Status of Current work: Continued · not updated this week",
+      }),
+    );
+    await user.click(screen.getByRole("menuitem", { name: "In progress" }));
+
+    // The draft takes the change at once (autosave persists it as for any
+    // other draft edit); no editor opens and no Confirm button was needed.
+    expect(
+      await screen.findByRole("button", {
+        name: "Status of Current work: In progress",
+      }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("form", { name: "Current week update for Payments" }),
+    ).toBeNull();
+  });
+
+  it("sets a status that needs no extra input in place and opens the editor for a pause", async () => {
+    const user = userEvent.setup();
+    const saveDraft = vi.fn();
+    render(
+      <Wrapper saveDraft={saveDraft}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Status of Current work: In progress",
+      }),
+    );
+    await user.click(screen.getByRole("menuitem", { name: "Paused" }));
+    // A pause needs its reason: the canonical editor opens and nothing changes.
+    expect(
+      await screen.findByRole("form", {
+        name: "Current week update for Payments",
+      }),
+    ).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(
+      await screen.findByRole("button", {
+        name: "Status of Current work: In progress",
+      }),
+    ).toBeVisible();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Status of Current work: In progress",
+      }),
+    );
+    await user.click(screen.getByRole("menuitem", { name: "Done" }));
+    expect(
+      await screen.findByRole("button", {
+        name: "Status of Current work: Done",
+      }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("form", { name: "Current week update for Payments" }),
+    ).toBeNull();
+  });
+
   it("keeps carried work unconfirmed when the editor is cancelled", async () => {
     const user = userEvent.setup();
     const saveDraft = vi.fn();
@@ -1731,17 +1711,21 @@ describe("LeadForm Overview", () => {
     );
 
     const progress = await screen.findByRole("button", {
-      name: "Update progress for Current work",
+      name: "Edit item: Current work",
     });
     await user.click(progress);
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(saveDraft).not.toHaveBeenCalled();
     // The marker is untouched, so the carried copy and confirm anchor remain.
-    expect(screen.getByText("Continued · not updated this week")).toBeVisible();
+    expect(
+      screen.getByRole("button", {
+        name: "Status of Current work: Continued · not updated this week",
+      }),
+    ).toBeVisible();
     expect(
       await screen.findByRole("button", {
-        name: "Update progress for Current work",
+        name: "Edit item: Current work",
       }),
     ).toHaveFocus();
   });
@@ -1868,15 +1852,19 @@ describe("LeadForm Overview", () => {
     });
     expect(
       await screen.findByRole("button", {
-        name: "Update progress for Legacy next-week plan",
+        name: "Edit item: Legacy next-week plan",
       }),
     ).toBeInTheDocument();
     const preview = screen
       .getByRole("button", {
-        name: "Update progress for Legacy next-week plan",
+        name: "Edit item: Legacy next-week plan",
       })
       .closest("[data-overview-item-preview]");
-    expect(preview).toHaveTextContent("In progress");
+    expect(
+      within(preview as HTMLElement).getByRole("button", {
+        name: "Status of Legacy next-week plan: In progress",
+      }),
+    ).toBeVisible();
     await user.click(screen.getByText("History"));
     expect(screen.getByText(/Moved to next week by Test Lead/)).toBeVisible();
     expect(screen.getByText(/Previous: Current work/)).toBeVisible();

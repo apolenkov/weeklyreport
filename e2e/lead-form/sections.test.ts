@@ -92,8 +92,19 @@ async function ref(role: string, name: string): Promise<string> {
   return match;
 }
 
+// Centre the button before clicking: at the viewport edge the fixed completion
+// cluster covers it and agent-browser refuses to click through.
+async function clickRef(target: string, session?: string): Promise<void> {
+  await command(["scrollintoview", target], session);
+  await command(["click", target], session);
+}
+
 async function click(name: string, session?: string): Promise<void> {
-  await findRole("button", name, "click", { session });
+  const matches = refsByRole(await snapshot(session), "button", name);
+  assert.equal(matches.length, 1, `Expected one button: ${name}`);
+  const target = matches.at(0);
+  assert.ok(target);
+  await clickRef(target, session);
 }
 
 async function scopedClick(
@@ -101,10 +112,7 @@ async function scopedClick(
   name: string,
   session?: string,
 ): Promise<void> {
-  await command(
-    ["click", await scopedRef(scope, "button", name, session)],
-    session,
-  );
+  await clickRef(await scopedRef(scope, "button", name, session), session);
 }
 
 async function select(name: string, value: string): Promise<void> {
@@ -1223,57 +1231,103 @@ async function weeklyValue(name: string): Promise<unknown> {
   ).value;
 }
 
-async function saveWeeklyFields(): Promise<void> {
+const editWeeklyName = (name: string): string =>
+  `Edit weekly fields for ${name}`;
+
+/** Weekly fields stay closed at rest: neither the form nor its inputs render. */
+async function assertWeeklyClosed(): Promise<void> {
+  await waitClosed(WEEKLY_FORM);
+  const data = await snapshot();
+  assert.equal(scopeCount(data, "textbox", /^Weekly title(?: |$)/), 0);
+  assert.equal(scopeCount(data, "textbox", /^Description(?: |$)/), 0);
+}
+
+/** Opens the weekly fields from the Activity header edit control (named by the displayed title). */
+async function openWeeklyFields(displayedTitle: string): Promise<void> {
+  await click(editWeeklyName(displayedTitle));
+  await waitScope(WEEKLY_FORM);
+}
+
+/** Save closes the form and returns focus to the edit control, which carries the new displayed title. */
+async function saveWeeklyFields(displayedTitle: string): Promise<void> {
   await scopedClick(WEEKLY_FORM, "Save weekly fields");
+  await assertWeeklyClosed();
+  await assertFocused(editWeeklyName(displayedTitle));
   await saveDraft();
 }
 
-void test("activity weekly title and description save, cancel and reset", async () => {
+async function activityHeader(displayedTitle: string): Promise<string> {
+  return scopeSnapshot(
+    await snapshot(),
+    "article",
+    `Activity ${displayedTitle}`,
+  ).snapshot;
+}
+
+void test("activity weekly title and description open on demand, then save, cancel and reset", async () => {
+  const title = "E2E weekly activity";
+  const description = "E2E weekly activity description";
   await openLeadReport();
   await waitText(ACTIVITY.name);
+  // No weekly input at rest; only Activities carry the edit control.
+  await assertWeeklyClosed();
+  const rest = await snapshot();
+  assert.equal(scopeCount(rest, "button", editWeeklyName(ACTIVITY.name)), 1);
+  assert.equal(scopeCount(rest, "button", editWeeklyName(PRODUCT.name)), 0);
+  await openWeeklyFields(ACTIVITY.name);
   const titleBefore = await weeklyValue("Weekly title");
   const descriptionBefore = await weeklyValue("Description");
   await weeklyFill("Weekly title", "E2E cancelled title");
   await weeklyFill("Description", "E2E cancelled description");
   await scopedClick(WEEKLY_FORM, "Cancel");
+  await assertWeeklyClosed();
+  await assertFocused(editWeeklyName(ACTIVITY.name));
+  assert.equal(
+    (await activityHeader(ACTIVITY.name)).includes("E2E cancelled"),
+    false,
+  );
+  await openWeeklyFields(ACTIVITY.name);
   assert.equal(await weeklyValue("Weekly title"), titleBefore);
   assert.equal(await weeklyValue("Description"), descriptionBefore);
-  await weeklyFill("Weekly title", "E2E weekly activity");
-  await weeklyFill("Description", "E2E weekly activity description");
-  await saveWeeklyFields();
-  await persistedReload("E2E weekly activity");
-  assert.equal(await weeklyValue("Weekly title"), "E2E weekly activity");
-  assert.equal(
-    await weeklyValue("Description"),
-    "E2E weekly activity description",
-  );
+  await weeklyFill("Weekly title", title);
+  await weeklyFill("Description", description);
+  await saveWeeklyFields(title);
+  await persistedReload(title);
+  await assertWeeklyClosed();
+  // The saved values show as read-only text in the Activity header.
+  const header = await activityHeader(title);
+  assert.ok(header.includes(title));
+  assert.ok(header.includes(description));
+  await openWeeklyFields(title);
+  assert.equal(await weeklyValue("Weekly title"), title);
+  assert.equal(await weeklyValue("Description"), description);
   await scopedClick(WEEKLY_FORM, "Reset to catalogue name");
   assert.equal(await weeklyValue("Weekly title"), "");
-  assert.equal(
-    await weeklyValue("Description"),
-    "E2E weekly activity description",
-  );
-  await saveWeeklyFields();
+  assert.equal(await weeklyValue("Description"), description);
+  await saveWeeklyFields(ACTIVITY.name);
   await persistedReload(ACTIVITY.name);
+  assert.ok((await activityHeader(ACTIVITY.name)).includes(description));
+  await openWeeklyFields(ACTIVITY.name);
   assert.equal(await weeklyValue("Weekly title"), "");
-  assert.equal(
-    await weeklyValue("Description"),
-    "E2E weekly activity description",
-  );
+  assert.equal(await weeklyValue("Description"), description);
   await weeklyFill("Description", "");
   assert.equal(await weeklyValue("Description"), "");
-  await saveWeeklyFields();
+  await saveWeeklyFields(ACTIVITY.name);
   await persistedReload(ACTIVITY.name);
-  assert.equal(await weeklyValue("Description"), "");
   assert.equal(
-    scopeCount(await snapshot(), "article", `Activity ${ACTIVITY.name}`),
-    1,
+    (await activityHeader(ACTIVITY.name)).includes(description),
+    false,
   );
+  await openWeeklyFields(ACTIVITY.name);
+  assert.equal(await weeklyValue("Description"), "");
+  assert.equal(await weeklyValue("Weekly title"), "");
 });
 
 void test("activity weekly fields enforce title and description limits", async () => {
+  const longTitle = "T".repeat(200);
   await openLeadReport();
   await waitText(ACTIVITY.name);
+  await openWeeklyFields(ACTIVITY.name);
   await weeklyFill("Weekly title", "T".repeat(201));
   await waitText("Weekly title must be 200 characters or fewer.");
   assert.equal(
@@ -1293,7 +1347,7 @@ void test("activity weekly fields enforce title and description limits", async (
     ).enabled,
     false,
   );
-  await weeklyFill("Weekly title", "T".repeat(200));
+  await weeklyFill("Weekly title", longTitle);
   await weeklyFill("Description", "D".repeat(501));
   await waitText("Description must be 500 characters or fewer.");
   assert.equal(
@@ -1304,8 +1358,9 @@ void test("activity weekly fields enforce title and description limits", async (
     "true",
   );
   await weeklyFill("Description", "D".repeat(500));
-  await saveWeeklyFields();
-  await persistedReload("T".repeat(200));
-  assert.equal(await weeklyValue("Weekly title"), "T".repeat(200));
+  await saveWeeklyFields(longTitle);
+  await persistedReload(longTitle);
+  await openWeeklyFields(longTitle);
+  assert.equal(await weeklyValue("Weekly title"), longTitle);
   assert.equal(await weeklyValue("Description"), "D".repeat(500));
 });

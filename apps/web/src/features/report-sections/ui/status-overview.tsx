@@ -69,8 +69,10 @@ function StatusOverviewHeader({
   previousPlanSource,
   autosaveStatus,
   detailsHref,
+  onConfirmAll,
 }: {
   readonly idPrefix: string;
+  readonly onConfirmAll: (() => void) | undefined;
   readonly previousPlanSource: StatusOverviewProps["model"]["previousPlanSource"];
   readonly autosaveStatus: StatusOverviewProps["autosaveStatus"];
   readonly detailsHref: StatusOverviewProps["detailsHref"];
@@ -104,6 +106,15 @@ function StatusOverviewHeader({
           >
             {autosaveStatus}
           </p>
+        ) : null}
+        {onConfirmAll ? (
+          <button
+            type="button"
+            onClick={onConfirmAll}
+            className="inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] px-3 text-xs font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+          >
+            Confirm all as continue
+          </button>
         ) : null}
         {detailsHref ? (
           <a
@@ -179,6 +190,9 @@ export function StatusOverview(props: StatusOverviewProps) {
         previousPlanSource={model.previousPlanSource}
         autosaveStatus={autosaveStatus}
         detailsHref={detailsHref}
+        onConfirmAll={
+          (props.pendingReviewCount ?? 0) > 0 ? props.onConfirmAll : undefined
+        }
       />
 
       {health ? (

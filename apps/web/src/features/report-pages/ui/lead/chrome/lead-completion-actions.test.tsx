@@ -104,4 +104,29 @@ describe("LeadCompletionActions", () => {
     );
     expect(group.className).toContain("[&_button]:min-h-10");
   });
+  it("shows the review counter beside Submit and hides it at zero", () => {
+    const props = { autosave, onSubmit: vi.fn(), submitDisabled: true };
+    const { rerender } = render(
+      <LeadStickyCompletionActions
+        actions={{ ...props, pendingReviewCount: 2 }}
+      />,
+    );
+    const sticky = screen.getByRole("group", {
+      name: "Sticky completion actions",
+    });
+    const counter = within(sticky).getByText("2 to review");
+    expect(counter.nextElementSibling).toBe(
+      within(sticky).getByRole("button", { name: "Submit" }),
+    );
+    expect(
+      within(sticky).getByRole("button", { name: "Submit" }),
+    ).toBeDisabled();
+
+    rerender(
+      <LeadStickyCompletionActions
+        actions={{ ...props, pendingReviewCount: 0 }}
+      />,
+    );
+    expect(screen.queryByText(/to review/)).toBeNull();
+  });
 });

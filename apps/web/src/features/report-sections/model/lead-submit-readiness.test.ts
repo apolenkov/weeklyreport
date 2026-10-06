@@ -7,6 +7,7 @@ import {
   buildLeadSubmitPayload,
   deriveLeadSubmitReadiness,
   type LeadSubmitReadinessInput,
+  pendingReviewLabel,
 } from "./lead-submit-readiness";
 import type { Product, RiskEntry } from "./types";
 
@@ -172,11 +173,55 @@ describe("deriveLeadSubmitReadiness", () => {
     expect(readiness.blockingIssues).toEqual([
       {
         id: `submit-validation:UNCONFIRMED_CARRIED_ITEM:${CARRIED_ITEM_ID}`,
-        label: 'Update progress for "Implement the report".',
+        label: 'Review "Implement the report".',
         overviewFocus: `confirm:current:${CARRIED_ITEM_ID}`,
       },
     ]);
     expect(readiness.canOpenConfirmation).toBe(false);
+  });
+
+  it("counts every unconfirmed carried Current item and nothing else", () => {
+    const [base] = draft.items;
+    const carried = (stableId: string, over: object = {}) => ({
+      ...expectDefined(base),
+      stableId,
+      carriedOver: true,
+      ...over,
+    });
+    const readiness = deriveLeadSubmitReadiness({
+      ...baseInput,
+      draftPayload: {
+        ...draft,
+        items: [
+          carried(CARRIED_ITEM_ID),
+          carried("10000000-0000-4000-8000-000000000009"),
+          // Next, already confirmed and prior-only work never count.
+          carried("10000000-0000-4000-8000-00000000000a", { type: "next" }),
+          carried("10000000-0000-4000-8000-00000000000b", {
+            carriedOver: false,
+          }),
+        ],
+      },
+    });
+
+    expect(readiness.pendingReviewCount).toBe(2);
+    expect(
+      readiness.blockingIssues.filter((issue) =>
+        issue.id.startsWith("submit-validation:UNCONFIRMED_CARRIED_ITEM:"),
+      ),
+    ).toHaveLength(2);
+  });
+
+  it("reports zero pending items once continuations are confirmed", () => {
+    expect(deriveLeadSubmitReadiness(baseInput).pendingReviewCount).toBe(0);
+    expect(
+      deriveLeadSubmitReadiness({ ...baseInput, draftPayload: null })
+        .pendingReviewCount,
+    ).toBe(0);
+  });
+
+  it("formats the review counter", () => {
+    expect(pendingReviewLabel(2)).toBe("2 to review");
   });
 
   it("links an invalid Next plan to its matching Overview editor", () => {

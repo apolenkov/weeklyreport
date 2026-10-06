@@ -64,8 +64,8 @@ describe("useOpenWorkRegister", () => {
       { wrapper },
     );
 
-    await waitFor(() => expect(result.current.isComplete).toBe(true));
-    expect(query).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(query).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(result.current.isLoading).toBe(false));
     expect(result.current.openItems).toHaveLength(1);
     expect(result.current.openItems[0]?.occurrence.item.stableId).toBe(
       STABLE_ID,
