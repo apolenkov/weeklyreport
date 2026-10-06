@@ -205,11 +205,11 @@ describe("SlideProductCard status presentation", () => {
     render(<SlideProductCard card={card} authorsById={authorsById} />);
 
     const risks = screen.getByRole("heading", { name: "Risks" });
-    expect(risks).toHaveClass("max-sm:border-b-0", "max-sm:pb-0");
-    expect(risks.parentElement).toHaveClass("max-sm:flex");
-    expect(screen.getByLabelText("No Risks")).toHaveTextContent("—");
+    expect(risks).toHaveClass("max-sm:hidden");
+    const empty = screen.getByLabelText("No Risks");
+    expect(empty).toHaveTextContent("—");
+    expect(empty).toHaveTextContent("No risks");
     const current = screen.getByRole("heading", { name: "Current work" });
-    expect(current).not.toHaveClass("max-sm:border-b-0");
-    expect(current.parentElement).not.toHaveClass("max-sm:flex");
+    expect(current).not.toHaveClass("max-sm:hidden");
   });
 });

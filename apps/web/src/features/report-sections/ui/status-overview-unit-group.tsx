@@ -52,7 +52,7 @@ export function UnitGroup({
       <div className="flex items-center justify-between gap-3 bg-[var(--color-surface-muted)] px-4 py-2">
         <h3
           id={groupId}
-          className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--color-foreground)]"
+          className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-primary)]"
         >
           {group.label}
         </h3>

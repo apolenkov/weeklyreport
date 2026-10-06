@@ -95,6 +95,7 @@ describe("humanizeProcedure", () => {
 describe("shortId", () => {
   it("keeps short ids whole and shows the distinctive tail of long ones", () => {
     expect(shortId("singleton")).toBe("singleton");
+    expect(shortId("a-short-id-01234")).toBe("a-short-id-01234");
     expect(shortId("a0000000-0000-4000-8000-000000000401")).toBe("…00000401");
   });
 });
