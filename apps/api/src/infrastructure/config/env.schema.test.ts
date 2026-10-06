@@ -453,6 +453,58 @@ describe("envSchema — no defaults, every product var required", () => {
     ).toBe(false);
   });
 
+  it.each(["https://App.example.com/", "https://app.example.com:443"])(
+    "accepts FRONTEND_URL %j canonicalizing to the configured origin",
+    (FRONTEND_URL) => {
+      expect(envSchema.safeParse({ ...COMPLETE, FRONTEND_URL }).success).toBe(
+        true,
+      );
+    },
+  );
+
+  it.each([
+    "ftp://app.example.com",
+    "file:///etc/hostname",
+    "https://user:pass@app.example.com",
+  ])(
+    "rejects a non-HTTP(S) or credentialed FRONTEND_URL %j",
+    (FRONTEND_URL) => {
+      expect(envSchema.safeParse({ ...COMPLETE, FRONTEND_URL }).success).toBe(
+        false,
+      );
+    },
+  );
+
+  it.each([
+    "not-a-url",
+    "ftp://files.example.com",
+    "https://user:pass@app.example.com",
+    "https://a.example.com,*",
+    "https://*.example.com",
+    "https://app.example.com,not-a-url",
+  ])(
+    "rejects malformed FRONTEND_URLS entry %j in every environment",
+    (FRONTEND_URLS) => {
+      expect(
+        envSchema.safeParse({
+          ...COMPLETE,
+          NODE_ENV: "development",
+          FRONTEND_URLS,
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it("accepts FRONTEND_URLS entries that canonicalize to HTTP(S) origins", () => {
+    expect(
+      envSchema.safeParse({
+        ...COMPLETE,
+        FRONTEND_URLS:
+          " https://Admin.example.com/ , https://app.example.com:443 ",
+      }).success,
+    ).toBe(true);
+  });
+
   it.each(["0", "-1", "1.5", "not-a-number"] as const)(
     "rejects invalid assistant integer limits (%s)",
     (value) => {

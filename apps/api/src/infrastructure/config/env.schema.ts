@@ -28,6 +28,22 @@ const MAX_SIMILARITY_THRESHOLD = 1;
 const positiveIntegerEnv = z.coerce.number().int().positive();
 const explicitNumberEnv = z.string().trim().min(1).transform(Number);
 
+// FRONTEND_URL/FRONTEND_URLS configure application URLs whose paths may matter
+// for redirects, but CORS authorization compares only the canonical HTTP(S)
+// origin against the browser Origin header. Derives that origin, or null when
+// the value cannot form one — non-HTTP(S) scheme, embedded credentials, or an
+// opaque/null origin.
+export const canonicalHttpOrigin = (value: string): string | null => {
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    if (url.username !== "" || url.password !== "") return null;
+    return url.origin === "null" ? null : url.origin;
+  } catch {
+    return null;
+  }
+};
+
 // No `.default()` anywhere by design: every value is REQUIRED and supplied
 // explicitly per environment, so a misconfigured deploy fails boot loud instead
 // of running on a silent (e.g. localhost) default. See env-schema-coverage spec.
@@ -36,14 +52,20 @@ const envObjectSchema = z.object({
   PORT: z.coerce.number().int().positive(),
   API_HOST: z.enum(["127.0.0.1", "0.0.0.0"]),
   NODE_ENV: z.enum(["development", "production", "test"]),
-  FRONTEND_URL: z.url(),
+  // Application URL for redirects; must still canonicalize to an HTTP(S)
+  // origin because its origin doubles as a CORS allowlist entry.
+  FRONTEND_URL: z.url().refine((value) => canonicalHttpOrigin(value) !== null, {
+    message:
+      "FRONTEND_URL must be an HTTP(S) application URL without credentials",
+  }),
   // Base URL the reminder scheduler embeds in notification email links
   // (`reminders.scheduler.ts`). Required so prod emails never link to
   // localhost; in local dev it is set to the same web origin as FRONTEND_URL.
   APP_BASE_URL: z.url(),
   // Optional CSV of additional allowed origins for CORS (e.g. prod host +
-  // admin host on one API instance). Wildcards (*) are rejected in
-  // superRefine when NODE_ENV=production.
+  // admin host on one API instance). Each entry must canonicalize to an
+  // HTTP(S) origin; wildcards and malformed entries are rejected in
+  // superRefine in every environment.
   FRONTEND_URLS: z.string().optional(),
   AUTH_DEV_MODE: z
     .enum(["true", "false"])
@@ -259,20 +281,27 @@ const addPlaceholderSecretIssues = (
   }
 };
 
-// Production CORS accepts only the explicitly configured origins; reject a
-// wildcard so FRONTEND_URLS remains a concrete allowlist.
-const addWildcardOriginIssue = (
+// CORS compares the browser Origin header exactly, so every FRONTEND_URLS
+// entry must canonicalize to a concrete HTTP(S) origin. A wildcard, malformed
+// URL, credential-bearing or non-HTTP(S) entry could never match a real
+// Origin and would silently narrow the allowlist — reject in every
+// environment, not just production.
+const addFrontendUrlsEntryIssues = (
   data: ValidatedEnv,
   ctx: z.RefinementCtx,
 ): void => {
-  const origins = (data.FRONTEND_URLS ?? "")
+  const invalid = (data.FRONTEND_URLS ?? "")
     .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (!origins.some((origin) => origin.includes("*"))) return;
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .some(
+      (entry) => entry.includes("*") || canonicalHttpOrigin(entry) === null,
+    );
+  if (!invalid) return;
   ctx.addIssue({
     code: "custom",
-    message: 'FRONTEND_URLS origins must not include "*" in production',
+    message:
+      "FRONTEND_URLS entries must be HTTP(S) URLs without wildcards or credentials",
     path: ["FRONTEND_URLS"],
   });
 };
@@ -356,11 +385,11 @@ const addProviderAllowedOriginsIssue = (
 
 export const envSchema = envObjectSchema.superRefine((data, ctx) => {
   addProviderAllowedOriginsIssue(data, ctx);
+  addFrontendUrlsEntryIssues(data, ctx);
   // Production fences. Boot must fail if any of these aren't met.
   if (data.NODE_ENV !== "production") return;
   addForbiddenDevModeIssue(data, ctx);
   addPlaceholderSecretIssues(data, ctx);
-  addWildcardOriginIssue(data, ctx);
   addMissingSmtpIssues(data, ctx);
   addMissingSmtpPortIssue(data, ctx);
   addMissingReleaseVersionIssue(data, ctx);
