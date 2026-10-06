@@ -132,6 +132,7 @@ export function UnitGroup({
             onSetStatus={overview.onSetStatus}
             onResolvePlan={overview.onResolvePlan}
             onRestorePlan={overview.onRestorePlan}
+            onVerdict={overview.onVerdict}
             editorSlot={
               editorSlot?.unitKey === unit.key ? editorSlot : undefined
             }

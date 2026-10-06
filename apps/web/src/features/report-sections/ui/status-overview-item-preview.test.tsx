@@ -76,12 +76,15 @@ describe("StatusOverviewItemPreview at rest", () => {
     expect(badge).toHaveAttribute("title", "Development, Testing");
   });
 
-  it("marks an unplanned item with a small badge", () => {
+  it("keeps the unplanned meaning in the status name, not as a badge", () => {
     render(
       <StatusOverviewItemPreview item={{ ...item, continuity: "unplanned" }} />,
     );
 
-    expect(screen.getByText("Unplanned")).toBeInTheDocument();
+    expect(screen.queryByText("Unplanned")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: /· Unplanned$/ }),
+    ).toBeInTheDocument();
   });
 
   it("clamps a long collapsed update to two lines until it is expanded", async () => {

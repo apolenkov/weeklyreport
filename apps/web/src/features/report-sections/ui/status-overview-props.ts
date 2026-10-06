@@ -9,6 +9,7 @@ import type {
 } from "../model/status-overview";
 import type { StatusOverviewActivityFieldsChange } from "./status-overview-activity-editor";
 import type { StatusOverviewEditorSlot } from "./status-overview-editor-slot";
+import type { VerdictHandler } from "./status-overview-item-handlers";
 
 export interface StatusOverviewProps {
   readonly health?: ReportHealthPulse | undefined;
@@ -38,6 +39,10 @@ export interface StatusOverviewProps {
     ((item: StatusOverviewItem, focusKey?: string) => void) | undefined;
   readonly onRestorePlan?:
     ((item: StatusOverviewItem, focusKey?: string) => void) | undefined;
+  readonly onVerdict?: VerdictHandler | undefined;
+  /** Unconfirmed carried continuations; the confirm-all action shows above zero. */
+  readonly pendingReviewCount?: number | undefined;
+  readonly onConfirmAll?: (() => void) | undefined;
   /** Linked Next commitment on the same Current item (never a type-flip); the
    * promise form is the audited replacement path. */
   readonly onLinkedContinuation?:

@@ -78,11 +78,7 @@ export type {
   StatusOverviewModel,
 } from "./model/status-overview";
 export { projectStatusOverview } from "./model/status-overview";
-export type {
-  PlanVerdict,
-  PlanVerdictRequest,
-  PlanVerdictWrite,
-} from "./model/status-overview-verdict";
+export type { PlanVerdict } from "./model/status-overview-verdict";
 export { planVerdictWrite } from "./model/status-overview-verdict";
 export {
   annotateOwnRiskCoverage,

@@ -5,6 +5,9 @@ import {
   LeadCompletionActions,
 } from "./lead-completion-actions";
 
+// Bottom padding that keeps the last content clear of the fixed cluster.
+export const LEAD_STICKY_COMPLETION_CLEARANCE_CLASS = "pb-28";
+
 interface LeadStickyCompletionActionsProps {
   readonly actions: LeadCompletionActionContract;
 }

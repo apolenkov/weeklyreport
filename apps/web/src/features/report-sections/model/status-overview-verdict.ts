@@ -189,3 +189,28 @@ export function planVerdictWrite(
     ? priorOutcome(request)
     : linkedWrite(request, request.linked);
 }
+
+/** What a Previously planned item shows: the verdict rail or the accepted stamp. */
+export type PriorVerdictState = PlanVerdict | "pending";
+
+/**
+ * Derives the verdict state of a prior-week item from the selected week's
+ * occurrence with the same `stableId`. Nothing is stored on the prior record:
+ * no occurrence, or an unconfirmed carried one, is still pending; any other
+ * occurrence already is the lead's verdict. Null when no verdict applies
+ * (cancelled prior plan, or the lead cannot edit and nothing was decided).
+ */
+export function priorVerdictState(
+  prior: SectionItem,
+  linked: SectionItem | null,
+  editable: boolean,
+): PriorVerdictState | null {
+  if (prior.resolution != null) return null;
+  if (linked === null || (linked.type === "current" && linked.carriedOver))
+    return editable ? "pending" : null;
+  if (linked.resolution != null) return "wont_do";
+  if (linked.type === "next" || linked.workflowStatus === "postponed")
+    return "next";
+  if (linked.workflowStatus === "done") return "done";
+  return linked.workflowStatus === "paused" ? "paused" : "continue";
+}

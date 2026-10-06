@@ -19,7 +19,7 @@ export interface StatusOverviewActivityFieldsChange {
 }
 
 // Lengths are checked on the trimmed value, as the save schema trims it.
-export function limitError(
+function limitError(
   label: string,
   value: string,
   limit: number,

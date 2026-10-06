@@ -129,11 +129,11 @@ describe("LeadSubmitReadinessSummary", () => {
           blockingIssues: [
             {
               id: "submit-validation:UNCONFIRMED_CARRIED_ITEM:a",
-              label: 'Update progress for "A".',
+              label: 'Review "A".',
             },
             {
               id: "submit-validation:UNCONFIRMED_CARRIED_ITEM:b",
-              label: 'Update progress for "B".',
+              label: 'Review "B".',
             },
           ],
           canOpenConfirmation: false,
@@ -153,10 +153,10 @@ describe("LeadSubmitReadinessSummary", () => {
       <>
         <button
           id={overviewFocus}
-          aria-label="Update progress for Carried work"
+          aria-label="Status of Carried work"
           data-overview-focus={overviewFocus}
         >
-          Update progress
+          Status
         </button>
         <LeadSubmitReadinessSummary
           readiness={{
@@ -164,7 +164,7 @@ describe("LeadSubmitReadinessSummary", () => {
             blockingIssues: [
               {
                 id: "submit-validation:UNCONFIRMED_CARRIED_ITEM:carried-item",
-                label: 'Update progress for "Carried work".',
+                label: 'Review "Carried work".',
                 overviewFocus,
               },
             ],
@@ -176,12 +176,12 @@ describe("LeadSubmitReadinessSummary", () => {
     );
 
     const link = screen.getByRole("link", {
-      name: 'Update progress for "Carried work".',
+      name: 'Review "Carried work".',
     });
     expect(link).toHaveAttribute("href", `#${overviewFocus}`);
     await userEvent.click(link);
     expect(
-      screen.getByRole("button", { name: "Update progress for Carried work" }),
+      screen.getByRole("button", { name: "Status of Carried work" }),
     ).toHaveFocus();
   });
 
@@ -192,10 +192,10 @@ describe("LeadSubmitReadinessSummary", () => {
       <>
         <button
           id={overviewFocus}
-          aria-label="Update progress for Carried work"
+          aria-label="Status of Carried work"
           data-overview-focus={overviewFocus}
         >
-          Update progress
+          Status
         </button>
         <LeadSubmitReadinessSummary
           readiness={{
@@ -203,7 +203,7 @@ describe("LeadSubmitReadinessSummary", () => {
             blockingIssues: [
               {
                 id: "submit-validation:UNCONFIRMED_CARRIED_ITEM:carried-item",
-                label: 'Update progress for "Carried work".',
+                label: 'Review "Carried work".',
                 overviewFocus,
               },
             ],
@@ -215,11 +215,11 @@ describe("LeadSubmitReadinessSummary", () => {
     );
 
     const target = screen.getByRole("button", {
-      name: "Update progress for Carried work",
+      name: "Status of Carried work",
     });
     const allowed = fireEvent.click(
       screen.getByRole("link", {
-        name: 'Update progress for "Carried work".',
+        name: 'Review "Carried work".',
       }),
       { metaKey: true },
     );
@@ -300,7 +300,7 @@ describe("LeadSubmitReadinessSummary", () => {
             blockingIssues: [
               {
                 id: "submit-validation:UNCONFIRMED_CARRIED_ITEM:carried-third",
-                label: 'Update progress for "Third carried work".',
+                label: 'Review "Third carried work".',
                 overviewFocus,
               },
             ],
@@ -321,7 +321,7 @@ describe("LeadSubmitReadinessSummary", () => {
 
     await userEvent.click(
       screen.getByRole("link", {
-        name: 'Update progress for "Third carried work".',
+        name: 'Review "Third carried work".',
       }),
     );
 
