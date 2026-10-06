@@ -568,7 +568,7 @@ describe("SdlcPipeline — co-lead blocked locked chip: initials, no counts", ()
 
 // ---- Responsive pipeline structural contract ----
 // jsdom has no layout engine; these tests pin the structural contract only:
-// phone/tablet/narrow-desktop viewports use compact grids, while xl+ renders
+// phone and tablet viewports use compact grids, while lg+ renders
 // one non-wrapping arrow-connected sequence without changing semantic order.
 function getStageRows(container: HTMLElement): HTMLElement[] {
   return Array.from(
@@ -596,19 +596,18 @@ describe("SdlcPipeline — responsive stage pipeline contract", () => {
     expect(stages).not.toBeNull();
     expect(stages?.className).toContain("grid-cols-2");
     expect(stages?.className).toContain("md:grid-cols-4");
-    expect(stages?.className).toContain("xl:flex");
-    expect(stages?.className).toContain("xl:flex-nowrap");
+    expect(stages?.className).toContain("lg:flex");
+    expect(stages?.className).toContain("lg:flex-nowrap");
     expect(stages?.className).not.toContain("flex-wrap");
     expect(rows).toHaveLength(BASE_PRODUCT.stages.length);
     for (const row of rows) {
       expect(row.className).toContain("w-full");
       expect(row.className).toContain("min-w-0");
-      expect(row.className).toContain("xl:w-[var(--sdlc-stage-width)]");
-      expect(row.className).toContain("xl:flex-none");
-      expect(row.className).not.toContain("xl:flex-1");
+      expect(row.className).toContain("lg:max-w-[var(--sdlc-stage-width)]");
+      expect(row.className).toContain("lg:flex-1");
       expect(row.querySelector("button")).toBeInTheDocument();
     }
-    expect(stages?.className).toContain("xl:justify-center");
+    expect(stages?.className).toContain("lg:justify-center");
     expect(stages?.style.getPropertyValue("--sdlc-stage-width")).toBe("9rem");
   });
 
@@ -622,7 +621,7 @@ describe("SdlcPipeline — responsive stage pipeline contract", () => {
       expect(connector).toHaveAttribute("aria-hidden", "true");
       expect(connector).not.toHaveAttribute("tabindex");
       expect(connector.className).toContain("hidden");
-      expect(connector.className).toContain("xl:flex");
+      expect(connector.className).toContain("lg:flex");
       expect(connector.style.height).toBe(STAGE_CHIP_BOX_HEIGHT);
       expect(connector.querySelector("svg")).toBeInTheDocument();
     }

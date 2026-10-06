@@ -132,32 +132,34 @@ function IdentityLoading() {
 
 function IdentityFields({ form }: { readonly form: OrgIdentityFormModel }) {
   return (
-    <fieldset disabled={form.isSaving} className="min-w-0 max-w-lg space-y-5">
-      <p className="text-sm text-[var(--color-muted-foreground)]">
+    <fieldset disabled={form.isSaving} className="min-w-0 max-w-4xl space-y-5">
+      <p className="max-w-[65ch] text-sm text-[var(--color-muted-foreground)]">
         These values brand the application chrome: the nav-bar shows the short
         name, the landing page hero shows both, and PDF report headers use the
         full name.
       </p>
 
-      <OrgIdentityField
-        id="org-short-name"
-        label="Short name"
-        hint={`Shown in the nav-bar brand pill (max ${MAX_SHORT_NAME_LENGTH} chars).`}
-        maxLength={MAX_SHORT_NAME_LENGTH}
-        value={form.shortName}
-        isOver={form.shortNameOver}
-        onChange={form.editShortName}
-      />
+      <div className="grid gap-5 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+        <OrgIdentityField
+          id="org-short-name"
+          label="Short name"
+          hint={`Shown in the nav-bar brand pill (max ${MAX_SHORT_NAME_LENGTH} chars).`}
+          maxLength={MAX_SHORT_NAME_LENGTH}
+          value={form.shortName}
+          isOver={form.shortNameOver}
+          onChange={form.editShortName}
+        />
 
-      <OrgIdentityField
-        id="org-full-name"
-        label="Full name"
-        hint={`Shown on the landing hero and in PDF report headers (max ${MAX_FULL_NAME_LENGTH} chars).`}
-        maxLength={MAX_FULL_NAME_LENGTH}
-        value={form.fullName}
-        isOver={form.fullNameOver}
-        onChange={form.editFullName}
-      />
+        <OrgIdentityField
+          id="org-full-name"
+          label="Full name"
+          hint={`Shown on the landing hero and in PDF report headers (max ${MAX_FULL_NAME_LENGTH} chars).`}
+          maxLength={MAX_FULL_NAME_LENGTH}
+          value={form.fullName}
+          isOver={form.fullNameOver}
+          onChange={form.editFullName}
+        />
+      </div>
 
       <SaveIdentityRow
         canSave={form.canSave}

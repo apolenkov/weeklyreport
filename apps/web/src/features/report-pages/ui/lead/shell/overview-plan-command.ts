@@ -131,6 +131,7 @@ function openWorkOverviewItem(
     pausedReason: item.pausedReason ?? null,
     resolution: item.resolution ?? null,
     outcomeHistory: item.outcomeHistory ?? [],
+    comments: item.comments ?? [],
     canResolve: true,
     canRestore: false,
     workflowStatus: item.workflowStatus,

@@ -2,11 +2,16 @@
 
 import type { PeriodComparisonOutput } from "@customreport/shared";
 import { trafficLightToCanonical } from "@customreport/shared";
+import { ChevronRight } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { formatPeriodRangeWithYear } from "../../../shared/lib/format/format-date";
+import { compareBySeverityThenName } from "../../../shared/lib/status/status-order";
 import { SlideStatusBadge } from "../../../shared/ui/feedback/slide-status-badge";
 import {
   AnalyticsTable,
+  ColumnHeader,
+  DataCell,
   StickyColumnHeader,
   StickyRowHeader,
 } from "./analytics-table";
@@ -18,7 +23,51 @@ function deltaClass(delta: number): string {
 }
 
 function riskDeltaText(delta: number): string {
-  return delta === 0 ? "\u2014" : String(delta);
+  return delta > 0 ? `+${String(delta)}` : String(delta);
+}
+
+type ComparisonRow = PeriodComparisonOutput["rows"][number];
+
+function ComparisonRows({ rows }: { readonly rows: readonly ComparisonRow[] }) {
+  return rows.map((r) => (
+    <tr key={r.projectId}>
+      <StickyRowHeader>{r.projectName}</StickyRowHeader>
+      <DataCell className="whitespace-nowrap">
+        <SlideStatusBadge
+          status={trafficLightToCanonical(r.statusB)}
+          labelVariant="screen"
+        />
+      </DataCell>
+      <DataCell className="whitespace-nowrap">
+        <SlideStatusBadge
+          status={trafficLightToCanonical(r.statusA)}
+          labelVariant="screen"
+        />
+      </DataCell>
+      <DataCell numeric>{r.riskCountB}</DataCell>
+      <DataCell numeric>{r.riskCountA}</DataCell>
+      <DataCell numeric className={deltaClass(r.riskDelta)}>
+        {riskDeltaText(r.riskDelta)}
+      </DataCell>
+    </tr>
+  ));
+}
+
+// Identical periods repeat the traffic-light history above, so the table stays
+// folded until someone asks for it.
+function UnchangedFold({ children }: { readonly children: ReactNode }) {
+  return (
+    <details className="group">
+      <summary className="flex min-h-[var(--touch-target-min)] cursor-pointer items-center gap-1 text-sm font-medium text-[var(--color-primary)]">
+        <ChevronRight
+          aria-hidden="true"
+          className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90 motion-reduce:transition-none"
+        />
+        No status or risk changes between these periods. Show the table
+      </summary>
+      {children}
+    </details>
+  );
 }
 
 export function PeriodComparisonTable({
@@ -33,67 +82,51 @@ export function PeriodComparisonTable({
     return <p className="text-sm text-muted-foreground">No comparison data.</p>;
   }
 
+  const sortedRows = rows
+    .map((row) => ({
+      row,
+      status: trafficLightToCanonical(row.statusB),
+      name: row.projectName,
+    }))
+    .toSorted(compareBySeverityThenName)
+    .map(({ row }) => row);
+  const unchanged = rows.every(
+    (row) => row.statusA === row.statusB && row.riskDelta === 0,
+  );
+
+  const table = (
+    <AnalyticsTable
+      headingId={headingId}
+      caption="Period comparison data"
+      dataColumns={5}
+      showScrollHint
+    >
+      <thead>
+        <tr>
+          <StickyColumnHeader>Project</StickyColumnHeader>
+          <ColumnHeader>Latest status</ColumnHeader>
+          <ColumnHeader>Previous status</ColumnHeader>
+          <ColumnHeader numeric>Latest risks</ColumnHeader>
+          <ColumnHeader numeric>Previous risks</ColumnHeader>
+          <ColumnHeader numeric>Risk change</ColumnHeader>
+        </tr>
+      </thead>
+      <tbody>
+        <ComparisonRows rows={sortedRows} />
+      </tbody>
+    </AnalyticsTable>
+  );
+
   return (
     <>
       <p className="mb-3 text-sm text-muted-foreground">
-        Periods{" "}
-        {formatPeriodRangeWithYear(periodA?.periodStart, periodA?.periodEnd)}{" "}
-        (previous) and{" "}
+        Latest period{" "}
         {formatPeriodRangeWithYear(periodB?.periodStart, periodB?.periodEnd)}{" "}
-        (latest). Risk change is latest minus previous.
+        compared with previous period{" "}
+        {formatPeriodRangeWithYear(periodA?.periodStart, periodA?.periodEnd)}.
+        Risk change is latest minus previous.
       </p>
-      <AnalyticsTable
-        headingId={headingId}
-        caption="Period comparison data"
-        showScrollHint
-      >
-        <thead>
-          <tr className="border-b text-left">
-            <StickyColumnHeader>Project</StickyColumnHeader>
-            <th scope="col" className="px-3 py-2">
-              Latest status
-            </th>
-            <th scope="col" className="px-3 py-2">
-              Previous status
-            </th>
-            <th scope="col" className="px-3 py-2">
-              Latest risks
-            </th>
-            <th scope="col" className="px-3 py-2">
-              Previous risks
-            </th>
-            <th scope="col" className="px-3 py-2">
-              Risk change
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.projectId} className="border-b last:border-0">
-              <StickyRowHeader>{r.projectName}</StickyRowHeader>
-              <td className="whitespace-nowrap px-3 py-2">
-                <SlideStatusBadge
-                  status={trafficLightToCanonical(r.statusB)}
-                  labelVariant="screen"
-                />
-              </td>
-              <td className="whitespace-nowrap px-3 py-2">
-                <SlideStatusBadge
-                  status={trafficLightToCanonical(r.statusA)}
-                  labelVariant="screen"
-                />
-              </td>
-              <td className="px-3 py-2">{r.riskCountB}</td>
-              <td className="px-3 py-2">{r.riskCountA}</td>
-              <td className={`px-3 py-2 ${deltaClass(r.riskDelta)}`}>
-                {r.riskDelta > 0
-                  ? `+${String(r.riskDelta)}`
-                  : riskDeltaText(r.riskDelta)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </AnalyticsTable>
+      {unchanged ? <UnchangedFold>{table}</UnchangedFold> : table}
     </>
   );
 }

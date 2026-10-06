@@ -20,7 +20,7 @@ vi.mock("../model/action-log-format", () => ({
   copyToClipboard: (...args: unknown[]) => {
     return copyToClipboard(...args) as Promise<boolean>;
   },
-  truncate: (value: string) => value,
+  shortId: (value: string) => value,
 }));
 
 describe("CorrelationCell", () => {
@@ -28,6 +28,15 @@ describe("CorrelationCell", () => {
     toastError.mockClear();
     copyToClipboard.mockReset();
     vi.useRealTimers();
+  });
+
+  it("shows the id and a labelled Copy button", () => {
+    render(<CorrelationCell value="req-123" />);
+
+    expect(screen.getByText("req-123")).toHaveAttribute("title", "req-123");
+    expect(
+      screen.getByRole("button", { name: /copy reference id req-123/i }),
+    ).toHaveTextContent("Copy");
   });
 
   it("shows copied feedback on a successful copy", async () => {

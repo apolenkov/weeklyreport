@@ -16,9 +16,9 @@ const HISTORY_LINK_TITLE = "Past weeks and closed reports";
 export const LEAD_REPORT_ROUTE = "/lead/report";
 export const REPORTS_ROUTE = "/reports";
 export const ADMIN_ROUTE = "/admin";
-const PDF_EXPORTS_ROUTE = "/pdf-exports";
+export const PDF_EXPORTS_ROUTE = "/pdf-exports";
 export const REPORTS_LATEST_ROUTE = "/reports/latest";
-const REPORTS_TRENDS_ROUTE = "/reports/trends";
+export const REPORTS_TRENDS_ROUTE = "/reports/trends";
 export const HEAD_DASHBOARD_ROUTE = "/head/dashboard";
 export const HEAD_REPORT_ROUTE = "/head/report";
 const FEEDBACK_ROUTE = "/feedback";
@@ -76,8 +76,8 @@ export const NAV_LINKS: readonly NavLink[] = [
   // so the route is HEAD_ROUTE_ROLES-gated, not trapped inside admin-only UI.
   {
     href: PDF_EXPORTS_ROUTE,
-    label: "Exports",
-    title: "Quarantined PDF exports awaiting recovery",
+    label: "PDF exports",
+    title: "Failed PDF exports and how to retry them",
     roles: ["head", "admin"],
   },
   {

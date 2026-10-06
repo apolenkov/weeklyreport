@@ -74,7 +74,7 @@ export function TrendsSection(props: TrendsSectionProps) {
 
   return (
     <section className="card-surface p-4 sm:p-6">
-      <h2 id={headingId} className="mb-3 text-lg font-medium">
+      <h2 id={headingId} className="section-title mb-3">
         {title}
       </h2>
       <TrendsSectionContent {...props} />

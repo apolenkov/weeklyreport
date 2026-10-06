@@ -12,6 +12,9 @@ import { LeadQueueDetail } from "./lead-queue-detail";
 import {
   contentSummary,
   freshnessLabel,
+  QUEUE_ACTION_CELL_CLASS,
+  QUEUE_ACTIONS_CLASS,
+  QUEUE_META_CLASS,
   QUEUE_ROW_GRID_CLASS,
   STATUS_CLASSES,
   STATUS_LABELS,
@@ -35,9 +38,11 @@ function LeadIdentity({ lead }: { readonly lead: LeadInfo }) {
         <span className="block truncate font-semibold text-[var(--color-foreground)]">
           {lead.name}
         </span>
-        <span className="block truncate text-xs text-[var(--color-muted-foreground)]">
-          {ROLE_LABEL[lead.role]}
-        </span>
+        {lead.role === "lead" ? null : (
+          <span className="block truncate text-xs text-[var(--color-muted-foreground)]">
+            {ROLE_LABEL[lead.role]}
+          </span>
+        )}
       </span>
     </div>
   );
@@ -45,7 +50,7 @@ function LeadIdentity({ lead }: { readonly lead: LeadInfo }) {
 
 function LeadStateBadges({ lead }: { readonly lead: LeadInfo }) {
   return (
-    <div className="flex min-w-0 flex-wrap gap-1.5">
+    <div className="flex min-w-0 flex-wrap gap-1.5 max-sm:flex-col max-sm:items-end max-lg:justify-end">
       <span
         className={`inline-flex rounded-[var(--radius-pill)] border px-2.5 py-0.5 text-xs font-semibold ${STATUS_CLASSES[lead.status]}`}
       >
@@ -82,7 +87,7 @@ function LeadRowToggle({
       aria-controls={detailId}
       aria-label={`${expanded ? "Hide details" : "Details"} for ${leadName}`}
       onClick={onToggle}
-      className="inline-flex h-[var(--dashboard-action-h)] w-[var(--dashboard-summary-action-w)] items-center justify-center gap-1 rounded-[var(--radius-pill)] px-2 text-xs font-semibold text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)]"
+      className={`inline-flex h-[var(--dashboard-action-h)] items-center justify-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] px-2 text-xs font-semibold text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] ${QUEUE_ACTION_CELL_CLASS}`}
     >
       {expanded ? "Hide" : "Details"}
       <ChevronDown
@@ -114,27 +119,33 @@ function LeadQueueRowSummary({
     <div className={QUEUE_ROW_GRID_CLASS}>
       <LeadIdentity lead={lead} />
       <LeadStateBadges lead={lead} />
-      <span className="min-w-0 text-xs text-[var(--color-muted-foreground)]">
-        {freshnessLabel(lead)}
-        {lead.isStale ? " · Needs attention" : ""}
-      </span>
-      <span className="min-w-0 text-xs font-medium text-[var(--color-foreground)]">
-        {contentSummary(lead)}
-      </span>
-      <div className="flex w-[var(--dashboard-summary-action-w)] flex-wrap items-center sm:justify-end [&>a]:h-[var(--dashboard-action-h)] [&>a]:w-full [&>a]:justify-center [&>button]:h-[var(--dashboard-action-h)] [&>button]:w-full [&>button]:justify-center">
-        <LeadPrimaryAction
-          lead={lead}
-          reportId={reportId}
-          onMutated={onMutated}
+      <div className={QUEUE_META_CLASS}>
+        <span className="min-w-0 text-xs text-[var(--color-muted-foreground)] max-lg:after:ml-2 max-lg:after:content-['·']">
+          {freshnessLabel(lead)}
+          {lead.isStale ? " · Needs attention" : ""}
+        </span>
+        <span className="min-w-0 text-xs font-medium text-[var(--color-foreground)]">
+          {contentSummary(lead)}
+        </span>
+      </div>
+      <div className={QUEUE_ACTIONS_CLASS}>
+        <div
+          className={`flex flex-wrap items-center sm:justify-end [&>a]:h-[var(--dashboard-action-h)] [&>a]:w-full [&>a]:justify-center [&>button]:h-[var(--dashboard-action-h)] [&>button]:w-full [&>button]:justify-center ${QUEUE_ACTION_CELL_CLASS}`}
+        >
+          <LeadPrimaryAction
+            lead={lead}
+            reportId={reportId}
+            onMutated={onMutated}
+          />
+        </div>
+        <LeadRowToggle
+          buttonRef={toggleRef}
+          detailId={detailId}
+          expanded={expanded}
+          leadName={lead.name}
+          onToggle={onToggle}
         />
       </div>
-      <LeadRowToggle
-        buttonRef={toggleRef}
-        detailId={detailId}
-        expanded={expanded}
-        leadName={lead.name}
-        onToggle={onToggle}
-      />
     </div>
   );
 }

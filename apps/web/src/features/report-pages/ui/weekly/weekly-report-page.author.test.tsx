@@ -136,8 +136,9 @@ describe("WeeklyReportPage author highlighting", () => {
         "button[aria-expanded]",
       );
       const betaAccordion = betaSection?.querySelector("button[aria-expanded]");
-      expect(alphaAccordion).toHaveAttribute("aria-expanded", "true");
-      expect(betaAccordion).toHaveAttribute("aria-expanded", "false");
+      // Beta is at risk, so it leads the severity-ordered list and takes the highlight.
+      expect(betaAccordion).toHaveAttribute("aria-expanded", "true");
+      expect(alphaAccordion).toHaveAttribute("aria-expanded", "false");
     });
   });
 

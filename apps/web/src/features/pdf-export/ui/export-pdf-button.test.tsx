@@ -6,7 +6,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { type PdfExportJob, pdfExportJobSchema } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TRPCClientError } from "@trpc/client";
 import type { ReactNode } from "react";
@@ -185,6 +185,28 @@ describe("ExportPdfButton", () => {
     );
     expect(button).toHaveAccessibleDescription(DISABLED_REASON);
     expect(screen.getByText(DISABLED_REASON)).toHaveClass("sr-only");
+  });
+
+  it("shows a visible label and the short reason while export is unavailable", () => {
+    renderButton({ statusQuery: COMPLETED_STATUS, periodStatus: "open" });
+
+    const button = screen.getByRole("button", { name: "Export PDF" });
+    expect(button).toHaveTextContent("Export PDF");
+    expect(within(button).getByText("Export PDF")).toHaveClass("lg:sr-only");
+    const caption = screen.getByTestId("export-pdf-disabled-caption");
+    expect(caption).toHaveTextContent("Available after publish");
+    expect(caption).toHaveClass("lg:hidden");
+  });
+
+  it("drops the reason caption once the report is published", () => {
+    renderButton({ statusQuery: COMPLETED_STATUS, periodStatus: "published" });
+
+    expect(
+      screen.getByRole("button", { name: "Export PDF" }),
+    ).toHaveTextContent("Export PDF");
+    expect(
+      screen.queryByTestId("export-pdf-disabled-caption"),
+    ).not.toBeInTheDocument();
   });
 
   it("stays disabled while the report is reopened", () => {

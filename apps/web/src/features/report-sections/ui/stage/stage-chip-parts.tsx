@@ -40,10 +40,10 @@ export function StageChipContent({
     <>
       <span className="flex min-w-0 items-center gap-2 truncate lg:gap-1.5">
         <StageIconGlyph stageName={stage.stageName} />
-        <span className="min-w-0 truncate lg:hidden">
+        <span className="min-w-0 truncate xl:hidden">
           {stageShortLabel(stage.stageName)}
         </span>
-        <span className="hidden whitespace-nowrap lg:inline">
+        <span className="hidden whitespace-nowrap xl:inline">
           {stage.stageName}
         </span>
       </span>

@@ -111,7 +111,7 @@ describe("LeadSummaryTable action queue", () => {
       ),
     ).toBeVisible();
     const row = leadRow("Alice Lead");
-    expect(within(row).getByText("Lead")).toBeVisible();
+    expect(within(row).queryByText("Lead")).toBeNull();
     expect(within(row).getByText("In progress")).toBeVisible();
     expect(within(row).queryByText("Not reviewed")).toBeNull();
     expect(within(row).getByText(/5 records · At risk/)).toBeVisible();
@@ -119,9 +119,42 @@ describe("LeadSummaryTable action queue", () => {
     expect(primaryAction).toBeVisible();
     expect(primaryAction.parentElement).toHaveClass(
       "w-[var(--dashboard-summary-action-w)]",
+      "max-sm:flex-1",
       "[&>button]:w-full",
     );
     expect(within(row).queryByText("Products")).not.toBeInTheDocument();
+  });
+
+  it("names the author role only when the row is not a lead", () => {
+    render(
+      <LeadSummaryTable
+        leads={[makeLead({ name: "Heidi Head", role: "head" })]}
+        reportId="10000000-0000-4000-8000-000000000001"
+        onMutated={vi.fn()}
+      />,
+    );
+
+    expect(within(leadRow("Heidi Head")).getByText("Head")).toBeVisible();
+  });
+
+  it("puts the primary action and Details side by side below lg", () => {
+    render(
+      <LeadSummaryTable
+        leads={[makeLead()]}
+        reportId="10000000-0000-4000-8000-000000000001"
+        onMutated={vi.fn()}
+      />,
+    );
+
+    const toggle = screen.getByRole("button", {
+      name: "Details for Alice Lead",
+    });
+    const actionLine = toggle.parentElement;
+    expect(actionLine).toHaveClass("flex", "max-lg:col-span-2", "lg:contents");
+    expect(actionLine).toContainElement(
+      within(leadRow("Alice Lead")).getByRole("button", { name: "Open" }),
+    );
+    expect(toggle).toHaveClass("max-sm:flex-1", "border");
   });
 
   it("exposes expanded detail through a linked disclosure and preserves toggle focus", () => {

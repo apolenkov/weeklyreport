@@ -97,7 +97,7 @@ describe("Trends query loading", () => {
     });
     expect(
       screen.getByText(
-        "Periods Aug 1–23, 2026 (previous) and Aug 20–30, 2026 (latest). Risk change is latest minus previous.",
+        "Latest period Aug 20–30, 2026 compared with previous period Aug 1–23, 2026. Risk change is latest minus previous.",
       ),
     ).toBeVisible();
     expect(

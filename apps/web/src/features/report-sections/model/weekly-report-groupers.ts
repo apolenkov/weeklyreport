@@ -49,7 +49,7 @@ export function statusLabelFor(
   const leads =
     leadNames.length > 0
       ? leadNames.map(shortNameFromName).join(", ")
-      : "unassigned";
+      : "Unassigned";
   return `${statusLabel(status, "screen")} · ${leads}`;
 }
 

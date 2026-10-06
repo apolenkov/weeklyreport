@@ -46,7 +46,9 @@ describe("ActivityLanesBlock", () => {
       />,
     );
 
-    expect(screen.getByText("Activities")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Project activities" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Jira triage duty")).toBeInTheDocument();
     expect(screen.getByText("row a1")).toBeInTheDocument();
     expect(screen.getByText("row a2")).toBeInTheDocument();

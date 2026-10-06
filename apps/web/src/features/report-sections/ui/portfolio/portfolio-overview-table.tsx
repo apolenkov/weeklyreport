@@ -4,7 +4,6 @@ import { pluralize } from "../../../../shared/lib/format/pluralize";
 import type {
   LeadOverviewRow,
   WeeklyPortfolioProduct,
-  WeeklyProductStatus,
 } from "../../model/weekly-report-types";
 import {
   LeadOverviewCard,
@@ -27,13 +26,6 @@ type PortfolioOverviewTableProps =
       readonly onNavigate: (leadId: string) => void;
     };
 
-const STATUS_SORT: Record<WeeklyProductStatus, number> = {
-  blocked: 0,
-  "at-risk": 1,
-  "on-track": 2,
-  empty: 3,
-};
-
 function GridIcon() {
   return (
     <svg
@@ -55,10 +47,10 @@ function GridIcon() {
 
 function PortfolioOverviewGrid({
   props,
-  sortedProducts,
+  products,
 }: {
   readonly props: PortfolioOverviewTableProps;
-  readonly sortedProducts: readonly WeeklyPortfolioProduct[];
+  readonly products: readonly WeeklyPortfolioProduct[];
 }) {
   return (
     <div className="min-h-0">
@@ -71,7 +63,7 @@ function PortfolioOverviewGrid({
                 onNavigate={props.onNavigate}
               />
             ))
-          : sortedProducts.map((product) => (
+          : products.map((product) => (
               <ProductOverviewCard
                 key={product.id}
                 product={product}
@@ -88,15 +80,11 @@ function PortfolioOverviewGrid({
 
 export function PortfolioOverviewTable(props: PortfolioOverviewTableProps) {
   const isLead = props.scope === "lead";
-  // Lead rows arrive pre-sorted from the mapper; product rows sort here.
-  const sortedProducts = isLead
-    ? []
-    : [...props.products].sort(
-        (a, b) => STATUS_SORT[a.status] - STATUS_SORT[b.status],
-      );
+  // Both row kinds arrive in display order from the mapper.
+  const products = isLead ? [] : props.products;
   const leads = isLead ? props.leads : [];
 
-  const count = isLead ? leads.length : sortedProducts.length;
+  const count = isLead ? leads.length : products.length;
   const heading = isLead ? "Leads Overview" : "Portfolio Overview";
   const countSuffix = isLead
     ? pluralize(count, "lead", "leads")
@@ -128,7 +116,7 @@ export function PortfolioOverviewTable(props: PortfolioOverviewTableProps) {
         </div>
       </div>
 
-      <PortfolioOverviewGrid props={props} sortedProducts={sortedProducts} />
+      <PortfolioOverviewGrid props={props} products={products} />
     </div>
   );
 }
