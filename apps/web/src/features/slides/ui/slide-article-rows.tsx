@@ -214,7 +214,7 @@ function ItemRow({
 }
 
 // One grid cell: sorted rows of a single column, or the muted em-dash
-// placeholder when the cell is empty.
+// placeholder when the cell is empty (a short "No <label>" line on a phone).
 export function SlideCell({
   rows,
   authorsById,
@@ -234,7 +234,12 @@ export function SlideCell({
         aria-label={`No ${label}`}
         className="text-[13px] text-[var(--color-muted-foreground)]"
       >
-        —
+        <span aria-hidden="true" className="max-sm:hidden">
+          —
+        </span>
+        <span aria-hidden="true" className="sm:hidden">
+          No {label.toLowerCase()}
+        </span>
       </span>
     );
   }
