@@ -1,3 +1,8 @@
+import type { AiPromptContents } from "@customreport/shared";
+import {
+  AI_PROMPT_SLOT_CONTENT_LIMIT,
+  AI_PROMPT_SLOT_KEYS,
+} from "@customreport/shared";
 import {
   AiPromptBundleLifecycle,
   AiProviderLifecycle,
@@ -14,6 +19,7 @@ import type {
 import {
   aiFeaturePromptCatalog,
   baselineReportAssistantPrompts,
+  composePromptSet,
 } from "./ai-feature-prompt-catalog.js";
 import { AiPromptService } from "./ai-prompt.service.js";
 import {
@@ -222,6 +228,63 @@ describe("AiPromptService", () => {
       ),
     ).rejects.toBeInstanceOf(AiPromptConfigurationError);
     expect(harness.repository.createDraft).not.toHaveBeenCalled();
+  });
+
+  it("rejects an oversized schema-valid composition before persistence while a fitting draft succeeds", async () => {
+    const entry = aiFeaturePromptCatalog.require("lead-report-assistant");
+    const contentsFor = (tail: number): AiPromptContents =>
+      Object.fromEntries(
+        AI_PROMPT_SLOT_KEYS.map((slot) => [slot, "e".repeat(tail)]),
+      ) as AiPromptContents;
+    // Largest uniform tail length that still fits the canonical bundle cap.
+    let fittingTail = 1;
+    let high = AI_PROMPT_SLOT_CONTENT_LIMIT;
+    while (fittingTail < high) {
+      const mid = Math.ceil((fittingTail + high) / 2);
+      try {
+        composePromptSet(entry, contentsFor(mid), entry.lockedCore);
+        fittingTail = mid;
+      } catch {
+        high = mid - 1;
+      }
+    }
+    const base = bundle(AiPromptBundleLifecycle.active);
+    const created: StoredAiPromptBundleRevision = {
+      ...bundle(AiPromptBundleLifecycle.draft),
+      id: "859b2767-0f86-41e2-b025-49730ca010e4",
+      revision: 2,
+      baseRevisionId: base.id,
+    };
+    const harness = serviceFor({ revision: base });
+    harness.repository.createDraft.mockResolvedValue(created);
+
+    // Every slot is individually schema-valid at the cap; the aggregate
+    // serialized bundle still overflows.
+    await expect(
+      harness.service.draft(
+        {
+          featureKey: "lead-report-assistant",
+          baseRevisionId: base.id,
+          promptContents: contentsFor(AI_PROMPT_SLOT_CONTENT_LIMIT),
+        },
+        "admin-1",
+      ),
+    ).rejects.toBeInstanceOf(AiPromptConfigurationError);
+    expect(harness.repository.createDraft).not.toHaveBeenCalled();
+    expect(harness.audit.record).not.toHaveBeenCalled();
+    expect(harness.metrics.record).not.toHaveBeenCalled();
+
+    await expect(
+      harness.service.draft(
+        {
+          featureKey: "lead-report-assistant",
+          baseRevisionId: base.id,
+          promptContents: contentsFor(fittingTail),
+        },
+        "admin-1",
+      ),
+    ).resolves.toMatchObject({ lifecycle: "draft", revision: 2 });
+    expect(harness.repository.createDraft).toHaveBeenCalledTimes(1);
   });
 
   it("keeps a non-current active revision readable but unavailable for serving", async () => {
