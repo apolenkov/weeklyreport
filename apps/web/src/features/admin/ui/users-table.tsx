@@ -130,7 +130,7 @@ function UserRow({
   onDelete,
 }: UserRowProps) {
   return (
-    <tr className="grid grid-cols-2 gap-x-3 border-b border-[var(--color-border)] py-3 last:border-0 hover:bg-[var(--color-surface-hover)] sm:table-row sm:py-0">
+    <tr className="grid grid-cols-2 gap-x-3 border-b border-[var(--color-border)] py-3 last:border-0 hover:bg-[var(--color-surface-hover)] has-[button[aria-expanded=true]]:bg-[color-mix(in_srgb,var(--color-muted)_45%,transparent)] sm:table-row sm:py-0">
       <td
         className={`${USER_CELL_CLASS} col-span-2 font-medium text-[var(--color-foreground)]`}
       >

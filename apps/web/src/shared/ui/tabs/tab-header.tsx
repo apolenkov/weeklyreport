@@ -42,7 +42,7 @@ export function TabHeader({
         ) : null}
       </div>
       {(search || actions) && (
-        <div className="flex flex-shrink-0 flex-wrap items-center gap-3 xl:flex-nowrap">
+        <div className="flex flex-shrink-0 flex-wrap items-end gap-3 max-sm:grid max-sm:grid-cols-1 max-sm:[&>button]:justify-center xl:flex-nowrap">
           {search}
           {actions}
         </div>
@@ -57,6 +57,8 @@ export interface TabSearchProps {
   readonly placeholder?: string;
   readonly testId?: string;
   readonly ariaLabel?: string;
+  /** Visible caption above the field; it also serves as the accessible name. */
+  readonly label?: string;
   readonly disabled?: boolean;
 }
 
@@ -66,9 +68,10 @@ export function TabSearch({
   placeholder,
   testId,
   ariaLabel,
+  label,
   disabled = false,
 }: TabSearchProps) {
-  return (
+  const field = (
     <input
       type="search"
       disabled={disabled}
@@ -76,9 +79,25 @@ export function TabSearch({
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder ?? "Search…"}
       data-testid={testId}
-      aria-label={ariaLabel ?? placeholder ?? "Search"}
+      aria-label={label ? undefined : (ariaLabel ?? placeholder ?? "Search")}
       className="min-h-[var(--touch-target-min)] w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-1.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] disabled:cursor-not-allowed disabled:opacity-50 sm:w-64"
     />
+  );
+  if (!label) return field;
+  return (
+    <label className="flex flex-col gap-1">
+      <FieldCaption>{label}</FieldCaption>
+      {field}
+    </label>
+  );
+}
+
+/** Small caption shared by labelled header fields. */
+export function FieldCaption({ children }: { readonly children: ReactNode }) {
+  return (
+    <span className="text-xs font-semibold text-[var(--color-muted-foreground)]">
+      {children}
+    </span>
   );
 }
 
@@ -108,7 +127,7 @@ export function TabFilter({
       onChange={(e) => onChange(e.target.value)}
       data-testid={testId}
       aria-label={ariaLabel ?? "Filter"}
-      className="select-chevron min-h-[var(--touch-target-min)] rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] py-1.5 pl-3 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
+      className="select-chevron min-h-[var(--touch-target-min)] max-sm:w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] py-1.5 pl-3 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
     >
       {options.map((opt) => (
         <option key={opt.value} value={opt.value}>

@@ -12,7 +12,9 @@ export default function PdfExportsPage() {
           <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
             PDF exports
           </h1>
-          <PdfRecoverySection />
+          <div className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-sm">
+            <PdfRecoverySection />
+          </div>
         </div>
       </div>
     </main>

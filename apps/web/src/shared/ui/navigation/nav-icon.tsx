@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Clock,
+  FileDown,
   FileText,
   LayoutDashboard,
   Settings,
@@ -11,6 +12,7 @@ import {
   HEAD_DASHBOARD_ROUTE,
   HEAD_REPORT_ROUTE,
   LEAD_REPORT_ROUTE,
+  PDF_EXPORTS_ROUTE,
   REPORTS_LATEST_ROUTE,
   REPORTS_ROUTE,
 } from "./nav-links";
@@ -33,6 +35,8 @@ export function NavIcon({ href }: { readonly href: string }) {
       return <LayoutDashboard {...NAV_ICON_COMMON} />;
     case HEAD_REPORT_ROUTE:
       return <BarChart3 {...NAV_ICON_COMMON} />;
+    case PDF_EXPORTS_ROUTE:
+      return <FileDown {...NAV_ICON_COMMON} />;
     case ADMIN_ROUTE:
       return <Settings {...NAV_ICON_COMMON} />;
     default:

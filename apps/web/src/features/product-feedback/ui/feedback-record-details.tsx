@@ -42,7 +42,7 @@ export function FeedbackRecordDetails({
             key={message.id}
           >
             <span className="font-medium">{threadActor(item, message)}</span>
-            <span className="ml-2 text-xs text-[var(--color-ink-muted)]">
+            <span className="ml-2 text-xs text-[var(--color-muted-foreground)]">
               {new Intl.DateTimeFormat("en", {
                 dateStyle: "medium",
                 timeStyle: "short",
@@ -53,7 +53,7 @@ export function FeedbackRecordDetails({
           </p>
         ))}
         {item.thread.length === 0 ? (
-          <p className="text-sm text-[var(--color-ink-muted)]">
+          <p className="text-sm text-[var(--color-muted-foreground)]">
             No replies yet.
           </p>
         ) : null}
@@ -85,7 +85,7 @@ function FeedbackRecordIdentity({ item }: { readonly item: FeedbackCardItem }) {
         <p className="min-w-0" key={label}>
           <span className="font-medium">{label}</span>
           <br />
-          <code className="break-all text-xs text-[var(--color-ink-muted)]">
+          <code className="break-all text-xs text-[var(--color-muted-foreground)]">
             {value}
           </code>
         </p>
@@ -118,7 +118,7 @@ function ContextBlock({
           <p className="min-w-0" key={field}>
             <span className="font-medium">{label}</span>
             <br />
-            <span className="break-words text-[var(--color-ink-muted)]">
+            <span className="break-words text-[var(--color-muted-foreground)]">
               {context[field]}
             </span>
           </p>

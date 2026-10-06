@@ -84,7 +84,7 @@ function CaptureDiagnostics({ item }: { readonly item: FeedbackCaptureItem }) {
   const consoleEntries = item.diagnostics?.console ?? [];
   const networkEntries = item.diagnostics?.network ?? [];
   return (
-    <div className="space-y-3 text-xs text-[var(--color-ink-muted)]">
+    <div className="space-y-3 text-xs text-[var(--color-muted-foreground)]">
       <div className="grid grid-cols-3 gap-2">
         {[
           ["Viewport", item.viewport],
@@ -97,13 +97,13 @@ function CaptureDiagnostics({ item }: { readonly item: FeedbackCaptureItem }) {
           >
             {label}
             <br />
-            <strong className="text-[var(--color-ink)]">{value}</strong>
+            <strong className="text-[var(--color-foreground)]">{value}</strong>
           </span>
         ))}
       </div>
       {consoleEntries.length > 0 ? (
         <details className="rounded-lg border border-[var(--color-border)] p-3">
-          <summary className="font-medium text-[var(--color-ink)]">
+          <summary className="font-medium text-[var(--color-foreground)]">
             Console diagnostics
           </summary>
           <ul className="mt-2 space-y-2">
@@ -120,7 +120,7 @@ function CaptureDiagnostics({ item }: { readonly item: FeedbackCaptureItem }) {
       ) : null}
       {networkEntries.length > 0 ? (
         <details className="rounded-lg border border-[var(--color-border)] p-3">
-          <summary className="font-medium text-[var(--color-ink)]">
+          <summary className="font-medium text-[var(--color-foreground)]">
             Failed network requests
           </summary>
           <ul className="mt-2 space-y-2">

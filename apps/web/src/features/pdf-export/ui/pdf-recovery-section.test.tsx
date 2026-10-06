@@ -142,8 +142,20 @@ describe("PdfRecoverySection — DB-backed recovery list", () => {
     renderSection(() => Promise.resolve({ jobs: [] }));
 
     expect(
-      await screen.findByText("No PDF exports awaiting recovery."),
+      await screen.findByText(
+        "No failed exports. Every PDF export has finished.",
+      ),
     ).toBeInTheDocument();
+  });
+
+  it("points to a report as the place where exports start", async () => {
+    renderSection(() => Promise.resolve({ jobs: [] }));
+
+    expect(
+      await screen.findByRole("link", {
+        name: "Exports are generated from a report",
+      }),
+    ).toHaveAttribute("href", "/reports");
   });
 
   it("posts {jobId, expectedGeneration} taken from the listed row on retry", async () => {
