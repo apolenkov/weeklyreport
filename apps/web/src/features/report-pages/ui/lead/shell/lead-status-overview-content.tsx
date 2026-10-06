@@ -193,7 +193,7 @@ function OverviewHeader({
   readonly pendingInput: boolean;
   readonly completion: Pick<
     CompletionPresentation,
-    "completionActions" | "sentinelRef"
+    "completionActions" | "headerActionsVisible" | "sentinelRef"
   >;
 }) {
   if (!editor) return null;
@@ -203,6 +203,7 @@ function OverviewHeader({
       pendingInput={pendingInput}
       completionActions={completion.completionActions}
       completionSentinelRef={completion.sentinelRef}
+      showCompletionActions={completion.headerActionsVisible}
     />
   );
 }
