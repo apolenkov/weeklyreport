@@ -12,12 +12,14 @@ const ACTIVITY_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 
 function renderEditor(
   overrides: Partial<{
+    onClose: () => void;
     titleOverride: string | null;
     description: string | null;
     onChange: (activityId: string, next: unknown) => void;
   }> = {},
 ) {
   const onChange = overrides.onChange ?? vi.fn();
+  const onClose = overrides.onClose ?? vi.fn();
   render(
     <StatusOverviewActivityEditor
       activityId={ACTIVITY_ID}
@@ -27,12 +29,38 @@ function renderEditor(
         catalogueName: "Catalogue duty",
       }}
       onChange={onChange}
+      onClose={onClose}
     />,
   );
-  return { onChange };
+  return { onChange, onClose };
 }
 
 describe("StatusOverviewActivityEditor", () => {
+  it("takes focus when opened, closes after Save and closes on Cancel without saving", async () => {
+    const { onChange, onClose } = renderEditor({
+      titleOverride: "Weekly duty",
+    });
+    const user = userEvent.setup();
+    expect(
+      screen.getByRole("form", { name: "Weekly fields for Catalogue duty" }),
+    ).toHaveFocus();
+
+    await user.type(screen.getByTestId(`activity-title-${ACTIVITY_ID}`), "!");
+    await user.click(
+      screen.getByTestId(`activity-fields-cancel-${ACTIVITY_ID}`),
+    );
+    expect(onChange).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId(`activity-title-${ACTIVITY_ID}`)).toHaveValue(
+      "Weekly duty",
+    );
+
+    await user.type(screen.getByTestId(`activity-title-${ACTIVITY_ID}`), "?");
+    await user.click(screen.getByTestId(`activity-fields-save-${ACTIVITY_ID}`));
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
   it("shows the weekly override and the catalogue placeholder", () => {
     renderEditor({ titleOverride: "Weekly duty", description: "Ship it" });
 
@@ -123,6 +151,7 @@ describe("StatusOverviewActivityEditor", () => {
           catalogueName: "Catalogue duty",
         }}
         onChange={onChange}
+        onClose={vi.fn()}
       />,
     );
 
@@ -135,6 +164,7 @@ describe("StatusOverviewActivityEditor", () => {
           catalogueName: "Catalogue duty",
         }}
         onChange={onChange}
+        onClose={vi.fn()}
       />,
     );
 
@@ -169,6 +199,7 @@ describe("StatusOverviewActivityEditor", () => {
           catalogueName: "Catalogue duty",
         }}
         onChange={onChange}
+        onClose={vi.fn()}
       />,
     );
 
@@ -190,6 +221,7 @@ describe("StatusOverviewActivityEditor", () => {
           catalogueName: "Catalogue duty",
         }}
         onChange={onChange}
+        onClose={vi.fn()}
       />,
     );
 

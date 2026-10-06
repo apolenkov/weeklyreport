@@ -57,6 +57,13 @@ const FOREIGN_SUPPORT = {
 } as const;
 type Snapshot = Awaited<ReturnType<typeof snapshot>>;
 
+// Every write control an editable Overview exposes: report actions, the item
+// status icon and title, the revealed quick move and overflow menu, and the
+// Activity weekly-fields edit control.
+const EARLIER_OPEN_WORK_LINE = /^\d+ earlier open items?$/;
+const OVERVIEW_WRITE_CONTROL =
+  /^(?:Save draft now|Retry saving draft|Submit(?: report)?$|Add item to |Status of |Edit item: |Quick move to |More actions for |Edit weekly fields for )/;
+
 function namedRefs(
   data: Snapshot,
   role: string,
@@ -181,6 +188,20 @@ async function clickViewMode(name: "Report" | "Slides"): Promise<void> {
   await command(["click", await scopedRef(VIEW_MODE_SCOPE, "link", name)]);
 }
 
+// The sticky Save/Submit cluster hides the header cluster while it is visible, so
+// the completion actions are present when exactly one save button shows in either.
+async function waitCompletionActions(): Promise<void> {
+  await command([
+    "wait",
+    "--fn",
+    `Array.from(document.getElementsByTagName('div'))
+      .filter(group => group.getAttribute('role') === 'group' && ['Header completion actions', 'Sticky completion actions'].includes(group.getAttribute('aria-label') ?? ''))
+      .flatMap(group => Array.from(group.getElementsByTagName('button')))
+      .filter(button => ['Save draft now', 'Retry saving draft', 'Saving draft', 'Draft saved'].includes(button.getAttribute('aria-label') ?? '') && button.getClientRects().length > 0)
+      .length === 1`,
+  ]);
+}
+
 async function openPeriodPicker(): Promise<void> {
   await findRole("combobox", "Select reporting period", "click");
   await waitScope({ role: "listbox", name: "Reporting period" });
@@ -261,17 +282,12 @@ void test("Report and Slides preserve the selected period and record visibility"
   await waitText("Submitted");
   const history = await snapshot();
   assert.equal(
-    namedRefs(history, "button", (name) =>
-      /^(?:Save draft now|Retry saving draft|Submit(?: report)?$|Add item to |Update progress for |Edit item: )/.test(
-        name,
-      ),
-    ).length,
+    namedRefs(history, "button", (name) => OVERVIEW_WRITE_CONTROL.test(name))
+      .length,
     0,
   );
-  assert.equal(
-    scopeCount(history, "DisclosureTriangle", /^More actions for /),
-    0,
-  );
+  // The verdict rail is a write control of the selected week only.
+  assert.equal(scopeCount(history, "group", /^Verdict for /), 0);
   await clickViewMode("Slides");
   await waitText("Viewing past period. This form is read-only.");
   assert.equal(
@@ -411,7 +427,7 @@ async function swipeOpenPeriodListbox(direction: "left" | "right") {
   // inside the listbox; its content-sized width may end before the swipe does.
   assert.ok(
     x < 200 && x + width > 200 && y < 400 && y + height > 400,
-    "The native swipe must start inside the open period listbox",
+    `The native swipe must start inside the open period listbox: ${JSON.stringify({ x, y, width, height })}`,
   );
   await command(["swipe", direction, "100"]);
 }
@@ -421,7 +437,7 @@ void test("period listbox touch swipes move between Current and read-only histor
   await command(["set", "viewport", "400", "800"]);
   // The native swipe always starts at (200, 400). The compact mobile header puts the open
   // listbox above that point, so push the page down until the origin falls inside it.
-  await command(["eval", "document.body.style.paddingTop = '48px'"]);
+  await command(["eval", "document.body.style.paddingTop = '16px'"]);
   await findRole("switch", ARCHIVE_NAME, "click");
   await assertAttribute("switch", ARCHIVE_NAME, "aria-checked", "true");
   await openPeriodPicker();
@@ -467,6 +483,9 @@ void test("period listbox touch swipes move between Current and read-only histor
     "aria-expanded",
     "false",
   );
+  // The read-only banner and the two-option listbox sit higher than the Current
+  // listbox, so push the page further down for the second swipe origin.
+  await command(["eval", "document.body.style.paddingTop = '80px'"]);
   await openPeriodPicker();
   const selectedPrevious = namedRefs(
     scopeSnapshot(await snapshot(), "listbox", "Reporting period"),
@@ -708,7 +727,7 @@ async function assertOwnSavePayload(marker: string): Promise<void> {
 
 void test("Everyone saves only the Lead records and preserves foreign content", async () => {
   await openReadOnlyReport();
-  await waitScope({ role: "group", name: "Header completion actions" });
+  await waitCompletionActions();
   await waitButton(`Add item to ${LEAD_FORM_FIXTURE.activityName}`);
   await openSupportingSections();
   const ownEditing = supportEditingNames(await snapshot());
@@ -721,7 +740,7 @@ void test("Everyone saves only the Lead records and preserves foreign content", 
   await clickViewMode("Report");
   await waitText(LEAD_FORM_FIXTURE.currentText);
   await waitScope({ role: "region", name: "Status overview" });
-  await waitScope({ role: "group", name: "Header completion actions" });
+  await waitCompletionActions();
   await waitButton(`Add item to ${LEAD_FORM_FIXTURE.activityName}`);
   const marker = "E2E Everyone own activity progress";
   await command(["network", "requests", "--clear"]);
@@ -815,14 +834,14 @@ async function assertOverviewEditingUnavailable(): Promise<void> {
     ),
   );
   assert.equal(
-    namedRefs(data, "button", (name) =>
-      /^(?:Save draft now|Retry saving draft|Submit(?: report)?$|Add item to |Update progress for |\+ Add )/.test(
-        name,
-      ),
+    namedRefs(
+      data,
+      "button",
+      (name) => OVERVIEW_WRITE_CONTROL.test(name) || name.startsWith("+ Add "),
     ).length,
     0,
   );
-  assert.equal(scopeCount(data, "DisclosureTriangle", /^More actions for /), 0);
+  assert.equal(scopeCount(data, "group", /^Verdict for /), 0);
   await assertNoEditors();
 }
 
@@ -898,8 +917,25 @@ void test("open-work read failure recovers through Retry open work", async () =>
     await command(["network", "unroute", route]);
   }
   await findRole("button", "Retry open work", "click");
+  await waitScope({ role: "region", name: "Open work from earlier periods" });
+  // Earlier open work rests as one collapsed disclosure line with its count.
+  // <summary> exposes no snapshot ref, so it is found by role and name.
+  const register = scopeSnapshot(
+    await waitSnapshot(
+      (data) =>
+        scopeCount(data, "DisclosureTriangle", EARLIER_OPEN_WORK_LINE) === 1,
+      "Expected the collapsed earlier open work disclosure",
+    ),
+    "region",
+    "Open work from earlier periods",
+  );
+  const summaryName = /DisclosureTriangle "(\d+ earlier open items?)"/u.exec(
+    register.snapshot,
+  )?.[1];
+  assert.ok(summaryName, "Missing earlier open work summary name");
+  assert.ok(!register.snapshot.includes(OPEN_WORK_FIXTURE.paused));
+  await findRole("DisclosureTriangle", summaryName, "click");
   await waitText(OPEN_WORK_FIXTURE.paused);
-  await assertScope("region", "Open work from earlier periods");
   assert.equal(
     refsByRole(await snapshot(), "button", "Retry open work").length,
     0,

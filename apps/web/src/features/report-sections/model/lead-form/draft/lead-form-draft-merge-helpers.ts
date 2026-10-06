@@ -4,6 +4,7 @@ import type {
 } from "@customreport/shared";
 
 import { persistableItemStatusToWorkflow } from "../../item-status";
+import { isUnconfirmedCarried } from "../../lead-actions/lead-item-actions";
 import type { DecisionEntry, KanbanItem, RiskEntry } from "../../types";
 export { mergeProductDraft } from "./lead-form-draft-product-merge";
 
@@ -192,6 +193,15 @@ export function mergeItemsDraft(
   );
   const others = section.items.filter((item) => item.type !== itemType);
   return { ...section, items: [...others, ...mergedTyped] };
+}
+
+export function confirmCarriedDraft(section: DraftSection): DraftSection {
+  return {
+    ...section,
+    items: section.items.map((item) =>
+      isUnconfirmedCarried(item) ? { ...item, carriedOver: false } : item,
+    ),
+  };
 }
 
 export function patchDraftItem(

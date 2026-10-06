@@ -1,4 +1,7 @@
-import type { LeadStatusOverviewOutput } from "@customreport/shared";
+import type {
+  ItemWorkflowStatus,
+  LeadStatusOverviewOutput,
+} from "@customreport/shared";
 import type { SetStateAction } from "react";
 
 import type {
@@ -8,7 +11,10 @@ import type {
   StatusOverviewItem,
   StatusOverviewModel,
 } from "../../../../report-sections";
-import { buildConfirmCarriedItemPatch } from "../../../../report-sections";
+import {
+  buildConfirmCarriedItemPatch,
+  buildSetItemStatusPatch,
+} from "../../../../report-sections";
 import {
   createOverviewComposerState,
   findEditableItem,
@@ -16,6 +22,7 @@ import {
 } from "./lead-status-overview-item-editor";
 import { buildPriorPlanSeed } from "./overview-editor-recovery";
 import { overviewMoveEditorItem } from "./overview-item-save";
+import { useEditorSettle } from "./use-editor-settle";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
 
 type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
@@ -83,6 +90,7 @@ export function useOverviewEditOpeners({
   rememberFocus,
   resetAttempt,
 }: OpenersArgs) {
+  const { whenIdle } = useEditorSettle(editor);
   const openEditItem = (
     target: StatusOverviewEditTarget,
     week: "current" | "next",
@@ -129,14 +137,31 @@ export function useOverviewEditOpeners({
     });
   };
   const confirmItem = (item: StatusOverviewItem): void => {
-    if (!editor || isReadOnly || dialog || !item.recordId) return;
-    const patch = buildConfirmCarriedItemPatch(
-      editor.draft.section,
-      item.recordId,
-    );
-    if (patch) editor.draft.apply(patch);
+    const recordId = item.recordId;
+    if (!editor || isReadOnly || dialog || !recordId) return;
+    // A running outcome command locks the draft: apply right after it.
+    whenIdle((ready) => {
+      const patch = buildConfirmCarriedItemPatch(ready.draft.section, recordId);
+      if (patch) ready.draft.apply(patch);
+    });
   };
-  return { editItem, moveItem, confirmItem };
+  // A status the draft can take directly is patched in place; one that needs
+  // more input (a pause reason, a next step to clear, a covering risk) opens
+  // the canonical editor on the same item instead.
+  const setItemStatus = (
+    item: StatusOverviewItem,
+    status: ItemWorkflowStatus,
+    focusKey?: string,
+  ): void => {
+    const { recordId, editTarget } = item;
+    if (!editor || isReadOnly || dialog || !recordId || !editTarget) return;
+    whenIdle(({ draft }) => {
+      const patch = buildSetItemStatusPatch(draft.section, recordId, status);
+      if (patch) draft.apply(patch);
+      else openEditItem(editTarget, editTarget.source, { focusKey });
+    });
+  };
+  return { editItem, moveItem, confirmItem, setItemStatus };
 }
 
 export function useOverviewCreateOpeners({

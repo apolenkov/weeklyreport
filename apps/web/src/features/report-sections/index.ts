@@ -3,6 +3,7 @@ export { STATUS_BADGE } from "./model/item-card-style";
 export { buildItemDialogProps } from "./model/item-dialog-props";
 export { persistableItemStatusToWorkflow } from "./model/item-status";
 export {
+  buildConfirmAllCarriedPatch,
   buildConfirmCarriedItemPatch,
   buildMoveItemPatch,
   continueToNextPatch,
@@ -12,6 +13,7 @@ export {
   pauseItemPatch,
   promoteContinuationPatch,
 } from "./model/lead-actions/lead-item-actions";
+export { buildSetItemStatusPatch } from "./model/lead-actions/lead-item-status-patch";
 export type { CrossAuthorRow } from "./model/lead-cross-author";
 export type { CrossAuthorContentRow } from "./model/lead-cross-author-content";
 export type {
@@ -51,6 +53,7 @@ export { sectionToDraftPayload } from "./model/lead-section-draft-payload";
 export type { LeadStatus } from "./model/lead-status";
 export { deriveLeadStatus } from "./model/lead-status";
 export type { LeadSubmitReadiness } from "./model/lead-submit-readiness";
+export { pendingReviewLabel } from "./model/lead-submit-readiness";
 export { isBoardEmpty, splitItemBoard } from "./model/next-week-columns";
 export { sortByPriorityRank } from "./model/priority/priority-sort";
 export type { ParentActivityOption, RecordParent } from "./model/record-parent";
@@ -75,6 +78,8 @@ export type {
   StatusOverviewModel,
 } from "./model/status-overview";
 export { projectStatusOverview } from "./model/status-overview";
+export type { PlanVerdict } from "./model/status-overview-verdict";
+export { planVerdictWrite } from "./model/status-overview-verdict";
 export {
   annotateOwnRiskCoverage,
   applyRiskSeverityFloor,

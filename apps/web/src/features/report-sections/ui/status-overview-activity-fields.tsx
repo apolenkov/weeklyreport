@@ -1,3 +1,8 @@
+import {
+  MAX_ACTIVITY_NAME_LENGTH,
+  SAFE_TEXT_MAX_LENGTH,
+} from "@customreport/shared";
+import { Pencil } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { useInlineEditUnloadGuard } from "./use-inline-edit-unload-guard";
@@ -14,7 +19,7 @@ export interface StatusOverviewActivityFieldsChange {
 }
 
 // Lengths are checked on the trimmed value, as the save schema trims it.
-export function limitError(
+function limitError(
   label: string,
   value: string,
   limit: number,
@@ -22,6 +27,24 @@ export function limitError(
   return value.trim().length > limit
     ? `${label} must be ${String(limit)} characters or fewer.`
     : undefined;
+}
+
+export function activityFieldErrors(title: string, description: string) {
+  const titleError = limitError(
+    "Weekly title",
+    title,
+    MAX_ACTIVITY_NAME_LENGTH,
+  );
+  const descriptionError = limitError(
+    "Description",
+    description,
+    SAFE_TEXT_MAX_LENGTH,
+  );
+  return {
+    titleError,
+    descriptionError,
+    invalid: titleError !== undefined || descriptionError !== undefined,
+  };
 }
 
 function FieldError({
@@ -214,7 +237,6 @@ export function ActivityFieldActions({
       <button
         type="button"
         onClick={onCancel}
-        disabled={!dirty}
         data-testid={`activity-fields-cancel-${activityId}`}
         className="inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-sm)] px-2 text-xs text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] disabled:opacity-50"
       >
@@ -229,5 +251,61 @@ export function ActivityFieldActions({
         Reset to catalogue name
       </button>
     </div>
+  );
+}
+
+/** Which Activities have their weekly fields open, plus focus return to the edit control. */
+export function useActivityFieldsDisclosure() {
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
+  const buttons = useRef(new Map<string, HTMLButtonElement>());
+  const returnFocusTo = useRef<string | null>(null);
+  useEffect(() => {
+    if (returnFocusTo.current === null) return;
+    buttons.current.get(returnFocusTo.current)?.focus();
+    returnFocusTo.current = null;
+  }, [open]);
+  return {
+    isOpen: (id: string): boolean => open.has(id),
+    setOpen: (id: string, next: boolean): void => {
+      if (!next) returnFocusTo.current = id;
+      setOpen((current) => {
+        const updated = new Set(current);
+        if (next) updated.add(id);
+        else updated.delete(id);
+        return updated;
+      });
+    },
+    buttonRef: (id: string) => (element: HTMLButtonElement | null) => {
+      if (element) buttons.current.set(id, element);
+      else buttons.current.delete(id);
+    },
+  };
+}
+
+export type ActivityFieldsDisclosure = ReturnType<
+  typeof useActivityFieldsDisclosure
+>;
+
+export function ActivityFieldsEditButton({
+  activityId,
+  name,
+  disclosure,
+}: {
+  readonly activityId: string;
+  readonly name: string;
+  readonly disclosure: ActivityFieldsDisclosure;
+}) {
+  if (disclosure.isOpen(activityId)) return null;
+  return (
+    <button
+      ref={disclosure.buttonRef(activityId)}
+      type="button"
+      aria-label={`Edit weekly fields for ${name}`}
+      data-testid={`activity-fields-edit-${activityId}`}
+      onClick={() => disclosure.setOpen(activityId, true)}
+      className="inline-flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+    >
+      <Pencil aria-hidden="true" className="size-4" />
+    </button>
   );
 }

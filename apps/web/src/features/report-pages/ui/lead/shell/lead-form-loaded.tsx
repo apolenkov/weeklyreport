@@ -33,7 +33,10 @@ import {
 } from "../chrome/lead-form-header-actions";
 import { LeadFormPastPeriodBanner } from "../chrome/lead-form-past-period-banner";
 import { LeadFormToolbarControls } from "../chrome/lead-form-toolbar-controls";
-import { LeadStickyCompletionActions } from "../chrome/lead-sticky-completion-actions";
+import {
+  LEAD_STICKY_COMPLETION_CLEARANCE_CLASS,
+  LeadStickyCompletionActions,
+} from "../chrome/lead-sticky-completion-actions";
 import { LeadSubmitReadinessSummary } from "../chrome/lead-submit-readiness-summary";
 import type { QuickAddKind } from "../chrome/quick-add-button";
 import {
@@ -50,7 +53,6 @@ type LeadFormLoadedWriteActions = LeadFormHeaderWriteActions &
 
 // The fixed completion rail owns the only conditional content clearance.
 // Route containers must not add a second always-on offset.
-const LEAD_STICKY_COMPLETION_CLEARANCE_CLASS = "pb-28";
 
 // Declared data-loading seam — not the hook's raw return type.
 export interface LeadFormLoadedData {

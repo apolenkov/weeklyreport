@@ -5,6 +5,7 @@ import {
 } from "@customreport/shared";
 
 import type { AutosaveState } from "./autosave/autosave-types";
+import { isUnconfirmedCarried } from "./lead-actions/lead-item-actions";
 import {
   type DraftSaveContent,
   toActivityStatusPayload,
@@ -44,9 +45,16 @@ export interface LeadSubmitReadiness {
   readonly unsetStatuses: readonly LeadSubmitStatusIdentity[];
   readonly willAutoPromote: readonly LeadSubmitStatusIdentity[];
   readonly blockingIssues: readonly LeadSubmitBlockingIssue[];
+  /** Carried continuations the lead has not confirmed; each one blocks submit. */
+  readonly pendingReviewCount: number;
   readonly autosaveState: AutosaveState;
   readonly submitPending: boolean;
   readonly canOpenConfirmation: boolean;
+}
+
+/** Counter text shared by the readiness copy and the sticky Save/Submit cluster. */
+export function pendingReviewLabel(count: number): string {
+  return `${count} to review`;
 }
 
 export function committedRisks(
@@ -136,12 +144,12 @@ function submissionIssues(
       ];
     }
     return draftPayload.items
-      .filter((item) => item.type === "current" && item.carriedOver)
+      .filter(isUnconfirmedCarried)
       .map((item, itemIndex) => {
         const identity = item.stableId ?? item.id;
         return {
           id: `submit-validation:${issue.code}:${identity ?? String(itemIndex)}`,
-          label: `Update progress for "${item.text}".`,
+          label: `Review "${item.text}".`,
           ...(identity ? { overviewFocus: `confirm:current:${identity}` } : {}),
         };
       });
@@ -234,6 +242,9 @@ export function deriveLeadSubmitReadiness(
     unsetStatuses: willAutoPromote,
     willAutoPromote,
     blockingIssues,
+    pendingReviewCount: (input.draftPayload?.items ?? []).filter(
+      isUnconfirmedCarried,
+    ).length,
     autosaveState: input.autosaveState,
     submitPending: input.submitPending,
     canOpenConfirmation: blockingIssues.length === 0 && !input.submitPending,

@@ -36,6 +36,7 @@ import {
   waitClosed,
   waitNotification,
   waitScope,
+  waitSnapshot,
 } from "./helpers.js";
 
 registerE2eHooks();
@@ -59,6 +60,9 @@ const SOURCE_PRODUCT_COUNT =
       (assignment) => assignment.userId === LEAD_FORM_FIXTURE.leadId,
     ).map((assignment) => assignment.projectId),
   ).size + 1;
+// The earlier-open-work register rests as one collapsed disclosure line.
+const EARLIER_OPEN_WORK = /^\d+ earlier open items?$/u;
+const PENDING_REVIEW = "1 to review";
 const ARCHIVED_FILL_HINT =
   "No submitted reports in open periods. Show closed (archived) report periods to see more.";
 const ANSWER: ReportAssistantOutcome = {
@@ -105,6 +109,41 @@ async function clickScoped(
   name: string,
 ): Promise<void> {
   await command(["click", await scopedRef(scope, role, name)]);
+}
+
+// The status icon is the item's one primary control; its name carries the
+// current status, so focus is matched on the stable prefix.
+async function assertStatusFocused(text: string): Promise<void> {
+  const prefix = JSON.stringify(`Status of ${text}:`);
+  await command([
+    "wait",
+    "--fn",
+    `document.activeElement?.getAttribute('aria-label')?.startsWith(${prefix}) === true`,
+  ]);
+}
+
+async function pendingReviewCounters(): Promise<string[]> {
+  const data = await command([
+    "eval",
+    `Array.from(document.querySelectorAll('[data-testid="pending-review-count"]')).map(element => element.textContent ?? '')`,
+  ]);
+  assert(Array.isArray(data.result), "Missing pending review counters");
+  return data.result.map(String);
+}
+
+async function openEarlierWork(): Promise<void> {
+  // <summary> exposes no snapshot ref, so the summary is found by role and name.
+  const data = await waitSnapshot(
+    (observed) =>
+      scopeCount(observed, "DisclosureTriangle", EARLIER_OPEN_WORK) === 1,
+    "Expected the collapsed earlier open work disclosure",
+  );
+  const name = /DisclosureTriangle "(\d+ earlier open items?)"/u.exec(
+    data.snapshot,
+  )?.[1];
+  assert(name, "Missing earlier open work summary name");
+  await findRole("DisclosureTriangle", name, "click");
+  await waitText("E2E paused work");
 }
 
 async function valueOf(role: string, name: string | RegExp): Promise<string> {
@@ -188,7 +227,7 @@ async function availabilityFailed(): Promise<void> {
   // Recover the open-work register through its own UI retry; no fake report
   // response is used by the chat stub.
   await findRole("button", "Retry open work", "click");
-  await waitText("E2E paused work");
+  await openEarlierWork();
   await waitText(LEAD_FORM_FIXTURE.currentText);
 }
 
@@ -269,8 +308,8 @@ async function addMarker(text: string): Promise<void> {
   );
   await fill("Description *", text);
   await findRole("button", "Save update", "click");
-  await waitButton(`Update progress for ${text}`);
-  await findRole("button", `Update progress for ${text}`, "text");
+  await waitButton(`Edit item: ${text}`);
+  await findRole("button", `Edit item: ${text}`, "text");
   await saveDraft();
 }
 
@@ -364,15 +403,14 @@ void test("completion guidance jumps to missing work", async () => {
   await clearRequests();
   assert.match(
     await roleText("region", "Before you submit"),
-    /Complete the items below before submitting\./u,
+    /1 to review\. Complete the items below before submitting\./u,
   );
+  const counters = await pendingReviewCounters();
+  assert(counters.length > 0, "The Save/Submit cluster must show the counter");
+  assert(counters.every((counter) => counter === PENDING_REVIEW));
   await findRole("heading", "Fix before submitting", "text");
-  await findRole(
-    "link",
-    `Update progress for "${LEAD_FORM_FIXTURE.carriedText}".`,
-    "click",
-  );
-  await assertFocused(`Update progress for ${LEAD_FORM_FIXTURE.carriedText}`);
+  await findRole("link", `Review "${LEAD_FORM_FIXTURE.carriedText}".`, "click");
+  await assertStatusFocused(LEAD_FORM_FIXTURE.carriedText);
   assert.match(await getUrl(), /#confirm:current:/u);
   assert.match(
     await roleText(
@@ -420,6 +458,37 @@ void test("completion guidance jumps to missing work", async () => {
   await assertNoReportWrites();
 });
 
+void test("confirming suggested continuations clears the review counter and its blocker", async () => {
+  await openLeadReport();
+  await clearRequests();
+  const review = `Review "${LEAD_FORM_FIXTURE.carriedText}".`;
+  const missingCurrent =
+    "Project CRM-Customer 360 needs at least one Current Week item.";
+  await findRole("link", review, "text");
+  await findRole("link", missingCurrent, "text");
+  await findRole("button", "Confirm all as continue", "click");
+  await command([
+    "wait",
+    "--fn",
+    `document.querySelectorAll('[data-testid="pending-review-count"]').length === 0`,
+  ]);
+  assert.deepEqual(await pendingReviewCounters(), []);
+  const data = await snapshot();
+  assert.equal(refsByRole(data, "link", review).length, 0);
+  assert.equal(refsByRole(data, "button", "Confirm all as continue").length, 0);
+  // The other blocker and the end-of-form explanation stay in flow.
+  await findRole("link", missingCurrent, "text");
+  const readiness = await roleText("region", "Before you submit");
+  assert.doesNotMatch(readiness, /to review/u);
+  assert.match(readiness, /Complete the items below before submitting\./u);
+  const submit = await scopedRef(
+    { role: "region", name: "Before you submit" },
+    "button",
+    "Submit report",
+  );
+  assert.equal((await command(["is", "enabled", submit])).enabled, false);
+});
+
 void test("Fill from previous handles cancel and persists canonical replacement", async () => {
   await openLeadReport();
   await addMarker("E2E fill replacement marker");
@@ -428,24 +497,20 @@ void test("Fill from previous handles cancel and persists canonical replacement"
   await clickScoped(confirmation, "button", "Cancel");
   await waitClosed(confirmation);
   await assertFocused("Fill from most recent submitted period");
-  await findRole(
-    "button",
-    "Update progress for E2E fill replacement marker",
-    "text",
-  );
+  await findRole("button", "Edit item: E2E fill replacement marker", "text");
   await assertNoReportWrites();
   const replacement = await openFillConfirmation();
   await clickScoped(replacement, "button", "Replace & fill");
   await waitText("Form filled from selected period");
   await reload();
   await expandFilledProduct();
-  await waitButton(`Update progress for ${LEAD_FORM_FIXTURE.previousText}`);
+  await waitButton(`Edit item: ${LEAD_FORM_FIXTURE.previousText}`);
   const data = await snapshot();
   assert.doesNotMatch(data.snapshot, /E2E fill replacement marker/u);
   assert.doesNotMatch(data.snapshot, /E2E own reviewer record feedback/u);
   await findRole(
     "button",
-    `Update progress for ${LEAD_FORM_FIXTURE.previousText}`,
+    `Edit item: ${LEAD_FORM_FIXTURE.previousText}`,
     "text",
   );
   await clickScoped({ role: "group", name: "View mode" }, "link", "Slides");
@@ -517,10 +582,10 @@ void test("Fill from pending replacement blocks dismissal and duplicate writes",
   assert.equal(calls.length, 1);
   await reload();
   await expandFilledProduct();
-  await waitButton(`Update progress for ${LEAD_FORM_FIXTURE.previousText}`);
+  await waitButton(`Edit item: ${LEAD_FORM_FIXTURE.previousText}`);
   await findRole(
     "button",
-    `Update progress for ${LEAD_FORM_FIXTURE.previousText}`,
+    `Edit item: ${LEAD_FORM_FIXTURE.previousText}`,
     "text",
   );
 });
@@ -590,11 +655,11 @@ void test("Fill from previous dirty overwrite retains input and recovers from fa
   await command(["network", "unroute", DRAFT_ROUTE]);
   await reload();
   await expandFilledProduct();
-  await waitButton(`Update progress for ${LEAD_FORM_FIXTURE.previousText}`);
+  await waitButton(`Edit item: ${LEAD_FORM_FIXTURE.previousText}`);
   assert.doesNotMatch((await snapshot()).snapshot, /E2E unsaved fill risk/u);
   await findRole(
     "button",
-    `Update progress for ${LEAD_FORM_FIXTURE.previousText}`,
+    `Edit item: ${LEAD_FORM_FIXTURE.previousText}`,
     "text",
   );
 });
@@ -672,7 +737,7 @@ void test("past-report picker searches and restores focus without changing the d
   await command(["press", "Escape"]);
   await findRole(
     "button",
-    `Update progress for ${LEAD_FORM_FIXTURE.carriedText}`,
+    `Edit item: ${LEAD_FORM_FIXTURE.carriedText}`,
     "text",
   );
   await assertNoReportWrites();
@@ -680,15 +745,16 @@ void test("past-report picker searches and restores focus without changing the d
 
 void test("published lineage disables Fill from without a write", async () => {
   await openLeadReport();
-  const formName = `Current week update for ${LEAD_FORM_FIXTURE.productName}`;
+  const verdict = `Continue — ${LEAD_FORM_FIXTURE.previousText}`;
   await clickScoped(
     { role: "article", name: `Product ${LEAD_FORM_FIXTURE.productName}` },
     "button",
-    `Plan this work: ${LEAD_FORM_FIXTURE.previousText}`,
+    verdict,
   );
-  await findRole("form", formName, "text");
-  await findRole("button", "Save update", "click");
-  await waitClosed({ role: "form", name: formName });
+  await waitSnapshot(
+    (data) => scopeCount(data, "button", verdict) === 0,
+    "Expected the verdict rail to close after Continue",
+  );
   await saveDraft();
   await reload();
   await waitButton("Fill from most recent submitted period");
@@ -742,7 +808,7 @@ void test("Fill from without submitted history explains the disabled action", as
 void test("archived-only history explains Fill from and preserves the draft after cancellation", async (context) => {
   await prepareE2eData("minimal", context.signal, "archived-fill-only");
   await openLeadReport();
-  const current = "Update progress for Minimal editable report item";
+  const current = "Edit item: Minimal editable report item";
   await waitButton(current);
   await clearRequests();
   const archiveSwitch = "Show closed (archived) report periods";

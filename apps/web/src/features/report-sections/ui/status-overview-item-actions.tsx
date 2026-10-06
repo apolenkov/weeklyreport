@@ -1,13 +1,24 @@
-import { useRef, useState } from "react";
+import type { ItemWorkflowStatus } from "@customreport/shared";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@customreport/ui/components/ui/dropdown-menu";
+import { Check } from "lucide-react";
 
-import { shortItemLabel } from "../../../shared/lib/format/short-label";
+import { itemStatusToWorkflow } from "../model/item-status";
 import type {
   StatusOverviewEditTarget,
   StatusOverviewItem,
 } from "../model/status-overview";
 import { statusOverviewItemActions } from "../model/status-overview-items";
+import { choicesForWeek } from "./item-status-choices";
+import type { VerdictHandler } from "./status-overview-item-handlers";
+import { ProgressIcon } from "./status-overview-item-icons";
+import { statusOverviewProgressLabel } from "./status-overview-item-metadata";
 
-interface ActionProps {
+export interface ActionProps {
   readonly item: StatusOverviewItem;
   readonly onEditItem?:
     ((target: StatusOverviewEditTarget) => void) | undefined;
@@ -20,280 +31,115 @@ interface ActionProps {
       ) => void)
     | undefined;
   readonly onConfirmItem?: ((item: StatusOverviewItem) => void) | undefined;
+  readonly onSetStatus?:
+    | ((
+        item: StatusOverviewItem,
+        status: ItemWorkflowStatus,
+        focusKey?: string,
+      ) => void)
+    | undefined;
   readonly onResolvePlan?:
     ((item: StatusOverviewItem, focusKey?: string) => void) | undefined;
   readonly onRestorePlan?:
     ((item: StatusOverviewItem, focusKey?: string) => void) | undefined;
+  readonly onVerdict?: VerdictHandler | undefined;
 }
 
-const OVERVIEW_ITEM_ACTION_CLASS =
-  "inline-flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-sm)] px-2 text-xs font-semibold text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
-const PRIMARY_ACTION_CLASS =
-  "inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-sm)] bg-[var(--color-primary)] px-3 text-xs font-semibold text-[var(--color-primary-foreground)] hover:bg-[var(--color-starbucks-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
+const FOCUS_RING =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
+export const ICON_BUTTON_CLASS = `inline-flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)] ${FOCUS_RING}`;
+export const MENU_ITEM_CLASS = "min-h-[var(--touch-target-min)] cursor-pointer";
+export function identityOf(item: StatusOverviewItem): string {
+  return item.stableId ?? item.key;
+}
 
-function ProgressAction({ item, onEditItem }: ActionProps) {
-  if (statusOverviewItemActions(item).primary !== "progress") return null;
-  const target = item.editTarget;
-  if (target === null || onEditItem === undefined) return null;
+function StatusMenuItems({
+  item,
+  onChoose,
+}: {
+  readonly item: StatusOverviewItem;
+  readonly onChoose: (status: ItemWorkflowStatus) => void;
+}) {
+  return choicesForWeek(item.source === "next" ? "next" : "current").map(
+    (choice) => {
+      const status = itemStatusToWorkflow(choice.value);
+      const current = status === item.workflowStatus;
+      return (
+        <DropdownMenuItem
+          key={choice.value}
+          aria-current={current ? "true" : undefined}
+          onSelect={() => onChoose(status)}
+          className={MENU_ITEM_CLASS}
+        >
+          <ProgressIcon status={status} />
+          <span className="flex-1">{choice.label}</span>
+          {current ? <Check aria-hidden="true" className="size-4" /> : null}
+        </DropdownMenuItem>
+      );
+    },
+  );
+}
+
+/**
+ * The status icon is the one primary interaction: it opens a menu of statuses
+ * (a cycling click would pass over statuses that need a reason). Where no
+ * status can be written it stays a plain, non-interactive image.
+ */
+export function StatusControl({
+  item,
+  onSetStatus,
+  onConfirmItem,
+}: Pick<ActionProps, "item" | "onSetStatus" | "onConfirmItem">) {
+  const unplanned = item.continuity === "unplanned" ? " · Unplanned" : "";
+  const label = `Status of ${item.text}: ${statusOverviewProgressLabel(item)}${unplanned}`;
   const carried = item.needsConfirmation === true;
-  const identity = item.stableId ?? item.key;
-  // Carried items keep the confirm anchor: the submit-readiness summary
-  // deep-links to `confirm:current:<stableId>`, and saving the editor clears
-  // carriedOver through the existing confirmation patch. Other items reuse the
-  // `edit:` focus key so readiness links land on a top-level control.
-  const focusKey = `${carried ? "confirm" : "edit"}:${item.source}:${identity}`;
-  return (
-    <button
-      id={carried ? focusKey : undefined}
-      type="button"
-      aria-label={`Update progress for ${shortItemLabel(item.text)}`}
-      data-overview-focus={focusKey}
-      onClick={() => onEditItem(target)}
-      className={PRIMARY_ACTION_CLASS}
-    >
-      Update progress
-    </button>
-  );
-}
-
-function MenuItem({
-  label,
-  ariaLabel,
-  focusKey,
-  fallbackKey,
-  onActivate,
-}: {
-  readonly label: string;
-  readonly ariaLabel: string;
-  readonly focusKey: string;
-  readonly fallbackKey?: string;
-  readonly onActivate: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={ariaLabel}
-      data-overview-focus={focusKey}
-      data-overview-focus-fallback={fallbackKey}
-      onClick={onActivate}
-      className={OVERVIEW_ITEM_ACTION_CLASS}
-    >
-      {label}
-    </button>
-  );
-}
-
-function EditMenuItem({
-  item,
-  target,
-  onEdit,
-  onDone,
-}: {
-  readonly item: StatusOverviewItem;
-  readonly target: StatusOverviewEditTarget;
-  readonly onEdit: (target: StatusOverviewEditTarget) => void;
-  readonly onDone: () => void;
-}) {
-  const identity = item.stableId ?? item.key;
-  return (
-    <MenuItem
-      label="Edit details"
-      ariaLabel={`Edit details: ${shortItemLabel(item.text)}`}
-      focusKey={`edit:${item.source}:${identity}`}
-      fallbackKey={`edit:${target.source}:${
-        item.stableId ?? `${target.source}:${target.recordId}`
-      }`}
-      onActivate={() => {
-        onDone();
-        onEdit(target);
-      }}
+  const icon = (
+    <ProgressIcon
+      status={item.resolution ? "wont_do" : item.workflowStatus}
+      unconfirmed={carried}
     />
   );
-}
-
-function StatusMenuItem({
-  item,
-  onResolve,
-  onDone,
-}: {
-  readonly item: StatusOverviewItem;
-  readonly onResolve: NonNullable<ActionProps["onResolvePlan"]>;
-  readonly onDone: () => void;
-}) {
-  const focusKey = `resolve:${item.source}:${item.stableId ?? item.key}`;
-  return (
-    <MenuItem
-      label="Update status"
-      ariaLabel={`Update status: ${shortItemLabel(item.text)}`}
-      focusKey={focusKey}
-      onActivate={() => {
-        onDone();
-        onResolve(item, focusKey);
-      }}
-    />
-  );
-}
-
-function MoveMenuItem({
-  item,
-  onMove,
-  onDone,
-}: {
-  readonly item: StatusOverviewItem;
-  readonly onMove: NonNullable<ActionProps["onMoveItem"]>;
-  readonly onDone: () => void;
-}) {
-  const nextWeek = item.source === "current";
-  const focusKey = `move:${item.source}:${item.stableId ?? item.key}`;
-  const label = nextWeek ? "Move to next week" : "Move to this week";
-  return (
-    <MenuItem
-      label={label}
-      ariaLabel={`${label}: ${shortItemLabel(item.text)}`}
-      focusKey={focusKey}
-      onActivate={() => {
-        onDone();
-        onMove(item, nextWeek ? "next" : "current", focusKey);
-      }}
-    />
-  );
-}
-
-function MoreActions({
-  item,
-  onEditItem,
-  onMoveItem,
-  onResolvePlan,
-}: ActionProps) {
-  const [open, setOpen] = useState(false);
-  const summaryRef = useRef<HTMLElement>(null);
-  const secondary = statusOverviewItemActions(item).secondary;
-  const edit = secondary.includes("edit") ? onEditItem : undefined;
-  const move = secondary.includes("move") ? onMoveItem : undefined;
-  // The terminal outcome path stays available for active editable items, but
-  // never on Previous rows or an unconfirmed carry — the canonical progress
-  // editor clears that first.
-  const status =
-    item.source !== "previous" &&
-    item.needsConfirmation !== true &&
-    item.canResolve
-      ? onResolvePlan
-      : undefined;
-  const target = item.editTarget;
-  if ((!edit && !move && !status) || target === null) return null;
-  const close = () => setOpen(false);
-  return (
-    <details
-      open={open}
-      className="min-w-0"
-      onKeyDown={(event) => {
-        if (event.key === "Escape" && open) {
-          event.stopPropagation();
-          close();
-          summaryRef.current?.focus();
-        }
-      }}
-    >
-      <summary
-        ref={summaryRef}
-        aria-label={`More actions for ${shortItemLabel(item.text)}`}
-        onClick={(event) => {
-          event.preventDefault();
-          setOpen(!open);
-        }}
-        className={`${OVERVIEW_ITEM_ACTION_CLASS} cursor-pointer list-none [&::-webkit-details-marker]:hidden`}
+  if (
+    statusOverviewItemActions(item).primary !== "status" ||
+    onSetStatus === undefined
+  ) {
+    return (
+      <span
+        role="img"
+        aria-label={label}
+        className="inline-flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center"
       >
-        More actions
-      </summary>
-      <div className="flex flex-wrap items-center gap-1 pt-1">
-        {edit ? (
-          <EditMenuItem
-            item={item}
-            target={target}
-            onEdit={edit}
-            onDone={close}
-          />
-        ) : null}
-        {status ? (
-          <StatusMenuItem item={item} onResolve={status} onDone={close} />
-        ) : null}
-        {move ? (
-          <MoveMenuItem item={item} onMove={move} onDone={close} />
-        ) : null}
-      </div>
-    </details>
-  );
-}
-
-function PlanAction({ item, onPlanItem }: ActionProps) {
-  if (
-    !onPlanItem ||
-    !statusOverviewItemActions(item).recovery.includes("replan")
-  )
-    return null;
+        {icon}
+      </span>
+    );
+  }
+  const focusKey = `${carried ? "confirm" : "edit"}:${item.source}:${identityOf(item)}`;
+  // Choosing the status a carried item already shows is the confirmation.
+  const choose = (status: ItemWorkflowStatus) => {
+    if (carried && status === item.workflowStatus && onConfirmItem) {
+      onConfirmItem(item);
+      return;
+    }
+    onSetStatus(item, status, focusKey);
+  };
   return (
-    <button
-      type="button"
-      aria-label={`Plan this work: ${shortItemLabel(item.text)}`}
-      data-overview-focus={`plan:${item.source}:${item.stableId ?? item.key}`}
-      onClick={() => onPlanItem(item)}
-      className={OVERVIEW_ITEM_ACTION_CLASS}
-    >
-      Plan this work
-    </button>
-  );
-}
-
-function RestoreAction({ item, onRestorePlan }: ActionProps) {
-  if (
-    !onRestorePlan ||
-    !statusOverviewItemActions(item).recovery.includes("restore")
-  )
-    return null;
-  const focusKey = `restore:${item.source}:${item.stableId ?? item.key}`;
-  return (
-    <button
-      type="button"
-      aria-label={`Restore ${shortItemLabel(item.text)}`}
-      data-overview-focus={focusKey}
-      onClick={() => onRestorePlan(item, focusKey)}
-      className={OVERVIEW_ITEM_ACTION_CLASS}
-    >
-      Restore
-    </button>
-  );
-}
-
-function hasActions(props: ActionProps): boolean {
-  const { item } = props;
-  const actions = statusOverviewItemActions(item);
-  const primary = item.editTarget !== null ? props.onEditItem : undefined;
-  const resolvable =
-    item.source !== "previous" &&
-    item.needsConfirmation !== true &&
-    item.canResolve &&
-    props.onResolvePlan !== undefined;
-  return (
-    (actions.primary === "progress" && primary !== undefined) ||
-    (actions.secondary.includes("edit") && props.onEditItem !== undefined) ||
-    (actions.secondary.includes("move") && props.onMoveItem !== undefined) ||
-    resolvable ||
-    (actions.recovery.includes("replan") && props.onPlanItem !== undefined) ||
-    (actions.recovery.includes("restore") && props.onRestorePlan !== undefined)
-  );
-}
-
-export function PreviewActions(props: ActionProps) {
-  if (!hasActions(props)) return null;
-  return (
-    <div
-      data-overview-item-actions
-      className="mt-2 flex min-h-[var(--touch-target-min)] flex-wrap items-center gap-1 border-t border-[var(--color-border-subtle)] pt-2 md:mt-auto"
-    >
-      <ProgressAction {...props} />
-      <MoreActions {...props} />
-      <PlanAction {...props} />
-      <RestoreAction {...props} />
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          // The submit-readiness summary deep-links to this id and focus key.
+          id={carried ? focusKey : undefined}
+          type="button"
+          aria-label={label}
+          title={label}
+          data-overview-focus={focusKey}
+          className={ICON_BUTTON_CLASS}
+        >
+          {icon}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        <StatusMenuItems item={item} onChoose={choose} />
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

@@ -62,7 +62,8 @@ export function useOverviewItemEditor(
       startedAttempt.current = null;
     },
   };
-  const { editItem, moveItem, confirmItem } = useOverviewEditOpeners(openers);
+  const { editItem, moveItem, confirmItem, setItemStatus } =
+    useOverviewEditOpeners(openers);
   const { addItem, planItem } = useOverviewCreateOpeners(openers);
   const save = (updatedItem: KanbanItem): void => {
     saveOverviewItem(
@@ -88,6 +89,7 @@ export function useOverviewItemEditor(
     planItem,
     moveItem,
     confirmItem,
+    setItemStatus,
     changeWeek: (week: "current" | "next") =>
       setDialog((current) =>
         current?.submission === null ? { ...current, week } : current,

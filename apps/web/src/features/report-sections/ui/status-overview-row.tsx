@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 import type { ReportHealthUnit } from "../model/report-health-pulse";
 import type {
   StatusOverviewModel,
@@ -21,6 +23,19 @@ import { TimelineFooter } from "./status-overview-timeline-footer";
 
 export { STATUS_OVERVIEW_DESKTOP_GRID };
 
+function PreviousUnavailableNotice({
+  column,
+}: {
+  readonly column: StatusOverviewUnit["columns"]["previouslyPlanned"];
+}) {
+  if (column.availability !== "unavailable") return null;
+  return (
+    <p className="px-4 py-2 text-xs text-[var(--color-muted-foreground)]">
+      {column.reason}
+    </p>
+  );
+}
+
 export function StatusOverviewUnitRow({
   health,
   healthPanelId,
@@ -34,6 +49,7 @@ export function StatusOverviewUnitRow({
   onToggle,
   panelId,
   editorSlot,
+  headerAction,
   ...handlers
 }: {
   readonly health?: ReportHealthUnit | undefined;
@@ -47,6 +63,8 @@ export function StatusOverviewUnitRow({
   readonly expanded: boolean;
   readonly onToggle: () => void;
   readonly panelId: string;
+  /** Optional control shown in the unit header (the Activity edit button). */
+  readonly headerAction?: ReactNode;
 } & ItemHandlers) {
   return (
     <article
@@ -61,16 +79,13 @@ export function StatusOverviewUnitRow({
             healthExpanded={healthExpanded}
             healthPanelId={healthPanelId}
             onInspect={onInspect}
+            headerAction={headerAction}
           />
         </div>
         <div className="min-w-0 min-[80rem]:col-span-3">
           <MobilePeriodsSummary periods={periods} />
           <DesktopPeriodHeader periods={periods} />
-          {unit.columns.previouslyPlanned.availability === "unavailable" ? (
-            <p className="px-4 py-2 text-xs text-[var(--color-muted-foreground)]">
-              {unit.columns.previouslyPlanned.reason}
-            </p>
-          ) : null}
+          <PreviousUnavailableNotice column={unit.columns.previouslyPlanned} />
           <LineageRowList
             rows={rows}
             periods={periods}

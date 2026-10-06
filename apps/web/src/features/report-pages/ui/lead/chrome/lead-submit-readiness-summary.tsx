@@ -2,7 +2,10 @@
 
 import { type MouseEvent, useState } from "react";
 
-import type { LeadSubmitReadiness } from "../../../../report-sections";
+import {
+  type LeadSubmitReadiness,
+  pendingReviewLabel,
+} from "../../../../report-sections";
 import { autosaveReadinessCopy } from "./autosave-state-copy";
 
 interface LeadSubmitReadinessSummaryProps {
@@ -22,7 +25,10 @@ const PROMOTION_GROUPS = [
 function readinessStatusCopy(readiness: LeadSubmitReadiness): string {
   if (readiness.submitPending) return "Submitting report…";
   if (readiness.blockingIssues.length > 0) {
-    return "Complete the items below before submitting.";
+    const guidance = "Complete the items below before submitting.";
+    return readiness.pendingReviewCount > 0
+      ? `${pendingReviewLabel(readiness.pendingReviewCount)}. ${guidance}`
+      : guidance;
   }
   return "This report is ready to submit.";
 }
