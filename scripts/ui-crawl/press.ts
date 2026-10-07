@@ -118,7 +118,7 @@ function restore(
   if (outcome.escaped === outcome.before) return "escape";
   // An expander or toggle: pressing it again is cheaper than reloading the page.
   const reservedAt = pace("trpc", REPRESS_COST);
-  const again = repress(ctx.browser, control.selector, control.name);
+  const again = repress(ctx.browser, control);
   settleRate("trpc", reservedAt, REPRESS_COST, takeRequests(ctx.browser));
   if (again === outcome.before) return "toggle";
   settle(ctx, null, "reload");
@@ -184,12 +184,11 @@ export function runBatch(
   const reservedAt = pace("trpc", BATCH_COST);
   try {
     const sent = performance.now();
-    const outcome = pressBatch(
-      ctx.browser,
-      controls,
-      BATCH_BUDGET_MS,
-      MAX_QUIET_MS,
-    );
+    const outcome = pressBatch(ctx.browser, controls, {
+      budgetMs: BATCH_BUDGET_MS,
+      maxQuietMs: MAX_QUIET_MS,
+      mode: ctx.config.mode,
+    });
     settleRate("trpc", reservedAt, BATCH_COST, outcome.req);
     const total = Math.round(performance.now() - sent);
     if (total > STALL_MS)
@@ -233,6 +232,13 @@ export function finishPress(
   result: PressResult,
 ): StepRecord {
   const base = { name: control.name, tag: control.tag };
+  if (result.status === "stale")
+    return {
+      ...base,
+      ...NO_EFFECT,
+      action: "error",
+      reason: result.reason ?? "stale select",
+    };
   if (result.status === "obstructed") {
     const reason = "covered by another element";
     add(

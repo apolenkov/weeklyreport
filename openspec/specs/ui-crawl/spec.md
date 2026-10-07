@@ -114,6 +114,84 @@ The crawler MUST read each log source before clearing it. A failed read MUST rem
 - **THEN** its failure is reported and other successfully read evidence is preserved
 - **AND** unread sources remain uncleared
 
+### Requirement: Repeated presses verify live identity
+
+The crawler MUST repeat an action only when its live control retains the complete normalized name, native tag, role and original probe anchor. Empty identity or unavailable controls MUST NOT authorize synthetic events. A mismatch MUST leave the observed state available to the existing bounded restoration path.
+
+#### Scenario: A replacement shares the original label prefix
+
+- **WHEN** the original control is replaced by a different action with a shared label prefix
+- **THEN** no repeated event is sent to the replacement
+
+#### Scenario: The same toggle remains available
+
+- **WHEN** the original identified toggle remains available after its first press
+- **THEN** repeating it can restore the original observed state
+
+#### Scenario: Availability changed
+
+- **WHEN** the identified control becomes disabled or covered
+- **THEN** no repeated event is sent
+
+### Requirement: Native select assignments are checked at action time
+
+The crawler MUST recheck native select type, enabled state and option availability before changing a value. Unavailable assignments MUST NOT dispatch events or count as successful presses. Full traversal MUST retain its exact planned value. Quick traversal MUST choose another enabled option only when its still-available planned value has become current.
+
+#### Scenario: Availability changes after probing
+
+- **WHEN** the select or planned option becomes disabled, disappears or changes type
+- **THEN** the attempt is explicitly unsuccessful and input/change are not dispatched
+
+#### Scenario: Current value changes after probing
+
+- **WHEN** the planned option becomes the current value
+- **THEN** quick traversal can choose a different enabled option
+- **AND** full traversal preserves the exact assignment without claiming a new press
+
+#### Scenario: A valid assignment
+
+- **WHEN** an enabled native select has the enabled planned option
+- **THEN** its value changes to that option and input/change events are dispatched
+
+### Requirement: Quick restoration compares live field state
+
+Quick crawler state comparison MUST include deterministic live non-password input, textarea and select values, including selected options. Password values MUST NOT enter signatures. Existing checked, URL, surface, expanded and visible text state MUST remain part of comparison.
+
+#### Scenario: A live field changes without changing page text
+
+- **WHEN** a supported live field value changes
+- **THEN** quick restoration detects the changed state and either restores it or reports incomplete restoration
+
+#### Scenario: Password changes
+
+- **WHEN** a password field changes
+- **THEN** its value remains absent from crawler signatures
+
+### Requirement: Current press receives its own long-task measurement
+
+The crawler MUST finish the action task and collect long-task observations before returning press evidence. Each measurement MUST describe the action interval, excluding tasks from previous presses.
+
+#### Scenario: Synchronous slow handler
+
+- **WHEN** a press synchronously blocks the main thread for 250 ms
+- **THEN** that result reports the blocking duration
+- **AND** the next fast press does not inherit it
+
+### Requirement: Geometry observations distinguish offscreen and scrollable controls
+
+Crawler obstruction checks MUST use a point inside the control's visible viewport intersection. Fully offscreen controls MUST remain discoverable without unrelated edge obstructions. Hidden or clipped overflowing content MUST be reported unless intentionally truncated or internally scrollable in a native editable control; accessible auto/scroll overflow MUST NOT alone count as clipping.
+
+#### Scenario: Offscreen control beside an unrelated viewport edge control
+
+- **WHEN** a control lies fully outside the viewport
+- **THEN** it remains discoverable without an obstruction finding from the edge control
+
+#### Scenario: Hidden content and accessible scrolling
+
+- **WHEN** native geometry shows hidden/clip overflow or accessible auto/scroll overflow
+- **THEN** only unavailable content is reported as clipping
+- **AND** intentional ellipsis and native editable scrolling remain allowed
+
 ### Requirement: Admin tabs are walked in full once per run
 
 Admin tabs other than Periods and Reopen show the same content in every
@@ -174,3 +252,24 @@ The crawler MUST read completed press evidence before fallible recovery actions.
 - **WHEN** a full-mode batch fails after a completed press and page restoration fails
 - **THEN** the completed timings and logs remain in the page record with error completion
 - **AND** no screenshot, dependent control, combination or rebase reads the unknown page
+
+### Requirement: Role cleanup preserves failures
+
+The crawler MUST attempt profile persistence and browser shutdown independently. Every crawl and cleanup failure MUST remain observable. Failed shutdown MUST identify its browser session and preserve its cause. An otherwise successful crawl with failed cleanup MUST exit unsuccessfully.
+
+#### Scenario: Profile persistence fails
+
+- **WHEN** writing the role profile fails
+- **THEN** browser shutdown is still attempted
+- **AND** the write failure remains observable
+
+#### Scenario: Crawl and cleanup both fail
+
+- **WHEN** traversal, profile persistence and browser shutdown fail
+- **THEN** all three failures remain observable
+- **AND** the crawl does not report success
+
+#### Scenario: Shutdown fails after successful traversal
+
+- **WHEN** traversal succeeds but browser shutdown fails
+- **THEN** the role exits unsuccessfully with the session and shutdown cause
