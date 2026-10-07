@@ -121,16 +121,10 @@ export function CurrentWeekSection(props: CurrentWeekSectionProps) {
   const handlers = createEditableListHandlers(props, dialog);
 
   // Only fall back to the standalone empty-state when there are neither
-  // items nor products to drive a column layout.
-  if (isBoardEmpty(items, products, activities)) {
-    return (
-      <CurrentWeekEmptyState
-        readOnly={readOnly}
-        defaultProduct={defaultProduct}
-        onCreate={dialog.openCreate}
-      />
-    );
-  }
+  // items nor products to drive a column layout. The scroll container mounts
+  // either way: unmounting it would leave useScrollFade without a node, and
+  // the hook's effect would never re-observe it on the empty→board switch.
+  const empty = isBoardEmpty(items, products, activities);
 
   // One column per assigned product (including empty) so `+ Add` stays visible.
   // Activity lanes sit below the grid, never as peer product columns.
@@ -152,27 +146,37 @@ export function CurrentWeekSection(props: CurrentWeekSectionProps) {
         className="max-md:max-h-none max-md:overflow-visible md:max-h-[420px] md:overflow-y-auto"
         style={{ scrollbarWidth: "thin" }}
       >
-        <BoardGrid
-          productColumns={board.productColumns}
-          activityLanes={board.activityLanes}
-          readOnly={readOnly}
-          hasMultipleProducts={products.length > 1}
-          onAdd={dialog.openCreate}
-          renderItem={createItemRenderer({ props, handlers, pause })}
-        />
-
-        <ItemDialogStack
-          {...dialogProps}
-          pauseDialog={
-            <PauseReasonDialog
-              open={pause.pending !== null}
-              preview={pause.pending?.text ?? ""}
-              initialReason={pause.pending?.pausedReason ?? ""}
-              onConfirm={pause.confirm}
-              onCancel={pause.cancel}
+        {empty ? (
+          <CurrentWeekEmptyState
+            readOnly={readOnly}
+            defaultProduct={defaultProduct}
+            onCreate={dialog.openCreate}
+          />
+        ) : (
+          <>
+            <BoardGrid
+              productColumns={board.productColumns}
+              activityLanes={board.activityLanes}
+              readOnly={readOnly}
+              hasMultipleProducts={products.length > 1}
+              onAdd={dialog.openCreate}
+              renderItem={createItemRenderer({ props, handlers, pause })}
             />
-          }
-        />
+
+            <ItemDialogStack
+              {...dialogProps}
+              pauseDialog={
+                <PauseReasonDialog
+                  open={pause.pending !== null}
+                  preview={pause.pending?.text ?? ""}
+                  initialReason={pause.pending?.pausedReason ?? ""}
+                  onConfirm={pause.confirm}
+                  onCancel={pause.cancel}
+                />
+              }
+            />
+          </>
+        )}
       </div>
       {canScrollDown && <ScrollFadeOverlay />}
     </div>
