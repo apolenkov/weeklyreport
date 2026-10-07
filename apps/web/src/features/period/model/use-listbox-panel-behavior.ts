@@ -14,12 +14,23 @@ import {
   useAnchoredPanelPosition,
 } from "./use-anchored-panel-position";
 
+// Keeps the anchored panel inside the viewport gutter even when the trigger
+// hugs the right edge — content may still widen it via minWidth, so left is
+// clamped by the trigger width, not the eventual content width.
+const PANEL_VIEWPORT_GUTTER_PX = 16;
+
 // Left-anchored and width-matched so the panel lines up under the trigger.
 // Module-level so its identity stays stable across renders — the anchoring
 // effect keys on it and would otherwise re-bind its scroll/resize listeners.
 const leftAnchoredPosition = (rect: DOMRect) => ({
   top: rect.bottom + ANCHORED_PANEL_GAP_PX,
-  left: rect.left,
+  left: Math.min(
+    rect.left,
+    Math.max(
+      PANEL_VIEWPORT_GUTTER_PX,
+      window.innerWidth - PANEL_VIEWPORT_GUTTER_PX - rect.width,
+    ),
+  ),
   width: rect.width,
 });
 
