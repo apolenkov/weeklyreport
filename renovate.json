@@ -22,6 +22,34 @@
       "matchFileNames": [".gitlab-ci.yml"],
       "matchPackageNames": ["redis", "axllent/mailpit"],
       "enabled": false
+    },
+    {
+      "description": "OpenSpec 1.14.1 promotes existing long-requirement INFO diagnostics to WARNING, failing spec:check for 116 specs; 1.14.0 passes all 181 items (TASK-359)",
+      "matchPackageNames": ["@fission-ai/openspec"],
+      "matchNewValue": "1.14.1",
+      "enabled": false
+    },
+    {
+      "description": "Radix UI 1.7.0 appends its generated description ID to custom aria-describedby; our DialogDescription asChild supplies a custom ID, leaving the appended reference unresolved (4 DOM regressions, TASK-359)",
+      "matchPackageNames": ["radix-ui"],
+      "matchNewValue": "1.7.0",
+      "enabled": false
+    },
+    {
+      "description": "Node 26.11.0 was released on 2026-10-07 but its official bookworm/alpine tags return MANIFEST_UNKNOWN; preserve synchronized 26.10.0 until images are published (TASK-359)",
+      "matchPackageNames": ["node"],
+      "matchNewValue": "/^26\\.11\\.0(?:-|$)/",
+      "enabled": false
+    },
+    {
+      "description": "PostgreSQL 18.6 rejects the existing PostgreSQL 15 data directory; a data migration is required before changing the deployed storage major (guarded container proof, TASK-359)",
+      "matchPackageNames": ["postgres"],
+      "allowedVersions": "<16"
+    },
+    {
+      "description": "The deployed pgvector image must retain its PostgreSQL 15 storage major; PostgreSQL 18.6 rejects existing data files (TASK-359)",
+      "matchPackageNames": ["pgvector/pgvector"],
+      "allowedVersions": "/-pg15-/"
     }
   ]
 }

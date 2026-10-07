@@ -42,7 +42,7 @@ variables:
   NODE_TOOLCHAIN_ARTIFACT: node-toolchain-linux-x64.tar.gz
 
 .node-image:
-  image: node:26.10.0-bookworm@sha256:2aaae6d91f99fee84cfc92da9b52c22a185752d247746052bbc3f961e44478c6
+  image: node:26.10.0-bookworm@sha256:e6cfc3514df35d1cb534e83f9279a242ad6e578692ab7b56d73dadcc7c4354a0
   # Without this, jobs fetch artifacts from every earlier stage — the
   # node-toolchain tarball would land in the workspace as untracked residue
   # and trip the cleanliness gate. Database jobs use explicit `needs`.

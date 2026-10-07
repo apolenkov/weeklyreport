@@ -4,16 +4,16 @@ packages:
 
 catalog:
   "luxon": "^3.7.2"
-  "@types/luxon": "^3.7.5"
-  "@types/node": "26.4.0"
-  "@types/react": "^19.2.18"
-  "tsx": "^4.23.13"
-  "@trpc/server": "^11.18.0"
-  "react": "^19.2.8"
+  "@types/luxon": "^3.7.6"
+  "@types/node": "26.6.4"
+  "@types/react": "^19.3.0"
+  "tsx": "^4.23.15"
+  "@trpc/server": "^11.19.0"
+  "react": "^19.3.0"
   "superjson": "^2.2.6"
-  "zod": "^4.5.4"
-  "lucide-react": "^1.38.0"
-  "react-dom": "^19.2.8"
+  "zod": "^4.6.5"
+  "lucide-react": "^1.52.0"
+  "react-dom": "^19.3.0"
   "sonner": "^2.0.8"
 
 # pnpm 11+ build script allowlist (native / postinstall tooling).
@@ -53,8 +53,8 @@ overrides:
   # and break on the 0.9 parser API (removed errorHandler object, required
   # parseFromString mimeType), so the override must stay inside the 0.8 line.
   "@xmldom/xmldom": ">=0.8.13 <0.9"
-  protobufjs: ">=8.0.2 <9"
-  vite: ">=8.1.5 <9"
+  protobufjs: ">=8.8.0 <9"
+  vite: ">=8.3.3 <9"
   # Keep both brace-expansion ranges: the graph contains incompatible 1.x and
   # 5.x consumers, so one cross-major override would be unsafe.
   "brace-expansion@<2": ">=1.1.18 <2"
@@ -63,20 +63,35 @@ overrides:
   # (GHSA-rgwj-5xj2-c3m3 and a second <3.22.0 finding); floor at the patched
   # line, cap below the next major. mysql2 is prisma's internal MySQL driver
   # and is never exercised by this PostgreSQL-only product.
-  mysql2: ">=3.23.1 <4"
+  mysql2: ">=3.24.5 <4"
   fast-uri: ">=3.1.7 <4"
   # Dev-only transitives (jsdom, agentation-mcp) with open advisories; stay in the same major.
   # undici is pinned to the first patched release: 8.11.2 breaks vitest snapshot state in the jsdom suite.
   undici: "8.10.2"
-  hono: ">=4.13.7 <5"
+  hono: ">=4.13.13 <5"
   # Keep transitive packages in verified major ranges.
   js-yaml: ">=4.3.1 <5"
   nanoid: ">=3.3.17 <4"
   # These are transitive through Prisma, Next.js, and the CSS toolchain.
-  find-my-way: ">=9.7.0 <10"
-  sharp: ">=0.35.0 <1"
-  postcss: ">=8.5.23 <9"
+  find-my-way: ">=9.9.0 <10"
+  sharp: ">=0.35.5 <0.36"
+  postcss: ">=8.5.29 <9"
   # Prisma pins valibot exactly, so the safe current range is enforced here.
-  valibot: ">=1.4.2 <2"
+  valibot: ">=1.5.0 <2"
   # Prisma 7.10 pins a recursion-vulnerable 7.x; require the cycle-safe major.
   deepmerge-ts: ">=8.0.2 <9"
+
+minimumReleaseAgeExclude:
+  - "@next/env@16.4.0"
+  - "@next/eslint-plugin-next@16.4.0"
+  - "@next/swc-darwin-arm64@16.4.0"
+  - "@next/swc-darwin-x64@16.4.0"
+  - "@next/swc-linux-arm64-gnu@16.4.0"
+  - "@next/swc-linux-arm64-musl@16.4.0"
+  - "@next/swc-linux-x64-gnu@16.4.0"
+  - "@next/swc-linux-x64-musl@16.4.0"
+  - "@next/swc-win32-arm64-msvc@16.4.0"
+  - "@next/swc-win32-x64-msvc@16.4.0"
+  - eslint-plugin-jsdoc@65.2.0
+  - next@16.4.0
+  - nodemailer@10.0.16

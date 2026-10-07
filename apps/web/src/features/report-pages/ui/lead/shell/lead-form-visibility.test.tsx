@@ -349,7 +349,7 @@ describe("LeadForm — Record visibility: Mine only", () => {
     expect(screen.queryByText(CO_OWNER_NAME)).toBeNull();
     // Mine shows only own chips; foreign Testing is fully hidden.
     expect(screen.queryByLabelText(/^Testing:/)).toBeNull();
-    expect(screen.queryByLabelText(/^Development:/)).not.toBeNull();
+    expect(screen.getByLabelText(/^Development:/)).toBeInTheDocument();
   });
 });
 
