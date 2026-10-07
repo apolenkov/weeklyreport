@@ -91,13 +91,40 @@ describe("extractTraceId", () => {
     ).toBeUndefined();
   });
 
-  it("accepts an uppercase-hex trace id of the correct length", () => {
-    const traceId = "0AF7651916CD43DD8448EB211C80319C";
+  // Acceptance now mirrors the installed OTel W3C parser exactly: lowercase
+  // hex only, all-zero ids invalid, version `ff` forbidden, future versions
+  // tolerated with extra segments.
+  it("rejects an uppercase-hex trace id", () => {
     expect(
       extractTraceId({
-        traceparent: `00-${traceId}-b7ad6b7169203331-01`,
+        traceparent: "00-0AF7651916CD43DD8448EB211C80319C-b7ad6b7169203331-01",
       }),
-    ).toBe(traceId);
+    ).toBeUndefined();
+  });
+
+  it("rejects the forbidden `ff` version", () => {
+    expect(
+      extractTraceId({
+        traceparent: `ff-${ENQUEUE_TRACE_ID}-b7ad6b7169203331-01`,
+      }),
+    ).toBeUndefined();
+  });
+
+  it.each([
+    ["all-zero trace id", `00-${"0".repeat(32)}-b7ad6b7169203331-01`],
+    ["all-zero span id", `00-${ENQUEUE_TRACE_ID}-0000000000000000-01`],
+    ["non-hex trace flags", `00-${ENQUEUE_TRACE_ID}-b7ad6b7169203331-0g`],
+    ["short span id", `00-${ENQUEUE_TRACE_ID}-b7ad6b716920333-01`],
+  ])("rejects a carrier with %s", (_label, traceparent) => {
+    expect(extractTraceId({ traceparent })).toBeUndefined();
+  });
+
+  it("accepts a future-version carrier the way the OTel parser does", () => {
+    expect(
+      extractTraceId({
+        traceparent: `cc-${ENQUEUE_TRACE_ID}-b7ad6b7169203331-01-extra`,
+      }),
+    ).toBe(ENQUEUE_TRACE_ID);
   });
 });
 

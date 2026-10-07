@@ -5,6 +5,7 @@ import {
   SpanStatusCode,
   trace,
 } from "@opentelemetry/api";
+import { parseTraceParent } from "@opentelemetry/core";
 
 import type { JobTraceContext } from "../../lib/job-trace-context.js";
 
@@ -123,20 +124,13 @@ export async function runInJobTraceContext<T>(
   return runSpan();
 }
 
-const TRACEPARENT_SEGMENT_COUNT = 4;
-// W3C trace ids are exactly 32 hex chars (16 bytes); shorter ids are malformed.
-const TRACE_ID_HEX_RE = /^[0-9a-f]{32}$/i;
-
 // Failure handler runs after the span ends, so ambient OTel no longer has the
-// trace id — read it back from the job carrier. Strict on the trace id shape
-// so a truncated or garbage id never surfaces as a real trace reference.
+// trace id — read it back from the job carrier through the same W3C parser the
+// propagator uses, so a carrier OTel itself rejected never surfaces here as a
+// real trace reference.
 export function extractTraceId(ctx: JobTraceContext): string | undefined {
-  const segments = ctx.traceparent?.split("-");
-  if (segments?.length !== TRACEPARENT_SEGMENT_COUNT) return undefined;
-  const traceId = segments[1];
-  return traceId !== undefined && TRACE_ID_HEX_RE.test(traceId)
-    ? traceId
-    : undefined;
+  if (ctx.traceparent === undefined) return undefined;
+  return parseTraceParent(ctx.traceparent)?.traceId;
 }
 
 export function describeJobFailureTrace(data: unknown) {
