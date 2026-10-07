@@ -2,6 +2,8 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { SendMailOptions } from "nodemailer";
 import nodemailer from "nodemailer";
 
+import { APP_LOGGER } from "../../lib/audit-logger.js";
+import type { AppLogger } from "../../lib/logger.js";
 import { ENV_CONFIG } from "../config/config.module";
 import type { EnvConfig } from "../config/env.schema";
 
@@ -53,15 +55,21 @@ export class EmailService implements EmailPort {
   private readonly fromAddress: string;
   private readonly isDev: boolean;
 
-  constructor(@Inject(ENV_CONFIG) env: EnvConfig) {
+  constructor(
+    @Inject(ENV_CONFIG) env: EnvConfig,
+    @Inject(APP_LOGGER) private readonly logger: AppLogger,
+  ) {
     this.fromAddress = env.SMTP_FROM ?? DEV_STREAM_TRANSPORT_FROM;
     const host = env.SMTP_HOST;
 
     if (host) {
       this.isDev = false;
-      const auth = env.SMTP_USER
-        ? { user: env.SMTP_USER, pass: env.SMTP_PASS }
-        : undefined;
+      // env.schema guarantees the pair is all-or-none; the pass check keeps
+      // the types honest for callers that bypass env validation.
+      const auth =
+        env.SMTP_USER && env.SMTP_PASS
+          ? { user: env.SMTP_USER, pass: env.SMTP_PASS }
+          : undefined;
       this.transporter = createMailTransport({
         host,
         port: env.SMTP_PORT ?? DEFAULT_SMTP_PORT,
@@ -91,12 +99,7 @@ export class EmailService implements EmailPort {
       text,
     });
 
-    this.logDevDelivery(
-      "email sent (dev/streamTransport)",
-      fromAddr,
-      to,
-      subject,
-    );
+    this.logDevDelivery("email sent (dev/streamTransport)", fromAddr, to);
   };
 
   // Multipart (html+text) scores higher with corporate spam filters;
@@ -119,25 +122,15 @@ export class EmailService implements EmailPort {
       "email sent (dev/streamTransport, multipart)",
       fromAddr,
       to,
-      subject,
     );
   };
 
-  private logDevDelivery(
-    message: string,
-    from: string,
-    to: string,
-    subject: string,
-  ): void {
+  // Dev no-send diagnostics go through the shared logger so LOG_LEVEL gates
+  // them and the redaction layer sees the envelope. `recipientEmail` is the
+  // known PII key — the marker, not the address, reaches sinks. Subject/body
+  // are deliberately not logged.
+  private logDevDelivery(message: string, from: string, to: string): void {
     if (!this.isDev) return;
-    process.stdout.write(
-      `${JSON.stringify({
-        timestamp: new Date().toISOString(),
-        level: "info",
-        message,
-        envelope: { from, to },
-        subject,
-      })}\n`,
-    );
+    this.logger.info(message, { from, recipientEmail: to });
   }
 }

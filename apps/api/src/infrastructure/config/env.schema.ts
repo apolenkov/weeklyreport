@@ -341,6 +341,24 @@ const addMissingSmtpPortIssue = (
   });
 };
 
+// SMTP auth is an all-or-none pair in every environment: a user without its
+// password surfaces only as a late send failure, and a password without a
+// user is silently ignored. Whitespace counts as absent; the secret bytes of
+// a configured password are never trimmed.
+const addSmtpAuthPairIssue = (
+  data: ValidatedEnv,
+  ctx: z.RefinementCtx,
+): void => {
+  const userConfigured = Boolean(data.SMTP_USER?.trim());
+  const passConfigured = Boolean(data.SMTP_PASS?.trim());
+  if (userConfigured === passConfigured) return;
+  ctx.addIssue({
+    code: "custom",
+    message: "SMTP_USER and SMTP_PASS must be configured together",
+    path: [userConfigured ? "SMTP_PASS" : "SMTP_USER"],
+  });
+};
+
 const addMissingReleaseVersionIssue = (
   data: ValidatedEnv,
   ctx: z.RefinementCtx,
@@ -391,6 +409,7 @@ const addProviderAllowedOriginsIssue = (
 export const envSchema = envObjectSchema.superRefine((data, ctx) => {
   addProviderAllowedOriginsIssue(data, ctx);
   addFrontendUrlsEntryIssues(data, ctx);
+  addSmtpAuthPairIssue(data, ctx);
   // Production fences. Boot must fail if any of these aren't met.
   if (data.NODE_ENV !== "production") return;
   addForbiddenDevModeIssue(data, ctx);

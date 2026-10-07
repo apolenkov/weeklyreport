@@ -34,3 +34,23 @@ STARTTLS upgrade aborts the send instead of falling back to a cleartext
 - **WHEN** the configured relay does not offer STARTTLS
 - **THEN** the send fails with a TLS-upgrade error
 - **AND** no `AUTH LOGIN` credentials are transmitted in cleartext
+
+### Requirement: SMTP auth credentials are an all-or-none pair
+
+`SMTP_USER` and `SMTP_PASS` are optional as a pair, not independently. The
+environment schema MUST reject a configuration where exactly one of them is
+present or non-blank, in every `NODE_ENV`, so an anonymous relay stays
+supported and a half-configured pair fails at startup instead of surfacing as
+a late send failure or silently ignored password.
+
+#### Scenario: User without password is rejected at boot
+
+- **GIVEN** `SMTP_USER` is set but `SMTP_PASS` is absent or blank
+- **WHEN** the environment is validated
+- **THEN** validation fails with an issue naming the missing counterpart
+
+#### Scenario: Anonymous relay stays supported
+
+- **GIVEN** neither `SMTP_USER` nor `SMTP_PASS` is set
+- **WHEN** the environment is validated
+- **THEN** validation does not fail on the SMTP auth pair
