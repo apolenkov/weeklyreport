@@ -6,7 +6,7 @@ interface PolicyFormFooterProps {
   readonly isSaving: boolean;
   readonly validityValid: boolean;
   // Why Save is blocked; shown verbatim as the inline hint when invalid.
-  readonly validityReason?: string | null;
+  readonly validityReason?: string | null | undefined;
   readonly onChange: (
     next: PolicyFormState | ((prev: PolicyFormState) => PolicyFormState),
   ) => void;
