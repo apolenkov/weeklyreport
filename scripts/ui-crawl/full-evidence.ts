@@ -101,7 +101,7 @@ export function auditFullState(
 
 function logFindings(
   ctx: Ctx,
-  place: Readonly<{ key: string; shot: string }>,
+  place: Readonly<{ key: string; shot: string | null }>,
   logs: readonly PressLog[],
 ): void {
   for (const log of logs) {
@@ -125,7 +125,7 @@ export function fullStep(
   result: Readonly<{
     press?: PressResult;
     reason?: string;
-    shot: string;
+    shot: string | null;
     error?: boolean;
   }>,
 ): StepRecord {

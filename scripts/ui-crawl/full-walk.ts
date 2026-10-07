@@ -18,6 +18,7 @@ import {
 } from "./full-probe.ts";
 import type { FullFrame } from "./full-restore.ts";
 import {
+  cannotContinue,
   captureState,
   executeControl,
   type FullSession,
@@ -58,18 +59,25 @@ function dangerOrder(control: FullControl): number {
 }
 
 /** True when the press left the page as it was. */
+function failedEffect(
+  session: FullSession,
+  frame: FullFrame,
+  control: FullControl,
+): false {
+  session.limited = true;
+  if (!session.mutated) restoreOrRebase(session, frame, control);
+  return false;
+}
+
 function visitEffect(
   session: FullSession,
   frame: FullFrame,
   control: FullControl,
 ): boolean {
   const effect = executeControl(session, frame, control);
+  if (session.aborted) return false;
   if (effect?.unchanged) return true;
-  if (!effect) {
-    session.limited = true;
-    if (!session.mutated) restoreOrRebase(session, frame, control);
-    return false;
-  }
+  if (!effect) return failedEffect(session, frame, control);
   const after = observeEffect(session, frame);
   const child = {
     probe: after,
@@ -81,7 +89,7 @@ function visitEffect(
   else if (fullUrl(after.url) === fullUrl(frame.probe.url))
     walkFrame(session, child);
   else captureState(session, child);
-  if (session.mutated) return false;
+  if (cannotContinue(session)) return false;
   const restoredBy = restoreOrRebase(session, frame, control);
   const recorded = session.steps[effect.index];
   if (recorded && restoredBy)
@@ -165,6 +173,7 @@ function walkControls(
   finiteIds: ReadonlySet<string>,
 ): void {
   for (const [control, policy] of reasons) {
+    if (session.aborted) break;
     if (!session.mutated)
       walkControl(
         session,

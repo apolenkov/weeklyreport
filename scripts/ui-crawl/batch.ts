@@ -34,8 +34,8 @@ export type BatchOutcome = Readonly<{
   results: readonly PressResult[];
   /** True when the run ended early on a visible change, a navigation or the time budget. */
   stopped: boolean;
-  /** tRPC requests the page made during the run. */
-  req: number;
+  /** tRPC requests the page made during the run, or null after an unmeasured failure. */
+  req: number | null;
   /** Time spent inside the page script. */
   took: number;
 }>;
@@ -203,13 +203,14 @@ export function pressBatch(
   browser: Browser,
   controls: readonly ProbedControl[],
   options: BatchOptions,
-): BatchOutcome {
+): BatchOutcome & Readonly<{ req: number }> {
   const items = controls.map((c) =>
     c.tag === "select" && c.alternatives[0] !== undefined
       ? { selector: c.selector, tag: c.tag, alternative: c.alternatives[0] }
       : { selector: c.selector, tag: c.tag },
   );
-  return browser.evaluate(batchScript(items, options)) as BatchOutcome;
+  return browser.evaluate(batchScript(items, options)) as BatchOutcome &
+    Readonly<{ req: number }>;
 }
 
 /** Presses one control again (undoes an expander or a toggle) and returns the quiet state signature. */
@@ -267,14 +268,17 @@ export function quietState(browser: Browser): string {
 }
 
 /** Results a batch stored before its browser call failed (navigation, timeout). */
-export function recoverResults(browser: Browser): readonly PressResult[] {
+export function recoverResults(browser: Browser): Readonly<{
+  results: readonly PressResult[];
+  error: unknown;
+}> {
   try {
     const raw = browser.evaluate(
       "sessionStorage.getItem('__crawlRes') ?? '[]'",
     );
-    return JSON.parse(String(raw)) as PressResult[];
-  } catch {
-    return [];
+    return { results: JSON.parse(String(raw)) as PressResult[], error: null };
+  } catch (error) {
+    return { results: [], error };
   }
 }
 
