@@ -200,8 +200,11 @@ export function loadPasswords(file: string): Readonly<Record<string, string>> {
       if (match?.[1] && match[2] !== undefined)
         fromFile[match[1]] = match[2].replaceAll(/^['"]|['"]$/g, "");
     }
-  } catch {
-    // no secrets file: rely on the environment alone
+  } catch (error: unknown) {
+    if (!(error instanceof Error && "code" in error && error.code === "ENOENT"))
+      throw new Error(`Cannot read crawler secrets file: ${file}`, {
+        cause: error,
+      });
   }
   return {
     ...fromFile,

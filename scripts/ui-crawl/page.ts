@@ -1,8 +1,9 @@
 import { join } from "node:path";
 
 import { quietState, UNTIL, waitForState } from "./batch.ts";
-import { RETURN_WAIT_MS, SLOW_LOAD_MS, VISIT_ATTEMPTS } from "./constants.ts";
+import { RETURN_WAIT_MS, SLOW_LOAD_MS } from "./constants.ts";
 import { add, type Ctx, drainLogs, type Place } from "./logs.ts";
+import { retryPage } from "./page-retry.ts";
 import { pageKey, sameOrigin } from "./policy.ts";
 import { settle } from "./press.ts";
 import {
@@ -214,25 +215,9 @@ function visitWithRecovery(
   index: number,
   axeSource: string,
 ): ReturnType<typeof visitPage> {
-  let detail = "failed";
-  const mark = ctx.findings.length;
-  for (let attempt = 0; attempt < VISIT_ATTEMPTS; attempt += 1) {
-    try {
-      return visitPage(ctx, url, index, axeSource);
-    } catch (error: unknown) {
-      // findings of the abandoned attempt would repeat on the retry
-      ctx.findings.length = mark;
-      detail =
-        error instanceof Error
-          ? (error.message.split("\n")[0] ?? "")
-          : "failed";
-      try {
-        ctx.signIn();
-      } catch {
-        // the next attempt reports the failure again
-      }
-    }
-  }
+  const result = retryPage(ctx, () => visitPage(ctx, url, index, axeSource));
+  if (result.ok) return result.value;
+  const { detail } = result;
   const key = pageKey(url);
   add(
     ctx,

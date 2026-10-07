@@ -1,10 +1,11 @@
-import { SLOW_LOAD_MS, VISIT_ATTEMPTS } from "./constants.ts";
+import { SLOW_LOAD_MS } from "./constants.ts";
 import { pageCoverage } from "./coverage.ts";
 import { fullFamilyKey, fullPageKey } from "./full-plan.ts";
 import { type FullProbe, readFullProbe } from "./full-probe.ts";
 import { type FullSession, rebaseAfterWrite } from "./full-session.ts";
 import { walkFrame } from "./full-walk.ts";
 import { add, type Ctx, drainLogs } from "./logs.ts";
+import { retryPage } from "./page-retry.ts";
 import { sameOrigin } from "./policy.ts";
 import { settle } from "./press.ts";
 import type { PageRecord } from "./types.ts";
@@ -153,24 +154,9 @@ function visitWithRecovery(
   target: Target,
   axeSource: string,
 ): Visit | null {
-  let detail = "failed";
-  const mark = ctx.findings.length;
-  for (let attempt = 0; attempt < VISIT_ATTEMPTS; attempt += 1) {
-    try {
-      return visitFullPage(ctx, target, axeSource);
-    } catch (error: unknown) {
-      ctx.findings.length = mark;
-      detail =
-        error instanceof Error
-          ? (error.message.split("\n")[0] ?? "")
-          : "failed";
-      try {
-        ctx.signIn();
-      } catch {
-        // the next attempt reports the failure again
-      }
-    }
-  }
+  const result = retryPage(ctx, () => visitFullPage(ctx, target, axeSource));
+  if (result.ok) return result.value;
+  const { detail } = result;
   const { url } = target;
   const key = fullPageKey(url);
   add(

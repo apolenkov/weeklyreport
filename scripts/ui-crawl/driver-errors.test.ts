@@ -1,0 +1,73 @@
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { join } from "node:path";
+
+import { afterEach, describe, expect, it, vi } from "vitest";
+const root = join(import.meta.dirname, "../../output/crawl-cli-tests");
+const dirs: string[] = [];
+afterEach(() => {
+  vi.unstubAllEnvs();
+  for (const dir of dirs.splice(0))
+    rmSync(dir, { recursive: true, force: true });
+});
+async function driver(script: string) {
+  mkdirSync(root, { recursive: true });
+  const dir = mkdtempSync(join(root, "cli-"));
+  dirs.push(dir);
+  const file = join(dir, "cli.cjs");
+  writeFileSync(file, `#!${process.execPath}\n${script}`);
+  chmodSync(file, 0o700);
+  vi.stubEnv("AGENT_BROWSER_BIN", file);
+  vi.resetModules();
+  return import("./driver.ts");
+}
+describe("crawler CLI failure protocol", () => {
+  it("does not salvage stdout from a timed-out batch", async () => {
+    const { createBrowser } = await driver(
+      "if(process.argv[2]==='session')console.log('fixture-session');else{console.log(JSON.stringify([{success:true,result:'observed'}]));setTimeout(()=>{},3000)}",
+    );
+    const browser = createBrowser("fixture", 1000);
+    expect(() => browser.batch([["snapshot"]])).toThrow(
+      expect.objectContaining({ code: "ETIMEDOUT" }),
+    );
+  });
+  it("bounds session bootstrap by the configured timeout", async () => {
+    const { createBrowser } = await driver(
+      "setTimeout(()=>console.log('fixture-session'),600)",
+    );
+    expect(() => createBrowser("fixture", 100)).toThrow(
+      expect.objectContaining({ code: "ETIMEDOUT" }),
+    );
+  });
+  it("preserves nonzero exit and stderr when batch JSON is truncated", async () => {
+    const { createBrowser } = await driver(
+      "if(process.argv[2]==='session')console.log('fixture-session');else{process.stdout.write('[{');process.stderr.write('CLI ROOT FAILURE');process.exit(7)}",
+    );
+    const browser = createBrowser("fixture");
+    let error: unknown;
+    try {
+      browser.batch([["snapshot"]]);
+    } catch (error_) {
+      error = error_;
+    }
+    expect(error).toMatchObject({ status: 7 });
+    expect(String((error as { stderr?: unknown }).stderr)).toContain(
+      "CLI ROOT FAILURE",
+    );
+  });
+  it("keeps complete failed-command results available by entry", async () => {
+    const { createBrowser } = await driver(
+      "if(process.argv[2]==='session')console.log('fixture-session');else{console.log(JSON.stringify([{success:false,error:'command unavailable'},{success:true,result:{result:'observed'}}]));process.exit(7)}",
+    );
+    const browser = createBrowser("fixture");
+    expect(browser.batch([["snapshot"], ["eval", "true"]])).toEqual([
+      { ok: false, error: "command unavailable", value: undefined },
+      { ok: true, error: null, value: "observed" },
+    ]);
+  });
+});
