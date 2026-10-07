@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
-import { propagation, trace } from "@opentelemetry/api";
+import { propagation, SpanStatusCode, trace } from "@opentelemetry/api";
 import { W3CTraceContextPropagator } from "@opentelemetry/core";
 import {
   BasicTracerProvider,
@@ -163,6 +163,34 @@ describe("runInJobTraceContext", () => {
     expect(span?.spanContext().traceId).toBe(ENQUEUE_TRACE_ID);
     expect(span?.links).toHaveLength(1);
     expect(span?.links[0]?.context.traceId).toBe(ENQUEUE_TRACE_ID);
+  });
+
+  it("marks the worker span ERROR and rethrows the original rejection", async () => {
+    const failure = new Error("job body exploded");
+
+    await expect(
+      runInJobTraceContext({}, "worker.process", null, () =>
+        Promise.reject(failure),
+      ),
+    ).rejects.toBe(failure);
+
+    const spans = exporter
+      .getFinishedSpans()
+      .filter((s) => s.name === "worker.process");
+    expect(spans).toHaveLength(1);
+    expect(spans[0]?.status.code).toBe(SpanStatusCode.ERROR);
+    expect(spans[0]?.status.message).toBeUndefined();
+  });
+
+  it("leaves a successful worker span without an ERROR status", async () => {
+    await runInJobTraceContext({}, "worker.process", null, async () =>
+      Promise.resolve(),
+    );
+
+    const span = exporter
+      .getFinishedSpans()
+      .find((s) => s.name === "worker.process");
+    expect(span?.status.code).not.toBe(SpanStatusCode.ERROR);
   });
 
   it("starts an unlinked span when no enqueue trace was captured", async () => {
