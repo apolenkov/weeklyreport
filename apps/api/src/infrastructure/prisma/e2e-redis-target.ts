@@ -4,9 +4,9 @@
 // re-exports together with this module.
 import {
   E2E_DATABASE_NAME,
-  isLoopbackHost,
   MAX_TCP_PORT,
   parseE2eRuntimeDatabaseTarget,
+  parseLoopbackHost,
 } from "./e2e-destructive-target.js";
 
 export const E2E_REDIS_DB = "15" as const;
@@ -83,7 +83,10 @@ export function parseE2eRuntimeRedisTarget(
   }
   const host = env.REDIS_HOST;
   if (!host) throw new Error(`[${scriptName}] REDIS_HOST must be set.`);
-  if (!isLoopbackHost(host)) {
+  // Validated loopback literals still need canonicalizing before ioredis:
+  // "[::1]" is accepted input but not a dialable DNS name.
+  const dialableHost = parseLoopbackHost(host);
+  if (dialableHost === null) {
     throw new Error(
       `[${scriptName}] REDIS_HOST must be a loopback address: ${host}`,
     );
@@ -96,7 +99,7 @@ export function parseE2eRuntimeRedisTarget(
       `[${scriptName}] REDIS_PORT must be a decimal TCP port: ${rawPort}`,
     );
   }
-  return { host, port, db };
+  return { host: dialableHost, port, db };
 }
 
 /**

@@ -4,7 +4,10 @@ import {
   assertE2eRuntimeDestructive,
   assertE2eRuntimeDestructiveTarget,
   E2E_DESTRUCTIVE_CONSENT,
+  isLoopbackHost,
   parseE2eRuntimeDatabaseTarget,
+  parseE2eRuntimeRedisTarget,
+  parseLoopbackHost,
 } from "./_destructive-guard.js";
 
 const TARGET = "postgresql://customreport:secret@127.0.0.1:5432/";
@@ -67,6 +70,64 @@ describe("exact E2E/runtime destructive target", () => {
       ).not.toThrow();
     },
   );
+
+  it.each(["127.1.2.3", "::ffff:127.1.2.3", "::ffff:7f01:203"])(
+    "accepts the mapped/non-octet-aligned loopback host %s",
+    (host) => {
+      const url = targetUrl("customreport_e2e", host);
+      expect(() =>
+        assertE2eRuntimeDestructiveTarget("guard-test", url, validEnv(url)),
+      ).not.toThrow();
+    },
+  );
+
+  it.each([
+    "126.255.255.255",
+    "128.0.0.1",
+    "::ffff:8.8.8.8",
+    "::ffff:808:808",
+    "::ffff:7f00:1zz",
+    "::ffff:7f00:10000",
+  ])("rejects the non-loopback or malformed host %s", (host) => {
+    const url = targetUrl("customreport_e2e", host);
+    expect(() =>
+      assertE2eRuntimeDestructiveTarget("guard-test", url, validEnv(url)),
+    ).toThrow();
+  });
+
+  it.each([
+    ["::1]", false],
+    ["[::1", false],
+    ["[localhost]", false],
+    ["[127.0.0.1]", false],
+    ["::ffff:127.0.0.1", true],
+    ["::ffff:7f00:1", true],
+    ["::ffff:808:808", false],
+    [" LOCALHOST", false],
+    ["LocalHost", true],
+  ])("isLoopbackHost(%s) → %s", (host, expected) => {
+    expect(isLoopbackHost(host)).toBe(expected);
+  });
+
+  it.each([
+    ["[::1]", "::1"],
+    ["LOCALHOST", "localhost"],
+    ["127.0.0.1", "127.0.0.1"],
+    ["[::ffff:127.0.0.1]", "::ffff:127.0.0.1"],
+  ])("parseLoopbackHost(%s) normalizes to %s", (host, expected) => {
+    expect(parseLoopbackHost(host)).toBe(expected);
+  });
+
+  it("returns a dialable unbracketed Redis host for [::1]", () => {
+    const env = {
+      DATABASE_URL: targetUrl("customreport_e2e"),
+      REDIS_DB: "15",
+      REDIS_HOST: "[::1]",
+      REDIS_PORT: "6379",
+    };
+
+    expect(parseE2eRuntimeRedisTarget("guard-test", env).host).toBe("::1");
+  });
 
   it.each([
     "postgresql://customreport:secret@postgres:5432/customreport_e2e",
