@@ -1,8 +1,15 @@
-import type { PressResult } from "./batch.ts";
+import type { BatchOutcome, PressResult } from "./batch.ts";
 import { REPEAT_LIMIT, SHOT_INDEX_WIDTH } from "./constants.ts";
 import type { Ctx } from "./logs.ts";
 import { skipReason } from "./policy.ts";
-import { finishPress, hung, runBatch, skipped, type Target } from "./press.ts";
+import {
+  finishPress,
+  hung,
+  recoveredPress,
+  runBatch,
+  skipped,
+  type Target,
+} from "./press.ts";
 import type { PageProbe, ProbedControl } from "./probe.ts";
 import type { StepRecord } from "./types.ts";
 
@@ -72,6 +79,8 @@ export function planEntries(
 
 type Round = Readonly<{
   steps: readonly StepRecord[];
+  /** Recovery failed; the owner must stop without querying the unknown page again. */
+  aborted?: boolean;
   /** Index to plan next, or null when the page is finished. */
   next: number | null;
 }>;
@@ -86,6 +95,7 @@ function pressTargets(
     return {
       outcome: { results: [], stopped: false, req: 0, took: 0 },
       hungReason: null,
+      restored: true,
     };
   return runBatch(ctx, { key: page.key, url: page.url, shotBase: "" }, targets);
 }
@@ -132,6 +142,40 @@ function cutShort(
   return { steps: at.steps, next: at.index + 1 };
 }
 
+function recoveredRound(
+  ctx: Ctx,
+  page: PageRef,
+  entries: readonly Entry[],
+  recovery: Readonly<{
+    outcome: BatchOutcome;
+    hungReason: string | null;
+    counters: Counters;
+  }>,
+): Round {
+  const steps: StepRecord[] = [];
+  let used = 0;
+  for (const { control, reason, live } of entries) {
+    if (reason || !live) {
+      steps.push(skipped(control, reason ?? "gone"));
+      continue;
+    }
+    const target = { key: page.key, url: page.url, shotBase: "" };
+    const result = recovery.outcome.results[used++];
+    if (!result) {
+      steps.push(
+        hung(ctx, target, control, recovery.hungReason ?? "recovery failed"),
+      );
+      break;
+    }
+    if (result.status === "gone") steps.push(skipped(control, GONE));
+    else {
+      steps.push(recoveredPress(ctx, target, control, result));
+      countPress(recovery.counters, control);
+    }
+  }
+  return { steps, next: null, aborted: true };
+}
+
 /** Presses the planned controls in one browser call; returns the steps and the next index to plan. */
 export function pressEntries(
   ctx: Ctx,
@@ -139,7 +183,13 @@ export function pressEntries(
   entries: readonly Entry[],
   counters: Counters,
 ): Round {
-  const { outcome, hungReason } = pressTargets(ctx, page, entries);
+  const { outcome, hungReason, restored } = pressTargets(ctx, page, entries);
+  if (!restored)
+    return recoveredRound(ctx, page, entries, {
+      outcome,
+      hungReason,
+      counters,
+    });
   const steps: StepRecord[] = [];
   let used = 0;
   for (const { control, index, reason, live } of entries) {
