@@ -19,7 +19,7 @@
 ## 3. Runtime, CI, and delivery
 
 - [ ] 3.1 Verify current runtime/container releases and update compatible images.
-- [ ] 3.2 Verify PostgreSQL and Redis major upgrades or record failed checks.
+- [x] 3.2 Verify PostgreSQL and Redis major upgrades or record failed checks.
 - [ ] 3.3 Run pnpm format:check, pnpm lint, pnpm typecheck, pnpm spec:check,
       pnpm test, and pnpm build against the final commit.
 - [ ] 3.4 Run guarded reset and explicit seed, API integration, scoped coverage,

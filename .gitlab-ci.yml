@@ -301,7 +301,7 @@ api-integration:
   # Digests stay on the runner-cached images: newer ones time out on pull
   # (renovate.json disables their CI updates).
   services:
-    - name: redis:7.4.11-alpine@sha256:ff02b58f971e7d7d156a1267e283fcbbeee91773b6aa36c49dac28ecfe28eadf
+    - name: redis:8.10.2-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
       alias: redis
     - name: axllent/mailpit:v1.31.0@sha256:c96991d9bef73594c246d89ca81411d4e916f03e76a7d2d72fa2ab5dd3c9ce24
       alias: mailpit
