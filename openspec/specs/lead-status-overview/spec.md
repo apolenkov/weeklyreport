@@ -65,8 +65,8 @@ addressable views. Report MUST use the Overview projection as its unified
 reading and authoring surface; Slides MUST retain the presentation surface.
 A lead opening the route without a valid mode MUST see Report. Report MUST
 retain the canonical report identity, autosave, Fill from, Save, Submit,
-period navigation, visibility, and mode controls, and each editable cell's own
-`Add item` footer whenever available
+period navigation, visibility, and mode controls, and each editable reporting
+unit's single `Add item` action in the unit header whenever available
 for the current section. These controls MUST call the existing editor draft
 and write actions; Overview MUST NOT introduce a second action implementation
 or persistence path. Removing the separate Edit mode MUST satisfy the full
@@ -93,7 +93,7 @@ authoring parity requirement in `unified-report-authoring`.
 
 #### Scenario: An Overview action opens a canonical dialog
 
-- **WHEN** the lead activates a footer `Add item`, Fill from, Submit, or reopen/revoke
+- **WHEN** the lead activates a unit `Add item`, Fill from, Submit, or reopen/revoke
 - **THEN** the existing lead dialog host handles the action
 - **AND** no Overview-specific mutation endpoint or draft store is used
 
@@ -302,7 +302,7 @@ or published snapshots.
 
 ### Requirement: Overview MUST expose one primary progress interaction per active item
 
-The `/lead/report/:reportId` Report Overview MUST keep the three temporal columns and the canonical item editor. Each editable Current or Next item MUST rest as one status icon followed by its text, with at most a small stage badge in a corner; it MUST NOT render permanent text action buttons or a metadata line. The status icon MUST be the one primary progress/status interaction and MUST open a menu of statuses, because a cycling click would pass over statuses that need a reason. Secondary actions (edit details, move between weeks, resolve) MUST be reachable from one overflow control that is revealed on pointer hover, on keyboard focus within the item, and on tap, and MUST stay in the accessibility tree and keyboard order while visually hidden. Updating an unconfirmed carried item through the status interaction MUST clear its unconfirmed marker; it MUST NOT require a separate Confirm action. Previously planned content MUST remain read-only: no control in that column edits, moves or changes the status of the prior-week occurrence; the verdict controls defined by `lead-plan-verdict` write only the selected week's occurrence.
+The `/lead/report/:reportId` Report Overview MUST keep the three temporal columns and the canonical item editor. Each editable Current or Next item MUST rest as one status icon followed by its text, with at most a small stage badge in a corner; it MUST NOT render permanent text action buttons or a metadata line. The status icon MUST be the one primary progress/status interaction and MUST open a menu of statuses, because a cycling click would pass over statuses that need a reason. Secondary actions (edit details, move between weeks, resolve) MUST be reachable from one overflow control that is revealed on pointer hover, on keyboard focus within the item, and on tap, and MUST stay in the accessibility tree and keyboard order while visually hidden. Week moves MUST use that overflow menu, without a duplicate standalone button. Updating an unconfirmed carried item through the status interaction MUST clear its unconfirmed marker; it MUST NOT require a separate Confirm action. Previously planned content MUST remain read-only: no control in that column edits, moves or changes the status of the prior-week occurrence; the verdict controls defined by `lead-plan-verdict` write only the selected week's occurrence.
 
 #### Scenario: an unconfirmed carried item is shown
 
@@ -319,8 +319,9 @@ The `/lead/report/:reportId` Report Overview MUST keep the three temporal column
 #### Scenario: actions are revealed on hover, focus and tap
 
 - **WHEN** the lead hovers the item, moves keyboard focus into it, or taps it
-- **THEN** the overflow control and the quick week-move action become visible
-- **AND** keyboard users reach them with Tab without a hover
+- **THEN** the overflow control becomes visible and offers the applicable week-move action
+- **AND** no duplicate standalone quick week-move button is rendered
+- **AND** keyboard users reach the control and menu actions with Tab without a hover
 - **AND** touch users get them without any hover requirement
 
 #### Scenario: prior week remains read-only
@@ -360,7 +361,8 @@ visible and the exact matching editor MUST open below that lineage across the
 complete timeline width at multi-lane breakpoints. Other lineage rows and
 reporting units MUST remain rendered. Editor selection MUST continue to use
 canonical stable identity with the existing record-ID fallback and source
-boundary.
+boundary. The idle unit MUST NOT render a footer strip whose only content is
+the add affordance.
 
 #### Scenario: a linked Current item is edited
 
@@ -381,10 +383,10 @@ boundary.
 
 #### Scenario: an update is created
 
-- **WHEN** the lead activates the footer `Add item` control (accessible name `Add item to <unit name>`)
-- **THEN** the create composer spans the timeline in that unit's footer
+- **WHEN** the lead activates the unit `Add item` control (accessible name `Add item to <unit name>`) in the unit header
+- **THEN** the create composer spans the timeline in that unit's composer region
 - **AND** no duplicate composer is mounted
-- **AND** closing or acknowledging the create restores the idle footer
+- **AND** closing or acknowledging the create restores the idle composer region
 
 ### Requirement: Overview previews MUST separate reading from editing
 
