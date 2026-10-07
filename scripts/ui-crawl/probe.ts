@@ -63,7 +63,7 @@ export const pageProbeScript = (
   const name = (el) => {
     const by = el.getAttribute('aria-labelledby')?.split(/\s+/).map((id) => document.getElementById(id)?.textContent ?? '').join(' ');
     const labels = el.labels ? [...el.labels].map((l) => l.textContent).join(' ') : '';
-    return short([by, el.getAttribute('aria-label'), labels, el.getAttribute('title'), el.textContent, el.getAttribute('placeholder')].find((c) => c && String(c).trim()) || '', 100);
+    return String([by, el.getAttribute('aria-label'), labels, el.getAttribute('title'), el.textContent, el.getAttribute('placeholder')].find((c) => c && String(c).trim()) || '').replace(/\s+/g, ' ').trim();
   };
   const role = (el) => el.getAttribute('role') || ({A: 'link', BUTTON: 'button', SELECT: 'combobox', TEXTAREA: 'textbox', SUMMARY: 'button'})[el.tagName] || (el.tagName === 'INPUT' ? (el.type === 'checkbox' || el.type === 'radio' ? el.type : 'textbox') : null);
   const intentional = (el) => [el, ...el.querySelectorAll('*')].some((n) => { const s = getComputedStyle(n); return s.textOverflow === 'ellipsis' || (s.webkitLineClamp && s.webkitLineClamp !== 'none'); });
@@ -74,10 +74,11 @@ export const pageProbeScript = (
   const controls = all.map((el) => {
     const r = el.getBoundingClientRect();
     const cs = getComputedStyle(el);
-    const clipped = GEOM && ((el.scrollWidth > el.clientWidth + 2 && !['visible', 'clip'].includes(cs.overflowX) && el.tagName !== 'INPUT') || (el.scrollHeight > el.clientHeight + 2 && !['visible', 'clip'].includes(cs.overflowY) && el.tagName !== 'TEXTAREA' && el.tagName !== 'SELECT'));
-    const x = Math.max(0, Math.min(innerWidth - 1, r.left + r.width / 2));
-    const y = Math.max(0, Math.min(innerHeight - 1, r.top + r.height / 2));
-    const top = GEOM && r.bottom > 0 && r.top < innerHeight ? document.elementFromPoint(x, y) : null;
+    const editable = ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName);
+    const clipped = GEOM && !editable && ((el.scrollWidth > el.clientWidth + 2 && ['hidden', 'clip'].includes(cs.overflowX)) || (el.scrollHeight > el.clientHeight + 2 && ['hidden', 'clip'].includes(cs.overflowY)));
+    const left = Math.max(0, r.left), right = Math.min(innerWidth, r.right);
+    const upper = Math.max(0, r.top), lower = Math.min(innerHeight, r.bottom);
+    const top = GEOM && left < right && upper < lower ? document.elementFromPoint((left + right) / 2, (upper + lower) / 2) : null;
     const reachable = !top || top === el || el.contains(top) || top.contains(el) || top.closest('label')?.control === el;
     const nameText = name(el);
     if (GEOM && clipped && !intentional(el)) geometry.push({kind: 'control-clipped', target: short(nameText, 60), detail: 'content ' + el.scrollWidth + 'x' + el.scrollHeight + ' in box ' + el.clientWidth + 'x' + el.clientHeight});
@@ -110,7 +111,8 @@ const STATE_SIGNATURE = `(() => {
   const open = document.querySelectorAll('dialog[open], [role=dialog], [role=menu], [role=listbox], [data-state=open]').length;
   const expanded = [...document.querySelectorAll('[aria-expanded], details')].map((e) => e.getAttribute('aria-expanded') ?? e.open).join(',');
   const checked = [...document.querySelectorAll('input, [role=switch], [role=tab]')].map((e) => e.checked ?? e.getAttribute('aria-selected') ?? e.getAttribute('aria-checked')).join(',');
-  return location.href + '|' + open + '|' + expanded + '|' + checked + '|' + text.length + ':' + hash;
+  const values = [...document.querySelectorAll('input, textarea, select')].filter((e) => !['password', 'checkbox', 'radio'].includes(e.type)).map((e) => [e.tagName, e.value, e.tagName === 'SELECT' ? [...e.selectedOptions].map((o) => o.value) : null]);
+  return location.href + '|' + open + '|' + expanded + '|' + checked + '|' + JSON.stringify(values) + '|' + text.length + ':' + hash;
 })()`;
 
 export function axeProbe(axeSource: string): string {

@@ -3,18 +3,23 @@ import {
   DOM_GRACE_MS,
   MAX_QUIET_MS,
   QUIET_MS,
-  REPRESS_NAME_CHARS,
   RETURN_WAIT_MS,
 } from "./constants.ts";
 import type { Browser } from "./driver.ts";
-import { type ProbedControl, SIGNATURE_ONLY } from "./probe.ts";
+import {
+  pageProbeScript,
+  type ProbedControl,
+  SIGNATURE_ONLY,
+} from "./probe.ts";
+import { SELECT_ASSIGNMENT } from "./select-script.ts";
 
 export type PressLog = Readonly<{ kind: string; detail: string }>;
 
 export type PressResult = Readonly<{
   /** Index into the submitted list. */
   n: number;
-  status: "ok" | "gone" | "obstructed";
+  status: "ok" | "gone" | "obstructed" | "stale";
+  reason?: string;
   before: string;
   after: string;
   urlChanged: boolean;
@@ -42,7 +47,7 @@ const HOOKS = `(() => {
   const listen = EventTarget.prototype.addEventListener;
   EventTarget.prototype.addEventListener = function (type, ...rest) { return type === 'beforeunload' ? undefined : listen.call(this, type, ...rest); };
   Object.defineProperty(window, 'onbeforeunload', {get: () => null, set: () => {}, configurable: true});
-  const S = {logs: [], inflight: 0, last: performance.now(), net: performance.now(), blocked: 0, req: 0};
+  const S = {logs: [], inflight: 0, last: performance.now(), net: performance.now(), longTasks: [], longStart: null, longObserver: null, req: 0};
   const push = (kind, detail) => S.logs.push({kind, detail: String(detail).slice(0, 300)});
   const touch = () => { S.last = performance.now(); };
   const touchNet = () => { S.net = S.last = performance.now(); };
@@ -70,7 +75,7 @@ const HOOKS = `(() => {
   };
   new MutationObserver(touch).observe(document, {subtree: true, childList: true, attributes: true, characterData: true});
   new PerformanceObserver((l) => { touchNet(); for (const e of l.getEntries()) if (e.name.includes('/trpc/')) S.req++; }).observe({type: 'resource', buffered: true});
-  try { new PerformanceObserver((l) => l.getEntries().forEach((e) => { S.blocked = Math.max(S.blocked, e.duration); })).observe({type: 'longtask'}); } catch {}
+  try { S.longObserver = new PerformanceObserver((l) => { if (S.longStart !== null) S.longTasks.push(...l.getEntries()); }); S.longObserver.observe({type: 'longtask'}); } catch {}
   return (window.__crawl2 = S);
 })()`;
 
@@ -119,15 +124,25 @@ const PRESS = `(el, alternative) => {
 }`;
 
 /** Script for one batch of presses; stops at the first visible change so the caller can look at it. */
+type BatchOptions = Readonly<{
+  budgetMs: number;
+  maxQuietMs: number;
+  mode: "quick" | "full";
+}>;
+
 function batchScript(
-  items: readonly Readonly<{ selector: string; alternative?: string }>[],
-  budgetMs: number,
-  maxQuietMs: number,
+  items: readonly Readonly<{
+    selector: string;
+    tag: string;
+    alternative?: string;
+  }>[],
+  options: BatchOptions,
 ): string {
   return `(async () => {
   const S = ${HOOKS};
   const quiet = ${QUIET};
   const press = ${PRESS};
+  const selectAssignment = ${SELECT_ASSIGNMENT};
   const until = ${UNTIL};
   const state = () => ${SIGNATURE_ONLY};
   const items = ${JSON.stringify(items)};
@@ -151,20 +166,33 @@ function batchScript(
     }
     const base = {n, before: '', after: '', urlChanged: false, ms: 0, blockedMs: 0, logs: []};
     if (!el) { results.push({...base, status: 'gone'}); keep(); continue; }
+    let alternative = items[n].alternative;
+    if (items[n].tag === 'select') {
+      const assignment = selectAssignment(el, items[n], ${JSON.stringify(options.mode)});
+      if (assignment.reason) {results.push({...base, status: 'stale', reason: assignment.reason}); keep(); continue;}
+      alternative = assignment.value;
+    }
     el.scrollIntoView?.({block: 'nearest'});
     if (items[n].alternative === undefined && covered(el)) { results.push({...base, status: 'obstructed'}); keep(); continue; }
-    S.logs = []; S.blocked = 0;
+    S.logs = []; S.longTasks = []; S.longObserver?.takeRecords();
     const before = state();
     const url = location.href;
     const t0 = performance.now();
-    S.last = t0;
-    press(el, items[n].alternative);
-    await quiet(S, ${maxQuietMs});
+    S.last = t0; S.longStart = t0;
+    press(el, alternative);
+    await quiet(S, ${options.maxQuietMs});
+    const finished = performance.now();
+    if (globalThis.scheduler?.yield) await scheduler.yield();
+    else await new Promise((resolve) => setTimeout(resolve, 0));
+    S.longTasks.push(...(S.longObserver?.takeRecords() ?? []));
+    const relevant = S.longTasks.filter((e) => e.startTime < finished && e.startTime + e.duration > t0);
+    const blockedMs = Math.round(Math.max(0, ...relevant.map((e) => e.duration)));
+    S.longStart = null; S.longTasks = [];
     const after = state();
     const urlChanged = location.href !== url;
-    results.push({...base, status: 'ok', before, after, urlChanged, ms: Math.round(Math.min(S.last, Math.max(S.net, t0) + ${DOM_GRACE_MS}) - t0), blockedMs: Math.round(S.blocked), logs: S.logs});
+    results.push({...base, status: 'ok', before, after, urlChanged, ms: Math.round(Math.min(S.last, Math.max(S.net, t0) + ${DOM_GRACE_MS}) - t0), blockedMs, logs: S.logs});
     keep();
-    if (after !== before || urlChanged || performance.now() - started > ${budgetMs}) return {results, stopped: n + 1 < items.length || after !== before || urlChanged, req: S.req, took: Math.round(performance.now() - started)};
+    if (after !== before || urlChanged || performance.now() - started > ${options.budgetMs}) return {results, stopped: n + 1 < items.length || after !== before || urlChanged, req: S.req, took: Math.round(performance.now() - started)};
   }
   return {results, stopped: false, req: S.req, took: Math.round(performance.now() - started)};
 })()`;
@@ -174,32 +202,33 @@ function batchScript(
 export function pressBatch(
   browser: Browser,
   controls: readonly ProbedControl[],
-  budgetMs: number,
-  maxQuietMs: number,
+  options: BatchOptions,
 ): BatchOutcome & Readonly<{ req: number }> {
   const items = controls.map((c) =>
     c.tag === "select" && c.alternatives[0] !== undefined
-      ? { selector: c.selector, alternative: c.alternatives[0] }
-      : { selector: c.selector },
+      ? { selector: c.selector, tag: c.tag, alternative: c.alternatives[0] }
+      : { selector: c.selector, tag: c.tag },
   );
-  return browser.evaluate(
-    batchScript(items, budgetMs, maxQuietMs),
-  ) as BatchOutcome & Readonly<{ req: number }>;
+  return browser.evaluate(batchScript(items, options)) as BatchOutcome &
+    Readonly<{ req: number }>;
 }
 
 /** Presses one control again (undoes an expander or a toggle) and returns the quiet state signature. */
-export function repress(
-  browser: Browser,
-  selector: string,
-  name: string,
-): string {
+export function repress(browser: Browser, control: ProbedControl): string {
   return String(
-    browser.evaluate(String.raw`(async () => {
+    browser.evaluate(`(async () => {
   const S = ${HOOKS};
-  const el = document.querySelector(${JSON.stringify(selector)});
-  const text = (e) => [e.getAttribute('aria-label'), e.textContent].map((t) => String(t ?? '').replace(/\s+/g, ' ').trim());
-  // the path may now lead to another control (an opened form replaces its trigger): never press that one
-  if (el && text(el).some((t) => t && t.startsWith(${JSON.stringify(name.slice(0, REPRESS_NAME_CHARS))}))) (${PRESS})(el);
+  const expected = ${JSON.stringify(control)};
+  const live = ${pageProbeScript(false)}.controls.find((c) => c.selector === expected.selector);
+  const el = document.querySelector(expected.selector);
+  if (el && live && expected.name && live.name === expected.name && live.tag === expected.tag && live.role === expected.role && !live.disabled) {
+    el.scrollIntoView?.({block: 'nearest', inline: 'nearest'});
+    const r = el.getBoundingClientRect();
+    const left = Math.max(0, r.left), right = Math.min(innerWidth, r.right);
+    const top = Math.max(0, r.top), bottom = Math.min(innerHeight, r.bottom);
+    const hit = left < right && top < bottom ? document.elementFromPoint((left + right) / 2, (top + bottom) / 2) : null;
+    if (hit && (hit === el || el.contains(hit) || hit.contains(el) || hit.closest('label')?.control === el)) (${PRESS})(el);
+  }
   await (${QUIET})(S, ${MAX_QUIET_MS});
   return ${SIGNATURE_ONLY};
 })()`),
