@@ -55,6 +55,12 @@
       "description": "xmldom 0.9.12 rejects the errorHandler object passed by node-saml 5.1; SAML getSignedAssertion fails, while latest compatible 0.8.15 passes (TASK-359)",
       "matchPackageNames": ["@xmldom/xmldom"],
       "allowedVersions": "<0.9"
+    },
+    {
+      "description": "minimatch 3.1.5 requires the callable brace-expansion 1.x export; forcing 5.0.12 fails with expand is not a function. Keep latest compatible 1.1.21 only on the legacy edge (TASK-359)",
+      "matchPackageNames": ["brace-expansion"],
+      "allowedVersions": "<2",
+      "matchCurrentVersion": "<2"
     }
   ]
 }
