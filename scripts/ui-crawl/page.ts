@@ -1,5 +1,3 @@
-import { join } from "node:path";
-
 import { quietState, UNTIL, waitForState } from "./batch.ts";
 import { RETURN_WAIT_MS, SLOW_LOAD_MS } from "./constants.ts";
 import { add, type Ctx, drainLogs, type Place } from "./logs.ts";
@@ -20,6 +18,7 @@ import {
   planEntries,
   pressEntries,
 } from "./round.ts";
+import { captureScreenshot } from "./screenshot.ts";
 import type { PageRecord, StepRecord } from "./types.ts";
 
 type AxeViolation = Readonly<{
@@ -169,8 +168,11 @@ function visitPage(
 ): { record: PageRecord; links: readonly string[] } {
   const tag = `${String(index).padStart(2, "0")}-${slug(pageKey(url))}`;
   const loadMs = settle(ctx, url, "visit");
-  const shot = `${tag}.png`;
-  ctx.browser.batch([["screenshot", "--full", join(ctx.dir, shot)]]);
+  const shot = captureScreenshot(ctx, {
+    page: pageKey(url),
+    filename: `${tag}.png`,
+    full: true,
+  });
   const probe = ctx.browser.evaluate(PAGE_PROBE) as PageProbe;
   // The final URL decides the key: a redirect to sign-in means the session is gone.
   const key = pageKey(probe.url);
@@ -228,7 +230,7 @@ function visitWithRecovery(
     url,
     key,
     loadMs: 0,
-    shot: "",
+    shot: null,
     controlsFound: 0,
     axeViolations: 0,
     geometryIssues: 0,

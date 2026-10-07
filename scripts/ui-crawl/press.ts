@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { join } from "node:path";
 
 import {
   type BatchOutcome,
@@ -24,6 +23,7 @@ import {
 import { add, type Ctx, type Place } from "./logs.ts";
 import type { ProbedControl } from "./probe.ts";
 import { pace, settleRate } from "./rate.ts";
+import { captureScreenshot } from "./screenshot.ts";
 import type { StepRecord } from "./types.ts";
 
 export type Target = Readonly<{ key: string; url: string; shotBase: string }>;
@@ -247,7 +247,12 @@ export function finishPress(
     return { ...base, ...NO_EFFECT, action: "error", reason };
   }
   const changed = result.after !== result.before;
-  const shot = changed ? `${target.shotBase}.png` : null;
+  const shot = changed
+    ? captureScreenshot(ctx, {
+        page: target.key,
+        filename: `${target.shotBase}.png`,
+      })
+    : null;
   const place = { page: target.key, shot };
   reportLogs(ctx, place, result.logs, control.name);
   if (result.ms > SLOW_MS) {
@@ -260,9 +265,6 @@ export function finishPress(
   let restoredBy: StepRecord["restoredBy"] = "none";
   if (changed) {
     const urlMoved = result.urlChanged;
-    ctx.browser.batch([
-      ["screenshot", join(ctx.dir, `${target.shotBase}.png`)],
-    ]);
     const escaped = urlMoved ? result.after : escapeState(ctx.browser);
     restoredBy = restore(
       ctx,

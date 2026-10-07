@@ -31,7 +31,7 @@ export type PageRecord = Readonly<{
   url: string;
   key: string;
   loadMs: number;
-  shot: string;
+  shot: string | null;
   controlsFound: number;
   axeViolations: number;
   geometryIssues: number;
