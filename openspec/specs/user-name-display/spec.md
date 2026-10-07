@@ -34,6 +34,14 @@ label.
   renders
 - **THEN** it shows the two-letter mark «ИВ» (surname + given initial)
 
+#### Scenario: the navigation home link includes its visible initials in its name
+
+- **WHEN** the signed-in user's two-letter navigation mark links home
+- **THEN** its accessible name starts with the visible initials and includes
+  the user's full display name and home purpose
+- **AND** the link derives that name from its visible mark and visually hidden
+  descriptive text, without an overriding ARIA label
+
 ### Requirement: Cross-author stage owner carries a short name
 
 The cross-author status read SHALL expose a co-owner's short name so the foreign

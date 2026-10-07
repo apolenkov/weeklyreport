@@ -19,11 +19,7 @@ function BrandMark({
   readonly userName: string | null;
 }) {
   return (
-    <a
-      href={role ? getLogoHref(role) : "/"}
-      className={BRAND_SLOT_CLASS}
-      aria-label={homeLabel}
-    >
+    <a href={role ? getLogoHref(role) : "/"} className={BRAND_SLOT_CLASS}>
       {userName !== null ? (
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-starbucks-accent)] shadow-[var(--shadow-brand-mark)]">
           <span className="font-[family-name:var(--font-sans)] text-xs font-bold leading-none tracking-normal text-[var(--color-on-dark)]">
@@ -36,6 +32,7 @@ function BrandMark({
           aria-hidden="true"
         />
       )}
+      <span className="sr-only"> {homeLabel}</span>
     </a>
   );
 }
