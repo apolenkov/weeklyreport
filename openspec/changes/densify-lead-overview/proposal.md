@@ -27,10 +27,16 @@ denser.
 - The "Before you submit" card and the support section stack (risks,
   decisions, review feedback) use tighter spacing.
 - The overall lead form stack moves from `space-y-6` to `space-y-5`.
+- Week moves remain in `More actions`; the duplicate standalone quick-move
+  button is removed. This secondary path needs one additional menu activation.
+- The closed `Report health` disclosure mounts only its summary. Attention
+  entries and inspection controls mount when it opens.
+- Risks and decisions remain inline when the editor is available; the duplicate
+  jump link is omitted in that state.
 
 ## Non-goals
 
-- No behavior changes: add, edit, verdict, submit, autosave, expand/collapse
-  all keep their current flows and handlers.
+- Add, edit, verdict, submit and autosave keep their canonical handlers and
+  persistence contracts. This change adjusts control placement and disclosure.
 - No 375px layout changes beyond what falls out of shared spacing tokens; the
   mobile targets are already met and must not regress.

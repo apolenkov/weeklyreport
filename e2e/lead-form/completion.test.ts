@@ -22,7 +22,7 @@ import {
   waitText,
 } from "./browser.js";
 import { registerE2eHooks } from "./fixtures.js";
-import { assertFocused } from "./focus.js";
+import { assertFocused, centerControl } from "./focus.js";
 import {
   ARCHIVED_FILL_FIXTURE,
   LEAD_FORM_FIXTURE,
@@ -315,6 +315,10 @@ async function addMarker(text: string): Promise<void> {
 }
 
 async function openFillConfirmation(): Promise<{ role: string; name: RegExp }> {
+  // The completion handoff changes the split button's horizontal position.
+  // Wait for the header actions to return before measuring the click target.
+  await command(["eval", "scrollTo(0, 0)"]);
+  await waitScope({ role: "group", name: "Header completion actions" });
   await findRole("button", "Fill from most recent submitted period", "click");
   const name = /^Fill from .+\?$/u;
   const data = await waitScope({ role: "alertdialog", name });
@@ -412,11 +416,7 @@ void test("completion guidance jumps to missing work", async () => {
   await findRole("heading", "Fix before submitting", "text");
   const reviewName = `Review "${LEAD_FORM_FIXTURE.carriedText}".`;
   const review = oneRef(await snapshot(), "link", reviewName);
-  // Park the target mid-viewport before clicking it: the fixed completion
-  // bar covers targets that minimal edge scrolling leaves at the viewport
-  // edge, and scrollintoview is a no-op for already-visible targets.
-  await command(["eval", "scrollTo(0, 0)"]);
-  await command(["scrollintoview", review]);
+  await centerControl(review);
   await command(["click", review]);
   await assertStatusFocused(LEAD_FORM_FIXTURE.carriedText);
   assert.match(await getUrl(), /#confirm:current:/u);
@@ -452,22 +452,19 @@ void test("completion guidance jumps to missing work", async () => {
   assert.match((await snapshot()).snapshot, /Маркетинговый портал \/ DevOps/u);
   // The Risks & decisions jump link is gone: risks/decisions render inline
   // below the overview when the editor is ready, so assert them directly.
-  // Park each expander mid-viewport first (see the Review click above).
   const expandRisks = oneRef(
     await snapshot(),
     "button",
     "Expand Risks & Blockers",
   );
-  await command(["eval", "scrollTo(0, 0)"]);
-  await command(["scrollintoview", expandRisks]);
+  await centerControl(expandRisks);
   await command(["click", expandRisks]);
   const expandDecisions = oneRef(
     await snapshot(),
     "button",
     "Expand Decisions",
   );
-  await command(["eval", "scrollTo(0, 0)"]);
-  await command(["scrollintoview", expandDecisions]);
+  await centerControl(expandDecisions);
   await command(["click", expandDecisions]);
   await findRole("region", "Risks & Blockers", "text");
   await findRole("region", "Decisions", "text");
