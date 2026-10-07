@@ -152,7 +152,14 @@ export function useRemindersTabState(
 ) {
   const editorState = useReminderEditor(policies, defaultTimezone);
   const listState = useRemindersListState(policies);
-  const { editorSaveMut, toggleMut, removeMut } = useReminderPolicyMutations();
+  const { editorSaveMut, toggleMut, removeMut } = useReminderPolicyMutations(
+    (policyId) =>
+      listState.setBusyIds((previous) => {
+        const next = new Set(previous);
+        next.delete(policyId);
+        return next;
+      }),
+  );
 
   return {
     ...editorState,
@@ -189,29 +196,13 @@ export function useRemindersTabState(
       listState.setBusyIds((previous) => new Set(previous).add(policy.id));
       toggleMut.mutate(toggledPayload(policy), {
         onSuccess: () => toast.success("Reminder updated"),
-        onSettled: () =>
-          listState.setBusyIds((previous) => {
-            const next = new Set(previous);
-            next.delete(policy.id);
-            return next;
-          }),
       });
     },
     handleConfirmRemove: () => {
       const target = listState.pendingDelete;
       if (!target) return;
       listState.setBusyIds((previous) => new Set(previous).add(target.id));
-      removeMut.mutate(
-        { id: target.id },
-        {
-          onSettled: () =>
-            listState.setBusyIds((previous) => {
-              const next = new Set(previous);
-              next.delete(target.id);
-              return next;
-            }),
-        },
-      );
+      removeMut.mutate({ id: target.id });
       listState.setPendingDelete(null);
     },
   };
