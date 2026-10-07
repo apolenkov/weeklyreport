@@ -16,6 +16,7 @@ import { z } from "zod";
 import { groupScopeFilter } from "../../../lib/group-scope.js";
 import type { SnapshotAdminService } from "../../../modules/admin/index.js";
 import {
+  LeadFormAccessError,
   LeadFormDomainError,
   type LeadFormService,
 } from "../../../modules/report-sections/index.js";
@@ -84,11 +85,15 @@ function byPeriodProcedure(deps: LeadFormRouterDeps) {
         });
         return form;
       } catch (error) {
-        // A domain error is an expected refusal (warn); anything else is a bug (error).
-        const logFailure =
-          error instanceof LeadFormDomainError
-            ? ctx.logger.warn.bind(ctx.logger)
-            : ctx.logger.error.bind(ctx.logger);
+        // Expected refusals log at warn: a missing target (LeadFormDomainError,
+        // NOT_FOUND) and a foreign-author scope denial (LeadFormAccessError,
+        // FORBIDDEN). Anything else is an operational fault (error).
+        const isExpectedRefusal =
+          error instanceof LeadFormDomainError ||
+          error instanceof LeadFormAccessError;
+        const logFailure = isExpectedRefusal
+          ? ctx.logger.warn.bind(ctx.logger)
+          : ctx.logger.error.bind(ctx.logger);
         logFailure("lead form load failed", {
           phase: "lead-form.load",
           procedure: "leadForm.byPeriod",
