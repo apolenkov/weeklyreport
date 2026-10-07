@@ -39,7 +39,14 @@ export function autosaveStatusCopy(
   return AUTOSAVE_COPY[state].status;
 }
 
-export function autosaveReadinessCopy(state: AutosaveState): string {
+const OFFLINE_SAVING_READINESS =
+  "Saving is paused while you’re offline — changes will save when the connection returns.";
+
+export function autosaveReadinessCopy(
+  state: AutosaveState,
+  online = true,
+): string {
+  if (state === "saving" && !online) return OFFLINE_SAVING_READINESS;
   return AUTOSAVE_COPY[state].readiness;
 }
 

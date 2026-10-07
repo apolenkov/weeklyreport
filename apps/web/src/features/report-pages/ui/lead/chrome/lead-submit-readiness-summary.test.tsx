@@ -1,3 +1,4 @@
+import { onlineManager } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -35,6 +36,30 @@ describe("LeadSubmitReadinessSummary", () => {
     );
     expect(screen.queryByRole("button", { name: "Submit report" })).toBeNull();
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("explains the offline pause instead of claiming a save is in flight", () => {
+    const saving: LeadSubmitReadiness = { ...ready, autosaveState: "saving" };
+    onlineManager.setOnline(false);
+    try {
+      const { unmount } = render(
+        <LeadSubmitReadinessSummary readiness={saving} onSubmit={vi.fn()} />,
+      );
+      expect(
+        screen.getByText(/paused while you’re offline/),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText("Draft changes are saving."),
+      ).not.toBeInTheDocument();
+      unmount();
+    } finally {
+      onlineManager.setOnline(true);
+    }
+
+    render(
+      <LeadSubmitReadinessSummary readiness={saving} onSubmit={vi.fn()} />,
+    );
+    expect(screen.getByText("Draft changes are saving.")).toBeInTheDocument();
   });
 
   it("offers Submit when the caller has no sticky completion path", async () => {

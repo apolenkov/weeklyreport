@@ -1,10 +1,30 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  autosaveReadinessCopy,
   autosaveStatusCopy,
   OFFLINE_SAVING_STATUS,
   overviewSaveStatus,
 } from "./autosave-state-copy";
+
+describe("autosaveReadinessCopy", () => {
+  it("explains a save paused while the browser is offline", () => {
+    expect(autosaveReadinessCopy("saving", false)).toContain(
+      "paused while you’re offline",
+    );
+  });
+
+  it("keeps the normal readiness copy online and for other states", () => {
+    expect(autosaveReadinessCopy("saving")).toBe("Draft changes are saving.");
+    expect(autosaveReadinessCopy("saving", true)).toBe(
+      "Draft changes are saving.",
+    );
+    expect(autosaveReadinessCopy("error", false)).toBe(
+      "Draft save failed. Use Save to retry.",
+    );
+    expect(autosaveReadinessCopy("idle", false)).toBe("Draft is saved.");
+  });
+});
 
 describe("autosaveStatusCopy", () => {
   it("explains a save paused by the browser going offline", () => {
