@@ -414,10 +414,18 @@ async function prepareSubmission(): Promise<void> {
       `E2E current commitment for ${productName}`,
     );
     if (productName === "CRM-Customer 360") {
-      await command([
-        "check",
-        oneRef(namedScope(await snapshot(), form), "checkbox", "Development"),
-      ]);
+      const development = oneRef(
+        namedScope(await snapshot(), form),
+        "checkbox",
+        "Development",
+      );
+      // Park the checkbox mid-viewport before checking it: the sticky
+      // period toolbar (top) and the fixed completion bar (bottom) cover
+      // targets that minimal edge scrolling leaves at the viewport edge,
+      // and scrollintoview is a no-op for already-visible targets.
+      await command(["eval", "scrollTo(0, 0)"]);
+      await command(["scrollintoview", development]);
+      await command(["check", development]);
     } else {
       assert.match(namedScope(await snapshot(), form).snapshot, /Development/);
       assert.match(
