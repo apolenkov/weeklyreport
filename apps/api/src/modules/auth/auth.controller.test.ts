@@ -107,6 +107,16 @@ describe("createJwtSigner — contract tests", () => {
     expect(() => createJwtSigner(env32)).not.toThrow();
   });
 
+  it.each([
+    " ".repeat(32),
+    `  ${"b".repeat(30)}  `,
+    ` ${"change-me".padEnd(31, "-")} `,
+  ])("rejects a whitespace-padded weak secret %j", (AUTH_JWT_SECRET) => {
+    const env = { AUTH_JWT_SECRET } as unknown as NodeJS.ProcessEnv;
+
+    expect(() => createJwtSigner(env)).toThrow(/>= 32 characters/);
+  });
+
   it("signed token contains all session fields", () => {
     const signer = createJwtSigner(TEST_ENV);
     const token = signer.signSession(validSession);

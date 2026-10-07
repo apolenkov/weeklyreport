@@ -8,13 +8,16 @@ import { stringifySetCookie } from "cookie";
 import jwt from "jsonwebtoken";
 
 import { requireEnv } from "../../lib/env.js";
+import {
+  isStrongJwtSecret,
+  MIN_JWT_SECRET_LENGTH,
+} from "../../lib/jwt-secret.js";
 
 const ONE_HOUR_IN_SECONDS = SECONDS_PER_HOUR;
 
-// HS256 pinned on verify + a 32-char secret floor — required by
+// HS256 pinned on verify + a 32-char meaningful secret floor — required by
 // jwt-session-integrity (an unpinned alg or a short secret is forgeable).
 const SESSION_JWT_ALGORITHM = "HS256" as const;
-const MIN_JWT_SECRET_LENGTH = 32;
 
 export interface JwtSigner {
   signSession: (payload: UserSession) => string;
@@ -26,7 +29,7 @@ function requireJwtSecret(env: Record<string, unknown>): string {
   // as every other required var), then the symmetric-secret strength floor.
   const secret = requireEnv(env, "AUTH_JWT_SECRET");
 
-  if (secret.length < MIN_JWT_SECRET_LENGTH) {
+  if (!isStrongJwtSecret(secret)) {
     throw new Error(
       `AUTH_JWT_SECRET is too short (must be >= ${MIN_JWT_SECRET_LENGTH} characters).`,
     );

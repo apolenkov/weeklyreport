@@ -9,6 +9,10 @@ import {
   allowedOrigins,
   ProviderUrlPolicyError,
 } from "../../lib/ai-provider-url-policy.js";
+import {
+  isStrongJwtSecret,
+  MIN_JWT_SECRET_LENGTH,
+} from "../../lib/jwt-secret.js";
 import { logLevelSchema } from "../../lib/logger.js";
 import {
   isOtlpEndpoint,
@@ -20,8 +24,6 @@ import {
   SENTRY_DSN_INVALID_MESSAGE,
 } from "../../lib/sentry-dsn.js";
 import { REPORT_ASSISTANT_ENV_KEYS } from "./report-assistant-env-keys.js";
-
-const MIN_JWT_SECRET_LENGTH = 32;
 const MAX_TCP_PORT = 65_535;
 const MAX_REDIS_LOGICAL_DATABASE = 15;
 const MIN_SIMILARITY_THRESHOLD = 0;
@@ -88,7 +90,9 @@ const envObjectSchema = z.object({
   // Auth / JWT. Required (min 32): the JWT signer is built at boot in EVERY
   // mode — dev-login still issues a session JWT — so a config without it
   // crashes at controller construction regardless of AUTH_DEV_MODE.
-  AUTH_JWT_SECRET: z.string().min(MIN_JWT_SECRET_LENGTH),
+  AUTH_JWT_SECRET: z.string().refine((value) => isStrongJwtSecret(value), {
+    message: `must be at least ${MIN_JWT_SECRET_LENGTH} meaningful characters`,
+  }),
 
   // SAML / Keycloak (validated at runtime by saml.strategy.ts requireEnv).
   // Optional here because dev-login (AUTH_DEV_MODE) needs no IdP; prod boots
@@ -237,7 +241,11 @@ const envObjectSchema = z.object({
   }),
   // Short-lived JWT sent as a cookie to the internal renderer so it can open
   // the /print route. Min 32 chars also enforced in the service.
-  PDF_EXPORT_JWT_SECRET: z.string().min(MIN_JWT_SECRET_LENGTH),
+  PDF_EXPORT_JWT_SECRET: z
+    .string()
+    .refine((value) => isStrongJwtSecret(value), {
+      message: `must be at least ${MIN_JWT_SECRET_LENGTH} meaningful characters`,
+    }),
 
   // Heap threshold (bytes) for the /health/ready memory check. Required, no
   // default: readiness sheds traffic as the process nears the container memory
@@ -277,7 +285,8 @@ const addPlaceholderSecretIssues = (
   ctx: z.RefinementCtx,
 ): void => {
   for (const key of ["AUTH_JWT_SECRET", "PDF_EXPORT_JWT_SECRET"] as const) {
-    if (!PLACEHOLDER_SECRET_PREFIX.test(data[key])) continue;
+    // Padding cannot hide a public placeholder: judge the trimmed content.
+    if (!PLACEHOLDER_SECRET_PREFIX.test(data[key].trim())) continue;
     ctx.addIssue({
       code: "custom",
       message: `${key} must not be a placeholder value when NODE_ENV=production`,

@@ -29,7 +29,10 @@ its own pinned algorithm.
 
 ### Requirement: The session signing secret meets a minimum strength
 
-`AUTH_JWT_SECRET` MUST be present and at least 32 characters long. The single
+`AUTH_JWT_SECRET` MUST be present and at least 32 characters long, measured on
+the meaningful (whitespace-trimmed) content — padding MUST NOT count toward
+the minimum, so an all-whitespace or padded placeholder value fails the check.
+The accepted secret bytes MUST reach the JWT signer unchanged. The single
 require-secret site MUST reject a missing or too-short secret with a boot-time
 error that names the variable and the minimum length, so the service fails fast
 rather than running with a brute-forceable symmetric secret.

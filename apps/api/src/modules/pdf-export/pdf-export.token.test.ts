@@ -126,4 +126,13 @@ describe("verifyPdfExportToken — strict claim validation", () => {
       requestedBy: REQUESTED_BY,
     });
   });
+
+  it.each([undefined, "", " ".repeat(32), ` ${"a".repeat(30)} `])(
+    "rejects a missing or whitespace-padded weak secret %j",
+    (secret) => {
+      expect(() => verifyPdfExportTokenImpl("token", secret)).toThrow(
+        />= 32 characters/,
+      );
+    },
+  );
 });

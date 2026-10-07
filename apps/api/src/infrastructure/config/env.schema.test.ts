@@ -567,6 +567,43 @@ describe("envSchema — production fences", () => {
     },
   );
 
+  it.each(["AUTH_JWT_SECRET", "PDF_EXPORT_JWT_SECRET"])(
+    "rejects a whitespace-padded placeholder %s in production",
+    (key) => {
+      expect(
+        envSchema.safeParse({
+          ...COMPLETE,
+          [key]: "  change-me-in-production-min-32-chars!!  ",
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each(["AUTH_JWT_SECRET", "PDF_EXPORT_JWT_SECRET"])(
+    "rejects whitespace-only or meaningfully short %s",
+    (key) => {
+      for (const secret of [" ".repeat(32), ` ${"a".repeat(31)} `]) {
+        expect(
+          envSchema.safeParse({ ...COMPLETE, [key]: secret }).success,
+        ).toBe(false);
+      }
+    },
+  );
+
+  it.each(["AUTH_JWT_SECRET", "PDF_EXPORT_JWT_SECRET"])(
+    "accepts a padded %s whose meaningful length meets the floor",
+    (key) => {
+      const result = envSchema.safeParse({
+        ...COMPLETE,
+        [key]: `  ${"k".repeat(32)}  `,
+      });
+      expect(result.success).toBe(true);
+      // The accepted value is preserved byte-for-byte for the JWT signer.
+      if (result.success)
+        expect(result.data[key]).toBe(`  ${"k".repeat(32)}  `);
+    },
+  );
+
   it.each([
     ["OTEL_SDK_DISABLED", "1"],
     ["CLIENT_LOG_FORWARDING", "TRUE"],
