@@ -40,6 +40,7 @@ function sessionFor(
     probeCache: null,
     presses: 0,
     limited: false,
+    aborted: false,
     mutated: false,
     axeViolations: 0,
     geometryIssues: 0,
@@ -76,7 +77,7 @@ function walkRebasing(session: FullSession, probe: FullProbe): void {
       depth: 0,
       known: new Set(),
     });
-    if (!session.mutated) return;
+    if (session.aborted || !session.mutated) return;
     current = rebaseAfterWrite(session);
   }
   session.limited = true;
@@ -127,7 +128,7 @@ function visitFullPage(
   walkRebasing(session, probe);
   const first = session.states[0];
   const counts = pageCoverage(session.steps);
-  const failed = counts.errors > 0;
+  const failed = session.aborted || counts.errors > 0;
   const record: PageRecord = {
     url,
     key,

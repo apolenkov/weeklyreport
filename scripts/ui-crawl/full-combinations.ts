@@ -9,6 +9,7 @@ import { childKnown } from "./full-plan.ts";
 import { readFullProbe } from "./full-probe.ts";
 import type { FullFrame } from "./full-restore.ts";
 import {
+  cannotContinue,
   executeControl,
   type FullSession,
   observeEffect,
@@ -113,11 +114,12 @@ export function exploreCombinations(
   descend: Descend,
 ): void {
   for (const values of plan.combinations) {
+    if (session.aborted) break;
     const selected = session.mutated
       ? { reason: "pairwise: prior write changed the baseline" }
       : selectCombination(session, frame, plan, values);
     if ("reason" in selected) unavailable(session, values, selected.reason);
     else observe(session, values, selected.frame, descend);
-    restoreCombination(session, frame, plan);
+    if (!cannotContinue(session)) restoreCombination(session, frame, plan);
   }
 }

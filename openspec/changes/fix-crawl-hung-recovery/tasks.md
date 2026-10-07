@@ -6,4 +6,9 @@
 
 ## Workflow follow-up
 
+- [x] Add full-owner regressions for unchanged and changed completed results: both fail before changes (exit 1).
+- [x] Propagate failed recovery through full traversal, retain steps without unsafe screenshots and stop dependent actions; repeat all required gates.
+
 - Push the branch and open its GitLab merge request. Merge requires the owner.
+
+Full-owner verification: initial regression exit 1 (2 failures); final 14 focused tests exit 0; all six mandatory checks exit 0. Failed-recovery abort propagates through controls, nested frames, combinations and rebase. Evidence remains in ~/work/handoffs/287-crawl/recovery/full-*.log.
