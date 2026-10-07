@@ -18,6 +18,7 @@ import { crawlFullPages } from "./full.ts";
 import { CLEAR_COMMANDS, type Ctx } from "./logs.ts";
 import { crawlPages } from "./page.ts";
 import { configureRate, pace } from "./rate.ts";
+import { beginRecording } from "./recording.ts";
 import type { Config, Finding, PageRecord, Role, RunRecord } from "./types.ts";
 
 const axeSource = readFileSync(
@@ -158,7 +159,6 @@ function crawlWidth(
   const dir = join(config.out, "shots", name);
   mkdirSync(dir, { recursive: true });
   mkdirSync(join(config.out, "video"), { recursive: true });
-  const video = `video/${name}.webm`;
   const findings: Finding[] = [];
   const ctx: Ctx = {
     browser,
@@ -171,15 +171,20 @@ function crawlWidth(
   };
   const height = width === MOBILE_WIDTH ? MOBILE_HEIGHT : DEFAULT_HEIGHT;
   browser.batch([["set", "viewport", String(width), String(height)]]);
-  if (config.video)
-    browser.batch([["record", "start", join(config.out, video)]]);
+  const finishRecording = beginRecording(ctx, `video/${name}.webm`);
   const start = performance.now();
-  const pages =
-    config.mode === "full"
-      ? crawlFullPages(ctx, landing, axeSource)
-      : crawlPages(ctx, landing, axeSource);
-  const ms = Math.round(performance.now() - start);
-  if (config.video) browser.batch([["record", "stop"]]);
+  let pages: readonly PageRecord[];
+  let video: string | null;
+  let ms: number;
+  try {
+    pages =
+      config.mode === "full"
+        ? crawlFullPages(ctx, landing, axeSource)
+        : crawlPages(ctx, landing, axeSource);
+    ms = Math.round(performance.now() - start);
+  } finally {
+    video = finishRecording();
+  }
   return {
     role: role.name,
     state: config.state,

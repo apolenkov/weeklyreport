@@ -54,7 +54,8 @@ function runRow(run: RunRecord): readonly TableCell[] {
   const responses = steps
     .flatMap((step) => (step.responseMs === null ? [] : [step.responseMs]))
     .sort((a, b) => a - b);
-  const p95 = responses[Math.floor(responses.length * P95)] ?? 0;
+  const p95 = responses[Math.ceil(responses.length * P95) - 1];
+  const percentile = p95 === undefined ? "not measured" : `${p95} ms`;
   const video = run.video ? `[${run.video}](${run.video})` : "none";
   return [
     run.role,
@@ -64,7 +65,7 @@ function runRow(run: RunRecord): readonly TableCell[] {
     counts.pressed,
     counts.skipped,
     counts.errors,
-    `${p95} ms`,
+    `${percentile} (n=${responses.length})`,
     seconds(run.ms),
     video,
   ];
