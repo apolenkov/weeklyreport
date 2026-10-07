@@ -12,7 +12,7 @@
 
 - [x] 2.1 Upgrade dotenv with environment/bootstrap checks.
 - [x] 2.2 Upgrade NestJS core/platform/testing and verify API behavior.
-- [ ] 2.3 Upgrade nestjs-cls and verify context propagation consumers.
+- [x] 2.3 Upgrade nestjs-cls and verify context propagation consumers.
 - [ ] 2.4 Upgrade the coordinated OpenTelemetry ecosystem.
 - [ ] 2.5 Upgrade Sentry SDKs and public integration imports.
 
