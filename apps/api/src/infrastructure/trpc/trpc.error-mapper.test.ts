@@ -9,8 +9,11 @@ import {
   AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
   AdminPeriodStaleStateError,
+  AdminProjectNotFoundError,
+  AdminReminderPolicyNotFoundError,
   AdminReopenRequestAlreadyProcessedError,
   AdminReopenRequestNotFoundError,
+  AdminReportingGroupNotFoundError,
   AdminSelfLockoutError,
   AdminSnapshotConflictError,
   AdminUserActivityAssignmentConflictError,
@@ -636,6 +639,23 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
       name: "ProjectActivityConflictError",
       make: () => new ProjectActivityConflictError("m"),
       code: "CONFLICT",
+    },
+    // Validated-UUID P2025 misses on catalog writes — archive of a missing
+    // project or reporting group, delete of a missing reminder policy.
+    {
+      name: "AdminProjectNotFoundError",
+      make: () => new AdminProjectNotFoundError("m"),
+      code: "NOT_FOUND",
+    },
+    {
+      name: "AdminReportingGroupNotFoundError",
+      make: () => new AdminReportingGroupNotFoundError("m"),
+      code: "NOT_FOUND",
+    },
+    {
+      name: "AdminReminderPolicyNotFoundError",
+      make: () => new AdminReminderPolicyNotFoundError("m"),
+      code: "NOT_FOUND",
     },
   ] as const;
 
