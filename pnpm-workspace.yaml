@@ -64,7 +64,7 @@ overrides:
   # line, cap below the next major. mysql2 is prisma's internal MySQL driver
   # and is never exercised by this PostgreSQL-only product.
   mysql2: ">=3.24.5 <4"
-  fast-uri: ">=3.1.7 <4"
+  fast-uri: ">=4.2.1 <5"
   # Dev-only transitives (jsdom, agentation-mcp) with open advisories; stay in the same major.
   # undici is pinned to the first patched release: 8.11.2 breaks vitest snapshot state in the jsdom suite.
   undici: "8.10.2"
