@@ -14,8 +14,22 @@ export type Step = Readonly<{
   value: unknown;
 }>;
 
-/** One named agent-browser session; every call is a plain CLI invocation. */
-export function createBrowser(label: string, timeoutMs = CLI_TIMEOUT_MS) {
+function completeBatch(stdout: string): boolean {
+  try {
+    const parsed: unknown = JSON.parse(stdout);
+    return (
+      Array.isArray(parsed) &&
+      parsed.every(
+        (entry: unknown) =>
+          isRecord(entry) && typeof entry.success === "boolean",
+      )
+    );
+  } catch {
+    return false;
+  }
+}
+
+function sessionId(label: string, timeoutMs: number): string {
   const session = execFileSync(
     BIN,
     [
@@ -26,9 +40,15 @@ export function createBrowser(label: string, timeoutMs = CLI_TIMEOUT_MS) {
       "--prefix",
       `crawl-${label}-${Date.now()}-${process.pid}`,
     ],
-    { encoding: "utf8" },
+    { encoding: "utf8", timeout: timeoutMs, maxBuffer: MAX_BUFFER_BYTES },
   ).trim();
   assert.match(session, /^[a-zA-Z0-9-]+$/, "unexpected session id");
+  return session;
+}
+
+/** One named agent-browser session; every call is a plain CLI invocation. */
+export function createBrowser(label: string, timeoutMs = CLI_TIMEOUT_MS) {
+  const session = sessionId(label, timeoutMs);
   /** Wall time per kind of CLI call, for the speed profile. */
   const profile = new Map<string, { calls: number; ms: number }>();
   const diagnostics = createDiagnostics(label);
@@ -47,7 +67,11 @@ export function createBrowser(label: string, timeoutMs = CLI_TIMEOUT_MS) {
     } catch (error: unknown) {
       const stdout =
         isRecord(error) && typeof error.stdout === "string" ? error.stdout : "";
-      if (stdout.trim().startsWith("[")) return stdout;
+      const exited =
+        isRecord(error) &&
+        typeof error.status === "number" &&
+        error.status !== 0;
+      if (exited && args[0] === "batch" && completeBatch(stdout)) return stdout;
       throw error;
     }
   };
@@ -69,6 +93,11 @@ export function createBrowser(label: string, timeoutMs = CLI_TIMEOUT_MS) {
     for (const entry of parsed) diagnostics.noteLifecycle(entry, kind);
     return parsed.map((entry: unknown): Step => {
       assert.ok(isRecord(entry), "batch: malformed entry");
+      assert.equal(
+        typeof entry.success,
+        "boolean",
+        "batch: missing success flag",
+      );
       const result = entry.result;
       const value =
         isRecord(result) && "result" in result ? result.result : result;
