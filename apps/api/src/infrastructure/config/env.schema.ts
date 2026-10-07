@@ -5,6 +5,10 @@ import {
   ProviderUrlPolicyError,
 } from "../../lib/ai-provider-url-policy.js";
 import { logLevelSchema } from "../../lib/logger.js";
+import {
+  isOtlpEndpoint,
+  OTLP_ENDPOINT_INVALID_MESSAGE,
+} from "../../lib/otlp-endpoint.js";
 import { SAML_ENV_KEYS } from "../../lib/saml-env-keys.js";
 import { REPORT_ASSISTANT_ENV_KEYS } from "./report-assistant-env-keys.js";
 
@@ -14,12 +18,6 @@ const MIN_SIMILARITY_THRESHOLD = 0;
 const MAX_SIMILARITY_THRESHOLD = 1;
 const positiveIntegerEnv = z.coerce.number().int().positive();
 const explicitNumberEnv = z.string().trim().min(1).transform(Number);
-
-const optionalUrl = z.preprocess(
-  (value) =>
-    typeof value === "string" && value.trim().length === 0 ? undefined : value,
-  z.url().optional(),
-);
 
 // No `.default()` anywhere by design: every value is REQUIRED and supplied
 // explicitly per environment, so a misconfigured deploy fails boot loud instead
@@ -121,7 +119,19 @@ const envObjectSchema = z.object({
   // OpenTelemetry. The endpoint stays optional — the SDK only starts when
   // OTEL_EXPORTER_OTLP_ENDPOINT is set AND OTEL_SDK_DISABLED is not 'true'.
   // The toggle + sampler are required so the telemetry posture is explicit.
-  OTEL_EXPORTER_OTLP_ENDPOINT: optionalUrl,
+  // Shared with decideOtelBootstrap (lib/otlp-endpoint.ts): whitespace means
+  // unset, a nonblank value must be an HTTP(S) URL — both layers accept and
+  // reject the same forms.
+  OTEL_EXPORTER_OTLP_ENDPOINT: z.preprocess(
+    (value) =>
+      typeof value === "string" && value.trim().length === 0
+        ? undefined
+        : value,
+    z
+      .string()
+      .optional()
+      .refine(isOtlpEndpoint, { message: OTLP_ENDPOINT_INVALID_MESSAGE }),
+  ),
   OTEL_SDK_DISABLED: z.enum(["true", "false"]),
   OTEL_TRACES_SAMPLER_ARG: z
     .string()

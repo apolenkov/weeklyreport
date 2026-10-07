@@ -27,7 +27,7 @@ describe("OTel bootstrap decision", () => {
     }
   });
 
-  it.each([undefined, ""])(
+  it.each([undefined, "", " ".repeat(3), " \t "])(
     "returns no-endpoint when OTEL_EXPORTER_OTLP_ENDPOINT is %j",
     (OTEL_EXPORTER_OTLP_ENDPOINT) => {
       const decision = decideOtelBootstrap({
@@ -39,6 +39,25 @@ describe("OTel bootstrap decision", () => {
       }
     },
   );
+
+  it.each(["not-a-url", "ftp://otel:4318", "http://", "://otel"])(
+    "rejects a malformed nonblank OTEL_EXPORTER_OTLP_ENDPOINT %j before exporter creation",
+    (OTEL_EXPORTER_OTLP_ENDPOINT) => {
+      expect(() =>
+        decideOtelBootstrap({ OTEL_EXPORTER_OTLP_ENDPOINT }),
+      ).toThrow(/OTEL_EXPORTER_OTLP_ENDPOINT must be an http\(s\) URL/u);
+    },
+  );
+
+  it("trims surrounding whitespace on a configured endpoint", () => {
+    const decision = decideOtelBootstrap({
+      OTEL_EXPORTER_OTLP_ENDPOINT: "  http://otel:4318/collector  ",
+    });
+    expect(decision.started).toBe(true);
+    if (decision.started) {
+      expect(decision.endpoint).toBe("http://otel:4318/collector");
+    }
+  });
 
   it("returns enabled with default sampling ratio 1.0 when only endpoint is set", () => {
     const decision = decideOtelBootstrap({

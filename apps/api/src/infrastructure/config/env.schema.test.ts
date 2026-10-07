@@ -269,14 +269,33 @@ describe("envSchema — no defaults, every product var required", () => {
     },
   );
 
-  it("rejects a non-blank invalid OTEL endpoint", () => {
-    expect(
-      envSchema.safeParse({
-        ...COMPLETE,
-        OTEL_EXPORTER_OTLP_ENDPOINT: "not-a-url",
-      }).success,
-    ).toBe(false);
-  });
+  it.each(["not-a-url", "ftp://otel:4318", "http://"] as const)(
+    "rejects a non-blank invalid OTEL endpoint %j",
+    (OTEL_EXPORTER_OTLP_ENDPOINT) => {
+      expect(
+        envSchema.safeParse({
+          ...COMPLETE,
+          OTEL_EXPORTER_OTLP_ENDPOINT,
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it.each([
+    "http://otel:4318",
+    "https://collector.example.com/otlp",
+    " http://otel:4318 ",
+  ] as const)(
+    "accepts the OTEL endpoint %j shared with the early bootstrap",
+    (OTEL_EXPORTER_OTLP_ENDPOINT) => {
+      expect(
+        envSchema.safeParse({
+          ...COMPLETE,
+          OTEL_EXPORTER_OTLP_ENDPOINT,
+        }).success,
+      ).toBe(true);
+    },
+  );
 
   it.each(["0", "-1", "1.5", "not-a-number"] as const)(
     "rejects a non-positive-integer HEAP_HEALTH_THRESHOLD_BYTES (%s)",
