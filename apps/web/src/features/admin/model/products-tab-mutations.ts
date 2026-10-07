@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { toastMutationError } from "../../../shared/lib/errors/mutation-error-message";
 import { invalidateAdmin } from "../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
@@ -17,9 +18,7 @@ export function useProductMutations(onSaved: () => void) {
         toast.success("Product saved");
         onSaved();
       },
-      onError: (err) => {
-        toast.error(err.message);
-      },
+      onError: toastMutationError("Failed to save product"),
     }),
   );
 
@@ -29,9 +28,7 @@ export function useProductMutations(onSaved: () => void) {
         invalidateAdmin(qc, trpc);
         toast.success("Product archived");
       },
-      onError: (err) => {
-        toast.error(err.message);
-      },
+      onError: toastMutationError("Failed to archive product"),
     }),
   );
 
