@@ -126,17 +126,17 @@ function RisksCard({
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-0.5">
           <RiskStat
             count={blockedCount}
-            countClassName="text-lg font-bold tabular-nums text-[var(--color-destructive)]"
+            countClassName="text-lg font-bold text-[var(--color-destructive)]"
             label="blocked"
           />
           <RiskStat
             count={atRiskCount}
-            countClassName="text-lg font-bold tabular-nums text-[var(--color-status-at-risk-fg)]"
+            countClassName="text-lg font-bold text-[var(--color-status-at-risk-fg)]"
             label="at risk"
           />
           <RiskStat
             count={decisionCount}
-            countClassName="text-lg font-bold tabular-nums text-[var(--color-primary)]"
+            countClassName="text-lg font-bold text-[var(--color-primary)]"
             label={pluralize(decisionCount, "decision", "decisions")}
           />
         </div>

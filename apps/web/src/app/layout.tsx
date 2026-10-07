@@ -1,7 +1,7 @@
 import "../styles/app.css";
 
 import type { Metadata } from "next";
-import { Fraunces, Lexend, Source_Sans_3 } from "next/font/google";
+import { Fraunces, Onest } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { WebVitalsReporter } from "../features/telemetry/ui/web-vitals-reporter";
@@ -18,16 +18,10 @@ const fraunces = Fraunces({
   subsets: ["latin"],
   variable: "--font-fraunces",
 });
-const lexend = Lexend({
+const onest = Onest({
   display: "swap",
-  subsets: ["latin"],
-  variable: "--font-lexend",
-});
-const sourceSans = Source_Sans_3({
-  display: "swap",
-  style: ["normal", "italic"],
   subsets: ["cyrillic", "latin"],
-  variable: "--font-source-sans-3",
+  variable: "--font-onest",
 });
 
 // Titles resolve server-side through the Metadata API so the document title is
@@ -45,7 +39,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${fraunces.variable} ${lexend.variable} ${sourceSans.variable}`}
+      className={`${fraunces.variable} ${onest.variable}`}
     >
       <body className="min-h-svh bg-background font-sans antialiased tracking-[-0.01em]">
         <a

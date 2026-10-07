@@ -12,8 +12,7 @@ vi.mock("../shared/server/organization/get-org-public", () => ({
 }));
 vi.mock("next/font/google", () => ({
   Fraunces: () => ({ variable: "font-fraunces" }),
-  Lexend: () => ({ variable: "font-lexend" }),
-  Source_Sans_3: () => ({ variable: "font-source-sans" }),
+  Onest: () => ({ variable: "font-onest" }),
 }));
 // Stub client-only components that would fail in a jsdom render of the
 // full RSC tree (they are not under test here).
@@ -76,8 +75,7 @@ describe("RootLayout metadata, fonts, and inline-script safety", () => {
     const doc = renderLayout();
     expect(doc.documentElement.className.split(" ")).toEqual([
       "font-fraunces",
-      "font-lexend",
-      "font-source-sans",
+      "font-onest",
     ]);
     expect(doc.querySelector('link[href*="fonts.googleapis.com"]')).toBeNull();
     expect(doc.querySelector('link[href*="fonts.gstatic.com"]')).toBeNull();
