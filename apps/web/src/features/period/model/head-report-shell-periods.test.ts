@@ -220,6 +220,31 @@ describe("deriveHeadPeriods", () => {
     });
   });
 
+  it("keeps the frozen envelope when the displayed payload is another report", () => {
+    // The displayed candidate is keyed by the URL id, but weeklyReport.get may
+    // resolve a different report (e.g. the active week for a superseded id).
+    // That foreign envelope must not re-date the matching history entry.
+    const olderEntry: CompiledHistoryEntry = {
+      ...historyEntry("older-id"),
+      periodStart: new Date("2026-05-18T00:00:00.000Z"),
+      periodEnd: new Date("2026-05-24T00:00:00.000Z"),
+    };
+
+    const periods = deriveHeadPeriods(
+      [olderEntry],
+      activeReport("active-id"),
+      activeReport("active-id"),
+      "older-id",
+    );
+
+    const older = periods.find((period) => period.id === "older-id");
+    expect(older).toMatchObject({
+      periodStart: new Date("2026-05-18T00:00:00.000Z"),
+      isCurrent: false,
+    });
+    expect(older?.dateRange).toMatch(/May 18/);
+  });
+
   it("orders a displayed older period newest-first against history", () => {
     const newerHistory: CompiledHistoryEntry = {
       ...historyEntry("hist-newer"),

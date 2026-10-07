@@ -18,11 +18,17 @@ function historyEntryToPeriod(
   activeReportId: string | null,
   lifecycleCandidate: PrependCandidate | undefined,
 ): ReportPeriod {
-  const live = lifecycleCandidate?.data;
+  // A live lifecycle candidate owns the current envelope for ITS report: a
+  // reopened period may be re-dated while the compiled entry keeps the frozen
+  // snapshot. The displayed candidate is keyed by the URL id, but its payload
+  // may describe a different report (e.g. the active week resolved for a
+  // superseded id) — never project that envelope onto this entry.
+  const live =
+    lifecycleCandidate?.data.reportId === entry.reportId
+      ? lifecycleCandidate.data
+      : undefined;
   return toNavigationPeriod({
     id: entry.reportId,
-    // A live lifecycle candidate owns the current envelope: a reopened period
-    // may be re-dated while the compiled entry keeps the frozen snapshot.
     periodStart: live?.periodStart ?? entry.periodStart,
     periodEnd: live?.periodEnd ?? entry.periodEnd,
     archived: live?.archived ?? entry.archived,
