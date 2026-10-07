@@ -40,7 +40,7 @@ describe("OpenAiCompatibleTransport", () => {
       expect(init?.signal).toBeInstanceOf(AbortSignal);
       const body = init?.body;
       expect(typeof body).toBe("string");
-      if (typeof body !== "string") throw new Error("Expected JSON body");
+      if (typeof body !== "string") throw new TypeError("Expected JSON body");
       expect(JSON.parse(body)).not.toHaveProperty("temperature");
       return Promise.resolve(
         new Response(

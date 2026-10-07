@@ -25,7 +25,8 @@ function buildMocks(headerId?: string): {
 
 function requestId(req: CorrelationRequest): string {
   const value = req.headers["x-request-id"];
-  if (typeof value !== "string") throw new Error("Request id is not a string");
+  if (typeof value !== "string")
+    throw new TypeError("Request id is not a string");
   return value;
 }
 

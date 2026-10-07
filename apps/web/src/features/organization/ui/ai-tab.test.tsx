@@ -461,7 +461,7 @@ describe("AiTab", () => {
     );
     const alert = error.closest('[role="alert"]');
     if (!(alert instanceof HTMLElement))
-      throw new Error("AI settings alert was not rendered");
+      throw new TypeError("AI settings alert was not rendered");
     const initialReads = reads.list;
     catalogAvailable = true;
     const user = userEvent.setup();

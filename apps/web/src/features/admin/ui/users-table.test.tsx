@@ -37,7 +37,7 @@ describe("UsersTable responsive rows", () => {
     );
     const user = userEvent.setup();
     const row = screen.getByText("Ivanova A.").closest("tr");
-    if (!(row instanceof HTMLElement)) throw new Error("User row missing");
+    if (!(row instanceof HTMLElement)) throw new TypeError("User row missing");
 
     expect(row).toHaveClass("grid", "sm:table-row");
     expect(row).not.toHaveClass("opacity-60");
