@@ -51,6 +51,10 @@ function fixture(): Config {
 
 beforeEach(() => {
   vi.resetAllMocks();
+  transport.batch.mockImplementation(
+    (commands: readonly (readonly string[])[]) =>
+      commands.map(() => ({ ok: true, error: null, value: null })),
+  );
   transport.pages.mockReturnValue([]);
   transport.evaluate.mockImplementation((source: string) =>
     source === "location.href" ? "http://127.0.0.1:50123/lead" : "/lead",

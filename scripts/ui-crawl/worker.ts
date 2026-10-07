@@ -34,6 +34,20 @@ function sleep(ms: number): void {
   );
 }
 
+function authBatch(
+  browser: Browser,
+  commands: readonly (readonly string[])[],
+): void {
+  const results = browser.batch(commands);
+  for (const [index, command] of commands.entries()) {
+    const result = results[index];
+    if (!result?.ok)
+      throw new Error(
+        `Sign-in ${command[0] ?? "command"} failed: ${result?.error ?? "no result"}`,
+      );
+  }
+}
+
 function attemptLogin(
   browser: Browser,
   config: Pick<Config, "url">,
@@ -41,7 +55,7 @@ function attemptLogin(
   password: string,
 ): boolean {
   pace("auth", AUTH_COST);
-  browser.batch([
+  authBatch(browser, [
     ["cookies", "clear"],
     ["open", config.url],
     ["wait", "--load", "networkidle"],
@@ -49,7 +63,7 @@ function attemptLogin(
   browser.evaluate(
     `[...document.querySelectorAll('a')].find((a) => /sign in/i.test(a.textContent))?.click()`,
   );
-  browser.batch([
+  authBatch(browser, [
     ["wait", "#username"],
     ["fill", "#username", role.email],
     ["fill", "#password", password],
@@ -66,11 +80,17 @@ function tryLogin(
   config: Pick<Config, "url">,
   role: Role,
   password: string,
-): boolean {
+): Readonly<{ success: boolean; error: unknown }> {
   try {
-    return attemptLogin(browser, config, role, password);
-  } catch {
-    return false;
+    const success = attemptLogin(browser, config, role, password);
+    return {
+      success,
+      error: success
+        ? null
+        : new Error("Authentication callback did not return to the stand"),
+    };
+  } catch (error: unknown) {
+    return { success: false, error };
   }
 }
 
@@ -81,15 +101,19 @@ export function login(
   role: Role,
   password: string,
 ): void {
+  let cause: unknown;
   for (let attempt = 1; attempt <= LOGIN_ATTEMPTS; attempt += 1) {
-    if (tryLogin(browser, config, role, password)) {
+    const result = tryLogin(browser, config, role, password);
+    if (result.success) {
       browser.batch(CLEAR_COMMANDS);
       return;
     }
-    sleep(LOGIN_BACKOFF_MS);
+    cause = result.error;
+    if (attempt < LOGIN_ATTEMPTS) sleep(LOGIN_BACKOFF_MS);
   }
   throw new Error(
     `Sign-in as ${role.name} failed after ${LOGIN_ATTEMPTS} attempts`,
+    { cause },
   );
 }
 
