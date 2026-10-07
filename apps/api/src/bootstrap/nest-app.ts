@@ -29,18 +29,28 @@ export async function createNestApp(deps: {
 
   preBootLogger.info("bootstrap starting");
 
-  const app = await NestFactory.create(AppModule, {
-    logger: nestLoggerAdapter,
-  });
+  try {
+    // abortOnError:false — a provider init failure must reject this promise
+    // so the bootstrap failure boundary owns the exit, not process.abort.
+    const app = await NestFactory.create(AppModule, {
+      logger: nestLoggerAdapter,
+      abortOnError: false,
+    });
 
-  const { httpAdapter } = app.get(HttpAdapterHost);
-  app.useGlobalFilters(new SentryExceptionFilter(httpAdapter));
+    const { httpAdapter } = app.get(HttpAdapterHost);
+    app.useGlobalFilters(new SentryExceptionFilter(httpAdapter));
 
-  const logger = app.get<AppLogger>(APP_LOGGER);
+    const logger = app.get<AppLogger>(APP_LOGGER);
 
-  nestLoggerAdapter.setLogger(logger);
-  logger.info("bootstrap started");
-  logOtelDecision(logger, otelDecision);
+    nestLoggerAdapter.setLogger(logger);
+    logger.info("bootstrap started");
+    logOtelDecision(logger, otelDecision);
 
-  return { app, logger };
+    return { app, logger };
+  } catch (error) {
+    // The container logger never took over — flush the pre-boot logger once
+    // so its buffered file sink is not lost with the failed startup.
+    await preBootLogger.flush?.().catch(() => undefined);
+    throw error;
+  }
 }

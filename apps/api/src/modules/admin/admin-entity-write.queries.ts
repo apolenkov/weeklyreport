@@ -14,6 +14,7 @@ import { lockUserAndAssertActivityAssignments } from "../../lib/user-activity-as
 import { buildTransition } from "../period/index.js";
 import {
   AdminLastAdminError,
+  AdminProjectNotFoundError,
   AdminUserConflictError,
   AdminUserNotFoundError,
   AdminUserPublishedHistoryError,
@@ -220,10 +221,22 @@ export async function removeProject(
   projectId: string,
 ): Promise<void> {
   // Archive rather than delete: a project carries historical report content.
-  await prisma.project.update({
-    where: { id: projectId },
-    data: { archived: true },
-  });
+  // Only a missing row (P2025) becomes a typed NOT_FOUND; any other failure
+  // propagates unchanged.
+  try {
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { archived: true },
+    });
+  } catch (error: unknown) {
+    const prismaError = error as { code?: string } | null;
+    if (prismaError?.code === "P2025") {
+      throw new AdminProjectNotFoundError(
+        `Project ${projectId} was not found.`,
+      );
+    }
+    throw error;
+  }
 }
 
 // Spreads resolveLifecycle so all three lifecycle machines restore verbatim;
