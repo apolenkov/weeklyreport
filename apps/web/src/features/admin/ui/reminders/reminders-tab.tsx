@@ -50,6 +50,7 @@ export function RemindersTab({
     form: state.form,
     isSaving: state.isSaving,
     validityValid: state.validityValid,
+    validityReason: state.validityReason,
     onChange: state.setForm,
     onOffsetValidityChange: state.setOffsetValid,
     onCancel: state.closeEditor,

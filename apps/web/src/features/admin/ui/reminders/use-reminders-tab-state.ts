@@ -71,21 +71,28 @@ function useReminderEditor(
   // Offset magnitude validity reported up from the form; an empty/malformed
   // keystroke keeps the raw text and blocks Save until a valid value is entered.
   const [offsetValid, setOffsetValid] = useState(true);
-  const validityValid = useMemo(() => {
-    if (!offsetValid) return false;
+  // One reason explains why Save is blocked; null means the draft is valid.
+  // The same copy feeds the footer hint and the defensive handleSave toast.
+  const validityReason = useMemo((): string | null => {
+    if (!offsetValid) return "Enter a valid reminder offset";
     // A clearable date input yields an empty string; it must block Save even
     // when the forever checkbox or an absent end date would otherwise pass.
-    if (form.validFromIso === "") return false;
-    if (form.foreverChecked) return true;
-    if (form.validUntilIso === null) return true;
-    return form.validUntilIso >= form.validFromIso;
+    if (form.validFromIso === "") return "Start date is required";
+    if (form.foreverChecked || form.validUntilIso === null) return null;
+    if (form.validUntilIso === "") return "End date is required";
+    // ISO date strings compare lexicographically; the window is inclusive.
+    return form.validUntilIso < form.validFromIso
+      ? "End date must be on or after start date"
+      : null;
   }, [form.foreverChecked, form.validFromIso, form.validUntilIso, offsetValid]);
+  const validityValid = validityReason === null;
 
   return {
     editor,
     form,
     setForm,
     validityValid,
+    validityReason,
     setOffsetValid,
     closeEditor: () => {
       setEditor({ mode: "closed" });
@@ -155,8 +162,11 @@ export function useRemindersTabState(
       editorState.handleEditReminder(policy);
     },
     handleSave: () => {
-      if (!editorState.validityValid) {
-        toast.error("End date must be after start date");
+      // Defensive gate behind the disabled button: surfaces the same reason
+      // the footer hint shows instead of a generic validity message.
+      const reason = editorState.validityReason;
+      if (reason !== null) {
+        toast.error(reason);
         return;
       }
       const wasEditing = editorState.editor.mode === "edit";
