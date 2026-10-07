@@ -12,6 +12,9 @@ assertWebEnv();
 
 const API_URL = requireApiUrl();
 
+// Docker development keeps its build output separate from native Next.js.
+const distDir = process.env.NEXT_DIST_DIR || ".next";
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   devIndicators: false,
@@ -21,10 +24,12 @@ const nextConfig: NextConfig = {
   // Next 16.3.7 (webpack) traces `server/proxy.js` into next-server, then
   // renames it to `middleware.js` before the standalone copy, so a clean Linux
   // build fails with ENOENT on copyfile. The renamed file is traced separately.
+  // The glob must follow NEXT_DIST_DIR — a fixed `.next` path leaves the
+  // Docker-dev build unexcluded and the copy fails on the custom dir instead.
   outputFileTracingExcludes: {
     "next-server": [
-      "**/.next/server/proxy.js",
-      "**/.next/server/proxy.js.nft.json",
+      `**/${distDir}/server/proxy.js`,
+      `**/${distDir}/server/proxy.js.nft.json`,
     ],
   },
   reactCompiler: true,
@@ -34,8 +39,7 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["lucide-react"],
   },
   allowedDevOrigins: ["127.0.0.1", "localhost"],
-  // Docker development keeps its build output separate from native Next.js.
-  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
+  distDir,
   // shared uses NodeNext `.js` specifiers that point at `.ts` sources.
   webpack: (config: {
     resolve: { extensionAlias?: Record<string, string[]> };
