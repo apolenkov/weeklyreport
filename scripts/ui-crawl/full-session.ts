@@ -43,6 +43,7 @@ export interface FullSession {
   probeCache: FullProbe | null;
   presses: number;
   limited: boolean;
+  aborted: boolean;
   mutated: boolean;
   axeViolations: number;
   geometryIssues: number;
@@ -55,6 +56,11 @@ function framePlace(session: FullSession, frame: FullFrame): EvidencePlace {
     depth: frame.depth,
     path: frame.path.map((action) => action.control.name),
   };
+}
+
+/** A failed recovery or observed write invalidates dependent work on the current baseline. */
+export function cannotContinue(session: FullSession): boolean {
+  return session.aborted || session.mutated;
 }
 
 /** The page shows `frame` now: photograph it and audit it with a geometry probe. */
@@ -194,16 +200,19 @@ export function executeControl(
   control: FullControl,
 ): Effect | null {
   session.presses += 1;
-  const { outcome, hungReason } = invokeFullControl(
+  const { outcome, hungReason, restored } = invokeFullControl(
     session.ctx,
     session.home,
     control,
   );
   const press = outcome.results[0];
   const changed = press !== undefined && press.before !== press.after;
-  const shot = changed
-    ? fullShot(session.ctx, `${session.tag}-a${session.steps.length}`)
-    : (session.states.at(-1)?.shot ?? "");
+  session.aborted = !restored;
+  const shot = !restored
+    ? null
+    : changed
+      ? fullShot(session.ctx, `${session.tag}-a${session.steps.length}`)
+      : (session.states.at(-1)?.shot ?? "");
   session.done.add(controlKey(control));
   const reason = failure(press, hungReason);
   if (press?.status === "obstructed") noteObstructed(session, control);

@@ -128,6 +128,7 @@ function pressAll(
     const entries = planEntries(ctx, { probe, live, counters }, next);
     const round = pressEntries(ctx, page, entries, counters);
     steps.push(...round.steps);
+    if (round.aborted) break;
     next = round.next ?? probe.controls.length;
     const last = round.steps.at(-1);
     // An Escape that restored the exact state needs no further check; after a reload, wait for the baseline to return, then compare.
