@@ -19,7 +19,7 @@ import { createProvisionLeadWorkspace } from "./lead-workspace-provisioner";
 function resolveSamlStrategy(logger: AppLogger) {
   if (!hasSamlEnv(process.env)) {
     logger.warn(
-      "SAML env is absent — /auth/saml/* answers 503; dev-login is the only auth path",
+      "SAML configuration is absent — POST /auth/saml/callback answers 503; development login remains available",
     );
     return undefined;
   }
