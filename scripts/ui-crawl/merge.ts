@@ -19,7 +19,7 @@ function prefixed(result: RoleResult, prefix: string): RoleResult {
     ...result,
     runs: result.runs.map((run) => ({
       ...run,
-      video: run.video ? `${prefix}/${run.video}` : "",
+      video: run.video ? `${prefix}/${run.video}` : null,
       findings: run.findings.map((f) => ({ ...f, shot: shot(f.shot) })),
       pages: run.pages.map((page) => ({
         ...page,

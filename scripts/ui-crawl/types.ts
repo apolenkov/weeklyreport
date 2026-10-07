@@ -69,7 +69,7 @@ export type RunRecord = Readonly<{
   state?: string;
   width: number;
   ms: number;
-  video: string;
+  video: string | null;
   pages: readonly PageRecord[];
   findings: readonly Finding[];
 }>;
