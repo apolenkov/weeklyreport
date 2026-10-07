@@ -11,13 +11,15 @@ import {
   type ProbedControl,
   SIGNATURE_ONLY,
 } from "./probe.ts";
+import { SELECT_ASSIGNMENT } from "./select-script.ts";
 
 export type PressLog = Readonly<{ kind: string; detail: string }>;
 
 export type PressResult = Readonly<{
   /** Index into the submitted list. */
   n: number;
-  status: "ok" | "gone" | "obstructed";
+  status: "ok" | "gone" | "obstructed" | "stale";
+  reason?: string;
   before: string;
   after: string;
   urlChanged: boolean;
@@ -122,15 +124,25 @@ const PRESS = `(el, alternative) => {
 }`;
 
 /** Script for one batch of presses; stops at the first visible change so the caller can look at it. */
+type BatchOptions = Readonly<{
+  budgetMs: number;
+  maxQuietMs: number;
+  mode: "quick" | "full";
+}>;
+
 function batchScript(
-  items: readonly Readonly<{ selector: string; alternative?: string }>[],
-  budgetMs: number,
-  maxQuietMs: number,
+  items: readonly Readonly<{
+    selector: string;
+    tag: string;
+    alternative?: string;
+  }>[],
+  options: BatchOptions,
 ): string {
   return `(async () => {
   const S = ${HOOKS};
   const quiet = ${QUIET};
   const press = ${PRESS};
+  const selectAssignment = ${SELECT_ASSIGNMENT};
   const until = ${UNTIL};
   const state = () => ${SIGNATURE_ONLY};
   const items = ${JSON.stringify(items)};
@@ -154,6 +166,12 @@ function batchScript(
     }
     const base = {n, before: '', after: '', urlChanged: false, ms: 0, blockedMs: 0, logs: []};
     if (!el) { results.push({...base, status: 'gone'}); keep(); continue; }
+    let alternative = items[n].alternative;
+    if (items[n].tag === 'select') {
+      const assignment = selectAssignment(el, items[n], ${JSON.stringify(options.mode)});
+      if (assignment.reason) {results.push({...base, status: 'stale', reason: assignment.reason}); keep(); continue;}
+      alternative = assignment.value;
+    }
     el.scrollIntoView?.({block: 'nearest'});
     if (items[n].alternative === undefined && covered(el)) { results.push({...base, status: 'obstructed'}); keep(); continue; }
     S.logs = []; S.blocked = 0;
@@ -161,13 +179,13 @@ function batchScript(
     const url = location.href;
     const t0 = performance.now();
     S.last = t0;
-    press(el, items[n].alternative);
-    await quiet(S, ${maxQuietMs});
+    press(el, alternative);
+    await quiet(S, ${options.maxQuietMs});
     const after = state();
     const urlChanged = location.href !== url;
     results.push({...base, status: 'ok', before, after, urlChanged, ms: Math.round(Math.min(S.last, Math.max(S.net, t0) + ${DOM_GRACE_MS}) - t0), blockedMs: Math.round(S.blocked), logs: S.logs});
     keep();
-    if (after !== before || urlChanged || performance.now() - started > ${budgetMs}) return {results, stopped: n + 1 < items.length || after !== before || urlChanged, req: S.req, took: Math.round(performance.now() - started)};
+    if (after !== before || urlChanged || performance.now() - started > ${options.budgetMs}) return {results, stopped: n + 1 < items.length || after !== before || urlChanged, req: S.req, took: Math.round(performance.now() - started)};
   }
   return {results, stopped: false, req: S.req, took: Math.round(performance.now() - started)};
 })()`;
@@ -177,17 +195,14 @@ function batchScript(
 export function pressBatch(
   browser: Browser,
   controls: readonly ProbedControl[],
-  budgetMs: number,
-  maxQuietMs: number,
+  options: BatchOptions,
 ): BatchOutcome {
   const items = controls.map((c) =>
     c.tag === "select" && c.alternatives[0] !== undefined
-      ? { selector: c.selector, alternative: c.alternatives[0] }
-      : { selector: c.selector },
+      ? { selector: c.selector, tag: c.tag, alternative: c.alternatives[0] }
+      : { selector: c.selector, tag: c.tag },
   );
-  return browser.evaluate(
-    batchScript(items, budgetMs, maxQuietMs),
-  ) as BatchOutcome;
+  return browser.evaluate(batchScript(items, options)) as BatchOutcome;
 }
 
 /** Presses one control again (undoes an expander or a toggle) and returns the quiet state signature. */
