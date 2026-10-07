@@ -133,6 +133,9 @@ export function PeriodListboxPanel({
           top: pos.top,
           left: pos.left,
           minWidth: pos.width,
+          // Long option labels truncate inside this bound instead of pushing
+          // the panel past the right edge on narrow viewports.
+          maxWidth: "calc(100vw - 32px)",
           maxHeight: PERIOD_PANEL_MAX_HEIGHT_PX,
         }}
         onKeyDown={onKeyDown}
