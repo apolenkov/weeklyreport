@@ -10,6 +10,7 @@ import {
   reconcileLockedPolicyForReport,
 } from "../reminders/index.js";
 import { audienceFromPrisma, audienceToPrisma } from "./admin-enum-mappers";
+import { AdminReminderPolicyNotFoundError } from "./admin-shared.js";
 
 export async function listReminderPolicies(
   prisma: PrismaService,
@@ -101,5 +102,17 @@ export async function deleteReminderPolicy(
 ): Promise<void> {
   // The mandatory FK cascades rules (and their executions) atomically with
   // the policy delete, so a concurrent applicator can never leave an orphan.
-  await prisma.reminderPolicy.delete({ where: { id: policyId } });
+  // Only a missing row (P2025) becomes a typed NOT_FOUND; any other failure
+  // propagates unchanged.
+  try {
+    await prisma.reminderPolicy.delete({ where: { id: policyId } });
+  } catch (error: unknown) {
+    const prismaError = error as { code?: string } | null;
+    if (prismaError?.code === "P2025") {
+      throw new AdminReminderPolicyNotFoundError(
+        `Reminder policy ${policyId} was not found.`,
+      );
+    }
+    throw error;
+  }
 }
