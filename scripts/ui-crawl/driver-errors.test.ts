@@ -15,12 +15,12 @@ afterEach(() => {
   for (const dir of dirs.splice(0))
     rmSync(dir, { recursive: true, force: true });
 });
-async function driver(script: string) {
+async function driver(script: string, interpreter = process.execPath) {
   mkdirSync(root, { recursive: true });
   const dir = mkdtempSync(join(root, "cli-"));
   dirs.push(dir);
   const file = join(dir, "cli.cjs");
-  writeFileSync(file, `#!${process.execPath}\n${script}`);
+  writeFileSync(file, `#!${interpreter}\n${script}`);
   chmodSync(file, 0o700);
   vi.stubEnv("AGENT_BROWSER_BIN", file);
   vi.resetModules();
@@ -29,12 +29,20 @@ async function driver(script: string) {
 describe("crawler CLI failure protocol", () => {
   it("does not salvage stdout from a timed-out batch", async () => {
     const { createBrowser } = await driver(
-      "if(process.argv[2]==='session')console.log('fixture-session');else{console.log(JSON.stringify([{success:true,result:'observed'}]));setTimeout(()=>{},3000)}",
+      String.raw`if [ "$1" = session ]; then printf '%s\n' fixture-session; else printf '%s\n' '[{"success":true,"result":"observed"}]'; exec sleep 3; fi`,
+      "/bin/sh",
     );
     const browser = createBrowser("fixture", 1000);
-    expect(() => browser.batch([["snapshot"]])).toThrow(
-      expect.objectContaining({ code: "ETIMEDOUT" }),
-    );
+    let failure: unknown;
+    try {
+      browser.batch([["snapshot"]]);
+    } catch (error: unknown) {
+      failure = error;
+    }
+    expect(failure).toMatchObject({
+      code: "ETIMEDOUT",
+      stdout: '[{"success":true,"result":"observed"}]\n',
+    });
   });
   it("bounds session bootstrap by the configured timeout", async () => {
     const { createBrowser } = await driver(
