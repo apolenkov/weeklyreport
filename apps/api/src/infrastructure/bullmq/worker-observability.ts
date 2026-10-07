@@ -1,4 +1,10 @@
-import { context, propagation, ROOT_CONTEXT, trace } from "@opentelemetry/api";
+import {
+  context,
+  propagation,
+  ROOT_CONTEXT,
+  SpanStatusCode,
+  trace,
+} from "@opentelemetry/api";
 
 import type { JobTraceContext } from "../../lib/job-trace-context.js";
 
@@ -92,6 +98,12 @@ export async function runInJobTraceContext<T>(
   const runSpan = async (): Promise<T> => {
     try {
       return await context.with(trace.setSpan(parent, span), body);
+    } catch (error: unknown) {
+      // Mark the span ERROR so trace-only analysis sees the failure; the
+      // Sentry capture inside the body stays the sole owner of the raw
+      // exception, and no message/stack lands in span status.
+      span.setStatus({ code: SpanStatusCode.ERROR });
+      throw error;
     } finally {
       span.end();
     }

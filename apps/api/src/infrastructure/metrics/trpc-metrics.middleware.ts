@@ -1,4 +1,4 @@
-import { type Span, trace } from "@opentelemetry/api";
+import { type Span, SpanStatusCode, trace } from "@opentelemetry/api";
 import type { TRPCError } from "@trpc/server";
 
 import {
@@ -47,12 +47,18 @@ export async function trpcMetricsMiddleware<R extends TrpcMiddlewareResult>(
       const result = await next();
       const status = result.ok ? "success" : "error";
       span.setAttribute("status", status);
+      if (!result.ok) {
+        // Standard ERROR status for the error envelope too: a raw throw and a
+        // non-ok result look alike in trace-only analysis. No message/stack.
+        span.setStatus({ code: SpanStatusCode.ERROR });
+      }
       endTimer({ ...labels, status });
       trpcRequestTotal.inc({ ...labels, status });
       span.end();
       return result;
     } catch (error) {
       span.setAttribute("status", "error");
+      span.setStatus({ code: SpanStatusCode.ERROR });
       endTimer({ ...labels, status: "error" });
       trpcRequestTotal.inc({ ...labels, status: "error" });
       span.end();

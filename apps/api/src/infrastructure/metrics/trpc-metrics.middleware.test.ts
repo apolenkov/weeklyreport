@@ -1,4 +1,4 @@
-import type { Span } from "@opentelemetry/api";
+import { type Span, SpanStatusCode } from "@opentelemetry/api";
 import { TRPCError } from "@trpc/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -13,12 +13,13 @@ import {
 } from "./trpc-metrics.middleware.js";
 
 function installSpanSpy(): {
-  span: Pick<Span, "end" | "setAttribute">;
+  span: Pick<Span, "end" | "setAttribute" | "setStatus">;
   startActiveSpan: ReturnType<typeof vi.fn>;
   tracer: SpanStarter;
 } {
   const span = {
     setAttribute: vi.fn().mockReturnThis(),
+    setStatus: vi.fn().mockReturnThis(),
     end: vi.fn(),
   };
   const startActiveSpan = vi.fn(
@@ -94,6 +95,9 @@ describe("trpcMetricsMiddleware", () => {
     expect(startActiveSpan.mock.calls[0]?.[0]).toBe("admin.snapshot");
     expect(span.setAttribute).toHaveBeenCalledWith("type", "query");
     expect(span.setAttribute).toHaveBeenCalledWith("status", "success");
+    expect(span.setStatus).not.toHaveBeenCalledWith(
+      expect.objectContaining({ code: SpanStatusCode.ERROR }),
+    );
     expect(span.end).toHaveBeenCalledTimes(2);
   });
 
@@ -122,12 +126,17 @@ describe("trpcMetricsMiddleware", () => {
     );
     expect(span.setAttribute).toHaveBeenCalledWith("type", "mutation");
     expect(span.setAttribute).toHaveBeenCalledWith("status", "error");
+    // The standard span status marks the error envelope as a failure in
+    // trace-only analysis; the custom label stays the metrics dimension.
+    expect(span.setStatus).toHaveBeenCalledExactlyOnceWith({
+      code: SpanStatusCode.ERROR,
+    });
     expect(span.end).toHaveBeenCalledOnce();
   });
 
   it("records an error label and rethrows when inner next() throws", async () => {
     const thrown = new Error("boom");
-    const { tracer } = installSpanSpy();
+    const { span, tracer } = installSpanSpy();
     await expect(
       invoke("weeklyReport.get", "query", { throws: thrown }, tracer),
     ).rejects.toBe(thrown);
@@ -136,6 +145,12 @@ describe("trpcMetricsMiddleware", () => {
     expect(text).toContain(
       'trpc_request_total{procedure="weeklyReport.get",type="query",status="error"} 1',
     );
+    // A raw throw produces the same standard ERROR status as an error
+    // envelope, with no exception detail copied into the status.
+    expect(span.setStatus).toHaveBeenCalledExactlyOnceWith({
+      code: SpanStatusCode.ERROR,
+    });
+    expect(span.end).toHaveBeenCalledOnce();
   });
 
   it("starts a histogram timer that records a duration observation", async () => {
