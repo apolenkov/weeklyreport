@@ -40,7 +40,7 @@ describe("initializeSentry", () => {
       expect.objectContaining({
         dsn: VALID_DSN,
         tracesSampleRate: 0,
-        skipOpenTelemetrySetup: true,
+        enableOpenTelemetrySetup: false,
         environment: "test",
       }),
     );
