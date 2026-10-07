@@ -25,13 +25,17 @@ vi.mock("nodemailer", () => ({
   createTransport: createTransportMock,
 }));
 
+import type { AppLogger } from "../../lib/logger.js";
+import { createAppLogger, createNullLogger } from "../../lib/logger.js";
 import type { EnvConfig } from "../config/env.schema.js";
 import { EmailService } from "./email.service.js";
 
 const SMTP_HOST = "smtp.example.com";
 
-const createEmailService = (env: Record<string, unknown>): EmailService =>
-  new EmailService(env as unknown as EnvConfig);
+const createEmailService = (
+  env: Record<string, unknown>,
+  logger: AppLogger = createNullLogger(),
+): EmailService => new EmailService(env as unknown as EnvConfig, logger);
 
 const transportOptions = (): Record<string, unknown> | undefined =>
   createTransportMock.mock.calls.at(-1)?.[0];
@@ -97,6 +101,18 @@ describe("EmailService transport security", () => {
 
     expect(transportOptions()).not.toHaveProperty("requireTLS");
   });
+
+  it.each([[{ SMTP_USER: "mailer" }], [{ SMTP_PASS: "test-password" }]])(
+    "builds an anonymous transport for a half-configured pair %o",
+    (extra) => {
+      // env.schema rejects this shape; the service still fails safe if a
+      // caller constructs it around validation.
+      createEmailService({ SMTP_HOST, SMTP_PORT: 587, ...extra });
+
+      expect(transportOptions()?.auth).toBeUndefined();
+      expect(transportOptions()).not.toHaveProperty("requireTLS");
+    },
+  );
 });
 
 describe("EmailService delivery behavior", () => {
@@ -204,5 +220,62 @@ describe("EmailService delivery behavior", () => {
       subject: "Second",
       text: "Second body",
     });
+  });
+});
+
+describe("EmailService dev diagnostics", () => {
+  it("routes the dev no-send diagnostic through the shared logger", async () => {
+    const info = vi.fn();
+    const service = createEmailService({}, { ...createNullLogger(), info });
+
+    await service.sendMail("recipient@example.com", "Subject", "Body");
+
+    expect(info).toHaveBeenCalledWith("email sent (dev/streamTransport)", {
+      from: "noreply@example.com",
+      recipientEmail: "recipient@example.com",
+    });
+  });
+
+  it("stays silent on the logger for the SMTP transport", async () => {
+    const info = vi.fn();
+    const service = createEmailService(
+      { SMTP_HOST },
+      { ...createNullLogger(), info },
+    );
+
+    await service.sendMail("recipient@example.com", "Subject", "Body");
+
+    expect(info).not.toHaveBeenCalled();
+  });
+
+  it("redacts the recipient and honors minLevel through a real AppLogger", async () => {
+    const writes: string[] = [];
+    const spy = vi
+      .spyOn(process.stdout, "write")
+      .mockImplementation((chunk) => {
+        writes.push(String(chunk));
+        return true;
+      });
+    try {
+      const dev = createEmailService({}, createAppLogger({ minLevel: "info" }));
+      await dev.sendMail("recipient@example.com", "Subject", "Body");
+
+      expect(writes).toHaveLength(1);
+      const entry = JSON.parse(writes[0] ?? "{}") as Record<string, unknown>;
+      expect(entry.recipientEmail).toBe("[redacted]");
+      expect(entry.message).toContain("dev/streamTransport");
+      expect(writes[0]).not.toContain("recipient@example.com");
+      expect(writes[0]).not.toContain("Subject");
+
+      writes.length = 0;
+      const quietDev = createEmailService(
+        {},
+        createAppLogger({ minLevel: "error" }),
+      );
+      await quietDev.sendMail("recipient@example.com", "Subject", "Body");
+      expect(writes).toHaveLength(0);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

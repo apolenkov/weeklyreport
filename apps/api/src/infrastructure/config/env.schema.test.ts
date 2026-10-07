@@ -626,6 +626,34 @@ describe("envSchema — production fences", () => {
     expect(envSchema.safeParse(without).success).toBe(false);
   });
 
+  it.each([
+    [{ SMTP_USER: "mailer" }, "SMTP_PASS"],
+    [{ SMTP_PASS: "s3cret" }, "SMTP_USER"],
+    [{ SMTP_USER: "mailer", SMTP_PASS: " ".repeat(3) }, "SMTP_PASS"],
+  ])(
+    "rejects a half-configured SMTP auth pair %o (issue on %s)",
+    (extra, issuePath) => {
+      const result = envSchema.safeParse({ ...COMPLETE, ...extra });
+      expect(result.success).toBe(false);
+      if (result.success) return;
+      expect(
+        result.error.issues.some(
+          (issue) =>
+            issue.path[0] === issuePath &&
+            issue.message.includes("SMTP_USER and SMTP_PASS"),
+        ),
+      ).toBe(true);
+    },
+  );
+
+  it.each([
+    {},
+    { SMTP_USER: "mailer", SMTP_PASS: "s3cret" },
+    { SMTP_USER: " ".repeat(3), SMTP_PASS: "" },
+  ])("accepts a complete or fully absent SMTP auth pair %o", (extra) => {
+    expect(envSchema.safeParse({ ...COMPLETE, ...extra }).success).toBe(true);
+  });
+
   it("rejects whitespace-only SMTP_HOST/SMTP_FROM in production", () => {
     const result = envSchema.safeParse({
       ...COMPLETE,

@@ -148,6 +148,22 @@ bypass it.
 - **WHEN** the entry is emitted
 - **THEN** every field's value is unchanged
 
+### Requirement: Dev email diagnostics use AppLogger
+
+The development no-send email diagnostic MUST be emitted through the shared
+`AppLogger`, not a direct `process.stdout` write, so `LOG_LEVEL` gates it like
+every other event and the PII context policy redacts the recipient before any
+sink sees it. The subject and body MUST NOT be logged.
+
+#### Scenario: A dev send emits a redacted, level-gated diagnostic
+
+- **GIVEN** `EmailService` runs the no-send development transport
+- **WHEN** a message is "delivered" by it
+- **THEN** an `info` entry is emitted through `AppLogger` with the recipient
+  under the `recipientEmail` context key
+- **AND** every sink receives the redaction marker, not the raw address
+- **AND** `LOG_LEVEL=error` suppresses the diagnostic entirely
+
 ### Requirement: Next.js loads server error instrumentation
 
 The web application MUST place its server instrumentation hook where the
