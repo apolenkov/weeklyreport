@@ -10,6 +10,10 @@ import {
   OTLP_ENDPOINT_INVALID_MESSAGE,
 } from "../../lib/otlp-endpoint.js";
 import { SAML_ENV_KEYS } from "../../lib/saml-env-keys.js";
+import {
+  parseSentryDsn,
+  SENTRY_DSN_INVALID_MESSAGE,
+} from "../../lib/sentry-dsn.js";
 import { REPORT_ASSISTANT_ENV_KEYS } from "./report-assistant-env-keys.js";
 
 const MIN_JWT_SECRET_LENGTH = 32;
@@ -147,7 +151,17 @@ const envObjectSchema = z.object({
   // Error capture (Bugsink/Sentry-compatible). Optional: the dynamic Sentry
   // bootstrap reads this only after startup validation; this schema remains
   // the single validation and coverage owner.
-  SENTRY_DSN: z.string().optional(),
+  SENTRY_DSN: z
+    .string()
+    .optional()
+    .refine((value) => {
+      try {
+        parseSentryDsn(value);
+        return true;
+      } catch {
+        return false;
+      }
+    }, SENTRY_DSN_INVALID_MESSAGE),
   // Browser → server log forwarder toggle (`main.ts`). This schema owns its
   // validation; optional prod opt-in;
   // dev enables the forwarder via NODE_ENV, prod opts in with "true".

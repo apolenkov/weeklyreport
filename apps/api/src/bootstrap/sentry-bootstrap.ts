@@ -2,6 +2,7 @@ import * as Sentry from "@sentry/nestjs";
 
 import { envSchema } from "../infrastructure/config/env.schema.js";
 import { stampActiveTrace } from "../infrastructure/otel/sentry-trace-correlation.js";
+import { parseSentryDsn } from "../lib/sentry-dsn.js";
 
 export function initializeSentry(): void {
   const nodeEnv = envSchema.shape.NODE_ENV.safeParse(process.env.NODE_ENV);
@@ -11,10 +12,13 @@ export function initializeSentry(): void {
     );
     process.exit(1);
   }
-  if (!process.env.SENTRY_DSN) return;
+  // A malformed configured DSN fails loudly here, before Sentry.init would
+  // log the raw value and build a client that reports nothing.
+  const dsn = parseSentryDsn(process.env.SENTRY_DSN);
+  if (dsn === undefined) return;
 
   Sentry.init({
-    dsn: process.env.SENTRY_DSN,
+    dsn,
     tracesSampleRate: 0,
     skipOpenTelemetrySetup: true,
     environment: nodeEnv.data,
