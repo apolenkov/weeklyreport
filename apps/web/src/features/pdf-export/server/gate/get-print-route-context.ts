@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 
 import {
   requireApiUrl,
+  SERVER_FETCH_TIMEOUT_MS,
   shouldUseDevAuthFallback,
   TRPC_BATCH_EMPTY_INPUT,
 } from "../../../../shared/server/transport/api-url";
@@ -37,6 +38,7 @@ export async function getPrintRouteContext(): Promise<PrintRouteContext> {
       method: "GET",
       ...(token ? { headers: { cookie: `${AUTH_COOKIE_NAME}=${token}` } } : {}),
       cache: "no-store",
+      signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
     });
     if (!response.ok) return NO_CONTEXT;
     const body = (await response.json()) as unknown;
