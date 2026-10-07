@@ -47,7 +47,7 @@ const HOOKS = `(() => {
   const listen = EventTarget.prototype.addEventListener;
   EventTarget.prototype.addEventListener = function (type, ...rest) { return type === 'beforeunload' ? undefined : listen.call(this, type, ...rest); };
   Object.defineProperty(window, 'onbeforeunload', {get: () => null, set: () => {}, configurable: true});
-  const S = {logs: [], inflight: 0, last: performance.now(), net: performance.now(), blocked: 0, req: 0};
+  const S = {logs: [], inflight: 0, last: performance.now(), net: performance.now(), longTasks: [], longStart: null, longObserver: null, req: 0};
   const push = (kind, detail) => S.logs.push({kind, detail: String(detail).slice(0, 300)});
   const touch = () => { S.last = performance.now(); };
   const touchNet = () => { S.net = S.last = performance.now(); };
@@ -75,7 +75,7 @@ const HOOKS = `(() => {
   };
   new MutationObserver(touch).observe(document, {subtree: true, childList: true, attributes: true, characterData: true});
   new PerformanceObserver((l) => { touchNet(); for (const e of l.getEntries()) if (e.name.includes('/trpc/')) S.req++; }).observe({type: 'resource', buffered: true});
-  try { new PerformanceObserver((l) => l.getEntries().forEach((e) => { S.blocked = Math.max(S.blocked, e.duration); })).observe({type: 'longtask'}); } catch {}
+  try { S.longObserver = new PerformanceObserver((l) => { if (S.longStart !== null) S.longTasks.push(...l.getEntries()); }); S.longObserver.observe({type: 'longtask'}); } catch {}
   return (window.__crawl2 = S);
 })()`;
 
@@ -174,16 +174,23 @@ function batchScript(
     }
     el.scrollIntoView?.({block: 'nearest'});
     if (items[n].alternative === undefined && covered(el)) { results.push({...base, status: 'obstructed'}); keep(); continue; }
-    S.logs = []; S.blocked = 0;
+    S.logs = []; S.longTasks = []; S.longObserver?.takeRecords();
     const before = state();
     const url = location.href;
     const t0 = performance.now();
-    S.last = t0;
+    S.last = t0; S.longStart = t0;
     press(el, alternative);
     await quiet(S, ${options.maxQuietMs});
+    const finished = performance.now();
+    if (globalThis.scheduler?.yield) await scheduler.yield();
+    else await new Promise((resolve) => setTimeout(resolve, 0));
+    S.longTasks.push(...(S.longObserver?.takeRecords() ?? []));
+    const relevant = S.longTasks.filter((e) => e.startTime < finished && e.startTime + e.duration > t0);
+    const blockedMs = Math.round(Math.max(0, ...relevant.map((e) => e.duration)));
+    S.longStart = null; S.longTasks = [];
     const after = state();
     const urlChanged = location.href !== url;
-    results.push({...base, status: 'ok', before, after, urlChanged, ms: Math.round(Math.min(S.last, Math.max(S.net, t0) + ${DOM_GRACE_MS}) - t0), blockedMs: Math.round(S.blocked), logs: S.logs});
+    results.push({...base, status: 'ok', before, after, urlChanged, ms: Math.round(Math.min(S.last, Math.max(S.net, t0) + ${DOM_GRACE_MS}) - t0), blockedMs, logs: S.logs});
     keep();
     if (after !== before || urlChanged || performance.now() - started > ${options.budgetMs}) return {results, stopped: n + 1 < items.length || after !== before || urlChanged, req: S.req, took: Math.round(performance.now() - started)};
   }
