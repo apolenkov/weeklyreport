@@ -46,13 +46,19 @@ The head dashboard MUST render its page shell immediately and MUST let each pane
 
 ### Requirement: Application fonts are self-hosted through next font
 
-The root layout MUST load Fraunces, Lexend, and Source Sans 3 through `next/font`, MUST preserve the existing CSS font-token consumers, and MUST NOT render a blocking `fonts.googleapis.com` stylesheet or preconnect tags.
+The root layout MUST load Fraunces and Onest through `next/font`, Onest with both its cyrillic and latin subsets so Russian and English interface text render in one typeface with working tabular figures. It MUST preserve the existing CSS font-token consumers and MUST NOT render a blocking `fonts.googleapis.com` stylesheet or preconnect tags.
 
 #### Scenario: The root document renders
 
 - **WHEN** any application route is loaded
-- **THEN** the three font variables are applied through Next-generated font assets
+- **THEN** the two font variables are applied through Next-generated font assets
 - **AND** no Google Fonts network stylesheet is required for first render
+
+#### Scenario: A screen mixes Russian and English text
+
+- **WHEN** a table row shows a Russian name beside an English label and a number
+- **THEN** all of it renders in Onest without a second typeface for the Cyrillic part
+- **AND** digits styled as tabular have equal advance widths
 
 ### Requirement: Suspense fallbacks correspond to real suspension
 
