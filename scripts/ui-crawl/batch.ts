@@ -3,11 +3,14 @@ import {
   DOM_GRACE_MS,
   MAX_QUIET_MS,
   QUIET_MS,
-  REPRESS_NAME_CHARS,
   RETURN_WAIT_MS,
 } from "./constants.ts";
 import type { Browser } from "./driver.ts";
-import { type ProbedControl, SIGNATURE_ONLY } from "./probe.ts";
+import {
+  pageProbeScript,
+  type ProbedControl,
+  SIGNATURE_ONLY,
+} from "./probe.ts";
 
 export type PressLog = Readonly<{ kind: string; detail: string }>;
 
@@ -188,18 +191,21 @@ export function pressBatch(
 }
 
 /** Presses one control again (undoes an expander or a toggle) and returns the quiet state signature. */
-export function repress(
-  browser: Browser,
-  selector: string,
-  name: string,
-): string {
+export function repress(browser: Browser, control: ProbedControl): string {
   return String(
-    browser.evaluate(String.raw`(async () => {
+    browser.evaluate(`(async () => {
   const S = ${HOOKS};
-  const el = document.querySelector(${JSON.stringify(selector)});
-  const text = (e) => [e.getAttribute('aria-label'), e.textContent].map((t) => String(t ?? '').replace(/\s+/g, ' ').trim());
-  // the path may now lead to another control (an opened form replaces its trigger): never press that one
-  if (el && text(el).some((t) => t && t.startsWith(${JSON.stringify(name.slice(0, REPRESS_NAME_CHARS))}))) (${PRESS})(el);
+  const expected = ${JSON.stringify(control)};
+  const live = ${pageProbeScript(false)}.controls.find((c) => c.selector === expected.selector);
+  const el = document.querySelector(expected.selector);
+  if (el && live && expected.name && live.name === expected.name && live.tag === expected.tag && live.role === expected.role && !live.disabled) {
+    el.scrollIntoView?.({block: 'nearest', inline: 'nearest'});
+    const r = el.getBoundingClientRect();
+    const left = Math.max(0, r.left), right = Math.min(innerWidth, r.right);
+    const top = Math.max(0, r.top), bottom = Math.min(innerHeight, r.bottom);
+    const hit = left < right && top < bottom ? document.elementFromPoint((left + right) / 2, (top + bottom) / 2) : null;
+    if (hit && (hit === el || el.contains(hit) || hit.contains(el) || hit.closest('label')?.control === el)) (${PRESS})(el);
+  }
   await (${QUIET})(S, ${MAX_QUIET_MS});
   return ${SIGNATURE_ONLY};
 })()`),
