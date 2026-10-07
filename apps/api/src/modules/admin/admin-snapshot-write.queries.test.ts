@@ -760,6 +760,39 @@ describe("applyPoliciesToNewPeriods — restored policy exclusions", () => {
     ]);
     expect(Array.from(calls[1]?.[2] ?? [])).toEqual([otherPolicyId]);
   });
+
+  it("continues past a failing period and returns the failure list", async () => {
+    // Post-commit applicator failures must not short-circuit the remaining
+    // periods nor reject the already-committed restore.
+    const otherReportId = "10000000-0000-4000-8000-000000000018";
+    const applyToPeriod = vi.fn((reportId: string) =>
+      reportId === REPORT_ID
+        ? Promise.reject(new Error("applicator down"))
+        : Promise.resolve({ created: 0, updated: 0, skipped: 0 }),
+    );
+
+    const failures = await applyPoliciesToNewPeriods(
+      { applyToPeriod } as never,
+      [] as never,
+      [
+        { id: REPORT_ID, deadline: new Date("2026-04-11T09:00:00.000Z") },
+        { id: otherReportId, deadline: new Date("2026-04-18T09:00:00.000Z") },
+      ],
+    );
+
+    expect(applyToPeriod).toHaveBeenCalledTimes(2);
+    expect(failures).toEqual([
+      { periodId: REPORT_ID, error: "applicator down" },
+    ]);
+  });
+
+  it("returns an empty failure list when no applicator is wired", async () => {
+    await expect(
+      applyPoliciesToNewPeriods(undefined, [] as never, [
+        { id: REPORT_ID, deadline: new Date("2026-04-11T09:00:00.000Z") },
+      ]),
+    ).resolves.toEqual([]);
+  });
 });
 
 describe("writePeriodRow — publication recovery", () => {

@@ -16,6 +16,9 @@ export class RemindersPolicyRepairScheduler {
     private readonly applicator: PolicyApplicatorService,
   ) {}
 
+  // Missing-rule-only repair: it creates absent pairs without touching
+  // restored or existing rule versions, so it also converges post-commit
+  // applicator failures from snapshot restore and manual period creation.
   @Cron(CronExpression.EVERY_HOUR, { timeZone: "UTC", waitForCompletion: true })
   async repairMissingRules(): Promise<void> {
     const sweepStart = new Date();
