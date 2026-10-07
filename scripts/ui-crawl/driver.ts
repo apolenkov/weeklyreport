@@ -86,8 +86,9 @@ export function createBrowser(label: string, timeoutMs = CLI_TIMEOUT_MS) {
   const close = (): void => {
     try {
       exec(["close"]);
-    } catch {
-      // the daemon may already be gone
+    } catch (error) {
+      const message = `Failed to close browser session ${session}`;
+      throw new Error(message, { cause: error });
     }
   };
   return {
