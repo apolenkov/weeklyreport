@@ -177,6 +177,18 @@ The active failed-job alert consumed by operators MUST threshold this gauge rath
 - **AND** neither the gauge nor the alert depends on `QueueEvents` having been
   subscribed at the moment each job failed
 
+#### Scenario: A job fails terminally before exhausting its retry budget
+
+- **GIVEN** a `pdf-export` job configured with `attempts: 3` throws an
+  unrecoverable error on its first attempt
+- **WHEN** BullMQ publishes the terminal `failed` queue event
+- **THEN** the event-driven failure counter (`cr_dlq_failed_total`) increments
+  by one for that queue
+- **AND** the failed job also appears in the authoritative failed-count gauge
+  on the next poll
+- **AND** ordinary retry transitions (`waiting`/`delayed`) never increment the
+  counter
+
 ### Requirement: A queue health probe MUST be bounded by a timeout
 
 `BullMQHealthIndicator.isHealthy` MUST NOT await `getJobCounts()` (or any Redis-backed probe) unboundedly.

@@ -64,7 +64,7 @@ export const httpRequestDurationSeconds = new Histogram({
 // state is tracked separately because events can be missed across restarts.
 export const dlqFailedTotal = new Counter({
   name: "cr_dlq_failed_total",
-  help: "Total BullMQ jobs that exhausted their retry budget",
+  help: "Total terminal BullMQ job failures, including early unrecoverable ones",
   labelNames: ["queue"] as const,
   registers: [metricsRegistry],
 });

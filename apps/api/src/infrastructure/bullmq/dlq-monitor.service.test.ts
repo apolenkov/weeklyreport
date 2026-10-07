@@ -2,6 +2,45 @@ import { Logger } from "@nestjs/common";
 import type { Queue } from "bullmq";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+// QueueEvents handlers are captured per instance so tests can emit the same
+// stream events BullMQ publishes — without a live Redis connection.
+vi.mock("bullmq", () => ({
+  QueueEvents: class {
+    static readonly instances: {
+      name: string;
+      handlers: Record<string, (...args: never[]) => void>;
+    }[] = [];
+
+    readonly handlers: Record<string, (...args: never[]) => void> = {};
+
+    constructor(readonly name: string) {
+      (
+        this.constructor as typeof import("bullmq").QueueEvents & {
+          instances: {
+            name: string;
+            handlers: Record<string, (...args: never[]) => void>;
+          }[];
+        }
+      ).instances.push(this);
+    }
+
+    on(event: string, handler: (...args: never[]) => void): this {
+      this.handlers[event] = handler;
+      return this;
+    }
+
+    close() {
+      return Promise.resolve();
+    }
+
+    disconnect() {
+      /* no-op for the test double */
+    }
+  },
+}));
+
+import { QueueEvents } from "bullmq";
+
 import type { EnvConfig } from "../config/env.schema";
 import {
   dlqFailedCurrent,
@@ -36,11 +75,10 @@ const STUB_MEMORY_CLIENT = {
 // queue connection.
 interface DlqTestSeam {
   recordTerminalFailure(
-    name: string,
-    queue: Pick<Queue, "getJob">,
+    name: QueueName,
     jobId: string,
     failedReason: string,
-  ): Promise<void>;
+  ): void;
 }
 
 function seam(): DlqTestSeam {
@@ -65,44 +103,115 @@ describe("DLQMonitorService.recordTerminalFailure", () => {
     vi.restoreAllMocks();
   });
 
-  it("does not increment on a non-terminal (retryable) failure", async () => {
+  it("increments once per received terminal failed event", () => {
     const inc = vi.spyOn(dlqFailedTotal, "inc");
-    const queue: Pick<Queue, "getJob"> = {
-      getJob: vi
-        .fn()
-        .mockResolvedValue({ opts: { attempts: 3 }, attemptsMade: 1 }),
-    };
 
-    await seam().recordTerminalFailure("pdf-export", queue, "job-2", "retry");
+    seam().recordTerminalFailure("pdf-export", "job-2", "render refused");
+    seam().recordTerminalFailure("pdf-export", "job-3", "render refused");
 
-    expect(inc).not.toHaveBeenCalled();
+    expect(inc).toHaveBeenCalledTimes(2);
+    expect(inc).toHaveBeenCalledWith({ queue: "pdf-export" });
   });
 
-  it("ignores a failure whose job no longer exists", async () => {
+  // An UnrecoverableError terminalizes the job mid-budget; the 'failed' event
+  // is already the terminal signal, so the counter must not gate on attempts.
+  it("counts an early unrecoverable failure that never exhausted retries", () => {
     const inc = vi.spyOn(dlqFailedTotal, "inc");
-    const queue: Pick<Queue, "getJob"> = {
-      getJob: vi.fn().mockResolvedValue(null),
-    };
 
-    await seam().recordTerminalFailure("pdf-export", queue, "gone", "boom");
-
-    expect(inc).not.toHaveBeenCalled();
-  });
-
-  it("treats an undefined attempts option as one attempt", async () => {
-    const inc = vi.spyOn(dlqFailedTotal, "inc");
-    const queue: Pick<Queue, "getJob"> = {
-      getJob: vi.fn().mockResolvedValue({ opts: {}, attemptsMade: 1 }),
-    };
-
-    await seam().recordTerminalFailure(
-      "email-reminder",
-      queue,
-      "job-default-attempts",
-      "boom",
+    seam().recordTerminalFailure(
+      "pdf-export",
+      "job-1-g1",
+      "payload is missing a valid generation",
     );
 
+    expect(inc).toHaveBeenCalledExactlyOnceWith({ queue: "pdf-export" });
+  });
+
+  it("counts a failed event whose job hash was already removed", () => {
+    // Retention (removeOnFail) or a manual removal can delete the job hash
+    // between the event and any later read; the event itself is the record.
+    const inc = vi.spyOn(dlqFailedTotal, "inc");
+
+    seam().recordTerminalFailure("email-reminder", "gone", "boom");
+
     expect(inc).toHaveBeenCalledExactlyOnceWith({ queue: "email-reminder" });
+  });
+
+  it("logs the failure without claiming a retry-budget exhaustion", () => {
+    const error = vi.spyOn(Logger.prototype, "error");
+
+    seam().recordTerminalFailure("pdf-export", "job-9", "renderer gone");
+
+    expect(error).toHaveBeenCalledExactlyOnceWith(
+      expect.stringContaining("job-9"),
+    );
+    const message = String(error.mock.calls[0]?.[0]);
+    expect(message).toContain("pdf-export");
+    expect(message).toContain("renderer gone");
+    expect(message).not.toMatch(/exhausted|attempts/i);
+  });
+});
+
+// The QueueEvents surface: only a terminal 'failed' event may count — the
+// per-attempt 'waiting'/'delayed' transitions of an ordinary retry must not.
+describe("DLQMonitorService failed-event wiring", () => {
+  beforeEach(() => {
+    vi.spyOn(Logger.prototype, "log").mockImplementation(() => {
+      /* silence */
+    });
+    vi.spyOn(Logger.prototype, "error").mockImplementation(() => {
+      /* silence */
+    });
+    vi.spyOn(Logger.prototype, "warn").mockImplementation(() => {
+      /* silence */
+    });
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  function queueEventsInstances(): {
+    name: string;
+    handlers: Record<string, (...args: never[]) => void>;
+  }[] {
+    return (
+      QueueEvents as unknown as {
+        instances: {
+          name: string;
+          handlers: Record<string, (...args: never[]) => void>;
+        }[];
+      }
+    ).instances;
+  }
+
+  it("counts 'failed' events and ignores 'waiting'/'delayed' retry transitions", async () => {
+    const inc = vi.spyOn(dlqFailedTotal, "inc");
+    const monitor = new DLQMonitorService(
+      STUB_REGISTRY,
+      STUB_ENV,
+      STUB_MEMORY_CLIENT,
+    );
+    try {
+      monitor.onModuleInit();
+      const pdfEvents = queueEventsInstances().find(
+        (instance) => instance.name === "pdf-export",
+      );
+      expect(pdfEvents?.handlers.failed).toBeTypeOf("function");
+      expect(pdfEvents?.handlers.waiting).toBeUndefined();
+      expect(pdfEvents?.handlers.delayed).toBeUndefined();
+
+      // An early terminal failure (e.g. UnrecoverableError on attempt 1 of 3)
+      // publishes the same 'failed' event as an exhausted retry budget.
+      pdfEvents?.handlers.failed?.({
+        jobId: "job-1-g1",
+        failedReason: "unrecoverable",
+      } as never);
+
+      expect(inc).toHaveBeenCalledExactlyOnceWith({ queue: "pdf-export" });
+    } finally {
+      await monitor.onModuleDestroy();
+    }
   });
 });
 

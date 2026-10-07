@@ -76,13 +76,9 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
 
     for (const name of QUEUE_NAMES) {
       const events = new QueueEvents(name, bullOptions);
-      const queue = this.registry.get(name);
 
       events.on("failed", ({ jobId, failedReason }) => {
-        // The QueueEvents emitter expects a void-returning listener and ignores
-        // any returned promise, so the async work is fire-and-forget. The
-        // handler never rejects (all awaits are guarded inside the method).
-        void this.recordTerminalFailure(name, queue, jobId, failedReason);
+        this.recordTerminalFailure(name, jobId, failedReason);
       });
 
       this.queueEvents.set(name, events);
@@ -123,28 +119,27 @@ export class DLQMonitorService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  // Sole owner of cr_dlq_failed_total — workers must not also inc. BullMQ emits
-  // 'failed' on every retry; only attemptsMade >= attempts is terminal.
-  private async recordTerminalFailure(
+  // Sole owner of cr_dlq_failed_total — workers must not also inc. QueueEvents
+  // 'failed' is published only by the terminal moveToFinished (a retryable
+  // failure emits 'waiting'/'delayed' instead), so every received event is a
+  // terminal failure — including UnrecoverableError deliveries that never
+  // exhausted their retry budget. The event payload is authoritative: the job
+  // hash may already be gone through retention or manual removal, and the
+  // event must still count.
+  private recordTerminalFailure(
     name: QueueName,
-    queue: Queue,
     jobId: string,
     failedReason: string,
-  ): Promise<void> {
+  ): void {
     try {
-      const job = await queue.getJob(jobId);
-      if (!job) return;
-      const attemptsConfigured = job.opts.attempts ?? 1;
-      if (job.attemptsMade >= attemptsConfigured) {
-        dlqFailedTotal.inc({ queue: name });
-        this.logger.error(
-          `[dlq] job ${jobId} on ${name} exhausted ${attemptsConfigured} attempts: ${failedReason}`,
-        );
-      }
+      dlqFailedTotal.inc({ queue: name });
+      this.logger.error(
+        `[dlq] job ${jobId} on ${name} failed terminally: ${failedReason}`,
+      );
     } catch (error) {
       // Don't let metrics-side bookkeeping crash the queue listener.
       this.logger.warn(
-        `[dlq] failed to inspect terminal failure for ${name}/${jobId}: ${errorMessage(error)}`,
+        `[dlq] failed to record terminal failure for ${name}/${jobId}: ${errorMessage(error)}`,
       );
     }
   }
