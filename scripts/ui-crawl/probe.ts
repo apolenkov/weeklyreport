@@ -63,7 +63,7 @@ export const pageProbeScript = (
   const name = (el) => {
     const by = el.getAttribute('aria-labelledby')?.split(/\s+/).map((id) => document.getElementById(id)?.textContent ?? '').join(' ');
     const labels = el.labels ? [...el.labels].map((l) => l.textContent).join(' ') : '';
-    return short([by, el.getAttribute('aria-label'), labels, el.getAttribute('title'), el.textContent, el.getAttribute('placeholder')].find((c) => c && String(c).trim()) || '', 100);
+    return String([by, el.getAttribute('aria-label'), labels, el.getAttribute('title'), el.textContent, el.getAttribute('placeholder')].find((c) => c && String(c).trim()) || '').replace(/\s+/g, ' ').trim();
   };
   const role = (el) => el.getAttribute('role') || ({A: 'link', BUTTON: 'button', SELECT: 'combobox', TEXTAREA: 'textbox', SUMMARY: 'button'})[el.tagName] || (el.tagName === 'INPUT' ? (el.type === 'checkbox' || el.type === 'radio' ? el.type : 'textbox') : null);
   const intentional = (el) => [el, ...el.querySelectorAll('*')].some((n) => { const s = getComputedStyle(n); return s.textOverflow === 'ellipsis' || (s.webkitLineClamp && s.webkitLineClamp !== 'none'); });

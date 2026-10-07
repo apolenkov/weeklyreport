@@ -106,7 +106,7 @@ function restore(
   if (outcome.escaped === outcome.before) return "escape";
   // An expander or toggle: pressing it again is cheaper than reloading the page.
   const reservedAt = pace("trpc", REPRESS_COST);
-  const again = repress(ctx.browser, control.selector, control.name);
+  const again = repress(ctx.browser, control);
   settleRate("trpc", reservedAt, REPRESS_COST, takeRequests(ctx.browser));
   if (again === outcome.before) return "toggle";
   settle(ctx, null, "reload");
