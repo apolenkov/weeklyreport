@@ -2,7 +2,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 
 import react from "@vitejs/plugin-react";
-import { defineConfig, mergeConfig } from "vitest/config";
+import { configDefaults, defineConfig, mergeConfig } from "vitest/config";
 
 import baseConfig from "../../vitest.base.config.ts";
 
@@ -20,11 +20,13 @@ const webConfig = defineConfig({
     // disabled in workers instead of emitting a warning for every access.
     execArgv: ["--no-experimental-webstorage"],
     globals: false,
-    // Reset every mock between tests (Vitest 4 restores the original vi.fn
+    // Reset every mock between tests (Vitest restores the original vi.fn
     // implementation) so implementations and history never leak across tests.
     mockReset: true,
     restoreMocks: true,
-    exclude: ["node_modules/**"],
+    // Standalone build copies and nested dependencies are generated artifacts,
+    // not additional owners of the source suite.
+    exclude: [...configDefaults.exclude, "**/.next/**"],
     // Coverage floors. Web has more UI code than the focused DOM suite drives,
     // so the bar is lower than api.
     coverage: {
