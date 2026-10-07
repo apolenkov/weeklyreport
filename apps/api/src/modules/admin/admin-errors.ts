@@ -114,6 +114,31 @@ export class AdminSelfLockoutError extends Error {
   }
 }
 
+// Archiving an absent project id (validated UUID, P2025 from the update)
+// → NOT_FOUND so the admin UI shows a row-removed state, not a generic 500.
+export class AdminProjectNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminProjectNotFoundError";
+  }
+}
+
+// Same classification for a missing reporting-group archive target.
+export class AdminReportingGroupNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminReportingGroupNotFoundError";
+  }
+}
+
+// Same classification for a missing reminder-policy delete target.
+export class AdminReminderPolicyNotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminReminderPolicyNotFoundError";
+  }
+}
+
 // The write would leave the project without an active administrator → CONFLICT.
 export class AdminLastAdminError extends Error {
   constructor(message: string) {

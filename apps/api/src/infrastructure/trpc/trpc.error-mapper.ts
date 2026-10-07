@@ -8,8 +8,11 @@ import {
   AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
   AdminPeriodStaleStateError,
+  AdminProjectNotFoundError,
+  AdminReminderPolicyNotFoundError,
   AdminReopenRequestAlreadyProcessedError,
   AdminReopenRequestNotFoundError,
+  AdminReportingGroupNotFoundError,
   AdminSelfLockoutError,
   AdminSnapshotConflictError,
   AdminUserActivityAssignmentConflictError,
@@ -177,6 +180,12 @@ export const DOMAIN_ERROR_CODES: readonly (readonly [
   [AdminUserConflictError, "CONFLICT"],
   // Targeted activate/deactivate on an absent user id (P2025) → NOT_FOUND.
   [AdminUserNotFoundError, "NOT_FOUND"],
+  // Catalog writes on an absent id share the same classification: archive of
+  // a missing project or reporting group, delete of a missing reminder
+  // policy — all validated-UUID P2025 misses → NOT_FOUND.
+  [AdminProjectNotFoundError, "NOT_FOUND"],
+  [AdminReportingGroupNotFoundError, "NOT_FOUND"],
+  [AdminReminderPolicyNotFoundError, "NOT_FOUND"],
   // Self-lockout is a client mistake; the last-admin rule is a state conflict.
   [AdminSelfLockoutError, "BAD_REQUEST"],
   [AdminLastAdminError, "CONFLICT"],

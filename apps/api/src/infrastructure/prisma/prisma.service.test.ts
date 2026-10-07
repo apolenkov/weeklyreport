@@ -62,8 +62,10 @@ async function captureQueryListener(
 }
 
 afterEach(async () => {
-  await Promise.all(openServices.splice(0).map((s) => poolOf(s).end()));
+  // Restore first: tests may mock pool.end to reject, and the real close
+  // must still run here.
   vi.restoreAllMocks();
+  await Promise.all(openServices.splice(0).map((s) => poolOf(s).end()));
 });
 
 describe("PrismaService pool error listener", () => {
@@ -210,7 +212,10 @@ describe("PrismaService shutdown logging", () => {
     expect(poolEndSpy).not.toHaveBeenCalled();
 
     disconnectGate.resolve();
-    await Promise.resolve();
+    // A macrotask flushes every queued microtask in the disconnect→end chain.
+    await new Promise((resolve) => {
+      setImmediate(resolve);
+    });
     expect(poolEndSpy).toHaveBeenCalledOnce();
     expect(logSpy).toHaveBeenCalledTimes(1);
 
@@ -221,5 +226,61 @@ describe("PrismaService shutdown logging", () => {
     expect(poolEndSpy).toHaveBeenCalledOnce();
     expect(logSpy).toHaveBeenNthCalledWith(2, "Database connection closed");
     expect(logSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("still ends the owned pool when $disconnect rejects, and rethrows that error", async () => {
+    const service = makeService();
+    const disconnectError = new Error("disconnect failed");
+    vi.spyOn(service, "$disconnect").mockRejectedValue(disconnectError);
+    const poolEndSpy = vi
+      .spyOn(poolOf(service), "end")
+      .mockResolvedValue(undefined);
+    const logSpy = vi
+      .spyOn(loggerOf(service), "log")
+      .mockImplementation(() => undefined);
+
+    await expect(service.onModuleDestroy()).rejects.toBe(disconnectError);
+
+    expect(poolEndSpy).toHaveBeenCalledOnce();
+    // The pool did close — the closed log stays honest.
+    expect(logSpy).toHaveBeenCalledWith("Database connection closed");
+  });
+
+  it("propagates a pool.end failure without logging a close", async () => {
+    const service = makeService();
+    vi.spyOn(service, "$disconnect").mockResolvedValue(undefined);
+    const endError = new Error("pool end failed");
+    vi.spyOn(poolOf(service), "end").mockRejectedValue(endError);
+    const logSpy = vi
+      .spyOn(loggerOf(service), "log")
+      .mockImplementation(() => undefined);
+
+    await expect(service.onModuleDestroy()).rejects.toBe(endError);
+
+    expect(logSpy).not.toHaveBeenCalledWith("Database connection closed");
+  });
+
+  it("throws an AggregateError carrying both failures when both steps reject", async () => {
+    const service = makeService();
+    const disconnectError = new Error("disconnect failed");
+    const endError = new Error("pool end failed");
+    vi.spyOn(service, "$disconnect").mockRejectedValue(disconnectError);
+    const poolEndSpy = vi
+      .spyOn(poolOf(service), "end")
+      .mockRejectedValue(endError);
+
+    const failure = await service.onModuleDestroy().then(
+      () => {
+        throw new Error("expected rejection");
+      },
+      (error: unknown) => error,
+    );
+
+    expect(poolEndSpy).toHaveBeenCalledOnce();
+    expect(failure).toBeInstanceOf(AggregateError);
+    expect((failure as AggregateError).errors).toEqual([
+      disconnectError,
+      endError,
+    ]);
   });
 });

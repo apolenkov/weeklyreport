@@ -9,7 +9,10 @@ import { AdminPrismaRepository } from "./admin.prisma-repository";
 import {
   AdminGroupProductConflictError,
   AdminPeriodOverlapError,
+  AdminProjectNotFoundError,
+  AdminReminderPolicyNotFoundError,
   AdminReopenRequestNotFoundError,
+  AdminReportingGroupNotFoundError,
   AdminUserConflictError,
   AdminUserNotFoundError,
   AdminUserPublishedHistoryError,
@@ -700,6 +703,69 @@ describe("AdminPrismaRepository — deactivate/activate, stages", () => {
     expect(policyDelete).toHaveBeenCalledWith({ where: { id: "policy-1" } });
     expect(ruleDeleteMany).not.toHaveBeenCalled();
   });
+
+  it.each([
+    {
+      method: "removeProject",
+      delegate: {
+        project: { update: vi.fn(() => Promise.reject({ code: "P2025" })) },
+      },
+      errorClass: AdminProjectNotFoundError,
+    },
+    {
+      method: "archiveReportingGroup",
+      delegate: {
+        reportingGroup: {
+          update: vi.fn(() => Promise.reject({ code: "P2025" })),
+        },
+      },
+      errorClass: AdminReportingGroupNotFoundError,
+    },
+    {
+      method: "deleteReminderPolicy",
+      delegate: {
+        reminderPolicy: {
+          delete: vi.fn(() => Promise.reject({ code: "P2025" })),
+        },
+      },
+      errorClass: AdminReminderPolicyNotFoundError,
+    },
+  ] as const)(
+    "$method translates a missing-row P2025 into a typed not-found error",
+    async ({ method, delegate, errorClass }) => {
+      const repo = new AdminPrismaRepository(
+        delegate as unknown as PrismaService,
+      );
+
+      await expect(repo[method]("missing-id")).rejects.toBeInstanceOf(
+        errorClass,
+      );
+    },
+  );
+
+  it.each([
+    { method: "removeProject", delegateKey: "project", verb: "update" },
+    {
+      method: "archiveReportingGroup",
+      delegateKey: "reportingGroup",
+      verb: "update",
+    },
+    {
+      method: "deleteReminderPolicy",
+      delegateKey: "reminderPolicy",
+      verb: "delete",
+    },
+  ] as const)(
+    "$method re-throws a non-P2025 rejection unchanged",
+    async ({ method, delegateKey, verb }) => {
+      const rejection = new Error("connection reset");
+      const repo = new AdminPrismaRepository({
+        [delegateKey]: { [verb]: vi.fn(() => Promise.reject(rejection)) },
+      } as unknown as PrismaService);
+
+      await expect(repo[method]("id-1")).rejects.toBe(rejection);
+    },
+  );
 
   it("listStageAssignmentCounts maps the groupBy rows", async () => {
     const groupBy = vi.fn(() =>

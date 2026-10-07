@@ -33,6 +33,7 @@ import { PrismaInstrumentation } from "@prisma/instrumentation";
 import { SentryPropagator } from "@sentry/opentelemetry";
 
 import { errorMessage } from "../../lib/error-message.js";
+import { parseOtlpEndpoint } from "../../lib/otlp-endpoint.js";
 
 export type OtelBootstrapResult =
   | {
@@ -70,8 +71,10 @@ export function decideOtelBootstrap(
   if ((env.OTEL_SDK_DISABLED ?? "").toLowerCase() === "true") {
     return { started: false, reason: "disabled-flag" };
   }
-  const endpoint = env.OTEL_EXPORTER_OTLP_ENDPOINT;
-  if (!endpoint) {
+  // Same contract as env.schema: whitespace means unset, a malformed
+  // nonblank endpoint throws before any exporter is constructed.
+  const endpoint = parseOtlpEndpoint(env.OTEL_EXPORTER_OTLP_ENDPOINT);
+  if (endpoint === undefined) {
     return { started: false, reason: "no-endpoint" };
   }
   const samplingRatio = samplingRatioFor(env.OTEL_TRACES_SAMPLER_ARG);

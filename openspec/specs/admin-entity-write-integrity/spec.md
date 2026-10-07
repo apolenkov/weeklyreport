@@ -258,3 +258,46 @@ accessible explanation.
 - **GIVEN** exactly one active administrator exists
 - **WHEN** another actor deactivates, deletes, or demotes that user
 - **THEN** the call fails with `CONFLICT` and the user stays an active admin
+
+### Requirement: Catalog writes on a missing target surface a typed not-found
+
+Archiving a project or reporting group and deleting a reminder policy each
+target a router-validated UUID. When the row is absent — including when it
+vanished between validation and the write — the Prisma missing-row error
+(P2025) MUST be translated into a typed domain error that maps to
+`NOT_FOUND` with a fixed, safe message. Every other failure MUST propagate
+unchanged into the generic masked internal error. Output schema parsing MUST
+stay outside the missing-row catch so a corrupt row never masquerades as a
+missing one, and repeated archive of an existing already-archived row MUST
+remain a success.
+
+#### Scenario: Archiving a missing project
+
+- **WHEN** `admin` project archive targets a validated UUID with no row
+- **THEN** the call fails with `NOT_FOUND` and a fixed safe message, never a
+  generic internal error
+
+#### Scenario: Archiving a missing reporting group
+
+- **WHEN** `admin` reporting-group archive targets a validated UUID with no
+  row
+- **THEN** the call fails with `NOT_FOUND` and a fixed safe message
+
+#### Scenario: Deleting a missing reminder policy
+
+- **WHEN** `admin` reminder-policy delete targets a validated UUID with no
+  row — including a repeated delete
+- **THEN** the call fails with `NOT_FOUND` and a fixed safe message
+
+#### Scenario: A non-missing failure stays internal
+
+- **WHEN** the catalog write fails for any reason other than a missing row
+  (database outage, unrelated constraint)
+- **THEN** the original error propagates unchanged into the masked
+  `INTERNAL_SERVER_ERROR`
+
+#### Scenario: Repeated archive of an existing row succeeds
+
+- **GIVEN** a project or reporting group row that is already archived
+- **WHEN** the archive write runs again
+- **THEN** it succeeds idempotently and no physical deletion occurs

@@ -103,8 +103,28 @@ export class PrismaService
 
   async onModuleDestroy(): Promise<void> {
     this.logger.log("Shutting down Prisma...");
-    await this.$disconnect();
-    await this.pool.end();
-    this.logger.log("Database connection closed");
+    // $disconnect and the owned pool end are independent teardown steps: a
+    // failing disconnect must not strand the pool, and a failing end must not
+    // hide the disconnect error — attempt both, then propagate. The wrapper
+    // keeps a (pathological) `reject(undefined)` distinct from success.
+    const disconnectFailure = await this.$disconnect().then(
+      () => null,
+      (error: unknown) => ({ error }),
+    );
+    const endFailure = await this.pool.end().then(
+      () => {
+        this.logger.log("Database connection closed");
+        return null;
+      },
+      (error: unknown) => ({ error }),
+    );
+    if (disconnectFailure !== null && endFailure !== null) {
+      throw new AggregateError(
+        [disconnectFailure.error, endFailure.error],
+        "prisma disconnect and pool end both failed",
+      );
+    }
+    if (disconnectFailure !== null) throw disconnectFailure.error;
+    if (endFailure !== null) throw endFailure.error;
   }
 }
