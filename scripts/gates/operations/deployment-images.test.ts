@@ -21,7 +21,7 @@ const REVIEWED_EXTERNAL_IMAGES = new Set([
   "pgvector/pgvector:0.8.7-pg15-bookworm@sha256:47af0b65960b14f1c6945aa4ccae37836c632e9a6fe0eea9160936e616e5b2e9",
   "postgres:15.19-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81",
   "redis:8.10.2-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0",
-  "renovate/renovate:41.173.1@sha256:e998e1218fe572e23278d8808186a310784f7cb2ac8055307183ffc51d3a59e5",
+  "renovate/renovate:44.144.1@sha256:884e67eb69cb92126eb7266f87f0022ad6a96f1c3c066710a93f755629af3bda",
 ]);
 
 function assertReviewedExternalImage(path: string, image: string): void {
