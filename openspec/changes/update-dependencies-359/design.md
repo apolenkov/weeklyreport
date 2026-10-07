@@ -19,6 +19,9 @@ rewrites. Prerelease dist-tags do not supersede a published stable release.
 - Check an exception by attempting the actual install, build, or relevant flow;
   record a scoped Renovate rule and a commit explanation when it fails.
 - Preserve period dual-state, role-coverage, weekly rollover, and database guards.
+- Fix the owner-requested NavBrand label-in-name defect using the visible
+  initials followed by visually hidden descriptive text; keep axe-core 4.14.0
+  and remove its temporary Renovate hold. Prove the regression before repair.
 
 ## Risks / Trade-offs
 

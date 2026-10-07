@@ -14,17 +14,20 @@ and container images.
 - Keep a lower version only when a concrete check fails; explain the failure in
   its commit and encode the restriction in Renovate.
 - Verify the complete application against the reserved disposable database.
+- Repair the owner-requested NavBrand label-in-name defect exposed by axe-core
+  4.14.0 and keep its accessibility check enabled.
 
 ## Capabilities
 
-No specification-level behavior changes; `skip_specs: true` applies. Existing
-dependency-integrity, dependency-vulnerability-scanning, and test-evidence-integrity
-contracts remain authoritative.
+The requested navigation fix updates `user-name-display`. Existing
+dependency-integrity, dependency-vulnerability-scanning, test-evidence-integrity,
+and error-trace-correlation contracts remain authoritative.
 
 ## Impact
 
 Workspace manifests, lockfile, build/runtime declarations, container references,
 Renovate configuration, and public SDK imports affected by migration.
+The navigation home link gains a native accessible name containing its initials.
 
 ## Non-goals
 
