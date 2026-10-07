@@ -4,13 +4,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@customreport/ui/components/ui/dropdown-menu";
-import {
-  ArrowLeft,
-  ArrowRight,
-  CalendarPlus,
-  Ellipsis,
-  Undo2,
-} from "lucide-react";
+import { CalendarPlus, Ellipsis, Undo2 } from "lucide-react";
 
 import { shortItemLabel } from "../../../shared/lib/format/short-label";
 import type {
@@ -62,31 +56,6 @@ function overflowHandlers({
         ? onResolvePlan
         : undefined,
   };
-}
-
-function QuickMove({
-  item,
-  onMove,
-}: {
-  readonly item: StatusOverviewItem;
-  readonly onMove: NonNullable<ActionProps["onMoveItem"]>;
-}) {
-  const nextWeek = item.source === "current";
-  const focusKey = `move:${item.source}:${identityOf(item)}`;
-  const label = `Quick move to ${nextWeek ? "next" : "this"} week: ${shortItemLabel(item.text)}`;
-  const Arrow = nextWeek ? ArrowRight : ArrowLeft;
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={nextWeek ? "Move to next week" : "Move to this week"}
-      data-overview-focus={focusKey}
-      onClick={() => onMove(item, nextWeek ? "next" : "current", focusKey)}
-      className={ICON_BUTTON_CLASS}
-    >
-      <Arrow aria-hidden="true" className="size-4" />
-    </button>
-  );
 }
 
 function MoreActions({
@@ -145,7 +114,7 @@ function MoreActions({
               move(
                 item,
                 nextWeek ? "next" : "current",
-                `move:${item.source}:${identity}`,
+                `more:${item.source}:${identity}`,
               )
             }
             className={MENU_ITEM_CLASS}
@@ -201,8 +170,8 @@ function RestoreAction({ item, onRestorePlan }: ActionProps) {
 }
 
 /**
- * Revealed on hover, focus within and tap: the quick week move, the overflow
- * menu and the recovery actions. Renders nothing when none applies.
+ * Revealed on hover, focus within and tap: the overflow menu (which carries
+ * the week move) and the recovery actions. Renders nothing when none applies.
  */
 export function ItemActionZone(props: ActionProps) {
   const overflow = overflowHandlers(props);
@@ -216,9 +185,6 @@ export function ItemActionZone(props: ActionProps) {
   if (!hasOverflow && !hasPlan && !hasRestore) return null;
   return (
     <div data-overview-item-actions className={REVEAL_CLASS}>
-      {overflow.move ? (
-        <QuickMove item={props.item} onMove={overflow.move} />
-      ) : null}
       <MoreActions item={props.item} {...overflow} />
       <PlanAction {...props} />
       <RestoreAction {...props} />

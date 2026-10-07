@@ -83,7 +83,7 @@ function OpenWorkList({
 }
 
 const SUMMARY =
-  "min-h-[var(--touch-target-min)] cursor-pointer rounded-[var(--radius-sm)] py-3 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
+  "min-h-[var(--touch-target-min)] cursor-pointer rounded-[var(--radius-sm)] py-2 text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
 
 function TerminalWorkBody({
   items,

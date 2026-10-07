@@ -1,4 +1,4 @@
-import type { MouseEvent } from "react";
+import { type MouseEvent, useState } from "react";
 
 import { countLabel } from "../../../shared/lib/format/pluralize";
 import { SlideStatusBadge } from "../../../shared/ui/feedback/slide-status-badge";
@@ -88,6 +88,7 @@ export function ReportHealthPulseView({
   readonly health: ReportHealthPulse;
   readonly onInspect: OpenHealthDetail;
 }) {
+  const [open, setOpen] = useState(false);
   const attention = health.units.filter(
     (unit) =>
       !unit.historical &&
@@ -99,13 +100,22 @@ export function ReportHealthPulseView({
   return (
     <section
       aria-label="Report health"
-      className="mb-5 min-w-0 rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-card)] px-4"
+      className="mb-5 min-w-0 rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-card)] px-4 md:mb-7"
     >
       {attention.length === 0 ? (
         <HealthyLine total={health.total} />
       ) : (
-        <details>
-          <summary className="min-h-[var(--touch-target-min)] cursor-pointer rounded-[var(--radius-sm)] py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]">
+        <details
+          open={open}
+          onToggle={(event) => setOpen(event.currentTarget.open)}
+        >
+          <summary
+            onClick={(event) => {
+              event.preventDefault();
+              setOpen(!open);
+            }}
+            className="min-h-[var(--touch-target-min)] cursor-pointer rounded-[var(--radius-sm)] py-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] md:py-4"
+          >
             <span className="font-semibold text-[var(--color-foreground)]">
               Report health
             </span>
@@ -114,20 +124,24 @@ export function ReportHealthPulseView({
               {`${health.blocked} of ${health.total} blocked · ${health.atRisk} of ${health.total} at risk · ${health.missing} of ${health.total} missing status`}
             </span>
           </summary>
-          <p className="text-xs text-[var(--color-muted-foreground)]">
-            {countLabel(
-              health.total,
-              "current reporting unit",
-              "current reporting units",
-            )}{" "}
-            · Products and activities
-          </p>
-          <HealthAttentionList units={attention} onInspect={onInspect} />
-          <p className="my-3 text-xs text-[var(--color-muted-foreground)]">
-            Select any unit name below to inspect its health. Missing status can
-            overlap with a problem. Status changes come from Risks &amp;
-            Blockers.
-          </p>
+          {open ? (
+            <>
+              <p className="text-xs text-[var(--color-muted-foreground)]">
+                {countLabel(
+                  health.total,
+                  "current reporting unit",
+                  "current reporting units",
+                )}{" "}
+                · Products and activities
+              </p>
+              <HealthAttentionList units={attention} onInspect={onInspect} />
+              <p className="my-3 text-xs text-[var(--color-muted-foreground)]">
+                Select any unit name below to inspect its health. Missing status
+                can overlap with a problem. Status changes come from Risks &amp;
+                Blockers.
+              </p>
+            </>
+          ) : null}
         </details>
       )}
     </section>

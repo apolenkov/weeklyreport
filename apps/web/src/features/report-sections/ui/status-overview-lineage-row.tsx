@@ -67,7 +67,7 @@ function EmptyLane({
   return (
     <div
       data-overview-lineage-lane={column.source}
-      className={`${TIMELINE_CELL} hidden md:min-h-36 md:flex md:flex-col md:items-center md:justify-center md:border-t-0 bg-[var(--color-surface-muted)]`}
+      className={`${TIMELINE_CELL} hidden md:min-h-24 md:flex md:flex-col md:items-center md:justify-center md:border-t-0 bg-[var(--color-surface-muted)]`}
     >
       <span
         aria-hidden="true"
@@ -132,7 +132,7 @@ function LineageRow({
             data-overview-lineage-lane={column.source}
             role="group"
             aria-labelledby={STATUS_OVERVIEW_COLUMN_HEADER_IDS[column.key]}
-            className={`${TIMELINE_CELL} block border-t border-[var(--color-border-subtle)] first:border-t-0 md:min-h-36 md:flex-col md:border-t-0 md:flex`}
+            className={`${TIMELINE_CELL} block border-t border-[var(--color-border-subtle)] first:border-t-0 md:min-h-24 md:flex-col md:border-t-0 md:flex`}
           >
             <MobileWeekLabel
               label={column.label}
@@ -200,7 +200,7 @@ export function LineageRowList({
 }) {
   if (rows.length === 0) {
     return (
-      <p className="px-4 py-3 text-sm text-[var(--color-muted-foreground)]">
+      <p className="px-4 py-2 text-sm text-[var(--color-muted-foreground)]">
         No items yet
       </p>
     );
