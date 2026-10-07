@@ -82,7 +82,7 @@ export function DocumentActionGroup({ children }: { children: ReactNode }) {
     <div
       role="group"
       aria-label="Document actions"
-      className="flex min-w-0 flex-wrap items-center justify-start gap-1.5 sm:justify-end"
+      className="flex min-w-0 flex-wrap items-center justify-start gap-1.5 max-sm:grid max-sm:grid-cols-2 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2 sm:justify-end"
     >
       {children}
     </div>
