@@ -5,7 +5,7 @@
 - [x] 1.3 Upgrade axe-core 4.14.0, repair NavBrand label-in-name, add regression coverage, and verify the real app without a Renovate exception.
 - [x] 1.4 Upgrade Vitest and coverage together, verifying complete unit suites.
 - [x] 1.5 Upgrade the lint plugin major with the full lint gate.
-- [ ] 1.6 Verify transitive overrides and encode proven compatibility restrictions.
+- [x] 1.6 Verify transitive overrides and encode proven compatibility restrictions.
 - [ ] 1.7 Upgrade pnpm separately with frozen install and workspace gates.
 
 ## 2. API and Web SDKs
