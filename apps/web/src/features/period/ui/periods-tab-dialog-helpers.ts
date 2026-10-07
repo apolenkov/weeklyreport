@@ -43,6 +43,9 @@ export function computeDeadlineError(args: {
   const { deadline, periodStart, periodEnd } = args;
   if (!deadline) return null;
   const dl = new Date(`${deadline}:00.000Z`);
+  // An unparseable value otherwise turns every bound comparison into a NaN
+  // comparison (all false) and sails through to the server as garbage input.
+  if (Number.isNaN(dl.getTime())) return "Enter a valid deadline.";
   if (periodStart) {
     const start = new Date(`${periodStart}T00:00:00.000Z`);
     if (dl < start) return "Deadline cannot be before period start.";
