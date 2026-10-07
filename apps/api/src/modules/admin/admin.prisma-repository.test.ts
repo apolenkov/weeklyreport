@@ -3,9 +3,11 @@ import { Prisma } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { createNullLogger } from "../../lib/logger.js";
 import type { PolicyApplicatorService } from "../reminders/index.js";
 import { LeadFormConstraintError } from "../report-sections/index.js";
 import { AdminPrismaRepository } from "./admin.prisma-repository";
+import { AdminStageAssignmentNotFoundError } from "./admin-errors";
 import {
   AdminGroupProductConflictError,
   AdminPeriodOverlapError,
@@ -74,16 +76,28 @@ describe("AdminPrismaRepository.createPeriodManual — reminder parity", () => {
     expect(result).toEqual(CREATED);
   });
 
-  it("propagates an applicator failure (period already committed)", async () => {
+  it("returns the committed period and logs an applicator failure", async () => {
+    // The period row already committed when the post-create hook runs, so an
+    // applicator failure is reported to the hourly missing-rule repair sweep,
+    // not propagated as a create failure.
     const applicator = {
       applyToPeriod: vi.fn(() =>
         Promise.reject(new Error("reminders DB down")),
       ),
     } as unknown as PolicyApplicatorService;
-    const repo = new AdminPrismaRepository(fakePrisma(), applicator);
+    const logger = { ...createNullLogger(), error: vi.fn() };
+    const repo = new AdminPrismaRepository(fakePrisma(), applicator, logger);
 
-    await expect(repo.createPeriodManual(INPUT)).rejects.toThrow(
-      "reminders DB down",
+    const result = await repo.createPeriodManual(INPUT);
+
+    expect(result).toEqual(CREATED);
+    expect(logger.error).toHaveBeenCalledWith(
+      "post-commit reminder policy application failed",
+      expect.objectContaining({
+        phase: "create-period-manual",
+        committed: true,
+        reportIds: [CREATED.id],
+      }),
     );
   });
 
@@ -1485,7 +1499,7 @@ describe("AdminPrismaRepository — stage-assignment write serialization", () =>
     ]);
   });
 
-  it("deleteStageAssignment propagates a missing-row failure unchanged", async () => {
+  it("deleteStageAssignment maps a missing row to a typed NOT_FOUND", async () => {
     const missing = { code: "P2025" };
     const tx = lockedTx([], ["report-1"], {
       delete: vi.fn(() => Promise.reject(missing)),
@@ -1493,11 +1507,22 @@ describe("AdminPrismaRepository — stage-assignment write serialization", () =>
     const { prisma, $transaction } = prismaForTransactions([tx]);
     const repo = new AdminPrismaRepository(prisma);
 
-    await expect(repo.deleteStageAssignment(ASSIGNMENT_ID)).rejects.toBe(
-      missing,
+    await expect(repo.deleteStageAssignment(ASSIGNMENT_ID)).rejects.toThrow(
+      AdminStageAssignmentNotFoundError,
     );
     // The failure still flows through the locked transaction, not around it.
     expect($transaction).toHaveBeenCalledTimes(1);
+  });
+
+  it("deleteStageAssignment propagates a non-P2025 failure unchanged", async () => {
+    const boom = new Error("connection reset");
+    const tx = lockedTx([], ["report-1"], {
+      delete: vi.fn(() => Promise.reject(boom)),
+    });
+    const { prisma } = prismaForTransactions([tx]);
+    const repo = new AdminPrismaRepository(prisma);
+
+    await expect(repo.deleteStageAssignment(ASSIGNMENT_ID)).rejects.toBe(boom);
   });
 
   it("saveStageAssignment retries a compound-key P2002 in a second fully-locked transaction", async () => {

@@ -2,6 +2,7 @@ import { type AdminSnapshot, adminSnapshotSchema } from "@customreport/shared";
 import { Prisma } from "@prisma/client";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { reconcileRestoredProjectAssignment } from "../../lib/project-assignment.js";
 import { lockStatusGraph } from "../../lib/status-graph-lock.js";
 import { lockAndAssertGroupHead } from "../../lib/user-activity-assignment.js";
@@ -110,6 +111,7 @@ export async function saveSnapshot(
   prisma: PrismaService,
   policyApplicator: PolicyApplicatorService | undefined,
   snapshot: AdminSnapshot,
+  logger: AppLogger = createNullLogger(),
 ): Promise<AdminSnapshot> {
   // Repository callers can bypass the public service, so validate here before
   // opening a transaction. Non-viewer users must carry their explicit group;
@@ -169,11 +171,21 @@ export async function saveSnapshot(
   // Post-commit so applicator failure cannot roll back periods. Skip pairs the
   // snapshot already wrote (would clobber restored status) and pass `now` so
   // already-elapsed instants from an old snapshot are not re-dispatched.
-  await applyPoliciesToNewPeriods(
+  const policyFailures = await applyPoliciesToNewPeriods(
     policyApplicator,
     parsedSnapshot.reminderRules,
     newlyCreatedPeriods,
   );
+  if (policyFailures.length > 0) {
+    // The restore transaction already committed; the hourly
+    // RemindersPolicyRepairScheduler fills in the missing rules next sweep.
+    logger.error("post-commit reminder policy application failed", {
+      phase: "snapshot-restore",
+      committed: true,
+      reportIds: policyFailures.map((failure) => failure.periodId),
+      errors: policyFailures.map((failure) => failure.error),
+    });
+  }
 
   return getSnapshot(prisma);
 }

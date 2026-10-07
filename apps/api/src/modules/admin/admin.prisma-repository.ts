@@ -14,6 +14,8 @@ import type {
 import { Inject, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { APP_LOGGER } from "../../lib/audit-logger.js";
+import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { PolicyApplicatorService } from "../reminders/index.js";
 import * as entityWriteQueries from "./admin-entity-write.queries";
 import * as groupQueries from "./admin-group.queries";
@@ -50,6 +52,8 @@ export class AdminPrismaRepository implements AdminRepository {
     // covers the new period's deadline. Wired in admin.module.ts.
     @Inject(PolicyApplicatorService)
     private readonly policyApplicator?: PolicyApplicatorService,
+    @Inject(APP_LOGGER)
+    private readonly logger: AppLogger = createNullLogger(),
   ) {}
 
   // ---- AppSettings ----
@@ -116,6 +120,7 @@ export class AdminPrismaRepository implements AdminRepository {
       this.prisma,
       this.policyApplicator,
       snapshot,
+      this.logger,
     );
   }
 
@@ -164,9 +169,20 @@ export class AdminPrismaRepository implements AdminRepository {
     );
     // Materialize one ReminderRule per active policy on the fresh period. `now`
     // is forwarded so a backfilled period with a past deadline does not arm
-    // elapsed reminders as active. Runs after the create; errors propagate.
+    // elapsed reminders as active. Runs after the create commits: a hook
+    // failure is logged for the hourly missing-rule repair sweep, not
+    // propagated — the period row already exists.
     if (this.policyApplicator) {
-      await this.policyApplicator.applyToPeriod(created.id, now);
+      try {
+        await this.policyApplicator.applyToPeriod(created.id, now);
+      } catch (error: unknown) {
+        this.logger.error("post-commit reminder policy application failed", {
+          phase: "create-period-manual",
+          committed: true,
+          reportIds: [created.id],
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
     return created;
   }

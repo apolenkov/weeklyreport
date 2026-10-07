@@ -262,19 +262,37 @@ const restoredPolicyIdsByReport = (
     ),
   );
 
+export interface PostCommitPolicyFailure {
+  readonly periodId: string;
+  readonly error: string;
+}
+
+// Runs after the restore transaction commits: one period's applicator failure
+// must not skip the rest or fail the already-committed restore. Failures are
+// returned so the caller can log them; the hourly missing-rule repair sweep
+// converges them later.
 export async function applyPoliciesToNewPeriods(
   policyApplicator: PolicyApplicatorService | undefined,
   reminderRules: AdminSnapshot["reminderRules"],
   periods: readonly NewlyCreatedPeriod[],
-): Promise<void> {
-  if (policyApplicator === undefined) return;
+): Promise<PostCommitPolicyFailure[]> {
+  const failures: PostCommitPolicyFailure[] = [];
+  if (policyApplicator === undefined) return failures;
   const policyIdsByReport = restoredPolicyIdsByReport(reminderRules);
   const now = new Date();
   for (const period of periods) {
-    await policyApplicator.applyToPeriod(
-      period.id,
-      now,
-      policyIdsByReport.get(period.id),
-    );
+    try {
+      await policyApplicator.applyToPeriod(
+        period.id,
+        now,
+        policyIdsByReport.get(period.id),
+      );
+    } catch (error: unknown) {
+      failures.push({
+        periodId: period.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
+  return failures;
 }
