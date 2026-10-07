@@ -33,7 +33,6 @@ export const STALL_MS = 5000;
 export const DOM_GRACE_MS = 400;
 export const VISIT_ATTEMPTS = 2;
 /** Leading characters of a control's name that must match before it is pressed again. */
-export const REPRESS_NAME_CHARS = 20;
 export const SECONDS_PER_MINUTE = 60;
 /** How long a page that is still returning to its parent state is waited for before a control counts as gone. */
 export const RETURN_WAIT_MS = 3000;
