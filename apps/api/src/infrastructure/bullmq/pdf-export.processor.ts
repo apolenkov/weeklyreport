@@ -28,6 +28,7 @@ import { RawBullMqProcessor } from "./raw-bullmq-processor.js";
 import { WorkerLivenessRegistry } from "./worker-liveness.registry.js";
 import {
   describeJobFailureTrace,
+  jobDataStringField,
   type JobTraceContext,
 } from "./worker-observability.js";
 
@@ -102,31 +103,38 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
     );
   }
 
-  protected readonly onJobFailed = (
+  // Awaiting markTerminalFailure keeps its rejection inside the worker's
+  // failure-hook wrapper; a detached call could surface an unhandled
+  // rejection when the payload is malformed.
+  protected readonly onJobFailed = async (
     job: Job<PdfExportJobData> | undefined,
     error: Error,
-  ): void => {
+  ): Promise<void> => {
     const { logFields: correlation } = describeJobFailureTrace(job?.data);
-    void this.markTerminalFailure(job, correlation);
+    // job.data is untrusted Redis JSON: identity extraction is null/primitive
+    // safe, and a rejected identity still yields one diagnostic log.
+    const identity = job ? pdfExportPayloadIdentity(job.data) : null;
 
     this.logger.error("pdf-export job failed", {
-      jobId: job?.data.jobId,
-      reportId: job?.data.reportId,
+      jobId: identity?.jobId,
+      reportId: identity?.reportId,
       attempt: job?.attemptsMade,
       ...correlation,
       error: error.message,
     });
+
+    await this.markTerminalFailure(job, identity, correlation);
   };
 
   private async markTerminalFailure(
     job: Job<PdfExportJobData> | undefined,
+    identity: PdfExportJobIdentity | null,
     correlation: Readonly<Record<string, string>>,
   ): Promise<void> {
-    const identity = job ? pdfExportPayloadIdentity(job.data) : null;
     if (!job || !identity || !matchesQueueJob(job, identity)) {
       this.logger.error("pdf-export failed event identity rejected", {
         queueJobId: job?.id,
-        jobId: job?.data.jobId,
+        jobId: jobDataStringField(job?.data, "jobId"),
       });
       return;
     }
@@ -157,7 +165,7 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
       );
     } catch (markError: unknown) {
       this.logger.error("pdf-export failed-state update failed", {
-        jobId: job.data.jobId,
+        jobId: identity.jobId,
         ...correlation,
         error: errorMessage(markError),
       });
@@ -167,6 +175,13 @@ export class PdfExportProcessor extends RawBullMqProcessor<PdfExportJobData> {
   protected readonly processJob = async (
     job: Job<PdfExportJobData>,
   ): Promise<{ artifactUrl: string; checksum: string }> => {
+    // Redis JSON is untrusted: a null or primitive payload cannot even be
+    // destructured, so reject it unrecoverably before any identity, token,
+    // render, or artifact work.
+    const rawData: unknown = job.data;
+    if (typeof rawData !== "object" || rawData === null) {
+      throw new UnrecoverableError("pdf-export job payload is not an object");
+    }
     const { reportId, jobId, requestedBy, generation } = job.data;
     // A payload without a valid generation can never render safely — fail the
     // job unrecoverably rather than substitute the row's current generation.

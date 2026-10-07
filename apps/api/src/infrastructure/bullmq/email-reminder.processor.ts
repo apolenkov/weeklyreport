@@ -22,7 +22,10 @@ import type { EnvConfig } from "../config/env.schema";
 import { EMAIL_PORT, type EmailPort } from "../email/email.service";
 import { RawBullMqProcessor } from "./raw-bullmq-processor.js";
 import { WorkerLivenessRegistry } from "./worker-liveness.registry.js";
-import { describeJobFailureTrace } from "./worker-observability.js";
+import {
+  describeJobFailureTrace,
+  jobDataStringField,
+} from "./worker-observability.js";
 export type EmailReminderJobData = ReminderQueueJobEnvelope;
 
 // null means "use the SMTP_FROM env default".
@@ -71,18 +74,21 @@ export class EmailReminderProcessor extends RawBullMqProcessor<EmailReminderJobD
   ): void => {
     const { correlationId, logFields, traceparent, traceId } =
       describeJobFailureTrace(job?.data);
+    // job.data is untrusted Redis JSON: a null or primitive payload must not
+    // crash the failure hook, so the id comes through the string-field guard.
+    const executionId = jobDataStringField(job?.data, "executionId");
     if (traceparent !== undefined && traceId === undefined) {
       // A malformed traceparent means the enqueuer emitted a bad carrier —
       // reject it loudly so the linkage gap is diagnosable, not silent.
       this.logger.warn("email-reminder job failed with malformed traceparent", {
-        executionId: job?.data.executionId,
+        executionId,
         attempt: job?.attemptsMade,
         traceparent,
         ...(correlationId ? { correlationId } : {}),
       });
     }
     this.logger.error("email-reminder job failed", {
-      executionId: job?.data.executionId,
+      executionId,
       attempt: job?.attemptsMade,
       ...logFields,
       error: error.message,
