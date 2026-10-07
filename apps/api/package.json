@@ -52,7 +52,7 @@
     "ioredis": "^6.0.0",
     "jsonwebtoken": "^9.0.3",
     "luxon": "catalog:",
-    "nestjs-cls": "^6.2.2",
+    "nestjs-cls": "^7.0.1",
     "nodemailer": "^10.0.16",
     "passport": "^0.7.0",
     "pg": "^8.23.1",
