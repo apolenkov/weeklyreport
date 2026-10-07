@@ -3,7 +3,7 @@
 - [x] 1.1 Inventory stable published versions and upstream migration guidance.
 - [x] 1.2 Update compatible patch/minor dependencies and verify the workspace.
 - [x] 1.3 Verify axe-core 4.14.0 on the real app; retain 4.13.0 after its new rule fails, with evidence and a scoped Renovate ignore.
-- [ ] 1.4 Upgrade Vitest and coverage together, verifying complete unit suites.
+- [x] 1.4 Upgrade Vitest and coverage together, verifying complete unit suites.
 - [ ] 1.5 Upgrade the lint plugin major with the full lint gate.
 - [ ] 1.6 Verify transitive overrides and encode proven compatibility restrictions.
 - [ ] 1.7 Upgrade pnpm separately with frozen install and workspace gates.
