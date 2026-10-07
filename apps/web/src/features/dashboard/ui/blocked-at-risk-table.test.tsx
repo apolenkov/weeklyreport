@@ -79,7 +79,7 @@ describe("BlockedAtRiskTable — grouping by product", () => {
     expect(screen.getAllByText("Marketing Portal")).toHaveLength(1);
     const card = headings[0]?.closest("div.overflow-hidden");
     if (!(card instanceof HTMLElement))
-      throw new Error("expected product card");
+      throw new TypeError("expected product card");
     expect(within(card).getByText("MP")).toBeVisible();
     expect(within(card).getByText("Anna · Boris")).toBeVisible();
     expect(within(card).getAllByText("Blocked")).toHaveLength(2);
