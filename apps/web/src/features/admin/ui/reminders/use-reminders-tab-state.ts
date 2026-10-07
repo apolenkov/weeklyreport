@@ -117,11 +117,16 @@ function useRemindersListState(policies: readonly AdminReminderPolicyView[]) {
   const [search, setSearch] = useState("");
   const [pendingDelete, setPendingDelete] =
     useState<AdminReminderPolicyView | null>(null);
-  // Id of the reminder whose own save/remove is in flight — so a mutation
-  // disables only that row's controls, not the whole list.
-  const [busyId, setBusyId] = useState<string | null>(null);
-  // Captured once so the next-send line is stable across re-renders.
-  const now = useMemo(() => new Date(), []);
+  // Ids of reminders whose own save/remove is in flight — so each mutation
+  // disables only that row's controls, not the whole list. A set, not a
+  // single id: overlapping row toggles must not free a row that is still
+  // pending nor clear a sibling's busy state on settle.
+  const [busyIds, setBusyIds] = useState<ReadonlySet<string>>(
+    () => new Set<string>(),
+  );
+  // Captured per render: a mount-only memo would keep showing a fireAt that
+  // already passed as "upcoming" for as long as the tab stays open.
+  const now = new Date();
 
   const normalizedSearch = search.trim().toLowerCase();
   const filteredPolicies = useMemo(
@@ -134,8 +139,8 @@ function useRemindersListState(policies: readonly AdminReminderPolicyView[]) {
     setSearch,
     pendingDelete,
     setPendingDelete,
-    busyId,
-    setBusyId,
+    busyIds,
+    setBusyIds,
     now,
     filteredPolicies,
   };
@@ -181,19 +186,31 @@ export function useRemindersTabState(
       );
     },
     handleToggleActive: (policy: AdminReminderPolicyView) => {
-      listState.setBusyId(policy.id);
+      listState.setBusyIds((previous) => new Set(previous).add(policy.id));
       toggleMut.mutate(toggledPayload(policy), {
         onSuccess: () => toast.success("Reminder updated"),
-        onSettled: () => listState.setBusyId(null),
+        onSettled: () =>
+          listState.setBusyIds((previous) => {
+            const next = new Set(previous);
+            next.delete(policy.id);
+            return next;
+          }),
       });
     },
     handleConfirmRemove: () => {
       const target = listState.pendingDelete;
       if (!target) return;
-      listState.setBusyId(target.id);
+      listState.setBusyIds((previous) => new Set(previous).add(target.id));
       removeMut.mutate(
         { id: target.id },
-        { onSettled: () => listState.setBusyId(null) },
+        {
+          onSettled: () =>
+            listState.setBusyIds((previous) => {
+              const next = new Set(previous);
+              next.delete(target.id);
+              return next;
+            }),
+        },
       );
       listState.setPendingDelete(null);
     },

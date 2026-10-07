@@ -77,7 +77,7 @@ export function RemindersTab({
         derivedRulesByPolicyId={derivedRulesByPolicyId}
         editor={state.editor}
         editorProps={editorProps}
-        busyId={state.busyId}
+        busyIds={state.busyIds}
         now={state.now}
         onNewReminder={state.handleNewReminder}
         onToggleActive={state.handleToggleActive}
