@@ -50,20 +50,25 @@ const documentBatches = (
   );
 };
 
+const INVALID_EMBEDDING_VECTOR =
+  "Provider returned an invalid embedding vector";
+
 const finiteVector = (value: unknown, dimensions: number): EmbeddingVector => {
   if (!Array.isArray(value) || value.length !== dimensions) {
-    throw new OpenAiCompatibleProtocolError(
-      "Provider returned an invalid embedding vector",
-    );
+    throw new OpenAiCompatibleProtocolError(INVALID_EMBEDDING_VECTOR);
   }
-  return value.map((number) => {
+  const vector = value.map((number) => {
     if (typeof number !== "number" || !Number.isFinite(number)) {
-      throw new OpenAiCompatibleProtocolError(
-        "Provider returned an invalid embedding vector",
-      );
+      throw new OpenAiCompatibleProtocolError(INVALID_EMBEDDING_VECTOR);
     }
     return number;
   });
+  // Cosine distance is undefined for a zero vector, so it can never rank:
+  // refuse it as a protocol failure rather than caching or preparing it.
+  if (!vector.some((component) => component !== 0)) {
+    throw new OpenAiCompatibleProtocolError(INVALID_EMBEDDING_VECTOR);
+  }
+  return vector;
 };
 
 const embedBatch = async (

@@ -58,6 +58,30 @@ The Prisma schema and PostgreSQL init migration MUST define pgvector support and
 - **WHEN** an adapter attempts to persist a vector whose length differs from the declared dimensions
 - **THEN** PostgreSQL rejects the row
 
+### Requirement: Zero vectors are refused before caching or ranking
+
+Every cosine-vector admission boundary — the provider embedding adapter, the semantic repository upsert and query-vector validation, and the capability embedding probe — MUST reject a vector that has the declared dimensions and finite components but no nonzero component, because cosine distance is undefined for a zero vector. A provider batch containing a zero vector MUST surface a controlled technical failure, never `no_results` and never a completed preparation. PostgreSQL MUST enforce the same invariant with a `vector_norm("vector") > 0` CHECK, and the migration that introduces it MUST remove only persisted zero-norm cache rows so their content hashes are rebuilt through the existing read-through/preparation path. Ranking that surfaces a non-finite similarity MUST continue to fail closed rather than silently dropping the match.
+
+#### Scenario: Zero query or document vector refused
+
+- **WHEN** a zero vector reaches the embedding adapter, the cache upsert, or the rank query validation
+- **THEN** it is rejected before any row is persisted or ranked
+
+#### Scenario: Provider returns a zero vector in a batch
+
+- **WHEN** one document embedding in a provider batch is the zero vector
+- **THEN** the whole response fails as a technical provider failure and preparation does not complete
+
+#### Scenario: Sparse nonzero vector stays valid
+
+- **WHEN** a finite vector of the declared dimensions contains at least one nonzero component
+- **THEN** it is admitted for caching and ranking
+
+#### Scenario: Persisted zero-norm rows are invalidated
+
+- **WHEN** the nonzero-vector migration runs against a cache holding zero-norm rows
+- **THEN** only those rows are removed and their hashes are rebuilt through the existing missing-hash workflow
+
 ### Requirement: Ranking performs a bounded exact pgvector comparison
 
 The semantic repository MUST parameterize the query vector and filter cache rows by provider, model, input version, dimensions, and the complete allowed content-hash set before cosine-distance ordering. The first version MUST use exact comparison and MUST NOT require an HNSW or IVFFlat index.

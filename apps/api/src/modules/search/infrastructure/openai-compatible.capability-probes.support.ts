@@ -94,6 +94,8 @@ export const embeddingContract = async (
     throw new OpenAiCompatibleProtocolError("embedding_vector_invalid");
   }
   const dimensions = firstVector.length;
+  // A zero vector has no defined cosine distance, so a lane that returns one
+  // can never rank: it fails the contract instead of marking readiness passed.
   if (
     !Number.isInteger(dimensions) ||
     dimensions < 1 ||
@@ -103,7 +105,8 @@ export const embeddingContract = async (
         vector.length !== dimensions ||
         vector.some(
           (value) => typeof value !== "number" || !Number.isFinite(value),
-        ),
+        ) ||
+        !vector.some((value) => value !== 0),
     )
   ) {
     throw new OpenAiCompatibleProtocolError("embedding_vector_invalid");
