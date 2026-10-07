@@ -3,9 +3,10 @@ NS=${NS:-wr-tester}
 STATE_DIR=${STATE_DIR:-$HOME/.local/state/wr-tester}
 HERE=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 REPO=$(cd "$HERE/../.." && pwd)
-# Browser-facing ports are fixed: the SAML URLs in values-tester.yaml use 8080/8081.
-APP_PORT=8080
-KC_PORT=8081
+# Browser-facing ports. Override them (with NS and STATE_DIR) to run a second
+# stand beside an existing one: start.sh feeds them into the SAML URLs.
+APP_PORT=${APP_PORT:-8080}
+KC_PORT=${KC_PORT:-8081}
 MAIL_PORT=${MAIL_PORT:-8026}
 
 # pf_start <name> <svc> <local-port> <remote-port>: background port-forward, pid kept in STATE_DIR.

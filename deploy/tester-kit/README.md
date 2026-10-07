@@ -10,7 +10,13 @@
 - `kubectl`, `helm`, `openssl`, `envsubst`, `curl`, а также Node 26 и `pnpm` (они нужны для загрузки демо-данных).
 - Копия репозитория: `git clone https://forge.example.com/example/weeklyreport.git`.
 - `docker` (он есть в OrbStack и Docker Desktop).
-- Свободные порты `8080`, `8081`, `8026`. Если на машине уже работает другой стенд, остановите его.
+- Свободные порты `8080`, `8081`, `8026`. Если на машине уже работает другой стенд, остановите его —
+  или поднимите второй рядом на других портах и в другом namespace:
+
+  ```bash
+  NS=wr-tester-2 STATE_DIR=~/.local/state/wr-tester-2 \
+    APP_PORT=9080 KC_PORT=9081 MAIL_PORT=9026 deploy/tester-kit/start.sh
+  ```
 
 ## Запуск
 
