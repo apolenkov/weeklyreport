@@ -24,6 +24,8 @@ export interface LiveAccessScope {
 // Single source of truth for the revoked/deactivated decision across every
 // JWT-admitting entry path. Fail-open Redis fast path + fail-closed Prisma
 // isActive read — see openspec/specs/jwt-session-integrity (two-tier gate).
+// A stale Redis member from a failed activation SREM converges through the
+// service's hourly reconcileRevokedSet sweep, not through this hot path.
 // The same read returns the live role and group (with its name) so callers
 // never trust the JWT copies after an admin change, and, given the active
 // report, the user's own section id (and, on request, a viewer's group grants):

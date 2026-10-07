@@ -62,6 +62,7 @@ export function createAdminUsersProcedures(deps: AdminUsersDeps) {
       }),
 
     // Clear Redis revoke so new logins are not blocked by a stale revoke set.
+    // A failed removal converges via the service's hourly reconcile sweep.
     activateUser: adminProcedure
       .input(z.object({ userId: z.uuid() }))
       .use(captureMutationAuditInputMiddleware)
