@@ -134,6 +134,13 @@ separate Edit mode.
 - **THEN** it announces that the lead is offline and that changes save when the connection returns
 - **AND** it does not show only the generic unsaved-update copy
 
+#### Scenario: The submit-readiness summary cannot claim a paused save is in flight
+
+- **GIVEN** the draft autosave is paused because the browser is offline
+- **WHEN** the "Before you submit" summary renders
+- **THEN** its autosave line explains the offline pause and that changes save when the connection returns
+- **AND** it does not claim that draft changes are actively saving
+
 #### Scenario: Discarding an editor after a failed save reverts the board
 
 - **GIVEN** Save update applied an edit to the draft and the save failed
