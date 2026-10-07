@@ -115,7 +115,7 @@ function AutomaticStatusChanges({
       className="mt-2 rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-hover)]/40"
       data-testid="lead-submit-automatic-statuses"
     >
-      <summary className="cursor-pointer px-4 py-2 text-sm marker:text-[var(--color-muted-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-ring)]">
+      <summary className="min-h-[var(--touch-target-min)] cursor-pointer px-4 py-2 text-sm marker:text-[var(--color-muted-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-ring)]">
         <span className="font-semibold text-[var(--color-foreground)]">
           When you submit:
         </span>{" "}

@@ -24,7 +24,7 @@ import {
   waitText,
 } from "./browser.js";
 import { registerE2eHooks } from "./fixtures.js";
-import { assertFocused } from "./focus.js";
+import { assertFocused, centerControl } from "./focus.js";
 import {
   clickBackdrop,
   LEAD_FORM_FIXTURE,
@@ -419,12 +419,7 @@ async function prepareSubmission(): Promise<void> {
         "checkbox",
         "Development",
       );
-      // Park the checkbox mid-viewport before checking it: the sticky
-      // period toolbar (top) and the fixed completion bar (bottom) cover
-      // targets that minimal edge scrolling leaves at the viewport edge,
-      // and scrollintoview is a no-op for already-visible targets.
-      await command(["eval", "scrollTo(0, 0)"]);
-      await command(["scrollintoview", development]);
+      await centerControl(development);
       await command(["check", development]);
     } else {
       assert.match(namedScope(await snapshot(), form).snapshot, /Development/);
