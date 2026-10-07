@@ -57,6 +57,10 @@ fi
 helm upgrade --install weeklyreport "$REPO/deploy/helm/weeklyreport" -n "$NS" \
   -f "$HERE/values-tester.yaml" \
   --set "images.registry=$REGISTRY" --set "images.tag=$TAG" "${PULL_ARGS[@]}" \
+  --set "api.env.FRONTEND_URL=http://localhost:$APP_PORT" \
+  --set "api.env.APP_BASE_URL=http://localhost:$APP_PORT" \
+  --set "api.env.KEYCLOAK_SAML_CALLBACK_URL=http://localhost:$APP_PORT/auth/saml/callback" \
+  --set "api.env.KEYCLOAK_SAML_ENTRY_POINT=http://localhost:$KC_PORT/realms/weeklyreport/protocol/saml" \
   --set-string "api.env.KEYCLOAK_SAML_CERT=$(cat "$STATE_DIR/idp-cert.b64")" \
   --wait --timeout 10m
 

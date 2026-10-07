@@ -23,7 +23,7 @@ spec:
             [
               "start-dev",
               "--import-realm",
-              "--hostname=http://localhost:8081",
+              "--hostname=${KC_ORIGIN}",
               "--http-enabled=true",
             ]
           env:
