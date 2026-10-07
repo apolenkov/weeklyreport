@@ -23,7 +23,7 @@ function prefixed(result: RoleResult, prefix: string): RoleResult {
       findings: run.findings.map((f) => ({ ...f, shot: shot(f.shot) })),
       pages: run.pages.map((page) => ({
         ...page,
-        shot: shot(page.shot) ?? "",
+        shot: shot(page.shot),
         steps: page.steps.map((s) => ({ ...s, shot: shot(s.shot) })),
         ...(page.states
           ? {

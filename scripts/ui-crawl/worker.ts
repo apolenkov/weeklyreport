@@ -128,7 +128,7 @@ function relativize(
     findings: findings.map((f) => ({ ...f, shot: rel(f.shot) })),
     pages: pages.map((p) => ({
       ...p,
-      shot: `shots/${name}/${p.shot}`,
+      shot: rel(p.shot),
       steps: p.steps.map((s) => ({ ...s, shot: rel(s.shot) })),
       ...(p.states
         ? {
