@@ -21,7 +21,10 @@ import {
   providerTestExecutionMessage,
   useAiProviderMutations,
 } from "./ai-provider-mutations";
-import { selectObservedRevision } from "./ai-provider-revision-selection";
+import {
+  selectObservedRevision,
+  useSavedRevisionPin,
+} from "./ai-provider-revision-selection";
 import { AiProviderStateSummary } from "./ai-provider-state-summary";
 
 type AiProviderMutations = ReturnType<typeof useAiProviderMutations>;
@@ -204,8 +207,13 @@ export function AiProviderCard({
         ? pollIntervalMs
         : false,
   });
-  const [savedRevision, setSavedRevision] =
-    useState<AiProviderConfigurationRead | null>(null);
+  // The pin records when the revision was saved so a post-save refetch that
+  // still lacks it (external discard / history window) can retire it instead
+  // of displaying a phantom revision forever.
+  const { savedRevision, setSavedRevision } = useSavedRevisionPin(
+    aiQ.data,
+    aiQ.dataUpdatedAt,
+  );
   const [message, setMessage] = useState<string | null>(null);
   const [operationFailed, setOperationFailed] = useState(false);
   const mutations = useAiProviderMutations({
