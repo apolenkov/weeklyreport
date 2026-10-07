@@ -12,7 +12,10 @@ export function useHeaderActionsVisibility() {
   useEffect(() => {
     if (!target || typeof IntersectionObserver === "undefined") return;
     const observer = new IntersectionObserver((entries) => {
-      setObservedVisible(entries.some((entry) => entry.isIntersecting));
+      // A batch can coalesce enter+exit transitions for the same sentinel;
+      // the last entry is the current truth, `some()` would report a stale
+      // intersect after a fast fling through the zone.
+      setObservedVisible(entries.at(-1)?.isIntersecting ?? true);
     });
     observer.observe(target);
     return () => observer.disconnect();
