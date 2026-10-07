@@ -44,7 +44,7 @@ catalogs:
       version: 4.6.5
 
 overrides:
-  '@xmldom/xmldom': '>=0.8.13 <0.9'
+  '@xmldom/xmldom': '>=0.8.15 <0.9'
   protobufjs: '>=8.8.0 <9'
   vite: '>=8.3.3 <9'
   brace-expansion@<2: '>=1.1.18 <2'

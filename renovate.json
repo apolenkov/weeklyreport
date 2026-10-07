@@ -50,6 +50,11 @@
       "description": "The deployed pgvector image must retain its PostgreSQL 15 storage major; PostgreSQL 18.6 rejects existing data files (TASK-359)",
       "matchPackageNames": ["pgvector/pgvector"],
       "allowedVersions": "/-pg15-/"
+    },
+    {
+      "description": "xmldom 0.9.12 rejects the errorHandler object passed by node-saml 5.1; SAML getSignedAssertion fails, while latest compatible 0.8.15 passes (TASK-359)",
+      "matchPackageNames": ["@xmldom/xmldom"],
+      "allowedVersions": "<0.9"
     }
   ]
 }
