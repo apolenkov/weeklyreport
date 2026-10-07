@@ -52,7 +52,7 @@ overrides:
   # node-saml, samlify, xml-crypto, and xml-encryption all declare `^0.8.x`
   # and break on the 0.9 parser API (removed errorHandler object, required
   # parseFromString mimeType), so the override must stay inside the 0.8 line.
-  "@xmldom/xmldom": ">=0.8.13 <0.9"
+  "@xmldom/xmldom": ">=0.8.15 <0.9"
   protobufjs: ">=8.8.0 <9"
   vite: ">=8.3.3 <9"
   # Keep both brace-expansion ranges: the graph contains incompatible 1.x and
