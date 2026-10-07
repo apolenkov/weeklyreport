@@ -5,6 +5,7 @@ import { ClsService } from "nestjs-cls";
 
 import { RawBullMqProcessor } from "../../../infrastructure/bullmq/raw-bullmq-processor.js";
 import { WorkerLivenessRegistry } from "../../../infrastructure/bullmq/worker-liveness.registry.js";
+import { jobDataStringField } from "../../../infrastructure/bullmq/worker-observability.js";
 import { ENV_CONFIG } from "../../../infrastructure/config/config.module.js";
 import type { EnvConfig } from "../../../infrastructure/config/env.schema.js";
 import { APP_LOGGER } from "../../../lib/audit-logger.js";
@@ -46,12 +47,14 @@ export class AiProviderTestProcessor extends RawBullMqProcessor<AiProviderTestJo
     job: Job<AiProviderTestJobData> | undefined,
     _error: Error,
   ): Promise<void> => {
+    // job.data is untrusted Redis JSON: a null/primitive payload or a
+    // non-string id must neither crash the hook nor reach durable writes.
+    const executionId = jobDataStringField(job?.data, "executionId");
     this.logger.error("AI provider test job failed", {
-      executionId: job?.data.executionId,
+      executionId,
       failureCode: AI_PROVIDER_TEST_JOB_FAILED,
     });
     if (!job) return;
-    const { executionId } = job.data;
     // The enqueuer sets the BullMQ job id to the execution id, so a mismatched
     // or empty identity marks a stale/foreign delivery that must not write.
     if (!executionId || job.id !== executionId) return;

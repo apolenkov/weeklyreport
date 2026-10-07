@@ -81,7 +81,7 @@ export abstract class RawBullMqProcessor<TData extends JobTraceContext>
 
     worker.on("failed", (job, error) => {
       void runInJobTraceContext(
-        job?.data ?? {},
+        job?.data,
         `${this.spanName}.failed`,
         this.cls,
         async () => {

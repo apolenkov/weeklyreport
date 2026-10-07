@@ -40,17 +40,45 @@ export function captureJobTraceContext(
   };
 }
 
+// Redis payloads are untrusted: the Job<T> generic cannot prove the runtime
+// shape, so a null or primitive job.data must not crash telemetry or the
+// failure hooks that run after a malformed delivery. Only a non-null object's
+// string field is ever read back.
+export function jobDataStringField(
+  data: unknown,
+  key: string,
+): string | undefined {
+  if (typeof data !== "object" || data === null) return undefined;
+  const value: unknown = (data as Record<string, unknown>)[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+// The trace carrier is the same untrusted boundary: propagation.extract and
+// failure logs only ever see string fields of a non-null object; anything
+// else degrades to an empty carrier rather than throwing.
+function jobTraceCarrier(data: unknown): JobTraceContext {
+  const traceparent = jobDataStringField(data, "traceparent");
+  const tracestate = jobDataStringField(data, "tracestate");
+  const correlationId = jobDataStringField(data, "correlationId");
+  return {
+    ...(traceparent !== undefined ? { traceparent } : {}),
+    ...(tracestate !== undefined ? { tracestate } : {}),
+    ...(correlationId !== undefined ? { correlationId } : {}),
+  };
+}
+
 // Link the job body to its enqueue trace and seed CLS with the enqueue
 // correlationId so job logs share the request's trace/correlation context.
 export async function runInJobTraceContext<T>(
-  jobContext: JobTraceContext,
+  jobContext: unknown,
   spanName: string,
   cls: JobCls | null,
   body: () => Promise<T>,
 ): Promise<T> {
+  const jobData = jobTraceCarrier(jobContext);
   const parent = propagation.extract(ROOT_CONTEXT, {
-    ...(jobContext.traceparent ? { traceparent: jobContext.traceparent } : {}),
-    ...(jobContext.tracestate ? { tracestate: jobContext.tracestate } : {}),
+    ...(jobData.traceparent ? { traceparent: jobData.traceparent } : {}),
+    ...(jobData.tracestate ? { tracestate: jobData.tracestate } : {}),
   });
   const parentSpanContext = trace.getSpanContext(parent);
   const span = trace.getTracer(WORKER_TRACER_NAME).startSpan(
@@ -73,7 +101,7 @@ export async function runInJobTraceContext<T>(
     // BullMQ callbacks may arrive inside an unrelated request scope. Start every
     // job with an empty store so nestjs-cls cannot inherit that caller's fields.
     return cls.runWith({}, async () => {
-      const { correlationId } = jobContext;
+      const { correlationId } = jobData;
       if (correlationId !== undefined) {
         cls.set(CORRELATION_ID_KEY, correlationId);
       }
@@ -99,10 +127,10 @@ export function extractTraceId(ctx: JobTraceContext): string | undefined {
     : undefined;
 }
 
-export function describeJobFailureTrace(ctx: JobTraceContext | undefined) {
-  const correlationId = ctx?.correlationId;
-  const traceparent = ctx?.traceparent;
-  const traceId = ctx ? extractTraceId(ctx) : undefined;
+export function describeJobFailureTrace(data: unknown) {
+  const ctx = jobTraceCarrier(data);
+  const { correlationId, traceparent } = ctx;
+  const traceId = extractTraceId(ctx);
   return {
     correlationId,
     traceparent,
