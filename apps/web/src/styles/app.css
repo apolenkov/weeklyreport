@@ -6,6 +6,15 @@
 @source "../../../../packages/ui/src";
 
 @layer base {
+  html {
+    --lead-sticky-completion-clearance: 7rem;
+  }
+
+  /* Native focus scrolling needs the same clearance as the end of the form. */
+  html:has(aside[aria-label="Report completion"]) {
+    scroll-padding-bottom: var(--lead-sticky-completion-clearance);
+  }
+
   #main-content:focus {
     outline: none;
   }

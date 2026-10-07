@@ -37,3 +37,6 @@
 - [ ] 4.5 Run the full sequential E2E suite and all root verification commands.
 - [ ] 4.6 Archive the change into the canonical specifications and remove the
       generated archive directory per the repository cleanliness contract.
+
+- [ ] 4.7 Verify native Tab traversal on both widths and preserve bottom
+      clearance for focused controls while the completion cluster is visible.
