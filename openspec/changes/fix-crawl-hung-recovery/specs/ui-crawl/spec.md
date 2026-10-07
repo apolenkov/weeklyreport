@@ -15,3 +15,9 @@ The crawler MUST read completed press evidence before fallible recovery actions.
 - **WHEN** completed press evidence cannot be read
 - **THEN** the read failure is explicit and coverage remains incomplete
 - **AND** the request count is unavailable rather than zero
+
+#### Scenario: Full traversal cannot restore a failed batch
+
+- **WHEN** a full-mode batch fails after a completed press and page restoration fails
+- **THEN** the completed timings and logs remain in the page record with error completion
+- **AND** no screenshot, dependent control, combination or rebase reads the unknown page
