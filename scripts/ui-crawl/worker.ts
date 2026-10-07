@@ -181,15 +181,9 @@ export function crawlRole(
   configureRate("trpc", ledger("trpc"), TRPC_BUDGET);
   configureRate("auth", ledger("auth"), AUTH_BUDGET);
   const browser = createBrowser(role.name);
-  try {
-    login(browser, config, role, password);
-    const landing = String(browser.evaluate("location.href"));
-    return config.widths.map((width) =>
-      crawlWidth({ browser, config, role }, width, landing, () => {
-        login(browser, config, role, password);
-      }),
-    );
-  } finally {
+  using cleanup = new DisposableStack();
+  cleanup.defer(() => browser.close());
+  cleanup.defer(() => {
     writeJson(join(config.out, `profile-${role.name}.json`), {
       stalls: browser.stalls,
       restarts: browser.restarts,
@@ -200,8 +194,14 @@ export function crawlRole(
         ]),
       ),
     });
-    browser.close();
-  }
+  });
+  login(browser, config, role, password);
+  const landing = String(browser.evaluate("location.href"));
+  return config.widths.map((width) =>
+    crawlWidth({ browser, config, role }, width, landing, () => {
+      login(browser, config, role, password);
+    }),
+  );
 }
 
 export function writeJson(file: string, data: unknown): void {
