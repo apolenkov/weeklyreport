@@ -52,10 +52,16 @@ function selectAccessLevel(
 
 // HTTP access log for everything outside the tRPC adapter (/auth, /pdfs,
 // /health, /metrics, /admin/queues). tRPC has its own procedure-level
-// middleware, so /trpc/* is skipped here to avoid duplicate envelopes.
+// middleware, so the /trpc mount is skipped here to avoid duplicate envelopes.
+// The skip must match Express's mount semantics exactly: "/trpc" itself and
+// "/trpc/…" are adapter-owned, while siblings like "/trpcFoo" are ordinary
+// unmatched routes that still need an access envelope and a histogram sample.
+const isTrpcPath = (path: string): boolean =>
+  path === "/trpc" || path.startsWith("/trpc/");
+
 export function createHttpAccessLog(logger: AppLogger): RequestHandler {
   return (req: Request, res: Response, next: NextFunction) => {
-    if (req.path.startsWith("/trpc")) {
+    if (isTrpcPath(req.path)) {
       next();
       return;
     }
