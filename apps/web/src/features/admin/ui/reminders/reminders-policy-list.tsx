@@ -32,7 +32,7 @@ interface RemindersPolicyListProps {
   >;
   readonly editor: RemindersEditor;
   readonly editorProps: PolicyEditorProps;
-  readonly busyId: string | null;
+  readonly busyIds: ReadonlySet<string>;
   readonly now: Date;
   readonly onNewReminder: () => void;
   readonly onToggleActive: (policy: AdminReminderPolicyView) => void;
@@ -46,7 +46,7 @@ export function RemindersPolicyList({
   derivedRulesByPolicyId,
   editor,
   editorProps,
-  busyId,
+  busyIds,
   now,
   onNewReminder,
   onToggleActive,
@@ -74,7 +74,7 @@ export function RemindersPolicyList({
             key={policy.id}
             policy={policy}
             derivedRules={derivedRulesByPolicyId[policy.id] ?? []}
-            isBusy={busyId === policy.id}
+            isBusy={busyIds.has(policy.id)}
             now={now}
             onToggleActive={() => onToggleActive(policy)}
             onEdit={() => onEdit(policy)}

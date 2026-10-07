@@ -5,6 +5,8 @@ interface PolicyFormFooterProps {
   readonly editing: boolean;
   readonly isSaving: boolean;
   readonly validityValid: boolean;
+  // Why Save is blocked; shown verbatim as the inline hint when invalid.
+  readonly validityReason?: string | null | undefined;
   readonly onChange: (
     next: PolicyFormState | ((prev: PolicyFormState) => PolicyFormState),
   ) => void;
@@ -36,17 +38,18 @@ function PolicyFormActions({
   editing,
   isSaving,
   validityValid,
+  validityReason,
   onCancel,
   onSave,
 }: Omit<PolicyFormFooterProps, "form" | "onChange">) {
   return (
     <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-      {!validityValid && (
+      {!validityValid && validityReason && (
         <span
           data-testid="policy-validity-hint"
           className="text-xs text-[var(--color-destructive)]"
         >
-          End date must be after start date
+          {validityReason}
         </span>
       )}
       <button
@@ -76,6 +79,7 @@ export function PolicyFormFooter({
   editing,
   isSaving,
   validityValid,
+  validityReason,
   onCancel,
   onSave,
 }: PolicyFormFooterProps) {
@@ -86,6 +90,7 @@ export function PolicyFormFooter({
         editing={editing}
         isSaving={isSaving}
         validityValid={validityValid}
+        validityReason={validityReason}
         onCancel={onCancel}
         onSave={onSave}
       />

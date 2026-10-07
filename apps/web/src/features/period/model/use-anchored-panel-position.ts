@@ -35,6 +35,15 @@ export function useAnchoredPanelPosition<T>(
   project: (rect: DOMRect) => T,
 ): T | null {
   const [position, setPosition] = useState<T | null>(null);
+  // Drop stale coordinates the moment the panel closes (render-phase reset):
+  // the panel is gated on position !== null, so without it a reopen after the
+  // trigger moved would paint one frame at the old spot before the measure
+  // below lands.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (!open) setPosition(null);
+  }
 
   useEffect(() => {
     if (!open) return;

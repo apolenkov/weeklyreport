@@ -50,6 +50,7 @@ export function RemindersTab({
     form: state.form,
     isSaving: state.isSaving,
     validityValid: state.validityValid,
+    validityReason: state.validityReason,
     onChange: state.setForm,
     onOffsetValidityChange: state.setOffsetValid,
     onCancel: state.closeEditor,
@@ -76,7 +77,7 @@ export function RemindersTab({
         derivedRulesByPolicyId={derivedRulesByPolicyId}
         editor={state.editor}
         editorProps={editorProps}
-        busyId={state.busyId}
+        busyIds={state.busyIds}
         now={state.now}
         onNewReminder={state.handleNewReminder}
         onToggleActive={state.handleToggleActive}

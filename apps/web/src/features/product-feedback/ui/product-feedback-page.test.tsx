@@ -55,6 +55,9 @@ const inboxState = {
   search: "",
   setSearch: vi.fn(),
   items: [pageFeedback],
+  loadedCount: 1,
+  total: 1,
+  hasMore: false,
   view: "ready",
   refresh: vi.fn(() => Promise.resolve()),
   changeStatus,
@@ -278,7 +281,9 @@ describe("ProductFeedbackPage inbox states", () => {
 
     expect(screen.getByText(/Loading feedback/)).toBeInTheDocument();
     expect(screen.queryByRole("alert")).toBeNull();
-    expect(screen.queryByText("No feedback matches these filters.")).toBeNull();
+    expect(
+      screen.queryByText("No loaded feedback matches these filters."),
+    ).toBeNull();
     expect(screen.queryByText("The row is difficult to read")).toBeNull();
   });
 
@@ -302,21 +307,64 @@ describe("ProductFeedbackPage inbox states", () => {
     expect(inboxState.refresh).toHaveBeenCalledTimes(1);
   });
 
-  it("shows the empty state when no feedback matches", () => {
+  it("shows the loaded-scope empty state when no feedback matches", () => {
     setRole("lead");
     useProductFeedbackInbox.mockReturnValue({
       ...inboxState,
       view: "empty",
       items: [],
+      loadedCount: 0,
+      total: 0,
     });
 
     render(<ProductFeedbackPage />);
 
     expect(
-      screen.getByText("No feedback matches these filters."),
+      screen.getByText("No loaded feedback matches these filters."),
     ).toBeInTheDocument();
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.queryByText("The row is difficult to read")).toBeNull();
+  });
+
+  it("announces the bounded slice when more feedback exists than loaded", () => {
+    setRole("lead");
+    useProductFeedbackInbox.mockReturnValue({
+      ...inboxState,
+      loadedCount: 100,
+      total: 150,
+      hasMore: true,
+    });
+
+    render(<ProductFeedbackPage />);
+
+    expect(
+      screen.getByText(
+        "Showing the newest 100 of 150 feedback items. Search and filters apply to these loaded items.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("hides the slice notice while keeping the loaded-scope empty copy", () => {
+    setRole("lead");
+    useProductFeedbackInbox.mockReturnValue({
+      ...inboxState,
+      view: "empty",
+      items: [],
+      loadedCount: 100,
+      total: 150,
+      hasMore: true,
+    });
+
+    render(<ProductFeedbackPage />);
+
+    expect(
+      screen.getByText(
+        "Showing the newest 100 of 150 feedback items. Search and filters apply to these loaded items.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText("No loaded feedback matches these filters."),
+    ).toBeInTheDocument();
   });
 });
 

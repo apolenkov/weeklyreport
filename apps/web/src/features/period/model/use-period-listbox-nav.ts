@@ -132,21 +132,29 @@ function createListboxKeyHandlers({
 
 // Swipe gesture. Left = next week, right = previous week.
 function useSwipeNavigation(onPrev: () => void, onNext: () => void) {
-  const touchStartXRef = useRef<number | null>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   function handleTouchStart(e: ReactTouchEvent<HTMLDivElement>) {
     const t = Array.from(e.touches).at(0);
-    touchStartXRef.current = t ? t.clientX : null;
+    touchStartRef.current = t ? { x: t.clientX, y: t.clientY } : null;
   }
 
   function handleTouchEnd(e: ReactTouchEvent<HTMLDivElement>) {
-    const start = touchStartXRef.current;
-    touchStartXRef.current = null;
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
     if (start === null) return;
     const t = Array.from(e.changedTouches).at(0);
     if (!t) return;
-    const deltaX = t.clientX - start;
-    if (Math.abs(deltaX) < SWIPE_THRESHOLD_PX) return;
+    const deltaX = t.clientX - start.x;
+    const deltaY = t.clientY - start.y;
+    // Only a horizontally dominant swipe navigates periods — a mostly
+    // vertical scroll with sideways drift must not jump the report.
+    if (
+      Math.abs(deltaX) < SWIPE_THRESHOLD_PX ||
+      Math.abs(deltaX) <= Math.abs(deltaY)
+    ) {
+      return;
+    }
     if (deltaX < 0) onNext();
     else onPrev();
   }
@@ -179,10 +187,17 @@ export function usePeriodListboxNav({
     navigateTo,
   });
   const { open, setOpen } = selection;
+  // The option set can shrink while the panel is open (archive/refetch):
+  // a stale activeIdx would leave aria-activedescendant dangling on a
+  // removed option. Clamp at read so highlight, select and aria all agree.
+  const activeIdx = Math.max(
+    0,
+    Math.min(selection.activeIdx, Math.max(0, periodOptionIds.length - 1)),
+  );
   const panelPos = useListboxPanelBehavior({
     open,
     setOpen,
-    activeIdx: selection.activeIdx,
+    activeIdx,
     optionIdPrefix,
     triggerRef,
     panelRef,
@@ -190,7 +205,7 @@ export function usePeriodListboxNav({
 
   const keyHandlers = createListboxKeyHandlers({
     open,
-    activeIdx: selection.activeIdx,
+    activeIdx,
     setActiveIdx: selection.setActiveIdx,
     periodOptionIds,
     selectOption: selection.selectOption,
@@ -206,6 +221,7 @@ export function usePeriodListboxNav({
     panelRef,
     panelPos,
     ...selection,
+    activeIdx,
     ...keyHandlers,
     ...swipeHandlers,
   };

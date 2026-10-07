@@ -2,6 +2,7 @@ import type { ReminderPolicy } from "@customreport/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { toastMutationError } from "../../../shared/lib/errors/mutation-error-message";
 import { invalidateAdmin } from "../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import type { AdminReminderPolicyView } from "./admin-types";
@@ -27,11 +28,7 @@ export function useReminderPolicyMutations() {
 
   const savePolicyMutationOptions = trpc.admin.savePolicy.mutationOptions({
     onSuccess: () => invalidateAdmin(qc, trpc),
-    onError: (err: unknown) => {
-      const message =
-        err instanceof Error ? err.message : "Failed to save reminder";
-      toast.error(message);
-    },
+    onError: toastMutationError("Failed to save reminder"),
   });
   // Editor saves and row toggles share transport behavior but keep independent
   // pending state and per-call completion ownership.
@@ -44,11 +41,7 @@ export function useReminderPolicyMutations() {
         invalidateAdmin(qc, trpc);
         toast.success("Reminder removed");
       },
-      onError: (err: unknown) => {
-        const message =
-          err instanceof Error ? err.message : "Failed to remove reminder";
-        toast.error(message);
-      },
+      onError: toastMutationError("Failed to remove reminder"),
     }),
   );
 

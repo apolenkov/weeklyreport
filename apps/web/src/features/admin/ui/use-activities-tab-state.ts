@@ -4,6 +4,7 @@ import type { ProjectActivity } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 
+import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { useActivityMutations } from "../model/activities-tab-mutations";
 import {
@@ -89,6 +90,12 @@ function useActivityArchive(
 export function useActivitiesTabState() {
   const trpc = useTRPC();
   const activitiesQuery = useQuery(trpc.projectActivity.list.queryOptions());
+  // Log-only: the tab already surfaces the failure via AdminQueryIssue.
+  useQueryErrorHandler(activitiesQuery, {
+    component: "ActivitiesTab",
+    event: "admin.activities.load_failed",
+    procedure: "projectActivity.list",
+  });
   const activities = activitiesQuery.data ?? [];
 
   const dialog = useActivityDialog();

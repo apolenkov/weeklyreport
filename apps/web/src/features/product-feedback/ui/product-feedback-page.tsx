@@ -92,6 +92,18 @@ function FeedbackFilters({ inbox }: { readonly inbox: Inbox }) {
   );
 }
 
+function FeedbackScopeNote({ inbox }: { readonly inbox: Inbox }) {
+  if (!inbox.hasMore || (inbox.view !== "ready" && inbox.view !== "empty")) {
+    return null;
+  }
+  return (
+    <p className="mb-3 text-xs text-[var(--color-muted-foreground)]">
+      Showing the newest {inbox.loadedCount} of {inbox.total} feedback items.
+      Search and filters apply to these loaded items.
+    </p>
+  );
+}
+
 function FeedbackInboxBody({ inbox }: { readonly inbox: Inbox }) {
   const changeStatus = async (id: string, status: FeedbackStatus) => {
     try {
@@ -104,6 +116,7 @@ function FeedbackInboxBody({ inbox }: { readonly inbox: Inbox }) {
 
   return (
     <>
+      <FeedbackScopeNote inbox={inbox} />
       {inbox.view === "loading" && (
         <div className="flex items-center justify-center gap-2 py-16 text-sm text-[var(--color-muted-foreground)]">
           <LoaderCircle aria-hidden="true" className="size-4 animate-spin" />
@@ -127,7 +140,7 @@ function FeedbackInboxBody({ inbox }: { readonly inbox: Inbox }) {
       )}
       {inbox.view === "empty" && (
         <div className="rounded-xl border border-dashed border-[var(--color-border)] p-12 text-center text-sm text-[var(--color-muted-foreground)]">
-          No feedback matches these filters.
+          No loaded feedback matches these filters.
         </div>
       )}
       {inbox.view === "ready" && (

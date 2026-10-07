@@ -24,7 +24,7 @@ function makeProduct(
 describe("PrintPortfolioTable — status label/color pins", () => {
   it.each([
     { status: "on-track", label: "On Track", color: "#006241" },
-    { status: "at-risk", label: "At Risk", color: "#daa520" },
+    { status: "at-risk", label: "At Risk", color: "#856800" },
     { status: "blocked", label: "Blocked", color: "#c82014" },
     { status: "empty", label: "No status", color: "#6b7280" },
   ] as const)(
