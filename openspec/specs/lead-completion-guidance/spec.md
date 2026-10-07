@@ -80,7 +80,7 @@ change the existing submit payload or automatic-promotion rules.
 
 ### Requirement: Sticky actions and submission explanation stay separate
 
-The submission explanation MUST remain in normal document flow at the end of the editable form. Only the existing compact Save/Add/Submit action cluster MAY be sticky, and it MUST preserve content clearance and safe-area behavior rather than turning the explanatory summary into a persistent banner. While suggested continuations await confirmation, that cluster MUST show their number as a compact `n to review` indicator next to Submit, and the indicator MUST disappear at zero; it MUST NOT add a second banner or replace the end-of-form explanation.
+The submission explanation MUST remain in normal document flow at the end of the editable form. Only the existing compact Save/Add/Submit action cluster MAY be sticky, and it MUST preserve content clearance and safe-area behavior rather than turning the explanatory summary into a persistent banner. Native keyboard focus scrolling MUST reserve the same bottom clearance as the form content while the compact cluster is visible, so the focused control remains above it. While suggested continuations await confirmation, that cluster MUST show their number as a compact `n to review` indicator next to Submit, and the indicator MUST disappear at zero; it MUST NOT add a second banner or replace the end-of-form explanation.
 
 #### Scenario: The lead scrolls through a long report
 
@@ -93,3 +93,9 @@ The submission explanation MUST remain in normal document flow at the end of the
 - **WHEN** two suggested continuations are unconfirmed
 - **THEN** the compact cluster shows `2 to review` beside Submit
 - **AND** the end-of-form explanation names the same items and remains in document flow
+
+#### Scenario: Keyboard focus passes through the report
+
+- **WHEN** the lead tabs through report controls while the compact completion cluster is visible
+- **THEN** native focus scrolling keeps each focused control above the cluster
+- **AND** the end of the form remains reachable without being covered by the cluster

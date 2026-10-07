@@ -68,7 +68,7 @@ native 200% browser zoom, without horizontal overflow or clipped controls.
 
 ### Requirement: Lead Report MUST expose one compact read-only health pulse
 
-Canonical Lead Report MUST replace its lower Product Status and Project Activities status-editing accordions with one compact health pulse near the weekly overview. By default the pulse MUST render as one summary line that names the counts of blocked, at-risk and missing-status units with their denominators, and MUST expand on demand to identify affected reporting units and concrete stage or activity locations before healthy detail. It MUST distinguish blocked, at-risk and missing-status information without implying that missing data is healthy. Its totals MUST name their denominator and count each current unit once per stated category, without including historical-only units.
+Canonical Lead Report MUST replace its lower Product Status and Project Activities status-editing accordions with one compact health pulse near the weekly overview. By default the pulse MUST render as one summary line that names the counts of blocked, at-risk and missing-status units with their denominators, and MUST expand on demand to identify affected reporting units and concrete stage or activity locations before healthy detail. While the disclosure is closed, only the summary line MUST be mounted; attention entries and their inspection controls MUST render only after it opens. Closing the disclosure MUST remove those entries from the reading and keyboard order. It MUST distinguish blocked, at-risk and missing-status information without implying that missing data is healthy. Its totals MUST name their denominator and count each current unit once per stated category, without including historical-only units.
 
 #### Scenario: Problems exist across a product and an activity
 
@@ -88,6 +88,12 @@ Canonical Lead Report MUST replace its lower Product Status and Project Activiti
 
 - **WHEN** no unit is blocked, at risk or missing a status
 - **THEN** the summary line states that all current units are reported healthy with their count
+
+#### Scenario: The health disclosure is opened and closed
+
+- **WHEN** the lead opens the Report health disclosure
+- **THEN** affected units and their inspection actions become available
+- **AND** closing it removes the attention entries and their controls while preserving the summary and draft
 
 ### Requirement: Unit inspection MUST stay contextual and non-mutating
 
