@@ -672,9 +672,12 @@ describe("RemindersTab — add / edit form", () => {
     expect(within(advanced).getByLabelText(/Valid from/i)).toBeInTheDocument();
   });
 
-  it("disables Save and shows a hint when validUntil < validFrom", async () => {
+  it("disables Save with the reversed-range reason when validUntil < validFrom", async () => {
     const user = userEvent.setup();
-    renderTab({ policies: [], derivedRulesByPolicyId: {} });
+    const { captured } = renderTab({
+      policies: [],
+      derivedRulesByPolicyId: {},
+    });
 
     expect(screen.getByTestId("policy-form")).toBeInTheDocument();
 
@@ -694,24 +697,73 @@ describe("RemindersTab — add / edit form", () => {
     await user.clear(validUntil);
     await user.type(validUntil, beforeIso);
 
-    expect(screen.getByTestId("policy-validity-hint")).toBeInTheDocument();
+    expect(screen.getByTestId("policy-validity-hint")).toHaveTextContent(
+      "End date must be on or after start date",
+    );
     expect(screen.getByTestId("policy-save-button")).toBeDisabled();
+    expect(
+      expectDefined(captured["admin.savePolicy"]).mutationFn,
+    ).not.toHaveBeenCalled();
   });
 
-  it("disables Save when Valid from is cleared", async () => {
+  it("allows a same-day validity window (inclusive end)", async () => {
     const user = userEvent.setup();
-    renderTab({ policies: [], derivedRulesByPolicyId: {} });
+    const { captured } = renderTab({
+      policies: [],
+      derivedRulesByPolicyId: {},
+    });
+
+    await user.click(
+      screen.getByRole("checkbox", { name: /forever \(no end date\)/i }),
+    );
+    const validFrom = screen.getByLabelText<HTMLInputElement>(/Valid from/i);
+    const validUntil = screen.getByLabelText<HTMLInputElement>(
+      /^policy-valid-until$|^Valid until$/i,
+    );
+
+    await user.clear(validUntil);
+    await user.type(validUntil, validFrom.value);
+
+    expect(screen.queryByTestId("policy-validity-hint")).toBeNull();
+    await user.click(screen.getByTestId("policy-save-button"));
+
+    const savePolicyEntry = expectDefined(captured["admin.savePolicy"]);
+    await waitFor(() => {
+      expect(savePolicyEntry.mutationFn).toHaveBeenCalledTimes(1);
+    });
+    const arg = savePolicyEntry.mutationFn.mock.calls[0]?.[0] as {
+      validFrom: Date;
+      validUntil: Date | null;
+    };
+    expect(arg.validUntil).toEqual(arg.validFrom);
+  });
+
+  it("disables Save with the missing-start reason when Valid from is cleared", async () => {
+    const user = userEvent.setup();
+    const { captured } = renderTab({
+      policies: [],
+      derivedRulesByPolicyId: {},
+    });
 
     const validFrom = screen.getByLabelText<HTMLInputElement>(/Valid from/i);
     await user.clear(validFrom);
 
     expect(validFrom.value).toBe("");
+    expect(screen.getByTestId("policy-validity-hint")).toHaveTextContent(
+      "Start date is required",
+    );
     expect(screen.getByTestId("policy-save-button")).toBeDisabled();
+    expect(
+      expectDefined(captured["admin.savePolicy"]).mutationFn,
+    ).not.toHaveBeenCalled();
   });
 
-  it("unchecking forever does not silently acquire today's end date", async () => {
+  it("disables Save with the missing-end reason when forever is unchecked", async () => {
     const user = userEvent.setup();
-    renderTab({ policies: [], derivedRulesByPolicyId: {} });
+    const { captured } = renderTab({
+      policies: [],
+      derivedRulesByPolicyId: {},
+    });
 
     expect(screen.getByTestId("policy-form")).toBeInTheDocument();
 
@@ -725,7 +777,13 @@ describe("RemindersTab — add / edit form", () => {
     // The end-date input stays empty — no fabricated today — so Save stays
     // blocked until the admin deliberately picks a date.
     expect(validUntil.value).toBe("");
+    expect(screen.getByTestId("policy-validity-hint")).toHaveTextContent(
+      "End date is required",
+    );
     expect(screen.getByTestId("policy-save-button")).toBeDisabled();
+    expect(
+      expectDefined(captured["admin.savePolicy"]).mutationFn,
+    ).not.toHaveBeenCalled();
   });
 });
 
