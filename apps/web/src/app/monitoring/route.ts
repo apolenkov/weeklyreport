@@ -84,7 +84,14 @@ function forwardedSentryQuotaHeaders(upstream: Headers): Headers {
 async function readBoundedBody(req: Request): Promise<ArrayBuffer | null> {
   if (req.body === null) return new ArrayBuffer(0);
 
-  return readBoundedChunks(req.body.getReader(), []);
+  const reader = req.body.getReader();
+  try {
+    return await readBoundedChunks(reader, []);
+  } finally {
+    // Mirror the client-logs reader: release the lock so a partially read
+    // request stream is never retained beyond this handler.
+    reader.releaseLock();
+  }
 }
 
 async function readBoundedChunks(
