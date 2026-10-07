@@ -3,6 +3,7 @@
 // statements, so this cannot be a call in the body below.
 import "./src/shared/lib/runtime/zod-jitless";
 
+import { createSentryPrivacyOptions } from "@customreport/shared";
 import * as Sentry from "@sentry/nextjs";
 
 import { BROWSER_SENTRY_TUNNEL } from "./sentry-options.config";
@@ -13,6 +14,7 @@ import { webEnv } from "./src/shared/lib/runtime/web-env";
 const BROWSER_TRACES_SAMPLE_RATE = 1;
 
 Sentry.init({
+  ...createSentryPrivacyOptions(),
   dsn: webEnv.sentryDsn(),
   tunnel: BROWSER_SENTRY_TUNNEL,
   environment: process.env.NODE_ENV,
@@ -25,5 +27,5 @@ Sentry.init({
   beforeSendTransaction: () => null,
 });
 
-// App Router navigation instrumentation (Next 15+/SDK 10).
+// App Router navigation instrumentation.
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;

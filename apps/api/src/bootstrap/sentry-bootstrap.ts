@@ -1,3 +1,4 @@
+import { createSentryPrivacyOptions } from "@customreport/shared";
 import * as Sentry from "@sentry/nestjs";
 
 import { envSchema } from "../infrastructure/config/env.schema.js";
@@ -18,9 +19,10 @@ export function initializeSentry(): void {
   if (dsn === undefined) return;
 
   Sentry.init({
+    ...createSentryPrivacyOptions(),
     dsn,
     tracesSampleRate: 0,
-    skipOpenTelemetrySetup: true,
+    enableOpenTelemetrySetup: false,
     environment: nodeEnv.data,
     beforeSend: stampActiveTrace,
     beforeSendTransaction: () => null,

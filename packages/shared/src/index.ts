@@ -276,4 +276,5 @@ export * from "./schemas/telemetry/telemetry.js";
 export { deriveEffectiveProductStatus } from "./status/effective-product-status.js";
 export * from "./status/traffic-light-aggregation.js";
 export { sanitizeClientLogUrl } from "./telemetry/sanitize-client-log-url.js";
+export { createSentryPrivacyOptions } from "./telemetry/sentry-policy.js";
 export * from "./time.js";
