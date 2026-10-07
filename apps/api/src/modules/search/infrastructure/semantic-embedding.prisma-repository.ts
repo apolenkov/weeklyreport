@@ -33,11 +33,18 @@ const validateVector = (
   dimensions: number,
   label: string,
 ): void => {
+  // A zero vector has no defined cosine distance and can never rank, so the
+  // same nonzero admission rule as the provider boundary applies on write
+  // and on query. Checking `some(component !== 0)` after finiteness is
+  // sufficient — no sum-of-squares needed.
   if (
     vector.length !== dimensions ||
-    vector.some((value) => !Number.isFinite(value))
+    vector.some((value) => !Number.isFinite(value)) ||
+    !vector.some((value) => value !== 0)
   ) {
-    throw new Error(`${label} must contain ${dimensions} finite values`);
+    throw new Error(
+      `${label} must contain ${dimensions} finite values with a nonzero component`,
+    );
   }
 };
 

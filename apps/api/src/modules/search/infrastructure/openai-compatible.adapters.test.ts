@@ -289,4 +289,18 @@ describe("OpenAI-compatible report assistant adapters", () => {
       embeddings.embedDocuments([{ contentHash: "a", text: "first" }]),
     ).rejects.toBeInstanceOf(OpenAiCompatibleProtocolError);
   });
+
+  it("rejects a provider zero vector: cosine distance is undefined", async () => {
+    const harness = transportFor([{ data: [{ index: 0, embedding: [0, 0] }] }]);
+    const embeddings = new OpenAiCompatibleEmbeddingAdapter(harness.transport, {
+      model: "embed",
+      dimensions: 2,
+      batchSize: 1,
+      tokenBudget: 100,
+    });
+
+    await expect(
+      embeddings.embedDocuments([{ contentHash: "a", text: "first" }]),
+    ).rejects.toBeInstanceOf(OpenAiCompatibleProtocolError);
+  });
 });

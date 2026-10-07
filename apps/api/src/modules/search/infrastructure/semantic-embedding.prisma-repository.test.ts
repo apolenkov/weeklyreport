@@ -94,6 +94,36 @@ describe("SemanticEmbeddingPrismaRepository", () => {
     expect(harness.queryRaw).not.toHaveBeenCalled();
   });
 
+  it("rejects a zero vector on rank and upsert: cosine distance is undefined", async () => {
+    const harness = prismaHarness();
+
+    await expect(
+      harness.repository.rank({
+        ...scope,
+        queryVector: [0, 0, 0],
+        allowedContentHashes: ["hash-a"],
+        similarityThreshold: 0.55,
+        limit: 10,
+      }),
+    ).rejects.toThrow("nonzero");
+    await expect(
+      harness.repository.upsert({
+        ...scope,
+        contentHash: "hash-a",
+        vector: [0, 0, 0],
+      }),
+    ).rejects.toThrow("nonzero");
+    // A sparse but nonzero vector still passes.
+    await expect(
+      harness.repository.upsert({
+        ...scope,
+        contentHash: "hash-a",
+        vector: [0, 1, 0],
+      }),
+    ).resolves.toBeUndefined();
+    expect(harness.queryRaw).not.toHaveBeenCalled();
+  });
+
   it("parameterizes vector upserts and keeps the cache key explicit", async () => {
     const harness = prismaHarness();
 
