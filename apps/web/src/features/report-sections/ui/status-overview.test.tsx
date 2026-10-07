@@ -107,7 +107,7 @@ describe("StatusOverview", () => {
     expect(onMoveItem).toHaveBeenCalledWith(
       expect.objectContaining({ recordId: "item-1" }),
       "next",
-      "move:current:item-1",
+      "more:current:item-1",
     );
   });
 
@@ -380,6 +380,7 @@ describe("StatusOverview", () => {
       />,
     );
 
+    await user.click(screen.getByText("Report health"));
     await user.click(
       screen.getByRole("button", {
         name: "Inspect health for Payments platform with a deliberately long reporting name",
@@ -487,6 +488,7 @@ describe("StatusOverview", () => {
         }}
       />,
     );
+    await user.click(screen.getByText("Report health"));
     const pulseOpener = screen.getByRole("button", {
       name: "Inspect health for Incident duty",
     });
@@ -893,7 +895,7 @@ describe("StatusOverview", () => {
     );
   });
 
-  it("uses one Add item entry point and keeps its editor in the unit footer", () => {
+  it("uses one Add item entry point in the unit header and keeps its editor in the unit footer", () => {
     const unit = model.units[0];
     if (!unit) throw new Error("Expected one overview unit");
     const onAddItem = vi.fn();

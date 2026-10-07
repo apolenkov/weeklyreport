@@ -402,7 +402,7 @@ describe("LeadForm Overview", () => {
     ).toBeNull();
     expect(
       within(preview).queryByRole("button", {
-        name: /Status of|Edit item|Quick move/,
+        name: /Status of|Edit item/,
       }),
     ).toBeNull();
     expect(
@@ -1007,8 +1007,8 @@ describe("LeadForm Overview", () => {
       `/lead/report/${REPORT_ID}?mode=slides`,
     );
     expect(
-      screen.getByRole("link", { name: "Risks & decisions" }),
-    ).toHaveAttribute("href", "#report-details");
+      screen.queryByRole("link", { name: "Risks & decisions" }),
+    ).toBeNull();
     expect(screen.queryByTestId("lead-report-form")).toBeNull();
     const documentActions = screen.getByRole("group", {
       name: "Document actions",
@@ -1471,21 +1471,26 @@ describe("LeadForm Overview", () => {
 
     const preview = await itemPreview("Current work");
     const opener = await within(preview).findByRole("button", {
-      name: "Quick move to next week: Current work",
+      name: "More actions for Current work",
     });
     expect(opener).toHaveAttribute(
       "data-overview-focus",
-      "move:current:a0000000-0000-4000-8000-000000000011",
+      "more:current:a0000000-0000-4000-8000-000000000011",
     );
     await user.click(opener);
+    await user.click(
+      screen.getByRole("menuitem", {
+        name: "Move to next week: Current work",
+      }),
+    );
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(saveDraft).not.toHaveBeenCalled();
-    // The Move origin is the revealed quick-move control, still in the tree.
+    // The Move origin is the More actions trigger, still in the tree.
     const settled = await itemPreview("Current work");
     expect(
       within(settled).getByRole("button", {
-        name: "Quick move to next week: Current work",
+        name: "More actions for Current work",
       }),
     ).toHaveFocus();
   });

@@ -55,8 +55,8 @@ describe("ReportHealthPulseView", () => {
     const details = summary.closest("details");
     expect(details).not.toHaveAttribute("open");
     expect(
-      screen.getByRole("button", { name: "Inspect health for Billing" }),
-    ).not.toBeVisible();
+      screen.queryByRole("button", { name: "Inspect health for Billing" }),
+    ).toBeNull();
     fireEvent.click(summary);
     expect(
       screen.getByRole("button", { name: "Inspect health for Billing" }),
@@ -89,6 +89,7 @@ describe("ReportHealthPulseView", () => {
     render(
       <ReportHealthPulseView health={pulse([flagged])} onInspect={vi.fn()} />,
     );
+    fireEvent.click(screen.getByText("Report health"));
     expect(screen.getByText("Not reported: QA")).toBeInTheDocument();
   });
 });

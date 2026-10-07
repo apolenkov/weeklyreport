@@ -57,7 +57,7 @@ const TERMINAL_SUMMARY = /^Completed and cancelled work \(\d+\)$/u;
 const HEALTH = 'section[aria-label="Report health"]';
 const HEALTH_SUMMARY =
   /^Report health · \d+ of \d+ blocked · \d+ of \d+ at risk · \d+ of \d+ missing status$/u;
-// Quick move, More actions, Plan this work and Restore stay in the accessibility
+// More actions, Plan this work and Restore stay in the accessibility
 // tree but are clipped until the item is hovered or holds focus.
 const ACTIONS_REVEALED = `(() => { const zone = document.activeElement?.closest('[data-overview-item-actions]'); return zone !== null && zone !== undefined && zone.getBoundingClientRect().width > 0 && zone.getAnimations().length === 0; })()`;
 
@@ -308,20 +308,17 @@ async function moreAction(
   await clickRole("menuitem", `${action}: ${label}`);
 }
 
+// The week move lives only inside the More actions disclosure.
 async function quickMove(
   column: Week,
   text: string,
   parent: string = ACTIVITY,
 ): Promise<void> {
-  const target = column === "Current week" ? "next" : "this";
-  await revealClick(
-    await weekControl(
-      column,
-      text,
-      "button",
-      `Quick move to ${target} week: ${shortItemLabel(text)}`,
-      parent,
-    ),
+  await moreAction(
+    column,
+    text,
+    column === "Current week" ? "Move to next week" : "Move to this week",
+    parent,
   );
 }
 
@@ -627,14 +624,9 @@ void test("items rest as a status icon, text and stage badge", async () => {
   const text = LEAD_FORM_FIXTURE.currentText;
   const current = await weekGroup("Current week", text, PRODUCT);
   const names = buttonNames(current.snapshot);
-  // The four controls of an item: the status icon, the editable text, and the
-  // two actions that stay in the tree while visually hidden.
-  for (const prefix of [
-    "Status of ",
-    "Edit item: ",
-    "Quick move to ",
-    "More actions for ",
-  ])
+  // The three controls of an item: the status icon, the editable text, and the
+  // overflow action that stays in the tree while visually hidden.
+  for (const prefix of ["Status of ", "Edit item: ", "More actions for "])
     assert.equal(
       names.filter((name) => name.startsWith(prefix)).length,
       1,
@@ -674,16 +666,16 @@ void test("item actions are revealed by focus or hover and stay in the accessibi
   await openLeadReport();
   await waitText("Project activities");
   const opacity = (text: string) => {
-    const selector = `button[aria-label="Quick move to next week: ${shortItemLabel(text)}"]`;
+    const selector = `button[aria-label="More actions for ${shortItemLabel(text)}"]`;
     return `getComputedStyle(document.querySelector(${JSON.stringify(selector)}).closest('[data-overview-item-actions]')).opacity`;
   };
   const focused = LEAD_FORM_FIXTURE.currentText;
   const hovered = LEAD_FORM_FIXTURE.carriedText;
-  const quickMoveRef = await weekControl(
+  const actionsRef = await weekControl(
     "Current week",
     focused,
     "button",
-    `Quick move to next week: ${shortItemLabel(focused)}`,
+    `More actions for ${shortItemLabel(focused)}`,
     PRODUCT,
   );
   const titleRef = await weekControl(
@@ -695,7 +687,7 @@ void test("item actions are revealed by focus or hover and stay in the accessibi
   );
   for (const text of [focused, hovered])
     assert.equal((await command(["eval", opacity(text)])).result, "0");
-  await command(["focus", quickMoveRef]);
+  await command(["focus", actionsRef]);
   await command(["wait", "--fn", `${opacity(focused)} === "1"`]);
   await command(["hover", titleRef]);
   await command(["wait", "--fn", `${opacity(hovered)} === "1"`]);
@@ -909,7 +901,7 @@ void test("the item editor saves current and next week through the canonical for
   );
 });
 
-void test("More actions and Quick move edit details and move between current and next week", async () => {
+void test("More actions edits details and moves between current and next week", async () => {
   await openLeadReport();
   const text = "E2E reversible week placement";
   await addActivity(text);
@@ -1284,7 +1276,7 @@ void test("Previous remains read-only", async () => {
   // only the verdict rail and the historical replan act, on the selected week.
   assert.doesNotMatch(
     previous,
-    /(?:button|menuitem) "(?:Edit item:|Status of |Quick move|Edit details|Update status:|Move to|Restore )/u,
+    /(?:button|menuitem) "(?:Edit item:|Status of |Edit details|Update status:|Move to|Restore )/u,
   );
   assert.match(previous, /image "Status of /u);
   assert.equal(
