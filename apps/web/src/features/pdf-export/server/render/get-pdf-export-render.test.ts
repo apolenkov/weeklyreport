@@ -14,6 +14,7 @@ vi.mock("next/headers", () => ({
   cookies: () => Promise.resolve({ get: cookieGetMock }),
 }));
 
+import { SERVER_FETCH_TIMEOUT_MS } from "../../../../shared/server/transport/api-url";
 import { getPdfExportRender } from "./get-pdf-export-render";
 
 const JOB_ID = "22222222-2222-4222-8222-222222222222";
@@ -68,6 +69,7 @@ describe("getPdfExportRender", () => {
     expect(init.headers).toEqual({
       cookie: "customreport_session=worker-jwt",
     });
+    expect(init.signal).toBeInstanceOf(AbortSignal);
   });
 
   it("fails closed without a session cookie and never calls the API", async () => {
@@ -101,5 +103,34 @@ describe("getPdfExportRender", () => {
     );
 
     expect(await getPdfExportRender(JOB_ID, REPORT_ID)).toBeNull();
+  });
+
+  it("fails closed when the shared deadline aborts a stalled API call", async () => {
+    vi.stubEnv("API_URL", "http://api:3002");
+    cookieGetMock.mockReturnValue({ value: "worker-jwt" });
+    // AbortSignal.timeout is the platform seam; the test owns when it fires.
+    const deadline = new AbortController();
+    const timeoutSpy = vi
+      .spyOn(AbortSignal, "timeout")
+      .mockReturnValue(deadline.signal);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (_url: unknown, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            const signal = init?.signal;
+            const abort = () => reject(signal?.reason ?? new Error("aborted"));
+            if (signal?.aborted) {
+              abort();
+              return;
+            }
+            signal?.addEventListener("abort", abort);
+          }),
+      ),
+    );
+
+    deadline.abort();
+    await expect(getPdfExportRender(JOB_ID, REPORT_ID)).resolves.toBeNull();
+    expect(timeoutSpy).toHaveBeenCalledWith(SERVER_FETCH_TIMEOUT_MS);
   });
 });

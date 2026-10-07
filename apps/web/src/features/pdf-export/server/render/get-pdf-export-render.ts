@@ -10,6 +10,7 @@ import { cookies } from "next/headers";
 import {
   decodeTrpcBatchPayload,
   requireApiUrl,
+  SERVER_FETCH_TIMEOUT_MS,
 } from "../../../../shared/server/transport/api-url";
 
 // The print page must reach data-print-state="ready" from SSR markup alone —
@@ -35,6 +36,7 @@ export async function getPdfExportRender(
       method: "GET",
       headers: { cookie: `${AUTH_COOKIE_NAME}=${token}` },
       cache: "no-store",
+      signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
     });
     if (!response.ok) return null;
     const parsed = weeklyReportReadModelSchema.safeParse(
