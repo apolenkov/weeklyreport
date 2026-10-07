@@ -219,6 +219,82 @@ describe("same-origin Sentry tunnel route", () => {
     ).toBe(true);
   });
 
+  it("measures quota windows on the monotonic clock, not wall time", () => {
+    const quota = new SentryTunnelQuota(
+      SENTRY_TUNNEL_WINDOW_MS,
+      SENTRY_TUNNEL_MAX_REQUESTS_PER_WINDOW,
+      SENTRY_TUNNEL_MAX_CLIENT_BUCKETS,
+      128,
+    );
+    const perfNow = vi.spyOn(performance, "now").mockReturnValue(0);
+    vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+    try {
+      for (
+        let index = 0;
+        index < SENTRY_TUNNEL_MAX_REQUESTS_PER_WINDOW;
+        index += 1
+      ) {
+        expect(quota.consume("monotonic-client")).toBe(true);
+      }
+      expect(quota.consume("monotonic-client")).toBe(false);
+
+      // A wall-clock rollback must not stretch the active window.
+      perfNow.mockReturnValue(30_000);
+      vi.mocked(Date.now).mockReturnValue(0);
+      expect(quota.consume("monotonic-client")).toBe(false);
+
+      // Expiry follows the monotonic clock alone.
+      perfNow.mockReturnValue(SENTRY_TUNNEL_WINDOW_MS + 1);
+      expect(quota.consume("monotonic-client")).toBe(true);
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+
+  it("forwards upstream rate-limit headers so the SDK applies real backoff", async () => {
+    vi.stubEnv("SENTRY_DSN", "https://public-key@bugsink.test/42");
+    const upstreamHeaders = new Headers({
+      "retry-after": "3600",
+      "x-sentry-rate-limits": "3600;error;organization",
+      "set-cookie": "session=upstream-secret",
+    });
+    const fetchMock = vi.fn<typeof fetch>(() =>
+      Promise.resolve(
+        new Response(null, { status: 429, headers: upstreamHeaders }),
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await POST(makeRequest({ "x-real-ip": "198.51.100.55" }));
+
+    expect(res.status).toBe(429);
+    expect(res.headers.get("retry-after")).toBe("3600");
+    expect(res.headers.get("x-sentry-rate-limits")).toBe(
+      "3600;error;organization",
+    );
+    expect(res.headers.get("set-cookie")).toBeNull();
+  });
+
+  it("forwards a category quota header on a successful upstream status", async () => {
+    vi.stubEnv("SENTRY_DSN", "https://public-key@bugsink.test/42");
+    const fetchMock = vi.fn<typeof fetch>(() =>
+      Promise.resolve(
+        new Response(null, {
+          status: 200,
+          headers: { "x-sentry-rate-limits": "120;transaction;organization" },
+        }),
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await POST(makeRequest({ "x-real-ip": "198.51.100.56" }));
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("x-sentry-rate-limits")).toBe(
+      "120;transaction;organization",
+    );
+  });
+
   it("uses the edge-provided real address before forwarded chains", () => {
     const request = makeRequest({
       "x-real-ip": "198.51.100.10",

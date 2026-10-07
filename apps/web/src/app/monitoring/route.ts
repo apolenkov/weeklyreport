@@ -52,12 +52,33 @@ export async function POST(req: Request): Promise<Response> {
       body,
       signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
     });
-    return new Response(null, { status: upstream.status });
+    return new Response(null, {
+      status: upstream.status,
+      headers: forwardedSentryQuotaHeaders(upstream.headers),
+    });
   } catch {
     // Telemetry must never turn a browser-side reporting failure into an app
     // failure; the SDK will apply its normal retry/drop behavior.
     return new Response(null, { status: 204 });
   }
+}
+
+// Only Sentry's own rate-limit metadata crosses the tunnel boundary — the SDK
+// applies real backoff instead of guessing a fixed 60s or missing a category
+// limit on a 2xx. Arbitrary upstream headers (cookies, body-adjacent fields)
+// are never forwarded.
+const FORWARDED_UPSTREAM_HEADERS = [
+  "retry-after",
+  "x-sentry-rate-limits",
+] as const;
+
+function forwardedSentryQuotaHeaders(upstream: Headers): Headers {
+  const forwarded = new Headers();
+  for (const name of FORWARDED_UPSTREAM_HEADERS) {
+    const value = upstream.get(name);
+    if (value !== null) forwarded.set(name, value);
+  }
+  return forwarded;
 }
 
 async function readBoundedBody(req: Request): Promise<ArrayBuffer | null> {
