@@ -16,7 +16,7 @@ export function devLoginHref(role: DbRole, email: string): string {
   return `/auth/dev-login?${params.toString()}`;
 }
 
-export const FALLBACK_REDIRECT = "/head/dashboard";
+export const FALLBACK_REDIRECT = ROLE_HOME_PATH.head;
 
 export function defaultRedirectFor(role: unknown): string {
   return isRole(role) ? ROLE_HOME_PATH[role] : FALLBACK_REDIRECT;

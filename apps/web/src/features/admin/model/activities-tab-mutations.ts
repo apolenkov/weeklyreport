@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
+import { toastMutationError } from "../../../shared/lib/errors/mutation-error-message";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
 // Activities live outside admin.snapshot, so `invalidateAdmin` would refetch
@@ -21,9 +22,7 @@ export function useActivityMutations(onSaved: () => void) {
         toast.success("Activity saved");
         onSaved();
       },
-      onError: (err) => {
-        toast.error(err.message);
-      },
+      onError: toastMutationError("Failed to save activity"),
     }),
   );
 
@@ -34,9 +33,7 @@ export function useActivityMutations(onSaved: () => void) {
         toast.success("Activity saved");
         onSaved();
       },
-      onError: (err) => {
-        toast.error(err.message);
-      },
+      onError: toastMutationError("Failed to save activity"),
     }),
   );
 
@@ -48,9 +45,7 @@ export function useActivityMutations(onSaved: () => void) {
           variables.archived ? "Activity archived" : "Activity restored",
         );
       },
-      onError: (err) => {
-        toast.error(err.message);
-      },
+      onError: toastMutationError("Failed to update activity"),
     }),
   );
 

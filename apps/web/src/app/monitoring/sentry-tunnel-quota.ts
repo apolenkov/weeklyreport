@@ -13,7 +13,9 @@ export class SentryTunnelQuota {
     private readonly maxKeyLength: number,
   ) {}
 
-  consume(clientKey: string, now = Date.now()): boolean {
+  // Window math runs on the monotonic clock: a wall-clock rollback (NTP
+  // step, manual change) must never stretch a client's admission window.
+  consume(clientKey: string, now = performance.now()): boolean {
     const normalizedKey =
       clientKey.trim().slice(0, this.maxKeyLength) || "anonymous";
     const current = this.buckets.get(normalizedKey);

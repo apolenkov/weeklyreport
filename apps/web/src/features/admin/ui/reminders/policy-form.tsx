@@ -21,6 +21,9 @@ interface PolicyFormProps {
   readonly editing: boolean;
   readonly isSaving: boolean;
   readonly validityValid: boolean;
+  // Why Save is blocked; optional because the shared editor-props bundle type
+  // predates it — the footer hint degrades to no text while Save stays gated.
+  readonly validityReason?: string | null;
   readonly onChange: (
     next: PolicyFormState | ((prev: PolicyFormState) => PolicyFormState),
   ) => void;
@@ -67,6 +70,7 @@ export function PolicyForm({
   editing,
   isSaving,
   validityValid,
+  validityReason,
   onChange,
   onOffsetValidityChange,
   onCancel,
@@ -107,6 +111,7 @@ export function PolicyForm({
           editing={editing}
           isSaving={isSaving}
           validityValid={validityValid}
+          validityReason={validityReason}
           onCancel={onCancel}
           onSave={onSave}
         />

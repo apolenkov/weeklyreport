@@ -2,6 +2,7 @@
 
 import { type MouseEvent, useState } from "react";
 
+import { useIsOnline } from "../../../../../shared/lib/query/use-is-online";
 import {
   type LeadSubmitReadiness,
   pendingReviewLabel,
@@ -38,6 +39,9 @@ function ReadinessHeader({
   onSubmit,
   showSubmitAction,
 }: LeadSubmitReadinessSummaryProps) {
+  // The same onlineManager signal useSaveStatus uses, so the paragraph cannot
+  // claim a save is in flight while the status line reports it paused.
+  const online = useIsOnline();
   return (
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div>
@@ -51,7 +55,7 @@ function ReadinessHeader({
           {readinessStatusCopy(readiness)}
         </p>
         <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-          {autosaveReadinessCopy(readiness.autosaveState)}
+          {autosaveReadinessCopy(readiness.autosaveState, online)}
         </p>
       </div>
       {showSubmitAction ? (

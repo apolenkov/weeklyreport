@@ -52,7 +52,10 @@ export async function POST(req: Request): Promise<Response> {
       body,
       signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
     });
-    return new Response(null, { status: upstream.status });
+    return new Response(null, {
+      status: upstream.status,
+      headers: forwardedSentryQuotaHeaders(upstream.headers),
+    });
   } catch {
     // Telemetry must never turn a browser-side reporting failure into an app
     // failure; the SDK will apply its normal retry/drop behavior.
@@ -60,10 +63,35 @@ export async function POST(req: Request): Promise<Response> {
   }
 }
 
+// Only Sentry's own rate-limit metadata crosses the tunnel boundary — the SDK
+// applies real backoff instead of guessing a fixed 60s or missing a category
+// limit on a 2xx. Arbitrary upstream headers (cookies, body-adjacent fields)
+// are never forwarded.
+const FORWARDED_UPSTREAM_HEADERS = [
+  "retry-after",
+  "x-sentry-rate-limits",
+] as const;
+
+function forwardedSentryQuotaHeaders(upstream: Headers): Headers {
+  const forwarded = new Headers();
+  for (const name of FORWARDED_UPSTREAM_HEADERS) {
+    const value = upstream.get(name);
+    if (value !== null) forwarded.set(name, value);
+  }
+  return forwarded;
+}
+
 async function readBoundedBody(req: Request): Promise<ArrayBuffer | null> {
   if (req.body === null) return new ArrayBuffer(0);
 
-  return readBoundedChunks(req.body.getReader(), []);
+  const reader = req.body.getReader();
+  try {
+    return await readBoundedChunks(reader, []);
+  } finally {
+    // Mirror the client-logs reader: release the lock so a partially read
+    // request stream is never retained beyond this handler.
+    reader.releaseLock();
+  }
 }
 
 async function readBoundedChunks(

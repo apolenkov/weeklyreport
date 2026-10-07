@@ -5,6 +5,7 @@ import {
   humanizeProcedure,
   shortId,
   statusLabel,
+  truncate,
 } from "./action-log-format";
 
 // `formatTimestamp` renders in the viewer's zone, so the expected strings only
@@ -90,6 +91,40 @@ describe("humanizeProcedure", () => {
       expect(humanizeProcedure(procedure)).toBe(procedure);
     },
   );
+});
+
+describe("truncate", () => {
+  it.each([
+    { value: "short", max: 80, expected: "short" },
+    { value: "emoji 😀 inside", max: 80, expected: "emoji 😀 inside" },
+    {
+      value: "x".repeat(81),
+      max: 80,
+      expected: `${"x".repeat(79)}…`,
+    },
+    // An emoji straddling the cutoff must not leave a lone surrogate half.
+    {
+      value: `${"x".repeat(78)}😀y`,
+      max: 80,
+      expected: `${"x".repeat(78)}…`,
+    },
+    // A combining mark stays glued to its base letter across the boundary.
+    {
+      value: `${"x".repeat(77)}e\u0301zz`,
+      max: 80,
+      expected: `${"x".repeat(77)}e\u0301…`,
+    },
+    // A ZWJ sequence is one grapheme even though it spans many code units.
+    {
+      value: `${"x".repeat(75)}👨‍👩‍👧z`,
+      max: 80,
+      expected: `${"x".repeat(75)}…`,
+    },
+  ])("truncates %j to %j", ({ value, max, expected }) => {
+    const result = truncate(value, max);
+    expect(result).toBe(expected);
+    expect(result.isWellFormed()).toBe(true);
+  });
 });
 
 describe("shortId", () => {

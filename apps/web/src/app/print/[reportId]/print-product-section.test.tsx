@@ -26,7 +26,7 @@ function makeReport(
 describe("PrintProductSection — status label/color pins", () => {
   it.each([
     { status: "on-track", label: "On Track", color: "#006241" },
-    { status: "at-risk", label: "At Risk", color: "#daa520" },
+    { status: "at-risk", label: "At Risk", color: "#856800" },
     { status: "blocked", label: "Blocked", color: "#c82014" },
   ] as const)(
     "renders '$label' with $color for status '$status'",
@@ -141,7 +141,7 @@ describe("PrintProductSection — item outcome context", () => {
 });
 
 describe("PrintProductSection — item status badge", () => {
-  it("prints an at-risk item badge with the amber palette", () => {
+  it("prints an at-risk item badge with the dark amber palette", () => {
     render(
       <PrintProductSection
         report={{
@@ -163,7 +163,7 @@ describe("PrintProductSection — item status badge", () => {
     const badge = screen.getByText("At risk");
     expect(badge).toHaveStyle({
       backgroundColor: "#fef9e7",
-      color: "#daa520",
+      color: "#856800",
     });
   });
 });

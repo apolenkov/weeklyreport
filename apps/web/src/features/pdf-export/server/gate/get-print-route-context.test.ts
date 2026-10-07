@@ -4,13 +4,19 @@ import { describe, expect, it, vi } from "vitest";
 // don't have a Next.js server context, so neutralise it.
 vi.mock("server-only", () => ({}));
 
+const cookieGetMock = vi.hoisted(() =>
+  vi.fn<(name: string) => { value: string } | undefined>(),
+);
+
 // `next/headers` is server-only; mock keeps the module surface available
 // without dragging the Next.js runtime.
 vi.mock("next/headers", () => ({
-  cookies: () => Promise.resolve({ get: vi.fn() }),
+  cookies: () => Promise.resolve({ get: cookieGetMock }),
 }));
 
+import { SERVER_FETCH_TIMEOUT_MS } from "../../../../shared/server/transport/api-url";
 import { decodePrintGateResponse } from "./decode-print-gate";
+import { getPrintRouteContext } from "./get-print-route-context";
 
 // Preserve the realistic batched printGate seam: route-gate mocks otherwise
 // bypass decoding of session, export mode, and report id together.
@@ -138,5 +144,78 @@ describe("decodePrintGateResponse", () => {
       pdfReportId: null,
       pdfJobId: null,
     });
+  });
+});
+
+describe("getPrintRouteContext", () => {
+  it("returns the decoded context for a valid gate payload", async () => {
+    vi.stubEnv("API_URL", "http://api:3002");
+    cookieGetMock.mockReturnValue({ value: "worker-jwt" });
+    const body = [
+      {
+        result: {
+          data: {
+            json: {
+              session: null,
+              isPdfExport: true,
+              pdfReportId: REPORT_ID,
+              pdfJobId: "22222222-2222-4222-8222-222222222222",
+            },
+          },
+        },
+      },
+    ];
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(new Response(JSON.stringify(body), { status: 200 })),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const context = await getPrintRouteContext();
+
+    expect(context).toEqual({
+      session: null,
+      isPdfExport: true,
+      pdfReportId: REPORT_ID,
+      pdfJobId: "22222222-2222-4222-8222-222222222222",
+    });
+    const [, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(init.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("fails closed to no-context when the shared deadline aborts a stalled API call", async () => {
+    vi.stubEnv("API_URL", "http://api:3002");
+    cookieGetMock.mockReturnValue({ value: "worker-jwt" });
+    // AbortSignal.timeout is the platform seam; the test owns when it fires.
+    const deadline = new AbortController();
+    const timeoutSpy = vi
+      .spyOn(AbortSignal, "timeout")
+      .mockReturnValue(deadline.signal);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (_url: unknown, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            const signal = init?.signal;
+            const abort = () => reject(signal?.reason ?? new Error("aborted"));
+            if (signal?.aborted) {
+              abort();
+              return;
+            }
+            signal?.addEventListener("abort", abort);
+          }),
+      ),
+    );
+
+    deadline.abort();
+    await expect(getPrintRouteContext()).resolves.toEqual({
+      session: null,
+      isPdfExport: false,
+      pdfReportId: null,
+      pdfJobId: null,
+    });
+    expect(timeoutSpy).toHaveBeenCalledWith(SERVER_FETCH_TIMEOUT_MS);
   });
 });

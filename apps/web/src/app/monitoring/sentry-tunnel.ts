@@ -40,8 +40,10 @@ export function resolveSentryTunnelClientKey(req: Request): string {
  */
 export function consumeSentryTunnelQuota(
   clientKey: string,
-  now = Date.now(),
+  now?: number,
 ): boolean {
+  // The quota owner supplies the monotonic default; callers only inject a
+  // clock in tests, always on the same monotonic scale.
   return clientQuota.consume(clientKey, now);
 }
 

@@ -12,7 +12,10 @@ import { AiProviderCardContent } from "./ai-provider-card";
 import { providerTestExecutionMessage } from "./ai-provider-mutations";
 import { AiProviderRetainedRevisions } from "./ai-provider-retained-revisions";
 import { AiProviderRevisionDetails } from "./ai-provider-revision-details";
-import { selectObservedRevision } from "./ai-provider-revision-selection";
+import {
+  savedRevisionIsStale,
+  selectObservedRevision,
+} from "./ai-provider-revision-selection";
 
 const revision = (
   lifecycle: AiProviderConfigurationRead["lifecycle"],
@@ -83,6 +86,43 @@ describe("selectObservedRevision", () => {
         failed,
       ),
     ).toMatchObject({ id: preparing.id, lifecycle: "preparing" });
+  });
+});
+
+describe("savedRevisionIsStale", () => {
+  const saved = revision("draft", "22222222-2222-4222-8222-222222222222");
+
+  it("keeps the pin while no post-save fetch has landed", () => {
+    expect(
+      savedRevisionIsStale(
+        { ...control(null), revisions: [] },
+        saved,
+        1000,
+        2000,
+      ),
+    ).toBe(false);
+  });
+
+  it("keeps the pin when a post-save fetch returns the revision", () => {
+    expect(
+      savedRevisionIsStale(
+        { ...control(null), revisions: [saved] },
+        saved,
+        3000,
+        2000,
+      ),
+    ).toBe(false);
+  });
+
+  it("retires the pin once a post-save fetch still lacks the revision", () => {
+    expect(
+      savedRevisionIsStale(
+        { ...control(null), revisions: [] },
+        saved,
+        3000,
+        2000,
+      ),
+    ).toBe(true);
   });
 });
 
