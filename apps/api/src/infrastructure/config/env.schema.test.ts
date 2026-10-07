@@ -297,6 +297,28 @@ describe("envSchema — no defaults, every product var required", () => {
     },
   );
 
+  it.each([
+    "https://key@o123.ingest.sentry.io/456",
+    "http://key@selfhosted.local:9000/7",
+  ] as const)("accepts the valid SENTRY_DSN %j", (SENTRY_DSN) => {
+    expect(envSchema.safeParse({ ...COMPLETE, SENTRY_DSN }).success).toBe(true);
+  });
+
+  it.each([
+    " ".repeat(4),
+    "not-a-dsn",
+    "ftp://key@sentry.example.com/42",
+    "https://sentry.example.com/42",
+    "https://key@sentry.example.com/abc",
+  ] as const)(
+    "rejects the malformed configured SENTRY_DSN %j",
+    (SENTRY_DSN) => {
+      expect(envSchema.safeParse({ ...COMPLETE, SENTRY_DSN }).success).toBe(
+        false,
+      );
+    },
+  );
+
   it.each(["0", "-1", "1.5", "not-a-number"] as const)(
     "rejects a non-positive-integer HEAP_HEALTH_THRESHOLD_BYTES (%s)",
     (value) => {
