@@ -10,7 +10,7 @@
 //
 // E2E destructive work has one deliberately narrow target contract. Production
 // restore is a separate shell entrypoint and does not use this module.
-import { isIP } from "node:net";
+import { isLoopbackHost, parseLoopbackHost } from "./loopback-host.js";
 
 export const E2E_DESTRUCTIVE_CONSENT = "давай" as const;
 export const E2E_DATABASE_NAME = "customreport_e2e" as const;
@@ -31,8 +31,6 @@ export interface E2eRuntimeDatabaseIdentity {
 
 const DEFAULT_POSTGRES_PORT = "5432";
 export const MAX_TCP_PORT = 65_535;
-const IPV4_MAX_OCTET = 255;
-const IPV4_MAPPED_HIGH_WORD = 0x7f_00;
 const RAW_ASCII_SPACE_OR_CONTROL = /[\u0000-\u0020\u007F]/u;
 
 const maskedUrl = (value: string): string => {
@@ -56,34 +54,7 @@ const refuse = (scriptName: string, url: string, reason: string): never => {
   );
 };
 
-const isLoopbackIpv4 = (host: string): boolean =>
-  host.startsWith("127.") && Boolean(isIP(host));
-
-export const isLoopbackHost = (hostname: string): boolean => {
-  const host = hostname.toLowerCase().replaceAll(/^\[|\]$/gu, "");
-  if (host === "localhost" || host === "::1" || isLoopbackIpv4(host)) {
-    return true;
-  }
-
-  // URL normalisation can expose IPv4-mapped literals in either dotted or
-  // hexadecimal form. Keep the accepted surface explicit and loopback-only.
-  if (host.startsWith("::ffff:")) {
-    const mapped = host.slice("::ffff:".length);
-    if (isLoopbackIpv4(mapped)) return true;
-    const mappedParts = mapped.split(":");
-    if (mappedParts.length !== 2) return false;
-    const high = Number.parseInt(mappedParts[0] ?? "", 16);
-    const low = Number.parseInt(mappedParts[1] ?? "", 16);
-    return (
-      Number.isInteger(high) &&
-      Number.isInteger(low) &&
-      high === IPV4_MAPPED_HIGH_WORD &&
-      low >= 0 &&
-      low <= IPV4_MAX_OCTET
-    );
-  }
-  return false;
-};
+export { isLoopbackHost, parseLoopbackHost };
 
 const rawPortFromBracketedHost = (
   scriptName: string,
