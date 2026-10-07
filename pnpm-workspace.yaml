@@ -66,8 +66,8 @@ overrides:
   mysql2: ">=3.24.5 <4"
   fast-uri: ">=4.2.1 <5"
   # Dev-only transitives (jsdom, agentation-mcp) with open advisories; stay in the same major.
-  # undici is pinned to the first patched release: 8.11.2 breaks vitest snapshot state in the jsdom suite.
-  undici: "8.10.2"
+  # Keep the jsdom transport reproducible; the complete Web suite verifies this exact release.
+  undici: "8.11.2"
   hono: ">=4.13.13 <5"
   # Keep transitive packages in verified major ranges.
   js-yaml: ">=5.4.3 <6"
