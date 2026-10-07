@@ -1,6 +1,11 @@
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 
+import {
+  isStrongJwtSecret,
+  MIN_JWT_SECRET_LENGTH,
+} from "../../lib/jwt-secret.js";
+
 // reportId binds the cookie to one resource; kind routes the verifier away
 // from session JWTs. requestedBy rebuilds the worker session as the requester.
 export interface PdfExportTokenClaims {
@@ -16,7 +21,6 @@ const PDF_EXPORT_KIND = "pdf-export" as const;
 // auth.controller.ts `SESSION_JWT_ALGORITHM`). Sign uses the jsonwebtoken
 // default, which is the same HS256.
 const PDF_EXPORT_JWT_ALGORITHM = "HS256" as const;
-const MIN_PDF_EXPORT_JWT_SECRET_LENGTH = 32;
 
 // Every claim the signer mints is required on verify: exp is enforced because
 // jwt.verify only checks an exp that is present, and sign always sets one — a
@@ -30,9 +34,10 @@ const pdfExportTokenClaimsSchema = z.object({
 });
 
 function requirePdfExportSecret(secret: string | undefined): string {
-  if (!secret || secret.length < MIN_PDF_EXPORT_JWT_SECRET_LENGTH) {
+  if (!isStrongJwtSecret(secret)) {
     throw new Error(
-      "PDF_EXPORT_JWT_SECRET is missing or too short (must be >= 32 chars).",
+      `PDF_EXPORT_JWT_SECRET is missing or too short ` +
+        `(must be >= ${MIN_JWT_SECRET_LENGTH} characters).`,
     );
   }
   return secret;
