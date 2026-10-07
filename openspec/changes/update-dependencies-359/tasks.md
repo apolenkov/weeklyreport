@@ -6,7 +6,7 @@
 - [x] 1.4 Upgrade Vitest and coverage together, verifying complete unit suites.
 - [x] 1.5 Upgrade the lint plugin major with the full lint gate.
 - [x] 1.6 Verify transitive overrides and encode proven compatibility restrictions.
-- [ ] 1.7 Upgrade pnpm separately with frozen install and workspace gates.
+- [x] 1.7 Upgrade pnpm separately with frozen install and workspace gates.
 
 ## 2. API and Web SDKs
 
