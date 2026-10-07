@@ -1,5 +1,6 @@
 /// <reference types="node" />
 
+import { createSentryPrivacyOptions } from "@customreport/shared";
 import { z } from "zod";
 
 // Runtime-neutral Sentry options shared by the edge and server entrypoints,
@@ -37,6 +38,7 @@ export function createSentryInitOptions() {
   const env = readSentryRuntimeEnv();
 
   return {
+    ...createSentryPrivacyOptions(),
     // The server DSN is authoritative when both are configured. Both values
     // are parsed before selection so a malformed configured value never hides.
     dsn: env.SENTRY_DSN ?? env.NEXT_PUBLIC_SENTRY_DSN,
