@@ -71,8 +71,8 @@ variables:
     - when: on_success
   before_script:
     # Node 26 no longer bundles Corepack; install only the pinned pnpm CLI here.
-    - npm install --global pnpm@11.28.3
-    - test "$(pnpm --version)" = "11.28.3"
+    - npm install --global pnpm@12.10.1
+    - test "$(pnpm --version)" = "12.10.1"
     - pnpm install --frozen-lockfile
     - pnpm exec prisma generate
 
@@ -97,8 +97,8 @@ variables:
     - tar -xzf "$NODE_TOOLCHAIN_ARTIFACT" -C /
     - ldconfig
     - test "$(node --version)" = "v26.10.0"
-    - npm install --global pnpm@11.28.3
-    - test "$(pnpm --version)" = "11.28.3"
+    - npm install --global pnpm@12.10.1
+    - test "$(pnpm --version)" = "12.10.1"
     - pnpm install --frozen-lockfile
     - pnpm exec prisma generate
     # The postgres daemon must run as the postgres user; initdb refuses root.
@@ -188,8 +188,8 @@ dependency-scan:
         - pnpm-workspace.yaml
     - when: never
   before_script:
-    - npm install --global pnpm@11.28.3
-    - test "$(pnpm --version)" = "11.28.3"
+    - npm install --global pnpm@12.10.1
+    - test "$(pnpm --version)" = "12.10.1"
     - pnpm install --frozen-lockfile
   script:
     - pnpm audit --prod
