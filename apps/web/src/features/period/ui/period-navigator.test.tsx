@@ -214,6 +214,50 @@ describe("PeriodNavigator (lead)", () => {
       },
     );
 
+    it.each([
+      { periods: PERIODS, shrink: "3 to 2", key: "Enter" },
+      { periods: PERIODS, shrink: "3 to 2", key: " " },
+      { periods: SCHEDULED_PERIODS, shrink: "4 to 2", key: "Enter" },
+      { periods: SCHEDULED_PERIODS, shrink: "4 to 2", key: " " },
+    ])(
+      "moves up once after options shrink $shrink and selects with $key",
+      ({ periods, key }) => {
+        navigationState.pathname = "/lead/report/2026-W16";
+        const scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView");
+        const { rerender } = render(<PeriodNavigator periods={periods} />);
+        const trigger = getTrigger();
+        trigger.focus();
+        fireEvent.click(trigger);
+        fireEvent.keyDown(trigger, { key: "End" });
+        expect(trigger).toHaveAttribute(
+          "aria-activedescendant",
+          screen.getByRole("option", { name: /Apr 7–13, 2026/ }).id,
+        );
+
+        rerender(<PeriodNavigator periods={PERIODS.slice(0, 2)} />);
+        expect(trigger).toHaveAttribute(
+          "aria-activedescendant",
+          screen.getByRole("option", { name: /Apr 14–20, 2026/ }).id,
+        );
+        scrollIntoView.mockClear();
+
+        fireEvent.keyDown(trigger, { key: "ArrowUp" });
+
+        const firstOption = screen.getByRole("option", {
+          name: /Apr 21–27, 2026/,
+        });
+        expect(trigger).toHaveAttribute(
+          "aria-activedescendant",
+          firstOption.id,
+        );
+        expect(scrollIntoView.mock.contexts).toContain(firstOption);
+        expect(trigger).toHaveFocus();
+        fireEvent.keyDown(trigger, { key });
+        expect(push).toHaveBeenCalledExactlyOnceWith("/lead/report/2026-W17");
+        expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+      },
+    );
+
     it("removes the active descendant when an open list becomes empty", () => {
       const { rerender } = render(<PeriodNavigator periods={PERIODS} />);
       const trigger = getTrigger();
