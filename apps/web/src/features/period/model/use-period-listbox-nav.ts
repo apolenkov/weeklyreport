@@ -102,7 +102,9 @@ function createListboxKeyHandlers({
       setActiveIdx((i) => Math.min(i + 1, periodOptionIds.length - 1));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setActiveIdx((i) => Math.max(i - 1, 0));
+      setActiveIdx((i) =>
+        Math.max(Math.min(i, periodOptionIds.length - 1) - 1, 0),
+      );
     } else if (e.key === "Home") {
       e.preventDefault();
       setActiveIdx(0);
