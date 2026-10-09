@@ -18,32 +18,25 @@
       "labels": ["dependencies", "major"]
     },
     {
-      "description": "OpenSpec 1.14.1 promotes existing long-requirement INFO diagnostics to WARNING, failing spec:check for 116 specs; 1.14.0 passes all 181 items (TASK-359)",
+      "description": "OpenSpec 1.14.1 promotes long-requirement diagnostics to WARNING, failing strict spec:check for 117 of 182 items on 2026-10-09 (TASK-359)",
       "matchPackageNames": ["@fission-ai/openspec"],
       "matchNewValue": "1.14.1",
       "enabled": false
     },
     {
-      "description": "Radix UI 1.7.0 appends its generated description ID to custom aria-describedby; our DialogDescription asChild supplies a custom ID, leaving the appended reference unresolved (4 DOM regressions, TASK-359)",
-      "matchPackageNames": ["radix-ui"],
-      "matchNewValue": "1.7.0",
-      "enabled": false
-    },
-    {
-      "description": "Node 26.11.0 was released on 2026-10-07 but its official bookworm/alpine tags return MANIFEST_UNKNOWN; preserve synchronized 26.10.0 until images are published (TASK-359)",
-      "matchPackageNames": ["node"],
-      "matchNewValue": "/^26\\.11\\.0(?:-|$)/",
-      "enabled": false
-    },
-    {
-      "description": "PostgreSQL 18.6 rejects the existing PostgreSQL 15 data directory; a data migration is required before changing the deployed storage major (guarded container proof, TASK-359)",
+      "description": "pg_dump/pg_restore 18.6 and 17.11 emit transaction_timeout unsupported by the retained PostgreSQL 15 target; 16.15 passes the real backup/restore roundtrip (isolated synthetic proof 2026-10-09, TASK-359)",
       "matchPackageNames": ["postgres"],
-      "allowedVersions": "<16"
+      "allowedVersions": "<17",
+      "matchFileNames": ["deploy/postgres/Dockerfile.backup"]
     },
     {
-      "description": "The deployed pgvector image must retain its PostgreSQL 15 storage major; PostgreSQL 18.6 rejects existing data files (TASK-359)",
+      "description": "PostgreSQL 18.6 rejects PostgreSQL 15 data files; 15.19 on Trixie preserves the fixture and starts successfully. Retain the storage major only for existing local/Helm volumes until migration (isolated synthetic proof 2026-10-09, TASK-359)",
       "matchPackageNames": ["pgvector/pgvector"],
-      "allowedVersions": "/-pg15-/"
+      "allowedVersions": "/-pg15-/",
+      "matchFileNames": [
+        "deploy/local-dev/deps.yaml",
+        "deploy/helm/weeklyreport/values.yaml"
+      ]
     },
     {
       "description": "xmldom 0.9.12 rejects the errorHandler object passed by node-saml 5.1; SAML getSignedAssertion fails, while latest compatible 0.8.15 passes (TASK-359)",
@@ -55,6 +48,12 @@
       "matchPackageNames": ["brace-expansion"],
       "allowedVersions": "<2",
       "matchCurrentVersion": "<2"
+    },
+    {
+      "description": "Vite 8.3.4 breaks Vitest 5.0.3 async rejection and snapshot context on Node 26.11.1 and 26.10.0; 8.3.3 passes all 27 unchanged control cases between two failed 8.3.4 runs (TASK-359, 2026-10-09)",
+      "matchPackageNames": ["vite"],
+      "matchNewValue": "8.3.4",
+      "enabled": false
     }
   ]
 }

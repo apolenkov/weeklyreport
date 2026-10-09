@@ -16,7 +16,7 @@ import {
 interface ReasonTooltipProps {
   readonly reason: string | undefined;
   readonly children: ReactElement<{
-    "aria-describedby"?: string;
+    "aria-describedby"?: string | undefined;
     onClick?: (event: MouseEvent) => void;
   }>;
 }
@@ -24,8 +24,9 @@ interface ReasonTooltipProps {
 // Explains why an aria-disabled control is blocked. The reason opens on hover
 // and focus, and on click/tap (controlled open, because Radix ignores touch);
 // preventDefault keeps Radix's own click handler from closing it again. The
-// sr-only copy gives assistive tech a stable aria-describedby target. Callers
-// supply the TooltipProvider.
+// sr-only copy supplies the description while closed; the open tooltip supplies
+// its own description so assistive tech receives the reason once. Callers supply
+// the TooltipProvider.
 export function ReasonTooltip({ reason, children }: ReasonTooltipProps) {
   const reasonId = useId();
   const [open, setOpen] = useState(false);
@@ -35,7 +36,7 @@ export function ReasonTooltip({ reason, children }: ReasonTooltipProps) {
       <Tooltip open={open} onOpenChange={setOpen}>
         <TooltipTrigger asChild>
           {cloneElement(children, {
-            "aria-describedby": reasonId,
+            "aria-describedby": open ? undefined : reasonId,
             onClick: (event) => {
               event.preventDefault();
               setOpen(true);

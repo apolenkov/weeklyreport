@@ -143,25 +143,27 @@ describe("LeadReportAssistant", () => {
     const trigger = await screen.findByRole("button", {
       name: "Report chat unavailable",
     });
+    const reason =
+      "Report chat is unavailable until an administrator configures AI";
     expect(trigger).toHaveAttribute("aria-disabled", "true");
+    expect(trigger).toBeEnabled();
+    expect(trigger).toHaveAccessibleDescription(reason);
     act(() => trigger.focus());
-    expect(
-      (
-        await screen.findAllByText(
-          "Report chat is unavailable until an administrator configures AI",
-        )
-      ).length,
-    ).toBeGreaterThan(0);
+    expect((await screen.findAllByText(reason)).length).toBeGreaterThan(0);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(reason);
+    expect(trigger).toHaveFocus();
+    expect(trigger).toHaveAccessibleDescription(reason);
     fireEvent.click(trigger);
-    expect(screen.getByRole("tooltip")).toHaveTextContent(
-      "Report chat is unavailable until an administrator configures AI",
-    );
-    expect(
-      document.getElementById(trigger.getAttribute("aria-describedby") ?? ""),
-    ).toHaveTextContent(
-      "Report chat is unavailable until an administrator configures AI",
-    );
+    expect(screen.getByRole("tooltip")).toHaveTextContent(reason);
+    expect(trigger).toHaveFocus();
+    expect(trigger).toHaveAccessibleDescription(reason);
     expect(screen.queryByText("Lead workspace")).not.toBeInTheDocument();
+
+    act(() => trigger.blur());
+    await waitFor(() =>
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument(),
+    );
+    expect(trigger).toHaveAccessibleDescription(reason);
   });
 
   it("keeps Chat disabled while availability is pending", async () => {
