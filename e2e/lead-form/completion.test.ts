@@ -22,10 +22,11 @@ import {
   waitText,
 } from "./browser.js";
 import { registerE2eHooks } from "./fixtures.js";
-import { assertFocused } from "./focus.js";
+import { assertFocused, centerControl } from "./focus.js";
 import {
   ARCHIVED_FILL_FIXTURE,
   LEAD_FORM_FIXTURE,
+  oneRef,
   roleText,
   saveDraft,
   scopeCount,
@@ -314,6 +315,10 @@ async function addMarker(text: string): Promise<void> {
 }
 
 async function openFillConfirmation(): Promise<{ role: string; name: RegExp }> {
+  // The completion handoff changes the split button's horizontal position.
+  // Wait for the header actions to return before measuring the click target.
+  await command(["eval", "scrollTo(0, 0)"]);
+  await waitScope({ role: "group", name: "Header completion actions" });
   await findRole("button", "Fill from most recent submitted period", "click");
   const name = /^Fill from .+\?$/u;
   const data = await waitScope({ role: "alertdialog", name });
@@ -409,7 +414,10 @@ void test("completion guidance jumps to missing work", async () => {
   assert(counters.length > 0, "The Save/Submit cluster must show the counter");
   assert(counters.every((counter) => counter === PENDING_REVIEW));
   await findRole("heading", "Fix before submitting", "text");
-  await findRole("link", `Review "${LEAD_FORM_FIXTURE.carriedText}".`, "click");
+  const reviewName = `Review "${LEAD_FORM_FIXTURE.carriedText}".`;
+  const review = oneRef(await snapshot(), "link", reviewName);
+  await centerControl(review);
+  await command(["click", review]);
   await assertStatusFocused(LEAD_FORM_FIXTURE.carriedText);
   assert.match(await getUrl(), /#confirm:current:/u);
   assert.match(
@@ -442,10 +450,22 @@ void test("completion guidance jumps to missing work", async () => {
   assert.doesNotMatch(data.snapshot, /heading "Stages \(/u);
   await findRole(promotionRole, name, "click");
   assert.match((await snapshot()).snapshot, /Маркетинговый портал \/ DevOps/u);
-  await findRole("link", "Risks & decisions", "click");
-  assert.match(await getUrl(), /#report-details$/u);
-  await findRole("button", "Expand Risks & Blockers", "click");
-  await findRole("button", "Expand Decisions", "click");
+  // The Risks & decisions jump link is gone: risks/decisions render inline
+  // below the overview when the editor is ready, so assert them directly.
+  const expandRisks = oneRef(
+    await snapshot(),
+    "button",
+    "Expand Risks & Blockers",
+  );
+  await centerControl(expandRisks);
+  await command(["click", expandRisks]);
+  const expandDecisions = oneRef(
+    await snapshot(),
+    "button",
+    "Expand Decisions",
+  );
+  await centerControl(expandDecisions);
+  await command(["click", expandDecisions]);
   await findRole("region", "Risks & Blockers", "text");
   await findRole("region", "Decisions", "text");
   const submit = await scopedRef(

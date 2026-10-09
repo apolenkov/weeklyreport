@@ -24,7 +24,7 @@ import {
   waitText,
 } from "./browser.js";
 import { registerE2eHooks } from "./fixtures.js";
-import { assertFocused } from "./focus.js";
+import { assertFocused, centerControl } from "./focus.js";
 import {
   clickBackdrop,
   LEAD_FORM_FIXTURE,
@@ -414,10 +414,13 @@ async function prepareSubmission(): Promise<void> {
       `E2E current commitment for ${productName}`,
     );
     if (productName === "CRM-Customer 360") {
-      await command([
-        "check",
-        oneRef(namedScope(await snapshot(), form), "checkbox", "Development"),
-      ]);
+      const development = oneRef(
+        namedScope(await snapshot(), form),
+        "checkbox",
+        "Development",
+      );
+      await centerControl(development);
+      await command(["check", development]);
     } else {
       assert.match(namedScope(await snapshot(), form).snapshot, /Development/);
       assert.match(

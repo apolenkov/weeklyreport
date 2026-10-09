@@ -236,7 +236,7 @@ export function LeadFormLoaded(props: LeadFormLoadedProps) {
   return (
     <SdlcTooltipProvider>
       <form
-        className={`space-y-6 ${completion.showStickyCompletion ? LEAD_STICKY_COMPLETION_CLEARANCE_CLASS : ""}`}
+        className={`space-y-5 ${completion.showStickyCompletion ? LEAD_STICKY_COMPLETION_CLEARANCE_CLASS : ""}`}
         data-testid="lead-report-form"
         data-layout-key="report-page"
         data-layout-stability="position-width"

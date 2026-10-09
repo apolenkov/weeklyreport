@@ -70,7 +70,7 @@ export function useOverviewFocusReturn(
     const destination =
       origin ??
       document.querySelector<HTMLElement>("[data-overview-focus-heading]");
-    destination?.focus({ preventScroll: true });
+    destination?.focus();
   }, [open]);
 
   return (explicitOriginKey?: string) => {

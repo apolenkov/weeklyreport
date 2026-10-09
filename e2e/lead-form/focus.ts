@@ -2,6 +2,34 @@ import assert from "node:assert/strict";
 
 import { command } from "./browser.js";
 
+/** Keep ordinary pointer actions clear of the sticky toolbars. */
+export async function centerControl(
+  ref: string,
+  session?: string,
+): Promise<void> {
+  await command(["focus", ref], session);
+  await command(
+    [
+      "eval",
+      "document.activeElement.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' })",
+    ],
+    session,
+  );
+  await command(
+    [
+      "wait",
+      "--fn",
+      `(() => {
+        const element = document.activeElement;
+        const rect = element.getBoundingClientRect();
+        const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+        return rect.width > 0 && rect.height > 0 && hit !== null && element.contains(hit);
+      })()`,
+    ],
+    session,
+  );
+}
+
 export async function assertFocused(
   name: string,
   session?: string,

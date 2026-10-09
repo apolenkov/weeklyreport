@@ -130,8 +130,11 @@ function useOverviewDetailsHref(
   targetReportId: string,
 ) {
   const searchParams = useSearchParams();
+  // With the editor ready the risks/decisions surface renders inline below the
+  // overview, so a jump link only duplicates scrolling; keep it solely as the
+  // fallback path to the standalone details view when the editor is absent.
   return readyEditor
-    ? "#report-details"
+    ? undefined
     : buildStatusOverviewDetailsHref(targetReportId, searchParams);
 }
 
@@ -265,7 +268,7 @@ export function LeadStatusOverviewContent({
   return (
     <SdlcTooltipProvider>
       <div
-        className={`min-w-0 space-y-6 ${completion.showStickyCompletion ? LEAD_STICKY_COMPLETION_CLEARANCE_CLASS : ""}`}
+        className={`min-w-0 space-y-5 ${completion.showStickyCompletion ? LEAD_STICKY_COMPLETION_CLEARANCE_CLASS : ""}`}
         data-testid="lead-status-overview-page"
         data-layout-key="report-page"
         data-layout-stability="position-width"

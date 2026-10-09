@@ -19,7 +19,10 @@ import {
   ShowMoreButton,
 } from "./status-overview-lineage-row";
 import { StatusOverviewUnitSummary } from "./status-overview-summary";
-import { TimelineFooter } from "./status-overview-timeline-footer";
+import {
+  TimelineFooter,
+  UnitAddItemButton,
+} from "./status-overview-timeline-footer";
 
 export { STATUS_OVERVIEW_DESKTOP_GRID };
 
@@ -33,6 +36,28 @@ function PreviousUnavailableNotice({
     <p className="px-4 py-2 text-xs text-[var(--color-muted-foreground)]">
       {column.reason}
     </p>
+  );
+}
+
+function UnitHeaderActions({
+  headerAction,
+  unit,
+  onAddItem,
+}: {
+  readonly headerAction?: ReactNode;
+  readonly unit: StatusOverviewUnit;
+  readonly onAddItem: ItemHandlers["onAddItem"];
+}) {
+  const addAction =
+    onAddItem && !unit.historical ? (
+      <UnitAddItemButton unit={unit} onAddItem={onAddItem} />
+    ) : null;
+  if (!headerAction && !addAction) return undefined;
+  return (
+    <div className="flex shrink-0 items-start gap-1">
+      {headerAction}
+      {addAction}
+    </div>
   );
 }
 
@@ -66,6 +91,11 @@ export function StatusOverviewUnitRow({
   /** Optional control shown in the unit header (the Activity edit button). */
   readonly headerAction?: ReactNode;
 } & ItemHandlers) {
+  const headerActions = UnitHeaderActions({
+    headerAction,
+    unit,
+    onAddItem: handlers.onAddItem,
+  });
   return (
     <article
       aria-label={`${unit.kind === "product" ? "Product" : "Activity"} ${unit.name}`}
@@ -79,7 +109,7 @@ export function StatusOverviewUnitRow({
             healthExpanded={healthExpanded}
             healthPanelId={healthPanelId}
             onInspect={onInspect}
-            headerAction={headerAction}
+            headerAction={headerActions}
           />
         </div>
         <div className="min-w-0 min-[80rem]:col-span-3">
@@ -99,11 +129,7 @@ export function StatusOverviewUnitRow({
             panelId={panelId}
             onToggle={onToggle}
           />
-          <TimelineFooter
-            unit={unit}
-            onAddItem={handlers.onAddItem}
-            editorSlot={editorSlot}
-          />
+          <TimelineFooter editorSlot={editorSlot} />
         </div>
       </div>
       {health && healthExpanded ? (
