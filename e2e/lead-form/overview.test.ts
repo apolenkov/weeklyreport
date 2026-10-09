@@ -17,6 +17,7 @@ import {
   waitText,
 } from "./browser.js";
 import { registerE2eHooks } from "./fixtures.js";
+import { assertFocused, centerControl } from "./focus.js";
 import {
   LEAD_FORM_FIXTURE,
   OPEN_WORK_FIXTURE,
@@ -861,6 +862,38 @@ void test("activity health stays stage-free and historical health stays read-onl
   await clickRole("button", "Close health details");
   assert.equal(await writeCount(), before);
 });
+
+for (const [width, height] of [
+  [1280, 900],
+  [375, 812],
+] as const) {
+  void test(`cancelling header Add restores visible focus at ${width}×${height}`, async () => {
+    await openLeadReport();
+    const addName = `Add item to ${PRODUCT}`;
+    const editor = { role: "form", name: `Current week update for ${PRODUCT}` };
+    await command(["set", "viewport", String(width), String(height)]);
+    await centerControl(await namedRef("button", addName));
+    await clickRole("button", addName);
+    await waitScope(editor);
+    await cancelUpdate("Current week", PRODUCT);
+    await waitClosed(editor);
+    await assertFocused(addName);
+    const visible = await command([
+      "eval",
+      `(() => {
+        const element = document.activeElement;
+        const rect = element.getBoundingClientRect();
+        const hit = document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+        return rect.width > 0 && rect.height > 0 && rect.top >= 0 && rect.bottom <= innerHeight && hit !== null && element.contains(hit);
+      })()`,
+    ]);
+    assert.equal(
+      visible.result,
+      true,
+      `Header Add focus is outside the visible page at ${width}×${height}`,
+    );
+  });
+}
 
 void test("the item editor saves current and next week through the canonical form", async () => {
   await openLeadReport();
