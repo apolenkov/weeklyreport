@@ -33,7 +33,7 @@ WeeklyReport автоматизирует еженедельные статус-
 Это монорепо на pnpm workspaces + Turborepo. Главные части:
 
 - **`apps/web`** — фронтенд на Next.js 16 / React 19. App Router.
-- **`apps/api`** — бэкенд на NestJS 11. Слой API — tRPC. Доступ к БД — Prisma.
+- **`apps/api`** — бэкенд на NestJS. Слой API — tRPC. Доступ к БД — Prisma.
 - **`packages/shared`** — Zod-схемы, типы, enum-ы. Общий контракт между web и api.
 - **`packages/report-persistence`** — серверный Prisma include/mapper и сборка
   immutable published snapshots, общая для API и seed-профилей.
