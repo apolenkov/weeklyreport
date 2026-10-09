@@ -6,7 +6,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { type PdfExportJob, pdfExportJobSchema } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TRPCClientError } from "@trpc/client";
 import type { ReactNode } from "react";
@@ -217,6 +217,7 @@ describe("ExportPdfButton", () => {
   });
 
   it("reveals the exact prerequisite on pointer hover without enabling export", async () => {
+    const user = userEvent.setup();
     const { captured } = renderButton({
       statusQuery: COMPLETED_STATUS,
       periodStatus: "open",
@@ -229,18 +230,35 @@ describe("ExportPdfButton", () => {
     expect(trigger).not.toHaveAttribute("role", "button");
     expect(trigger).toHaveAccessibleName("Export PDF unavailable");
     expect(trigger).toHaveAccessibleDescription(DISABLED_REASON);
+    const reason = screen.getByText(DISABLED_REASON);
+    expect(trigger).toHaveAttribute("aria-describedby", reason.id);
     expect(button).toBeDisabled();
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
 
-    await userEvent.hover(trigger);
+    await user.hover(trigger);
 
-    expect(
-      await screen.findByRole("tooltip", { name: DISABLED_REASON }),
-    ).toBeVisible();
+    const tooltip = await screen.findByRole("tooltip", {
+      name: DISABLED_REASON,
+    });
+    expect(tooltip).toBeVisible();
+    expect(trigger).toHaveAccessibleDescription(DISABLED_REASON);
+    expect(trigger).toHaveAttribute("aria-describedby", tooltip.id);
     expect(button).toBeDisabled();
     expect(
       expectDefined(captured["pdfExport.request"]).mutationFn,
     ).not.toHaveBeenCalled();
+
+    await user.unhover(trigger);
+    // Leave both surfaces and the area that permits travel into the tooltip.
+    await user.pointer({
+      target: document.body,
+      coords: { clientX: 1000, clientY: 1000 },
+    });
+    await waitFor(() =>
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument(),
+    );
+    expect(trigger).toHaveAccessibleDescription(DISABLED_REASON);
+    expect(trigger).toHaveAttribute("aria-describedby", reason.id);
   });
 
   it("reveals the exact prerequisite on keyboard focus without activation", async () => {
@@ -251,21 +269,37 @@ describe("ExportPdfButton", () => {
     });
     const trigger = screen.getByTestId("export-pdf-disabled-trigger");
     const button = screen.getByRole("button", { name: "Export PDF" });
+    const reason = screen.getByText(DISABLED_REASON);
+
+    expect(trigger).toHaveAccessibleDescription(DISABLED_REASON);
+    expect(trigger).toHaveAttribute("aria-describedby", reason.id);
 
     await user.tab();
 
     expect(trigger).toHaveFocus();
-    expect(
-      await screen.findByRole("tooltip", { name: DISABLED_REASON }),
-    ).toBeVisible();
+    const tooltip = await screen.findByRole("tooltip", {
+      name: DISABLED_REASON,
+    });
+    expect(tooltip).toBeVisible();
+    expect(trigger).toHaveAccessibleDescription(DISABLED_REASON);
+    expect(trigger).toHaveAttribute("aria-describedby", tooltip.id);
     expect(button).toBeDisabled();
 
     await user.keyboard("{Enter}");
 
+    expect(trigger).toHaveFocus();
+    expect(trigger).toHaveAccessibleDescription(DISABLED_REASON);
     expect(button).toBeDisabled();
     expect(
       expectDefined(captured["pdfExport.request"]).mutationFn,
     ).not.toHaveBeenCalled();
+
+    act(() => trigger.blur());
+    await waitFor(() =>
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument(),
+    );
+    expect(trigger).toHaveAccessibleDescription(DISABLED_REASON);
+    expect(trigger).toHaveAttribute("aria-describedby", reason.id);
   });
 
   it("keeps the disabled tooltip trigger geometry neutral and non-button", () => {
