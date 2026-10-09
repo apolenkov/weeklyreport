@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -241,6 +242,124 @@ describe("RemindersTab — plain-language cards", () => {
     expect(row).toHaveTextContent("No upcoming sends");
     expect(row).not.toHaveTextContent("Next send:");
   });
+
+  it("drops an elapsed next send when the admin searches without remounting", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date("2099-05-07T09:59:00.000Z"));
+      renderTab();
+      const row = screen.getByTestId(`policy-row-${policyDeadline.id}`);
+      expect(row).toHaveTextContent("Next send: May 7, 2099");
+
+      vi.setSystemTime(new Date("2099-05-07T10:01:00.000Z"));
+      fireEvent.change(screen.getByLabelText(/Search reminders/i), {
+        target: { value: "deadline" },
+      });
+
+      expect(screen.getByTestId(`policy-row-${policyDeadline.id}`)).toBe(row);
+      expect(row).toHaveTextContent("No upcoming sends");
+      expect(row).not.toHaveTextContent("Next send:");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each(
+    ["toggle", "remove"].flatMap((operation) =>
+      [
+        { settledIndex: 0, outcome: "success" },
+        { settledIndex: 1, outcome: "success" },
+        { settledIndex: 0, outcome: "error" },
+        { settledIndex: 1, outcome: "error" },
+      ].map((scenario) => ({ ...scenario, operation })),
+    ),
+  )(
+    "keeps overlapping $operation requests independent when request $settledIndex settles with $outcome",
+    async ({ settledIndex, outcome, operation }) => {
+      const requests = [
+        Promise.withResolvers<unknown>(),
+        Promise.withResolvers<unknown>(),
+      ];
+      const untouchedPolicy = {
+        ...policyDeadline,
+        id: "b0000000-0000-4000-8000-000000000003",
+      };
+      const { captured } = renderTab({
+        policies: [policyDeadline, policyEscalation, untouchedPolicy],
+      });
+      const mutation = expectDefined(
+        captured[
+          operation === "toggle" ? "admin.savePolicy" : "admin.removePolicy"
+        ],
+      ).mutationFn;
+      mutation
+        .mockImplementationOnce(() => expectDefined(requests[0]).promise)
+        .mockImplementationOnce(() => expectDefined(requests[1]).promise);
+      const policies = [policyDeadline, policyEscalation];
+      const pendingIndex = settledIndex === 0 ? 1 : 0;
+      const startRequest = (policy: AdminReminderPolicyView) => {
+        fireEvent.click(screen.getByTestId(`${operation}-${policy.id}`));
+        if (operation === "remove") {
+          fireEvent.click(
+            within(screen.getByRole("alertdialog")).getByRole("button", {
+              name: "Delete",
+            }),
+          );
+        }
+      };
+      const assertRowBusy = (
+        policy: AdminReminderPolicyView,
+        busy: boolean,
+      ) => {
+        for (const action of ["toggle", "edit", "remove"]) {
+          const control = screen.getByTestId(`${action}-${policy.id}`);
+          if (busy) expect(control).toBeDisabled();
+          else expect(control).toBeEnabled();
+        }
+      };
+
+      try {
+        startRequest(policyDeadline);
+        await waitFor(() => expect(mutation).toHaveBeenCalledTimes(1));
+        startRequest(policyEscalation);
+        await waitFor(() => expect(mutation).toHaveBeenCalledTimes(2));
+
+        assertRowBusy(policyDeadline, true);
+        assertRowBusy(policyEscalation, true);
+        assertRowBusy(untouchedPolicy, false);
+
+        await act(async () => {
+          const request = expectDefined(requests[settledIndex]);
+          if (outcome === "error") request.reject(new Error("Save failed"));
+          else request.resolve(undefined);
+          await Promise.allSettled([request.promise]);
+        });
+        await waitFor(
+          () => assertRowBusy(expectDefined(policies[settledIndex]), false),
+          { timeout: 1000 },
+        );
+        assertRowBusy(expectDefined(policies[pendingIndex]), true);
+        assertRowBusy(untouchedPolicy, false);
+
+        await act(async () => {
+          expectDefined(requests[pendingIndex]).resolve(undefined);
+          await expectDefined(requests[pendingIndex]).promise;
+        });
+        await waitFor(
+          () => {
+            assertRowBusy(policyDeadline, false);
+            assertRowBusy(policyEscalation, false);
+          },
+          { timeout: 1000 },
+        );
+      } finally {
+        await act(async () => {
+          for (const request of requests) request.resolve(undefined);
+          await Promise.allSettled(requests.map((request) => request.promise));
+        });
+      }
+    },
+  );
 
   it("toggles a reminder on/off via the existing save mutation", async () => {
     const user = userEvent.setup();
