@@ -48,7 +48,7 @@ Prisma CLI for the minimal migration image; `packages/report-persistence` is ser
 
 ## Commands and runtime
 
-- `pnpm` only (Node 26.10.0, `.nvmrc`). `pnpm deps:up` / `deps:down` run PostgreSQL, Redis, Mailpit
+- `pnpm` only; runtime pins are in `.nvmrc` and `package.json`. `pnpm deps:up` / `deps:down` run PostgreSQL, Redis, Mailpit
   and Gotenberg in the OrbStack namespace `wr-dev` (ports 5432, 6379, 1025/8025, 3010 must be free;
   no Docker Compose). Web :3000, API :3002. Dev auth: `AUTH_DEV_MODE=true`; refused in production.
 - Browser/E2E needs Redis DB 15: `REDIS_DB=15 pnpm exec turbo run dev --env-mode=loose` (plain
@@ -77,12 +77,16 @@ lifecycle tuple is enforced by a DB constraint (`Report_lifecycle_tuple_check`).
 
 ## Conventions
 
-- OpenSpec is the source of truth: read `openspec list` and `openspec/specs/` before changing
-  behavior; non-trivial work starts as a change. After `openspec archive`/`init` delete
-  `openspec/changes/archive/` (the cleanliness gate forbids it). `docs/` is curated product
-  documentation only; temporary review data stays outside the repository.
+- OpenSpec is the source of truth for requirements and scenarios: read `openspec list` and
+  `openspec/specs/` before changing behavior; non-trivial work starts as a change. Backlog holds
+  task state and execution plans; cross-link the task and change. Use the available installed
+  `openspec-*` skill for the phase and read its canonical `SKILL.md` through the harness catalogue;
+  do not paste generated workflows here. After archiving, remove the task-owned artifacts under
+  `openspec/changes/archive/` (the cleanliness gate forbids that directory); coordinate any other
+  archive contents rather than deleting concurrent work. `docs/` is curated product documentation
+  only; temporary review data stays outside the repository.
 - UI strings in `apps/web/src/**/*.tsx` stay English (Russian only in data, comments, fixtures):
-  `grep -nE '[а-яА-Я]' <file>`.
+  `rg -n '[а-яА-Я]' <file>`.
 - Follow `docs/exemplary-code-standard.md`. No per-file lint exemptions; `eslint-suppressions.json`
   may only shrink. Product configuration fails closed (Zod, `requireEnv`, no silent defaults).
   Comments state current rationale only; markers are `TODO(<ref>): note`.
