@@ -11,18 +11,20 @@ context: |
   in this long-lived agent context.
 
   # Stack
-  - Monorepo: pnpm 11.28 workspaces + Turborepo 2.11.6
-  - Frontend: Next.js 16 (App Router, React Compiler), React 19, Tailwind 4,
-    shadcn/ui via `@customreport/ui`, TanStack Query 5, tRPC 11 client
-  - Backend: NestJS 11, Express 5, tRPC 11 server, Prisma 7 with
-    `@prisma/adapter-pg`, BullMQ 6, Redis 7, PostgreSQL 15, OpenTelemetry,
+  - Monorepo: pnpm workspaces + Turborepo
+  - Frontend: Next.js (App Router, React Compiler), React, Tailwind,
+    shadcn/ui via `@customreport/ui`, TanStack Query, tRPC client
+  - Backend: NestJS, Express, tRPC server, Prisma with
+    `@prisma/adapter-pg`, BullMQ, Redis, PostgreSQL, OpenTelemetry,
     Prometheus @prometheus-io/client
   - Auth: SAML via `@node-saml/passport-saml` + Keycloak (prod); dev-only
     `/auth/dev-login` gated behind `AUTH_DEV_MODE`
-  - Validation: Zod 4 shared schemas in `@customreport/shared`
-  - Testing: Vitest 4, Testing Library; PDF export renders through an
+  - Validation: Zod shared schemas in `@customreport/shared`
+  - Testing: Vitest, Testing Library; PDF export renders through an
     internal Gotenberg service, not an in-process browser
-  - Node: 26.10.0 Current (Docker pins Node 26.10.0 images)
+  - Runtime and dependency versions: `.nvmrc`, `package.json`,
+    `pnpm-workspace.yaml`, and workspace manifests; image pins live in
+    Dockerfiles, `.gitlab-ci.yml`, and deployment manifests.
 
   # Workspace layout
   apps/web         — Next.js frontend (`@customreport/web`)
