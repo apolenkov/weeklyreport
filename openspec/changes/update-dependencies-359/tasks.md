@@ -7,6 +7,8 @@
 - [x] 1.5 Upgrade the lint plugin major with the full lint gate.
 - [x] 1.6 Verify transitive overrides and encode proven compatibility restrictions.
 - [x] 1.7 Upgrade pnpm separately with frozen install and workspace gates.
+- [ ] 1.8 Verify stable React Hooks compiler diagnostics and remove the RC-only plugin.
+- [ ] 1.9 Upgrade Radix to 1.7.0 using native dialog IDs; prove ARIA IDREF and focus regressions.
 
 ## 2. API and Web SDKs
 
@@ -18,8 +20,8 @@
 
 ## 3. Runtime, CI, and delivery
 
-- [x] 3.1 Verify current runtime/container releases and update compatible images.
-- [x] 3.2 Verify PostgreSQL and Redis major upgrades or record failed checks.
+- [ ] 3.1 Refresh runtime/container releases and verify the current upgraded images.
+- [ ] 3.2 Verify PostgreSQL and Redis major upgrades or record current failed checks.
 - [ ] 3.3 Run pnpm format:check, pnpm lint, pnpm typecheck, pnpm spec:check,
       pnpm test, and pnpm build against the final commit.
 - [ ] 3.4 Run guarded reset and explicit seed, API integration, scoped coverage,

@@ -416,7 +416,7 @@ test("web health probes use the IPv4 address the standalone server binds", () =>
 test("backup entrypoints are baked into the pinned image", () => {
   assert.match(
     backupDockerfile,
-    /FROM postgres:15\.19-alpine@sha256:f7d23353e1b15400d22ebe31189f4d314b87a4c129cc400c8c2d8d4ca127bf81/,
+    /FROM postgres:16\.15-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea/,
   );
   assert.match(
     backupDockerfile,

@@ -29,7 +29,9 @@ spec:
     spec:
       containers:
         - name: postgres
-          image: pgvector/pgvector:0.8.7-pg15-bookworm@sha256:47af0b65960b14f1c6945aa4ccae37836c632e9a6fe0eea9160936e616e5b2e9
+          # PostgreSQL 18 rejects existing 15 data; latest compatible 15.19 on Trixie
+          # preserves storage (isolated synthetic proof, TASK-359, 2026-10-09).
+          image: pgvector/pgvector:0.8.7-pg15-trixie@sha256:8d4485d6fd3156d090ac5f37eb2e22eb59d93c91169414d5809414102ee924b9
           # pg_stat_statements mines real slow-query stats; statements over
           # 200ms are logged to the pod log.
           args:

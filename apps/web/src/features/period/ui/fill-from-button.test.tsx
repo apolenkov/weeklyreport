@@ -360,16 +360,27 @@ describe("FillFromButton — locked on a reopened period", () => {
     expect(main).toHaveAttribute("aria-disabled", "true");
     expect(chevron).toHaveAttribute("aria-disabled", "true");
     expect(main).toBeEnabled();
+    expect(chevron).toBeEnabled();
+    expect(main).toHaveAccessibleDescription(lockedReason);
+    expect(chevron).toHaveAccessibleDescription(lockedReason);
     act(() => chevron.focus());
     expect((await screen.findAllByText(lockedReason)).length).toBeGreaterThan(
       0,
     );
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(lockedReason);
+    expect(chevron).toHaveFocus();
+    expect(chevron).toHaveAccessibleDescription(lockedReason);
     fireEvent.click(chevron);
     expect(chevron).toHaveAttribute("aria-expanded", "false");
     expect(screen.getByRole("tooltip")).toHaveTextContent(lockedReason);
-    expect(
-      document.getElementById(chevron.getAttribute("aria-describedby") ?? ""),
-    ).toHaveTextContent(lockedReason);
+    expect(chevron).toHaveFocus();
+    expect(chevron).toHaveAccessibleDescription(lockedReason);
+
+    act(() => chevron.blur());
+    await waitFor(() =>
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument(),
+    );
+    expect(chevron).toHaveAccessibleDescription(lockedReason);
   });
 
   it("does not open the confirm dialog when the locked main segment is clicked", () => {
