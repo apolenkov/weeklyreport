@@ -11,18 +11,18 @@ required evidence, collected outside CI as separate checks — the `quality` job
 is therefore a lint/test lane, not a full acceptance gate. The GitLab instance
 is 15.10, so `.gitlab-ci.yml` uses no keyword introduced after 15.10.
 
-| GitLab job          | Execution                                                            |
-| ------------------- | -------------------------------------------------------------------- |
-| node-toolchain      | Node 26.10.0 container on the shared Docker runner                   |
-| quality             | Node 26.10.0 container on the shared Docker runner                   |
-| coverage            | Node 26.10.0 container on the shared Docker runner                   |
-| api-integration     | pgvector 0.8.7/pg15 job container on the shared Docker runner        |
-| migrate-reset       | pgvector 0.8.7/pg15 job container on the shared Docker runner        |
-| dependency-scan     | Schedule, manual, or MR changing lockfile/manifests                  |
-| dependency-scan-dev | Same rules as dependency-scan; `allow_failure: true`                 |
-| renovate            | Schedule, web, or API pipeline with `RENOVATE_TOKEN` set; no `needs` |
-| build-images        | Rootless BuildKit; default branch and tags, manual on MRs            |
-| deploy-production   | Manual, default branch, only when `KUBECONFIG` is set                |
+| GitLab job          | Execution                                                             |
+| ------------------- | --------------------------------------------------------------------- |
+| node-toolchain      | Pinned Node container on the shared Docker runner                     |
+| quality             | Pinned Node container on the shared Docker runner                     |
+| coverage            | Pinned Node container on the shared Docker runner                     |
+| api-integration     | Pinned pgvector/PG18 Trixie job container on the shared Docker runner |
+| migrate-reset       | Pinned pgvector/PG18 Trixie job container on the shared Docker runner |
+| dependency-scan     | Schedule, manual, or MR changing lockfile/manifests                   |
+| dependency-scan-dev | Same rules as dependency-scan; `allow_failure: true`                  |
+| renovate            | Schedule, web, or API pipeline with `RENOVATE_TOKEN` set; no `needs`  |
+| build-images        | Rootless BuildKit; default branch and tags, manual on MRs             |
+| deploy-production   | Manual, default branch, only when `KUBECONFIG` is set                 |
 
 ## Renovate
 
@@ -35,7 +35,8 @@ schedule, so a manual run is never silently skipped.
 ## Image build and deploy
 
 `build-images` builds `api`, `migrate`, `web`, and `backup` with
-`moby/buildkit:v0.33.1-rootless` (digest-pinned, no Docker daemon or socket) and
+the digest-pinned `moby/buildkit` rootless image from `.gitlab-ci.yml`
+(no Docker daemon or socket) and
 pushes them tagged with the commit SHA to `$CI_REGISTRY_IMAGE`. `IMAGE_REGISTRY`,
 `IMAGE_REGISTRY_USER`, and `IMAGE_REGISTRY_PASSWORD` override the registry and
 credentials; the job fails in its first step when the resolved registry, user,
@@ -66,16 +67,19 @@ remote host as localhost — forbidden by the `destructive-db-guard` spec and by
 the owner decision. The honest topology is:
 
 - `api-integration` and `migrate-reset` run on the same pinned
-  `pgvector/pgvector:0.8.7-pg15-bookworm` image.
+  `pgvector/pgvector:0.8.7-pg18-trixie` image. These CI clusters use fresh
+  storage; existing local and Helm volumes remain on PG15 Bookworm under the
+  separately verified storage compatibility rule.
   PostgreSQL starts inside the job container (`initdb` + `pg_ctl`)
   bound to `127.0.0.1` — a real in-job process, so the guarded
   `postgresql://…@127.0.0.1:5432/customreport_e2e` target is truthful. The
   `customreport` role is a superuser, the
   privilege `prisma migrate reset` needs to drop and recreate the database.
 - The image carries no Node, curl, wget, or git, so the `node-toolchain` job
-  downloads `node-v26.10.0-linux-x64.tar.gz` in the bookworm job image, verifies
-  the pinned SHA-256, adds the `libatomic.so.1` that Node 26 links and the slim
-  image lacks (copied from the same bookworm toolchain image), and passes one
+  downloads the Linux x64 tarball named by `NODE_TOOLCHAIN_TARBALL` in the
+  Trixie toolchain image, verifies `NODE_TOOLCHAIN_SHA256`, adds the
+  `libatomic.so.1` that Node 26 links and the slim image lacks (copied from the
+  same Trixie toolchain image), and passes one
   composite artifact to database jobs. `pnpm install --frozen-lockfile` needs
   no git inside the database image. Egress endpoints: the npm registry,
   Docker Hub, nodejs.org (`node-toolchain` tarball), and get.helm.sh in

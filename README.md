@@ -45,7 +45,7 @@ production-развёртывания.
 ## Стек
 
 - **Фронтенд** — Next.js 16 / React 19 (`apps/web`).
-- **Бэкенд** — NestJS 11 + tRPC + Prisma (`apps/api`).
+- **Бэкенд** — NestJS + tRPC + Prisma (`apps/api`).
 - **БД** — PostgreSQL; общие схемы и контракты — `packages/shared`.
 - **Наблюдаемость** — структурированные логи, внутренние метрики на `/metrics`
   и ошибки в подключённом внешнем Sentry.
