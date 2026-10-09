@@ -51,3 +51,7 @@ apps/web/next-env.d.ts
 .pi/goals/
 .pi/.goals-pool-snapshot.json
 .pi/pi-goal-x-settings.json
+
+# OpenSpec native adapters: regenerate with openspec init; preserve vendor bytes.
+/.pi/skills/openspec-*/
+/.pi/prompts/opsx-*.md
