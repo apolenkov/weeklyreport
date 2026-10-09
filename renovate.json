@@ -18,9 +18,41 @@
       "labels": ["dependencies", "major"]
     },
     {
-      "description": "CI service images stay on the runner-cached digests (new digests time out on pull); bump only with a runner cache refresh",
-      "matchFileNames": [".gitlab-ci.yml"],
-      "matchPackageNames": ["redis", "axllent/mailpit"],
+      "description": "OpenSpec 1.14.1 promotes long-requirement diagnostics to WARNING, failing strict spec:check for 117 of 182 items on 2026-10-09 (TASK-359)",
+      "matchPackageNames": ["@fission-ai/openspec"],
+      "matchNewValue": "1.14.1",
+      "enabled": false
+    },
+    {
+      "description": "pg_dump/pg_restore 18.6 and 17.11 emit transaction_timeout unsupported by the retained PostgreSQL 15 target; 16.15 passes the real backup/restore roundtrip (isolated synthetic proof 2026-10-09, TASK-359)",
+      "matchPackageNames": ["postgres"],
+      "allowedVersions": "<17",
+      "matchFileNames": ["deploy/postgres/Dockerfile.backup"]
+    },
+    {
+      "description": "Existing PostgreSQL 15 data requires its storage major and Bookworm glibc collation 2.36; Trixie provides 2.41 and needs dependent indexes rebuilt before version refresh. Retain latest compatible PG15 Bookworm only for local/Helm volumes (TASK-359, 2026-10-09)",
+      "matchPackageNames": ["pgvector/pgvector"],
+      "allowedVersions": "/-pg15-bookworm$/",
+      "matchFileNames": [
+        "deploy/local-dev/deps.yaml",
+        "deploy/helm/weeklyreport/values.yaml"
+      ]
+    },
+    {
+      "description": "xmldom 0.9.12 rejects the errorHandler object passed by node-saml 5.1; SAML getSignedAssertion fails, while latest compatible 0.8.15 passes (TASK-359)",
+      "matchPackageNames": ["@xmldom/xmldom"],
+      "allowedVersions": "<0.9"
+    },
+    {
+      "description": "minimatch 3.1.5 requires the callable brace-expansion 1.x export; forcing 5.0.12 fails with expand is not a function. Keep latest compatible 1.1.21 only on the legacy edge (TASK-359)",
+      "matchPackageNames": ["brace-expansion"],
+      "allowedVersions": "<2",
+      "matchCurrentVersion": "<2"
+    },
+    {
+      "description": "Vite 8.3.4 breaks Vitest 5.0.3 async rejection and snapshot context on Node 26.11.1 and 26.10.0; 8.3.3 passes all 27 unchanged control cases between two failed 8.3.4 runs (TASK-359, 2026-10-09)",
+      "matchPackageNames": ["vite"],
+      "matchNewValue": "8.3.4",
       "enabled": false
     }
   ]

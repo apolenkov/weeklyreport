@@ -7,6 +7,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@customreport/ui/components/ui/tooltip";
+import { useState } from "react";
 
 import { usePdfExportJob } from "./use-pdf-export-job";
 
@@ -69,6 +70,9 @@ export function ExportPdfButton({
   reportId,
   periodStatus,
 }: ExportPdfButtonProps) {
+  // The open tooltip supplies its description; the closed trigger uses the
+  // permanent reason so assistive tech receives the prerequisite once.
+  const [tooltipOpen, setTooltipOpen] = useState(false);
   const {
     isExportable,
     isGenerating,
@@ -85,13 +89,13 @@ export function ExportPdfButton({
     <>
       {!isExportable ? (
         <TooltipProvider delayDuration={0}>
-          <Tooltip>
+          <Tooltip open={tooltipOpen} onOpenChange={setTooltipOpen}>
             <TooltipTrigger asChild>
               <span
                 data-testid="export-pdf-disabled-trigger"
                 role="group"
                 aria-label="Export PDF unavailable"
-                aria-describedby={disabledReasonId}
+                aria-describedby={tooltipOpen ? undefined : disabledReasonId}
                 tabIndex={0}
                 className={DISABLED_TRIGGER_CLASS}
               >

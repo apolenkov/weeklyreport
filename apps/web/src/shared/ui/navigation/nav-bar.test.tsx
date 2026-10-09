@@ -238,12 +238,21 @@ describe("NavBar — role-aware visibility", () => {
 
   it("renders the user initials in the compact home mark", () => {
     setRole("lead");
-    const { container } = render(<NavBar />);
+    render(<NavBar />);
 
-    const brandLink = container.querySelector('a[aria-label="Test User home"]');
+    const brandLink = screen.getByRole("link", { name: /Test User home$/ });
 
-    expect(brandLink).not.toBeNull();
-    expect(brandLink?.textContent).toBe("TU");
+    expect(within(brandLink).getByText("TU")).toBeVisible();
+  });
+
+  it("names the home link with its visible initials first for voice control", () => {
+    setRole("lead");
+    render(<NavBar />);
+
+    const homeLink = screen.getByRole("link", { name: /Test User home$/ });
+
+    expect(homeLink).toHaveAccessibleName("TU Test User home");
+    expect(homeLink).toHaveAttribute("href", "/lead/report");
   });
 
   // The avatar must derive initials from the structured name parts (surname +
@@ -268,10 +277,11 @@ describe("NavBar — role-aware visibility", () => {
       isAuthenticated: true,
     });
 
-    const { container } = render(<NavBar />);
-    const brandLink = container.querySelector('a[aria-label="Zzz Yyy home"]');
+    render(<NavBar />);
+    const brandLink = screen.getByRole("link", { name: /Zzz Yyy home$/ });
 
-    expect(brandLink?.textContent).toBe("ИП");
+    expect(within(brandLink).getByText("ИП")).toBeVisible();
+    expect(brandLink).toHaveAccessibleName("ИП Zzz Yyy home");
   });
 
   it("renders organization identity as restrained text metadata", () => {
@@ -403,8 +413,8 @@ describe("NavBar — role-aware visibility", () => {
     const { container } = render(<NavBar />);
 
     expect(
-      container.querySelector('[aria-label="Profile loading"]'),
-    ).not.toBeNull();
+      screen.getByRole("link", { name: "Profile loading" }),
+    ).toBeInTheDocument();
     expect(
       container.querySelector('[aria-label="Main navigation"]'),
     ).toBeEmptyDOMElement();

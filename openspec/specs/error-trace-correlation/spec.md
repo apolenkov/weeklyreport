@@ -11,7 +11,7 @@ Correlate errors and worker logs with OTel traces across browser, API, and BullM
 An error captured while an OTel span is active MUST be sent to Bugsink with
 `contexts.trace.trace_id` (and `span_id`) set to that span's ids, so the error
 links to its trace in Tempo. The Sentry SDK MUST run with
-`skipOpenTelemetrySetup: true` so the app's NodeSDK owns tracing and Tempo keeps
+`enableOpenTelemetrySetup: false` so the app's NodeSDK owns tracing and Tempo keeps
 receiving spans. Transactions MUST NOT be sent to Bugsink (it stores errors
 only).
 
@@ -32,7 +32,16 @@ only).
 
 - **GIVEN** any Sentry runtime (api, Next server, Next edge, browser)
 - **WHEN** the SDK would emit a transaction event
-- **THEN** `beforeSendTransaction` drops it and Bugsink receives only errors
+- **THEN** the explicit `static` trace lifecycle keeps `beforeSendTransaction`
+  active, it drops the transaction, and Bugsink receives only errors
+
+#### Scenario: SDK upgrades preserve the privacy policy
+
+- **GIVEN** any Sentry runtime (api, Next server, Next edge, browser)
+- **WHEN** the SDK collects automatic event context
+- **THEN** the shared data collection policy preserves restricted user, cookie,
+  request body, AI input/output, database, queue, and GraphQL collection, with
+  sensitive HTTP header and URL query keys excluded
 
 ### Requirement: Browser-originated requests share one trace id with the api
 

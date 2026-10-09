@@ -275,7 +275,7 @@ describe("OpenAiCompatibleCapabilityTester", () => {
         generation: expect.objectContaining({
           status: "passed",
         }) as unknown as Record<string, unknown>,
-      }) as unknown as Record<string, unknown>,
+      }) as unknown,
     });
     await expect(makeResult(validPlan)).resolves.toMatchObject({
       result: expect.objectContaining({
@@ -283,14 +283,14 @@ describe("OpenAiCompatibleCapabilityTester", () => {
         generation: expect.objectContaining({
           status: "passed",
         }) as unknown as Record<string, unknown>,
-      }) as unknown as Record<string, unknown>,
+      }) as unknown,
     });
     await expect(makeResult({ unexpected: true })).resolves.toMatchObject({
       result: expect.objectContaining({
         generation: expect.objectContaining({
           status: "failed",
         }) as unknown as Record<string, unknown>,
-      }) as unknown as Record<string, unknown>,
+      }) as unknown,
     });
   });
 

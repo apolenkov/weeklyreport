@@ -2,7 +2,6 @@ import type { ESLint, Linter } from "eslint";
 import { globalIgnores } from "eslint/config";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import react from "eslint-plugin-react";
-import reactCompiler from "eslint-plugin-react-compiler";
 import reactHooks from "eslint-plugin-react-hooks";
 import simpleImportSort from "eslint-plugin-simple-import-sort";
 import unicorn from "eslint-plugin-unicorn";
@@ -44,7 +43,6 @@ export const coreConfig: Linter.Config[] = [
       react,
       "jsx-a11y": jsxA11y,
       "react-hooks": reactHooksPlugin,
-      "react-compiler": reactCompiler,
       "simple-import-sort": simpleImportSort,
       unicorn,
       "unused-imports": unusedImports,
@@ -273,7 +271,7 @@ export const coreConfig: Linter.Config[] = [
 
       // Full v7 recommended preset: the classic two rules plus the
       // React-Compiler-powered diagnostics (purity, set-state-in-effect,
-      // immutability, refs, …) that pair with react-compiler/react-compiler.
+      // immutability, refs, …) provided by the stable React Hooks plugin.
       ...reactHooks.configs.recommended.rules,
       "react-hooks/exhaustive-deps": "error",
       // Destructure hooks that bundle refs with data; deliberate render-time ref
@@ -282,9 +280,6 @@ export const coreConfig: Linter.Config[] = [
       // Effect-owned external sync and timer choreography require a reasoned
       // per-site disable.
       "react-hooks/set-state-in-effect": "error",
-
-      // React Compiler (React 19)
-      "react-compiler/react-compiler": "error",
 
       // Production structure budgets. Native eslint-suppressions.json counts
       // preserve existing function-length violations; overrides.ts exempts
