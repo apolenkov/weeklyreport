@@ -42,7 +42,7 @@ function encodeOpenWorkCursor(value: OpenWorkCursor): string {
 }
 
 function parseCursorDate(value: unknown): Date {
-  if (typeof value !== "string") throw new Error("invalid cursor date");
+  if (typeof value !== "string") throw new TypeError("invalid cursor date");
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime()) || parsed.toISOString() !== value) {
     throw new Error("invalid cursor date");

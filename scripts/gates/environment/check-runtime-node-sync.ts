@@ -109,7 +109,7 @@ const gitlabCiPins = (
 
 const gitlabNodeDeclarations = (): readonly Declaration[] => [
   ...gitlabCiPins(
-    /^ +image: node:(\d+\.\d+\.\d+)-bookworm@sha256:[\da-f]{64}$/gmu,
+    /^ +image: node:(\d+\.\d+\.\d+)-trixie@sha256:[\da-f]{64}$/gmu,
     GITLAB_NODE_IMAGE_COUNT,
     "Node image",
   ),
@@ -143,28 +143,28 @@ const gitlabPnpmDeclarations = (): readonly Declaration[] => [
   ),
 ];
 
-// The .gitlab-ci.yml job image is the same bookworm base as Dockerfile.api's
+// The .gitlab-ci.yml job image is the same trixie base as Dockerfile.api's
 // FROM lines, so the pinned digest — not just the tag — must agree with them.
-const bookwormImageDigests = (): readonly Declaration[] => {
+const trixieImageDigests = (): readonly Declaration[] => {
   const dockerfileDigests = DOCKERFILES.flatMap((file) =>
     [
       ...read(file).matchAll(
-        /^FROM node:\d+\.\d+\.\d+-bookworm@sha256:([\da-f]{64})/gmu,
+        /^FROM node:\d+\.\d+\.\d+-trixie@sha256:([\da-f]{64})/gmu,
       ),
     ].map((match) => ({
-      source: `${file} bookworm base`,
+      source: `${file} trixie base`,
       value: match[1],
     })),
   );
 
   return [
     ...(dockerfileDigests.length === 0
-      ? [{ source: "Dockerfiles bookworm base", value: undefined }]
+      ? [{ source: "Dockerfiles trixie base", value: undefined }]
       : dockerfileDigests),
     ...gitlabCiPins(
-      /^ +image: node:\d+\.\d+\.\d+-bookworm@sha256:([\da-f]{64})$/gmu,
+      /^ +image: node:\d+\.\d+\.\d+-trixie@sha256:([\da-f]{64})$/gmu,
       GITLAB_NODE_IMAGE_COUNT,
-      "bookworm digest",
+      "trixie digest",
     ),
   ];
 };
@@ -287,8 +287,8 @@ const report = (label: string, entries: readonly Declaration[]): boolean => {
 
 const nodeVersionOk = report("Node runtime version", runtimeVersions());
 const nodeImageDigestOk = report(
-  "Node bookworm image digest",
-  bookwormImageDigests(),
+  "Node trixie image digest",
+  trixieImageDigests(),
 );
 const nodeMajorOk = report("Node dependency major", nodeMajorDeclarations());
 const nodeEngineRangeOk = nodeEngineOk();

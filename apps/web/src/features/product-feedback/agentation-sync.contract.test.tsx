@@ -77,7 +77,7 @@ function respond(
       options?.method === "POST"
     ) {
       if (typeof options.body !== "string")
-        throw new Error("Expected a JSON request body");
+        throw new TypeError("Expected a JSON request body");
       const input = JSON.parse(options.body) as Annotation;
       annotationWriteCount += 1;
       if (holdAnnotationSync)

@@ -6,7 +6,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@customreport/ui/components/ui/dialog";
-import { type RefObject, useId, useRef } from "react";
+import { type RefObject, useRef } from "react";
 
 import { usePortalTarget } from "./document-body-portal";
 
@@ -84,8 +84,6 @@ function ConfirmDeleteContent({
   triggerRef,
 }: ConfirmDeleteContentProps) {
   const cancelRef = useRef<HTMLButtonElement | null>(null);
-  const titleId = useId();
-  const previewId = useId();
   const preventWhilePending = (event: Event) => {
     if (isPending) event.preventDefault();
   };
@@ -101,8 +99,6 @@ function ConfirmDeleteContent({
       restoreFocusToPrevious={true}
       role="alertdialog"
       aria-modal="true"
-      aria-labelledby={titleId}
-      aria-describedby={previewId}
       onEscapeKeyDown={preventWhilePending}
       onInteractOutside={preventWhilePending}
     >
@@ -113,8 +109,6 @@ function ConfirmDeleteContent({
         consequence={consequence}
         reversible={reversible}
         showReversibility={showReversibility}
-        titleId={titleId}
-        previewId={previewId}
       />
       <ConfirmDeleteActions
         cancelRef={cancelRef}
@@ -140,26 +134,17 @@ function ConfirmDeleteBody({
   consequence,
   reversible,
   showReversibility,
-  titleId,
-  previewId,
-}: ConfirmDeleteBodyProps & {
-  readonly titleId: string;
-  readonly previewId: string;
-}) {
+}: ConfirmDeleteBodyProps) {
   return (
     <>
       <DialogTitle asChild>
-        <h3
-          id={titleId}
-          className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]"
-        >
+        <h3 className="font-[family-name:var(--font-sans)] text-lg font-semibold text-[var(--color-foreground)]">
           {title}
         </h3>
       </DialogTitle>
 
       <DialogDescription asChild>
         <p
-          id={previewId}
           className="mt-3 line-clamp-2 break-words rounded-md border border-[var(--color-muted)] bg-[var(--color-surface-hover)] px-3 py-2 text-sm font-medium text-[var(--color-foreground)]"
           title={preview}
         >

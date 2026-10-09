@@ -29,6 +29,8 @@ spec:
     spec:
       containers:
         - name: postgres
+          # Existing PostgreSQL 15 files need the same major and Bookworm collation.
+          # Trixie changes glibc collation 2.36 to 2.41 (TASK-359, 2026-10-09).
           image: pgvector/pgvector:0.8.7-pg15-bookworm@sha256:47af0b65960b14f1c6945aa4ccae37836c632e9a6fe0eea9160936e616e5b2e9
           # pg_stat_statements mines real slow-query stats; statements over
           # 200ms are logged to the pod log.
@@ -94,7 +96,7 @@ spec:
     spec:
       containers:
         - name: redis
-          image: redis:7.4.11-alpine@sha256:858f009f9709ce576febc734aa78b8f6d624b82571f9ddb6bda4377c833b3499
+          image: redis:8.10.2-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
           args:
             - redis-server
             - --maxmemory-policy
@@ -144,7 +146,7 @@ spec:
     spec:
       containers:
         - name: mailpit
-          image: axllent/mailpit:v1.31.3@sha256:ed9b00c609e77e99c79b93f1178255ebc271868920f2c69a8d166bd5634ed10d
+          image: axllent/mailpit:v1.31.4@sha256:b68349e3a014b90c5610bfb26b2ae36f3892d7b8cf25ee140c6c71c98d2fcf48
           env:
             - { name: MP_SMTP_AUTH_ALLOW_INSECURE, value: "true" }
             - { name: MP_MAX_MESSAGES, value: "5000" }

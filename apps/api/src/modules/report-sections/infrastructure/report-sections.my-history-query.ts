@@ -65,7 +65,7 @@ export function decodeMyHistoryCursor(cursor: string): HistoryCursor {
     const periodStart = new Date(parsed.periodStart);
     const eventAt = new Date(parsed.eventAt);
     if (Number.isNaN(periodStart.getTime()) || Number.isNaN(eventAt.getTime()))
-      throw new Error("invalid cursor");
+      throw new TypeError("invalid cursor");
     const source = parsed.source === "published" ? "published" : "live";
     return { periodStart, eventAt, source, id: parsed.id };
   } catch {

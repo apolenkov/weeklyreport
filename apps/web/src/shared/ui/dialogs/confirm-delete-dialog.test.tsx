@@ -79,12 +79,13 @@ describe("ConfirmDeleteDialog — a11y regression", () => {
     const descriptionId = dialog.getAttribute("aria-describedby");
     expect(labelId).toBeTruthy();
     expect(descriptionId).toBeTruthy();
-    expect(document.getElementById(labelId ?? "")).toHaveTextContent(
-      "Delete item?",
-    );
-    expect(document.getElementById(descriptionId ?? "")).toHaveTextContent(
-      "Quarterly planning item",
-    );
+    expect(dialog).toHaveAccessibleName("Delete item?");
+    expect(dialog).toHaveAccessibleDescription("Quarterly planning item");
+    for (const id of [labelId, descriptionId].flatMap((value) =>
+      (value ?? "").trim().split(/\s+/u),
+    )) {
+      expect(document.getElementById(id)).not.toBeNull();
+    }
   });
 
   it("keeps title and description IDREFs unique across mounted dialogs", () => {
@@ -103,17 +104,17 @@ describe("ConfirmDeleteDialog — a11y regression", () => {
       ...document.querySelectorAll<HTMLElement>('[role="alertdialog"]'),
     ];
     expect(dialogs).toHaveLength(2);
-    const labelIds = dialogs.map((dialog) =>
-      dialog.getAttribute("aria-labelledby"),
+    const labelIds = dialogs.flatMap((dialog) =>
+      (dialog.getAttribute("aria-labelledby") ?? "").trim().split(/\s+/u),
     );
-    const descriptionIds = dialogs.map((dialog) =>
-      dialog.getAttribute("aria-describedby"),
+    const descriptionIds = dialogs.flatMap((dialog) =>
+      (dialog.getAttribute("aria-describedby") ?? "").trim().split(/\s+/u),
     );
-    expect(new Set(labelIds).size).toBe(dialogs.length);
-    expect(new Set(descriptionIds).size).toBe(dialogs.length);
+    expect(new Set(labelIds).size).toBe(labelIds.length);
+    expect(new Set(descriptionIds).size).toBe(descriptionIds.length);
     for (const id of [...labelIds, ...descriptionIds]) {
       expect(id).toBeTruthy();
-      expect(document.getElementById(id ?? "")).not.toBeNull();
+      expect(document.getElementById(id)).not.toBeNull();
     }
   });
 

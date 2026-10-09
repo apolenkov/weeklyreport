@@ -555,7 +555,7 @@ describe("LeadForm mutation wiring", () => {
     );
 
     expect(screen.queryByText("Autosaved")).toBeNull();
-    expect(screen.queryByText(/Pending|Saving/i)).not.toBeNull();
+    expect(screen.getByText(/Pending|Saving/i)).toBeInTheDocument();
   });
 
   it("same-payload refetch preserves unsaved local draft edits", async () => {
@@ -602,6 +602,6 @@ describe("LeadForm mutation wiring", () => {
     });
 
     expect(screen.queryByText("Autosaved")).toBeNull();
-    expect(screen.queryByText(/Pending|Saving/i)).not.toBeNull();
+    expect(screen.getByText(/Pending|Saving/i)).toBeInTheDocument();
   });
 });
