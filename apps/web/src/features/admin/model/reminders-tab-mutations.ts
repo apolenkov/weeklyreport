@@ -22,7 +22,9 @@ export function toggledPayload(
   };
 }
 
-export function useReminderPolicyMutations() {
+export function useReminderPolicyMutations(
+  onRowSettled: (policyId: string) => void,
+) {
   const trpc = useTRPC();
   const qc = useQueryClient();
 
@@ -33,7 +35,12 @@ export function useReminderPolicyMutations() {
   // Editor saves and row toggles share transport behavior but keep independent
   // pending state and per-call completion ownership.
   const editorSaveMut = useMutation(savePolicyMutationOptions);
-  const toggleMut = useMutation(savePolicyMutationOptions);
+  // Mutation-level callbacks run for every request; mutate-level callbacks
+  // belong only to the latest observer when row operations overlap.
+  const toggleMut = useMutation({
+    ...savePolicyMutationOptions,
+    onSettled: (_data, _error, policy) => onRowSettled(policy.id),
+  });
 
   const removeMut = useMutation(
     trpc.admin.removePolicy.mutationOptions({
@@ -42,6 +49,7 @@ export function useReminderPolicyMutations() {
         toast.success("Reminder removed");
       },
       onError: toastMutationError("Failed to remove reminder"),
+      onSettled: (_data, _error, policy) => onRowSettled(policy.id),
     }),
   );
 

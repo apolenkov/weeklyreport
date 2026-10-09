@@ -2,7 +2,13 @@
 // paths; the listbox keeps archived options compatible with neutral badges.
 import "@testing-library/jest-dom/vitest";
 
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -173,6 +179,128 @@ describe("PeriodNavigator (lead)", () => {
   });
 
   describe("custom listbox", () => {
+    it.each(["Enter", " "])(
+      "clamps the active descendant after options shrink and selects it with %j",
+      (key) => {
+        const scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView");
+        const { rerender } = render(<PeriodNavigator periods={PERIODS} />);
+        const trigger = getTrigger();
+        trigger.focus();
+        fireEvent.click(trigger);
+        fireEvent.keyDown(trigger, { key: "End" });
+        const removedOption = screen.getByRole("option", {
+          name: /Apr 7–13, 2026/,
+        });
+        expect(trigger).toHaveAttribute(
+          "aria-activedescendant",
+          removedOption.id,
+        );
+        scrollIntoView.mockClear();
+
+        rerender(<PeriodNavigator periods={PERIODS.slice(0, 2)} />);
+
+        const remainingOption = screen.getByRole("option", {
+          name: /Apr 14–20, 2026/,
+        });
+        expect(trigger).toHaveAttribute(
+          "aria-activedescendant",
+          remainingOption.id,
+        );
+        expect(scrollIntoView.mock.contexts).toContain(remainingOption);
+        expect(trigger).toHaveFocus();
+        fireEvent.keyDown(trigger, { key });
+        expect(push).toHaveBeenCalledExactlyOnceWith("/lead/report/2026-W16");
+        expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+      },
+    );
+
+    it.each([
+      { periods: PERIODS, shrink: "3 to 2", key: "Enter" },
+      { periods: PERIODS, shrink: "3 to 2", key: " " },
+      { periods: SCHEDULED_PERIODS, shrink: "4 to 2", key: "Enter" },
+      { periods: SCHEDULED_PERIODS, shrink: "4 to 2", key: " " },
+    ])(
+      "moves up once after options shrink $shrink and selects with $key",
+      ({ periods, key }) => {
+        navigationState.pathname = "/lead/report/2026-W16";
+        const scrollIntoView = vi.spyOn(Element.prototype, "scrollIntoView");
+        const { rerender } = render(<PeriodNavigator periods={periods} />);
+        const trigger = getTrigger();
+        trigger.focus();
+        fireEvent.click(trigger);
+        fireEvent.keyDown(trigger, { key: "End" });
+        expect(trigger).toHaveAttribute(
+          "aria-activedescendant",
+          screen.getByRole("option", { name: /Apr 7–13, 2026/ }).id,
+        );
+
+        rerender(<PeriodNavigator periods={PERIODS.slice(0, 2)} />);
+        expect(trigger).toHaveAttribute(
+          "aria-activedescendant",
+          screen.getByRole("option", { name: /Apr 14–20, 2026/ }).id,
+        );
+        scrollIntoView.mockClear();
+
+        fireEvent.keyDown(trigger, { key: "ArrowUp" });
+
+        const firstOption = screen.getByRole("option", {
+          name: /Apr 21–27, 2026/,
+        });
+        expect(trigger).toHaveAttribute(
+          "aria-activedescendant",
+          firstOption.id,
+        );
+        expect(scrollIntoView.mock.contexts).toContain(firstOption);
+        expect(trigger).toHaveFocus();
+        fireEvent.keyDown(trigger, { key });
+        expect(push).toHaveBeenCalledExactlyOnceWith("/lead/report/2026-W17");
+        expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+      },
+    );
+
+    it("removes the active descendant when an open list becomes empty", () => {
+      const { rerender } = render(<PeriodNavigator periods={PERIODS} />);
+      const trigger = getTrigger();
+      fireEvent.click(trigger);
+      fireEvent.keyDown(trigger, { key: "End" });
+
+      rerender(<PeriodNavigator periods={[]} />);
+
+      expect(screen.queryByRole("option")).not.toBeInTheDocument();
+      expect(trigger).not.toHaveAttribute("aria-activedescendant");
+      for (const key of ["ArrowDown", "ArrowUp", "Home", "End", "Enter", " "]) {
+        fireEvent.keyDown(trigger, { key });
+      }
+      expect(trigger).not.toHaveAttribute("aria-activedescendant");
+      expect(push).not.toHaveBeenCalled();
+    });
+
+    it("bounds the portaled panel at the right gutter on open and resize", async () => {
+      const viewport = vi.spyOn(window, "innerWidth", "get");
+      viewport.mockReturnValue(320);
+      render(<PeriodNavigator periods={PERIODS} />);
+      const trigger = getTrigger();
+      vi.spyOn(trigger, "getBoundingClientRect").mockReturnValue(
+        new DOMRect(250, 20, 60, 40),
+      );
+
+      fireEvent.click(trigger);
+
+      const panel = screen.getByRole("listbox");
+      expect(panel).toHaveStyle({
+        left: "244px",
+        top: "64px",
+        "min-width": "60px",
+      });
+      expect(panel.style.maxWidth).toBe("calc(100vw - 32px)");
+      expect(panel.parentElement).toBe(document.body);
+
+      viewport.mockReturnValue(280);
+      fireEvent(window, new Event("resize"));
+
+      await waitFor(() => expect(panel).toHaveStyle({ left: "204px" }));
+    });
+
     it("trigger exposes the combobox a11y contract and starts closed", () => {
       render(<PeriodNavigator periods={PERIODS} />);
       const trigger = getTrigger();
@@ -327,6 +455,63 @@ describe("PeriodNavigator (lead)", () => {
       } finally {
         scrollIntoView.mockRestore();
       }
+    });
+  });
+
+  describe("swipe navigation", () => {
+    it.each([
+      { deltaX: -50, deltaY: 0, target: "/lead/report/2026-W17" },
+      { deltaX: 50, deltaY: 10, target: "/lead/report/2026-W15" },
+      { deltaX: -49, deltaY: 0, target: null },
+      { deltaX: 49, deltaY: 0, target: null },
+      { deltaX: -80, deltaY: 100, target: null },
+      { deltaX: 80, deltaY: -100, target: null },
+      { deltaX: -60, deltaY: 60, target: null },
+      { deltaX: 60, deltaY: -60, target: null },
+    ])(
+      "handles displacement ($deltaX, $deltaY) without treating vertical scroll as navigation",
+      ({ deltaX, deltaY, target }) => {
+        navigationState.pathname = "/lead/report/2026-W16";
+        render(<PeriodNavigator periods={PERIODS} />);
+        const navigation = screen.getByRole("group", {
+          name: "Period navigation (swipe left/right or use arrows)",
+        });
+
+        fireEvent.touchStart(navigation, {
+          touches: [{ clientX: 100, clientY: 100 }],
+        });
+        fireEvent.touchEnd(navigation, {
+          changedTouches: [{ clientX: 100 + deltaX, clientY: 100 + deltaY }],
+        });
+
+        if (target === null) expect(push).not.toHaveBeenCalled();
+        else expect(push).toHaveBeenCalledExactlyOnceWith(target);
+      },
+    );
+
+    it("consumes the touch start once and ignores incomplete gestures", () => {
+      navigationState.pathname = "/lead/report/2026-W16";
+      render(<PeriodNavigator periods={PERIODS} />);
+      const navigation = screen.getByRole("group", {
+        name: "Period navigation (swipe left/right or use arrows)",
+      });
+      const end = { changedTouches: [{ clientX: 0, clientY: 100 }] };
+      fireEvent.touchEnd(navigation, end);
+      fireEvent.touchStart(navigation, { touches: [] });
+      fireEvent.touchEnd(navigation, end);
+      fireEvent.touchStart(navigation, {
+        touches: [{ clientX: 100, clientY: 100 }],
+      });
+      fireEvent.touchEnd(navigation, { changedTouches: [] });
+      fireEvent.touchEnd(navigation, end);
+      expect(push).not.toHaveBeenCalled();
+
+      fireEvent.touchStart(navigation, {
+        touches: [{ clientX: 100, clientY: 100 }],
+      });
+      fireEvent.touchEnd(navigation, end);
+      fireEvent.touchEnd(navigation, end);
+      expect(push).toHaveBeenCalledExactlyOnceWith("/lead/report/2026-W17");
     });
   });
 
