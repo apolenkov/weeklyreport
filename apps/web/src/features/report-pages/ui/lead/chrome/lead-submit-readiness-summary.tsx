@@ -112,10 +112,10 @@ function AutomaticStatusChanges({
     <details
       open={open}
       onToggle={(event) => setOpen(event.currentTarget.open)}
-      className="mt-4 rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-hover)]/40"
+      className="mt-2 rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-hover)]/40"
       data-testid="lead-submit-automatic-statuses"
     >
-      <summary className="cursor-pointer px-4 py-3 text-sm marker:text-[var(--color-muted-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-ring)]">
+      <summary className="min-h-[var(--touch-target-min)] cursor-pointer px-4 py-2 text-sm marker:text-[var(--color-muted-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--color-ring)]">
         <span className="font-semibold text-[var(--color-foreground)]">
           When you submit:
         </span>{" "}
@@ -185,7 +185,7 @@ function BlockingIssues({
 }) {
   if (items.length === 0) return null;
   return (
-    <div className="mt-4 rounded-[var(--radius)] border border-[var(--color-destructive)]/35 bg-[var(--color-destructive-surface-subtle)] p-4">
+    <div className="mt-2 rounded-[var(--radius)] border border-[var(--color-destructive)]/35 bg-[var(--color-destructive-surface-subtle)] p-3">
       <h3 className="text-sm font-semibold text-[var(--color-destructive)]">
         Fix before submitting
       </h3>
@@ -226,7 +226,7 @@ export function LeadSubmitReadinessSummary({
   return (
     <section
       aria-labelledby="lead-submit-readiness-title"
-      className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-sm"
+      className="rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-3 shadow-sm"
       data-testid="lead-submit-readiness"
     >
       <ReadinessHeader

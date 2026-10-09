@@ -78,7 +78,7 @@ function StatusOverviewHeader({
   readonly detailsHref: StatusOverviewProps["detailsHref"];
 }) {
   return (
-    <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+    <div className="mb-4 flex flex-wrap items-end justify-between gap-3 md:mb-6 md:border-b md:border-[var(--color-border-subtle)] md:pb-4">
       <div>
         <h2
           id={`${idPrefix}-heading`}
@@ -135,7 +135,7 @@ function ColumnHeadings({
   readonly periods: StatusOverviewProps["model"]["periods"];
 }) {
   return (
-    <div className={`mb-1 hidden ${STATUS_OVERVIEW_DESKTOP_GRID}`}>
+    <div className={`mb-4 hidden ${STATUS_OVERVIEW_DESKTOP_GRID}`}>
       <div />
       <ColumnHeading
         id={STATUS_OVERVIEW_COLUMN_HEADER_IDS.previouslyPlanned}

@@ -363,11 +363,11 @@ describe("StatusOverviewItemPreview revealed actions", () => {
     expect(onMoveItem).toHaveBeenCalledWith(
       expect.objectContaining({ text: "Original text" }),
       "next",
-      "move:current:stable-1",
+      "more:current:stable-1",
     );
   });
 
-  it("offers a quick week move as an icon beside the overflow", async () => {
+  it("offers the week move inside the overflow menu only", async () => {
     const user = userEvent.setup();
     const onMoveItem = vi.fn();
     render(
@@ -378,15 +378,19 @@ describe("StatusOverviewItemPreview revealed actions", () => {
       />,
     );
 
+    expect(screen.queryByRole("button", { name: /Quick move/ })).toBeNull();
     await user.click(
-      screen.getByRole("button", {
-        name: "Quick move to next week: Original text",
+      screen.getByRole("button", { name: "More actions for Original text" }),
+    );
+    await user.click(
+      screen.getByRole("menuitem", {
+        name: "Move to next week: Original text",
       }),
     );
     expect(onMoveItem).toHaveBeenCalledWith(
       expect.objectContaining({ key: "item-1" }),
       "next",
-      "move:current:stable-1",
+      "more:current:stable-1",
     );
   });
 
@@ -507,7 +511,7 @@ describe("StatusOverviewItemPreview revealed actions", () => {
     expect(onPlanItem).toHaveBeenCalledWith(previous);
     expect(
       screen.queryByRole("button", {
-        name: /Status of|More actions|Quick move|Edit/,
+        name: /Status of|More actions|Edit/,
       }),
     ).toBeNull();
   });
@@ -576,10 +580,6 @@ describe("StatusOverviewItemPreview reveal and keyboard", () => {
     await user.tab();
     expect(
       screen.getByRole("button", { name: "Edit item: Original text" }),
-    ).toHaveFocus();
-    await user.tab();
-    expect(
-      screen.getByRole("button", { name: /^Quick move to next week/ }),
     ).toHaveFocus();
     await user.tab();
     expect(

@@ -78,7 +78,7 @@ export function LeadOverviewSupportSections({
 
   return (
     <div
-      className="min-w-0 space-y-6"
+      className="min-w-0 space-y-2"
       data-testid="lead-overview-support-sections"
       data-feedback-anchor="lead-overview-support-sections"
     >
