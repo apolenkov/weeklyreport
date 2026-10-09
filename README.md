@@ -68,8 +68,8 @@ weeklyreport
 
 ## Требования
 
-- Node.js **26.10.0 Current** (`>=26.0.0 <27.0.0`, версия `.nvmrc`)
-- pnpm **12.10.1** (`npm install -g pnpm@12.10.1`; Node 26 не поставляет Corepack)
+- Node.js **26.11.1 Current** (`>=26.0.0 <27.0.0`, версия `.nvmrc`)
+- pnpm **12.11.0** (`npm install -g pnpm@12.11.0`; Node 26 не поставляет Corepack)
 - OrbStack с включённым Kubernetes и `kubectl` (локальные Postgres, Redis, Mailpit и Gotenberg живут в namespace `wr-dev`)
 
 ## Быстрый старт

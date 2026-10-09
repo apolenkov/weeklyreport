@@ -11,9 +11,9 @@ images:
   # Name of an existing dockerconfigjson Secret for a private registry.
   pullSecret: ""
   thirdParty:
-    # PostgreSQL 18 rejects existing 15 data; latest compatible 15.19 on Trixie
-    # preserves storage (isolated synthetic proof, TASK-359, 2026-10-09).
-    postgres: pgvector/pgvector:0.8.7-pg15-trixie@sha256:8d4485d6fd3156d090ac5f37eb2e22eb59d93c91169414d5809414102ee924b9
+    # Existing PostgreSQL 15 files need the same major and Bookworm collation.
+    # Trixie changes glibc collation 2.36 to 2.41 (TASK-359, 2026-10-09).
+    postgres: pgvector/pgvector:0.8.7-pg15-bookworm@sha256:47af0b65960b14f1c6945aa4ccae37836c632e9a6fe0eea9160936e616e5b2e9
     pgbouncer: edoburu/pgbouncer:v1.26.0-p0@sha256:b17551c776ef7e5769ef80b956d20f85e2fd25dd8912d31d58f782aad495b711
     redis: redis:8.10.2-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
     caddy: caddy:2.11.7-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f

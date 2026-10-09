@@ -7,8 +7,9 @@
 - [x] 1.5 Upgrade the lint plugin major with the full lint gate.
 - [x] 1.6 Verify transitive overrides and encode proven compatibility restrictions.
 - [x] 1.7 Upgrade pnpm separately with frozen install and workspace gates.
-- [ ] 1.8 Verify stable React Hooks compiler diagnostics and remove the RC-only plugin.
-- [ ] 1.9 Upgrade Radix to 1.7.0 using native dialog IDs; prove ARIA IDREF and focus regressions.
+- [x] 1.8 Verify stable React Hooks compiler diagnostics and remove the RC-only plugin.
+- [x] 1.9 Upgrade Radix to 1.7.0 using native dialog IDs; prove ARIA IDREF and focus regressions.
+- [x] 1.10 Repair ReasonTooltip and Export PDF native description ownership; prove exact pointer/keyboard descriptions through open and close.
 
 ## 2. API and Web SDKs
 

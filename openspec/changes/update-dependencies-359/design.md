@@ -30,6 +30,14 @@ rewrites. Prerelease dist-tags do not supersede a published stable release.
   Preserve visible copy, least-destructive focus, pending guards, and restore
   behavior under the existing `dialog-listbox-a11y` contract. Assert every ARIA
   IDREF resolves, including concurrent dialogs, before and after the repair.
+- Keep disabled-action descriptions singular through native Tooltip open state.
+  The closed trigger uses its persistent reason; the open native tooltip owns
+  the description. Verify pointer and keyboard open/close behavior.
+- Keep the latest compatible PostgreSQL 15 Bookworm image for existing local
+  and Helm volumes. Trixie changes glibc collation from 2.36 to 2.41; opening the
+  same data without rebuilding dependent indexes is not storage acceptance.
+  Fresh CI databases use PostgreSQL 18/Trixie. Scope the Renovate storage
+  exception to the two existing-volume files and PG15 Bookworm tags.
 
 ## Risks / Trade-offs
 

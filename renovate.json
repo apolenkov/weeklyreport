@@ -30,9 +30,9 @@
       "matchFileNames": ["deploy/postgres/Dockerfile.backup"]
     },
     {
-      "description": "PostgreSQL 18.6 rejects PostgreSQL 15 data files; 15.19 on Trixie preserves the fixture and starts successfully. Retain the storage major only for existing local/Helm volumes until migration (isolated synthetic proof 2026-10-09, TASK-359)",
+      "description": "Existing PostgreSQL 15 data requires its storage major and Bookworm glibc collation 2.36; Trixie provides 2.41 and needs dependent indexes rebuilt before version refresh. Retain latest compatible PG15 Bookworm only for local/Helm volumes (TASK-359, 2026-10-09)",
       "matchPackageNames": ["pgvector/pgvector"],
-      "allowedVersions": "/-pg15-/",
+      "allowedVersions": "/-pg15-bookworm$/",
       "matchFileNames": [
         "deploy/local-dev/deps.yaml",
         "deploy/helm/weeklyreport/values.yaml"
