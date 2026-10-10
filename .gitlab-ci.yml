@@ -121,7 +121,9 @@ variables:
 # The pgvector job image ships no curl/wget, so the toolchain is assembled in
 # the trixie job image once — official Node tarball verified against the
 # pinned SHA-256, plus the libatomic.so.1 the slim image lacks — and handed to
-# database jobs as one composite artifact under /usr/local.
+# database jobs as one composite artifact under /usr/local. The artifact also
+# carries the CA bundle: the pgvector image has none, and pnpm 12 (rustls)
+# reads the system store, so `pnpm install` fails there with UnknownIssuer.
 node-toolchain:
   extends: .node-image
   stage: toolchain
@@ -140,7 +142,9 @@ node-toolchain:
     - mkdir -p toolchain-root/usr/local/lib
     - tar -xzf "$NODE_TOOLCHAIN_TARBALL" -C toolchain-root/usr/local --strip-components=1
     - cp /usr/lib/x86_64-linux-gnu/libatomic.so.1 toolchain-root/usr/local/lib/
-    - tar -czf "$NODE_TOOLCHAIN_ARTIFACT" -C toolchain-root usr
+    - mkdir -p toolchain-root/etc/ssl/certs
+    - cp /etc/ssl/certs/ca-certificates.crt toolchain-root/etc/ssl/certs/
+    - tar -czf "$NODE_TOOLCHAIN_ARTIFACT" -C toolchain-root usr etc
 
 quality:
   extends: .workspace-node
