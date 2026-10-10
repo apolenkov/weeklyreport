@@ -32,6 +32,7 @@ context: |
   packages/report-persistence — server-only Prisma mapper and published snapshot assembly (`@customreport/report-persistence`)
   packages/shared  — Zod schemas + tRPC router types (`@customreport/shared`)
   packages/ui      — shadcn/ui + composition components (`@customreport/ui`)
+  packages/migrator-runtime — manifest-only Prisma CLI closure for the minimal migration image (`@customreport/migrator-runtime`)
   prisma/          — schema, migrations, seeds, destructive
                      guard
 

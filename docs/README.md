@@ -5,6 +5,7 @@ not belong in this directory.
 
 | Path                         | What it is                                                                                             |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `artifacts.md`               | Source/local-state ownership, Git and Docker admission, CI evidence, image and report-export storage.  |
 | `adr/`                       | Current accepted architectural and product decisions; `adr/README.md` holds the ADR template.          |
 | `exemplary-code-standard.md` | Current code-quality and maintainability standard.                                                     |
 | `onboarding.md`              | New-contributor guide: setup, development, testing, workflows.                                         |

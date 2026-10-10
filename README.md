@@ -55,21 +55,30 @@ production-развёртывания.
 
 ```text
 weeklyreport
-├── apps/web         # Next.js фронтенд
-├── apps/api         # NestJS / tRPC / Prisma бэкенд
-├── packages/report-persistence # серверный Prisma mapper и snapshots
-├── packages/migrator-runtime # зависимости минимального migration image
-├── packages/shared  # Zod-схемы, типы, общие контракты
-├── packages/ui      # shadcn/ui + токены Tailwind
-├── prisma           # схема, миграции, сиды, защитные guard-ы
-├── openspec         # актуальные контракты продукта и разработки (specs/)
-└── docs             # ADR-ы и гайды (см. docs/onboarding.md)
+├── apps/{web,api}               # UI и API; тесты рядом с владельцем
+├── packages/{shared,ui}         # общие контракты и UI
+├── packages/report-persistence  # серверный Prisma mapper и snapshots
+├── packages/migrator-runtime    # зависимости минимального migration image
+├── prisma/                      # schema, guards, migrations и seed
+├── deploy/                      # локальная инфраструктура, Helm и операции
+├── scripts/                     # автоматизация, gates и анализ результатов
+├── e2e/                         # пользовательские проверки и их setup
+├── eslint-config/               # правила для корневого eslint.config.ts
+├── assets/readme/               # изображения этого README
+├── docs/                        # актуальные гайды и ADR
+└── openspec/                    # требования и активные изменения
 ```
+
+Исходники и тесты с действующими потребителями остаются в своих областях.
+Рабочие копии `.worktrees/`, кэши, логи и готовые отчёты — локальное состояние.
+[Карта артефактов](./docs/artifacts.md) объясняет, что входит в Git и образы,
+что выгружает CI и где хранится экспорт PDF; [AGENTS.md](./AGENTS.md) задаёт
+правила для агентов и параллельных сессий.
 
 ## Требования
 
 - Node.js **26.11.1 Current** (`>=26.0.0 <27.0.0`, версия `.nvmrc`)
-- pnpm **12.11.0** (`npm install -g pnpm@12.11.0`; Node 26 не поставляет Corepack)
+- pnpm — версия из поля `packageManager` в `package.json` (`npm install -g pnpm@<версия>`; Node 26 не поставляет Corepack)
 - OrbStack с включённым Kubernetes и `kubectl` (локальные Postgres, Redis, Mailpit и Gotenberg живут в namespace `wr-dev`)
 
 ## Быстрый старт
