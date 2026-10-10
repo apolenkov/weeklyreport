@@ -1,7 +1,7 @@
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 
 import { afterEach, describe, expect, it } from "vitest";
@@ -118,22 +118,100 @@ describe("repository cleanliness", () => {
     ]);
   });
 
-  it("allows per-machine code-index and agent worktree state", async () => {
+  it("allows owned local artifacts while keeping Pi configuration tracked", async () => {
     const root = await repository();
     await writeFile(
       join(root, ".gitignore"),
-      ".claude/worktrees/\n.codegraph/\n.kilo/\n.superpowers/\n",
+      await readFile(new URL("../../.gitignore", import.meta.url), "utf8"),
     );
-    for (const dir of [".codegraph", ".kilo", ".superpowers/sdd"]) {
-      await mkdir(join(root, dir), { recursive: true });
-      await writeFile(join(root, dir, "state"), "x");
+    for (const directory of [
+      ".worktrees/other-session",
+      ".pnpm-store/v3",
+      ".logs",
+      "apps/api/.logs",
+      ".codegraph",
+      ".kilo",
+      ".superpowers/sdd",
+      ".devin",
+      ".devin-artifacts",
+      "apps/web/.next-lane_a",
+      "ci-reports",
+      "apps/api/storage/pdf",
+      ".pi/skills/openspec-apply-change",
+      ".pi/subagents",
+      ".pi/prompts",
+    ]) {
+      await mkdir(join(root, directory, "empty"), { recursive: true });
+      await writeFile(
+        join(
+          root,
+          directory,
+          directory === ".pi/prompts" ? "opsx-apply.md" : "state",
+        ),
+        "local",
+      );
     }
-    await mkdir(join(root, ".claude/worktrees/agent-1/empty"), {
-      recursive: true,
+    await mkdir(join(root, ".pi"), { recursive: true });
+    await writeFile(join(root, ".pi/settings.json"), "{}");
+    await execFileAsync("git", ["add", ".gitignore", ".pi/settings.json"], {
+      cwd: root,
     });
-    await execFileAsync("git", ["add", ".gitignore"], { cwd: root });
+    const inventory = await inventoryRepository(root);
+    expect(validateInventory(inventory)).toEqual([]);
+    expect(inventory.tracked).toContain(".pi/settings.json");
+  });
 
-    expect(validateInventory(await inventoryRepository(root))).toEqual([]);
+  it("rejects force-added generated output without rejecting source near names", async () => {
+    const root = await repository();
+    await writeFile(
+      join(root, ".gitignore"),
+      "node_modules/\n.next/\n.next-docker-dev/\ndist/\ncoverage/\n.turbo/\n*.tsbuildinfo\n.worktrees/\n.pnpm-store/\n.logs/\nci-reports/\napps/api/storage/\n",
+    );
+    const generated = [
+      "node_modules/generated.js",
+      "apps/api/node_modules/generated.js",
+      ".next/cache/generated.js",
+      "apps/web/.next/cache/generated.js",
+      ".next-docker-dev/cache/generated.js",
+      "apps/web/.next-docker-dev/cache/generated.js",
+      "dist/generated.js",
+      "packages/shared/dist/generated.js",
+      "coverage/coverage.json",
+      "apps/api/coverage/coverage.json",
+      ".turbo/cache/generated.js",
+      "packages/shared/.turbo/cache/generated.js",
+      "build.tsbuildinfo",
+      "apps/web/tsconfig.tsbuildinfo",
+      ".worktrees/other-session/generated.ts",
+      ".pnpm-store/v3/generated.js",
+      ".logs/app.log",
+      "ci-reports/results.json",
+      "apps/api/storage/pdf/job.pdf",
+    ];
+    const source = [
+      ".env.example",
+      "docs/current.md",
+      "distance/config.ts",
+      "src/node_modules-helper.ts",
+    ];
+    for (const path of [...generated, ...source]) {
+      await mkdir(dirname(join(root, path)), { recursive: true });
+      await writeFile(join(root, path), "fixture");
+    }
+    await mkdir(join(root, "apps/web/.next/local"), { recursive: true });
+    await writeFile(join(root, "apps/web/.next/local/cache"), "ignored");
+    await execFileAsync(
+      "git",
+      ["add", "-f", ".gitignore", ...generated, ...source],
+      { cwd: root },
+    );
+    const inventory = await inventoryRepository(root);
+    expect(validateInventory(inventory)).toEqual(
+      generated
+        .map((path) => `tracked: ${path}`)
+        .sort((left, right) => left.localeCompare(right)),
+    );
+    expect(inventory.ignored).toContain("apps/web/.next/local/cache");
   });
 
   it("allows per-machine Pi runtime state and session exports", async () => {

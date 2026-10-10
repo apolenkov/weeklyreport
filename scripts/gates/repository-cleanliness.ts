@@ -18,12 +18,15 @@ const ALLOWED_IGNORED_FILES = new Set([
 ]);
 const ALLOWED_IGNORED_PATHS = [
   /(^|\/)node_modules(?:\/|$)/u,
-  /(^|\/)(?:\.next(?:-docker-dev)?|dist|coverage|\.turbo)(?:\/|$)/u,
+  /(^|\/)(?:\.next(?:-docker-dev|-lane_[^/]+)?|dist|coverage|\.turbo|\.logs)(?:\/|$)/u,
+  /^(?:\.worktrees|\.pnpm-store|ci-reports|\.devin|\.devin-artifacts|apps\/api\/storage)(?:\/|$)/u,
   /(^|\/)(?:\.env|\.env\.[^/]+)$/u,
   /(^|\/)(?:\.opencode|\.playwright-cli|\.playwright-mcp|output)(?:\/|$)/u,
   /(^|\/)codex-session-[^/]+\.md$/u,
   /(^|\/)pi-session-[^/]+\.html$/u,
   /(^|\/)\.pi\/(?:goals|subagents)(?:\/|$)/u,
+  /^\.pi\/skills\/openspec-[^/]+\//u,
+  /^\.pi\/prompts\/opsx-[^/]+\.md$/u,
   /^(?:\.codegraph|\.kilo|\.superpowers|\.claude\/worktrees)(?:\/|$)/u,
   /^(?:\.agents|\.claude)\/skills\/(?:openspec-[^/]+\/|\.openspec-target$)/u,
   /^\.claude\/commands\/opsx\//u,
@@ -46,6 +49,9 @@ const IGNORED_DIRECTORY_NAMES = new Set([
   ".pi",
 ]);
 const FORBIDDEN_PATHS = [
+  /(^|\/)(?:node_modules|\.next(?:-docker-dev|-lane_[^/]+)?|dist|coverage|\.turbo|\.logs)(?:\/|$)/u,
+  /(^|\/)[^/]*\.tsbuildinfo$/u,
+  /^(?:\.worktrees|\.pnpm-store|ci-reports|output|apps\/api\/storage)(?:\/|$)/u,
   /^openspec\/changes\/archive(?:\/|$)/,
   /^openspec\/deferred(?:\/|$)/,
   /(?:^|\/)HANDOFF-[^/]+$/i,
@@ -84,8 +90,13 @@ async function findEmptyDirectories(root: string): Promise<string[]> {
   const isAllowedDirectory = (directory: string): boolean => {
     const path = relative(root, directory);
     if (ALLOWED_EMPTY_DIRECTORIES.has(path)) return true;
-    return /(^|\/)(?:node_modules|\.next(?:-docker-dev)?|dist|coverage|\.turbo)(?:\/|$)/.test(
-      path,
+    return (
+      /^(?:\.worktrees|\.pnpm-store|ci-reports|\.codegraph|\.kilo|\.superpowers|\.devin|\.devin-artifacts|apps\/api\/storage)(?:\/|$)/u.test(
+        path,
+      ) ||
+      /(^|\/)(?:node_modules|\.next(?:-docker-dev|-lane_[^/]+)?|dist|coverage|\.turbo|\.logs)(?:\/|$)/u.test(
+        path,
+      )
     );
   };
   const visit = async (directory: string): Promise<void> => {
