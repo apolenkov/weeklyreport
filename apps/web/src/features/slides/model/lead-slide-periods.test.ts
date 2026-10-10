@@ -107,4 +107,29 @@ describe("lead slide periods", () => {
       }),
     ).toBe(PUBLISHED_REPORT_ID);
   });
+
+  it("prefers a non-archived report over an archived active one", () => {
+    const options = buildLeadSlidePeriodOptions(
+      [
+        historyEntry(ARCHIVED_REPORT_ID, "2026-05-11T00:00:00.000Z", true),
+        historyEntry(PUBLISHED_REPORT_ID, "2026-05-04T00:00:00.000Z"),
+      ],
+      null,
+    );
+
+    expect(
+      resolveLeadSlideReportId({
+        options,
+        requestedReportId: null,
+        activeReportId: ARCHIVED_REPORT_ID,
+      }),
+    ).toBe(PUBLISHED_REPORT_ID);
+    expect(
+      resolveLeadSlideReportId({
+        options,
+        requestedReportId: null,
+        activeReportId: PUBLISHED_REPORT_ID,
+      }),
+    ).toBe(PUBLISHED_REPORT_ID);
+  });
 });
