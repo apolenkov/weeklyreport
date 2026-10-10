@@ -1,107 +1,160 @@
 # AGENTS.md
 
-Guidance for coding agents in this repository. WeeklyReport automates the Development weekly status
-reports (Leads fill sections, the Head reviews, publishes and exports). pnpm + Turbo monorepo; the
-layout is visible in the tree and READMEs. Non-obvious: `packages/migrator-runtime` only pins the
-Prisma CLI for the minimal migration image; `packages/report-persistence` is server-only.
+WeeklyReport is a pnpm/Turbo monorepo for weekly reports: Leads author sections;
+the Head reviews, publishes and exports. Start with the task's scope, then read
+the relevant README and OpenSpec contract. This file adds repository rules to
+the owner's global instructions; it does not replace their decisions.
 
-## Autonomy in the local MVP
+## Find the owner
 
-- This checkout is an actively developed MVP, not a release. Within the requested task, proceed
-  with local implementation, diagnostics, tests, browser checks and recoverable changes to
-  identified synthetic records without asking per step. `localhost` alone does not prove a backend
-  is disposable.
-- **Standing local synthetic-database authority (owner decision 2026-09-23).** For the exact,
-  guard-approved targets under Database safety the owner grants standing permission for any
-  database operation the task needs: queries, record changes, schema and migration changes
-  (including migration-history repair), reset, truncate, drop/recreate and reseed. Do not ask per
-  run, table or record. Before every destructive operation still verify the exact target, use the
-  repository guard with its consent token, and coordinate concurrent sessions. This does not cover
-  unprovisioned lane databases or any production, shared or unknown target. It also covers
-  cleaning Redis DB 15, restarting local repository processes, recreating repository-scoped local
-  Docker resources and removing generated runtime/build/cache state.
-- An audit does not authorize product fixes; explicit read-only instructions override the above.
-  Never extend this to production, shared or unknown data, credentials, paid actions, external
-  messages or publication.
-- Inspect the real handler before activating a control with unclear side effects; record the
-  pre-state before lifecycle tests. If a test changes state unexpectedly, disclose it once,
-  recover when the recovery is known and authorized, otherwise isolate the record and continue.
+| Area                          | Purpose                                                           |
+| ----------------------------- | ----------------------------------------------------------------- |
+| `apps/web`                    | Next.js UI; features and their colocated tests                    |
+| `apps/api`                    | NestJS/tRPC API, workers and external-service adapters            |
+| `packages/shared`             | Shared Zod schemas, types and contracts                           |
+| `packages/report-persistence` | Server-only Prisma mapping and snapshots                          |
+| `packages/ui`                 | Shared UI components and design tokens                            |
+| `packages/migrator-runtime`   | Prisma CLI dependencies for the migration image                   |
+| `prisma`                      | Schema, migrations, seeds, destructive guards and operations      |
+| `e2e`                         | Browser setup and complete product journeys                       |
+| `scripts`                     | Development automation and repository/build gates                 |
+| `deploy`                      | Local/tester infrastructure, Helm and observability configuration |
+| `docs`, `openspec/specs`      | Current product guides/ADRs; requirements and scenarios           |
 
-## Database safety
+Use CodeGraph first when the project is indexed. Reuse existing owners and public
+contracts; keep tests beside their owner. Read `docs/exemplary-code-standard.md`.
+UI copy in `apps/web/src/**/*.tsx` is English. Required runtime configuration
+fails closed; no silent defaults, new lint exemptions or compatibility layers.
+Comments explain current rationale; use `TODO(<ref>): note` for tracked work.
 
-- Disposable candidates are only `customreport_e2e` and the lane targets
-  `customreport_e2e_lane_[a-o]_test`; only lanes `a` and `b` are provisioned, never create others
-  without a new owner order. Local dev, tests and E2E share `customreport_e2e` by default
-  (owner decision 2026-09-18). Every phase reset wipes its database: keep no long-lived data.
-- Before each test/E2E phase run a guarded reset plus the explicit seed. Resolve the target from
-  `E2E_DATABASE_URL` (or the command's explicit URL), print it with credentials masked, prove it is
-  loopback-only and not production, and require `prisma/guards/_destructive-guard.ts` to accept it.
-- Every destructive operation needs `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай'` in its
-  environment (per command; no chat prompt needed). Never bypass the guard.
-- Prisma 7: `migrate reset` does not auto-seed; run the seed explicitly with the same token.
-- Redis needs an explicit `REDIS_DB`: product/dev 0, E2E on `customreport_e2e` 15, lanes `a`..`l` =
-  1..12. Destructive Redis cleanup selects the DB derived from the guarded database name and must
-  never flush DB 0, 13 or 14.
-- Migrations: while no production database exists the canonical init migration may be re-baselined
-  (`prisma/migrations/canonical-init-contract.test.ts` guards its shape); after the first
-  production deployment migrations are forward-only.
+## Work and ownership
+
+This checkout is an actively developed local MVP. Within the requested task,
+proceed with diagnostics, tests, browser checks and recoverable changes to known
+synthetic records. Localhost alone does not prove a disposable target. Inspect
+handlers before unclear controls, record lifecycle pre-state, and disclose any
+unexpected state change; recover only when recovery is known and authorized.
+
+- Backlog holds task state and execution plans; OpenSpec holds requirements and
+  changes. Cross-link them. Read the applicable Backlog CLI phase instructions.
+  Put reusable research in Backlog Documents and substantial decisions in ADRs.
+- Audit-only work stays read-only. Non-trivial behavior changes start with an
+  OpenSpec change. Use the installed skill for the phase; do not copy its workflow
+  into this file. Keep only current product documentation in `docs/`.
+- Work in your own branch/worktree under `.worktrees/`. Preserve other sessions'
+  files, processes and resources. Keep review evidence in the owner's durable
+  handoff directory, outside the product tree. Commit or hand off unique work.
+- Use normal lefthook hooks and Conventional Commits; never bypass hooks or alter
+  their skip conditions to make a check pass. Hooks do not replace acceptance.
+- After OpenSpec archival, preserve evidence outside the repository and remove
+  only your archived change artifacts. Coordinate other archive contents.
 
 ## Commands and runtime
 
-- `pnpm` only; runtime pins are in `.nvmrc` and `package.json`. `pnpm deps:up` / `deps:down` run PostgreSQL, Redis, Mailpit
-  and Gotenberg in the OrbStack namespace `wr-dev` (ports 5432, 6379, 1025/8025, 3010 must be free;
-  no Docker Compose). Web :3000, API :3002. Dev auth: `AUTH_DEV_MODE=true`; refused in production.
-- Browser/E2E needs Redis DB 15: `REDIS_DB=15 pnpm exec turbo run dev --env-mode=loose` (plain
-  `pnpm dev` drops `REDIS_DB` under Turbo's strict env). Verify the app clients use `db=15`;
-  `/health/ready` only proves connectivity. Check that the running app contains your changes
-  before browser acceptance. Env for E2E: `E2E_DATABASE_URL` and `DATABASE_URL` from `.env.test`
-  and `.env`.
-- If the Prisma client is missing or stale: `pnpm --filter @customreport/api db:generate`.
-  API database integration: `pnpm --filter @customreport/api test:integration` on a guarded
-  disposable database. `pnpm lint` stops at the first failing check.
-- When the owner asks to try the product, start it from source, offer a reset to the minimal seed
-  through the guarded flow, report URLs and dev roles, diagnose hangs from logs, and stop the
-  processes at session end.
+Use pnpm. Read `.nvmrc`, `package.json` and workspace manifests for runtime and
+package pins; do not duplicate version numbers in instructions. Local dependency
+commands are `pnpm deps:up` / `pnpm deps:down` in OrbStack namespace `wr-dev`.
+Web uses port 3000; API port 3002. Dev authentication is forbidden in production.
 
-## Load-bearing invariants
+## Database safety
 
-Respect these in any write path and link the relevant `openspec/specs/` spec. Only the Report
-lifecycle tuple is enforced by a DB constraint (`Report_lifecycle_tuple_check`).
+- The owner grants standing authority for task-required operations on exact,
+  guard-approved synthetic targets, including schema/history repair, reset,
+  drop/recreate and reseed. No per-run approval is needed. This authority excludes
+  production, shared/unknown targets, unprovisioned lanes and read-only audits.
+  It also covers task-required cleanup of Redis DB15, restart of local repository
+  processes/resources and removal of generated runtime/build/cache state. Verify
+  the target and coordinate other sessions before every destructive operation.
+- Current disposable targets are `customreport_e2e` and provisioned lanes
+  `customreport_e2e_lane_a_test` / `customreport_e2e_lane_b_test`. A broader guard
+  pattern does not authorize more lanes. Dev/test/E2E share the main target.
+- Before every destructive operation, resolve and print the credential-masked
+  target, prove loopback and exact eligibility, and require
+  `prisma/guards/_destructive-guard.ts`. Set
+  `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай'` for that command.
+- Before each database-backed test/E2E phase, use guarded reset and explicit seed
+  on the same target. Prisma7 reset does not auto-seed. Coordinate shared users.
+- Redis must use an explicit DB: product/dev0, main E2E15, provisioned lanes a/b1/2. Derive
+  cleanup DB from the guarded target; never flush0,13 or14.
+- Browser source-start: `REDIS_DB=15 pnpm exec turbo run dev --env-mode=loose`.
+  Plain `pnpm dev` drops that variable under Turbo's strict mode. Verify the
+  actual clients' DB and served source; readiness only proves connectivity.
+- Canonical init may be re-baselined before production exists, with its contract
+  test preserved. After first production deployment use forward-only migrations.
 
-- **Period dual-state.** Canonical `periodState` plus the lifecycle tuple (`status`,
-  `periodStatus`, `archived`, audit flags, timestamps) are updated atomically.
-- **Role-coverage gate.** tRPC procedures use one of the 7 canonical middleware-chain builders,
-  including `leadProcedure` (matched by reference identity); never hand-roll a chain.
-- **Weekly-cycle rollover.** At most one active W+1 item per `stableId`: an explicit Next
-  commitment wins, otherwise unfinished Current in-progress continues; Previous stays read-only.
+## Preserve product invariants
 
-## Conventions
+- Update periodState and the report lifecycle tuple atomically.
+- tRPC routes use the seven canonical middleware builders, including reference-
+  identical leadProcedure; do not construct custom authorization chains.
+- Rollover creates at most one active W+1 item per stableId. Explicit Next wins;
+  unfinished Current continues otherwise. Previous stays read-only.
 
-- OpenSpec is the source of truth for requirements and scenarios: read `openspec list` and
-  `openspec/specs/` before changing behavior; non-trivial work starts as a change. Backlog holds
-  task state and execution plans; cross-link the task and change. Use the available installed
-  `openspec-*` skill for the phase and read its canonical `SKILL.md` through the harness catalogue;
-  do not paste generated workflows here. After archiving, remove the task-owned artifacts under
-  `openspec/changes/archive/` (the cleanliness gate forbids that directory); coordinate any other
-  archive contents rather than deleting concurrent work. `docs/` is curated product documentation
-  only; temporary review data stays outside the repository.
-- UI strings in `apps/web/src/**/*.tsx` stay English (Russian only in data, comments, fixtures):
-  `rg -n '[а-яА-Я]' <file>`.
-- Follow `docs/exemplary-code-standard.md`. No per-file lint exemptions; `eslint-suppressions.json`
-  may only shrink. Product configuration fails closed (Zod, `requireEnv`, no silent defaults).
-  Comments state current rationale only; markers are `TODO(<ref>): note`.
-- onUI visual review: use the `onui-local` MCP on `http://localhost:3000`; list pages and read
-  annotations at `standard` detail before UI edits; resolve one only after its requirement is
-  tied to changed sources, a check and browser verification.
+Read and link the owning OpenSpec scenario for each write-path change. Only the
+Report lifecycle tuple has the corresponding database check constraint.
 
-## Gates, completion, browser
+## Files leaving the repository
 
-- GitLab is the only remote. `.gitlab-ci.yml` runs lint/test lanes (quality, coverage, API
-  integration, migrate-reset, audit), a gated image build and an optional manual Helm deploy; it
-  is not full acceptance. Local acceptance: `docs/exemplary-code-standard.md#verification`.
-- Before reporting done run those checks and report results; a check not run or blocked does not
-  count as passed. Stage only task-owned changes (concurrent sessions edit this repo); remove
-  task-owned worktrees, dev servers and containers at session end.
-- Browser verification uses agent-browser (Vercel). Judge a flow by its observable result
-  (snapshot, DOM, network, screenshot); an unknown or failed result is not a pass. Do not claim a
-  flow without fresh evidence.
+Read [docs/artifacts.md](docs/artifacts.md) for producers, consumers, storage,
+retention and checks. Source tests and automation with live consumers stay in
+Git; raw campaign/session output stays in the external evidence archive.
+
+Keep local worktrees/stores, build output, coverage, logs, secrets and generated
+reports out of Git and application image contexts. Use `.gitignore` and
+`.dockerignore`; preserve inputs required by the Dockerfiles and production gates.
+Workspace packages are private. Versions, commands and output paths have owners
+in manifests, `turbo.json`, Dockerfiles and `.gitlab-ci.yml`.
+
+Distinguish three outputs: expiring GitLab evidence artifacts, SHA-tagged container
+images, and API-owned report files. The Helm chart manages deployment configuration;
+an image or a successful build does not prove production acceptance.
+
+PDF exports use a published report snapshot, durable job/generation and requester-
+authorized download. `PDF_OUTPUT_DIR` owns filesystem placement; the production
+Helm chart mounts `/app/data/pdfs`. Preserve canonical generation paths, atomic
+publication, temporary-file cleanup and access checks. Completed-PDF retention
+has no owner in the traced source; do not infer it from database-backup retention
+or silently add deletion. Document any new export contract in OpenSpec first.
+
+## Verify and deliver
+
+For application, build, dependency or runtime configuration changes, run all six
+commands on the reviewed tree:
+
+```bash
+pnpm format:check
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm spec:check
+```
+
+For prose/instructions only, check changed-file formatting, referenced paths and
+commands, and `git diff --check`; validate OpenSpec if its files change. Follow
+`docs/exemplary-code-standard.md#verification`. Run additional coverage, guarded
+API integration and full E2E when the affected contract requires them. Root unit
+tests do not prove database integration. Generate stale Prisma client with
+`pnpm --filter @customreport/api db:generate` before relevant checks.
+
+## Browser verification
+
+Before UI edits, list pages and read annotations through onui-local at standard
+detail. Resolve an annotation only after its requirement maps to changed sources,
+a check and browser evidence. Browser acceptance uses agent-browser (Vercel):
+
+```bash
+export AGENT_BROWSER_SESSION="$(agent-browser session id --scope worktree --prefix "task-$(date +%s)-$$")"
+agent-browser skills get core
+```
+
+Create the session before the task's first browser command and reuse it. Verify
+observable DOM/network/screenshot outcomes and inspect whole screenshots. A
+visible defect, failed or unknown result is not PASS.
+
+GitLab is the only remote. Follow the current task's CI decision; skipped or
+cancelled CI is not GREEN. Tie local checks, independent review, MR delivery and
+remote CI to their actual SHA and keep those evidence layers distinct. Report
+what changed, what passed, what remains and the next action in Backlog. Stop only
+your processes and remove only delivered task-owned worktrees/resources; retain
+evidence and other sessions' work.

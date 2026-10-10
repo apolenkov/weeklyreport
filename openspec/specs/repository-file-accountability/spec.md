@@ -29,14 +29,28 @@ retained files, and unproved delete verdicts fail acceptance.
 ### Requirement: The whole worktree is clean
 
 Acceptance MUST inventory tracked, untracked, and ignored entries plus empty
-directories outside `.git`. Installed dependencies, generated build output, and
-local environment secrets MAY be explicitly allowed; historical handoffs,
-session artifacts, ignored tool installations, and unexplained residue MUST fail.
+directories outside `.git`. Installed dependencies, generated build output,
+local secrets and explicitly owned local artifact classes MAY be allowed.
+Historical handoffs, session artifacts, ignored tool installations and
+unexplained residue MUST fail. Local allowance MUST NOT authorize committing
+runtime or generated artifacts.
 
 #### Scenario: Unexplained residue remains
 
-- **WHEN** the cleanliness gate finds an untracked or disallowed ignored entry, a forbidden historical artifact, or an empty directory
+- **WHEN** the cleanliness gate finds an untracked or disallowed ignored entry, a forbidden historical artifact, or an unexplained empty directory
 - **THEN** acceptance fails with the exact path
+
+#### Scenario: Supported local artifacts remain
+
+- **WHEN** the inventory contains ignored root worktrees or package stores, logs, generated Next variants, CI reports, API export storage, declared native agent state or regenerated OpenSpec adapters
+- **THEN** these explicitly identified local classes are allowed and their internal empty directories do not fail acceptance
+- **AND** unrelated ignored paths and committable Pi configuration remain subject to normal inventory
+
+#### Scenario: Generated artifacts are forced into Git
+
+- **WHEN** generated dependency/build/cache paths, TypeScript build metadata, or reserved worktree/store/log/CI/export paths are force-added to Git
+- **THEN** the gate fails with exact tracked diagnostics
+- **AND** source, documentation, public environment examples and similar legitimate path names remain allowed
 
 ### Requirement: Accountability tooling is disposable
 
@@ -48,3 +62,16 @@ documentation, while raw session artifacts remain in the external archive.
 
 - **WHEN** the final registry and review evidence are archived
 - **THEN** no root E2E, UAT, browser, catalogue, campaign, or session harness is added to Git
+
+### Requirement: Artifact documentation identifies delivery and export ownership
+
+The repository documentation MUST distinguish source, allowed local state,
+container payloads, CI evidence and report exports, naming their producers,
+consumers, storage and cleanup authority. Source-derived declarations MUST NOT
+be presented as deployment or browser acceptance.
+
+#### Scenario: A developer locates an output
+
+- **WHEN** the developer follows the repository or documentation index
+- **THEN** one current artifact guide identifies the relevant Git/build/CI/image/PDF contract and its owning source
+- **AND** unresolved completed-PDF retention and browser filename behavior are explicit, without inventing deletion or runtime results

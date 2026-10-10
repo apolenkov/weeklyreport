@@ -1,5 +1,10 @@
 node_modules/
 
+# Repository-owned local working copies, package cache and CI evidence.
+/.worktrees/
+/.pnpm-store/
+/ci-reports/
+
 .turbo/
 .next/
 .next-docker-dev/
@@ -49,6 +54,7 @@ apps/web/next-env.d.ts
 # per-machine. Committable project configuration under .pi/ (for example
 # .pi/agents/ or .pi/settings.json) stays visible to git.
 .pi/goals/
+.pi/subagents/
 .pi/.goals-pool-snapshot.json
 .pi/pi-goal-x-settings.json
 
