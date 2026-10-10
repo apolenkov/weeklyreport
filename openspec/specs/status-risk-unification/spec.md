@@ -280,8 +280,8 @@ Every risk MUST carry an explicit severity (`at-risk` or `blocked`) through the 
 ### Requirement: Slide readiness derives project severity from the unified slide status model
 
 The section-slide readiness model MUST count a real project as blocked or
-at-risk from the same risk-derived product status used by that project's visible
-slide badge. It MUST NOT derive project severity from persisted
+at-risk from the same risk-derived product status used by that project's own
+section slide badge, before any cross-author foreign health adjustment. It MUST NOT derive project severity from persisted
 `ReportSectionReadModel.projects[].trafficLight`. Synthetic cross-product slides
 MUST NOT contribute a project severity count. Existing project-scoped risk-row
 counts remain additive and MUST continue to contribute independently.
@@ -315,3 +315,12 @@ counts remain additive and MUST continue to contribute independently.
 - **WHEN** section readiness counts blocked and at-risk projects
 - **THEN** only projected product ids backed by `section.projects` contribute
   project severity counts
+
+#### Scenario: Foreign health adjusts the badge but not the project counts
+
+- **GIVEN** a real project whose own section has no backing risks
+- **AND** foreign health marks the same product red on the lead deck
+- **WHEN** the section slide model derives the badge and readiness
+- **THEN** the deck badge reflects the foreign-adjusted status
+- **AND** the project contributes zero to `blockedCount` and `atRiskCount`
+- **AND** foreign blocked risk rows still contribute exactly once as risk rows
