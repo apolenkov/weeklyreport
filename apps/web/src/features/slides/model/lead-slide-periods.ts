@@ -67,9 +67,13 @@ export function resolveLeadSlideReportId({
     return requestedReportId;
   }
 
+  // An archived active report must not outrank the newest non-archived one;
+  // the fallback below already prefers non-archived options.
   if (
     activeReportId &&
-    options.some((option) => option.reportId === activeReportId)
+    options.some(
+      (option) => option.reportId === activeReportId && !option.archived,
+    )
   ) {
     return activeReportId;
   }
