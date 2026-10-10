@@ -57,6 +57,7 @@ function chunks<T>(values: readonly T[], limit: number): readonly T[][] {
 function pageSubsection(
   subsection: GridSubsection,
   records: readonly LocatedRecord[],
+  isFirstProductPage: boolean,
 ): GridSubsection | null {
   const rows = records.filter(
     (record) => record.kind === "row" && record.subsectionId === subsection.id,
@@ -71,7 +72,10 @@ function pageSubsection(
     risks: rowsFor("risks"),
     decisions: rowsFor("decisions"),
   };
+  // A recordless project subsection is context; it appears once, on the
+  // product's first page, instead of repeating on every continuation.
   const statusOnly =
+    isFirstProductPage &&
     subsection.kind === "project" &&
     COLUMN_ORDER.every((column) => subsection.columns[column].length === 0);
   return rows.length > 0 || statusOnly ? { ...subsection, columns } : null;
@@ -80,11 +84,12 @@ function pageSubsection(
 function pageProduct(
   product: GridProductCard,
   records: readonly LocatedRecord[],
+  isFirstProductPage: boolean,
 ): GridProductCard {
   return {
     ...product,
     subsections: product.subsections.flatMap((subsection) => {
-      const page = pageSubsection(subsection, records);
+      const page = pageSubsection(subsection, records, isFirstProductPage);
       return page === null ? [] : [page];
     }),
   };
@@ -151,7 +156,7 @@ function pageProductSlide(
 function pageGrid(
   source: SlideGridModel,
   product: GridProductCard,
-  records: readonly LocatedRecord[],
+  pagedProduct: GridProductCard,
   page: PageRecords,
 ): SlideGridModel {
   const scored = !product.noData && product.status !== null;
@@ -174,7 +179,7 @@ function pageGrid(
       total: scored ? 1 : 0,
     },
     priorityStrip: page.priorities,
-    products: [pageProduct(product, records)],
+    products: [pagedProduct],
   };
 }
 
@@ -217,7 +222,12 @@ function buildPage(
         : productPageIndex === 0
           ? `${product.name} — 1 of ${String(productPageTotal)}`
           : `${product.name} — continuation ${String(productPageIndex + 1)} of ${String(productPageTotal)}`,
-    grid: pageGrid(grid, product, records, page),
+    grid: pageGrid(
+      grid,
+      product,
+      pageProduct(product, records, productPageIndex === 0),
+      page,
+    ),
   };
 }
 
