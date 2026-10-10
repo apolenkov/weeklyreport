@@ -240,6 +240,36 @@ describe("section slide utilities — paging, risk stories & transposition", () 
     ).toBe(true);
   });
 
+  it("shows a recordless activity subsection once, on the product's first page", () => {
+    const ACTIVITY_ID = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    const model = buildSectionSlideModel(
+      makeSection({
+        activities: [
+          {
+            activityId: ACTIVITY_ID,
+            activityName: "Operations",
+            status: "green",
+            derivedStatus: null,
+            linkedProducts: [
+              { productId: PRODUCT_ID, productName: "Core Product" },
+            ],
+          },
+        ],
+      }),
+    );
+
+    const pages = paginateSectionSlides(model, 1);
+    const shellPages = pages.filter((page) =>
+      page.grid?.products[0]?.subsections.some(
+        (subsection) => subsection.id === ACTIVITY_ID,
+      ),
+    );
+
+    expect(pages.length).toBeGreaterThan(1);
+    expect(shellPages).toHaveLength(1);
+    expect(shellPages[0]?.pageLabel).toContain("1 of");
+  });
+
   it("keeps document density as the unchanged all-content model", () => {
     const model = buildSectionSlideModel(makeSection());
     const document = expectDefined(slidesForDensity([model], "document")[0]);

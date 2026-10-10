@@ -348,6 +348,9 @@ product and caps records per view with deterministic continuation pages, while
 the existing Document density keeps the auto-height all-content article.
 Presentation density MUST preserve every record exactly once, product/record
 order, author attribution, status, and Mine/Everyone scoping.
+A project or activity subsection with no records is status context, not a record:
+it MUST appear once, on the product's first page, and MUST NOT repeat on
+continuation pages.
 
 #### Scenario: One product exceeds the presentation cap
 
@@ -365,6 +368,13 @@ order, author attribution, status, and Mine/Everyone scoping.
 
 - **WHEN** a slide is used for document reading or print-oriented review
 - **THEN** the auto-height article continues to render all products and records without count-based truncation
+
+#### Scenario: Recordless subsections are shown once
+
+- **GIVEN** a product with a recordless activity subsection whose records span several pages
+- **WHEN** Presentation density paginates the product
+- **THEN** the recordless subsection appears on the first page only
+- **AND** continuation pages carry no repeat of it
 
 ### Requirement: Slide author marks reflect the selected author scope
 
