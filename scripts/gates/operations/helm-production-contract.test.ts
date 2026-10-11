@@ -91,16 +91,12 @@ test("the rendered API environment satisfies its production startup contract", (
         SMTP_PASS: optionalInputs.SMTP_PASS,
         SENTRY_DSN: optionalInputs.SENTRY_DSN,
         ...Object.fromEntries(
-          [
-            "DB_PASSWORD",
-            "AUTH_JWT_SECRET",
-            "PDF_EXPORT_JWT_SECRET",
-            "AI_PROVIDER_CONFIG_ENCRYPTION_KEY",
-          ].map((key) => [
-            key,
-            `fixture.${key.toLowerCase()}.value.`.repeat(2),
-          ]),
+          ["DB_PASSWORD", "AUTH_JWT_SECRET", "PDF_EXPORT_JWT_SECRET"].map(
+            (key) => [key, `fixture.${key.toLowerCase()}.value.`.repeat(2)],
+          ),
         ),
+        // Boot validation requires real 32-byte key material (64 hex chars).
+        AI_PROVIDER_CONFIG_ENCRYPTION_KEY: "ab".repeat(32),
       },
     },
   };
