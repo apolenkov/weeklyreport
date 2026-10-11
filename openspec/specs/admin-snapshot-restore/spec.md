@@ -419,3 +419,31 @@ flag from the supplied snapshot, on both newly-created and already-existing
   database with `isActive: true`, and the snapshot's `isActive` for that
   user is `false`
 - **THEN** the stored `isActive` is updated to `false`
+
+### Requirement: Snapshot restore writes the canonical email identity it validates
+
+`upsertUsers` MUST persist each restored user's `normalizeEmail` form on both
+create and update, so a snapshot that passes case-insensitive email
+uniqueness can never restore a live graph that a later export would reject.
+On create, `samlId` MUST equal the verbatim snapshot email. On update, restore
+MUST preserve the existing `samlId`; it MUST NOT trim, case-fold, or rewrite the
+external identity.
+
+#### Scenario: Restored users round-trip through export validation
+
+- **GIVEN** a valid snapshot whose users carry mixed-case emails
+- **WHEN** the snapshot is restored and a fresh admin snapshot is exported
+- **THEN** the exported snapshot parses with no duplicate-email issue
+
+#### Scenario: samlId survives restore verbatim
+
+- **GIVEN** a snapshot user whose email has uppercase characters
+- **WHEN** the restore creates the user row
+- **THEN** `samlId` equals the snapshot email byte-for-byte
+
+#### Scenario: Existing external identity survives a snapshot email edit
+
+- **GIVEN** an existing user whose stored `samlId` differs from the snapshot email
+- **WHEN** restore updates that user's email
+- **THEN** `User.email` is stored in its canonical normalized form
+- **AND** the stored `samlId` is unchanged

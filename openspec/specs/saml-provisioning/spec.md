@@ -60,8 +60,10 @@ user defaults to `viewer`. Roles are assigned only by the admin.
 
 The `nameID` attribute SHALL be non-empty and contain at least one
 non-whitespace character; a blank `nameID` MUST fail assertion verification
-before any user lookup or provisioning. Valid identifiers are stored exactly
-as asserted — never trimmed, case-folded, or normalized.
+before any user lookup or provisioning. A verified `nameID` MUST be stored in
+`User.samlId` exactly as asserted — never trimmed, case-folded, or normalized.
+This verbatim-key requirement does not apply to the separate `User.email`, which
+uses the canonical trim-and-lowercase form.
 
 #### Scenario: whitespace-only identity is refused
 
@@ -71,13 +73,19 @@ as asserted — never trimmed, case-folded, or normalized.
 
 ### Requirement: Account key is the corporate email
 
-The account SHALL be keyed by the corporate email, which is also the `samlId`;
-there is no separate username and no corporate-domain allow-list on the email.
+Account resolution SHALL use the canonical corporate email identity in
+`User.email` and the separate, verbatim asserted `nameID` in `User.samlId`.
+Those values MUST NOT be required to be equal. An email miss MUST permit an exact
+SAML-key lookup for the same existing identity; an email hit with a foreign SAML
+key MUST be refused. There is no separate username and no corporate-domain
+allow-list on the email.
 
 #### Scenario: email identifies the account
 
 - **WHEN** a user is provisioned via SAML
-- **THEN** the corporate email is the account key (== `samlId`)
+- **THEN** `User.email` is the corporate email in its trimmed, lowercase form
+- **AND** `User.samlId` is the verified assertion's `nameID` byte-for-byte
+- **AND** no equality between email and `samlId` is required
 - **AND** no separate username is stored and no domain allow-list is enforced
 
 ### Requirement: Rejected SAML assertions are always audited and metered
@@ -127,3 +135,35 @@ The canonical API test suite MUST execute SAML response parsing with the pinned 
 
 - **WHEN** the same accepted assertion identifier is submitted again within its validity window
 - **THEN** the second request is rejected and recorded as a replay failure
+
+### Requirement: SAML email resolution is case-insensitive
+
+Account lookup by corporate email MUST compare case-insensitively as literal
+addresses, including `_` and `%`. SAML provisioning MUST store canonical
+`User.email` (trim + lowercase) on create. `User.samlId` lookup and storage MUST
+remain exact and verbatim. An email hit with a different asserted SAML identity
+MUST be refused without creating, updating, re-linking, or adopting a user.
+
+#### Scenario: Case-variant assertion resolves the same account
+
+- **GIVEN** a stored user with email `admin@example.test` and matching
+  `samlId`
+- **WHEN** a SAML assertion presents `Admin@Example.test` with the same
+  `samlId`
+- **THEN** the existing account is resolved and no new user is created
+
+#### Scenario: Case-variant email with a foreign samlId is refused
+
+- **GIVEN** a stored user with email `admin@example.test`
+- **WHEN** a SAML assertion presents `Admin@Example.test` under a different
+  `samlId`
+- **THEN** the login is refused as an identity mismatch
+- **AND** no user is created or updated
+
+#### Scenario: Pattern characters in an address match literally
+
+- **GIVEN** a stored user with email `a.b@example.test`
+- **WHEN** a SAML assertion presents `a_b@example.test` under another
+  `samlId`
+- **THEN** the stored account is not matched and a separate account is
+  provisioned
