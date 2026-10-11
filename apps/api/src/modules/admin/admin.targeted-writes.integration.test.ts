@@ -526,6 +526,35 @@ describe("AdminPrismaRepository (integration) — targeted writes & concurrency"
     expect(await prisma.user.count({ where: { email } })).toBe(1);
   });
 
+  it("upsertUser reports a typed conflict for a case-variant email of an existing user", async () => {
+    const user = {
+      name: "Case Variant",
+      lastName: "Variant",
+      firstName: "Case",
+      middleName: null,
+      position: null,
+      role: "viewer" as const,
+      reportingGroupId: null,
+      isActive: true,
+    };
+    await repo.upsertUser({
+      ...user,
+      id: "a0000000-0000-4000-a000-0000000000ae",
+      email: "Case-Variant@Test.Local",
+    });
+
+    await expect(
+      repo.upsertUser({
+        ...user,
+        id: "a0000000-0000-4000-a000-0000000000af",
+        email: "case-variant@test.local",
+      }),
+    ).rejects.toBeInstanceOf(AdminUserConflictError);
+    expect(
+      await prisma.user.count({ where: { email: "case-variant@test.local" } }),
+    ).toBe(1);
+  });
+
   it("a concurrently-inserted user survives an unrelated targeted edit", async () => {
     // A SAML just-in-time user lands while the admin holds a stale read; a
     // targeted project edit must not reconcile it away (it never reads users).
