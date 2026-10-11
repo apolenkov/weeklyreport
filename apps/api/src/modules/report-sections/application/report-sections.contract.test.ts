@@ -556,7 +556,18 @@ describe("ReportSectionsService — multi-project", () => {
         version: 1,
         status: "draft",
         confirmed: true,
-        stageStatuses: [],
+        stageStatuses: [
+          {
+            projectId: PROJECT_ID_1,
+            stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            status: "green",
+          },
+          {
+            projectId: PROJECT_ID_2,
+            stageId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+            status: "red",
+          },
+        ],
         activityStatuses: [],
         projectStatuses: [
           { projectId: PROJECT_ID_1, status: "green" },

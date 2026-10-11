@@ -17,6 +17,7 @@ import {
   fullProjectStatus,
   mapRow,
   OWNED_PROJECT,
+  STAGE_ID,
 } from "./__tests__/report-sections-prisma-harness";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
 
@@ -164,7 +165,9 @@ function createSubmission(
     status: "draft",
     confirmed: true,
     projectStatuses: [{ projectId: OWNED_PROJECT, status: "green" }],
-    stageStatuses: [],
+    stageStatuses: [
+      { projectId: OWNED_PROJECT, stageId: STAGE_ID, status: "green" },
+    ],
     activityStatuses: [],
     items: mapRow(row).items,
     risks: [],

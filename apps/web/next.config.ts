@@ -15,6 +15,9 @@ const API_URL = requireApiUrl();
 // Docker development keeps its build output separate from native Next.js.
 const distDir = process.env.NEXT_DIST_DIR || ".next";
 
+const privateTraceDirectories =
+  "{.git,.worktrees,.claude,.codegraph,.kilo,.superpowers,.opencode,.playwright-cli,.playwright-mcp,.devin,.devin-artifacts,.pi,.agents,.codex,.planning,.remember,.sisyphus,.idea,.tmp,.results,.turbo,.pnpm-store,.logs}";
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   devIndicators: false,
@@ -27,6 +30,17 @@ const nextConfig: NextConfig = {
   // The glob must follow NEXT_DIST_DIR — a fixed `.next` path leaves the
   // Docker-dev build unexcluded and the copy fails on the custom dir instead.
   outputFileTracingExcludes: {
+    // Global traces and route traces use repository-relative and web-relative paths.
+    "**": [
+      `**/${privateTraceDirectories}/**`,
+      `../../${privateTraceDirectories}/**`,
+      "apps/web/coverage/**",
+      "../../apps/web/coverage/**",
+      "**/.env{,.*}",
+      "../../.env{,.*}",
+      `**/${distDir}/{cache,dev,standalone}/**`,
+      `${distDir}/{cache,dev,standalone}/**`,
+    ],
     "next-server": [
       `**/${distDir}/server/proxy.js`,
       `**/${distDir}/server/proxy.js.nft.json`,

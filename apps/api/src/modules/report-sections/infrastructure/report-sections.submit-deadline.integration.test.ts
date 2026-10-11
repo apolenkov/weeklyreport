@@ -157,7 +157,9 @@ describe("submit versus manual deadline update (PostgreSQL interleaving)", () =>
       status: "draft",
       confirmed: true,
       projectStatuses: [{ projectId: testData.project.id, status: "green" }],
-      stageStatuses: [],
+      stageStatuses: [
+        { projectId: testData.project.id, stageId: stage.id, status: "green" },
+      ],
       activityStatuses: [],
       items: section.items,
       risks: [],
@@ -236,6 +238,32 @@ describe("submit versus manual deadline update (PostgreSQL interleaving)", () =>
     );
     return { adminResult, submitResult };
   }
+
+  it.each(["missing", "null"] as const)(
+    "rejects %s owned-stage status without changing persisted draft or children",
+    async (status) => {
+      const before = await readSectionState();
+      const service = new ReportSectionsService(
+        new ReportSectionsPrismaRepository(prisma as unknown as PrismaService),
+        NOOP_REPORT_SECTIONS_TELEMETRY,
+        createNullLogger(),
+      );
+      const stageStatuses =
+        status === "missing"
+          ? []
+          : expectDefined(payload.stageStatuses).map((entry) => ({
+              ...entry,
+              status: null,
+            }));
+      await expect(
+        service.submitSection({ ...payload, stageStatuses }, testData.lead.id),
+      ).rejects.toMatchObject({
+        name: "ReportSectionDomainError",
+        code: "MISSING_TRAFFIC_LIGHT",
+      });
+      expect(await readSectionState()).toEqual(before);
+    },
+  );
 
   it("rejects when admin shortens the deadline first, preserving original section and children", async () => {
     const before = await readSectionState();

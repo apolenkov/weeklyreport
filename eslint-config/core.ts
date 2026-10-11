@@ -26,6 +26,7 @@ export const coreConfig: Linter.Config[] = [
     ".devin-artifacts/**",
     ".kilo/**",
     ".claude/worktrees/**",
+    ".worktrees/**",
     "**/coverage/**",
     "**/.turbo/**",
     "openspec/**",

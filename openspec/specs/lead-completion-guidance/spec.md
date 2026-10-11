@@ -15,7 +15,10 @@ the form that first answers whether the report can be submitted and, when it
 cannot, identifies what the lead must fix. Readiness MUST apply the canonical
 shared submit validation to the lead's own live draft and the same promoted
 payload shape used by submission, including the requirement that every project
-in the canonical section has at least one Current Week item. Display-only
+in the canonical section has at least one Current Week item and every owned
+stage has a non-null status in that promoted payload. Unset own stages MUST
+remain eligible for client promotion after the existing warning; raw draft
+values MUST NOT introduce a readiness blocker that the promoted payload resolves. Display-only
 foreign or referenced products MUST NOT expand that validation denominator. The
 summary MUST NOT use `Submit readiness`, a bare `Ready`, or another internal
 readiness label as its primary user-facing explanation. It MUST share the
@@ -55,6 +58,13 @@ second validator or submission path.
 - **WHEN** submission is pending and no content blocker exists
 - **THEN** the summary announces that the report is being submitted instead of claiming a generic ready state
 - **AND** the final Submit action remains disabled
+
+#### Scenario: unset owned stages are eligible for warned client promotion
+
+- **GIVEN** the live draft has an unset owned stage and no other blocker
+- **WHEN** readiness is derived from `buildLeadSubmitPayload`
+- **THEN** readiness remains ready to submit and the existing warning identifies the unset stage
+- **AND** confirming submission sends that stage as green, satisfying server admission
 
 ### Requirement: Automatic status changes are compact and inspectable
 

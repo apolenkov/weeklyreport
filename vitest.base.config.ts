@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 
 // Date formatting in tests must not depend on the host time zone; workers
 // inherit this from the config process.
@@ -52,6 +52,8 @@ export const getVitestReporters = (
 // suite still writes its own `<project>/coverage`.
 export default defineConfig({
   test: {
+    exclude: [...configDefaults.exclude, ".worktrees/**", "**/.next/**"],
+    maxWorkers: 2,
     // Keep GitHub annotations without letting every Vitest invocation append
     // its own generic "Vitest Test Report" to the job summary. CI owns the
     // single labelled summary; JSON is opt-in so local runs stay artifact-free.
