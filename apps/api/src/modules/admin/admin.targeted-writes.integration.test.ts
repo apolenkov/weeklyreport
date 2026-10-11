@@ -16,6 +16,7 @@ import {
 import { ensureLeadSection } from "../report-sections/index.js";
 import { AdminPrismaRepository } from "./admin.prisma-repository";
 import {
+  AdminGroupProductConflictError,
   AdminUserConflictError,
   AdminUserPublishedHistoryError,
 } from "./admin-shared";
@@ -135,6 +136,93 @@ describe("AdminPrismaRepository (integration) — targeted writes & concurrency"
     role: "lead" as const,
     samlId: "jit-test",
   };
+
+  it.each([
+    { name: "existing", newProject: false },
+    { name: "new", newProject: true },
+  ])(
+    "refuses an inactive desired lead for a $name product without changing persisted assignment",
+    async ({ newProject }) => {
+      const inactive = await prisma.user.create({
+        data: {
+          ...jitUserData,
+          reportingGroupId: testData.lead.reportingGroupId,
+          isActive: false,
+        },
+      });
+      const projectId = newProject ? SECOND_PROJECT_ID : testData.project.id;
+      const readAssignment = async () => ({
+        project: await prisma.project.findUnique({
+          where: { id: projectId },
+          include: { groupProducts: true },
+        }),
+        statuses: await prisma.projectStatus.findMany({
+          where: { projectId },
+          orderBy: { id: "asc" },
+        }),
+        desiredLead: await prisma.user.findUniqueOrThrow({
+          where: { id: inactive.id },
+        }),
+      });
+      const before = await readAssignment();
+      await expect(
+        repo.upsertProject({
+          id: projectId,
+          name: "C0647 rejected inactive assignment",
+          archived: false,
+          leadId: inactive.id,
+          leadName: inactive.name,
+        }),
+      ).rejects.toBeInstanceOf(AdminGroupProductConflictError);
+      expect(await readAssignment()).toEqual(before);
+    },
+  );
+
+  it.each([
+    {
+      operation: "rename",
+      archived: false,
+      name: "C0647 renamed inactive-owned product",
+    },
+    {
+      operation: "Restore",
+      archived: true,
+      name: "C0647 archived inactive-owned product",
+    },
+  ])(
+    "allows targeted $operation with the unchanged inactive owner and never reactivates that user",
+    async ({ archived, name }) => {
+      const ownerBefore = await prisma.user.update({
+        where: { id: testData.lead.id },
+        data: { isActive: false },
+      });
+      await prisma.project.update({
+        where: { id: testData.project.id },
+        data: { archived, name: archived ? name : testData.project.name },
+      });
+      await repo.upsertProject({
+        id: testData.project.id,
+        name,
+        archived: false,
+        leadId: testData.lead.id,
+        leadName: testData.lead.name,
+      });
+      expect(
+        await prisma.project.findUniqueOrThrow({
+          where: { id: testData.project.id },
+        }),
+      ).toMatchObject({
+        name,
+        archived: false,
+        leadId: testData.lead.id,
+      });
+      expect(
+        await prisma.user.findUniqueOrThrow({
+          where: { id: testData.lead.id },
+        }),
+      ).toEqual(ownerBefore);
+    },
+  );
 
   it("saveSnapshot is additive-only: rows absent from the payload survive", async () => {
     // Capture the snapshot, then insert rows that are NOT part of it.

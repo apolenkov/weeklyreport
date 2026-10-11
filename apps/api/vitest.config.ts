@@ -13,7 +13,7 @@ export default mergeConfig(
       // Repository-wide TypeScript and ESLint gates allocate their own worker
       // processes. Keep enough CPU headroom that those gates measure code
       // defects instead of timing out behind the unit-test worker pool.
-      maxWorkers: 4,
+      maxWorkers: 2,
       // Integration suites have their own runner, so the default run stays
       // unit-only.
       exclude: ["**/*.integration.test.ts", "**/dist/**", "**/node_modules/**"],
