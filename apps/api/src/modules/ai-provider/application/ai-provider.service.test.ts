@@ -822,9 +822,14 @@ describe("AiProviderConfigurationService", () => {
     },
   );
 
-  it.each(["activate", "restore"] as const)(
-    "%s persists observed preparation counters when preparation rejects after progress",
-    async (operation) => {
+  it.each([
+    ["activate", 6],
+    ["restore", 6],
+    ["activate", 0],
+    ["restore", 0],
+  ] as const)(
+    "%s persists observed preparation counters when preparation rejects after progress (failed=%s)",
+    async (operation, failed) => {
       const events: Record<string, unknown>[] = [];
       const active = revision(activeId, {
         lifecycle: AiProviderLifecycle.active,
@@ -845,7 +850,7 @@ describe("AiProviderConfigurationService", () => {
             await onProgress?.({
               completed: 4,
               total: 10,
-              failed: 6,
+              failed,
               elapsedMs: 20,
             });
             throw new Error("queue unavailable");
@@ -876,7 +881,7 @@ describe("AiProviderConfigurationService", () => {
         expect.objectContaining({
           completed: 4,
           total: 10,
-          failed: 6,
+          failed,
           lifecycle: AiProviderLifecycle.failed,
         }),
       );

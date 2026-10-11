@@ -13,7 +13,6 @@ import type { PrismaClient } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-import { errorMessage } from "../../../lib/error-message.js";
 import type { EnvConfig } from "../../config/env.schema";
 import { assertE2eRuntimeDestructiveTarget } from "../../prisma/e2e-destructive-target.js";
 import {
@@ -32,8 +31,6 @@ const DEFAULT_RESEED_TIMEOUT_MS =
   DEFAULT_RESEED_TIMEOUT_MINUTES * MS_PER_MINUTE;
 // Async so a multi-minute reset never blocks the API event loop.
 const execFileAsync = promisify(execFile);
-const RESEED_OUTPUT_TAIL_LINES = 15;
-const RESEED_STDERR_TAIL_LENGTH = 500;
 
 export interface DevRouterDeps {
   prisma: PrismaClient;
@@ -95,22 +92,6 @@ const resolveRepoRoot = (envRoot: string | undefined): string => {
   }
   return repoRoot;
 };
-
-const extractStderr = (error: unknown): string => {
-  const stderrRaw =
-    error instanceof Error && "stderr" in error
-      ? (error as { stderr?: unknown }).stderr
-      : undefined;
-  if (typeof stderrRaw === "string") return stderrRaw;
-  return Buffer.isBuffer(stderrRaw) ? stderrRaw.toString("utf8") : "";
-};
-
-const toReseedError = (error: unknown): TRPCError =>
-  new TRPCError({
-    code: "INTERNAL_SERVER_ERROR",
-    message: `Reseed failed: ${errorMessage(error)}\n${extractStderr(error).slice(-RESEED_STDERR_TAIL_LENGTH)}`,
-    cause: error instanceof Error ? error : undefined,
-  });
 
 export function createDevRouter(deps: DevRouterDeps) {
   // ponytail: per-process flag; a multi-replica dev stack would need a DB lock.
@@ -185,12 +166,12 @@ export function createDevRouter(deps: DevRouterDeps) {
             env: process.env,
             timeout: reseedTimeoutMs(input.variant),
           } as const;
-          const reset = await execFileAsync(
+          await execFileAsync(
             resolveExecutable("pnpm"),
             ["exec", "prisma", "migrate", "reset", "--force"],
             options,
           );
-          const seed = await execFileAsync(
+          await execFileAsync(
             resolveExecutable("pnpm"),
             ["db:seed:profile", input.variant],
             options,
@@ -198,13 +179,13 @@ export function createDevRouter(deps: DevRouterDeps) {
           return {
             ok: true,
             variant: input.variant,
-            output: `${reset.stdout}\n${seed.stdout}`
-              .split("\n")
-              .slice(-RESEED_OUTPUT_TAIL_LINES)
-              .join("\n"),
+            output: "Reseed completed",
           };
-        } catch (error) {
-          throw toReseedError(error);
+        } catch {
+          throw new TRPCError({
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Reseed failed",
+          });
         } finally {
           reseed.inFlight = false;
         }

@@ -51,13 +51,45 @@ const PII_CONTEXT_KEYS: ReadonlySet<string> = new Set([
 ]);
 const REDACTION_MARKER = "[redacted]";
 
+function redactPiiValue(
+  value: unknown,
+  copies: WeakMap<object, unknown>,
+): unknown {
+  if (value === null || typeof value !== "object") return value;
+  const existing = copies.get(value);
+  if (existing !== undefined) return existing;
+  if (Array.isArray(value)) {
+    const copy: unknown[] = value.slice();
+    copies.set(value, copy);
+    value.forEach((entry, index) => {
+      copy[index] = redactPiiValue(entry, copies);
+    });
+    return copy;
+  }
+  // Opaque values retain their existing serialization, including Date and Error.
+  const prototype: unknown = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) return value;
+  const copy = Object.fromEntries(Object.entries(value));
+  copies.set(value, copy);
+  for (const [key, entry] of Object.entries(value)) {
+    copy[key] = PII_CONTEXT_KEYS.has(key)
+      ? REDACTION_MARKER
+      : redactPiiValue(entry, copies);
+  }
+  return copy;
+}
+
 function redactPiiContext(
   context: Record<string, unknown>,
 ): Record<string, unknown> {
+  const copies = new WeakMap<object, unknown>();
   return Object.fromEntries(
-    Object.entries(context).map(([key, value]) =>
-      PII_CONTEXT_KEYS.has(key) ? [key, REDACTION_MARKER] : [key, value],
-    ),
+    Object.entries(context).map(([key, value]) => [
+      key,
+      PII_CONTEXT_KEYS.has(key)
+        ? REDACTION_MARKER
+        : redactPiiValue(value, copies),
+    ]),
   );
 }
 
