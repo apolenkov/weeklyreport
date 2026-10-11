@@ -620,7 +620,7 @@ describe("PDF export JWT signing", () => {
     vi.stubEnv("PDF_EXPORT_JWT_SECRET", "seventeen-chars-x");
 
     expect(() => verifyPdfExportToken("any.signed.token")).toThrow(
-      />= 32 chars/,
+      />= 32 characters/,
     );
   });
 
