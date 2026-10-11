@@ -31,8 +31,12 @@ describe("buildUserSession — admin SAML login", () => {
   }): PrismaClient {
     const existing = opts.existingUser ?? null;
     const fake = {
+      $queryRaw: vi.fn(() =>
+        Promise.resolve(existing ? [{ id: existing.id }] : []),
+      ),
       user: {
-        findFirst: vi.fn(() => Promise.resolve(existing)),
+        findFirst: vi.fn(() => Promise.resolve(null)),
+        findUnique: vi.fn(() => Promise.resolve(existing)),
         update: vi.fn(
           ({
             where,
@@ -220,11 +224,13 @@ describe("buildUserSession — admin SAML login", () => {
 
     await buildUserSession(prisma, profile, failIfProvisioned);
 
-    expect(vi.mocked(prisma.user.findFirst)).toHaveBeenCalledWith({
-      where: {
-        email: { equals: "newcomer@customreport.local", mode: "insensitive" },
-      },
-    });
+    // The normalized address is bound as a parameter of the lower() lookup.
+    const { $queryRaw: queryRaw } = prisma as unknown as {
+      $queryRaw: ReturnType<typeof vi.fn>;
+    };
+    expect(queryRaw.mock.calls[0]?.slice(1)).toEqual([
+      "newcomer@customreport.local",
+    ]);
     const createMock = vi.mocked(prisma.user.create);
     const data = createMock.mock.calls[0]?.[0] as
       { data: { email: string; samlId: string } } | undefined;
@@ -251,13 +257,14 @@ describe("buildUserSession — first-login create race (P2002 reread)", () => {
   };
 
   function racingPrisma() {
-    // findFirst call sequence: 1=email (miss), 2=samlId (miss) → existing=null
-    // → create races and throws P2002; 3=catch-branch email re-read → WINNER.
-    let userFindCalls = 0;
-    const findFirst = vi.fn(() => {
-      userFindCalls += 1;
-      return Promise.resolve(userFindCalls >= 3 ? WINNER : null);
+    // Email lookups: 1=miss, then samlId (miss) → existing=null → create races
+    // and throws P2002; 2=catch-branch email re-read → WINNER.
+    let emailLookups = 0;
+    const queryRaw = vi.fn(() => {
+      emailLookups += 1;
+      return Promise.resolve(emailLookups >= 2 ? [{ id: WINNER.id }] : []);
     });
+    const findFirst = vi.fn(() => Promise.resolve(null));
     const create = vi.fn(() =>
       Promise.reject(
         Object.assign(new Error("Unique constraint failed"), {
@@ -267,7 +274,13 @@ describe("buildUserSession — first-login create race (P2002 reread)", () => {
       ),
     );
     const fake = {
-      user: { findFirst, create, update: vi.fn() },
+      $queryRaw: queryRaw,
+      user: {
+        findFirst,
+        findUnique: vi.fn(() => Promise.resolve(WINNER)),
+        create,
+        update: vi.fn(),
+      },
       reportSection: {
         findFirst: vi.fn(() => Promise.resolve(null)),
         findUnique: vi.fn(() => Promise.resolve(null)),
@@ -285,11 +298,16 @@ describe("buildUserSession — first-login create race (P2002 reread)", () => {
         upsert: vi.fn(() => Promise.resolve(null)),
       },
     };
-    return { prisma: fake as unknown as PrismaClient, create, findFirst };
+    return {
+      prisma: fake as unknown as PrismaClient,
+      create,
+      findFirst,
+      queryRaw,
+    };
   }
 
   it("loser catches P2002, re-reads the winner, returns its session", async () => {
-    const { prisma, create, findFirst } = racingPrisma();
+    const { prisma, create, findFirst, queryRaw } = racingPrisma();
     const profile: SamlProfile = {
       samlId: "saml-racer",
       email: "racer@customreport.local",
@@ -302,7 +320,9 @@ describe("buildUserSession — first-login create race (P2002 reread)", () => {
     expect(session.userId).toBe("winner-user-id");
     expect(session.email).toBe("racer@customreport.local");
     expect(create).toHaveBeenCalledTimes(1);
-    expect(findFirst).toHaveBeenCalledTimes(3);
+    // Fast path: email miss + samlId miss; catch branch: email hit (no samlId read).
+    expect(queryRaw).toHaveBeenCalledTimes(2);
+    expect(findFirst).toHaveBeenCalledTimes(1);
   });
 
   it("loser is REFUSED when the race winner's row carries a different samlId", async () => {
@@ -359,28 +379,25 @@ describe("buildUserSession — samlId identity cross-check", () => {
   };
 
   function fakePrisma(existingSamlId: string) {
-    const findFirst = vi.fn(
-      ({
-        where,
-      }: {
-        where: {
-          email?: string | { equals: string; mode?: string };
-          samlId?: string;
-        };
-      }) => {
-        // Mirror the production insensitive email lookup: fold both sides.
-        const queriedEmail =
-          typeof where.email === "string"
-            ? where.email
-            : where.email?.equals.toLowerCase();
-        if (queriedEmail === EXISTING_USER.email.toLowerCase()) {
-          return Promise.resolve({ ...EXISTING_USER, samlId: existingSamlId });
-        }
-        return Promise.resolve(null);
-      },
+    // Mirror the production lookup: lower() folds both sides of the comparison.
+    const queryRaw = vi.fn((_strings: TemplateStringsArray, email: string) =>
+      Promise.resolve(
+        email.toLowerCase() === EXISTING_USER.email.toLowerCase()
+          ? [{ id: EXISTING_USER.id }]
+          : [],
+      ),
     );
+    const findFirst = vi.fn(() => Promise.resolve(null));
     const fake = {
-      user: { findFirst, create: vi.fn(), update: vi.fn() },
+      $queryRaw: queryRaw,
+      user: {
+        findFirst,
+        findUnique: vi.fn(() =>
+          Promise.resolve({ ...EXISTING_USER, samlId: existingSamlId }),
+        ),
+        create: vi.fn(),
+        update: vi.fn(),
+      },
       reportSection: {
         findFirst: vi.fn(() => Promise.resolve(null)),
         findUnique: vi.fn(() => Promise.resolve(null)),

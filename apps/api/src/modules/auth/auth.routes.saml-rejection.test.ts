@@ -148,9 +148,7 @@ describe("SAML post-passport callback — audit error hygiene", () => {
       verifySessionToken: vi.fn(),
     };
     const prisma = {
-      user: {
-        findFirst: vi.fn(() => Promise.reject(new Error(INTERNAL_MARKER))),
-      },
+      $queryRaw: vi.fn(() => Promise.reject(new Error(INTERNAL_MARKER))),
     } as unknown as PrismaClient;
     const provisionLeadWorkspace = vi.fn();
     const auditLogger = {

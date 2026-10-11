@@ -68,6 +68,17 @@ function isSamlIdentityMismatch(
 
 type ExistingUser = Awaited<ReturnType<PrismaClient["user"]["findFirst"]>>;
 
+// Email identity is case-insensitive, so the lookup folds both sides in SQL with
+// the same lower("email") expression as User_email_lower_key (the index serves
+// it). Prisma's `mode: "insensitive"` is an unescaped ILIKE, where `_` and `%`
+// in an address would match other accounts.
+async function findUserByEmail(prisma: PrismaClient, email: string) {
+  const [row] = await prisma.$queryRaw<
+    { id: string }[]
+  >`SELECT "id" FROM "User" WHERE lower("email") = lower(${normalizeEmail(email)}) LIMIT 1`;
+  return row ? prisma.user.findUnique({ where: { id: row.id } }) : null;
+}
+
 // Prefer email match, then resolve the same stable SAML identity when an email
 // changed. A samlId collision on the email hit is refused outright (not
 // re-linked, not auto-created) rather than silently inheriting the matched
@@ -76,14 +87,7 @@ async function resolveExistingUser(
   prisma: PrismaClient,
   profile: SamlProfile,
 ): Promise<ExistingUser> {
-  // Email identity is case-insensitive, so the lookup folds both sides — a
-  // stored mixed-case row stays reachable and a case-variant assertion can
-  // never slip a second account past the email match.
-  const existingByEmail = await prisma.user.findFirst({
-    where: {
-      email: { equals: normalizeEmail(profile.email), mode: "insensitive" },
-    },
-  });
+  const existingByEmail = await findUserByEmail(prisma, profile.email);
   if (isSamlIdentityMismatch(existingByEmail, profile)) {
     throw new SamlIdentityMismatchError(
       `SAML profile samlId does not match the samlId on record for email ${profile.email}`,

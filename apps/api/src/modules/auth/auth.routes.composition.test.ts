@@ -248,8 +248,10 @@ describe("mountAuthRoutes composition", () => {
       reportingGroupId: null,
     };
     const prisma = {
+      $queryRaw: vi.fn(() => Promise.resolve([{ id: user.id }])),
       user: {
         findFirst: vi.fn(() => Promise.resolve(user)),
+        findUnique: vi.fn(() => Promise.resolve(user)),
         update: vi.fn(({ data }: { data: Partial<typeof user> }) =>
           Promise.resolve({ ...user, ...data }),
         ),

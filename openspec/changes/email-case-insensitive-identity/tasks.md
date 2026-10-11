@@ -19,5 +19,5 @@
 
 ## 4. Regression coverage
 
-- [x] 4.1 Unit coverage: writers persist normalized email; SAML lookup issues a case-insensitive email filter; case-variant + foreign `samlId` still refuses.
-- [ ] 4.2 API database-boundary regression on a guarded disposable database: first create wins, a case-variant second write is a typed conflict, and the exported snapshot parses and restores. Deferred — requires a live database.
+- [x] 4.1 Unit coverage: writers persist normalized email; SAML lookup binds the normalized address as a parameter of a `lower("email") = lower($1)` query (Prisma's insensitive filter is an unescaped ILIKE); case-variant + foreign `samlId` still refuses.
+- [x] 4.2 API database-boundary regression on a guarded disposable database: a stored mixed-case row is found from a case-variant assertion, `_`/`%` in an address never match other accounts, and a case-variant second write is a typed conflict (`user-session.email-identity.integration.test.ts`, `admin.targeted-writes.integration.test.ts`).

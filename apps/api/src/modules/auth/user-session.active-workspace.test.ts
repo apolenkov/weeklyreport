@@ -65,8 +65,10 @@ function activeWorkspacePrisma(role: Role, candidate: InvalidCandidate) {
     ),
   );
   const prisma = {
+    $queryRaw: vi.fn(() => Promise.resolve([{ id: user.id }])),
     user: {
-      findFirst: vi.fn(() => Promise.resolve(user)),
+      findFirst: vi.fn(() => Promise.resolve(null)),
+      findUnique: vi.fn(() => Promise.resolve(user)),
       create: vi.fn(),
       update: vi.fn(),
     },
