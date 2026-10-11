@@ -85,11 +85,11 @@ function LeadRowToggle({
       type="button"
       aria-expanded={expanded}
       aria-controls={detailId}
-      aria-label={`${expanded ? "Hide details" : "Details"} for ${leadName}`}
+      aria-label={`${expanded ? "Less details" : "Details"} for ${leadName}`}
       onClick={onToggle}
       className={`inline-flex h-[var(--dashboard-action-h)] items-center justify-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] px-2 text-xs font-semibold text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)] hover:text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] ${QUEUE_ACTION_CELL_CLASS}`}
     >
-      {expanded ? "Hide" : "Details"}
+      {expanded ? "Less" : "Details"}
       <ChevronDown
         aria-hidden="true"
         className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`}

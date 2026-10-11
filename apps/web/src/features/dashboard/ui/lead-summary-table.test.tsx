@@ -176,9 +176,11 @@ describe("LeadSummaryTable action queue", () => {
     if (!detailId) throw new Error("Disclosure is missing aria-controls");
 
     expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveTextContent(/^Details$/);
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
-    expect(toggle).toHaveAccessibleName("Hide details for Alice Lead");
+    expect(toggle).toHaveAccessibleName("Less details for Alice Lead");
+    expect(toggle).toHaveTextContent(/^Less$/);
     expect(toggle).toHaveClass(
       "h-[var(--dashboard-action-h)]",
       "w-[var(--dashboard-summary-action-w)]",
@@ -188,6 +190,12 @@ describe("LeadSummaryTable action queue", () => {
     expect(screen.getByText("Activities")).toBeVisible();
     expect(screen.getByText("Not reviewed · 0 verdicts")).toBeVisible();
     toggle.focus();
+    expect(toggle).toHaveFocus();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(toggle).toHaveAccessibleName("Details for Alice Lead");
+    expect(toggle).toHaveTextContent(/^Details$/);
     expect(toggle).toHaveFocus();
   });
 
