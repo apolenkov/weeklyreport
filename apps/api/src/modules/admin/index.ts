@@ -9,6 +9,7 @@ export type {
 export {
   AdminAccessError,
   AdminGroupProductConflictError,
+  AdminLastActiveGroupError,
   AdminLastAdminError,
   AdminPeriodAlreadyArchivedError,
   AdminPeriodNotFoundError,

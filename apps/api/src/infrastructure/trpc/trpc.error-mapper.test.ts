@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   AdminAccessError,
   AdminGroupProductConflictError,
+  AdminLastActiveGroupError,
   AdminLastAdminError,
   AdminPeriodAlreadyArchivedError,
   AdminPeriodNotFoundError,
@@ -616,6 +617,11 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
       name: "AdminSelfLockoutError",
       make: () => new AdminSelfLockoutError("m"),
       code: "BAD_REQUEST",
+    },
+    {
+      name: "AdminLastActiveGroupError",
+      make: () => new AdminLastActiveGroupError("m"),
+      code: "CONFLICT",
     },
     {
       name: "AdminLastAdminError",

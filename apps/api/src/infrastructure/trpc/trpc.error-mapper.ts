@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 import {
   AdminAccessError,
   AdminGroupProductConflictError,
+  AdminLastActiveGroupError,
   AdminLastAdminError,
   AdminPeriodAlreadyArchivedError,
   AdminPeriodNotFoundError,
@@ -191,6 +192,7 @@ export const DOMAIN_ERROR_CODES: readonly (readonly [
   // Self-lockout is a client mistake; the last-admin rule is a state conflict.
   [AdminSelfLockoutError, "BAD_REQUEST"],
   [AdminLastAdminError, "CONFLICT"],
+  [AdminLastActiveGroupError, "CONFLICT"],
   [AdminUserActivityAssignmentConflictError, "CONFLICT"],
   // Published reports retain their publisher identity; deactivation is the
   // supported offboarding path, so a hard delete is a state conflict.

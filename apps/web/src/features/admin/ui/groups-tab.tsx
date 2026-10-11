@@ -176,6 +176,9 @@ function useGroupsTab(groups: AdminGroupView[], users: AdminUserView[]) {
 export function GroupsTab({ groups, users, products }: GroupsTabProps) {
   const tab = useGroupsTab(groups, users);
   const { dialog, commands, filters } = tab;
+  const currentEditingGroup = groups.find(
+    (group) => group.id === dialog.editingGroup?.id,
+  );
 
   return (
     <>
@@ -216,6 +219,9 @@ export function GroupsTab({ groups, users, products }: GroupsTabProps) {
           onFormChange={dialog.setForm}
           headCandidates={tab.headCandidates}
           products={products}
+          canArchive={
+            currentEditingGroup?.archived === true || tab.activeGroupCount > 1
+          }
           canSave={dialog.form.name.trim().length > 0 && !commands.isSaving}
           isSaving={commands.isSaving}
           onSave={commands.save}

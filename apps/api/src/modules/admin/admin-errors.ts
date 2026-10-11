@@ -139,6 +139,14 @@ export class AdminReminderPolicyNotFoundError extends Error {
   }
 }
 
+// Archiving the last active reporting group → CONFLICT.
+export class AdminLastActiveGroupError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminLastActiveGroupError";
+  }
+}
+
 // The write would leave the project without an active administrator → CONFLICT.
 export class AdminLastAdminError extends Error {
   constructor(message: string) {

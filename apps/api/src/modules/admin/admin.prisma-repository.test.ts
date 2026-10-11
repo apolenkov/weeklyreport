@@ -747,8 +747,20 @@ describe("AdminPrismaRepository — deactivate/activate, stages", () => {
   ] as const)(
     "$method translates a missing-row P2025 into a typed not-found error",
     async ({ method, delegate, errorClass }) => {
+      const prisma = {
+        ...delegate,
+        $transaction: (run: (tx: unknown) => Promise<unknown>) =>
+          run({
+            ...delegate,
+            $queryRaw: vi.fn().mockResolvedValue([]),
+            reportingGroup: {
+              ...("reportingGroup" in delegate ? delegate.reportingGroup : {}),
+              findMany: vi.fn().mockResolvedValue([]),
+            },
+          }),
+      };
       const repo = new AdminPrismaRepository(
-        delegate as unknown as PrismaService,
+        prisma as unknown as PrismaService,
       );
 
       await expect(repo[method]("missing-id")).rejects.toBeInstanceOf(
@@ -773,8 +785,20 @@ describe("AdminPrismaRepository — deactivate/activate, stages", () => {
     "$method re-throws a non-P2025 rejection unchanged",
     async ({ method, delegateKey, verb }) => {
       const rejection = new Error("connection reset");
-      const repo = new AdminPrismaRepository({
+      const delegate = {
         [delegateKey]: { [verb]: vi.fn(() => Promise.reject(rejection)) },
+      };
+      const repo = new AdminPrismaRepository({
+        ...delegate,
+        $transaction: (run: (tx: unknown) => Promise<unknown>) =>
+          run({
+            ...delegate,
+            $queryRaw: vi.fn().mockResolvedValue([]),
+            reportingGroup: {
+              ...delegate.reportingGroup,
+              findMany: vi.fn().mockResolvedValue([]),
+            },
+          }),
       } as unknown as PrismaService);
 
       await expect(repo[method]("id-1")).rejects.toBe(rejection);
