@@ -9,6 +9,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { logs } from "@opentelemetry/api-logs";
+import {
+  InMemoryLogRecordExporter,
+  LoggerProvider,
+  SimpleLogRecordProcessor,
+} from "@opentelemetry/sdk-logs";
 import type { ClsService } from "nestjs-cls";
 import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
@@ -82,24 +87,28 @@ describe("createAppLogger", () => {
     expect(parsed.service).toBe("test-svc");
   });
 
-  it("degrades to the envelope when context serialization fails", () => {
-    const spy = vi.spyOn(process.stdout, "write").mockReturnValue(true);
-    const logger = createAppLogger({ minLevel: "info" });
-    const circular: Record<string, unknown> = {};
-    circular.self = circular;
+  it.each(["cyclic", "BigInt"])(
+    "degrades to the envelope for %s context",
+    (kind) => {
+      const spy = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+      const logger = createAppLogger({ minLevel: "info" });
+      const context: Record<string, unknown> =
+        kind === "BigInt" ? { value: 1n } : {};
+      if (kind === "cyclic") context.self = context;
 
-    expect(() => logger.info("circular", { ref: circular })).not.toThrow();
+      expect(() => logger.info(kind, { ref: context })).not.toThrow();
 
-    expect(spy).toHaveBeenCalledOnce();
-    const parsed = JSON.parse(
-      expectDefined(spy.mock.calls[0])[0] as string,
-    ) as Record<string, unknown>;
-    expect(parsed).toMatchObject({
-      level: "info",
-      message: "circular",
-      contextSerializationFailed: true,
-    });
-  });
+      expect(spy).toHaveBeenCalledOnce();
+      const parsed = JSON.parse(
+        expectDefined(spy.mock.calls[0])[0] as string,
+      ) as Record<string, unknown>;
+      expect(parsed).toMatchObject({
+        level: "info",
+        message: kind,
+        contextSerializationFailed: true,
+      });
+    },
+  );
 
   it("merges context into log entry", () => {
     const spy = vi.spyOn(process.stdout, "write").mockReturnValue(true);
@@ -180,6 +189,51 @@ describe("createAppLogger", () => {
     expect(fileParsed.leadName).toBe("[redacted]");
     expect(fileParsed.email).toBe("[redacted]");
   });
+
+  it.each(["info", "warn", "error"] as const)(
+    "redacts nested child context and arrays at each configured %s sink without mutating inputs",
+    async (level) => {
+      const marker = "synthetic-nested-private-marker";
+      const createdAt = new Date("2026-10-01T00:00:00.000Z");
+      const person = { email: marker, firstName: marker };
+      const context = {
+        recipients: [person, { recipientEmail: marker }],
+        organization: { fullName: "Synthetic Org", shortName: "SO" },
+        createdAt,
+      };
+      const logDir = createLogDir();
+      const output = vi
+        .spyOn(level === "error" ? process.stderr : process.stdout, "write")
+        .mockReturnValue(true);
+      const exporter = new InMemoryLogRecordExporter();
+      const provider = new LoggerProvider({
+        processors: [new SimpleLogRecordProcessor({ exporter })],
+      });
+      logs.setGlobalLoggerProvider(provider);
+      try {
+        const logger = createAppLogger({ logDir }).child({ user: person });
+        logger[level]("structured privacy", context);
+        await expectDefined(logger.flush)();
+        await provider.forceFlush();
+
+        const line = expectDefined(output.mock.calls[0])[0] as string;
+        const file = readFileSync(join(logDir, "app.log"), "utf8");
+        const record = expectDefined(exporter.getFinishedLogRecords().at(0));
+        for (const sink of [line, file, JSON.stringify(record.attributes)]) {
+          expect(sink).not.toContain(marker);
+          expect(sink).toContain("[redacted]");
+          expect(sink).toContain("Synthetic Org");
+        }
+        expect(file).toContain(createdAt.toISOString());
+        expect(person).toEqual({ email: marker, firstName: marker });
+        expect(context.createdAt).toBe(createdAt);
+        expect(context.recipients[0]).toBe(person);
+      } finally {
+        await provider.shutdown();
+        logs.disable();
+      }
+    },
+  );
 
   it("does not redact organization identity keys (no over-redaction)", () => {
     const spy = vi.spyOn(process.stdout, "write").mockReturnValue(true);

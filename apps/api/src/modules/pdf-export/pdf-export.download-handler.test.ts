@@ -1,5 +1,6 @@
 import { once } from "node:events";
 import {
+  chmodSync,
   createReadStream,
   fstatSync,
   mkdirSync,
@@ -433,6 +434,90 @@ describe("handlePdfDownload", () => {
 
     expect(res.statusCode).toBe(404);
   });
+
+  describe.each(["EACCES", "ENOTDIR"] as const)(
+    "native %s artifact open failure",
+    (code) => {
+      // Root can bypass chmod permission bits; ENOTDIR stays native coverage at any UID.
+      it.skipIf(
+        code === "EACCES" &&
+          (typeof process.getuid !== "function" || process.getuid() === 0),
+      )(
+        "returns 500 after a readable control (EACCES requires a non-root POSIX user)",
+        async () => {
+          writeArtifact(1, "PDF-BYTES");
+          const filePath = join(pdfDir, artifactName(1));
+          const owner = {
+            ...headSession,
+            userId: "a0000000-0000-4000-8000-000000000001",
+            reportingGroupId: "b0000000-0000-4000-8000-000000000001",
+          };
+          const authController = createAuthController(process.env);
+          const token = authController.issueSessionCookie(owner).token;
+          const prisma = {
+            ...makePrisma({ job: completedJob(owner.userId) }),
+            user: {
+              findUnique: () =>
+                Promise.resolve({
+                  isActive: true,
+                  role: "head",
+                  reportingGroupId: owner.reportingGroupId,
+                  reportingGroup: { name: "Group 1" },
+                  viewerGroupAccess: [],
+                }),
+            },
+          } as unknown as PrismaService;
+          const logError = vi.fn();
+          const deps = makeDeps({
+            prisma,
+            verifySessionToken: (value) =>
+              authController.verifySessionToken(value),
+            logger: { ...createNullLogger(), error: logError },
+          });
+          const readable = new MockResponse();
+          const finished = once(readable, "finish");
+          await handlePdfDownload(
+            makeReq({ cookie: token }),
+            asResponse(readable),
+            deps,
+          );
+          await finished;
+          expect(readable.statusCode).toBe(200);
+          expect(readable.body).toBe("PDF-BYTES");
+
+          const failingDirectory =
+            code === "EACCES" ? pdfDir : join(fixtureRoot, "not-a-directory");
+          if (code === "EACCES") chmodSync(filePath, 0o000);
+          else writeFileSync(failingDirectory, "regular file");
+          try {
+            expect(() =>
+              realFs.openSync(
+                join(failingDirectory, artifactName(1)),
+                realFs.constants.O_RDONLY,
+              ),
+            ).toThrow(expect.objectContaining({ code }));
+            const unreadable = new MockResponse();
+            await handlePdfDownload(
+              makeReq({ cookie: token }),
+              asResponse(unreadable),
+              { ...deps, pdfDir: failingDirectory },
+            );
+            expect(unreadable.body).toBe("");
+            expect(unreadable.statusCode).toBe(500);
+            expect(logError).toHaveBeenCalledExactlyOnceWith(
+              "pdf artifact open failed",
+              {
+                jobId: JOB_ID,
+                code,
+              },
+            );
+          } finally {
+            if (code === "EACCES") chmodSync(filePath, 0o600);
+          }
+        },
+      );
+    },
+  );
 
   it("refuses to serve an artifact that is a symlink planted in the artifacts dir (404)", async () => {
     // A symlink at the generation-scoped artifact path must be rejected at

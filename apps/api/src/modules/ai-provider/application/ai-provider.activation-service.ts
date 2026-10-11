@@ -274,7 +274,7 @@ export class AiProviderActivationService {
         result: {
           completed: observed?.completed ?? preparing.preparationCompleted,
           total: Math.max(1, observed?.total ?? preparing.preparationTotal),
-          failed: Math.max(1, observed?.failed ?? preparing.preparationFailed),
+          failed: observed?.failed ?? Math.max(1, preparing.preparationFailed),
           elapsedMs: Math.max(
             0,
             Date.now() - (preparing.preparationStartedAt ?? now()).getTime(),

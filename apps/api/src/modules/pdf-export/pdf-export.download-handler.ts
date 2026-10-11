@@ -98,11 +98,15 @@ async function resolveArtifactPath(
 }
 
 function openReadOnlyNoFollow(filePath: string): Promise<number | null> {
-  return new Promise((resolveOpen) => {
+  return new Promise((resolveOpen, rejectOpen) => {
     openFile(
       filePath,
       constants.O_RDONLY | constants.O_NOFOLLOW,
-      (error: unknown, fd: number) => {
+      (error, fd) => {
+        if (error && error.code !== "ENOENT" && error.code !== "ELOOP") {
+          rejectOpen(error);
+          return;
+        }
         resolveOpen(error ? null : fd);
       },
     );
@@ -190,15 +194,26 @@ export async function handlePdfDownload(
     return;
   }
 
-  const artifact = await resolveArtifactPath(
-    deps.pdfDir,
-    jobId,
-    job.generation,
-  );
-  if (artifact === null) {
-    res.status(HTTP.notFound).end();
-    return;
-  }
+  try {
+    const artifact = await resolveArtifactPath(
+      deps.pdfDir,
+      jobId,
+      job.generation,
+    );
+    if (artifact === null) {
+      res.status(HTTP.notFound).end();
+      return;
+    }
 
-  streamArtifact(res, artifact, deps, jobId);
+    streamArtifact(res, artifact, deps, jobId);
+  } catch (error) {
+    const code =
+      error instanceof Error &&
+      "code" in error &&
+      typeof error.code === "string"
+        ? error.code
+        : "UNKNOWN";
+    deps.logger.error("pdf artifact open failed", { jobId, code });
+    res.status(HTTP.serverError).end();
+  }
 }

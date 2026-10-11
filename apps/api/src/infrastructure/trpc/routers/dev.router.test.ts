@@ -1,4 +1,7 @@
+import { fileURLToPath } from "node:url";
+
 import type { PrismaClient } from "@prisma/client";
+import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 // The destructive child process is mocked: these cases prove WHEN the reset may
@@ -41,7 +44,7 @@ const DISPOSABLE_URL =
 const NON_DISPOSABLE_URL =
   "postgresql://customreport:localdev@db.internal:5432/customreport";
 
-function buildCaller(
+function buildBoundary(
   authDevMode: boolean,
   databaseUrl: string = DISPOSABLE_URL,
   runtime: { prisma?: PrismaClient; redisDb?: number } = {},
@@ -55,13 +58,40 @@ function buildCaller(
     prisma: runtime.prisma ?? ({} as unknown as PrismaClient),
     env,
   });
-  return router.createCaller({
-    session,
-    logger: createNullLogger(),
-    auditLogger: createNullAuditLogger(),
-    ip: "test-ip",
-    isPdfExport: false,
-    pdfReportId: null,
+  return {
+    router,
+    context: {
+      session,
+      correlationId: "d37-v06-synthetic-request",
+      logger: createNullLogger(),
+      auditLogger: createNullAuditLogger(),
+      ip: "test-ip",
+      isPdfExport: false,
+      pdfReportId: null,
+    },
+  };
+}
+
+function buildCaller(
+  authDevMode: boolean,
+  databaseUrl: string = DISPOSABLE_URL,
+  runtime: { prisma?: PrismaClient; redisDb?: number } = {},
+) {
+  const { router, context } = buildBoundary(authDevMode, databaseUrl, runtime);
+  return router.createCaller(context);
+}
+
+async function reseedResponse() {
+  const { router, context } = buildBoundary(true);
+  return fetchRequestHandler({
+    endpoint: "/trpc",
+    req: new Request("http://localhost/trpc/wipeAndReseed", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ json: { variant: "minimal" } }),
+    }),
+    router,
+    createContext: () => context,
   });
 }
 
@@ -207,5 +237,91 @@ describe("dev.runtimeTarget — observable database and Redis DB", () => {
     await expect(caller.runtimeTarget()).rejects.toMatchObject({
       code: "INTERNAL_SERVER_ERROR",
     });
+  });
+});
+
+describe("dev reseed diagnostic transport boundary", () => {
+  it("keeps actual guard-refusal child paths out of the API error", async () => {
+    const { spawnSync } =
+      await vi.importActual<typeof import("node:child_process")>(
+        "node:child_process",
+      );
+    const root = fileURLToPath(new URL("../../../../../../", import.meta.url));
+    const failed = spawnSync(
+      process.execPath,
+      [
+        "--import",
+        "tsx",
+        fileURLToPath(
+          new URL(
+            "../../../../../../prisma/seeds/profiles/seed-profile.ts",
+            import.meta.url,
+          ),
+        ),
+        "minimal",
+      ],
+      {
+        cwd: root,
+        env: {
+          PATH: process.env.PATH ?? "",
+          DOTENV_CONFIG_PATH: fileURLToPath(
+            new URL("d37-no-env-source-does-not-exist", import.meta.url),
+          ),
+        },
+        encoding: "utf8",
+        timeout: 2000,
+      },
+    );
+    expect(failed.status).toBe(1);
+    expect(failed.stderr).toContain(
+      "PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION must equal",
+    );
+    expect(failed.stderr).toContain(root);
+    const error = Object.assign(new Error("Seed command failed"), {
+      stderr: failed.stderr,
+    });
+    execFileMock
+      .mockResolvedValueOnce({ stdout: "reset complete", stderr: "" })
+      .mockRejectedValueOnce(error);
+    vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
+    const response = await reseedResponse();
+    expect(response.status).toBe(500);
+    const body: unknown = await response.json();
+    expect(execFileMock).toHaveBeenCalledTimes(2);
+    expect(body).toMatchObject({
+      error: {
+        json: {
+          message: "Reseed failed",
+          data: {
+            code: "INTERNAL_SERVER_ERROR",
+            requestId: "d37-v06-synthetic-request",
+          },
+        },
+      },
+    });
+    expect(JSON.stringify(body)).not.toContain(
+      "PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION must equal",
+    );
+    expect(JSON.stringify(body)).not.toContain(root.replace(/\/$/u, ""));
+    expect(JSON.stringify(body)).not.toContain("Seed command failed");
+  });
+
+  it("returns safe successful status without child stdout diagnostics", async () => {
+    execFileMock
+      .mockResolvedValueOnce({ stdout: "internal-reset-marker", stderr: "" })
+      .mockResolvedValueOnce({ stdout: "internal-seed-marker", stderr: "" });
+    vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
+    const response = await reseedResponse();
+    expect(response.status).toBe(200);
+    const body: unknown = await response.json();
+    expect(body).toMatchObject({
+      result: {
+        data: {
+          json: { ok: true, variant: "minimal", output: "Reseed completed" },
+        },
+      },
+    });
+    expect(JSON.stringify(body)).not.toContain("internal-reset-marker");
+    expect(JSON.stringify(body)).not.toContain("internal-seed-marker");
   });
 });

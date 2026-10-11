@@ -35,8 +35,13 @@ export class NestAppLoggerAdapter implements LoggerService {
     context?: string,
   ): void => {
     this.sink.current().error(String(message), {
+      ...(message instanceof Error
+        ? { name: message.name, stack: message.stack }
+        : {}),
       nestContext: context ?? stackOrContext,
-      ...(context ? { stack: stackOrContext } : {}),
+      ...(context && stackOrContext !== undefined
+        ? { stack: stackOrContext }
+        : {}),
     });
   };
 
