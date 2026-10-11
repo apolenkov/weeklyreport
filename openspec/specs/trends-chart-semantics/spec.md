@@ -13,8 +13,11 @@ Traffic-light history and Lead submissions SHALL render as visible HTML tables
 `scope="col"`/`scope="row"` headers, no legend and no per-series colours.
 Captions SHALL remain available to assistive technology without repeating the
 visible section heading. Status cells SHALL reuse the product status badge
-(label plus tone) without wrapping their words. Rows with a Red or Yellow status
-in range SHALL precede fully Green rows. The table wrapper SHALL scroll
+(label plus tone) without wrapping their words. Traffic-light history rows
+SHALL be ordered by the latest displayed period's status using shared canonical
+severity (Red, Yellow, Green, then No status), then by project name. A null or
+absent latest-period status SHALL remain No status for ordering; earlier
+statuses SHALL NOT override it. The table wrapper SHALL scroll
 horizontally, be keyboard-focusable and be named by its section heading, with
 the same visible focus indicator across all three tables. The first name
 column SHALL remain visible while scrolling, with an opaque background. The
@@ -32,6 +35,14 @@ document width SHALL NOT grow.
 - **WHEN** Trends renders at 375 CSS pixels
 - **THEN** the page has no horizontal overflow and the table scrolls inside its wrapper
 - **AND** project or lead names remain visible while the periods scroll
+
+#### Scenario: History rows use latest status severity and name
+
+- **GIVEN** projects have Red, Yellow, Green, or missing statuses in the latest displayed period
+- **WHEN** Traffic-light history renders
+- **THEN** rows follow Red, Yellow, Green, then No status order, with project names breaking equal-status ties
+- **AND** an earlier Red or Yellow does not promote a row whose latest status is Green or No status
+- **AND** a null or absent latest status stays in the No status group even when an earlier status was reported
 
 ### Requirement: History highlights the latest reported period
 
