@@ -81,6 +81,10 @@ function renderTab(opts?: {
     { path: ["admin", "snapshot"] },
     { path: ["admin", "saveReportingGroup"], mutation: true },
     { path: ["admin", "archiveReportingGroup"], mutation: true },
+    { path: ["admin", "listGroupProducts"], query: [] },
+    { path: ["admin", "listProductGroupOwnership"], query: [] },
+    { path: ["admin", "attachProductToGroup"], mutation: true },
+    { path: ["admin", "detachProductFromGroup"], mutation: true },
   ]);
 
   expectDefined(
@@ -331,5 +335,173 @@ describe("GroupsTab — picker names", () => {
         name: "Alice H. (alice@example.com)",
       }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("GroupsTab — last active group protection", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("blocks last-active archiving while still saving a rename", async () => {
+    const group = expectDefined(GROUPS[0]);
+    const { captured } = renderTab({ groups: [group], products: [] });
+    const user = userEvent.setup();
+    expect(
+      screen.queryByRole("button", { name: `Archive ${group.name}` }),
+    ).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: `Edit ${group.name}` }),
+    );
+    const archived = screen.getByRole("checkbox", { name: /^Archived/ });
+    expect(archived).toBeDisabled();
+    await user.click(archived);
+    expect(archived).not.toBeChecked();
+    const name = screen.getByLabelText(/^name$/i);
+    await user.clear(name);
+    await user.type(name, "Renamed group");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() =>
+      expect(
+        expectDefined(captured["admin.saveReportingGroup"]).calls,
+      ).toHaveLength(1),
+    );
+    expect(
+      expectDefined(captured["admin.saveReportingGroup"]).calls[0],
+    ).toMatchObject({
+      id: group.id,
+      name: "Renamed group",
+      archived: false,
+    });
+  });
+
+  it("allows restoring an archived group while only one other group is active", async () => {
+    const archivedGroup = { ...expectDefined(GROUPS[1]), archived: true };
+    const { captured } = renderTab({
+      groups: [expectDefined(GROUPS[0]), archivedGroup],
+      products: [],
+    });
+    const user = userEvent.setup();
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Filter by archive status" }),
+      "archived",
+    );
+    await user.click(
+      screen.getByRole("button", { name: `Edit ${archivedGroup.name}` }),
+    );
+    const archived = screen.getByRole("checkbox", { name: /^Archived/ });
+    expect(archived).toBeEnabled();
+    expect(archived).toBeChecked();
+    await user.click(archived);
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() =>
+      expect(
+        expectDefined(captured["admin.saveReportingGroup"]).calls,
+      ).toHaveLength(1),
+    );
+    expect(
+      expectDefined(captured["admin.saveReportingGroup"]).calls[0],
+    ).toMatchObject({
+      id: archivedGroup.id,
+      archived: false,
+    });
+  });
+
+  it("uses the global active roster when search displays just one of two groups", async () => {
+    const { captured } = renderTab({ products: [] });
+    const group = expectDefined(GROUPS[0]);
+    const user = userEvent.setup();
+    await user.type(
+      screen.getByRole("searchbox", { name: "Search groups" }),
+      "Alpha",
+    );
+    expect(
+      screen.queryByRole("button", { name: "Edit Beta Group" }),
+    ).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: `Edit ${group.name}` }),
+    );
+    const archived = screen.getByRole("checkbox", { name: /^Archived/ });
+    expect(archived).toBeEnabled();
+    await user.click(archived);
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() =>
+      expect(
+        expectDefined(captured["admin.saveReportingGroup"]).calls,
+      ).toHaveLength(1),
+    );
+    expect(
+      expectDefined(captured["admin.saveReportingGroup"]).calls[0],
+    ).toMatchObject({ id: group.id, archived: true });
+  });
+
+  it.each([false, true])(
+    "lets a checked stale draft be cleared against the current roster (initially archived: %s)",
+    async (initiallyArchived) => {
+      const { rerender, captured } = renderTab({
+        groups: [
+          { ...expectDefined(GROUPS[0]), archived: initiallyArchived },
+          expectDefined(GROUPS[1]),
+        ],
+        products: [],
+      });
+      const user = userEvent.setup();
+      if (initiallyArchived) {
+        await user.selectOptions(
+          screen.getByRole("combobox", { name: "Filter by archive status" }),
+          "all",
+        );
+      }
+      await user.click(
+        screen.getByRole("button", { name: "Edit Alpha Group" }),
+      );
+      if (!initiallyArchived) {
+        await user.click(screen.getByRole("checkbox", { name: /^Archived/ }));
+      }
+      rerender(
+        <GroupsTab
+          groups={[
+            expectDefined(GROUPS[0]),
+            { ...expectDefined(GROUPS[1]), archived: true },
+          ]}
+          users={USERS}
+          products={[]}
+        />,
+      );
+      const archived = screen.getByRole("checkbox", { name: /^Archived/ });
+      expect(archived).toBeChecked();
+      expect(archived).toBeEnabled();
+      await user.click(archived);
+      expect(archived).not.toBeChecked();
+      expect(archived).toBeDisabled();
+      await user.click(screen.getByRole("button", { name: "Save changes" }));
+      await waitFor(() =>
+        expect(
+          expectDefined(captured["admin.saveReportingGroup"]).calls,
+        ).toHaveLength(1),
+      );
+      expect(
+        expectDefined(captured["admin.saveReportingGroup"]).calls[0],
+      ).toMatchObject({ id: "g-1", archived: false });
+    },
+  );
+
+  it("restricts an open dialog when the refreshed roster leaves only its group active", async () => {
+    const { rerender } = renderTab({ products: [] });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "Edit Alpha Group" }));
+    expect(screen.getByRole("checkbox", { name: /^Archived/ })).toBeEnabled();
+    rerender(
+      <GroupsTab
+        groups={[
+          expectDefined(GROUPS[0]),
+          { ...expectDefined(GROUPS[1]), archived: true },
+        ]}
+        users={USERS}
+        products={[]}
+      />,
+    );
+    expect(screen.getByRole("checkbox", { name: /^Archived/ })).toBeDisabled();
+    expect(screen.getByLabelText(/^name$/i)).toBeEnabled();
   });
 });

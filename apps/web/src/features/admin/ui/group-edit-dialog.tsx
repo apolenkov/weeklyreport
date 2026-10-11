@@ -20,6 +20,7 @@ interface GroupEditDialogProps {
   readonly onFormChange: (form: GroupFormData) => void;
   readonly headCandidates: readonly AdminUserView[];
   readonly products: readonly AdminProductView[];
+  readonly canArchive: boolean;
   readonly canSave: boolean;
   readonly isSaving: boolean;
   readonly onSave: () => void;
@@ -109,14 +110,22 @@ function GroupLeaderField({
 }
 
 // Only offered when editing: a brand-new group is never born archived.
-function GroupArchivedField({ form, onFormChange }: GroupFieldProps) {
+function GroupArchivedField({
+  form,
+  onFormChange,
+  canArchive,
+}: GroupFieldProps & Pick<GroupEditDialogProps, "canArchive">) {
+  const blocked = !canArchive && !form.archived;
   return (
     <div>
-      <label className="flex cursor-pointer items-start gap-3">
+      <label
+        className={`flex items-start gap-3${blocked ? "" : " cursor-pointer"}`}
+      >
         <input
           type="checkbox"
           name="archived"
           checked={form.archived}
+          disabled={blocked}
           onChange={(e) =>
             onFormChange({ ...form, archived: e.target.checked })
           }
@@ -127,8 +136,9 @@ function GroupArchivedField({ form, onFormChange }: GroupFieldProps) {
             Archived
           </span>
           <span className="mt-0.5 block text-xs text-[var(--color-muted-foreground)]">
-            Hidden from new user/group pickers; existing references keep
-            working.
+            {canArchive
+              ? "Hidden from new user/group pickers; existing references keep working."
+              : "The last active group cannot be archived."}
           </span>
         </span>
       </label>
@@ -142,6 +152,7 @@ function GroupFormFields({
   headCandidates,
   products,
   editingGroup,
+  canArchive,
   isSaving,
 }: Pick<
   GroupEditDialogProps,
@@ -150,6 +161,7 @@ function GroupFormFields({
   | "headCandidates"
   | "products"
   | "editingGroup"
+  | "canArchive"
   | "isSaving"
 >) {
   return (
@@ -172,7 +184,11 @@ function GroupFormFields({
           headCandidates={headCandidates}
         />
         {editingGroup && (
-          <GroupArchivedField form={form} onFormChange={onFormChange} />
+          <GroupArchivedField
+            form={form}
+            onFormChange={onFormChange}
+            canArchive={canArchive}
+          />
         )}
         {editingGroup && (
           <GroupProductsEditor groupId={editingGroup.id} products={products} />
@@ -222,6 +238,7 @@ export function GroupEditDialog(props: GroupEditDialogProps) {
           headCandidates={props.headCandidates}
           products={props.products}
           editingGroup={editingGroup}
+          canArchive={props.canArchive}
           isSaving={isSaving}
         />
         <AdminEntityDialogActions

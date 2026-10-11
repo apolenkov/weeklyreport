@@ -265,7 +265,7 @@ Archiving a project or reporting group and deleting a reminder policy each
 target a router-validated UUID. When the row is absent — including when it
 vanished between validation and the write — the Prisma missing-row error
 (P2025) MUST be translated into a typed domain error that maps to
-`NOT_FOUND` with a fixed, safe message. Every other failure MUST propagate
+`NOT_FOUND` with a fixed, safe message. Every other persistence failure MUST propagate
 unchanged into the generic masked internal error. Output schema parsing MUST
 stay outside the missing-row catch so a corrupt row never masquerades as a
 missing one, and repeated archive of an existing already-archived row MUST
@@ -291,7 +291,7 @@ remain a success.
 
 #### Scenario: A non-missing failure stays internal
 
-- **WHEN** the catalog write fails for any reason other than a missing row
+- **WHEN** the catalog write fails for any persistence reason other than a missing row
   (database outage, unrelated constraint)
 - **THEN** the original error propagates unchanged into the masked
   `INTERNAL_SERVER_ERROR`
@@ -368,3 +368,50 @@ existing typed admin conflict without creating another user.
 - **THEN** `User.email` is stored in its trimmed, lowercase form
 - **AND** the existing `samlId` is unchanged
 - **AND** no corporate-domain allow-list is introduced
+
+### Requirement: The last active reporting group cannot be archived
+
+The targeted admin catalog mutations `admin.archiveReportingGroup` and `admin.saveReportingGroup` MUST reject an active-to-archived transition for the last active `ReportingGroup` with `CONFLICT` and a fixed safe message. The decision and write MUST be atomic under competing requests: concurrent attempts to archive the last two active groups MUST leave at least one active group. An archive request for a missing target MUST retain `NOT_FOUND`, and an already-archived target MUST remain idempotent. Existing input and head validation precedence MUST be preserved. Rename and other non-archiving edits, restoration of an archived group, and creation of a new archived group MUST remain available.
+
+The admin Groups edit dialog MUST prevent checking Archived for the last active group based on the global group roster, independently of search/archive filters, with a visible explanation. The restriction MUST NOT disable rename or restoration. The server MUST still enforce the invariant when the client roster is stale.
+
+#### Scenario: The direct archive request targets the last active group
+
+- **GIVEN** exactly one active reporting group exists
+- **WHEN** an administrator calls `admin.archiveReportingGroup` for that group
+- **THEN** the call fails with `CONFLICT` and the group remains active
+
+#### Scenario: The edit-form save attempts to archive the last active group
+
+- **GIVEN** exactly one active reporting group exists and its other input values are valid
+- **WHEN** an administrator calls `admin.saveReportingGroup` with that group's id and `archived: true`
+- **THEN** the call fails with `CONFLICT` and the persisted row is unchanged
+
+#### Scenario: Concurrent catalog writes target the last two groups
+
+- **GIVEN** exactly two active reporting groups exist
+- **WHEN** two requests concurrently archive different groups through either catalog mutation
+- **THEN** one request succeeds and the other fails with `CONFLICT`, leaving one active group
+
+#### Scenario: Another active group exists outside the filtered table
+
+- **GIVEN** two active groups exist and the search filter displays only one
+- **WHEN** the displayed group is edited
+- **THEN** its Archived checkbox remains available, and archiving it leaves the other group active
+
+#### Scenario: The last active group's name is edited
+
+- **GIVEN** exactly one active group exists
+- **WHEN** its edit dialog opens and a valid new name is saved with `archived: false`
+- **THEN** Archived cannot be checked, its explanation is visible, and the rename succeeds
+
+#### Scenario: An archived group is restored
+
+- **GIVEN** an archived group exists alongside exactly one active group
+- **WHEN** the archived group's checkbox is cleared and the edit is saved
+- **THEN** restoration succeeds and two active groups exist
+
+#### Scenario: Non-transitions preserve their current semantics
+
+- **WHEN** archive targets a missing group, repeats on an already-archived group, or save creates a new archived group
+- **THEN** the missing archive retains `NOT_FOUND`, the repeated archive succeeds, and creation succeeds without reducing the active count
