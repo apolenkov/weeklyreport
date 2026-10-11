@@ -23,6 +23,11 @@ import {
   parseSentryDsn,
   SENTRY_DSN_INVALID_MESSAGE,
 } from "../../lib/sentry-dsn.js";
+import {
+  addMissingSmtpIssues,
+  addMissingSmtpPortIssue,
+  addSmtpAuthPairIssue,
+} from "./env.smtp-issues.js";
 import { REPORT_ASSISTANT_ENV_KEYS } from "./report-assistant-env-keys.js";
 const MAX_TCP_PORT = 65_535;
 const MAX_REDIS_LOGICAL_DATABASE = 15;
@@ -317,54 +322,6 @@ const addFrontendUrlsEntryIssues = (
     message:
       "FRONTEND_URLS entries must be HTTP(S) URLs without wildcards or credentials",
     path: ["FRONTEND_URLS"],
-  });
-};
-
-// SMTP must be configured in production: without a host EmailService uses the
-// no-send development transport, and without a from-address it cannot address
-// an envelope. A whitespace-only value counts as absent.
-const SMTP_PRODUCTION_KEYS = ["SMTP_HOST", "SMTP_FROM"] as const;
-
-const addMissingSmtpIssues = (
-  data: ValidatedEnv,
-  ctx: z.RefinementCtx,
-): void => {
-  SMTP_PRODUCTION_KEYS.filter((key) => !data[key]?.trim()).forEach((key) => {
-    ctx.addIssue({
-      code: "custom",
-      message: `${key} is required when NODE_ENV=production`,
-      path: [key],
-    });
-  });
-};
-
-const addMissingSmtpPortIssue = (
-  data: ValidatedEnv,
-  ctx: z.RefinementCtx,
-): void => {
-  if (data.SMTP_PORT !== undefined) return;
-  ctx.addIssue({
-    code: "custom",
-    message: "SMTP_PORT is required when NODE_ENV=production",
-    path: ["SMTP_PORT"],
-  });
-};
-
-// SMTP auth is an all-or-none pair in every environment: a user without its
-// password surfaces only as a late send failure, and a password without a
-// user is silently ignored. Whitespace counts as absent; the secret bytes of
-// a configured password are never trimmed.
-const addSmtpAuthPairIssue = (
-  data: ValidatedEnv,
-  ctx: z.RefinementCtx,
-): void => {
-  const userConfigured = Boolean(data.SMTP_USER?.trim());
-  const passConfigured = Boolean(data.SMTP_PASS?.trim());
-  if (userConfigured === passConfigured) return;
-  ctx.addIssue({
-    code: "custom",
-    message: "SMTP_USER and SMTP_PASS must be configured together",
-    path: [userConfigured ? "SMTP_PASS" : "SMTP_USER"],
   });
 };
 
