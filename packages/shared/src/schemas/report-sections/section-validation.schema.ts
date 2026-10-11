@@ -51,7 +51,7 @@ function validateProjectSubmission(
   ]);
 }
 
-/** Validates a section submit payload against project and activity completeness rules. */
+/** Validates a section submit payload against project, activity, and owned-stage completeness rules. */
 export function validateSubmitInput(
   section: ReportSectionReadModel,
   input: SubmitSectionInput,
@@ -95,10 +95,30 @@ export function validateSubmitInput(
         ];
   });
 
+  const stageErrors = section.projects.flatMap((project) =>
+    project.ownedStages.flatMap((stage) => {
+      const matchingStatus = input.stageStatuses.findLast(
+        (status) =>
+          status.projectId === project.projectId &&
+          status.stageId === stage.stageId,
+      );
+
+      return matchingStatus?.status
+        ? []
+        : [
+            validationError(
+              "MISSING_TRAFFIC_LIGHT",
+              `Stage ${stage.stageName} of project ${project.projectName} must have a traffic light status.`,
+            ),
+          ];
+    }),
+  );
+
   return Object.freeze([
     ...projectErrors,
     ...confirmationErrors,
     ...activityErrors,
+    ...stageErrors,
   ]);
 }
 

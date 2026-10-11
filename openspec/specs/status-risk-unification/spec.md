@@ -216,11 +216,22 @@ invariant so the two surfaces cannot drift.
 
 ### Requirement: Unset stages auto-promote to On Track at submit after a warning
 
-At submit, any of the lead's own stages left unset (empty) MUST be promoted to
-On Track in the submitted section, mirroring the existing null→green coercion for
-project and activity statuses. The submit-confirm dialog MUST warn the lead
-first, stating how many stages will be marked On Track; the promotion MUST NOT
-block submit. While editing (before submit) an unset stage remains a valid state.
+In the browser lead form, any of the lead's own stages left unset (empty) MUST
+be promoted to On Track in the payload prepared by `buildLeadSubmitPayload`,
+mirroring its null→green coercion for project and activity statuses. The
+submit-confirm dialog MUST warn the lead first, stating how many stages will
+be marked On Track; this client promotion MUST NOT block submit. While editing
+(before submit), an unset stage remains a valid state.
+
+The server `reports.submit` procedure MUST require a non-null traffic light
+for every stage in its authoritative section projects' ownedStages, matched by
+both projectId and stageId. For duplicate pairs, the effective last entry MUST
+satisfy completeness, consistent with the existing merge behavior. A missing entry, omitted status, or null status MUST
+be rejected with `MISSING_TRAFFIC_LIGHT` before saving; the section MUST remain
+unchanged. The server MUST NOT promote missing statuses. Borrowed or unowned
+stages and referenced products MUST NOT add completeness requirements. All
+explicit red, yellow, and green stage statuses MUST remain admissible when the
+other submission requirements are met. Draft saves MUST still allow unset stages.
 
 #### Scenario: the submit-confirm dialog warns about unset stages
 
@@ -239,6 +250,36 @@ block submit. While editing (before submit) an unset stage remains a valid state
 - **GIVEN** a section where every own stage has a status
 - **WHEN** the lead opens the submit confirmation
 - **THEN** no unset-stage warning is shown
+
+#### Scenario: direct submit omits an owned stage status
+
+- **GIVEN** a draft section with an assigned owned stage
+- **WHEN** `reports.submit` receives no matching stage-status entry, an omitted status, or a null status
+- **THEN** it returns `MISSING_TRAFFIC_LIGHT` identifying the product and stage
+- **AND** no section save occurs and the persisted draft remains unchanged
+
+#### Scenario: another product has the same stage identifier
+
+- **GIVEN** two assigned products carry the same owned stage identifier
+- **WHEN** the submit payload supplies a status for that identifier on only one product
+- **THEN** the other product's stage is rejected as missing with `MISSING_TRAFFIC_LIGHT`
+
+#### Scenario: complete owned-stage statuses are submitted
+
+- **WHEN** every owned stage has an explicit red, yellow, or green status and the other submit requirements are satisfied
+- **THEN** `reports.submit` proceeds without server promotion
+
+#### Scenario: borrowed stages do not expand completeness
+
+- **GIVEN** all own stages have explicit statuses and a borrowed or referenced stage is unset
+- **WHEN** the lead submits a payload satisfying the other requirements
+- **THEN** that borrowed or referenced stage does not produce a completeness error
+
+#### Scenario: duplicate owned-stage entries have an unset final value
+
+- **WHEN** a submit payload has duplicate entries for one owned project/stage pair and the last entry has a null or omitted status
+- **THEN** `reports.submit` rejects that stage with `MISSING_TRAFFIC_LIGHT`
+- **AND** an explicit final red, yellow, or green remains admissible when the other requirements are met
 
 ### Requirement: Severity ranking and the risk floor mapping have one shared core
 

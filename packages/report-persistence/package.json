@@ -8,7 +8,7 @@
   },
   "scripts": {
     "typecheck": "tsc6 --noEmit -p tsconfig.json",
-    "test": "TZ=UTC vitest run --exclude '**/dist/**'"
+    "test": "TZ=UTC vitest run --config ../../vitest.base.config.ts --exclude '**/dist/**'"
   },
   "dependencies": {
     "@customreport/shared": "workspace:*"

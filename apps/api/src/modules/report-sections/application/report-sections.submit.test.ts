@@ -14,6 +14,7 @@ import {
   OPEN_REPORT_META,
   reportMetaReader,
 } from "./__tests__/report-meta-fixture";
+import { ReportSectionDomainError } from "./report-sections.contract.js";
 import {
   ReportSectionAccessError,
   ReportSectionNotFoundError,
@@ -132,7 +133,13 @@ function validSubmit(
     version: 1,
     status: "draft" as const,
     projectStatuses: [{ projectId: PROJECT_ID_1, status: "green" }],
-    stageStatuses: [],
+    stageStatuses: [
+      {
+        projectId: PROJECT_ID_1,
+        stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        status: "green",
+      },
+    ],
     activityStatuses: [],
     items: baseSection.items,
     risks: [],
@@ -143,19 +150,34 @@ function validSubmit(
 }
 
 describe("ReportSectionsService — submitSection happy path", () => {
-  it("submits section with valid input", async () => {
-    const service = new ReportSectionsService(
-      createRepository(baseSection),
-      NOOP_REPORT_SECTIONS_TELEMETRY,
-      createNullLogger(),
-    );
-    const result = await service.submitSection(validSubmit(), AUTHOR_ID);
+  it.each(["red", "yellow", "green"] as const)(
+    "submits complete %s owned-stage statuses",
+    async (status) => {
+      const service = new ReportSectionsService(
+        createRepository(baseSection),
+        NOOP_REPORT_SECTIONS_TELEMETRY,
+        createNullLogger(),
+      );
+      const result = await service.submitSection(
+        validSubmit({
+          stageStatuses: [
+            {
+              projectId: PROJECT_ID_1,
+              stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              status,
+            },
+          ],
+        }),
+        AUTHOR_ID,
+      );
 
-    expect(result.status).toBe("submitted");
-    expect(result.submittedAt).toBeInstanceOf(Date);
-  });
+      expect(result.projects[0]?.ownedStages[0]?.status).toBe(status);
+      expect(result.status).toBe("submitted");
+      expect(result.submittedAt).toBeInstanceOf(Date);
+    },
+  );
 
-  it("sets traffic light from input", async () => {
+  it("sets traffic light from the explicit owned-stage input", async () => {
     const service = new ReportSectionsService(
       createRepository(baseSection),
       NOOP_REPORT_SECTIONS_TELEMETRY,
@@ -164,6 +186,13 @@ describe("ReportSectionsService — submitSection happy path", () => {
     const result = await service.submitSection(
       validSubmit({
         projectStatuses: [{ projectId: PROJECT_ID_1, status: "red" }],
+        stageStatuses: [
+          {
+            projectId: PROJECT_ID_1,
+            stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            status: "red",
+          },
+        ],
       }),
       AUTHOR_ID,
     );
@@ -211,6 +240,47 @@ describe("ReportSectionsService — submitSection happy path", () => {
 });
 
 describe("ReportSectionsService — submitSection validation errors", () => {
+  it.each([
+    { name: "missing entry", stageStatuses: [] },
+    {
+      name: "null status",
+      stageStatuses: [
+        {
+          projectId: PROJECT_ID_1,
+          stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          status: null,
+        },
+      ],
+    },
+    {
+      name: "omitted status",
+      stageStatuses: [
+        {
+          projectId: PROJECT_ID_1,
+          stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        },
+      ],
+    },
+  ])("refuses owned-stage $name without saving", async ({ stageStatuses }) => {
+    const repository = createRepository(baseSection);
+    const save = vi.spyOn(repository, "saveSection");
+    const service = new ReportSectionsService(
+      repository,
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
+    const submission = service.submitSection(
+      validSubmit({ stageStatuses }),
+      AUTHOR_ID,
+    );
+    await expect(submission).rejects.toBeInstanceOf(ReportSectionDomainError);
+    await expect(submission).rejects.toMatchObject({
+      code: "MISSING_TRAFFIC_LIGHT",
+    });
+    expect(save).not.toHaveBeenCalled();
+    expect(await service.getActiveSection(SECTION_ID)).toEqual(baseSection);
+  });
+
   it("rejects when the period lookup returns null", async () => {
     const repository = createRepository(baseSection, null);
     const service = new ReportSectionsService(
@@ -384,6 +454,54 @@ describe("ReportSectionsService — submitSection validation errors", () => {
         AUTHOR_ID,
       ),
     ).rejects.toThrow();
+  });
+});
+
+describe("ReportSectionsService — unset-stage draft saves", () => {
+  it.each([
+    { name: "missing entry", stageStatuses: [] },
+    {
+      name: "null status",
+      stageStatuses: [
+        {
+          projectId: PROJECT_ID_1,
+          stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          status: null,
+        },
+      ],
+    },
+    {
+      name: "omitted status",
+      stageStatuses: [
+        {
+          projectId: PROJECT_ID_1,
+          stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        },
+      ],
+    },
+  ])("allows $name while editing", async ({ stageStatuses }) => {
+    const section = {
+      ...baseSection,
+      projects: baseSection.projects.map((project) => ({
+        ...project,
+        ownedStages: project.ownedStages.map((stage) => ({
+          ...stage,
+          status: null,
+        })),
+      })),
+    };
+    const service = new ReportSectionsService(
+      createRepository(section),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
+    const saved = await service.saveDraft(
+      validDraft({ stageStatuses }),
+      AUTHOR_ID,
+    );
+    expect(saved.status).toBe("draft");
+    expect(saved.submittedAt).toBeNull();
+    expect(saved.projects[0]?.ownedStages[0]?.status).toBeNull();
   });
 });
 

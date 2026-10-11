@@ -152,7 +152,13 @@ describe("ReportSectionsService — product telemetry", () => {
         version: 1,
         status: "draft" as const,
         confirmed: true as const,
-        stageStatuses: [],
+        stageStatuses: [
+          {
+            projectId: "44444444-4444-4444-8444-444444444444",
+            stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            status: "green" as const,
+          },
+        ],
         activityStatuses: [],
         projectStatuses: [
           {
@@ -206,7 +212,13 @@ describe("ReportSectionsService — product telemetry", () => {
         version: 1,
         status: "draft" as const,
         confirmed: true as const,
-        stageStatuses: [],
+        stageStatuses: [
+          {
+            projectId: "44444444-4444-4444-8444-444444444444",
+            stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            status: "green" as const,
+          },
+        ],
         activityStatuses: [],
         projectStatuses: [
           {

@@ -2,7 +2,11 @@ import { randomUUID } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import { type ReportSectionReadModel, validateSubmitInput } from "../report.js";
+import {
+  type ReportSectionReadModel,
+  type SubmitSectionInput,
+  validateSubmitInput,
+} from "../report.js";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -91,6 +95,227 @@ describe("validateSubmitInput", () => {
     activities: [],
     reviews: [],
     ...overrides,
+  });
+
+  describe("owned-stage completeness", () => {
+    const stageId = uuid();
+    const otherStageId = uuid();
+    const otherProjectId = uuid();
+    const makeStageSection = () =>
+      makeSection({
+        projects: [
+          {
+            projectId: PROJECT_UUID,
+            projectName: "Project Alpha",
+            trafficLight: "green",
+            ownedStages: [
+              { stageId, stageName: "Development", sortOrder: 0 },
+              { stageId: otherStageId, stageName: "Testing", sortOrder: 1 },
+            ],
+            stageSet: [],
+            ownerGroupId: null,
+          },
+        ],
+      });
+    const completeInput = (): SubmitSectionInput => ({
+      ...validSubmit(),
+      items: [{ ...validItem(), projectId: PROJECT_UUID }],
+      risks: [],
+      decisions: [],
+      stageStatuses: [
+        { projectId: PROJECT_UUID, stageId, status: "green" },
+        { projectId: PROJECT_UUID, stageId: otherStageId, status: "green" },
+      ],
+    });
+
+    it.each([
+      { name: "missing entry", entries: [] },
+      {
+        name: "null status",
+        entries: [{ projectId: PROJECT_UUID, stageId, status: null }],
+      },
+      {
+        name: "omitted status",
+        entries: [{ projectId: PROJECT_UUID, stageId }],
+      },
+      {
+        name: "same stage on another project",
+        entries: [
+          { projectId: otherProjectId, stageId, status: "green" as const },
+        ],
+      },
+    ])("rejects $name for an owned stage", ({ entries }) => {
+      const input = completeInput();
+      const errors = validateSubmitInput(makeStageSection(), {
+        ...input,
+        stageStatuses: [
+          { projectId: PROJECT_UUID, stageId: otherStageId, status: "green" },
+          ...entries,
+        ],
+      });
+      expect(errors).toEqual([
+        {
+          code: "MISSING_TRAFFIC_LIGHT",
+          message:
+            "Stage Development of project Project Alpha must have a traffic light status.",
+        },
+      ]);
+    });
+
+    it.each([
+      { name: "null", lastStatus: null },
+      { name: "omitted", lastStatus: undefined },
+    ])(
+      "rejects an effective $name status in duplicate owned-stage entries",
+      ({ lastStatus }) => {
+        const input = completeInput();
+        expect(
+          validateSubmitInput(makeStageSection(), {
+            ...input,
+            stageStatuses: [
+              ...input.stageStatuses,
+              { projectId: PROJECT_UUID, stageId, status: lastStatus },
+            ],
+          }),
+        ).toEqual([
+          {
+            code: "MISSING_TRAFFIC_LIGHT",
+            message:
+              "Stage Development of project Project Alpha must have a traffic light status.",
+          },
+        ]);
+      },
+    );
+
+    it("accepts the last explicit status in duplicate owned-stage entries", () => {
+      const input = completeInput();
+      expect(
+        validateSubmitInput(makeStageSection(), {
+          ...input,
+          stageStatuses: [
+            { projectId: PROJECT_UUID, stageId, status: null },
+            ...input.stageStatuses,
+          ],
+        }),
+      ).toEqual([]);
+    });
+
+    it.each(["red", "yellow", "green"] as const)(
+      "accepts complete %s stage statuses",
+      (status) => {
+        const input = completeInput();
+        expect(
+          validateSubmitInput(makeStageSection(), {
+            ...input,
+            stageStatuses: input.stageStatuses.map((entry) => ({
+              ...entry,
+              status,
+            })),
+          }),
+        ).toEqual([]);
+      },
+    );
+
+    it("requires the same owned stage independently on each project", () => {
+      const section = makeStageSection();
+      const project = section.projects.at(0);
+      if (!project) throw new Error("Missing fixture project");
+      const input = completeInput();
+      expect(
+        validateSubmitInput(
+          {
+            ...section,
+            projects: [
+              ...section.projects,
+              {
+                ...project,
+                projectId: otherProjectId,
+                projectName: "Project Beta",
+                ownedStages: [
+                  { stageId, stageName: "Development", sortOrder: 0 },
+                ],
+              },
+            ],
+          },
+          {
+            ...input,
+            projectStatuses: [
+              ...input.projectStatuses,
+              { projectId: otherProjectId, status: "green" },
+            ],
+            items: [
+              ...input.items,
+              { ...validItem(), projectId: otherProjectId },
+            ],
+          },
+        ),
+      ).toEqual([
+        {
+          code: "MISSING_TRAFFIC_LIGHT",
+          message:
+            "Stage Development of project Project Beta must have a traffic light status.",
+        },
+      ]);
+    });
+
+    it("ignores unset unowned and referenced stages", () => {
+      const section = makeStageSection();
+      const project = section.projects.at(0);
+      if (!project) throw new Error("Missing fixture project");
+      const borrowedStage = {
+        stageId: uuid(),
+        stageName: "Design",
+        sortOrder: 2,
+      };
+      expect(
+        validateSubmitInput(
+          {
+            ...section,
+            projects: [
+              {
+                ...project,
+                stageSet: [...project.ownedStages, borrowedStage],
+              },
+            ],
+            referencedProjects: [
+              {
+                projectId: otherProjectId,
+                projectName: "Referenced project",
+              },
+            ],
+          },
+          completeInput(),
+        ),
+      ).toEqual([]);
+    });
+
+    it("preserves project and activity error precedence", () => {
+      const section = makeStageSection();
+      const activityId = uuid();
+      const errors = validateSubmitInput(
+        {
+          ...section,
+          activities: [
+            {
+              activityId,
+              activityName: "Ops",
+              status: null,
+              jiraAccounts: [],
+              linkedProducts: [],
+              derivedStatus: null,
+              alarmFloor: null,
+            },
+          ],
+        },
+        { ...completeInput(), projectStatuses: [], stageStatuses: [] },
+      );
+      expect(errors.map((error) => error.message)).toEqual([
+        "Project Project Alpha must have a traffic light status.",
+        "Activity Ops must have a traffic light status.",
+        "Stage Development of project Project Alpha must have a traffic light status.",
+        "Stage Testing of project Project Alpha must have a traffic light status.",
+      ]);
+    });
   });
 
   it("returns SECTION_ALREADY_SUBMITTED for submitted section", () => {

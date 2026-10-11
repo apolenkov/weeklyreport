@@ -85,6 +85,13 @@ function validDraftFor(section: ReportSectionReadModel) {
 function validSubmitFor(section: ReportSectionReadModel) {
   return {
     ...validDraftFor(section),
+    stageStatuses: section.projects.flatMap((project) =>
+      project.ownedStages.map((stage) => ({
+        projectId: project.projectId,
+        stageId: stage.stageId,
+        status: "green" as const,
+      })),
+    ),
     confirmed: true as const,
   };
 }
@@ -313,7 +320,13 @@ describe("ReportSectionsService", () => {
         reportSectionId: baseSection.reportSectionId,
         version: 1,
         status: "draft",
-        stageStatuses: [],
+        stageStatuses: [
+          {
+            projectId: "44444444-4444-4444-8444-444444444444",
+            stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+            status: "green",
+          },
+        ],
         activityStatuses: [],
         confirmed: true,
         projectStatuses: [
@@ -560,7 +573,13 @@ describe("ReportSectionsService", () => {
       reportSectionId: baseSection.reportSectionId,
       version: 1,
       status: "draft" as const,
-      stageStatuses: [],
+      stageStatuses: [
+        {
+          projectId: "44444444-4444-4444-8444-444444444444",
+          stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          status: "green" as const,
+        },
+      ],
       activityStatuses: [],
       confirmed: true as const,
       projectStatuses: [
