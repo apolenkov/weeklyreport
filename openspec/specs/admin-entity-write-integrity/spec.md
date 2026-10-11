@@ -329,3 +329,42 @@ validation before persistence.
 - **GIVEN** no `StageAssignment` row exists for a validated UUID
 - **WHEN** `deleteStageAssignment` is called for it
 - **THEN** the call fails with `NOT_FOUND` and a fixed safe message
+
+### Requirement: Live user email identity is case-insensitive
+
+Admin create/update and snapshot restore MUST persist canonical `User.email`
+with the shared `normalizeEmail` (trim + lowercase), matching snapshot uniqueness.
+PostgreSQL MUST enforce `User_email_lower_key` on `lower("email")` while retaining
+the exact-case unique for Prisma. A case-variant second write MUST return the
+existing typed admin conflict without creating another user.
+
+#### Scenario: Case-variant admin write is a typed conflict
+
+- **GIVEN** a user exists with email `admin@example.test`
+- **WHEN** an admin write attempts to persist a different user with email
+  `Admin@example.test`
+- **THEN** the write fails with the typed admin conflict
+- **AND** no second user row exists
+
+#### Scenario: Mixed-case account stays reachable
+
+- **GIVEN** a user persisted before normalization with email `Lead@Example.test`
+- **WHEN** the lower(email) migration runs and a lookup resolves the account
+- **THEN** the migration succeeds (no duplicate) and the account remains
+  reachable through the case-insensitive email lookup
+
+#### Scenario: Ambiguous duplicates stop the migration
+
+- **GIVEN** two existing users whose emails differ only by case
+- **WHEN** the lower(email) migration runs
+- **THEN** it fails before creating the index and lists only the conflicting
+  user ids
+- **AND** no user, membership, or review data is merged or deleted
+
+#### Scenario: Canonical email preserves the external key and domain policy
+
+- **GIVEN** an existing user with a `samlId` set at creation
+- **WHEN** an admin edits the user's email
+- **THEN** `User.email` is stored in its trimmed, lowercase form
+- **AND** the existing `samlId` is unchanged
+- **AND** no corporate-domain allow-list is introduced
