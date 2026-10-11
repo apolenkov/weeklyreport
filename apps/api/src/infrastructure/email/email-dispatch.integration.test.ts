@@ -118,7 +118,7 @@ describe("email-dispatch integration", () => {
 
       const recipient = `deadline-dispatch-${Date.now()}@test.local`;
 
-      const emailService = new EmailService(SMTP_ENV);
+      const emailService = new EmailService(SMTP_ENV, createNullLogger());
       const processor = new EmailReminderProcessor(
         remindersStub as never,
         emailService,
@@ -176,7 +176,7 @@ describe("email-dispatch integration", () => {
 
       const headRecipient = `escalation-dispatch-${Date.now()}@test.local`;
 
-      const emailService = new EmailService(SMTP_ENV);
+      const emailService = new EmailService(SMTP_ENV, createNullLogger());
       const processor = new EmailReminderProcessor(
         remindersStub as never,
         emailService,
