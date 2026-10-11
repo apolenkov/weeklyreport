@@ -590,7 +590,7 @@ describe("envSchema — production fences", () => {
     },
   );
 
-  it.each(["AUTH_JWT_SECRET", "PDF_EXPORT_JWT_SECRET"])(
+  it.each(["AUTH_JWT_SECRET", "PDF_EXPORT_JWT_SECRET"] as const)(
     "accepts a padded %s whose meaningful length meets the floor",
     (key) => {
       const result = envSchema.safeParse({
