@@ -37,7 +37,7 @@ import type {
 } from "./report-assistant.telemetry.js";
 import { NOOP_REPORT_ASSISTANT_TELEMETRY } from "./report-assistant.telemetry.js";
 import type { ReportSearchRepository } from "./report-search.repository.js";
-import type { SemanticRetrievalService } from "./semantic-retrieval.service.js";
+import { SemanticRetrievalService } from "./semantic-retrieval.service.js";
 
 vi.mock("node:timers/promises", async () => {
   const { timersPromisesOnGlobalTimers } =
@@ -142,13 +142,17 @@ const occurrence = (
   itemText = "Ship the release",
   authorName = "Own Lead",
   additionalSections: readonly ReportSectionReadModel[] = [],
+  decisions: ReportSectionReadModel["decisions"] = [],
 ): ReportOccurrence => ({
   reportId: REPORT_ID,
   periodId: PERIOD_ID,
   periodLabel: "Week 31",
   periodStart: new Date("2026-08-03T00:00:00.000Z"),
   source: "live",
-  sections: [section(itemText, ACTOR_ID, authorName), ...additionalSections],
+  sections: [
+    { ...section(itemText, ACTOR_ID, authorName), decisions },
+    ...additionalSections,
+  ],
 });
 
 const source = {
@@ -177,6 +181,7 @@ type HarnessOptions = Readonly<{
   recordText?: string;
   authorName?: string;
   additionalSections?: readonly ReportSectionReadModel[];
+  decisions?: ReportSectionReadModel["decisions"];
   sharedProductIds?: readonly string[];
   semanticRetrieval?: SemanticRetrievalService;
   telemetry?: ReportAssistantTelemetry;
@@ -269,6 +274,7 @@ const createHarness = (
           options.recordText,
           options.authorName,
           options.additionalSections,
+          options.decisions,
         ),
       ]),
     getAuthorizationSnapshot: vi
@@ -539,6 +545,84 @@ describe("ReportAssistantService", () => {
     expect(answerInput?.grounding.aggregates.groups).toEqual([
       { key: "author:Own Lead", count: 2 },
     ]);
+  });
+
+  it("keeps exact decision timing and grounded grouping consistent across midnight", async () => {
+    const beforeMidnight = new Date(2026, 7, 4, 23, 59, 59, 999);
+    const afterMidnight = new Date(2026, 7, 5, 0, 0, 0, 1);
+    vi.setSystemTime(beforeMidnight);
+    const semanticRetrieval = new SemanticRetrievalService(
+      {
+        embedQuery: () => {
+          vi.setSystemTime(afterMidnight);
+          return Promise.resolve([1]);
+        },
+        embedDocuments: () => Promise.reject(new Error("Cache is complete")),
+      },
+      {
+        findCachedHashes: (_scope, hashes) => Promise.resolve(hashes),
+        upsert: () => Promise.reject(new Error("Cache is complete")),
+        rank: ({ allowedContentHashes }) =>
+          Promise.resolve(
+            allowedContentHashes.map((contentHash) => ({
+              contentHash,
+              similarity: 1,
+            })),
+          ),
+      },
+      {
+        configurationRevisionId: "runtime-revision",
+        scope: {
+          provider: "runtime-provider",
+          embeddingScopeIdentity: "runtime-embedding-identity",
+          model: "runtime-embedding",
+          inputVersion: "report-assistant/v1",
+          dimensions: 1,
+        },
+        similarityThreshold: 0.5,
+        readThroughLimit: 1,
+        enqueuer: {
+          enqueue: () => Promise.reject(new Error("Cache is complete")),
+        },
+      },
+    );
+    const harness = createHarness(
+      searchPlanSchema.parse({
+        ...basePlan,
+        recordKinds: ["decision"],
+        filters: { ...basePlan.filters, decisionTiming: ["due_today"] },
+        retrieval: { mode: "semantic_ranked", semanticQuery: "Approval" },
+        output: { ...basePlan.output, groupBy: ["decision_timing"] },
+      }),
+      {
+        semanticRetrieval,
+        decisions: [
+          {
+            id: "ef22fe99-c166-4714-8cce-ffeb526b3cc0",
+            productId: PRODUCT_ID,
+            text: "Approve the release",
+            owner: "Own Lead",
+            impact: "Release can proceed",
+            deadline: new Date(2026, 7, 4, 12),
+            resolvedAt: null,
+            stageNames: ["Development"],
+          },
+        ],
+      },
+    );
+
+    await expect(
+      harness.service.answer(request, ACTOR_ID),
+    ).resolves.toMatchObject({ kind: "ok" });
+    expect(
+      harness.answerer.mock.calls[0]?.[0].grounding.aggregates,
+    ).toMatchObject({
+      totalCount: 1,
+      groups: [{ key: "decision_timing:due_today", count: 1 }],
+    });
+    await expect(harness.service.answer(request, ACTOR_ID)).resolves.toEqual({
+      kind: "no_results",
+    });
   });
 
   it("returns no results instead of broadening an incompatible record filter", async () => {

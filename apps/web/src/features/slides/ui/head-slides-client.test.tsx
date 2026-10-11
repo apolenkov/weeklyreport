@@ -2,246 +2,277 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { useQuery } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ActivityLiveResponse } from "@customreport/shared";
+import { QueryClientProvider } from "@tanstack/react-query";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import type { ComponentProps } from "react";
+import { describe, expect, it, vi } from "vitest";
 
-interface ActivityQueryResult {
-  readonly data:
-    | {
-        readonly reportId: string;
-        readonly rows: readonly { readonly id: string }[];
-      }
-    | undefined;
-  readonly isLoading: boolean;
-  readonly isError: boolean;
-}
-
-const mockActivityQuery = vi.hoisted(() => vi.fn<() => ActivityQueryResult>());
-
-vi.mock("./status-slide-deck", () => ({
-  StatusSlideDeck: ({
-    slides,
-    toolbar,
-  }: {
-    slides: unknown[];
-    toolbar?: ReactNode;
-  }) => (
-    <div
-      data-testid="status-slide-deck"
-      data-slide-count={String(slides.length)}
-    >
-      {toolbar}
-      {slides.map((slide) => JSON.stringify(slide)).join(" ")}
-    </div>
-  ),
-}));
-
-vi.mock("./slide-skeleton", () => ({
-  SlideSkeleton: () => <div data-testid="slide-skeleton" />,
-}));
+import { makeQueryClient } from "../../../shared/lib/query/query-client";
+import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
+import { createMockTRPC } from "../../../test-utils/mock-trpc";
+import { makeWeeklyReportFixture } from "../../../test-utils/report-section-fixtures";
+import { HeadSlidesClient } from "./head-slides-client";
 
 vi.mock("../../../shared/hooks/query/use-query-error-handler", () => ({
   useQueryErrorHandler: () => undefined,
 }));
 
-// One activity row maps to one slide; identity sort keeps the count stable so
-// the assertion is on enableActivity gating, not the slide-building internals.
-vi.mock("../model/activity-slide-model", () => ({
-  buildActivitySlideModel: (row: unknown) => row,
-}));
-vi.mock("../model/product-scoped-slides", () => ({
-  buildProductScopedSlides: (sections: unknown[]) => sections,
-}));
-vi.mock("../model/section-slide-model", () => ({
-  buildSectionSlideModel: (section: unknown) => section,
-}));
-vi.mock("../model/section-slide-pagination", () => ({
-  sortSlidesForReview: (slides: unknown[]) => slides,
-}));
+const REPORT_ID = "10000000-0000-4000-8000-000000000001";
+const OTHER_REPORT_ID = "10000000-0000-4000-8000-000000000002";
 
-vi.mock("../../../shared/lib/trpc/trpc-context", () => ({
-  useTRPC: () => ({
-    weeklyReport: {
-      get: {
-        queryOptions: (input?: { reportId?: string }) => ({
-          queryKey: ["weeklyReport.get", input?.reportId ?? null],
-        }),
-      },
-    },
-    activity: {
-      live: {
-        queryOptions: () => ({ queryKey: ["activity.live"] }),
-      },
-    },
-  }),
-}));
-
-// An empty editable report and same-period activity rows exercise the host gate.
-const ACTIVITY_ROWS = [{ id: "a1" }, { id: "a2" }];
-
-vi.mock("@tanstack/react-query", () => ({
-  useQuery: vi.fn((opts: { queryKey?: unknown[]; enabled?: boolean }) => {
-    const key = opts.queryKey?.[0];
-    if (key === "weeklyReport.get") {
-      if (opts.queryKey?.[1] === "report-b") {
-        return { data: undefined, isLoading: true, isError: false };
-      }
-      return {
-        data: {
-          status: "active",
-          reportId: opts.queryKey?.[1] ?? "current-report",
-          periodStatus: "open",
-          archived: false,
-          leadSections:
-            opts.queryKey?.[1] === "report-a"
-              ? [{ id: "report-a-slide", label: "Report A slide" }]
-              : [],
-        },
-        isLoading: false,
-        isError: false,
-      };
-    }
-    return mockActivityQuery();
-  }),
-}));
-
-import { HeadSlidesClient } from "./head-slides-client";
-
-function activityQueryCall() {
-  return vi
-    .mocked(useQuery)
-    .mock.calls.map((call) => call[0])
-    .find(
-      (opts) =>
-        Array.isArray((opts as { queryKey?: unknown[] }).queryKey) &&
-        (opts as { queryKey: unknown[] }).queryKey[0] === "activity.live",
-    ) as { enabled?: boolean } | undefined;
+function report(populated = false) {
+  return {
+    status: "active" as const,
+    ...makeWeeklyReportFixture({
+      reportId: REPORT_ID,
+      leadSections: populated
+        ? [
+            { reportSectionId: "section-a", authorName: "Owner A" },
+            { reportSectionId: "section-b", authorName: "Owner B" },
+          ]
+        : [],
+    }),
+  };
 }
 
-beforeEach(() => {
-  mockActivityQuery.mockReturnValue({
-    data: { reportId: "current-report", rows: ACTIVITY_ROWS },
-    isLoading: false,
-    isError: false,
+function activity(reportId = REPORT_ID): ActivityLiveResponse {
+  return {
+    reportId,
+    periodStart: new Date("2026-08-31"),
+    periodEnd: new Date("2026-09-06"),
+    periodStatus: "open",
+    rows: [
+      {
+        reportId,
+        reportSectionId: null,
+        leadId: "lead-1",
+        leadName: "Activity",
+        email: null,
+        status: "draft",
+        itemCount: 0,
+        riskCount: 0,
+        decisionCount: 0,
+        priorityCount: 0,
+        lastEditAt: null,
+        submittedAt: null,
+      },
+    ],
+  };
+}
+
+function setup({
+  weekly = () => report(),
+  live = () => activity(),
+  props = {},
+  cachedActivity,
+}: {
+  readonly weekly?: ((input: unknown) => unknown) | undefined;
+  readonly live?: (() => unknown) | undefined;
+  readonly props?: ComponentProps<typeof HeadSlidesClient> | undefined;
+  readonly cachedActivity?: ActivityLiveResponse | undefined;
+} = {}) {
+  const liveRequest = vi.fn(live);
+  const { proxy } = createMockTRPC([
+    { path: ["weeklyReport", "get"], queryByInput: weekly },
+    { path: ["activity", "live"], query: liveRequest },
+  ]);
+  const client = makeQueryClient();
+  client.setDefaultOptions({
+    ...client.getDefaultOptions(),
+    queries: { ...client.getDefaultOptions().queries, retry: false },
   });
-});
+  if (cachedActivity)
+    client.setQueryData(proxy.activity.live.queryKey(), cachedActivity);
+  const view = (nextProps = props) => (
+    <QueryClientProvider client={client}>
+      <TRPCProxyContext.Provider value={proxy}>
+        <HeadSlidesClient reportId={REPORT_ID} {...nextProps} />
+      </TRPCProxyContext.Provider>
+    </QueryClientProvider>
+  );
+  const rendered = render(view());
+  return {
+    client,
+    proxy,
+    liveRequest,
+    rerender: (nextProps: ComponentProps<typeof HeadSlidesClient>) =>
+      rendered.rerender(view(nextProps)),
+  };
+}
 
-afterEach(() => {
-  vi.mocked(useQuery).mockClear();
-  mockActivityQuery.mockClear();
-});
-
-describe("HeadSlidesClient — enableActivity gating", () => {
-  it("viewer (enableActivity=false): activity.live query is marked disabled", () => {
-    render(<HeadSlidesClient enableActivity={false} />);
-    const activityCall = activityQueryCall();
-    expect(activityCall).toBeDefined();
-    expect(activityCall?.enabled).toBe(false);
+describe("HeadSlidesClient with real query and deck boundaries", () => {
+  it("does not request activity when the viewer disables it", async () => {
+    const { liveRequest } = setup({ props: { enableActivity: false } });
+    await screen.findByText("No slides available");
+    expect(liveRequest).not.toHaveBeenCalled();
   });
 
-  it("viewer (enableActivity=false): no activity-derived slides even when rows are present", () => {
-    render(<HeadSlidesClient enableActivity={false} />);
-    expect(screen.getByTestId("status-slide-deck")).toHaveAttribute(
-      "data-slide-count",
-      "0",
+  it("does not expose cached activity rows to a host that disables activity", async () => {
+    setup({ props: { enableActivity: false }, cachedActivity: activity() });
+    await screen.findByText("No slides available");
+    expect(screen.queryByText("Activity")).not.toBeInTheDocument();
+  });
+
+  it("loads matching activity into the head deck", async () => {
+    const { liveRequest } = setup();
+    await screen.findByTestId("head-slide-card-0");
+    expect(liveRequest).toHaveBeenCalledOnce();
+    expect(screen.getByTestId("head-slide-card-0")).toHaveTextContent(
+      "Activity",
     );
   });
 
-  it("head (default): activity.live query is enabled and its rows build slides", () => {
-    render(<HeadSlidesClient />);
-    const activityCall = activityQueryCall();
-    expect(activityCall?.enabled).toBe(true);
-    expect(screen.getByTestId("status-slide-deck")).toHaveAttribute(
-      "data-slide-count",
-      String(ACTIVITY_ROWS.length),
-    );
-  });
-});
-
-describe("HeadSlidesClient — density control", () => {
-  it("does not expose a density control on head decks", () => {
-    render(<HeadSlidesClient reportId="report-a" enableActivity={false} />);
+  it("does not expose a density control on head decks", async () => {
+    setup({ weekly: () => report(true) });
+    await screen.findByTestId("head-slide-card-0");
     expect(
       screen.queryByRole("group", { name: "Slide density" }),
     ).not.toBeInTheDocument();
-    expect(screen.getByTestId("status-slide-deck")).toBeInTheDocument();
   });
-});
 
-describe("HeadSlidesClient — activity fallback states", () => {
-  it("renders populated report slides while activity is loading", () => {
-    mockActivityQuery.mockReturnValue({
-      data: undefined,
-      isLoading: true,
-      isError: false,
+  it("keeps populated report slides visible during an unrelated activity read", async () => {
+    const pending = Promise.withResolvers<ActivityLiveResponse>();
+    const { client, proxy } = setup({
+      weekly: () => report(true),
+      live: () => pending.promise,
     });
-
-    render(<HeadSlidesClient reportId="report-a" />);
-
-    expect(screen.getByText(/Report A slide/)).toBeInTheDocument();
+    await screen.findByTestId("head-slide-card-0");
+    const fetching = client.query(proxy.activity.live.queryOptions());
+    await waitFor(() => expect(client.isFetching()).toBe(1));
+    expect(screen.getByTestId("head-slide-card-0")).toHaveTextContent(
+      "Owner A",
+    );
     expect(screen.queryByTestId("slide-skeleton")).not.toBeInTheDocument();
+    await act(async () => {
+      pending.resolve(activity());
+      await fetching;
+    });
+  });
+
+  it("keeps populated report slides visible when an unrelated activity read fails", async () => {
+    const { client, proxy } = setup({
+      weekly: () => report(true),
+      live: () => Promise.reject(new Error("Activity unavailable")),
+    });
+    await screen.findByTestId("head-slide-card-0");
+    await act(async () => {
+      await client
+        .query(proxy.activity.live.queryOptions())
+        .catch(() => undefined);
+    });
+    expect(screen.getByTestId("head-slide-card-0")).toHaveTextContent(
+      "Owner A",
+    );
     expect(screen.queryByText("Slides could not load")).not.toBeInTheDocument();
   });
 
-  it("renders populated report slides when activity fails", () => {
-    mockActivityQuery.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      isError: true,
-    });
-
-    render(<HeadSlidesClient reportId="report-a" />);
-
-    expect(screen.getByText(/Report A slide/)).toBeInTheDocument();
-    expect(screen.queryByTestId("slide-skeleton")).not.toBeInTheDocument();
-    expect(screen.queryByText("Slides could not load")).not.toBeInTheDocument();
-  });
-
-  it("shows the skeleton for an empty report while activity is loading", () => {
-    mockActivityQuery.mockReturnValue({
-      data: undefined,
-      isLoading: true,
-      isError: false,
-    });
-
-    render(<HeadSlidesClient />);
-
+  it("shows the skeleton while an empty report waits for activity", async () => {
+    const pending = Promise.withResolvers<ActivityLiveResponse>();
+    const { liveRequest } = setup({ live: () => pending.promise });
+    await waitFor(() => expect(liveRequest).toHaveBeenCalledOnce());
     expect(screen.getByTestId("slide-skeleton")).toBeInTheDocument();
-    expect(screen.queryByTestId("status-slide-deck")).not.toBeInTheDocument();
+    expect(screen.queryByText("No slides available")).not.toBeInTheDocument();
+    await act(async () => {
+      pending.resolve(activity());
+      await pending.promise;
+    });
+    await screen.findByTestId("head-slide-card-0");
   });
 
-  it("shows the error state for an empty report when activity fails", () => {
-    mockActivityQuery.mockReturnValue({
-      data: undefined,
-      isLoading: false,
-      isError: true,
-    });
-
-    render(<HeadSlidesClient />);
-
-    expect(screen.getByText("Slides could not load")).toBeInTheDocument();
+  it("shows the error state after an empty report activity read fails", async () => {
+    setup({ live: () => Promise.reject(new Error("Activity unavailable")) });
+    await screen.findByText("Slides could not load");
     expect(screen.queryByTestId("slide-skeleton")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("status-slide-deck")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("head-slides-deck")).not.toBeInTheDocument();
   });
-});
 
-describe("HeadSlidesClient report-key transitions", () => {
-  it("replaces report A slides with the pending skeleton for report B", async () => {
-    const rendered = render(
-      <HeadSlidesClient reportId="report-a" enableActivity={false} />,
-    );
-    expect(screen.getByText(/Report A slide/)).toBeInTheDocument();
-
-    rendered.rerender(
-      <HeadSlidesClient reportId="report-b" enableActivity={false} />,
-    );
-
-    await waitFor(() => {
-      expect(screen.queryByText(/Report A slide/)).not.toBeInTheDocument();
+  it("replaces report A with a pending skeleton when requesting report B", async () => {
+    const pending = Promise.withResolvers<ReturnType<typeof report>>();
+    const { rerender } = setup({
+      weekly: (input) =>
+        (input as { reportId: string }).reportId === OTHER_REPORT_ID
+          ? pending.promise
+          : report(true),
     });
-    expect(screen.getByTestId("slide-skeleton")).toBeInTheDocument();
-    expect(screen.queryByTestId("status-slide-deck")).toBeNull();
+    await screen.findByTestId("head-slide-card-0");
+    rerender({ reportId: OTHER_REPORT_ID });
+    await screen.findByTestId("slide-skeleton");
+    expect(screen.queryByText("Owner A")).not.toBeInTheDocument();
+    await act(async () => {
+      pending.resolve({ ...report(true), reportId: OTHER_REPORT_ID });
+      await pending.promise;
+    });
+    await screen.findByTestId("head-slide-card-0");
+  });
+
+  it("excludes foreign cached activity during refetch and renders matching activity after it resolves", async () => {
+    const pending = Promise.withResolvers<ActivityLiveResponse>();
+    const foreign = activity(OTHER_REPORT_ID);
+    const cached = {
+      ...foreign,
+      rows: foreign.rows.map((row) => ({
+        ...row,
+        leadName: "Foreign",
+      })),
+    };
+    const { client, proxy, liveRequest } = setup({
+      cachedActivity: cached,
+      live: () => pending.promise,
+    });
+    await screen.findByText("No slides available");
+    const fetching = client.refetchQueries(proxy.activity.live.pathFilter());
+    await waitFor(() => expect(liveRequest).toHaveBeenCalledOnce());
+    expect(client.isFetching(proxy.activity.live.pathFilter())).toBe(1);
+    expect(screen.queryByText("Foreign")).not.toBeInTheDocument();
+    await act(async () => {
+      pending.resolve(activity());
+      await fetching;
+    });
+    await screen.findByTestId("head-slide-card-0");
+    expect(screen.getByTestId("head-slide-card-0")).toHaveTextContent(
+      "Activity",
+    );
+  });
+
+  it("keeps one valid selected card through a shrinking and growing report refetch", async () => {
+    let weekly = report(true);
+    const { client, proxy } = setup({ weekly: () => weekly });
+    await screen.findByTestId("head-slide-card-1");
+    fireEvent.click(screen.getByRole("button", { name: "Next slide" }));
+    expect(screen.getByTestId("head-slide-card-1")).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+    weekly = { ...weekly, leadSections: weekly.leadSections.slice(0, 1) };
+    await act(async () => {
+      await client.refetchQueries(proxy.weeklyReport.get.pathFilter());
+    });
+    await waitFor(() =>
+      expect(screen.getAllByTestId(/head-slide-card-/)).toHaveLength(1),
+    );
+    expect(screen.getByTestId("head-slide-card-0")).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
+    expect(screen.queryByText("No slides available")).not.toBeInTheDocument();
+    weekly = report(true);
+    await act(async () => {
+      await client.refetchQueries(proxy.weeklyReport.get.pathFilter());
+    });
+    await waitFor(() =>
+      expect(screen.getAllByTestId(/head-slide-card-/)).toHaveLength(2),
+    );
+    const cards = screen.getAllByTestId(/head-slide-card-/);
+    expect(
+      cards.filter((card) => card.getAttribute("aria-current") === "true"),
+    ).toHaveLength(1);
+    expect(screen.queryByText("No slides available")).not.toBeInTheDocument();
   });
 });

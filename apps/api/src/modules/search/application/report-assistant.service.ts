@@ -171,6 +171,7 @@ export class ReportAssistantService {
     signal: AbortSignal,
   ): Promise<AssistantExecution> {
     signal.throwIfAborted();
+    const clock = { now: this.clock.now };
     const parsedRequest = reportAssistantRequestSchema.parse(request);
     const runtime = await this.runtimeResolver.resolveActive();
     signal.throwIfAborted();
@@ -186,7 +187,7 @@ export class ReportAssistantService {
       planner,
       {
         question: parsedRequest.question,
-        now: this.clock.now,
+        now: clock.now,
         timeZone: this.config.timeZone,
       },
       signal,
@@ -214,7 +215,7 @@ export class ReportAssistantService {
       dependencies: {
         repository: this.repository,
         tokenCodec: this.tokenCodec,
-        clock: this.clock,
+        clock,
         semanticRetrieval,
         timeZone: this.config.timeZone,
         candidateLimits: {
@@ -226,11 +227,12 @@ export class ReportAssistantService {
     if (preparation.kind === "terminal") {
       return complete(preparation.outcome, preparation.trace, model);
     }
-    return this.answerGroundedCandidates(parsedRequest.question, preparation, {
-      answerer,
-      model,
-      signal,
-    });
+    return this.answerGroundedCandidates(
+      parsedRequest.question,
+      preparation,
+      { answerer, model, signal },
+      clock.now,
+    );
   }
 
   private async answerGroundedCandidates(
@@ -245,6 +247,7 @@ export class ReportAssistantService {
       model: string;
       signal: AbortSignal;
     }>,
+    now: Date,
   ): Promise<AssistantExecution> {
     signal.throwIfAborted();
     const grounding = buildGroundingBundle(
@@ -253,7 +256,7 @@ export class ReportAssistantService {
       {
         contextTokenBudget: this.config.contextTokenBudget,
         classificationContext: {
-          now: this.clock.now,
+          now,
           timeZone: this.config.timeZone,
         },
         evidenceCandidates: preparation.limited.candidates,

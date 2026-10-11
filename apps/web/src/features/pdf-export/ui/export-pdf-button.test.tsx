@@ -347,6 +347,34 @@ describe("ExportPdfButton", () => {
     expect(openMock).not.toHaveBeenCalled();
   });
 
+  it("keeps the completed artifact fallback after a subsequent request fails", async () => {
+    const { captured } = renderButton({ statusQuery: COMPLETED_STATUS });
+    const requestMutation = expectDefined(
+      captured["pdfExport.request"],
+    ).mutationFn;
+    requestMutation
+      .mockResolvedValueOnce({ jobId: JOB_ID })
+      .mockRejectedValueOnce(new Error("request failed"));
+
+    const button = screen.getByRole("button", { name: "Export PDF" });
+    await userEvent.click(button);
+    expect(
+      await screen.findByRole("link", { name: "Download PDF" }),
+    ).toHaveAttribute("href", ARTIFACT_URL);
+    await waitFor(() => expect(button).not.toBeDisabled());
+
+    await userEvent.click(button);
+    await waitFor(() => {
+      expect(toastError).toHaveBeenCalledWith("request failed");
+      expect(button).not.toBeDisabled();
+    });
+    expect(screen.getByRole("link", { name: "Download PDF" })).toHaveAttribute(
+      "href",
+      ARTIFACT_URL,
+    );
+    expect(anchorClick).toHaveBeenCalledTimes(1);
+  });
+
   it("attempts one attachment download and keeps a fallback link with the same URL", async () => {
     const openMock = vi.fn();
     vi.stubGlobal("open", openMock);

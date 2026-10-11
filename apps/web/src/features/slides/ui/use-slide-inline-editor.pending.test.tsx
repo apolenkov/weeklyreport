@@ -280,6 +280,9 @@ function ReloadHarness() {
       <button onClick={() => editor.onRowActivate?.(ref)}>
         Open loaded item
       </button>
+      <button onClick={() => void data.refetchSection()}>
+        Refresh loaded section
+      </button>
       <span data-testid="read-state">
         {data.isError ? "failed" : data.isLoading ? "loading" : "loaded"}
       </span>
@@ -353,4 +356,85 @@ describe("slide conflict through its real section query producer", () => {
       expect(screen.getByRole("dialog")).toBeInTheDocument();
     },
   );
+});
+
+describe("slide editor same-record placement refresh", () => {
+  it("updates week choices without discarding dirty input and preserves a failed pending save", async () => {
+    let section = { ...makeSection(), risks: [], decisions: [] };
+    const pending = Promise.withResolvers<unknown>();
+    const { proxy, captured } = createMockTRPC([
+      { path: ["reports", "saveDraft"], mutation: true },
+      { path: ["reports", "getActive"], query: { reportId: "report-1" } },
+      { path: ["reports", "myHistory"], query: { items: [] } },
+      { path: ["leadForm", "crossAuthors"], query: [] },
+      {
+        path: ["leadForm", "byPeriod"],
+        query: () => ({ section, readOnly: false }),
+      },
+    ]);
+    const save = captured["reports.saveDraft"];
+    if (!save) throw new Error("Missing save fixture");
+    save.mutationFn.mockImplementationOnce(() => pending.promise);
+    const client = makeQueryClient();
+    render(
+      <QueryClientProvider client={client}>
+        <TRPCProxyContext.Provider value={proxy}>
+          <ReloadHarness />
+        </TRPCProxyContext.Provider>
+      </QueryClientProvider>,
+    );
+    const user = userEvent.setup();
+    await waitFor(() =>
+      expect(screen.getByTestId("read-state")).toHaveTextContent("loaded"),
+    );
+    await user.click(screen.getByRole("button", { name: "Open loaded item" }));
+    const input = screen.getByLabelText(/Description/);
+    await user.clear(input);
+    await user.type(input, "Unsaved author text");
+    expect(
+      screen.getByRole("button", { name: "Not started" }),
+    ).toBeInTheDocument();
+    section = {
+      ...section,
+      version: 2,
+      items: section.items.map((item) => ({ ...item, type: "next" as const })),
+    };
+    await user.click(
+      screen.getByRole("button", { name: "Refresh loaded section" }),
+    );
+    await screen.findByRole("button", { name: "Planned" });
+    expect(
+      screen.queryByRole("button", { name: "Not started" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/Description/)).toHaveValue(
+      "Unsaved author text",
+    );
+    await user.click(screen.getByRole("button", { name: "Save item" }));
+    await waitFor(() => expect(save.calls).toHaveLength(1));
+    expect(save.calls[0]).toMatchObject({
+      version: 2,
+      items: [
+        expect.objectContaining({
+          stableId: "item-1",
+          type: "next",
+          text: "Unsaved author text",
+        }),
+      ],
+    });
+    expect(screen.getByLabelText(/Description/)).toBeDisabled();
+    expect(screen.getByLabelText(/Description/)).toHaveValue(
+      "Unsaved author text",
+    );
+    await act(async () => {
+      pending.reject(new Error("Save unavailable"));
+      await pending.promise.catch(() => undefined);
+    });
+    await waitFor(() =>
+      expect(screen.getByLabelText(/Description/)).toBeEnabled(),
+    );
+    expect(screen.getByLabelText(/Description/)).toHaveValue(
+      "Unsaved author text",
+    );
+    expect(screen.getByRole("button", { name: "Planned" })).toBeInTheDocument();
+  });
 });
