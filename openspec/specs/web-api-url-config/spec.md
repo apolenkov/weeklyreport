@@ -115,13 +115,15 @@ loading skeleton while the session query is in flight.
 The web app MUST decode tRPC v11 superjson-batched query responses through one
 shared helper (`decodeTrpcBatchPayload` in
 `apps/web/src/shared/server/transport/api-url.ts`) rather than re-implementing the
-batch-envelope unwrap per call site. The helper MUST return the inner payload
-of the first batch entry, unwrapping the superjson `{ json }` wrapper when
-present, and MUST return `null` when the body is not a non-empty array, when
-the first entry carries an `error`, or when its `result.data` is `null` or
-`undefined`. Each server helper (`get-org-public`, `get-server-session`,
-`get-print-route-context`) MUST layer its own typed narrowing on top of this
-shared decode.
+batch-envelope unwrap per call site. Superjson is configured on both sides of
+the transport, so the helper MUST fail closed: it MUST return the inner `json`
+value of the first batch entry only when that entry's `result.data` is a
+superjson `{ json }` envelope, and MUST return `null` for every other shape,
+namely when the body is not a non-empty array, when the first entry carries an
+`error`, when its `result.data` is `null` or `undefined`, or when `result.data`
+is not a superjson envelope. Each server helper (`get-org-public`,
+`get-server-session`, `get-print-route-context`) MUST layer its own typed
+narrowing on top of this shared decode.
 
 #### Scenario: superjson-wrapped payload
 
@@ -134,8 +136,8 @@ shared decode.
 - **GIVEN** a batch body `[{ result: { data: <payload> } }]` with no `json`
   wrapper
 - **WHEN** a consumer calls `decodeTrpcBatchPayload(body)`
-- **THEN** it returns `<payload>` unchanged (config-drift tolerance is
-  preserved)
+- **THEN** it returns `null`, so configuration drift between the transports
+  never becomes an undocumented wire contract
 
 #### Scenario: error or empty entry
 
