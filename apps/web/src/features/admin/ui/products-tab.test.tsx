@@ -123,6 +123,10 @@ function renderTab(opts?: {
     // Minimal stubs for other admin paths that invalidateAdmin may touch.
     { path: ["admin", "snapshot"] },
     { path: ["admin", "getSettings"] },
+    { path: ["admin", "getOrganization"] },
+    { path: ["org", "getPublic"] },
+    { path: ["auth", "me"] },
+    { path: ["weeklyReport", "get"] },
   ]);
 
   const qc = new QueryClient({
@@ -500,13 +504,13 @@ describe("ProductsTab — retained owner in edit dialog", () => {
     vi.clearAllMocks();
   });
 
-  it("keeps a deactivated current owner visible as a disabled option without widening replacements", async () => {
+  it("renames a product while retaining its disabled deactivated owner without widening replacements", async () => {
     const user = userEvent.setup();
     const productWithInactiveOwner: AdminProductView = {
       ...mockProduct,
       leadOwnerId: INACTIVE_LEAD_ID,
     };
-    renderTab({
+    const { captured } = renderTab({
       products: [productWithInactiveOwner],
       users: [mockLead, inactiveLead],
     });
@@ -527,6 +531,48 @@ describe("ProductsTab — retained owner in edit dialog", () => {
     expect(
       within(select).getByRole("option", { name: "Alice L." }),
     ).toBeEnabled();
+    const name = screen.getByLabelText(/product name/i);
+    await user.clear(name);
+    await user.type(name, "Renamed inactive-owned product");
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    expect(captured["admin.saveProject"]?.calls).toEqual([
+      expect.objectContaining({
+        id: PRODUCT_ID,
+        name: "Renamed inactive-owned product",
+        leadId: INACTIVE_LEAD_ID,
+        archived: false,
+      }),
+    ]);
+    expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("restores an archived product with its unchanged inactive owner", async () => {
+    const product = {
+      ...mockProduct,
+      status: "archived" as const,
+      leadOwnerId: INACTIVE_LEAD_ID,
+    };
+    const user = userEvent.setup();
+    const { captured } = renderTab({
+      products: [product],
+      users: [mockLead, inactiveLead],
+    });
+    await user.click(
+      screen.getByRole("button", { name: `Restore ${product.name}` }),
+    );
+    await waitFor(() =>
+      expect(captured["admin.saveProject"]?.calls).toHaveLength(1),
+    );
+    expect(captured["admin.saveProject"]?.calls[0]).toMatchObject({
+      id: PRODUCT_ID,
+      name: product.name,
+      leadId: INACTIVE_LEAD_ID,
+      archived: false,
+    });
+    expect(toast.error).not.toHaveBeenCalled();
   });
 });
 

@@ -189,19 +189,17 @@ export async function lockAndValidateProjectOwnership(
       `Project ${input.projectId} changed ownership concurrently. Refresh and retry.`,
     );
   }
-  if (
-    input.requireDesiredLeadCurrent &&
-    project?.leadId !== input.desiredLeadId
-  ) {
+  const ownerChanged = project?.leadId !== input.desiredLeadId;
+  if (input.requireDesiredLeadCurrent && ownerChanged) {
     throw new AdminGroupProductConflictError(
       `Project ${input.projectId} changed ownership concurrently. Refresh and retry.`,
     );
   }
   const desiredLead = await tx.user.findUnique({
     where: { id: input.desiredLeadId },
-    select: { role: true, reportingGroupId: true },
+    select: { role: true, reportingGroupId: true, isActive: true },
   });
-  if (desiredLead?.role !== "lead") {
+  if (desiredLead?.role !== "lead" || (ownerChanged && !desiredLead.isActive)) {
     throw new AdminGroupProductConflictError(
       `Project ${input.projectId} must be owned by an active lead user.`,
     );

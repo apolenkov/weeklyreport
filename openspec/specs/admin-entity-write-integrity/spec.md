@@ -415,3 +415,48 @@ The admin Groups edit dialog MUST prevent checking Archived for the last active 
 
 - **WHEN** archive targets a missing group, repeats on an already-archived group, or save creates a new archived group
 - **THEN** the missing archive retains `NOT_FOUND`, the repeated archive succeeds, and creation succeeds without reducing the active count
+
+### Requirement: Product ownership changes require an active desired lead
+
+`admin.saveProject` MUST reject a new product or changed owner whose desired User has `isActive=false`, with `AdminGroupProductConflictError` mapped to `CONFLICT`, before assignment writes. An unchanged inactive lead MUST remain eligible for rename and targeted archived-product Restore, without modifying User activity. Existing role, reporting-group, lock ordering, and concurrent-owner checks MUST remain effective. This requirement does not change bulk snapshot restore's whole-graph contract.
+
+#### Scenario: Assigning an existing product to a deactivated lead
+
+- **GIVEN** a product currently belongs to a different lead and the desired user is an inactive lead in the otherwise valid reporting group
+- **WHEN** `admin.saveProject` requests that ownership change
+- **THEN** it returns `CONFLICT` through `AdminGroupProductConflictError`
+- **AND** the Project, derived ProjectStatus rows, and desired User remain unchanged
+
+#### Scenario: Creating a product for a deactivated lead
+
+- **WHEN** `admin.saveProject` creates a product whose desired user is an inactive lead
+- **THEN** it returns the same typed conflict and creates no product or derived status
+
+#### Scenario: Renaming with an unchanged inactive owner
+
+- **GIVEN** a product's current owner is an inactive lead and all existing role/group constraints remain valid
+- **WHEN** the administrator renames the product with the same leadId
+- **THEN** the rename succeeds and the user remains inactive
+
+#### Scenario: Targeted Restore retains an inactive owner
+
+- **GIVEN** an archived product has an inactive current lead
+- **WHEN** ProductsTab requests targeted Restore with the same leadId and archived=false
+- **THEN** the product becomes active with its existing lead, and the User is not reactivated
+
+#### Scenario: Active new ownership remains admissible
+
+- **WHEN** a product is created or reassigned to an active lead and existing integrity constraints are satisfied
+- **THEN** the targeted assignment proceeds with the existing live-status reconciliation
+
+#### Scenario: Concurrent ownership change preserves the earlier conflict
+
+- **GIVEN** ownership changes between the stable-user lock candidate read and the locked project reread
+- **WHEN** the requested desired lead is also inactive
+- **THEN** the existing concurrent-ownership conflict takes precedence over desired-lead activity refusal
+
+#### Scenario: Group attach keeps its current owner
+
+- **GIVEN** the product's current owner is an inactive lead in the compatible reporting group
+- **WHEN** `admin.attachProductToGroup` retains that current owner
+- **THEN** inactivity alone does not block attachment and existing group/ownership checks still apply

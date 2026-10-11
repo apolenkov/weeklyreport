@@ -2,7 +2,9 @@ import type { Prisma } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  AdminGroupProductConflictError,
   AdminUserActivityAssignmentConflictError,
+  lockAndValidateProjectOwnership,
   lockUser,
   lockUserAndAssertActivityAssignments,
 } from "./user-activity-assignment.js";
@@ -157,5 +159,88 @@ describe("user assignment integrity", () => {
       }),
     ).resolves.toBe(true);
     expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("project desired-lead activity admission", () => {
+  const DESIRED_LEAD_ID = "66666666-6666-4666-8666-666666666666";
+  const inactiveLead = {
+    role: "lead",
+    reportingGroupId: GROUP_A,
+    isActive: false,
+  };
+
+  function ownershipTx(currentLeadId: string | null, isActive: boolean) {
+    const project =
+      currentLeadId === null
+        ? null
+        : {
+            leadId: currentLeadId,
+            lead: { role: "lead", reportingGroupId: GROUP_A },
+          };
+    const projectRead = vi.fn().mockResolvedValue(project);
+    const tx = {
+      $queryRaw: vi.fn((_query: unknown, id: string) =>
+        Promise.resolve([{ id }]),
+      ),
+      project: { findUnique: projectRead },
+      user: {
+        findUnique: vi.fn().mockResolvedValue({ ...inactiveLead, isActive }),
+      },
+      groupProduct: { findUnique: vi.fn().mockResolvedValue(null) },
+    } as unknown as Prisma.TransactionClient;
+    return { tx, projectRead };
+  }
+
+  it.each([
+    { name: "an existing product", currentLeadId: USER_ID },
+    { name: "a new product", currentLeadId: null },
+  ])(
+    "refuses a new inactive desired owner for $name",
+    async ({ currentLeadId }) => {
+      const { tx } = ownershipTx(currentLeadId, false);
+      await expect(
+        lockAndValidateProjectOwnership(tx, {
+          projectId: PROJECT_ID,
+          desiredLeadId: DESIRED_LEAD_ID,
+        }),
+      ).rejects.toBeInstanceOf(AdminGroupProductConflictError);
+    },
+  );
+
+  it("allows an inactive current owner to remain on a product", async () => {
+    const { tx } = ownershipTx(USER_ID, false);
+    await expect(
+      lockAndValidateProjectOwnership(tx, {
+        projectId: PROJECT_ID,
+        desiredLeadId: USER_ID,
+        expectedGroupId: GROUP_A,
+        requireDesiredLeadCurrent: true,
+      }),
+    ).resolves.toMatchObject({ project: { leadId: USER_ID }, ownership: null });
+  });
+
+  it.each([USER_ID, null])(
+    "allows an active desired owner when current owner is %s",
+    async (currentLeadId) => {
+      const { tx } = ownershipTx(currentLeadId, true);
+      await expect(
+        lockAndValidateProjectOwnership(tx, {
+          projectId: PROJECT_ID,
+          desiredLeadId: DESIRED_LEAD_ID,
+        }),
+      ).resolves.toMatchObject({ ownership: null });
+    },
+  );
+
+  it("preserves concurrent-ownership conflict precedence over inactive desired lead", async () => {
+    const { tx, projectRead } = ownershipTx(DESIRED_LEAD_ID, false);
+    projectRead.mockResolvedValueOnce({ leadId: USER_ID });
+    await expect(
+      lockAndValidateProjectOwnership(tx, {
+        projectId: PROJECT_ID,
+        desiredLeadId: DESIRED_LEAD_ID,
+      }),
+    ).rejects.toThrow(/changed ownership concurrently/);
   });
 });
