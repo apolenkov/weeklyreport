@@ -14,6 +14,7 @@ import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { resolveHumanSession } from "../../lib/human-session";
 import { createNullLogger } from "../../lib/logger";
 import { ProductFeedbackMemoryRepository } from "../../test-utils/product-feedback.memory-repository";
+import { AgentationPrismaRepository } from "./agentation.repository";
 import { AgentationInboxActions } from "./agentation-inbox-actions";
 import {
   createAuthenticatedFeedbackHandler,
@@ -439,6 +440,33 @@ describe("authenticated product-feedback ingress", () => {
       server.close();
       reply.mockRestore();
       dismiss.mockRestore();
+    }
+  });
+
+  it("answers 409 on the native thread route when the message limit is hit", async () => {
+    const add = vi
+      .spyOn(AgentationPrismaRepository.prototype, "addThreadMessage")
+      .mockRejectedValue(
+        new FeedbackLimitError("Thread message limit reached"),
+      );
+    const server = await createServer({ agentationEnabled: true });
+    try {
+      const response = await call(
+        server,
+        "/agentation/annotations/a-1/thread",
+        {
+          method: "POST",
+          ...jsonBody({ content: "One more" }),
+        },
+      );
+      expect(response.status).toBe(409);
+      expect(await response.json()).toEqual({
+        error: "thread_limit_reached",
+        message: "This feedback thread has reached its message limit.",
+      });
+    } finally {
+      server.close();
+      add.mockRestore();
     }
   });
 
