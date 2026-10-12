@@ -17,8 +17,9 @@
 ## 3. Empty product-name labels (C5144)
 
 - [x] 3.1 Reproduce on baseline: `productName` `""`/`"   "` yields no
-      `… for Unknown` action names (focused vitest exits 1 on exactly the new
-      cases).
+      `… for untitled` action names (focused vitest exits 1 on exactly the new
+      cases). Note: the fallback word was later changed to «Unknown» (task 3.2
+      and the proposal); the reproduction above was recorded with the original.
 - [x] 3.2 Route toggle/edit/delete labels through one trimmed-fallback
       helper; fallback word flagged as owner-refinable in the proposal.
 
