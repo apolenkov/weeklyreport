@@ -348,6 +348,66 @@ is unsafe — a completed artifact may exist only as
 recovery is forward-only: fix forward and preserve every durable row,
 artifact, and queue entry.
 
+### Перед деплоем OCR-правок 287
+
+Run these on the real target database (read-only queries, the owner runs them)
+before applying `20261007003500_user_email_case_insensitive` and
+`20261007120000_semantic_embedding_nonzero_vector`, and before deploying the
+API that enforces the key format. Take the pre-deploy dump first
+([Manual and pre-deploy backup](#manual-and-pre-deploy-backup)).
+
+1. **Email duplicates.** The first migration fails loudly on any case-only
+   duplicate; the result must be empty. Otherwise resolve the listed users as
+   an operator decision (no automatic merge) and repeat.
+
+   ```sql
+   SELECT lower("email") AS email_key, count(*) AS users, array_agg("id") AS user_ids
+   FROM "User"
+   GROUP BY 1
+   HAVING count(*) > 1;
+   ```
+
+2. **Zero vectors.** The second migration deletes these cache rows; the
+   read-through path rebuilds them. A non-zero count is acceptable only if the
+   owner confirms the rebuild cost.
+
+   ```sql
+   SELECT count(*) AS zero_norm_rows
+   FROM "SemanticEmbedding"
+   WHERE vector_norm("vector") = 0;
+   ```
+
+3. **Key format, without printing the value.** For every environment, the
+   `AI_PROVIDER_CONFIG_ENCRYPTION_KEY` must be 64 hex characters or canonical
+   padded base64 of 32 bytes, otherwise boot fails closed. The value is passed
+   through the environment and only `OK`/`INVALID` is printed:
+
+   ```sh
+   AI_KEY="$(kubectl -n <ns> get secret <secret> \
+     -o jsonpath='{.data.AI_PROVIDER_CONFIG_ENCRYPTION_KEY}' | base64 -d)" \
+   node --import tsx -e '
+     import("./apps/api/src/lib/ai-provider-key-material.ts").then(({ parseAiProviderKeyMaterial }) => {
+       try { parseAiProviderKeyMaterial(process.env.AI_KEY ?? ""); console.log("OK"); }
+       catch { console.log("INVALID"); process.exitCode = 1; }
+     });'
+   ```
+
+   Do not rotate or replace the key to fix the format while encrypted provider
+   credentials are retained (see [Rotating secrets](#rotating-secrets)); fix only
+   the encoding of the same bytes.
+
+4. **Rollback of the schema changes** (only if both migrations were applied and
+   must be undone; neither restores deleted cache rows, which rebuild on demand):
+
+   ```sql
+   DROP INDEX "User_email_lower_key";
+   ALTER TABLE "SemanticEmbedding" DROP CONSTRAINT "SemanticEmbedding_vector_nonzero_check";
+   ```
+
+   Prisma migration history still lists both migrations after this; reconcile
+   it only through the explicitly authorized recovery path, otherwise fix
+   forward with a new migration.
+
 ### Agentation feedback operations
 
 WeeklyReport uses `agentation@3.1.2` for the authenticated development/
