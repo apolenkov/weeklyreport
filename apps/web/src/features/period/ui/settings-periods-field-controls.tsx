@@ -97,16 +97,17 @@ export function NumberField({
         min={bounds.min}
         max={bounds.max}
         aria-invalid={error !== null}
-        aria-describedby={error ? `${id}-error` : undefined}
+        aria-describedby={error ? `${id}-hint ${id}-error` : `${id}-hint`}
         value={raw}
         onChange={(e) => handleChange(e.target.value)}
         className={
           error === null ? NUMBER_INPUT_CLASS : NUMBER_INPUT_ERROR_CLASS
         }
       />
-      {error === null ? (
-        <p className={FIELD_HINT_CLASS}>{hint}</p>
-      ) : (
+      <p id={`${id}-hint`} className={FIELD_HINT_CLASS}>
+        {hint}
+      </p>
+      {error !== null && (
         <p id={`${id}-error`} className={FIELD_ERROR_CLASS} role="alert">
           {error}
         </p>

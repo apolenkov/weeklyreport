@@ -205,3 +205,45 @@ describe("PeriodsSubTab — disabled reopen-window validity", () => {
     });
   });
 });
+
+describe("Period Policy active validity", () => {
+  beforeEach(() => mutate.mockReset());
+  it("keeps focus in the field being corrected while another field remains invalid", () => {
+    render(<PeriodsSubTab serverSettings={SETTINGS} />);
+    const length = screen.getByLabelText("Period length (days)");
+    const grace = screen.getByLabelText("Grace period (hours)");
+    fireEvent.change(length, { target: { value: "99" } });
+    fireEvent.change(grace, { target: { value: "999" } });
+    length.focus();
+    fireEvent.change(length, { target: { value: "8" } });
+    expect(length).toHaveFocus();
+    expect(
+      screen.getByRole("button", { name: "Save period policy" }),
+    ).toBeDisabled();
+    expect(grace).toHaveAttribute("aria-invalid", "true");
+  });
+  it("rejects empty deadline time inline and preserves it through a background server update", () => {
+    const { rerender } = render(<PeriodsSubTab serverSettings={SETTINGS} />);
+    const time = screen.getByLabelText("Deadline time");
+    fireEvent.change(time, { target: { value: "" } });
+    expect(time).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Enter a valid time in HH:MM format.",
+    );
+    const save = screen.getByRole("button", { name: "Save period policy" });
+    expect(save).toBeDisabled();
+    fireEvent.click(save);
+    expect(mutate).not.toHaveBeenCalled();
+    rerender(
+      <PeriodsSubTab serverSettings={{ ...SETTINGS, deadlineTime: "19:30" }} />,
+    );
+    expect(time).toHaveValue("");
+    expect(save).toBeDisabled();
+    fireEvent.change(time, { target: { value: "02:05" } });
+    expect(time).toHaveAttribute("aria-invalid", "false");
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+    expect(mutate.mock.calls[0]?.[0]).toMatchObject({ deadlineTime: "02:05" });
+    expect(mutate).toHaveBeenCalledTimes(1);
+  });
+});

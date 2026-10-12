@@ -312,6 +312,44 @@ describe("LeadReportAssistant", () => {
     },
   );
 
+  it.each([
+    { markdown: "a **b", visible: "a **b", bold: [] },
+    { markdown: "a **b** c", visible: "a b c", bold: ["b"] },
+    {
+      markdown: "**one** and **two** then **tail",
+      visible: "one and two then **tail",
+      bold: ["one", "two"],
+    },
+    { markdown: "**", visible: "**", bold: [] },
+  ])(
+    "keeps unmatched emphasis literal in Chat: $markdown",
+    async ({ markdown, visible, bold }) => {
+      const mutation = renderAssistant();
+      mutation.mutationFn.mockResolvedValueOnce(
+        reportAssistantOutcomeSchema.parse({
+          ...successOutcome,
+          answerMarkdown: markdown,
+        }),
+      );
+      const dialog = await openAssistant();
+      submitQuestion();
+
+      await within(dialog).findByRole("link", { name: /S1.*Week 31.*Portal/u });
+      expect(
+        Array.from(
+          dialog.querySelectorAll("p"),
+          (element) => element.textContent,
+        ),
+      ).toContain(visible);
+      expect(
+        Array.from(
+          dialog.querySelectorAll("strong"),
+          (element) => element.textContent,
+        ),
+      ).toEqual(bold);
+    },
+  );
+
   it("uses the shared mobile touch target for assistant submit", async () => {
     renderAssistant();
     await openAssistant();

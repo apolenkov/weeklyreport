@@ -4,6 +4,7 @@ import { MAX_WEEK_LABEL_LENGTH } from "@customreport/shared";
 import type { ReactNode } from "react";
 
 interface CreatePeriodFieldsProps {
+  readonly envelopeFrozen: boolean;
   readonly periodStart: string;
   readonly onPeriodStartChange: (value: string) => void;
   readonly periodEnd: string;
@@ -18,10 +19,12 @@ interface CreatePeriodFieldsProps {
   readonly onWeekLabelChange: (value: string) => void;
 }
 
-const FIELD_CLASS =
-  "w-full rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2 text-sm text-[var(--color-foreground)] focus-visible:border-[var(--color-starbucks-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
-const INVALID_FIELD_CLASS =
-  "w-full rounded-[var(--radius-sm)] border px-3 py-2 text-sm text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] border-[var(--color-destructive)] bg-[var(--color-status-blocked-bg)] focus-visible:border-[var(--color-destructive)]";
+const FROZEN_ENVELOPE_ID = "period-envelope-frozen";
+
+const FIELD_BASE_CLASS =
+  "w-full rounded-[var(--radius-sm)] border px-3 py-2 text-sm text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
+const FIELD_CLASS = `${FIELD_BASE_CLASS} border-[var(--color-border)] bg-[var(--color-card)] focus-visible:border-[var(--color-starbucks-accent)]`;
+const INVALID_FIELD_CLASS = `${FIELD_BASE_CLASS} border-[var(--color-destructive)] bg-[var(--color-status-blocked-bg)] focus-visible:border-[var(--color-destructive)]`;
 
 function OptionalHint() {
   return (
@@ -70,9 +73,13 @@ function FieldError({
 }
 
 function PeriodStartField({
+  envelopeFrozen,
   periodStart,
   onPeriodStartChange,
-}: Pick<CreatePeriodFieldsProps, "periodStart" | "onPeriodStartChange">) {
+}: Pick<
+  CreatePeriodFieldsProps,
+  "envelopeFrozen" | "periodStart" | "onPeriodStartChange"
+>) {
   return (
     <div>
       <FieldLabel htmlFor="period-start">
@@ -81,12 +88,14 @@ function PeriodStartField({
       </FieldLabel>
       <input
         id="period-start"
+        disabled={envelopeFrozen}
         type="date"
         name="periodStart"
         autoComplete="off"
         value={periodStart}
         onChange={(e) => onPeriodStartChange(e.target.value)}
         required
+        aria-describedby={envelopeFrozen ? FROZEN_ENVELOPE_ID : undefined}
         data-testid="periods-create-start"
         className={FIELD_CLASS}
       />
@@ -95,13 +104,18 @@ function PeriodStartField({
 }
 
 function PeriodEndField({
+  envelopeFrozen,
   periodEnd,
   onPeriodEndChange,
   isEdit,
   periodEndError,
 }: Pick<
   CreatePeriodFieldsProps,
-  "periodEnd" | "onPeriodEndChange" | "isEdit" | "periodEndError"
+  | "envelopeFrozen"
+  | "periodEnd"
+  | "onPeriodEndChange"
+  | "isEdit"
+  | "periodEndError"
 >) {
   return (
     <div>
@@ -115,6 +129,7 @@ function PeriodEndField({
       </FieldLabel>
       <input
         id="period-end"
+        disabled={envelopeFrozen}
         type="date"
         name="periodEnd"
         autoComplete="off"
@@ -123,7 +138,13 @@ function PeriodEndField({
         required={isEdit}
         aria-required={isEdit}
         aria-invalid={periodEndError !== null}
-        aria-describedby={periodEndError ? "period-end-error" : undefined}
+        aria-describedby={
+          envelopeFrozen
+            ? FROZEN_ENVELOPE_ID
+            : periodEndError
+              ? "period-end-error"
+              : undefined
+        }
         data-testid="periods-create-end"
         className={periodEndError ? INVALID_FIELD_CLASS : FIELD_CLASS}
       />
@@ -139,13 +160,18 @@ function PeriodEndField({
 }
 
 function DeadlineField({
+  envelopeFrozen,
   deadline,
   onDeadlineChange,
   deadlineError,
   deadlineClearHint,
 }: Pick<
   CreatePeriodFieldsProps,
-  "deadline" | "onDeadlineChange" | "deadlineError" | "deadlineClearHint"
+  | "envelopeFrozen"
+  | "deadline"
+  | "onDeadlineChange"
+  | "deadlineError"
+  | "deadlineClearHint"
 >) {
   return (
     <div>
@@ -154,13 +180,14 @@ function DeadlineField({
       </FieldLabel>
       <input
         id="period-deadline"
+        disabled={envelopeFrozen}
         type="datetime-local"
         name="deadline"
         autoComplete="off"
         value={deadline}
         onChange={(e) => onDeadlineChange(e.target.value)}
         aria-invalid={deadlineError !== null}
-        aria-describedby={`period-deadline-timeframe-hint${
+        aria-describedby={`period-deadline-timeframe-hint${envelopeFrozen ? " period-envelope-frozen" : ""}${
           deadlineError
             ? " period-deadline-error"
             : deadlineClearHint
@@ -224,6 +251,15 @@ function WeekLabelField({
 export function CreatePeriodFields(props: CreatePeriodFieldsProps) {
   return (
     <div className="mt-4 space-y-4">
+      {props.envelopeFrozen && (
+        <p
+          id={FROZEN_ENVELOPE_ID}
+          className="text-sm text-[var(--color-muted-foreground)]"
+        >
+          Dates and deadline are frozen for published or archived periods. You
+          can edit the label.
+        </p>
+      )}
       <PeriodStartField {...props} />
       <PeriodEndField {...props} />
       <DeadlineField {...props} />

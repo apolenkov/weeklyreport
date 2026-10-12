@@ -9,7 +9,12 @@ import {
   RankMark,
   StatusBadge,
 } from "./accordion-row-primitives";
-import { CSS, itemRailTone, ROW_GRID } from "./accordion-tokens";
+import {
+  CSS,
+  itemRailTone,
+  ROW_GRID,
+  severityRailTone,
+} from "./accordion-tokens";
 
 const OUTCOME_LABELS = {
   done: "Completed",
@@ -87,8 +92,7 @@ export function ItemRow({ item }: { readonly item: WeeklyReportItem }) {
 }
 
 export function RiskRow({ risk }: { readonly risk: WeeklyReportRisk }) {
-  const tone =
-    risk.severity === "blocked" ? CSS.destructive : CSS.statusAtRiskBorder;
+  const tone = severityRailTone(risk.severity);
   return (
     <div className={ROW_GRID} data-accordion-row="risk">
       <span className="min-h-[18px]" aria-hidden="true" />
@@ -135,7 +139,7 @@ export function EscalationRow({
   readonly severity: "blocked" | "at-risk";
 }) {
   const isBlocked = severity === "blocked";
-  const tone = isBlocked ? CSS.destructive : CSS.statusAtRiskBorder;
+  const tone = severityRailTone(severity);
   return (
     <div className={ROW_GRID} data-accordion-row="escalation">
       <span className="min-h-[18px]" aria-hidden="true" />

@@ -8,6 +8,12 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { makeQueryState } from "../../../../test-utils/query-state";
 
+const logClientError = vi.hoisted(() => vi.fn());
+vi.mock("../../../../shared/lib/errors/client-error-reporting", () => ({
+  logClientError,
+  formatClientErrorMessage: vi.fn(),
+}));
+
 const mockReplace = vi.fn();
 let searchParamsValue = new URLSearchParams();
 vi.mock("next/navigation", () => ({
@@ -35,6 +41,7 @@ const REPORT_ID = "report-abc-123";
 
 afterEach(() => {
   mockReplace.mockReset();
+  logClientError.mockReset();
   vi.mocked(useQuery).mockReset();
   searchParamsValue = new URLSearchParams();
 });
@@ -144,4 +151,28 @@ describe("ReportsLatestPage — redirect / empty / error wiring", () => {
       /opening the status report/i,
     );
   });
+});
+
+it("reports a query error transition once through the actual error-policy hook", () => {
+  const error = new Error("unavailable");
+  vi.mocked(useQuery).mockReturnValue(
+    makeQueryState({ data: undefined, error }),
+  );
+  const { rerender } = render(<ReportsLatestPage />);
+  expect(logClientError).toHaveBeenCalledExactlyOnceWith(
+    "reports.latest_for_viewer.load_failed",
+    error,
+    { component: "ReportsLatestContent", procedure: "reports.latestForViewer" },
+  );
+  rerender(<ReportsLatestPage />);
+  expect(logClientError).toHaveBeenCalledTimes(1);
+  vi.mocked(useQuery).mockReturnValue(
+    makeQueryState({ data: { reportId: null } }),
+  );
+  rerender(<ReportsLatestPage />);
+  vi.mocked(useQuery).mockReturnValue(
+    makeQueryState({ data: undefined, error: new Error("second failure") }),
+  );
+  rerender(<ReportsLatestPage />);
+  expect(logClientError).toHaveBeenCalledTimes(2);
 });

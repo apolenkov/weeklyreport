@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { ADMIN_ROUTE } from "../../../shared/ui/navigation/nav-links";
+
 export function ProductFilterBanner({
   filterMatched,
 }: {
@@ -13,7 +15,7 @@ export function ProductFilterBanner({
           : "Product from search not found"}
       </span>
       <Link
-        href="/admin?tab=products"
+        href={`${ADMIN_ROUTE}?tab=products`}
         className="text-sm font-semibold text-[var(--color-starbucks-accent)] hover:text-[var(--color-primary)]"
       >
         Reset

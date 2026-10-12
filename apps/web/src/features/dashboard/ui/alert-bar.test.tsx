@@ -348,3 +348,20 @@ describe("AlertBar — no reopen surface", () => {
     expect(screen.queryByText(/reopen request/i)).not.toBeInTheDocument();
   });
 });
+
+it.each(["Failed to fetch", "Load failed", '[{"code":"invalid_type"}]'])(
+  "explains reminder dispatch failure %s using the action copy",
+  (message) => {
+    mockRole("head");
+    useMutationMock.mockImplementation(
+      (options: { onError: (error: Error) => void }) => ({
+        mutate: () => options.onError(new Error(message)),
+        isPending: false,
+      }),
+    );
+    sendReminder();
+    expect(toast.error).toHaveBeenCalledExactlyOnceWith(
+      "Failed to send reminder",
+    );
+  },
+);

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { LeadSectionPreviewAuth } from "../../../../../../features/report-pages";
 import { LEAD_PREVIEW_ROUTE_ROLES } from "../../../../../../shared/model/route-role-policy";
 import { RoleGate } from "../../../../../../shared/ui/auth-runtime/role-gate";
+import { LEAD_REPORT_ROUTE } from "../../../../../../shared/ui/navigation/nav-links";
 
 interface Props {
   params: Promise<{ reportId: string }>;
@@ -34,7 +35,7 @@ export default async function LeadReportPreviewPage({ params }: Props) {
             </div>
             <div className="flex items-center gap-3">
               <Link
-                href={`/lead/report/${encodeURIComponent(reportId)}`}
+                href={`${LEAD_REPORT_ROUTE}/${encodeURIComponent(reportId)}`}
                 className="inline-flex min-h-11 items-center whitespace-nowrap rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)]"
               >
                 ← Back to form

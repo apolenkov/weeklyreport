@@ -113,6 +113,88 @@ describe("SlideProductCard status presentation", () => {
     },
   );
 
+  it("collapses a product whose only activity has no status or records, and omits empty Shared", () => {
+    const grid = buildSlideGridModel({
+      section: makeReportSectionFixture({
+        projects: [
+          { projectId: "p1", projectName: "Alpha", trafficLight: null },
+        ],
+        activities: [
+          {
+            activityId: "linked",
+            activityName: "Linked empty",
+            status: null,
+            derivedStatus: null,
+            linkedProducts: [{ productId: "p1", productName: "Alpha" }],
+          },
+          {
+            activityId: "shared",
+            activityName: "Shared empty",
+            status: null,
+            derivedStatus: null,
+            linkedProducts: [],
+          },
+        ],
+      }),
+    });
+    expect(grid.products.map(({ id }) => id)).toEqual(["p1"]);
+    const card = expectDefined(grid.products[0]);
+    render(<SlideProductCard card={card} authorsById={authorsById} />);
+    expect(screen.getByTestId("slide-product-empty")).toHaveTextContent(
+      "Alpha",
+    );
+    expect(screen.getByText("no status for this period")).toBeInTheDocument();
+    expect(screen.queryByText("Linked empty")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    { status: "yellow" as const, derivedStatus: null, withRecord: false },
+    { status: null, derivedStatus: "yellow" as const, withRecord: false },
+    { status: null, derivedStatus: null, withRecord: true },
+  ])(
+    "retains activity status or records: $status/$derivedStatus/$withRecord",
+    ({ status, derivedStatus, withRecord }) => {
+      const grid = buildSlideGridModel({
+        section: makeReportSectionFixture({
+          projects: [
+            { projectId: "p1", projectName: "Alpha", trafficLight: null },
+          ],
+          activities: [
+            {
+              activityId: "activity-1",
+              activityName: "Operations",
+              status,
+              derivedStatus,
+              linkedProducts: [{ productId: "p1", productName: "Alpha" }],
+            },
+          ],
+          items: withRecord
+            ? [
+                {
+                  projectId: null,
+                  activityId: "activity-1",
+                  type: "current",
+                  text: "Activity update",
+                  tag: "",
+                  carriedOver: false,
+                  workflowStatus: "in_progress",
+                },
+              ]
+            : [],
+        }),
+      });
+      const card = expectDefined(grid.products[0]);
+      render(<SlideProductCard card={card} authorsById={authorsById} />);
+      expect(screen.getByTestId("slide-product-card")).toBeInTheDocument();
+      expect(screen.getByText("Operations")).toBeInTheDocument();
+      expect(
+        screen.queryByText("no status for this period"),
+      ).not.toBeInTheDocument();
+      if (withRecord)
+        expect(screen.getByText("Activity update")).toBeInTheDocument();
+    },
+  );
+
   it("keeps the compact label hidden and preserves the full product title", () => {
     const name = "Customer Insights and Reporting Platform";
     render(

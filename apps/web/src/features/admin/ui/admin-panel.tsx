@@ -32,6 +32,7 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
     {
       isError: dependencies.snapshot && snapshotQuery.isError,
       error: snapshotQuery.error,
+      isSuccess: snapshotQuery.isSuccess,
     },
     {
       component: "AdminPanel",
@@ -44,6 +45,7 @@ export function AdminPanel({ activeTab, productFilter }: AdminPanelProps) {
     {
       isError: dependencies.settings && settingsQuery.isError,
       error: settingsQuery.error,
+      isSuccess: settingsQuery.isSuccess,
     },
     {
       component: "AdminPanel",

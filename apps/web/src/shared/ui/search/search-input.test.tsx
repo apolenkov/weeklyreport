@@ -265,6 +265,37 @@ describe("SearchInput", () => {
     );
   });
 
+  it("prevents result mousedown from blurring search before navigation", () => {
+    useQueryMock.mockReturnValue(
+      makeQueryState({
+        data: [
+          {
+            type: "item",
+            id: ITEM_ID,
+            title: "Release blocked",
+            snippet: "Release",
+            rank: 0.9,
+            projectId: PROJECT_ID,
+            reportId: REPORT_ID,
+            reportSectionId: SECTION_ID,
+            createdAt: "2026-05-06T08:00:00.000Z",
+          },
+        ],
+      }),
+    );
+    render(<SearchInput scope="mine" />);
+    const input = screen.getByRole("combobox");
+    act(() => {
+      fireEvent.focus(input);
+      fireEvent.change(input, { target: { value: "release" } });
+      vi.advanceTimersByTime(350);
+    });
+    const option = screen.getByRole("option");
+    expect(fireEvent.mouseDown(option)).toBe(false);
+    fireEvent.click(option);
+    expect(pushMock).toHaveBeenCalledWith(`/lead/report/${REPORT_ID}`);
+  });
+
   it("clears the input and closes the dropdown on Escape", () => {
     useQueryMock.mockReturnValue(
       makeQueryState({

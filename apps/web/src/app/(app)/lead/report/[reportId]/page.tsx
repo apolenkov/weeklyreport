@@ -5,6 +5,7 @@ import {
   LeadForm,
   LeadFormSkeleton,
 } from "../../../../../features/report-pages";
+import { LEAD_REPORT_ROUTE } from "../../../../../shared/ui/navigation/nav-links";
 
 interface Props {
   params: Promise<{ reportId: string }>;
@@ -51,7 +52,7 @@ export default async function LeadReportByIdPage({
   if (typeof mode === "string" && mode && resolvedMode !== mode) {
     const preserved = preservedSearchParams(query);
     const suffix = preserved.size > 0 ? `?${preserved.toString()}` : "";
-    redirect(`/lead/report/${encodeURIComponent(reportId)}${suffix}`);
+    redirect(`${LEAD_REPORT_ROUTE}/${encodeURIComponent(reportId)}${suffix}`);
   }
 
   return (

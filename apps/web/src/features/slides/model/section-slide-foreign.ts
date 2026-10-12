@@ -18,8 +18,8 @@ interface ForeignAlarmRow extends ForeignTextRow {
 }
 
 export interface SlideForeignContent {
-  readonly currentItems: readonly ForeignAlarmRow[];
-  readonly nextItems: readonly ForeignAlarmRow[];
+  readonly currentItems: readonly ForeignTextRow[];
+  readonly nextItems: readonly ForeignTextRow[];
   readonly risks: readonly ForeignAlarmRow[];
   readonly decisions: readonly ForeignTextRow[];
 }
@@ -50,10 +50,9 @@ export function crossAuthorContentToSlideForeign(
   rows: readonly CrossAuthorContentRow[],
 ): SlideForeignContent {
   const items = rows.flatMap((crossAuthor) => crossAuthor.items);
-  const mapItem = (item: (typeof items)[number]): ForeignAlarmRow => ({
+  const mapItem = (item: (typeof items)[number]): ForeignTextRow => ({
     projectId: item.projectId,
     text: item.text,
-    blocked: false,
   });
   return {
     currentItems: items.filter((item) => item.type === "current").map(mapItem),
@@ -117,11 +116,7 @@ function mergeProductContent(
 }
 
 function foreignCounts(model: SectionSlideModel, foreign: SlideForeignContent) {
-  const blockedAdd = [
-    ...foreign.currentItems,
-    ...foreign.nextItems,
-    ...foreign.risks,
-  ].filter((row) => row.blocked).length;
+  const blockedAdd = foreign.risks.filter((row) => row.blocked).length;
   return {
     currentCount: model.currentCount + foreign.currentItems.length,
     nextCount: model.nextCount + foreign.nextItems.length,

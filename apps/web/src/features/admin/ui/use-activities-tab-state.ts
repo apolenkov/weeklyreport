@@ -44,15 +44,16 @@ function useActivityDialog() {
 function useActivityFilters(activities: readonly ProjectActivity[]) {
   const [localSearch, setLocalSearch] = useState("");
 
+  const needle = localSearch.trim().toLowerCase();
   const filtered = useMemo(() => {
-    const needle = localSearch.trim().toLowerCase();
     return needle
       ? activities.filter((a) => a.name.toLowerCase().includes(needle))
       : activities;
-  }, [activities, localSearch]);
+  }, [activities, needle]);
 
   return {
     localSearch,
+    isFiltering: needle !== "",
     setLocalSearch,
     activeActivities: filtered.filter((a) => !a.archived),
     archivedActivities: filtered.filter((a) => a.archived),
@@ -133,7 +134,6 @@ export function useActivitiesTabState() {
     ...archive,
     handleSave,
     canSave,
-    hasData: activities.length > 0,
     isLoading: activitiesQuery.isLoading,
     isError: activitiesQuery.isError,
     retry: () => {

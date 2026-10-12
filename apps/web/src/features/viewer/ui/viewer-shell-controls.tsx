@@ -2,6 +2,7 @@
 
 import { useCallback } from "react";
 
+import { REPORTS_ROUTE } from "../../../shared/ui/navigation/nav-links";
 import type { useReportShellUrlState } from "../../../shared/ui/report-shell/use-report-shell-url-state";
 import type { ReportPeriod } from "../../report-sections";
 import { ViewerContextControls } from "./viewer-context-controls";
@@ -30,7 +31,7 @@ export function ViewerShellControls({
 
   const urlBuilder = useCallback(
     (periodId: string) =>
-      `/reports/${encodeURIComponent(periodId)}${buildQuery({})}`,
+      `${REPORTS_ROUTE}/${encodeURIComponent(periodId)}${buildQuery({})}`,
     [buildQuery],
   );
 
@@ -43,8 +44,8 @@ export function ViewerShellControls({
       setIncludeArchive={setIncludeArchive}
       scope={scope}
       setScope={setScope}
-      editHref={`/reports/${encodeURIComponent(reportId)}${buildQuery({ mode: null })}`}
-      slidesHref={`/reports/${encodeURIComponent(reportId)}${buildQuery({ mode: "slides" })}`}
+      editHref={`${REPORTS_ROUTE}/${encodeURIComponent(reportId)}${buildQuery({ mode: null })}`}
+      slidesHref={`${REPORTS_ROUTE}/${encodeURIComponent(reportId)}${buildQuery({ mode: "slides" })}`}
       mode={mode}
       historyError={historyError}
       historyLoading={historyLoading}

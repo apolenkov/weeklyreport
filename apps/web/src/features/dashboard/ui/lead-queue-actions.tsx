@@ -1,3 +1,4 @@
+import { HEAD_REPORT_ROUTE } from "../../../shared/ui/navigation/nav-links";
 import type { LeadInfo } from "../model/dashboard";
 import { primaryAction } from "../model/dashboard-leads";
 import { RemindLeadButton } from "./remind-lead-button";
@@ -21,7 +22,7 @@ interface LeadQueueActionsProps {
 }
 
 function reportHref(reportId: string, leadId: string): string {
-  return `/head/report/${encodeURIComponent(reportId)}?authorId=${encodeURIComponent(leadId)}`;
+  return `${HEAD_REPORT_ROUTE}/${encodeURIComponent(reportId)}?authorId=${encodeURIComponent(leadId)}`;
 }
 
 function QueueLink({

@@ -1,6 +1,9 @@
 "use client";
 
-import type { AppSettings } from "@customreport/shared";
+import {
+  type AppSettings,
+  appSettingsUpdateSchema,
+} from "@customreport/shared";
 import type { Dispatch, SetStateAction } from "react";
 import { useEffect, useRef, useState } from "react";
 
@@ -106,7 +109,33 @@ function useReopenWindowState({
   return { raw, error, handleChange };
 }
 
-function DeadlineTimeField({ draft, setDraft }: DraftFieldProps) {
+function DeadlineTimeField({
+  draft,
+  setDraft,
+  onValidityChange,
+}: DraftFieldProps) {
+  const [raw, setRaw] = useState(draft.deadlineTime);
+  const [committedValue, setCommittedValue] = useState(draft.deadlineTime);
+  const [error, setError] = useState<string | null>(null);
+  if (committedValue !== draft.deadlineTime) {
+    setCommittedValue(draft.deadlineTime);
+    setRaw(draft.deadlineTime);
+    setError(null);
+  }
+  function handleChange(value: string) {
+    setRaw(value);
+    const valid = appSettingsUpdateSchema.safeParse({
+      deadlineTime: value,
+    }).success;
+    onValidityChange?.("deadline-time", valid);
+    if (!valid) {
+      setDraft((current) => current);
+      setError("Enter a valid time in HH:MM format.");
+      return;
+    }
+    setError(null);
+    setDraft((current) => ({ ...current, deadlineTime: value }));
+  }
   return (
     <div>
       <label htmlFor="deadline-time" className={FIELD_LABEL_CLASS}>
@@ -118,19 +147,21 @@ function DeadlineTimeField({ draft, setDraft }: DraftFieldProps) {
         type="time"
         autoComplete="off"
         step={60}
-        value={draft.deadlineTime}
-        onChange={(e) =>
-          setDraft((current) => ({
-            ...current,
-            deadlineTime: e.target.value,
-          }))
-        }
+        value={raw}
+        onChange={(e) => handleChange(e.target.value)}
+        aria-invalid={error !== null}
+        aria-describedby={`deadline-time-hint${error ? " deadline-time-error" : ""}`}
         className={FIELD_INPUT_CLASS}
       />
-      <p className={FIELD_HINT_CLASS}>
+      <p id="deadline-time-hint" className={FIELD_HINT_CLASS}>
         Used for manually created and scheduled auto-created periods, with HH:MM
         minute precision in the default timezone (Reminders tab).
       </p>
+      {error && (
+        <p id="deadline-time-error" role="alert" className={FIELD_ERROR_CLASS}>
+          {error}
+        </p>
+      )}
     </div>
   );
 }
@@ -245,7 +276,11 @@ export function PeriodCycleFields({
 
   return (
     <>
-      <DeadlineTimeField draft={draft} setDraft={setDraft} />
+      <DeadlineTimeField
+        draft={draft}
+        setDraft={setDraft}
+        {...(onValidityChange === undefined ? {} : { onValidityChange })}
+      />
       <AllowReopenField
         draft={draft}
         setDraft={setDraft}

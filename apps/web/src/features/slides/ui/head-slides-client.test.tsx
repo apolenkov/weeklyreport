@@ -12,17 +12,23 @@ import {
   waitFor,
 } from "@testing-library/react";
 import type { ComponentProps } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { toast } from "sonner";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import * as clientErrors from "../../../shared/lib/errors/client-error-reporting";
 import { makeQueryClient } from "../../../shared/lib/query/query-client";
 import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
 import { makeWeeklyReportFixture } from "../../../test-utils/report-section-fixtures";
 import { HeadSlidesClient } from "./head-slides-client";
 
-vi.mock("../../../shared/hooks/query/use-query-error-handler", () => ({
-  useQueryErrorHandler: () => undefined,
-}));
+const logClientError = vi.fn();
+const toastError = vi.fn(() => "test-toast");
+
+beforeEach(() => {
+  vi.spyOn(clientErrors, "logClientError").mockImplementation(logClientError);
+  vi.spyOn(toast, "error").mockImplementation(toastError);
+});
 
 const REPORT_ID = "10000000-0000-4000-8000-000000000001";
 const OTHER_REPORT_ID = "10000000-0000-4000-8000-000000000002";
@@ -112,6 +118,7 @@ describe("HeadSlidesClient with real query and deck boundaries", () => {
     const { liveRequest } = setup({ props: { enableActivity: false } });
     await screen.findByText("No slides available");
     expect(liveRequest).not.toHaveBeenCalled();
+    expect(logClientError).not.toHaveBeenCalled();
   });
 
   it("does not expose cached activity rows to a host that disables activity", async () => {
@@ -171,6 +178,7 @@ describe("HeadSlidesClient with real query and deck boundaries", () => {
       "Owner A",
     );
     expect(screen.queryByText("Slides could not load")).not.toBeInTheDocument();
+    expect(logClientError).not.toHaveBeenCalled();
   });
 
   it("shows the skeleton while an empty report waits for activity", async () => {
@@ -275,4 +283,115 @@ describe("HeadSlidesClient with real query and deck boundaries", () => {
     ).toHaveLength(1);
     expect(screen.queryByText("No slides available")).not.toBeInTheDocument();
   });
+});
+
+describe("HeadSlidesClient query error policy", () => {
+  it("logs an active activity failure once, remains log-only, and logs again after recovery", async () => {
+    const first = new Error("Activity unavailable");
+    const second = new Error("Activity unavailable again");
+    const deferred = Promise.withResolvers<ActivityLiveResponse>();
+    let response: ActivityLiveResponse | Error | Promise<ActivityLiveResponse> =
+      deferred.promise;
+    const { client, proxy, rerender } = setup({
+      live: () =>
+        response instanceof Error ? Promise.reject(response) : response,
+    });
+    await waitFor(() =>
+      expect(client.isFetching(proxy.activity.live.pathFilter())).toBe(1),
+    );
+    expect(screen.getByTestId("slide-skeleton")).toBeInTheDocument();
+    expect(logClientError).not.toHaveBeenCalled();
+    await act(async () => {
+      deferred.reject(first);
+      await deferred.promise.catch(() => undefined);
+    });
+    await screen.findByText("Slides could not load");
+    expect(logClientError).toHaveBeenCalledExactlyOnceWith(
+      "headSlides.activity.load_failed",
+      first,
+      {
+        component: "HeadSlidesClient",
+        procedure: "activity.live",
+      },
+    );
+    rerender({ scope: "product" });
+    expect(logClientError).toHaveBeenCalledOnce();
+    expect(toastError).not.toHaveBeenCalled();
+    response = activity();
+    await act(async () => {
+      await client.refetchQueries(proxy.activity.live.pathFilter());
+    });
+    await screen.findByTestId("head-slide-card-0");
+    response = second;
+    await act(async () => {
+      await client.refetchQueries(proxy.activity.live.pathFilter());
+    });
+    await screen.findByText("Slides could not load");
+    expect(logClientError).toHaveBeenCalledTimes(2);
+    expect(logClientError).toHaveBeenLastCalledWith(
+      "headSlides.activity.load_failed",
+      second,
+      {
+        component: "HeadSlidesClient",
+        procedure: "activity.live",
+      },
+    );
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it("keeps weekly failures on the existing weekly event only", async () => {
+    const error = new Error("Weekly unavailable");
+    const { liveRequest } = setup({ weekly: () => Promise.reject(error) });
+    await screen.findByText("Slides could not load");
+    expect(logClientError).toHaveBeenCalledExactlyOnceWith(
+      "headSlides.weeklyReport.load_failed",
+      error,
+      {
+        component: "HeadSlidesClient",
+        procedure: "weeklyReport.get",
+      },
+    );
+    expect(liveRequest).not.toHaveBeenCalled();
+    expect(toastError).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      label: "viewer",
+      props: { enableActivity: false },
+      weekly: () => report(),
+    },
+    {
+      label: "published",
+      props: {},
+      weekly: () => ({ ...report(), periodStatus: "published" as const }),
+    },
+    {
+      label: "archived",
+      props: {},
+      weekly: () => ({ ...report(), archived: true }),
+    },
+    {
+      label: "no period",
+      props: {},
+      weekly: () => ({ status: "no-period" as const }),
+    },
+  ])(
+    "does not report cached activity failures on the inactive $label surface",
+    async ({ props, weekly }) => {
+      const { client, proxy } = setup({
+        props,
+        weekly,
+        live: () => Promise.reject(new Error("Cached activity error")),
+      });
+      await waitFor(() => expect(client.isFetching()).toBe(0));
+      await act(async () => {
+        await client
+          .query(proxy.activity.live.queryOptions())
+          .catch(() => undefined);
+      });
+      expect(logClientError).not.toHaveBeenCalled();
+      expect(toastError).not.toHaveBeenCalled();
+    },
+  );
 });

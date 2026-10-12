@@ -1,6 +1,8 @@
 import type { SearchHit } from "@customreport/shared";
 import { useEffect, useState } from "react";
 
+import { ADMIN_ROUTE } from "../navigation/nav-links";
+
 export type SearchScope = "mine" | "all" | "published";
 
 export const DEBOUNCE_MS = 300;
@@ -30,7 +32,7 @@ export function targetUrlFor(hit: SearchHit, isViewer: boolean): SearchTarget {
     if (isViewer) return { kind: "unavailable" };
     return {
       kind: "navigable",
-      url: `/admin?tab=products&filter=${hit.id}`,
+      url: `${ADMIN_ROUTE}?tab=products&filter=${hit.id}`,
     };
   }
   if (hit.reportId) {

@@ -1,6 +1,9 @@
+/// <reference lib="dom" />
+// @vitest-environment jsdom
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { type PressResult } from "./batch.ts";
+import { type BatchOutcome, pressBatch, type PressResult } from "./batch.ts";
 import { parseCli } from "./config.ts";
 import type { Browser } from "./driver.ts";
 import type { Ctx } from "./logs.ts";
@@ -226,5 +229,104 @@ describe("hung batch recovery", () => {
         f.detail.includes("RECOVERY storage unavailable"),
       ),
     ).toBe(true);
+  });
+});
+
+describe("generated fetch instrumentation", () => {
+  it("records a handled transport rejection once and rethrows the same error", async () => {
+    const iframe = document.createElement("iframe");
+    document.body.append(iframe);
+    const pageWindow = iframe.contentWindow;
+    const pageDocument = iframe.contentDocument;
+    if (!pageWindow || !pageDocument)
+      throw new Error("Missing JSDOM iframe realm");
+    class NoopObserver {
+      observe = (): void => undefined;
+      takeRecords = (): [] => [];
+      disconnect = (): void => undefined;
+      unobserve = (): void => undefined;
+    }
+    const transport = vi.fn().mockRejectedValue(new TypeError("network down"));
+    Object.defineProperty(pageWindow, "fetch", {
+      value: transport,
+      writable: true,
+      configurable: true,
+    });
+    Object.defineProperty(pageWindow, "PerformanceObserver", {
+      value: NoopObserver,
+      configurable: true,
+    });
+    const ctx = context();
+    let source = "";
+    vi.mocked(ctx.browser.evaluate).mockImplementation(
+      (script): unknown => (source = script),
+    );
+    pressBatch(ctx.browser, [], {
+      budgetMs: 1000,
+      maxQuietMs: 100,
+      mode: "quick",
+    });
+    const script = pageDocument.createElement("script");
+    interface Realm {
+      __crawlDone: Promise<BatchOutcome>;
+      __crawl2: {
+        inflight: number;
+        logs: readonly Readonly<{ kind: string; detail: string }>[];
+      };
+    }
+    script.textContent = `window.__crawlDone = (${source});`;
+    pageDocument.body.append(script);
+    const realm = (): Realm => pageWindow as unknown as Realm;
+    try {
+      const outcome = await realm().__crawlDone;
+      expect(outcome).toMatchObject({ results: [], stopped: false });
+      const failure = new TypeError("connection refused");
+      transport.mockRejectedValueOnce(failure);
+      const caught = await pageWindow
+        .fetch("/trpc/items.list?input=secret")
+        .then(
+          () => null,
+          (error: unknown) => error,
+        );
+      expect(caught).toBe(failure);
+      const rejected = (): readonly Readonly<{
+        kind: string;
+        detail: string;
+      }>[] =>
+        realm().__crawl2.logs.filter((log) =>
+          log.detail.includes("fetch failed"),
+        );
+      expect(rejected()).toHaveLength(1);
+      expect(rejected()[0]?.kind).toBe("page-error");
+      expect(rejected()[0]?.detail).toContain("GET");
+      expect(rejected()[0]?.detail).not.toContain("secret");
+      expect(realm().__crawl2.inflight).toBe(0);
+      const replay = new Event("unhandledrejection");
+      Object.defineProperty(replay, "reason", { value: failure });
+      pageWindow.dispatchEvent(replay);
+      expect(rejected()).toHaveLength(1);
+      expect(
+        realm().__crawl2.logs.filter((log) =>
+          log.detail.includes("unhandled rejection"),
+        ),
+      ).toHaveLength(0);
+      transport.mockResolvedValueOnce({ status: 500 });
+      await pageWindow.fetch("/trpc/broken");
+      expect(
+        realm().__crawl2.logs.some((log) => log.kind === "http-error"),
+      ).toBe(true);
+      transport.mockRejectedValueOnce(
+        Object.assign(new Error("aborted"), { name: "AbortError" }),
+      );
+      await pageWindow.fetch("/trpc/abort").then(
+        () => null,
+        () => null,
+      );
+      expect(rejected()).toHaveLength(1);
+      expect(realm().__crawl2.inflight).toBe(0);
+    } finally {
+      script.remove();
+      iframe.remove();
+    }
   });
 });

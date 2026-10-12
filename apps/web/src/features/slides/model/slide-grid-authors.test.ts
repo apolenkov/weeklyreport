@@ -6,7 +6,10 @@ import {
   type ReportSectionFixture,
 } from "../../../test-utils/report-section-fixtures";
 import type { CrossAuthorContentRow } from "../../report-sections";
-import { buildAuthorRoster } from "./slide-grid-authors";
+import {
+  buildAuthorRoster,
+  buildContributorRoster,
+} from "./slide-grid-authors";
 
 const section = (over: ReportSectionFixture = {}): ReportSectionReadModel =>
   makeReportSectionFixture({
@@ -83,4 +86,40 @@ describe("buildAuthorRoster — color assignment", () => {
     expect(foreignColorIndexes).toEqual([1, 2, 3, 4, 5, 1, 2, 3]);
     expect(foreignColorIndexes).not.toContain(0);
   });
+});
+
+describe("slide author canonical identity marks", () => {
+  it.each([
+    { name: "Иванов В.П.", expected: "ИВ" },
+    { name: "Иванов", expected: "ИВ" },
+    { name: " ".repeat(3), expected: "??" },
+    { name: "𠮷田 花子", expected: "𠮷花" },
+    { name: "𠮷田", expected: "𠮷田" },
+  ])(
+    "preserves $name initials in owner, foreign and contributor rosters",
+    ({ name, expected }) => {
+      const ownerSection = section({ authorName: name });
+      const roster = buildAuthorRoster(ownerSection, [
+        foreignRow("foreign", name, "lead"),
+      ]);
+      expect(roster.authors.map(({ initials }) => initials)).toEqual([
+        expected,
+        expected,
+      ]);
+      expect(buildContributorRoster([ownerSection])[0]).toMatchObject({
+        initials: expected,
+        colorIndex: 0,
+        isOwner: false,
+      });
+      expect(
+        roster.authors.map(({ colorIndex, isOwner }) => ({
+          colorIndex,
+          isOwner,
+        })),
+      ).toEqual([
+        { colorIndex: 0, isOwner: true },
+        { colorIndex: 1, isOwner: false },
+      ]);
+    },
+  );
 });

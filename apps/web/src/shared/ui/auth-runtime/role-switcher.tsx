@@ -17,6 +17,8 @@ import type { RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { useQueryErrorHandler } from "../../hooks/query/use-query-error-handler";
+import { buildDevLoginHref } from "../../lib/navigation/dev-login-href";
 import { logoutThenRedirect } from "../../lib/navigation/logout-then-redirect";
 import { webEnv } from "../../lib/runtime/web-env";
 import { useTRPC } from "../../lib/trpc/trpc-context";
@@ -40,7 +42,7 @@ interface RoleSwitcherUser {
   readonly id: string;
   readonly name: string;
   readonly email: string;
-  readonly role: string;
+  readonly role: DbRole;
 }
 
 function RoleUserItems({
@@ -151,6 +153,12 @@ function useDevRoleSwitcher() {
     staleTime: DEV_USERS_STALE_TIME_MS,
   });
 
+  useQueryErrorHandler(usersQ, {
+    event: "devRoleSwitcher.users.load_failed",
+    component: "DevRoleSwitcher",
+    procedure: "dev.listUsers",
+  });
+
   const recoverFromFailure = () => {
     setPending(false);
     setFocusRecoveryToken((token) => token + 1);
@@ -183,11 +191,7 @@ function useDevRoleSwitcher() {
     users: usersQ.data ?? [],
     switchTo: (identity: { role: DbRole; email: string }) => {
       setPending(true);
-      const params = new URLSearchParams({
-        role: identity.role,
-        email: identity.email,
-      });
-      logoutThen(`/auth/dev-login?${params.toString()}`);
+      logoutThen(buildDevLoginHref(identity.role, identity.email));
     },
     logout: () => {
       setPending(true);

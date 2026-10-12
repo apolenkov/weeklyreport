@@ -5,6 +5,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ConfirmDeleteDialog } from "../../../shared/ui/dialogs/confirm-delete-dialog";
 
+export const PUBLISH_REQUIREMENT_HINT =
+  "Publish requires at least one submitted section.";
+
 interface PublishLockButtonProps {
   readonly pendingCount: number;
   readonly totalLeads: number;
@@ -131,7 +134,7 @@ export function PublishLockButton({
   onReopen,
   isPending = false,
   canPublish = true,
-  publishDisabledReason = "Publish requires at least one submitted section.",
+  publishDisabledReason = PUBLISH_REQUIREMENT_HINT,
 }: PublishLockButtonProps) {
   const [showDialog, setShowDialog] = useState(false);
   const publishButtonRef = useRef<HTMLButtonElement>(null);
@@ -167,6 +170,9 @@ export function PublishLockButton({
       focusReopenRef.current = true;
     });
   }
+
+  // Retire confirmation intent when its submission precondition disappears.
+  if (showDialog && !canPublish) setShowDialog(false);
 
   if (periodStatus === "published") {
     return (

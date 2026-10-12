@@ -188,8 +188,14 @@ export function buildWeeklyReportPageView(
   const progress = deriveProgressFacet(view);
   // Empty-state uses full content; submission alone is the publish precondition.
   const hasAnyContent = reviewSurface.accordion.hasAnyContent;
+  const visibleProducts =
+    params.scope === "product"
+      ? reviewSurface.accordion.products
+      : (reviewSurface.accordion.leadGroups.find(
+          (group) => group.id === params.focusedAuthorId,
+        )?.products ?? []);
   const focusedProductId = resolveFocusedProductId(
-    view.products,
+    visibleProducts,
     params.focusedAuthorId,
   );
 

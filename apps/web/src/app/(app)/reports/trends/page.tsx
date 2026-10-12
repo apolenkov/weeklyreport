@@ -116,7 +116,7 @@ function PeriodComparisonTrendsSection({
 }: Pick<TrendsQueries, "comparison" | "history" | "periodPair">) {
   const retry = () => {
     if (history.isError) void history.refetch().catch(() => undefined);
-    else void comparison.refetch().catch(() => undefined);
+    if (comparison.isError) void comparison.refetch().catch(() => undefined);
   };
 
   return (

@@ -9,6 +9,7 @@ import {
   JobsTabLabel,
 } from "../../../features/admin";
 import { ReopenTabLabel } from "../../../features/review";
+import { ADMIN_ROUTE } from "../../../shared/ui/navigation/nav-links";
 
 interface Props {
   searchParams: Promise<{
@@ -44,7 +45,7 @@ export default async function AdminPage({ searchParams }: Props) {
               {ADMIN_TABS.map((t) => (
                 <Link
                   key={t}
-                  href={`/admin?tab=${t}`}
+                  href={`${ADMIN_ROUTE}?tab=${t}`}
                   className={`relative flex items-center gap-1.5 rounded-[var(--radius-pill)] px-4 py-2 text-sm font-semibold capitalize tracking-normal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2 ${
                     activeTab === t
                       ? "bg-[var(--color-starbucks-accent)] text-[var(--color-primary-foreground)] shadow-[0_1px_3px_var(--color-ring)]"

@@ -5,12 +5,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useId, useMemo } from "react";
 
 import { copyReportSearchParams } from "../../../shared/lib/navigation/report-search-params";
+import { LEAD_REPORT_ROUTE } from "../../../shared/ui/navigation/nav-links";
 import type { ReportPeriod } from "../../report-sections";
 import { usePeriodListboxNav } from "./use-period-listbox-nav";
-
-// Lead-form addressable URL base. Period nav emits path-segment
-// URLs (`/lead/report/<reportId>`) so each week is bookmarkable.
-const LEAD_REPORT_BASE = "/lead/report";
 
 // The only routes that address a period as the trailing path segment.
 const ADDRESSED_PERIOD_PATH = /^\/(?:lead|head)\/report\/([^/]+)$/;
@@ -96,7 +93,7 @@ function useNavigateTo(urlBuilder: ((periodId: string) => string) | undefined) {
       const next = copyReportSearchParams(searchParams);
       const query = next.toString();
       const suffix = query ? `?${query}` : "";
-      router.push(`${LEAD_REPORT_BASE}/${periodId}${suffix}`);
+      router.push(`${LEAD_REPORT_ROUTE}/${periodId}${suffix}`);
     },
     [router, searchParams, urlBuilder],
   );

@@ -202,6 +202,9 @@ export function CreatePeriodDialog({
   // Edit semantics need the row itself; without it the dialog stays in create mode.
   const editedPeriod = mode === "edit" ? initialValues : undefined;
   const isEdit = editedPeriod !== undefined;
+  const envelopeFrozen =
+    editedPeriod?.periodState === "published" ||
+    editedPeriod?.periodState === "archived";
   // While the mutation is in flight the dialog must stay put: Escape, backdrop
   // click, and the Cancel button are all suppressed so a submit can't be
   // abandoned mid-flight.
@@ -215,7 +218,16 @@ export function CreatePeriodDialog({
 
   function handleSubmit() {
     if (!validation.canSubmit) return;
-    onSubmit(buildCreatePeriodValues(values, isEdit));
+    onSubmit(
+      envelopeFrozen
+        ? {
+            periodStart: editedPeriod.periodStart,
+            periodEnd: editedPeriod.periodEnd,
+            deadline: editedPeriod.deadline,
+            weekLabel: resolveWeekLabelForSubmit(values.weekLabel, true),
+          }
+        : buildCreatePeriodValues(values, isEdit),
+    );
   }
 
   return (
@@ -228,6 +240,7 @@ export function CreatePeriodDialog({
     >
       <fieldset disabled={isPending} className="m-0 min-w-0 border-0 p-0">
         <CreatePeriodFields
+          envelopeFrozen={envelopeFrozen}
           periodStart={values.periodStart}
           onPeriodStartChange={setters.setPeriodStart}
           periodEnd={values.periodEnd}

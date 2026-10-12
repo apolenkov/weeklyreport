@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { REPORTS_ROUTE } from "../../../../../shared/ui/navigation/nav-links";
+
 export function LeadFormEmptyState({
   titleId,
   title,
@@ -20,7 +22,7 @@ export function LeadFormEmptyState({
       </h1>
       {children}
       <Link
-        href="/reports"
+        href={REPORTS_ROUTE}
         className="inline-flex min-h-[var(--touch-target-min)] items-center text-sm font-medium text-[var(--color-primary)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
       >
         View report history &rarr;

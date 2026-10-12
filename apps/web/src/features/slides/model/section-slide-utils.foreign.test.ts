@@ -196,10 +196,10 @@ describe("crossAuthorContentToSlideForeign", () => {
       }),
     ]);
     expect(out.currentItems).toEqual([
-      { projectId: PRODUCT_ID, text: "Foreign current", blocked: false },
+      { projectId: PRODUCT_ID, text: "Foreign current" },
     ]);
     expect(out.nextItems).toEqual([
-      { projectId: PRODUCT_ID, text: "Foreign next", blocked: false },
+      { projectId: PRODUCT_ID, text: "Foreign next" },
     ]);
     expect(out.risks).toEqual([
       { projectId: PRODUCT_ID, text: "Foreign risk", blocked: false },
@@ -212,12 +212,8 @@ describe("crossAuthorContentToSlideForeign", () => {
 
 describe("mergeForeignSlideContent", () => {
   const foreign: SlideForeignContent = {
-    currentItems: [
-      { projectId: PRODUCT_ID, text: "Foreign current", blocked: false },
-    ],
-    nextItems: [
-      { projectId: PRODUCT_ID, text: "Foreign next", blocked: false },
-    ],
+    currentItems: [{ projectId: PRODUCT_ID, text: "Foreign current" }],
+    nextItems: [{ projectId: PRODUCT_ID, text: "Foreign next" }],
     risks: [{ projectId: PRODUCT_ID, text: "Foreign risk", blocked: true }],
     decisions: [{ projectId: PRODUCT_ID, text: "Foreign decision" }],
   };
@@ -299,9 +295,7 @@ describe("mergeForeignSlideContent", () => {
     const base = buildSectionSlideModel(makeSection());
     const merged = mergeForeignSlideContent(base, {
       ...EMPTY_SLIDE_FOREIGN_CONTENT,
-      currentItems: [
-        { projectId: PRODUCT_TWO_ID, text: "Off-deck foreign", blocked: false },
-      ],
+      currentItems: [{ projectId: PRODUCT_TWO_ID, text: "Off-deck foreign" }],
     });
     expect(merged.currentCount).toBe(base.currentCount);
     expect(merged).toBe(base); // nothing landed → same reference

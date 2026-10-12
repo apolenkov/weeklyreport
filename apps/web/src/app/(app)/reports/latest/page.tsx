@@ -5,8 +5,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type ReactNode, Suspense, useEffect } from "react";
 
+import { useQueryErrorHandler } from "../../../../shared/hooks/query/use-query-error-handler";
 import { getScalarSearchParam } from "../../../../shared/lib/navigation/scalar-search-param";
 import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
+import { REPORTS_ROUTE } from "../../../../shared/ui/navigation/nav-links";
 
 // Resolve the viewer-specific destination through the existing browser tRPC
 // query, then preserve the recovery marker while replacing this entry route.
@@ -50,13 +52,18 @@ function ReportsLatestContent() {
     getScalarSearchParam(searchParams, "recovery") === "1" ? "1" : "0";
 
   const latestQ = useQuery(trpc.reports.latestForViewer.queryOptions());
+  useQueryErrorHandler(latestQ, {
+    event: "reports.latest_for_viewer.load_failed",
+    component: "ReportsLatestContent",
+    procedure: "reports.latestForViewer",
+  });
 
   const reportId = latestQ.data?.reportId ?? null;
 
   useEffect(() => {
     if (reportId) {
       router.replace(
-        `/reports/${reportId}?source=status&recovery=${recovery}`,
+        `${REPORTS_ROUTE}/${reportId}?source=status&recovery=${recovery}`,
         {
           scroll: false,
         },

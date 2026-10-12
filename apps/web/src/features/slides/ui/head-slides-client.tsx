@@ -60,6 +60,19 @@ function useHeadSlideDeck({ reportId, scope, enableActivity }: SlideDeckArgs) {
     procedure: "weeklyReport.get",
   });
 
+  useQueryErrorHandler(
+    {
+      isError: needsActivityFallback && activityQ.isError,
+      isSuccess: activityQ.isSuccess,
+      error: activityQ.error,
+    },
+    {
+      event: "headSlides.activity.load_failed",
+      component: "HeadSlidesClient",
+      procedure: "activity.live",
+    },
+  );
+
   const documentSlides = useMemo(() => {
     if (!weeklyQ.data || weeklyQ.data.status === "no-period") return [];
     if (weeklyQ.data.leadSections.length > 0) {

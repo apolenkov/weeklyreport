@@ -36,8 +36,17 @@ import type { DbRole } from "@customreport/shared";
 import { expectTypeOf } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
+import { makeQueryState } from "../../../test-utils/query-state";
 import * as sessionTransition from "../../lib/auth/session-transition";
+import { logClientError } from "../../lib/errors/client-error-reporting";
 import { DevRoleSwitcher, ROLE_ORDER } from "./role-switcher";
+
+vi.mock("../../lib/errors/client-error-reporting", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("../../lib/errors/client-error-reporting")
+  >()),
+  logClientError: vi.fn(),
+}));
 
 const SEED_USER = {
   id: "00000000-0000-4000-8000-000000000001",
@@ -66,6 +75,36 @@ describe("DevRoleSwitcher — data-reset controls for every dev role", () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+  });
+
+  it("logs user load failures once per new error and keeps retry recovery", async () => {
+    const first = new Error("users failed");
+    const refetch = vi.fn().mockResolvedValue(undefined);
+    useMutationMock.mockReturnValue({ mutate: vi.fn() });
+    useQueryMock.mockReturnValue(
+      makeQueryState({ data: undefined, error: first, refetch }),
+    );
+    const rendered = render(<DevRoleSwitcher />);
+    expect(logClientError).toHaveBeenCalledWith(
+      "devRoleSwitcher.users.load_failed",
+      first,
+      { component: "DevRoleSwitcher", procedure: "dev.listUsers" },
+    );
+    rendered.rerender(<DevRoleSwitcher />);
+    expect(logClientError).toHaveBeenCalledTimes(1);
+    const user = userEvent.setup();
+    await user.click(screen.getByTestId("dev-role-switcher-trigger"));
+    await user.click(screen.getByText("Retry loading users"));
+    expect(refetch).toHaveBeenCalledOnce();
+    useQueryMock.mockReturnValue(makeQueryState({ data: [SEED_USER] }));
+    rendered.rerender(<DevRoleSwitcher />);
+    await user.click(screen.getByTestId("dev-role-switcher-trigger"));
+    expect(screen.getByText(SEED_USER.name)).toBeInTheDocument();
+    useQueryMock.mockReturnValue(
+      makeQueryState({ data: [SEED_USER], error: new Error("new failure") }),
+    );
+    rendered.rerender(<DevRoleSwitcher />);
+    expect(logClientError).toHaveBeenCalledTimes(2);
   });
 
   it("gives the icon-only trigger a discernible accessible name", () => {
@@ -292,6 +331,35 @@ describe("DevRoleSwitcher — logout honesty", () => {
       expect(trigger).toHaveFocus();
     });
   });
+
+  it.each(ROLE_ORDER)(
+    "preserves param-less encoded %s dev-login after logout",
+    async (role) => {
+      const email = `${role}+qa@example.test`;
+      primeHooks("admin");
+      useQueryMock.mockReturnValue(
+        makeQueryState({ data: [{ ...SEED_USER, role, email }] }),
+      );
+      fetchMock.mockResolvedValue({ ok: true });
+      const user = userEvent.setup();
+      render(<DevRoleSwitcher />);
+      await user.click(screen.getByTestId("dev-role-switcher-trigger"));
+      await user.click(
+        screen.getByTestId(`dev-role-switcher-${role}-${email}`),
+      );
+      await waitFor(() => expect(hrefAssign).toHaveBeenCalledOnce());
+      const url = new URL(
+        expectDefined(hrefAssign.mock.lastCall?.[0]),
+        "http://web.test",
+      );
+      expect(url.pathname).toBe("/auth/dev-login");
+      expect(Object.fromEntries(url.searchParams)).toEqual({ role, email });
+      expect(fetchMock).toHaveBeenCalledWith("/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+    },
+  );
 
   it("redirects home when logout responds OK", async () => {
     primeHooks("admin");

@@ -9,7 +9,6 @@ import { periodLabel } from "../model/use-period-navigator";
 // Portals to document.body so the toolbar's overflow clip cannot truncate it
 // (position:fixed from the trigger rect; scroll/resize tracked — same pattern
 // as FillFromButton).
-const PERIOD_PANEL_MAX_HEIGHT_PX = 280;
 
 interface PeriodOption {
   readonly id: string;
@@ -28,7 +27,9 @@ interface PeriodListboxPanelProps {
   readonly selectedId: string | undefined;
   readonly activeIdx: number;
   readonly pos: {
-    readonly top: number;
+    readonly top: number | undefined;
+    readonly bottom: number | undefined;
+    readonly maxHeight: number;
     readonly left: number;
     readonly width: number;
   };
@@ -68,6 +69,7 @@ function PeriodOptionRow({
   isActive,
   onHover,
   onSelect,
+  onKeyDown,
 }: {
   readonly option: PeriodOption;
   readonly optionId: string;
@@ -75,6 +77,7 @@ function PeriodOptionRow({
   readonly isActive: boolean;
   readonly onHover: () => void;
   readonly onSelect: () => void;
+  readonly onKeyDown: (e: ReactKeyboardEvent<HTMLDivElement>) => void;
 }) {
   return (
     <div
@@ -90,10 +93,14 @@ function PeriodOptionRow({
         isActive ? "bg-[var(--color-surface-hover)]" : "",
       ].join(" ")}
       onMouseEnter={onHover}
+      onClick={onSelect}
+      onKeyDown={(e) => {
+        e.stopPropagation();
+        onKeyDown(e);
+      }}
       onMouseDown={(e) => {
         // Keep focus on the trigger; prevent the panel from stealing it.
-        e.preventDefault();
-        onSelect();
+        if (e.button === 0) e.preventDefault();
       }}
     >
       <span className="flex-1 truncate">{periodLabel(option)}</span>
@@ -131,12 +138,13 @@ export function PeriodListboxPanel({
         className="fixed z-50 overflow-y-auto rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] py-1 shadow-lg"
         style={{
           top: pos.top,
+          bottom: pos.bottom,
           left: pos.left,
           minWidth: pos.width,
           // Long option labels truncate inside this bound instead of pushing
           // the panel past the right edge on narrow viewports.
           maxWidth: "calc(100vw - 32px)",
-          maxHeight: PERIOD_PANEL_MAX_HEIGHT_PX,
+          maxHeight: pos.maxHeight,
         }}
         onKeyDown={onKeyDown}
       >
@@ -149,6 +157,7 @@ export function PeriodListboxPanel({
             isActive={idx === activeIdx}
             onHover={() => onHover(idx)}
             onSelect={() => onSelect(opt.id)}
+            onKeyDown={onKeyDown}
           />
         ))}
       </div>

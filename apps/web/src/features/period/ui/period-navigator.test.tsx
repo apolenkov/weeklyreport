@@ -10,7 +10,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 const replace = vi.fn();
 const push = vi.fn();
@@ -84,6 +84,73 @@ describe("PeriodNavigator (lead)", () => {
     push.mockReset();
     navigationState.searchParams = new URLSearchParams();
     navigationState.pathname = "/lead/report";
+  });
+
+  it.each([1, 2])("does not navigate on mouse button %s", (button) => {
+    render(<PeriodNavigator periods={PERIODS} />);
+    fireEvent.click(getTrigger());
+    fireEvent.mouseDown(
+      screen.getByRole("option", { name: /Apr 14–20, 2026/ }),
+      { button },
+    );
+    expect(push).not.toHaveBeenCalled();
+    expect(screen.getByRole("listbox")).toBeVisible();
+  });
+
+  it("selects once through a complete primary click and through click-only activation", async () => {
+    const { unmount } = render(<PeriodNavigator periods={PERIODS} />);
+    await userEvent.click(getTrigger());
+    await userEvent.click(
+      screen.getByRole("option", { name: /Apr 14–20, 2026/ }),
+    );
+    expect(push).toHaveBeenCalledExactlyOnceWith("/lead/report/2026-W16");
+    unmount();
+    push.mockClear();
+    render(<PeriodNavigator periods={PERIODS} />);
+    fireEvent.click(getTrigger());
+    fireEvent.click(screen.getByRole("option", { name: /Apr 14–20, 2026/ }));
+    expect(push).toHaveBeenCalledExactlyOnceWith("/lead/report/2026-W16");
+  });
+
+  it("bounds the open panel vertically for a bottom trigger and recomputes on resize", () => {
+    onTestFinished(() => {
+      vi.unstubAllGlobals();
+    });
+    vi.stubGlobal("innerHeight", 200);
+    render(<PeriodNavigator periods={PERIODS} />);
+    const trigger = getTrigger();
+    const rect = {
+      x: 100,
+      y: 160,
+      top: 160,
+      bottom: 190,
+      left: 100,
+      right: 160,
+      width: 60,
+      height: 30,
+      toJSON: () => ({}),
+    };
+    vi.spyOn(trigger, "getBoundingClientRect").mockImplementation(() => rect);
+    fireEvent.click(trigger);
+    const panel = screen.getByRole("listbox");
+    const height = Number.parseFloat(panel.style.maxHeight);
+    const top = Number.parseFloat(panel.style.top);
+    const bottom = Number.parseFloat(panel.style.bottom);
+    expect(
+      (Number.isNaN(top) ? 200 - bottom - height : top) + height,
+    ).toBeLessThanOrEqual(184);
+    expect(height).toBeGreaterThan(0);
+    vi.stubGlobal("innerHeight", 140);
+    rect.y = 100;
+    rect.top = 100;
+    rect.bottom = 130;
+    fireEvent(window, new Event("resize"));
+    const resizedHeight = Number.parseFloat(panel.style.maxHeight);
+    const resizedBottom = Number.parseFloat(panel.style.bottom);
+    expect(140 - resizedBottom - resizedHeight).toBeGreaterThanOrEqual(16);
+    expect(resizedBottom).toBeGreaterThanOrEqual(16);
+    expect(resizedHeight).toBeGreaterThan(0);
+    vi.unstubAllGlobals();
   });
 
   describe("a11y — decorative SVG aria-hidden", () => {
@@ -354,9 +421,7 @@ describe("PeriodNavigator (lead)", () => {
     it("selecting an option via click pushes the addressed URL and closes", () => {
       render(<PeriodNavigator periods={PERIODS} />);
       fireEvent.click(getTrigger());
-      fireEvent.mouseDown(
-        screen.getByRole("option", { name: /Apr 14–20, 2026/ }),
-      );
+      fireEvent.click(screen.getByRole("option", { name: /Apr 14–20, 2026/ }));
       expect(push).toHaveBeenCalledWith("/lead/report/2026-W16");
       expect(replace).not.toHaveBeenCalled();
       expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
@@ -381,9 +446,7 @@ describe("PeriodNavigator (lead)", () => {
       render(<PeriodNavigator periods={PERIODS.slice(0, 1)} />);
       const trigger = getTrigger();
       fireEvent.click(trigger);
-      fireEvent.mouseDown(
-        screen.getByRole("option", { name: /Apr 21–27, 2026/ }),
-      );
+      fireEvent.click(screen.getByRole("option", { name: /Apr 21–27, 2026/ }));
       expect(push).not.toHaveBeenCalled();
       // The listbox still closes.
       expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
@@ -613,7 +676,7 @@ describe("PeriodNavigator (lead)", () => {
     expect(addressedOption).toHaveAttribute("aria-selected", "true");
     expect(newestOption).toHaveAttribute("aria-selected", "false");
 
-    fireEvent.mouseDown(newestOption);
+    fireEvent.click(newestOption);
     expect(push).toHaveBeenCalledWith("/reports/2026-W17");
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useEffectEvent } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 import { toast } from "sonner";
 
 import type { ClientErrorContext } from "../../lib/errors/client-error-reporting";
@@ -11,6 +11,7 @@ import {
 
 interface QueryErrorState {
   isError: boolean;
+  isSuccess: boolean;
   error: unknown;
 }
 
@@ -31,16 +32,22 @@ export function useQueryErrorHandler(
   opts: UseQueryErrorHandlerOpts,
 ): void {
   const readOpts = useEffectEvent(() => opts);
+  const toasted = useRef(false);
 
   useEffect(() => {
+    if (query.isSuccess) {
+      toasted.current = false;
+      return;
+    }
     if (!query.isError) return;
 
     const { event, component, procedure, context, toastPrefix } = readOpts();
 
     logClientError(event, query.error, { component, procedure, ...context });
 
-    if (toastPrefix !== undefined) {
+    if (toastPrefix !== undefined && !toasted.current) {
+      toasted.current = true;
       toast.error(formatClientErrorMessage(toastPrefix, query.error));
     }
-  }, [query.isError, query.error]); // opts via effect event — intentionally excluded from deps
+  }, [query.isError, query.isSuccess, query.error]); // opts via effect event — intentionally excluded from deps
 }

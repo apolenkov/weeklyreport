@@ -1,5 +1,6 @@
 import "@testing-library/jest-dom/vitest";
 
+import { weeklyReportReadModelSchema } from "@customreport/shared";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -299,6 +300,122 @@ describe("WeeklyReportPage author highlighting", () => {
     expect(navigationScrollIds).toContain(aliceLeadSection.id);
     expect(navigationScrollIds).not.toContain(aliceRootId);
     expect(navigationScrollIds).not.toContain(bobRootId);
+  });
+
+  it("targets the focused lead's own content rather than a co-owner's aggregate product", async () => {
+    const data = weeklyReportReadModelSchema.parse(
+      makeWeeklyReportData("open", {
+        submissionCount: 2,
+        totalLeads: 2,
+        portfolioOverview: [
+          {
+            productId: PRODUCT_ID_A,
+            productName: "Product Alpha",
+            worstStatus: "red",
+            stageCount: 1,
+            leadNames: ["Alice", "Bob"],
+            leadIds: [AUTHOR_ID_A, AUTHOR_ID_B],
+          },
+          {
+            productId: PRODUCT_ID_B,
+            productName: "Product Beta",
+            worstStatus: "green",
+            stageCount: 1,
+            leadNames: ["Bob"],
+            leadIds: [AUTHOR_ID_B],
+          },
+        ],
+        leadSections: [
+          {
+            reportSectionId: "22222222-2222-4222-8222-aaaaaaaaaaa1",
+            authorId: AUTHOR_ID_A,
+            authorName: "Alice",
+            status: "submitted",
+            submittedAt: new Date("2026-04-14T09:00:00Z"),
+            projects: [
+              {
+                projectId: PRODUCT_ID_A,
+                projectName: "Product Alpha",
+                trafficLight: "red",
+              },
+            ],
+            items: [
+              {
+                id: "33333333-3333-4333-8333-aaaaaaaaaa01",
+                projectId: PRODUCT_ID_A,
+                type: "current",
+                text: "Alice's Alpha work",
+                tag: "Dev",
+                workflowStatus: "in_progress",
+                carriedOver: false,
+              },
+            ],
+          },
+          {
+            reportSectionId: "22222222-2222-4222-8222-bbbbbbbbbbb1",
+            authorId: AUTHOR_ID_B,
+            authorName: "Bob",
+            status: "submitted",
+            submittedAt: new Date("2026-04-14T10:00:00Z"),
+            projects: [
+              {
+                projectId: PRODUCT_ID_A,
+                projectName: "Product Alpha",
+                trafficLight: "green",
+              },
+              {
+                projectId: PRODUCT_ID_B,
+                projectName: "Product Beta",
+                trafficLight: "green",
+              },
+            ],
+            items: [
+              {
+                id: "33333333-3333-4333-8333-bbbbbbbbbbb1",
+                projectId: PRODUCT_ID_B,
+                type: "current",
+                text: "Bob's Beta work",
+                tag: "Dev",
+                workflowStatus: "done",
+                carriedOver: false,
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    const scrollIntoView = vi.fn();
+    window.HTMLElement.prototype.scrollIntoView = scrollIntoView;
+    renderWeeklyReportPage(data, { authorId: AUTHOR_ID_B, scope: "lead" });
+
+    const bobProductId = `report-lead-${AUTHOR_ID_B}-product-${PRODUCT_ID_B}`;
+    await waitFor(() =>
+      expect(document.getElementById(bobProductId)).not.toBeNull(),
+    );
+    const bobProduct = document.getElementById(bobProductId);
+    if (!bobProduct) throw new Error("Bob's Beta panel is missing");
+    expect(
+      document.getElementById(
+        `report-lead-${AUTHOR_ID_B}-product-${PRODUCT_ID_A}`,
+      ),
+    ).toBeNull();
+    expect(bobProduct.querySelector("button[aria-expanded]")).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    await waitFor(() => {
+      const receivers = scrollIntoView.mock.instances.map(
+        (instance) => (instance as HTMLElement).id,
+      );
+      expect(receivers).toContain(bobProductId);
+      expect(receivers).not.toContain(
+        `report-lead-${AUTHOR_ID_A}-product-${PRODUCT_ID_A}`,
+      );
+      expect(receivers).not.toContain(
+        `report-lead-${AUTHOR_ID_B}-product-${PRODUCT_ID_A}`,
+      );
+    });
+    expect(document.getElementById(`report-lead-${AUTHOR_ID_B}`)).toHaveFocus();
   });
 
   it("drops a stale overview target when the author focus changes while mounted", async () => {

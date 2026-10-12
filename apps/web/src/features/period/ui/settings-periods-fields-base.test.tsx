@@ -86,7 +86,7 @@ describe("NumberField", () => {
     );
     expect(screen.getByLabelText("Period length (days)")).toHaveAttribute(
       "aria-describedby",
-      "period-length-days-error",
+      "period-length-days-hint period-length-days-error",
     );
     expect(screen.getByRole("alert")).toHaveAttribute(
       "id",
@@ -145,4 +145,26 @@ describe("PeriodBaseFields", () => {
     expect(input).toHaveValue(14);
     expect(screen.queryByRole("alert")).toBeNull();
   });
+});
+
+it("keeps numeric help in the accessible description while adding a validation alert", () => {
+  const onChange = vi.fn();
+  render(
+    <NumberField
+      id="period-length-days"
+      label="Period length (days)"
+      bounds={{ min: 1, max: 31 }}
+      value={7}
+      onChange={onChange}
+      hint="How many days each period spans"
+    />,
+  );
+  const input = screen.getByLabelText("Period length (days)");
+  expect(input).toHaveAccessibleDescription("How many days each period spans");
+  fireEvent.change(input, { target: { value: "1.5" } });
+  expect(input).toHaveAccessibleDescription(
+    "How many days each period spans Whole number between 1 and 31 required",
+  );
+  expect(screen.getByText("How many days each period spans")).toBeVisible();
+  expect(onChange).not.toHaveBeenCalled();
 });

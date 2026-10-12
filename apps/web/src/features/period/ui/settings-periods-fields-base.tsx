@@ -114,7 +114,7 @@ function SubmissionWindowFields({
           setDraft((current) => ({ ...current, gracePeriodHours }))
         }
         {...(onValidityChange === undefined ? {} : { onValidityChange })}
-        hint="Submissions within this many hours past the deadline are always accepted, regardless of «allow late submissions». Must be 0..168 (one week)."
+        hint={`Submissions within this many hours past the deadline are always accepted, regardless of «allow late submissions». Must be ${fieldLimits.GRACE_PERIOD_HOURS.min}..${fieldLimits.GRACE_PERIOD_HOURS.max} hours.`}
       />
 
       <ToggleField

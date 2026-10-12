@@ -15,6 +15,7 @@ import { useLeadFormRequiredReads } from "./use-lead-form-required-reads";
 
 // The error-relevant slice of a query result, so no whole-hook type crosses a seam.
 interface QueryErrorSource {
+  readonly isSuccess: boolean;
   readonly isError: boolean;
   readonly error: unknown;
 }
@@ -158,6 +159,7 @@ export function useLeadFormReports(input: {
     errorSources: {
       activeQ,
       byPeriodQ: {
+        isSuccess: byPeriodQ.isSuccess,
         isError: byPeriodQ.isError && !queries.sectionUnavailable,
         error: byPeriodQ.error,
       },

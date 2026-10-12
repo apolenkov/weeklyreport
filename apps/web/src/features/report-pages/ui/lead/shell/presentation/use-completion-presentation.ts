@@ -1,18 +1,11 @@
 "use client";
 
-import type {
-  LeadSubmitReadiness,
-  Product,
-} from "../../../../../report-sections";
+import type { LeadSubmitReadiness } from "../../../../../report-sections";
 import type { AutosaveSnapshot } from "../../../../../report-sections/client";
-import type { QuickAddKind } from "../../chrome/quick-add-button";
 import { useHeaderActionsVisibility } from "../../chrome/use-header-actions-visibility";
 
 interface CompletionPresentationInput {
   readonly autosave: AutosaveSnapshot;
-  readonly products: readonly Product[];
-  readonly activityCount: number;
-  readonly onQuickAdd: (kind: QuickAddKind) => void;
   readonly handleSubmit: () => void;
   readonly readiness: LeadSubmitReadiness;
   readonly isSlidesMode: boolean;
