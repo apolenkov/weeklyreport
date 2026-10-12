@@ -170,6 +170,52 @@ describe("saveSnapshot — reporting-group integrity", () => {
   });
 });
 
+describe("saveSnapshot — period order", () => {
+  it("rejects an inverted period before opening a restore transaction", async () => {
+    const transaction = vi.fn();
+    const prisma = { $transaction: transaction } as unknown as PrismaService;
+    const invertedSnapshot = {
+      users: [],
+      groups: [],
+      projects: [],
+      periods: [
+        {
+          id: REPORT_ID,
+          periodStart: new Date("2026-04-19T00:00:00.000Z"),
+          periodEnd: new Date("2026-04-13T23:59:59.000Z"),
+          deadline: null,
+          status: "draft",
+          periodState: "open",
+          periodStatus: "open",
+          archived: false,
+          weekLabel: null,
+          autoPublished: false,
+          autoArchived: false,
+          publishedAt: null,
+          publishedById: null,
+          reopenedAt: null,
+          publishedSnapshot: null,
+        },
+      ],
+      reminderRules: [],
+      reminderExecutions: [],
+      policies: [],
+    };
+
+    await expect(
+      saveSnapshot(prisma, undefined, invertedSnapshot as never),
+    ).rejects.toMatchObject({
+      issues: [
+        expect.objectContaining({
+          path: ["periods", 0, "periodEnd"],
+          message: "Period end must not be before period start.",
+        }),
+      ],
+    });
+    expect(transaction).not.toHaveBeenCalled();
+  });
+});
+
 describe("saveSnapshot — deterministic pre-transaction validation", () => {
   it("rejects duplicate business identity before opening a restore transaction", async () => {
     const transaction = vi.fn();

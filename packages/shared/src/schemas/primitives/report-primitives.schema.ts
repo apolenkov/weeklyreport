@@ -34,6 +34,12 @@ export const reportDate = () =>
     message: "Date must be in year 2000 or later",
   });
 
+/** True when a period ends before it starts; equal dates are a valid one-day period. */
+export const isPeriodInverted = (period: {
+  readonly periodStart: Date;
+  readonly periodEnd: Date;
+}): boolean => period.periodEnd.getTime() < period.periodStart.getTime();
+
 /** Defines the traffic-light values shared by report status surfaces. */
 export const trafficLightStatusSchema = z.enum(["green", "yellow", "red"]);
 /** Traffic-light value shared by report status surfaces. */

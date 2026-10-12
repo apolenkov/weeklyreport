@@ -1,5 +1,8 @@
 import { Prisma } from "@prisma/client";
-import { type AdminSnapshot, adminSnapshotSchema } from "@weeklyreport/shared";
+import {
+  type AdminSnapshot,
+  adminSnapshotRestoreSchema,
+} from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { type AppLogger, createNullLogger } from "../../lib/logger.js";
@@ -116,7 +119,7 @@ export async function saveSnapshot(
   // Repository callers can bypass the public service, so validate here before
   // opening a transaction. Non-viewer users must carry their explicit group;
   // restore never selects or creates a substitute group.
-  const parsedSnapshot = adminSnapshotSchema.parse(snapshot);
+  const parsedSnapshot = adminSnapshotRestoreSchema.parse(snapshot);
   const { newlyCreatedPeriods } = await prisma.$transaction(async (tx) => {
     await lockStatusGraph(tx);
     const currentRules = await lockReminderRestoreGraph(

@@ -6,6 +6,7 @@ import {
   MAX_WEEK_LABEL_LENGTH,
   reportPeriodSchema,
 } from "../period/period.schema.js";
+import { isPeriodInverted } from "../primitives/report-primitives.schema.js";
 import {
   pdfExportStatusSchema,
   publishedReportSnapshotSchema,
@@ -223,6 +224,36 @@ export const adminSnapshotSchema = z
   })
   .superRefine(validateAdminSnapshotIntegrity)
   .readonly();
+
+const PERIOD_ORDER_MESSAGE = "Period end must not be before period start.";
+
+// Restore is the only writer that reaches published rows without
+// assertEndNotBeforeStart or the live tsrange exclusion. The check lives on the
+// restore input, not on the shared read schemas, so stored data stays readable.
+function addSnapshotPeriodOrderIssues(
+  snapshot: z.infer<typeof adminSnapshotSchema>,
+  context: z.RefinementCtx,
+): void {
+  snapshot.periods.forEach((period, index) => {
+    if (isPeriodInverted(period))
+      context.addIssue({
+        code: "custom",
+        path: ["periods", index, "periodEnd"],
+        message: PERIOD_ORDER_MESSAGE,
+      });
+    if (period.publishedSnapshot && isPeriodInverted(period.publishedSnapshot))
+      context.addIssue({
+        code: "custom",
+        path: ["periods", index, "publishedSnapshot", "periodEnd"],
+        message: PERIOD_ORDER_MESSAGE,
+      });
+  });
+}
+
+/** Validates a snapshot about to be restored: the admin snapshot plus ordered period envelopes. */
+export const adminSnapshotRestoreSchema = adminSnapshotSchema.superRefine(
+  addSnapshotPeriodOrderIssues,
+);
 
 /** Metadata for one failed queue job; processor payloads stay server-private. */
 export const failedJobSchema = z
