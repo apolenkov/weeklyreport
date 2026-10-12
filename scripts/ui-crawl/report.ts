@@ -201,7 +201,7 @@ function matrixTable(results: readonly RoleResult[]): readonly string[] {
       rows.map((row) => [
         row.role,
         markdownText(row.page),
-        row.element,
+        markdownText(row.element),
         ...states.map((state) => row.cells.get(state) ?? "—"),
       ]),
     ),
@@ -226,7 +226,7 @@ export function renderMarkdown(
   return [
     "# UI crawl report",
     "",
-    `Target ${meta.url}, started ${meta.started}. Wall time for all roles (parallel ${meta.parallel}): **${seconds(meta.wallMs)}**.`,
+    `Target ${markdownText(meta.url)}, started ${meta.started}. Wall time for all roles (parallel ${meta.parallel}): **${seconds(meta.wallMs)}**.`,
     `Mode: ${meta.mode ?? "quick"}; prepared state: ${meta.state ?? "observed"}. Pressed means attempted with an observed result, not a product acceptance PASS.`,
     `Sequential sum of role times: ${seconds(results.reduce((sum, result) => sum + result.ms, 0))}.`,
     "",
