@@ -15,7 +15,7 @@ import {
 async function loadResetHard(): Promise<typeof import("./reset-hard.js")> {
   vi.stubEnv(
     "DATABASE_URL",
-    "postgresql://test:test@127.0.0.1:5432/customreport_e2e",
+    "postgresql://test:test@127.0.0.1:5432/weeklyreport_e2e",
   );
   vi.stubEnv("NODE_ENV", "test");
   vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
@@ -61,7 +61,7 @@ describe("flushRedis", () => {
     const flushRedis = await loadFlushRedis();
     vi.stubEnv(
       "DATABASE_URL",
-      "postgresql://test:test@127.0.0.1:5432/customreport_dev",
+      "postgresql://test:test@127.0.0.1:5432/weeklyreport_dev",
     );
     try {
       await expect(flushRedis()).rejects.toThrow(/not one of/u);
@@ -79,7 +79,7 @@ describe("flushRedis", () => {
     process.argv[2] = "full";
     vi.stubEnv(
       "DATABASE_URL",
-      "postgresql://test:test@127.0.0.1:5432/customreport_dev",
+      "postgresql://test:test@127.0.0.1:5432/weeklyreport_dev",
     );
     try {
       await expect(runResetHard()).rejects.toThrow(/not one of/u);
@@ -178,7 +178,7 @@ describe("flushRedis Redis DB per target database", () => {
     const server = await startMockRedisServer(["+OK\r\n", "+OK\r\n"]);
     configureRedis(server.port);
     const flushRedis = await loadFlushRedis();
-    useDatabase("customreport_e2e_lane_b_test");
+    useDatabase("weeklyreport_e2e_lane_b_test");
     vi.stubEnv("REDIS_DB", "2");
 
     await expect(flushRedis()).resolves.toBeUndefined();
@@ -191,7 +191,7 @@ describe("flushRedis Redis DB per target database", () => {
       const server = await startMockRedisServer(["+OK\r\n", "+OK\r\n"]);
       configureRedis(server.port);
       const flushRedis = await loadFlushRedis();
-      useDatabase("customreport_e2e_lane_b_test");
+      useDatabase("weeklyreport_e2e_lane_b_test");
       vi.stubEnv("REDIS_DB", redisDb);
 
       await expect(flushRedis()).rejects.toThrow(/REDIS_DB must be exactly 2/);
@@ -199,7 +199,7 @@ describe("flushRedis Redis DB per target database", () => {
     },
   );
 
-  it("refuses customreport_e2e on a lane's Redis DB", async () => {
+  it("refuses weeklyreport_e2e on a lane's Redis DB", async () => {
     const server = await startMockRedisServer(["+OK\r\n", "+OK\r\n"]);
     configureRedis(server.port);
     vi.stubEnv("REDIS_DB", "2");
@@ -211,7 +211,7 @@ describe("flushRedis Redis DB per target database", () => {
   it("refuses a lane without an assigned Redis DB", async () => {
     configureRedis(1);
     const flushRedis = await loadFlushRedis();
-    useDatabase("customreport_e2e_lane_m_test");
+    useDatabase("weeklyreport_e2e_lane_m_test");
 
     await expect(flushRedis()).rejects.toThrow(/no Redis DB assigned/);
   });

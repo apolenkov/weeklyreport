@@ -27,14 +27,14 @@ const COMPLETE = {
   OTEL_TRACES_SAMPLER_ARG: "0.1",
   PDF_BASE_URL: "https://app.example.com",
   GOTENBERG_URL: "http://gotenberg:3000",
-  PDF_OUTPUT_DIR: "/var/lib/customreport/pdfs",
+  PDF_OUTPUT_DIR: "/var/lib/weeklyreport/pdfs",
   PDF_EXPORT_JWT_SECRET: "a-production-pdf-secret-at-least-32-chars",
   SMTP_HOST: "smtp.example.com",
   SMTP_PORT: "587",
   SMTP_FROM: "noreply@example.com",
   KEYCLOAK_SAML_CALLBACK_URL: "https://app.example.com/auth/saml/callback",
   KEYCLOAK_SAML_ENTRY_POINT: "https://idp.example.com/saml/sso",
-  KEYCLOAK_SAML_ISSUER: "customreport",
+  KEYCLOAK_SAML_ISSUER: "weeklyreport",
   KEYCLOAK_SAML_CERT: "MIIC-fake-cert-material",
   HEAP_HEALTH_THRESHOLD_BYTES: "1610612736",
   DB_POOL_MAX: "10",
@@ -281,7 +281,7 @@ describe("envSchema — no defaults, every product var required", () => {
     },
   );
 
-  it.each(["./storage/pdfs", "/var/lib/customreport/pdfs", " ./pdfs "])(
+  it.each(["./storage/pdfs", "/var/lib/weeklyreport/pdfs", " ./pdfs "])(
     "preserves nonblank PDF_OUTPUT_DIR %j",
     (PDF_OUTPUT_DIR) => {
       expect(

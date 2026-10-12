@@ -149,7 +149,7 @@ function records(api: Api): void {
   });
   admin.mutate("create a user", "admin.saveUser", {
     id: user,
-    email: `scenario.${user.slice(0, ID_PREFIX)}@customreport.local`,
+    email: `scenario.${user.slice(0, ID_PREFIX)}@weeklyreport.local`,
     name: "Scenario User",
     lastName: "User",
     firstName: "Scenario",
@@ -188,7 +188,7 @@ function records(api: Api): void {
   const viewer = randomUUID();
   admin.mutate("create a viewer", "admin.saveUser", {
     id: viewer,
-    email: `scenario.${viewer.slice(0, ID_PREFIX)}@customreport.local`,
+    email: `scenario.${viewer.slice(0, ID_PREFIX)}@weeklyreport.local`,
     name: "Scenario Viewer",
     lastName: "Viewer",
     firstName: "Scenario",

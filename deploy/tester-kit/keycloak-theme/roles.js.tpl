@@ -4,10 +4,10 @@
 // real Keycloak form and submits it, so the sign-in is the normal SAML flow.
 (function () {
   var ROLES = [
-    { label: "Lead", username: "lead1@customreport.local", password: "${PW_LEAD1}" },
-    { label: "Head", username: "head@customreport.local", password: "${PW_HEAD}" },
-    { label: "Viewer", username: "viewer@customreport.local", password: "${PW_VIEWER}" },
-    { label: "Admin", username: "admin@customreport.local", password: "${PW_ADMIN}" },
+    { label: "Lead", username: "lead1@weeklyreport.local", password: "${PW_LEAD1}" },
+    { label: "Head", username: "head@weeklyreport.local", password: "${PW_HEAD}" },
+    { label: "Viewer", username: "viewer@weeklyreport.local", password: "${PW_VIEWER}" },
+    { label: "Admin", username: "admin@weeklyreport.local", password: "${PW_ADMIN}" },
   ];
 
   function setValue(input, value) {

@@ -8,7 +8,7 @@ import {
 } from "./bootstrap-local.js";
 
 const DATABASE_URL =
-  "postgresql://customreport:localdev@127.0.0.1:5432/customreport_e2e";
+  "postgresql://weeklyreport:localdev@127.0.0.1:5432/weeklyreport_e2e";
 const environment = {
   DATABASE_URL,
   E2E_DATABASE_URL: DATABASE_URL,
@@ -30,24 +30,24 @@ describe("local disposable database bootstrap", () => {
     {
       ...environment,
       DATABASE_URL:
-        "postgresql://customreport:localdev@127.0.0.1:5432/customreport_dev",
+        "postgresql://weeklyreport:localdev@127.0.0.1:5432/weeklyreport_dev",
       E2E_DATABASE_URL:
-        "postgresql://customreport:localdev@127.0.0.1:5432/customreport_dev",
+        "postgresql://weeklyreport:localdev@127.0.0.1:5432/weeklyreport_dev",
     },
     {
       ...environment,
       E2E_DATABASE_URL:
-        "postgresql://customreport:localdev@127.0.0.1:5432/customreport_e2e_lane_a_test",
+        "postgresql://weeklyreport:localdev@127.0.0.1:5432/weeklyreport_e2e_lane_a_test",
     },
     {
       ...environment,
       E2E_DATABASE_URL:
-        "postgresql://customreport:localdev@localhost:5432/customreport_e2e",
+        "postgresql://weeklyreport:localdev@localhost:5432/weeklyreport_e2e",
     },
     {
       ...environment,
       E2E_DATABASE_URL:
-        "postgresql://customreport:localdev@127.0.0.2:5432/customreport_e2e",
+        "postgresql://weeklyreport:localdev@127.0.0.2:5432/weeklyreport_e2e",
     },
   ])("rejects unsafe input before spawning a child", (unsafeEnvironment) => {
     const spawn = vi.fn<LocalBootstrapSpawn>(passingSpawn);

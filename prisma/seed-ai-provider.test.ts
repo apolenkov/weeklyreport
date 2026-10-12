@@ -13,7 +13,7 @@ const API_KEY = "sk-test-secret-key";
 const seedEnv = (
   overrides: Readonly<Record<string, string | undefined>> = {},
 ): Readonly<Record<string, string | undefined>> => ({
-  DATABASE_URL: "postgresql://user:pass@localhost:5432/customreport_e2e",
+  DATABASE_URL: "postgresql://user:pass@localhost:5432/weeklyreport_e2e",
   PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
   AI_PROVIDER_CONFIG_ENCRYPTION_KEY: ENCRYPTION_KEY,
   AI_PROVIDER_CONFIG_KEY_VERSION: "1",

@@ -88,7 +88,7 @@ const envObjectSchema = z.object({
   AUTH_DEV_MODE_ALLOW_TEST: z.enum(["true", "false"]).optional(),
   // Dev/test reseed repo-root override (`dev.wipeAndReseed`); first candidate
   // in a fallback list, so absent → the process walks cwd/workspace guesses.
-  CUSTOMREPORT_REPO_ROOT: z.string().optional(),
+  WEEKLYREPORT_REPO_ROOT: z.string().optional(),
   LOG_LEVEL: logLevelSchema,
   LOG_DIR: z.string().optional(),
 

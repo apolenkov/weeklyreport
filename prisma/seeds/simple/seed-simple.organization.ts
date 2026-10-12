@@ -36,7 +36,7 @@ export async function seedReportingGroups(prisma: PrismaClient): Promise<void> {
     data: {
       id: DEFAULT_REPORTING_GROUP_ID,
       name: DEFAULT_REPORTING_GROUP.name,
-      description: "Default reporting group for CustomReport demo users",
+      description: "Default reporting group for WeeklyReport demo users",
     },
   });
   // Keep the Finance leads outside the Core Development head's report scope.

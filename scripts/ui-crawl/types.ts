@@ -87,14 +87,14 @@ export type Role = Readonly<{
 }>;
 
 export const ROLES: readonly Role[] = [
-  { name: "lead", email: "lead1@customreport.local", passwordKey: "PW_LEAD1" },
-  { name: "head", email: "head@customreport.local", passwordKey: "PW_HEAD" },
+  { name: "lead", email: "lead1@weeklyreport.local", passwordKey: "PW_LEAD1" },
+  { name: "head", email: "head@weeklyreport.local", passwordKey: "PW_HEAD" },
   {
     name: "viewer",
-    email: "viewer@customreport.local",
+    email: "viewer@weeklyreport.local",
     passwordKey: "PW_VIEWER",
   },
-  { name: "admin", email: "admin@customreport.local", passwordKey: "PW_ADMIN" },
+  { name: "admin", email: "admin@weeklyreport.local", passwordKey: "PW_ADMIN" },
 ];
 
 export type Config = Readonly<{

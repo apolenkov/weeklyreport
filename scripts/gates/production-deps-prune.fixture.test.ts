@@ -133,7 +133,7 @@ void test("prune keeps a forbidden transitive when an allowed root reaches it", 
 });
 
 void test("prune refuses a non-deploy root before mutating it", async () => {
-  const root = await makeDeployRoot("customreport");
+  const root = await makeDeployRoot("weeklyreport");
   const sentinel = join(root, "sentinel.txt");
   await writeFile(sentinel, "untouched\n");
   const result = runPrune(root);

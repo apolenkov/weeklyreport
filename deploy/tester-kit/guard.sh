@@ -16,11 +16,11 @@ tester_guard() {
   tester_target_guard || return
   tester_kubectl -n "$NS" exec deploy/api -- node -e '
     const u = new URL(process.env.DATABASE_URL);
-    if (u.pathname !== "/customreport_e2e" || !["pgbouncer", "postgres"].includes(u.hostname)) throw Error("Unknown tester database");
+    if (u.pathname !== "/weeklyreport_e2e" || !["pgbouncer", "postgres"].includes(u.hostname)) throw Error("Unknown tester database");
     if (process.env.REDIS_DB !== "15") throw Error("Tester stand must use Redis DB 15; redeploy current values-tester.yaml");
     if (process.env.SMTP_HOST !== "mailpit") throw Error("Tester SMTP must use Mailpit");
     if (process.env.REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED !== "false") throw Error("Outbound assistant must be disabled");
-    console.log("Verified tester runtime: customreport_e2e, Redis DB 15, Mailpit, outbound assistant disabled");
+    console.log("Verified tester runtime: weeklyreport_e2e, Redis DB 15, Mailpit, outbound assistant disabled");
   '
 }
 

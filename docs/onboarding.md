@@ -151,7 +151,7 @@ Adapter принимает этот ключ только от loopback-соед
 для точной loopback-базы, которую принимает destructive guard.
 
 Штатная локальная разработка из `.env.example` намеренно использует
-`customreport_e2e`: это единственная seedable-база, которую guard считает
+`weeklyreport_e2e`: это единственная seedable-база, которую guard считает
 одноразовой. После запуска локальных Postgres и Redis выполни:
 
 ```bash
@@ -196,8 +196,8 @@ AI-провайдеров и промптов. Управляющая запис
   остаются раздельными.
 - Защита операций с disposable-базой — `prisma/guards/_destructive-guard.ts`:
   exact guard
-  принимает только loopback и точные базы `customreport_e2e` или
-  `customreport_e2e_lane_[a-o]_test`, без query/fragment, кодированных или
+  принимает только loopback и точные базы `weeklyreport_e2e` или
+  `weeklyreport_e2e_lane_[a-o]_test`, без query/fragment, кодированных или
   лишних path-сегментов. Для каждой операции нужен отдельный
   `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай'`; `ALLOW_PROD_DESTRUCTIVE`
   этот guard не обходит.
@@ -206,7 +206,7 @@ AI-провайдеров и промптов. Управляющая запис
   явного одноразового согласия вдобавок к точному target и production-флагу.
 - Redis требует явный `REDIS_DB`: обычная разработка использует логическую DB
   0, а одноразовые тестовые операции — DB, закреплённую за базой: 15 для
-  `customreport_e2e`, 1..12 для lane a..l (`customreport_e2e_lane_a_test` → 1,
+  `weeklyreport_e2e`, 1..12 для lane a..l (`weeklyreport_e2e_lane_a_test` → 1,
   `..._b_` → 2, …). Очистка сначала выполняет `SELECT <DB>` и только затем
   `FLUSHDB`; DB 0, 13, 14 и чужие DB не очищаются.
 
@@ -291,10 +291,10 @@ workspace, Prisma-тесты и проверки repository cleanliness и opera
 `.env.test`; `apps/web/vitest.config.ts` этот файл не загружает. По MVP-политике
 одной базы (решение владельца 2026-09-18, см. [`AGENTS.md`](../AGENTS.md#database-safety))
 обычная локальная разработка и последовательные тесты используют loopback-базу
-`customreport_e2e` —
+`weeklyreport_e2e` —
 образец [`.env.test.example`](../.env.test.example) несёт только E2E-цель.
-Для изолированных приёмочных запусков базы `customreport_e2e_lane_a_test` и
-`customreport_e2e_lane_b_test` уже существуют; пользоваться ими можно только
+Для изолированных приёмочных запусков базы `weeklyreport_e2e_lane_a_test` и
+`weeklyreport_e2e_lane_b_test` уже существуют; пользоваться ими можно только
 после проверки владельца процесса и точного адреса. Остальные lane-базы не
 подготовлены и не должны создаваться без нового распоряжения владельца.
 Каждой test/E2E-фазе предшествуют guarded reset и явный seed с механическим

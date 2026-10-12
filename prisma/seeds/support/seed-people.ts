@@ -44,7 +44,7 @@ export const SEED_REPORTING_GROUPS: readonly SeedReportingGroup[] = [
   {
     id: DEFAULT_REPORTING_GROUP_ID,
     name: DEFAULT_REPORTING_GROUP.name,
-    description: "Default reporting group for CustomReport demo users",
+    description: "Default reporting group for WeeklyReport demo users",
   },
 ] as const;
 
@@ -102,7 +102,7 @@ export const SEED_USERS: readonly SeedUser[] = [
   },
   {
     id: LEAD_MARIA_ID,
-    email: "maria@customreport.local",
+    email: "maria@weeklyreport.local",
     name: "Кузнецова Мария Андреевна",
     lastName: "Кузнецова",
     firstName: "Мария",
@@ -114,7 +114,7 @@ export const SEED_USERS: readonly SeedUser[] = [
   },
   {
     id: LEAD_IGOR_ID,
-    email: "igor@customreport.local",
+    email: "igor@weeklyreport.local",
     name: "Волков Игорь Олегович",
     lastName: "Волков",
     firstName: "Игорь",
@@ -126,7 +126,7 @@ export const SEED_USERS: readonly SeedUser[] = [
   },
   {
     id: LEAD_DMITRY_ID,
-    email: "dmitry@customreport.local",
+    email: "dmitry@weeklyreport.local",
     name: "Соколов Дмитрий Максимович",
     lastName: "Соколов",
     firstName: "Дмитрий",
@@ -138,7 +138,7 @@ export const SEED_USERS: readonly SeedUser[] = [
   },
   {
     id: LEAD_OLGA_ID,
-    email: "olga@customreport.local",
+    email: "olga@weeklyreport.local",
     name: "Никитина Ольга Сергеевна",
     lastName: "Никитина",
     firstName: "Ольга",
@@ -150,7 +150,7 @@ export const SEED_USERS: readonly SeedUser[] = [
   },
   {
     id: LEAD_SERGEY_ID,
-    email: "sergey@customreport.local",
+    email: "sergey@weeklyreport.local",
     name: "Тихонов Сергей Дмитриевич",
     lastName: "Тихонов",
     firstName: "Сергей",

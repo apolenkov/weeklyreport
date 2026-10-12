@@ -7,9 +7,9 @@ const urlFor = (database: string): string =>
 
 describe("assertRedisDbMatchesDatabase", () => {
   it.each([
-    ["customreport_e2e", 15],
-    ["customreport_e2e_lane_a_test", 1],
-    ["customreport_e2e_lane_b_test", "2"],
+    ["weeklyreport_e2e", 15],
+    ["weeklyreport_e2e_lane_a_test", 1],
+    ["weeklyreport_e2e_lane_b_test", "2"],
   ])("accepts the Redis DB assigned to %s", (database, redisDb) => {
     expect(() => {
       assertRedisDbMatchesDatabase("test", urlFor(database), redisDb);
@@ -17,9 +17,9 @@ describe("assertRedisDbMatchesDatabase", () => {
   });
 
   it.each([
-    ["customreport_e2e", 1],
-    ["customreport_e2e_lane_a_test", 15],
-    ["customreport_e2e_lane_a_test", 0],
+    ["weeklyreport_e2e", 1],
+    ["weeklyreport_e2e_lane_a_test", 15],
+    ["weeklyreport_e2e_lane_a_test", 0],
   ])("rejects a mismatched Redis DB for %s (%s)", (database, redisDb) => {
     expect(() => {
       assertRedisDbMatchesDatabase("test", urlFor(database), redisDb);

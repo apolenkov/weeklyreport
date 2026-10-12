@@ -75,7 +75,7 @@ const USER_ROWS = [
   },
   {
     id: LEAD_MARIA,
-    email: "maria@customreport.local",
+    email: "maria@weeklyreport.local",
     name: "Кузнецова Мария Андреевна",
     lastName: "Кузнецова",
     firstName: "Мария",
@@ -87,7 +87,7 @@ const USER_ROWS = [
   },
   {
     id: LEAD_IGOR,
-    email: "igor@customreport.local",
+    email: "igor@weeklyreport.local",
     name: "Волков Игорь Олегович",
     lastName: "Волков",
     firstName: "Игорь",
@@ -99,7 +99,7 @@ const USER_ROWS = [
   },
   {
     id: LEAD_DMITRY,
-    email: "dmitry@customreport.local",
+    email: "dmitry@weeklyreport.local",
     name: "Соколов Дмитрий Максимович",
     lastName: "Соколов",
     firstName: "Дмитрий",
@@ -113,7 +113,7 @@ const USER_ROWS = [
     // Olga and Sergey belong to Finance, outside the Core Development head's
     // report scope.
     id: LEAD_OLGA,
-    email: "olga@customreport.local",
+    email: "olga@weeklyreport.local",
     name: "Никитина Ольга Сергеевна",
     lastName: "Никитина",
     firstName: "Ольга",
@@ -125,7 +125,7 @@ const USER_ROWS = [
   },
   {
     id: LEAD_SERGEY,
-    email: "sergey@customreport.local",
+    email: "sergey@weeklyreport.local",
     name: "Тихонов Сергей Дмитриевич",
     lastName: "Тихонов",
     firstName: "Сергей",
@@ -138,7 +138,7 @@ const USER_ROWS = [
   // Non-technical PM leads in CoreDev group (MOBILE/CLOUD/DEVOPS only)
   {
     id: LEAD_MOBILE_PM,
-    email: "boris@customreport.local",
+    email: "boris@weeklyreport.local",
     name: "Семёнов Борис",
     lastName: "Семёнов",
     firstName: "Борис",
@@ -150,7 +150,7 @@ const USER_ROWS = [
   },
   {
     id: LEAD_CLOUD_PM,
-    email: "viktor@customreport.local",
+    email: "viktor@weeklyreport.local",
     name: "Лебедев Виктор",
     lastName: "Лебедев",
     firstName: "Виктор",
@@ -162,7 +162,7 @@ const USER_ROWS = [
   },
   {
     id: LEAD_DEVOPS_PM,
-    email: "galina@customreport.local",
+    email: "galina@weeklyreport.local",
     name: "Михайлова Галина",
     lastName: "Михайлова",
     firstName: "Галина",
@@ -175,7 +175,7 @@ const USER_ROWS = [
   {
     // Activity-only lead: reports a cross-cutting activity, owns no product.
     id: LEAD_ACTIVITY_ONLY,
-    email: "activity-lead@customreport.local",
+    email: "activity-lead@weeklyreport.local",
     name: "Фомин Роман Аркадьевич",
     lastName: "Фомин",
     firstName: "Роман",

@@ -72,7 +72,7 @@ const runBackup = (
       PGHOST: "postgres",
       PGUSER: "backup",
       PGPASSWORD: fixtureCredential,
-      PGDATABASE: "customreport",
+      PGDATABASE: "weeklyreport",
       BACKUP_DIR: join(directory, "backups"),
       BACKUP_INTERVAL_SECONDS: "3600",
       BACKUP_RETENTION_DAYS: "14",
@@ -202,7 +202,7 @@ test("one-shot mode writes one dump, needs no interval, and never sleeps", () =>
   assert.doesNotMatch(calls, /sleep/);
   const files = readdirSync(join(directory, "backups"));
   assert.equal(files.length, 1);
-  assert.match(files[0] ?? "", /^customreport-.*\.dump$/);
+  assert.match(files[0] ?? "", /^weeklyreport-.*\.dump$/);
 });
 
 test("one-shot mode exits non-zero on a failed dump and leaves no partial file", () => {

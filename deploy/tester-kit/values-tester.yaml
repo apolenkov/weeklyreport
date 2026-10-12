@@ -22,7 +22,7 @@ persistence:
   backupSize: 1Gi
 
 postgres:
-  db: customreport_e2e
+  db: weeklyreport_e2e
   # Statistics for full-run.sh: preloaded libraries, plans of slow statements
   # and a statement log. The collector writes pgdata/log/wr-run.log, a file the
   # analysis reads; the stand is synthetic, so statement values are not sensitive.
@@ -95,7 +95,7 @@ api:
     PRODUCT_FEEDBACK_ENABLED: "false"
     SMTP_HOST: mailpit
     SMTP_PORT: "1025"
-    SMTP_FROM: weeklyreport@customreport.local
+    SMTP_FROM: weeklyreport@weeklyreport.local
     KEYCLOAK_SAML_CALLBACK_URL: http://localhost:8080/auth/saml/callback
     KEYCLOAK_SAML_ENTRY_POINT: http://localhost:8081/realms/weeklyreport/protocol/saml
     KEYCLOAK_SAML_ISSUER: weeklyreport

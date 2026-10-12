@@ -87,9 +87,9 @@ test("local dependencies publish exactly the documented localhost ports", () => 
 
 test("local PostgreSQL owns one exact guarded database target", () => {
   const env = envOf("postgres");
-  assert.equal(env.POSTGRES_USER, "customreport");
+  assert.equal(env.POSTGRES_USER, "weeklyreport");
   assert.equal(env.POSTGRES_PASSWORD, "localdev");
-  assert.equal(env.POSTGRES_DB, "customreport_e2e");
+  assert.equal(env.POSTGRES_DB, "weeklyreport_e2e");
   assert.deepEqual(container("postgres").args, [
     "-c",
     "shared_preload_libraries=pg_stat_statements",
@@ -102,7 +102,7 @@ test("local PostgreSQL owns one exact guarded database target", () => {
   ]);
   assert.match(
     depsContent,
-    /command: \[pg_isready, -U, customreport, -d, postgres\]/u,
+    /command: \[pg_isready, -U, weeklyreport, -d, postgres\]/u,
   );
 });
 

@@ -39,8 +39,8 @@ deploy/tester-kit/start.sh --registry <префикс>   # образы из с�
 | Почта    | http://localhost:8026 (Mailpit, все письма стенда)          |
 | Keycloak | http://localhost:8081 (`admin`, пароль в `secrets.env`)     |
 
-Пользователи: `lead1@customreport.local` (лид), `head@customreport.local` (руководитель),
-`viewer@customreport.local` (наблюдатель), `admin@customreport.local` (администратор).
+Пользователи: `lead1@weeklyreport.local` (лид), `head@weeklyreport.local` (руководитель),
+`viewer@weeklyreport.local` (наблюдатель), `admin@weeklyreport.local` (администратор).
 Пароли печатает `start.sh` и сохраняет в файл `~/.local/state/wr-tester/secrets.env`.
 
 ## Вход кнопкой роли
@@ -120,7 +120,7 @@ deploy/tester-kit/walk.sh --full --states draft,published --roles lead,head --wi
   (`depth-limit`, `control-limit`) помечают страницу как `limited`, а не как полную. Неизвестный или неуспешный результат не считается успехом.
 - **Сброс.** После прохода, в том числе после сбоя, стенд возвращается к демо-данным (`reset.sh --yes`).
   Пока идёт проход, стенд занят: второй запуск мутаций ждёт, пока снимется блокировка `~/.local/state/wr-tester/mutation.lock`.
-  Полный проход проверяет, что стенд использует базу `customreport_e2e`, Redis DB 15 и Mailpit, а внешний ассистент выключен
+  Полный проход проверяет, что стенд использует базу `weeklyreport_e2e`, Redis DB 15 и Mailpit, а внешний ассистент выключен
   (если нет, пересоберите образы и обновите стенд: `build-images.sh` и `start.sh`).
 
 ## Полный прогон с анализом базы и обработчиков (`full-run.sh`)
@@ -176,7 +176,7 @@ deploy/tester-kit/full-run.sh --walk-args "--roles lead --max-pages 3"   # пр�
 ## Почему на стенде нет e2e
 
 e2e (`pnpm test:e2e`) с этим стендом несовместим. Он работает только с приложением, запущенным из исходников (`pnpm dev`) в режиме dev-входа
-на базе `customreport_e2e`. Адрес приложения задаёт `E2E_BASE_URL`, но e2e по-прежнему входит через `/auth/dev-login`, вызывает `dev.runtimeTarget`
+на базе `weeklyreport_e2e`. Адрес приложения задаёт `E2E_BASE_URL`, но e2e по-прежнему входит через `/auth/dev-login`, вызывает `dev.runtimeTarget`
 и сам сбрасывает базу. На стенде вход идёт через SAML, dev-режима нет, поэтому e2e здесь не запустится.
 
 Браузерные проверки на стенде — это `walk.sh` (автопроход) и `full-run.sh` (полный прогон с анализом базы). Шаг `e2e` в `full-run.sh` всегда

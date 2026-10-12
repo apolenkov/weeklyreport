@@ -6,8 +6,8 @@ const readBack = {
   version: 1,
   state: "returned",
   seedProfile: "full",
-  target: { database: "customreport_e2e", host: "127.0.0.1", port: "55432" },
-  targetUrl: "postgresql://***@127.0.0.1:55432/customreport_e2e",
+  target: { database: "weeklyreport_e2e", host: "127.0.0.1", port: "55432" },
+  targetUrl: "postgresql://***@127.0.0.1:55432/weeklyreport_e2e",
   reportId: "a0000000-0000-4000-8000-000000000001",
   sectionId: "a0000000-0000-4000-8000-000000004011",
   authorId: "a0000000-0000-4000-8000-000000000011",
@@ -48,11 +48,11 @@ describe("crawl fixture evidence boundary", () => {
   });
 
   it.each([
-    "postgresql://operator:secret@127.0.0.1:55432/customreport_e2e",
-    "postgresql://***@127.0.0.1:55432/customreport_production",
-    "postgresql://***@remote.example:55432/customreport_e2e",
-    "postgresql://***@127.0.0.1:55433/customreport_e2e",
-    "https://***@127.0.0.1:55432/customreport_e2e",
+    "postgresql://operator:secret@127.0.0.1:55432/weeklyreport_e2e",
+    "postgresql://***@127.0.0.1:55432/weeklyreport_production",
+    "postgresql://***@remote.example:55432/weeklyreport_e2e",
+    "postgresql://***@127.0.0.1:55433/weeklyreport_e2e",
+    "https://***@127.0.0.1:55432/weeklyreport_e2e",
   ])("rejects an unmasked or mismatched evidence target: %s", (targetUrl) => {
     expect(() => readStateManifest({ ...readBack, targetUrl })).toThrow();
   });

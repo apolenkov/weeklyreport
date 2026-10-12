@@ -6,10 +6,10 @@ import { parseE2eRuntimeDatabaseTarget } from "./_destructive-guard.js";
 const NUM_RUNS = 300;
 const SCRIPT = "guard-property";
 const ALLOWED_DATABASES: readonly string[] = [
-  "customreport_e2e",
+  "weeklyreport_e2e",
   ..."abcdefghijklmno"
     .split("")
-    .map((lane) => `customreport_e2e_lane_${lane}_test`),
+    .map((lane) => `weeklyreport_e2e_lane_${lane}_test`),
 ];
 const isAllowed = (name: string): boolean => ALLOWED_DATABASES.includes(name);
 const REFUSAL =
@@ -126,10 +126,10 @@ describe("destructive target parser properties", () => {
         urlParts,
         fc.oneof(
           fc.constantFrom(...ALLOWED_DATABASES),
-          fc.stringMatching(/^customreport_e2e[a-z_]{0,12}$/u),
+          fc.stringMatching(/^weeklyreport_e2e[a-z_]{0,12}$/u),
           fc
             .string({ unit: "grapheme-ascii", minLength: 1, maxLength: 2 })
-            .map((lane) => `customreport_e2e_lane_${lane}_test`),
+            .map((lane) => `weeklyreport_e2e_lane_${lane}_test`),
           fc
             .constantFrom(...ALLOWED_DATABASES)
             .chain((name) =>

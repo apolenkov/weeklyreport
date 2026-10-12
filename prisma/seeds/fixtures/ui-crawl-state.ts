@@ -291,7 +291,7 @@ async function main(): Promise<void> {
   const target = parseE2eRuntimeDatabaseTarget(SCRIPT_NAME, databaseUrl);
   assert.match(
     target.database,
-    /^customreport_e2e(?:_lane_[ab]_test)?$/u,
+    /^weeklyreport_e2e(?:_lane_[ab]_test)?$/u,
     "Unprovisioned lanes are not authorized",
   );
   assert(

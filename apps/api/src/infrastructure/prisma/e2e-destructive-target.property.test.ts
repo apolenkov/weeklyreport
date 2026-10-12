@@ -46,16 +46,16 @@ const structuredUrl = fc
     ),
     port: fc.integer({ min: 1, max: 65_535 }),
     database: fc.oneof(
-      fc.constant("customreport_e2e"),
+      fc.constant("weeklyreport_e2e"),
       fc
         .constantFrom(..."abcdefghijklmno")
-        .map((lane) => `customreport_e2e_lane_${lane}_test`),
+        .map((lane) => `weeklyreport_e2e_lane_${lane}_test`),
       fc.constantFrom(
-        "customreport",
+        "weeklyreport",
         "production",
-        "customreport_e2e_lane_p_test",
-        "customreport_e2e_lane_a",
-        "CUSTOMREPORT_E2E",
+        "weeklyreport_e2e_lane_p_test",
+        "weeklyreport_e2e_lane_a",
+        "WEEKLYREPORT_E2E",
       ),
     ),
     password,
@@ -71,13 +71,13 @@ describe("API destructive target parser properties", () => {
       fc.property(password, (secret) => {
         const encoded = encodeURIComponent(secret);
         const urls = [
-          `postgresql://guard:${encoded}@db.example.com/customreport_e2e`,
+          `postgresql://guard:${encoded}@db.example.com/weeklyreport_e2e`,
           `postgresql://guard:${encoded}@localhost/production`,
-          `https://guard:${encoded}@localhost/customreport_e2e`,
-          `postgresql://guard:${encoded}@localhost:65536/customreport_e2e`,
-          `postgresql://guard:${encoded}@localhost/customreport_e2e?host=remote`,
-          `postgresql://guard:${encoded}@[invalid]/customreport_e2e`,
-          `postgresql://guard:${secret}@localhost/customreport_e2e`,
+          `https://guard:${encoded}@localhost/weeklyreport_e2e`,
+          `postgresql://guard:${encoded}@localhost:65536/weeklyreport_e2e`,
+          `postgresql://guard:${encoded}@localhost/weeklyreport_e2e?host=remote`,
+          `postgresql://guard:${encoded}@[invalid]/weeklyreport_e2e`,
+          `postgresql://guard:${secret}@localhost/weeklyreport_e2e`,
         ];
         for (const url of urls) {
           const parse = () => parseE2eRuntimeDatabaseTarget(SCRIPT, url);
@@ -103,7 +103,7 @@ describe("API destructive target parser properties", () => {
         fc.oneof(fc.string({ unit: "binary" }), structuredUrl),
         (positiveHost, url) => {
           // Parse without a catch: rejecting every URL must fail this property.
-          const positiveUrl = `postgresql://${positiveHost}/customreport_e2e`;
+          const positiveUrl = `postgresql://${positiveHost}/weeklyreport_e2e`;
           const positive = {
             url: positiveUrl,
             target: parseE2eRuntimeDatabaseTarget(SCRIPT, positiveUrl),
@@ -131,7 +131,7 @@ describe("API destructive target parser properties", () => {
             const hostname = new URL(acceptedUrl).hostname;
             expect(target.host).toBe(hostname);
             expect(target.database).toMatch(
-              /^customreport_e2e(?:_lane_[a-o]_test)?$/u,
+              /^weeklyreport_e2e(?:_lane_[a-o]_test)?$/u,
             );
             const host = hostname.startsWith("[")
               ? hostname.slice(1, -1)

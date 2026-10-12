@@ -22,13 +22,13 @@ const MARIA_LABEL = "Мария К.";
 export const DEMO_LEADS: readonly DemoLead[] = [
   {
     id: LEAD_1_ID,
-    email: "lead1@customreport.local",
+    email: "lead1@weeklyreport.local",
     name: VASILY_LABEL,
     samlId: "lead-1",
   },
   {
     id: LEAD_MARIA_ID,
-    email: "maria@customreport.local",
+    email: "maria@weeklyreport.local",
     name: MARIA_LABEL,
     samlId: "lead-maria",
   },

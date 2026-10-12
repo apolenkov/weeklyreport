@@ -65,8 +65,8 @@ Web uses port 3000; API port 3002. Dev authentication is forbidden in production
   It also covers task-required cleanup of Redis DB15, restart of local repository
   processes/resources and removal of generated runtime/build/cache state. Verify
   the target and coordinate other sessions before every destructive operation.
-- Current disposable targets are `customreport_e2e` and provisioned lanes
-  `customreport_e2e_lane_a_test` / `customreport_e2e_lane_b_test`. A broader guard
+- Current disposable targets are `weeklyreport_e2e` and provisioned lanes
+  `weeklyreport_e2e_lane_a_test` / `weeklyreport_e2e_lane_b_test`. A broader guard
   pattern does not authorize more lanes. Dev/test/E2E share the main target.
 - Before every destructive operation, resolve and print the credential-masked
   target, prove loopback and exact eligibility, and require
