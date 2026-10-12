@@ -103,9 +103,12 @@ without DevOps: `deploy/local-prod/` replaces the corporate IdP and SMTP relay,
 and `deploy/helm/weeklyreport/values-local-prod.example.yaml` is the matching
 values file. Nothing in it is a production artefact.
 
-After TASK-369 the stand uses the database role and database named `weeklyreport`.
-Recreate an older stand (`deploy/tester-kit/stop.sh` deletes the namespace) or run
-`CREATE ROLE weeklyreport …` on its existing database.
+After TASK-369 the stand uses the database role `weeklyreport` and the databases
+`weeklyreport_production` and `weeklyreport_e2e`. Recreate an older `wr-local-prod`
+stand the way it was installed (not with `deploy/tester-kit/stop.sh`, which belongs to
+the tester kit), or, on an existing volume, run `CREATE ROLE weeklyreport …`,
+`CREATE DATABASE weeklyreport_production OWNER weeklyreport;` and
+`CREATE DATABASE weeklyreport_e2e OWNER weeklyreport;`.
 
 ```sh
 SHA=$(git rev-parse HEAD); STATE=<dir outside Git>
