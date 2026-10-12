@@ -39,5 +39,8 @@ the `FeedbackLimitError` class and its mapping in `product-feedback.handler.ts`.
   bounded only by the annotation count. Its byte growth is a separate hold with
   its own label, not a performance deferral.
 - No cap on annotations per session and no typed event envelope.
-- Legacy threads already above the cap are not rewritten; they stay readable
-  and cannot grow further.
+- Legacy threads already above the cap are not rewritten and cannot grow
+  further. They stay readable only through the inbox: the native annotation
+  response schema still bounds a thread at 50 messages, so a native read or
+  create response for such a row still fails. Their number is settled by the
+  native thread scan in tasks.md.
