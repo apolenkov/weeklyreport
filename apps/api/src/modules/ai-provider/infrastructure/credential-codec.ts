@@ -20,6 +20,13 @@ const AES_NONCE_BYTES = 12;
 const BASE64_QUANTUM = 4;
 const EMPTY_CREDENTIAL_MESSAGE = "Provider credential must be non-empty";
 
+// Contract: these domain strings keep the product's former name. They feed the
+// AES-GCM AAD and the HMAC of credentials already stored, so changing them makes
+// saved keys undecryptable; change only together with a re-encryption migration.
+const AAD_DOMAIN = "customreport:ai-provider:v2:key";
+const FINGERPRINT_DOMAIN =
+  "customreport:ai-provider:credential-fingerprint:v1\0";
+
 export type EncryptedCredential = Readonly<{
   ciphertext: string;
   nonce: string;
@@ -71,7 +78,7 @@ const assertKeyVersion = (keyVersion: number): void => {
 
 const aadFor = (keyVersion: number, context: CredentialContext): Buffer =>
   Buffer.from(
-    `customreport:ai-provider:v2:key:${keyVersion}:revision:${context.revisionId}:role:${context.role}`,
+    `${AAD_DOMAIN}:${keyVersion}:revision:${context.revisionId}:role:${context.role}`,
     "utf8",
   );
 
@@ -169,7 +176,7 @@ export class AesGcmCredentialCodec {
       throw new CredentialCodecError("Provider credential must be non-empty");
     }
     return createHmac("sha256", this.key)
-      .update("customreport:ai-provider:credential-fingerprint:v1\0", "utf8")
+      .update(FINGERPRINT_DOMAIN, "utf8")
       .update(value, "utf8")
       .digest("hex");
   }

@@ -19,7 +19,7 @@ export const SESSION_REVOCATION_DEPS = Symbol("SessionRevocationDeps");
 // Redis is a fast-path so in-flight JWTs are rejected without waiting for expiry.
 @Injectable()
 export class SessionRevocationService implements OnModuleDestroy {
-  private static readonly KEY = "customreport:revoked";
+  private static readonly KEY = "weeklyreport:revoked";
   private static readonly SCAN_PAGE_SIZE = 100;
 
   private readonly redis: Redis;

@@ -5,7 +5,7 @@ import type { PrismaService } from "../../infrastructure/prisma/prisma.service.j
 import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { SessionRevocationService } from "./session-revocation.service.js";
 
-const REVOCATION_KEY = "customreport:revoked";
+const REVOCATION_KEY = "weeklyreport:revoked";
 
 interface FakeRedis {
   sadd: ReturnType<typeof vi.fn>;

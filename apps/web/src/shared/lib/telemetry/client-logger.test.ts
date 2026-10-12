@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const INSTALLED_MARK = Symbol.for("customreport.client-logger.installed");
+const INSTALLED_MARK = Symbol.for("weeklyreport.client-logger.installed");
 const originalError = console.error;
 const originalWarn = console.warn;
 

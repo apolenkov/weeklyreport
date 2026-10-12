@@ -10,10 +10,10 @@ import type { EnvConfig } from "../../infrastructure/config/env.schema";
 import type { AnalyticsCachePort } from "./analytics.service.js";
 
 const TTL_SECONDS = 3600;
-// App-namespaced under `customreport:` so analytics keys never collide with
+// App-namespaced under `weeklyreport:` so analytics keys never collide with
 // other apps on the shared Redis. AnalyticsService builds full keys under this
 // root, so the shared cache adds no key prefix; invalidateAll SCANs the root.
-const PREFIX = "customreport:analytics:";
+const PREFIX = "weeklyreport:analytics:";
 
 // invalidateAll is called from every publish path and from reopen.
 @Injectable()

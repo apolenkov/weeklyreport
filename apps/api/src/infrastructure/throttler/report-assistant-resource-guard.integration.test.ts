@@ -24,8 +24,8 @@ const RENEWAL_WAIT_MS = 60;
 const scope = randomUUID();
 type ResourceKeys = Readonly<{ budget: string; leases: string }>;
 const keysFor = (lane: string): ResourceKeys => ({
-  budget: `customreport:assistant-resource:v1:integration:${scope}:${lane}:budget`,
-  leases: `customreport:assistant-resource:v1:integration:${scope}:${lane}:leases`,
+  budget: `weeklyreport:assistant-resource:v1:integration:${scope}:${lane}:budget`,
+  leases: `weeklyreport:assistant-resource:v1:integration:${scope}:${lane}:leases`,
 });
 const primaryKeys = keysFor("primary");
 const budgetLimitKeys = keysFor("budget-limit");
@@ -47,7 +47,7 @@ let connected = false;
 type AcquireResult = readonly [number, number, number];
 
 function cancelKey(token: string): string {
-  const key = `customreport:assistant-resource:v1:integration:${scope}:cancel:${token}`;
+  const key = `weeklyreport:assistant-resource:v1:integration:${scope}:cancel:${token}`;
   cancelKeys.add(key);
   return key;
 }

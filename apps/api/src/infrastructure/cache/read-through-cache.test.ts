@@ -335,13 +335,13 @@ describe("createRedisReadThroughCache", () => {
       connection: CONNECTION,
       loggerName: "Test",
       ttlSeconds: 60,
-      keyPrefix: "customreport:telemetry:",
+      keyPrefix: "weeklyreport:telemetry:",
     });
 
     await cache.getOrCompute("summary:v1", () => Promise.resolve({ n: 1 }));
 
     const store = storeOf();
-    expect(store.has("customreport:telemetry:summary:v1")).toBe(true);
+    expect(store.has("weeklyreport:telemetry:summary:v1")).toBe(true);
     expect(store.has("summary:v1")).toBe(false);
   });
 
@@ -353,11 +353,11 @@ describe("createRedisReadThroughCache", () => {
       keyPrefix: "",
     });
 
-    await cache.getOrCompute("customreport:analytics:k", () =>
+    await cache.getOrCompute("weeklyreport:analytics:k", () =>
       Promise.resolve(1),
     );
 
-    expect(storeOf().has("customreport:analytics:k")).toBe(true);
+    expect(storeOf().has("weeklyreport:analytics:k")).toBe(true);
   });
 
   it("short-circuits the compute function on a cache hit", async () => {
@@ -504,19 +504,19 @@ describe("createRedisReadThroughCache", () => {
       ttlSeconds: 3600,
       keyPrefix: "",
     });
-    await cache.getOrCompute("customreport:analytics:a", () =>
+    await cache.getOrCompute("weeklyreport:analytics:a", () =>
       Promise.resolve(1),
     );
-    await cache.getOrCompute("customreport:analytics:b", () =>
+    await cache.getOrCompute("weeklyreport:analytics:b", () =>
       Promise.resolve(2),
     );
     await cache.getOrCompute("other:keep", () => Promise.resolve(3));
 
-    await cache.invalidateByPrefix("customreport:analytics:");
+    await cache.invalidateByPrefix("weeklyreport:analytics:");
 
     const store = storeOf();
-    expect(store.has("customreport:analytics:a")).toBe(false);
-    expect(store.has("customreport:analytics:b")).toBe(false);
+    expect(store.has("weeklyreport:analytics:a")).toBe(false);
+    expect(store.has("weeklyreport:analytics:b")).toBe(false);
     expect(store.has("other:keep")).toBe(true);
   });
 

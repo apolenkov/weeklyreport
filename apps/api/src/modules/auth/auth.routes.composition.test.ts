@@ -265,7 +265,7 @@ describe("mountAuthRoutes composition", () => {
     } as unknown as PrismaClient;
     const authController = {
       issueSessionCookie: vi.fn(() => ({
-        setCookieHeader: "customreport_session=issued; HttpOnly; Path=/",
+        setCookieHeader: "weeklyreport_session=issued; HttpOnly; Path=/",
       })),
       verifySessionToken: vi.fn(),
     } as unknown as ReturnType<typeof createAuthController>;
@@ -287,7 +287,7 @@ describe("mountAuthRoutes composition", () => {
       expect(response.status).toBe(302);
       expect(response.headers.location).toBe(`${FRONTEND_URL}/reports/latest`);
       expect(response.headers["set-cookie"]).toEqual([
-        "customreport_session=issued; HttpOnly; Path=/",
+        "weeklyreport_session=issued; HttpOnly; Path=/",
       ]);
       expect(authController.issueSessionCookie).toHaveBeenCalledWith(
         expect.objectContaining({

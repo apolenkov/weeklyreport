@@ -54,8 +54,8 @@ describe("AnalyticsCache", () => {
     const getOrCompute = vi.spyOn(backing.cache, "getOrCompute");
     const compute = vi.fn(() => Promise.resolve({ ok: true }));
 
-    await cache.getOrCompute("customreport:analytics:k", compute);
-    await cache.getOrCompute("customreport:analytics:k", compute);
+    await cache.getOrCompute("weeklyreport:analytics:k", compute);
+    await cache.getOrCompute("weeklyreport:analytics:k", compute);
 
     expect(getOrCompute).toHaveBeenCalledTimes(2);
     expect(compute).toHaveBeenCalledTimes(1);
@@ -63,14 +63,14 @@ describe("AnalyticsCache", () => {
 
   it("invalidateAll delegates the analytics prefix and preserves other keys", async () => {
     const invalidateByPrefix = vi.spyOn(backing.cache, "invalidateByPrefix");
-    backing.values.set("customreport:analytics:a", { a: 1 });
-    backing.values.set("customreport:analytics:b", { b: 2 });
+    backing.values.set("weeklyreport:analytics:a", { a: 1 });
+    backing.values.set("weeklyreport:analytics:b", { b: 2 });
     backing.values.set("other:keep", "preserved");
 
     await cache.invalidateAll();
 
     expect(invalidateByPrefix).toHaveBeenCalledExactlyOnceWith(
-      "customreport:analytics:",
+      "weeklyreport:analytics:",
     );
     expect([...backing.values.entries()]).toEqual([
       ["other:keep", "preserved"],
@@ -81,7 +81,7 @@ describe("AnalyticsCache", () => {
     const { getOrCompute, invalidateAll, onModuleDestroy } = cache;
 
     await expect(
-      getOrCompute("customreport:analytics:k", () => Promise.resolve(42)),
+      getOrCompute("weeklyreport:analytics:k", () => Promise.resolve(42)),
     ).resolves.toBe(42);
     await expect(invalidateAll()).resolves.toBeUndefined();
     await expect(onModuleDestroy()).resolves.toBeUndefined();

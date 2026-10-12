@@ -10,7 +10,7 @@ export interface LastRoleRecord {
   readonly name: string;
 }
 
-export const LAST_ROLE_STORAGE_KEY = "customreport:lastRole";
+export const LAST_ROLE_STORAGE_KEY = "weeklyreport:lastRole";
 
 const lastRoleRecordSchema = z.object({
   role: sessionRoleSchema,

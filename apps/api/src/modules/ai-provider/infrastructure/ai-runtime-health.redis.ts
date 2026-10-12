@@ -9,7 +9,7 @@ import type {
   AiRuntimeHealth,
 } from "../application/ai-runtime-health.js";
 
-const KEY = "customreport:ai-runtime-failure:v1";
+const KEY = "weeklyreport:ai-runtime-failure:v1";
 // Stale enough to stop alarming an admin once nobody retries the chat.
 const FAILURE_TTL_SECONDS = 900;
 

@@ -67,7 +67,7 @@ describe("getPdfExportRender", () => {
     expect(decodeURIComponent(url)).toContain(JOB_ID);
     expect(decodeURIComponent(url)).toContain(REPORT_ID);
     expect(init.headers).toEqual({
-      cookie: "customreport_session=worker-jwt",
+      cookie: "weeklyreport_session=worker-jwt",
     });
     expect(init.signal).toBeInstanceOf(AbortSignal);
   });
