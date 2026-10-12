@@ -22,6 +22,8 @@ export const coreConfig: Linter.Config[] = [
     // Codex/agent-council runtime artifacts are machine-local tools, not repo
     // source; linting them would make local assistant state a product gate.
     ".agents/**",
+    // The handoff reserves this foreign machine-local state from traversal.
+    ".abide/**",
     // Git-ignored machine-local trees that carry full repo copies or evidence
     // dumps; linting them OOMs the run on duplicate sources.
     ".devin-artifacts/**",
