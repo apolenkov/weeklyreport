@@ -224,23 +224,21 @@ function ReopenWindowField({
       <input
         id={REOPEN_WINDOW_FIELD_ID}
         name={REOPEN_WINDOW_FIELD_ID}
-        type="number"
+        type="text"
         inputMode="numeric"
-        min={REOPEN_WINDOW_HOURS_MIN}
-        max={REOPEN_WINDOW_HOURS_MAX}
         disabled={!draft.allowReopenAfterPublish}
         aria-invalid={draft.allowReopenAfterPublish && error !== null}
         aria-describedby={
           draft.allowReopenAfterPublish && error
             ? `${REOPEN_WINDOW_FIELD_ID}-error`
-            : undefined
+            : `${REOPEN_WINDOW_FIELD_ID}-hint`
         }
         value={raw}
         onChange={(e) => handleChange(e.target.value)}
         className={`${FIELD_INPUT_CLASS} disabled:cursor-not-allowed`}
       />
       {!draft.allowReopenAfterPublish || error === null ? (
-        <p className={FIELD_HINT_CLASS}>
+        <p id={`${REOPEN_WINDOW_FIELD_ID}-hint`} className={FIELD_HINT_CLASS}>
           How long after publish a period can still be reopened. 0..168 (one
           week). Greyed out when «allow reopen» is off.
         </p>

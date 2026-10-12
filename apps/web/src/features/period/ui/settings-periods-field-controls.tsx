@@ -91,11 +91,9 @@ export function NumberField({
       <input
         id={id}
         name={id}
-        type="number"
+        type="text"
         autoComplete="off"
         inputMode="numeric"
-        min={bounds.min}
-        max={bounds.max}
         aria-invalid={error !== null}
         aria-describedby={error ? `${id}-hint ${id}-error` : `${id}-hint`}
         value={raw}
