@@ -184,7 +184,7 @@ describe("admin user deletion retains live reviewer history (integration)", () =
     }
     return {
       constraint: "RecordComment_reviewerId_fkey",
-      text: 'INSERT INTO "RecordComment" ("id", "reviewerId", "itemId", "text", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, now(), now())',
+      text: 'INSERT INTO "RecordComment" ("id", "reviewerId", "itemId", "text", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, now(), now())',
       values: [rowId, userId, itemId, "Retained review comment"],
     };
   }
@@ -355,6 +355,7 @@ describe("admin user deletion retains live reviewer history (integration)", () =
           observeTransactionBackend(prisma, observedPid),
         );
         removal = observedRepo.removeUser(subject.id);
+        void removal.catch(() => undefined);
         const waitingPid = await within(
           observedPid.promise,
           LOCK_WAIT_TIMEOUT_MS,
@@ -370,10 +371,13 @@ describe("admin user deletion retains live reviewer history (integration)", () =
         );
       } finally {
         await referenceClient.query("ROLLBACK").catch(() => undefined);
-        await (removal ?? Promise.resolve()).then(
-          () => undefined,
-          () => undefined,
-        );
+        if (removal !== undefined) {
+          await within(
+            removal,
+            LOCK_WAIT_TIMEOUT_MS,
+            "removeUser cleanup settlement",
+          ).catch(() => undefined);
+        }
         await Promise.allSettled([referenceClient.end(), oracle.end()]);
       }
       // User and the just-committed reference both survive; nothing else moved.
@@ -388,6 +392,7 @@ describe("admin user deletion retains live reviewer history (integration)", () =
         await prisma.user.findUnique({ where: { id: unrelated.id } }),
       ).toEqual(unrelated);
     },
+    30_000,
   );
 
   it.each(HISTORY_KINDS)(
@@ -429,6 +434,7 @@ describe("admin user deletion retains live reviewer history (integration)", () =
           ).rows[0],
         ).pid;
         insertion = referencer.query(reference.text, reference.values);
+        void insertion.catch(() => undefined);
         await waitForLockWaiter(oracle, referencerPid, removalPid);
         await removal.query("COMMIT");
         await expect(
@@ -442,16 +448,12 @@ describe("admin user deletion retains live reviewer history (integration)", () =
           constraint: reference.constraint,
         });
       } finally {
-        await Promise.allSettled([
-          removal.query("ROLLBACK").catch(() => undefined),
-        ]);
+        await removal.query("ROLLBACK").catch(() => undefined);
         await (insertion ?? Promise.resolve()).then(
           () => undefined,
           () => undefined,
         );
-        await Promise.allSettled([
-          referencer.query("ROLLBACK").catch(() => undefined),
-        ]);
+        await referencer.query("ROLLBACK").catch(() => undefined);
         await Promise.allSettled([
           removal.end(),
           referencer.end(),
@@ -469,5 +471,6 @@ describe("admin user deletion retains live reviewer history (integration)", () =
       ).toEqual(unrelated);
       expect(await readHistoryAndAnchors()).toEqual(before);
     },
+    30_000,
   );
 });

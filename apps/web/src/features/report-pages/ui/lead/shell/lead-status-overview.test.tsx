@@ -1202,15 +1202,26 @@ describe("LeadForm Overview", () => {
       within(editor).getByRole("button", { name: "Save update" }),
     ).toBeDisabled();
     expect(cancel).toBeEnabled();
+    // Cancel hits the same requestClose: the dirty draft is asked about again,
+    // and Discard closes the editor without waiting for the paused save.
+    await user.click(cancel);
+    await user.click(
+      within(
+        await screen.findByRole("alertdialog", { name: "Discard changes?" }),
+      ).getByRole("button", { name: "Discard" }),
+    );
+    expect(
+      screen.queryByRole("form", {
+        name: "Current week update for Payments",
+      }),
+    ).toBeNull();
     // No cancellation guarantee: the in-flight save still lands once it
-    // resolves; the dialog simply stops driving it.
+    // resolves, and the discard writes no second draft of its own.
     releaseSave?.();
     await pollUntil(() =>
       expect(
-        screen.queryByRole("form", {
-          name: "Current week update for Payments",
-        }),
-      ).toBeNull(),
+        within(screen.getByTestId("status-overview")).getByRole("status"),
+      ).toHaveTextContent("Draft saved"),
     );
     expect(saveDraft).toHaveBeenCalledOnce();
     await itemPreview("Current work — in-flight edit");
@@ -2266,8 +2277,11 @@ it("does not acknowledge a later parent-and-stage edit from an earlier in-flight
   await user.click(screen.getByRole("button", { name: "Save update" }));
   await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
   await user.click(screen.getByRole("button", { name: "Cancel" }));
-  const discard = screen.queryByRole("button", { name: "Discard" });
-  if (discard) await user.click(discard);
+  await user.click(
+    within(
+      await screen.findByRole("alertdialog", { name: "Discard changes?" }),
+    ).getByRole("button", { name: "Discard" }),
+  );
   await user.click(
     await screen.findByRole("button", {
       name: "Edit item: Earlier submitted text",
