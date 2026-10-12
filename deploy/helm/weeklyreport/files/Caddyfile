@@ -22,6 +22,8 @@
 	# X-Forwarded-For right to left and stops at the first untrusted address;
 	# without it Caddy takes the left-most one, which a client can forge even
 	# through a trusted peer.
+	# The same list lets Caddy keep the Ingress X-Forwarded-Proto, so the proxied
+	# sites must not override it.
 	servers {
 		trusted_proxies static {$CADDY_TRUSTED_PROXIES}
 		trusted_proxies_strict
@@ -45,7 +47,6 @@
 			header_up Host {host}
 			header_up X-Real-IP {client_ip}
 			header_up X-Forwarded-For {client_ip}
-			header_up X-Forwarded-Proto {scheme}
 			transport http {
 				read_timeout 5m
 				write_timeout 5m
@@ -66,7 +67,6 @@
 			header_up Host {host}
 			header_up X-Real-IP {client_ip}
 			header_up X-Forwarded-For {client_ip}
-			header_up X-Forwarded-Proto {scheme}
 		}
 	}
 

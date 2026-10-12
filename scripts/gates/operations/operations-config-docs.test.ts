@@ -227,6 +227,16 @@ test("the edge forwards one client address resolved right to left", () => {
   assert.equal(forwarded?.length, 4, "api and web both set both headers");
 });
 
+test("the edge keeps the trusted outer forwarded protocol", () => {
+  const caddy = read("deploy/helm/weeklyreport/files/Caddyfile");
+  assert.doesNotMatch(
+    caddy,
+    /header_up\s+X-Forwarded-Proto/iu,
+    "trusted_proxies handling owns X-Forwarded-Proto; an override replaces the Ingress https with the inner http scheme",
+  );
+  assert.match(caddy, /trusted_proxies static \{\$CADDY_TRUSTED_PROXIES\}/u);
+});
+
 test("the enforcing CSP policy reports violations to the required collector", () => {
   const caddy = read("deploy/helm/weeklyreport/files/Caddyfile");
   assert.match(
