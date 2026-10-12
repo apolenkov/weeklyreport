@@ -42,8 +42,8 @@ function HistoryArchiveToggle({
   );
 }
 
-// Before the session resolves there is no role to scope search by, so the row
-// holds its height instead of rendering controls that would shift the layout.
+// Before the session resolves the resolved frame renders invisible and inert, so
+// its height and narrow-width wrap match the loaded toolbar.
 export function HistoryToolbar({
   role,
   includeArchive,
@@ -55,14 +55,14 @@ export function HistoryToolbar({
   readonly archiveCount: number;
   readonly onArchiveChange: (nextValue: boolean) => void;
 }) {
-  if (!role) {
-    return <div className="min-h-[44px]" aria-hidden="true" />;
-  }
-
   const searchScope = historySearchScope(role);
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[color-mix(in_srgb,var(--color-card)_75%,transparent)] px-3 py-3">
-      <div className="min-w-[220px] flex-1">
+    <div
+      className={`flex flex-wrap items-center gap-3 rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[color-mix(in_srgb,var(--color-card)_75%,transparent)] px-3 py-3${role ? "" : " invisible"}`}
+      aria-hidden={role ? undefined : true}
+      inert={role ? undefined : true}
+    >
+      <div className="min-h-[var(--touch-target-min)] min-w-[220px] flex-1">
         {searchScope ? (
           <SearchInput
             scope={searchScope}

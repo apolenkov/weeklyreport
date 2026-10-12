@@ -28,4 +28,4 @@ No data/schema migration. Root receives exact source patch and before/after seal
 
 ## Open Questions
 
-Root must measure the chevron token/native geometry and 44px toolbar reservation before those roots receive code. Stalled-navigation policy remains unapproved.
+Root must measure the chevron token/native geometry before that root receives code; the History toolbar reserve moved to t503-history-toolbar-loading-reserve (native acceptance in the WR lane). Stalled-navigation policy remains unapproved.

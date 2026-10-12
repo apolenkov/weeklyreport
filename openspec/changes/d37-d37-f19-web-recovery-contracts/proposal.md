@@ -29,4 +29,4 @@ None.
 
 ## Impact
 
-Only F19 granted web owners and its unique OpenSpec change. Existing Sentry monotonic/headers, Activity logging and login fallback are reused. Chevron geometry and History toolbar sizing are untouched pending native RED; navigation cancellation remains needs-evidence pending measured policy. Root owns native browser, full gates, review and publication. Source checkpoint is not canonical ticket closure.
+Only F19 granted web owners and its unique OpenSpec change. Existing Sentry monotonic/headers, Activity logging and login fallback are reused. Chevron geometry is untouched pending native RED, and the History toolbar reserve moved to t503-history-toolbar-loading-reserve (native acceptance in the WR lane); navigation cancellation remains needs-evidence pending measured policy. Root owns native browser, full gates, review and publication. Source checkpoint is not canonical ticket closure.
