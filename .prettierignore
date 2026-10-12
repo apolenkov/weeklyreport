@@ -12,6 +12,7 @@ ci-reports
 output
 apps/api/storage
 .codegraph
+.abide
 .kilo
 .superpowers
 .opencode

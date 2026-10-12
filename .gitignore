@@ -30,6 +30,7 @@ coverage/
 .claude/commands/opsx/
 
 # Local agent and browser-tool artifacts: never committed.
+.abide/
 .claude/worktrees/
 .codegraph/
 .kilo/

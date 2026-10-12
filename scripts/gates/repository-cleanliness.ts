@@ -37,6 +37,7 @@ const ALLOWED_EMPTY_DIRECTORIES = new Set([
 ]);
 const IGNORED_DIRECTORY_NAMES = new Set([
   ".git",
+  ".abide",
   "node_modules",
   ".next",
   ".next-docker-dev",
@@ -78,10 +79,14 @@ export interface RepositoryInventory {
 }
 
 async function gitPaths(root: string, args: string[]): Promise<string[]> {
-  const { stdout } = await execFileAsync("git", args, {
-    cwd: root,
-    maxBuffer: MAX_BUFFER_SIZE,
-  });
+  const { stdout } = await execFileAsync(
+    "git",
+    [...args, "--", ".", ":(exclude).abide", ":(exclude).abide/**"],
+    {
+      cwd: root,
+      maxBuffer: MAX_BUFFER_SIZE,
+    },
+  );
   return stdout.split("\0").filter(Boolean);
 }
 
