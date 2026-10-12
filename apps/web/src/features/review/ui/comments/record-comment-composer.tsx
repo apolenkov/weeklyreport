@@ -31,6 +31,7 @@ export function RecordCommentComposer({
   const id = useId();
   const limitId = `${id}-review-comment-limit`;
   const validationErrorId = `${id}-review-comment-validation-error`;
+  const characterCount = Array.from(draft).length;
   return (
     <form
       className="flex flex-col gap-1.5"
@@ -69,7 +70,7 @@ export function RecordCommentComposer({
           {validationError ?? `Up to ${REVIEW_COMMENT_MAX_LENGTH} characters.`}
         </p>
         <p id={limitId} className="text-[var(--color-muted-foreground)]">
-          {draft.length} / {REVIEW_COMMENT_MAX_LENGTH}
+          {characterCount} / {REVIEW_COMMENT_MAX_LENGTH}
         </p>
       </div>
       <div className="flex justify-end">

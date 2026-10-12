@@ -120,7 +120,7 @@ function RequestChangesForm({
           {error ?? "The lead sees this note on the returned section."}
         </p>
         <p id={counterId} className="text-[var(--color-muted-foreground)]">
-          {reason.trim().length} / {REVIEW_COMMENT_MAX_LENGTH}
+          {Array.from(reason.trim()).length} / {REVIEW_COMMENT_MAX_LENGTH}
         </p>
       </div>
       <FormActions isPending={isPending} onCancel={onCancel} />

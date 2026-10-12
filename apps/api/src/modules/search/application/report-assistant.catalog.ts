@@ -27,12 +27,16 @@ const productEntities = (
 const activityEntities = (
   section: ReportSectionReadModel,
 ): readonly AccessibleEntity[] =>
-  section.activities.map((activity) => ({
-    kind: "activity" as const,
-    id: activity.activityId,
-    label: activity.activityName,
-    aliases: [activity.activityName],
-  }));
+  section.activities.map((activity) => {
+    const effectiveTitle =
+      activity.titleOverride?.trim() || activity.activityName;
+    return {
+      kind: "activity" as const,
+      id: activity.activityId,
+      label: effectiveTitle,
+      aliases: [activity.activityName, effectiveTitle],
+    };
+  });
 
 const sectionEntities = (
   retrieval: AuthorizedReportRetrieval,

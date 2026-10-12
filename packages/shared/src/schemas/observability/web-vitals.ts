@@ -3,6 +3,9 @@ import { z } from "zod";
 /** Upper bound that keeps public beacon samples from corrupting metric aggregates. */
 export const MAX_WEB_VITAL_VALUE = 300_000;
 
+/** Input validation ceiling for CLS scores, not a performance threshold. */
+const MAX_CLS_WEB_VITAL_VALUE = 10;
+
 /** Validates the unauthenticated browser beacon before any metric write. */
 export const webVitalBeaconSchema = z
   .object({
@@ -10,6 +13,15 @@ export const webVitalBeaconSchema = z
     value: z.number().nonnegative().max(MAX_WEB_VITAL_VALUE),
     id: z.string().min(1),
     navigationType: z.string().optional(),
+  })
+  .superRefine((beacon, ctx) => {
+    if (beacon.name === "CLS" && beacon.value > MAX_CLS_WEB_VITAL_VALUE) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["value"],
+        message: `CLS must not exceed ${MAX_CLS_WEB_VITAL_VALUE}.`,
+      });
+    }
   })
   .readonly();
 

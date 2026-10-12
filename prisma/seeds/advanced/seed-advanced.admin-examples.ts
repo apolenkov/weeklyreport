@@ -42,7 +42,7 @@ async function seedActionLog(prisma: PrismaClient): Promise<void> {
   const fields = {
     userId: HEAD_USER_ID,
     role: Role.head,
-    procedure: "review.publish",
+    procedure: "period.publish",
     targetId: SEED_REPORTS.published.id,
     status: UserActionStatus.success,
     reason: null,

@@ -15,6 +15,14 @@ import type {
 const CHARS_PER_ESTIMATED_TOKEN = 4;
 const FIRST_SOURCE_NUMBER = 1;
 
+/** The complete serialized grounding shape cannot fit its configured budget. */
+export class GroundingContextBudgetExceededError extends Error {
+  constructor() {
+    super("Complete grounding exceeds the configured context budget");
+    this.name = "GroundingContextBudgetExceededError";
+  }
+}
+
 type GroundingEvidence = Readonly<{
   source: SourceCitation;
   record: GroundingRecord;
@@ -219,8 +227,9 @@ export function buildGroundingBundle(
     budget.acceptedCandidates,
     budget.omittedCount > 0 || evidenceCandidates.length < candidates.length,
   );
-  return {
-    ...shape,
-    estimatedTokens: estimatedPromptTokens(shape),
-  };
+  const estimatedTokens = estimatedPromptTokens(shape);
+  if (estimatedTokens > contextTokenBudget) {
+    throw new GroundingContextBudgetExceededError();
+  }
+  return { ...shape, estimatedTokens };
 }

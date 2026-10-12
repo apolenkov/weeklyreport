@@ -716,7 +716,7 @@ describe("RemindersTab — add / edit form", () => {
       "policy-offset-minutes-error",
     );
     expect(screen.getByRole("alert")).toHaveTextContent(
-      "Enter a non-negative number",
+      "Enter a non-negative whole number",
     );
     expect(screen.getByRole("alert")).toHaveAttribute(
       "id",
@@ -745,6 +745,91 @@ describe("RemindersTab — add / edit form", () => {
     );
     expect(screen.getByTestId("policy-save-button")).toBeDisabled();
   });
+
+  it.each(["-1", "1.5"])(
+    "explains the whole-number rule for offset %j",
+    async (raw) => {
+      const user = userEvent.setup();
+      const { captured } = renderTab({ policies: [policyEscalation] });
+      await user.click(screen.getByTestId(`edit-${policyEscalation.id}`));
+      const amount = screen.getByLabelText<HTMLInputElement>(
+        /reminder offset amount/i,
+      );
+      await user.clear(amount);
+      if (raw) await user.type(amount, raw);
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Enter a non-negative whole number",
+      );
+      expect(screen.getByTestId("policy-save-button")).toBeDisabled();
+      expect(
+        expectDefined(captured["admin.savePolicy"]).mutationFn,
+      ).not.toHaveBeenCalled();
+      await user.clear(amount);
+      await user.type(amount, "3");
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(screen.getByTestId("policy-save-button")).toBeEnabled();
+    },
+  );
+
+  it("preserves invalid offset draft through normalized units and direction until valid retype", async () => {
+    const user = userEvent.setup();
+    const { captured } = renderTab({ policies: [policyEscalation] });
+    await user.click(screen.getByTestId(`edit-${policyEscalation.id}`));
+    const amount = screen.getByLabelText<HTMLInputElement>(
+      /reminder offset amount/i,
+    );
+    expect(amount).toHaveValue(2);
+    await user.clear(amount);
+    for (const unit of ["days", "minutes", "hours"]) {
+      await user.selectOptions(
+        screen.getByLabelText(/reminder offset unit/i),
+        unit,
+      );
+      await user.selectOptions(
+        screen.getByLabelText(/before or after deadline/i),
+        "before",
+      );
+      expect(amount.value).toBe("");
+      expect(amount).toHaveAttribute("aria-invalid", "true");
+      expect(screen.getByRole("alert")).toBeInTheDocument();
+      expect(screen.getByTestId("policy-save-button")).toBeDisabled();
+    }
+    expect(
+      expectDefined(captured["admin.savePolicy"]).mutationFn,
+    ).not.toHaveBeenCalled();
+    await user.type(amount, "4");
+    expect(amount).toHaveValue(4);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByTestId("policy-save-button")).toBeEnabled();
+    await user.click(screen.getByTestId("policy-save-button"));
+    await waitFor(() =>
+      expect(
+        expectDefined(captured["admin.savePolicy"]).mutationFn,
+      ).toHaveBeenCalledTimes(1),
+    );
+  });
+
+  it.each(["Cancel", "Save changes"])(
+    "restores search focus after %s when edited row is filtered out",
+    async (action) => {
+      const user = userEvent.setup();
+      const { captured } = renderTab();
+      await user.click(screen.getByTestId(`edit-${policyDeadline.id}`));
+      const search = screen.getByLabelText(/Search reminders/i);
+      await user.type(search, "head");
+      await user.click(screen.getByRole("button", { name: action }));
+      await waitFor(() =>
+        expect(screen.queryByTestId("policy-form")).not.toBeInTheDocument(),
+      );
+      expect(
+        screen.queryByTestId(`edit-${policyDeadline.id}`),
+      ).not.toBeInTheDocument();
+      expect(search).toHaveFocus();
+      expect(
+        expectDefined(captured["admin.savePolicy"]).mutationFn,
+      ).toHaveBeenCalledTimes(action === "Cancel" ? 0 : 1);
+    },
+  );
 
   it("never persists the invalid deadline→head-of-late pair from a fresh form", async () => {
     const user = userEvent.setup();

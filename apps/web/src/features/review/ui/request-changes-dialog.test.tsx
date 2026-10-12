@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
+import { reviewVerdictInputSchema } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -129,6 +130,40 @@ describe("RequestChangesDialog", () => {
     await userEvent.type(field, "  ab  ");
     expect(field).toHaveAccessibleDescription(
       "The lead sees this note on the returned section. 2 / 2000",
+    );
+  });
+
+  it("counts a schema-valid non-BMP reason below the unchanged native cap", async () => {
+    const user = userEvent.setup();
+    const { mutationFn, onRequested } = setup();
+    const reason = "😀".repeat(500);
+    const command = reviewVerdictInputSchema.parse({
+      reportSectionId: SECTION,
+      verdict: "changes_requested",
+      version: 3,
+      comment: reason,
+    });
+    const result = {
+      verdict: "changes_requested",
+      judgedVersion: 3,
+      unsubmitted: true,
+    };
+    mutationFn.mockResolvedValue(result);
+    const field = screen.getByLabelText("Reason for the lead");
+    expect(field).toHaveAttribute("maxlength", "2000");
+    await user.click(field);
+    await user.paste(reason);
+    expect(field).toHaveValue(reason);
+    expect(field).toHaveAccessibleDescription(
+      "The lead sees this note on the returned section. 500 / 2000",
+    );
+    await user.click(submitButton());
+    await waitFor(() => {
+      expect(onRequested).toHaveBeenCalledExactlyOnceWith(result);
+    });
+    expect(mutationFn).toHaveBeenCalledExactlyOnceWith(
+      command,
+      expect.anything(),
     );
   });
 });

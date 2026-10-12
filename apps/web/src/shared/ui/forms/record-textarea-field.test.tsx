@@ -1,3 +1,4 @@
+import { SAFE_TEXT_MAX_LENGTH, safeText } from "@customreport/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -215,6 +216,44 @@ describe("RecordTextareaField", () => {
 });
 
 describe("RecordTextareaField over the limit", () => {
+  it.each([
+    ["non-BMP boundary", "😀".repeat(500), "500 / 500 characters", false],
+    [
+      "non-BMP overflow",
+      "😀".repeat(501),
+      "501 / 500 characters — 1 over the limit",
+      true,
+    ],
+    [
+      "combining sequences",
+      "e\u0301".repeat(250),
+      "500 / 500 characters",
+      false,
+    ],
+  ] as const)(
+    "matches the shared text boundary for %s",
+    (_name, value, description, invalid) => {
+      expect(safeText().safeParse(value).success).toBe(!invalid);
+      render(
+        <RecordTextareaField
+          id="unicode-prose"
+          label="Prose"
+          value={value}
+          onChange={vi.fn()}
+          characterLimit={SAFE_TEXT_MAX_LENGTH}
+        />,
+      );
+      const textarea = screen.getByLabelText("Prose");
+      expect(textarea).toHaveValue(value);
+      expect(textarea).not.toHaveAttribute("maxlength");
+      expect(textarea).toHaveAttribute(
+        "aria-invalid",
+        invalid ? "true" : "false",
+      );
+      expect(textarea).toHaveAccessibleDescription(description);
+    },
+  );
+
   it("marks the textarea invalid at 501 of 500 characters", () => {
     render(
       <RecordTextareaField

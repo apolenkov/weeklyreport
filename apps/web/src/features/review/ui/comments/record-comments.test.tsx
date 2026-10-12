@@ -4,6 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import {
   type RecordCommentView,
   REVIEW_COMMENT_MAX_LENGTH,
+  reviewCommentInputSchema,
 } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -271,6 +272,69 @@ describe("RecordComments — mutation success", () => {
     );
     expect(screen.getByRole("button", { name: "Comment" })).toBeDisabled();
     expect(mutationCalls.comment).toHaveLength(0);
+  });
+
+  it.each([
+    ["non-BMP", "😀".repeat(2000)],
+    ["combining sequences", "e\u0301".repeat(1000)],
+  ])(
+    "counts and submits a schema-valid 2,000-point %s comment",
+    async (_name, boundary) => {
+      const user = userEvent.setup();
+      const command = reviewCommentInputSchema.parse({
+        itemId: "11111111-1111-4111-8111-111111111111",
+        text: boundary,
+      });
+      renderComments();
+      const draft = screen.getByRole("textbox", {
+        name: "Add a review comment",
+      });
+      await user.click(draft);
+      await user.paste(boundary);
+      expect(draft).toHaveValue(boundary);
+      expect(draft).toHaveAccessibleDescription("2000 / 2000");
+      expect(draft).toHaveAttribute("aria-invalid", "false");
+      await user.click(screen.getByRole("button", { name: "Comment" }));
+      await waitFor(() => {
+        expect(mutationCalls.comment).toEqual([command]);
+      });
+    },
+  );
+
+  it("retains a 2,001-point non-BMP draft and submits only after correction", async () => {
+    const user = userEvent.setup();
+    const overLimit = "😀".repeat(2001);
+    const boundary = "😀".repeat(2000);
+    expect(
+      reviewCommentInputSchema.safeParse({
+        itemId: "11111111-1111-4111-8111-111111111111",
+        text: overLimit,
+      }).success,
+    ).toBe(false);
+    renderComments();
+    const draft = screen.getByRole("textbox", { name: "Add a review comment" });
+    const submit = screen.getByRole("button", { name: "Comment" });
+    await user.click(draft);
+    await user.paste(overLimit);
+    expect(draft).toHaveValue(overLimit);
+    expect(draft).not.toHaveAttribute("maxlength");
+    expect(draft).toHaveAccessibleDescription(
+      "2001 / 2000 Comment must be 2000 characters or fewer.",
+    );
+    expect(submit).toBeDisabled();
+    expect(mutationCalls.comment).toHaveLength(0);
+    await user.clear(draft);
+    await user.paste(boundary);
+    expect(submit).toBeEnabled();
+    await user.click(submit);
+    await waitFor(() => {
+      expect(mutationCalls.comment).toEqual([
+        reviewCommentInputSchema.parse({
+          itemId: "11111111-1111-4111-8111-111111111111",
+          text: boundary,
+        }),
+      ]);
+    });
   });
 
   it("submits once after an over-limit draft is corrected to 2,000 characters", async () => {

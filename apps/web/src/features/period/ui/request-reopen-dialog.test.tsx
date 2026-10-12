@@ -1,5 +1,8 @@
+import { MAX_REOPEN_REASON_LENGTH } from "@customreport/shared";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 
 import { RequestReopenDialog } from "./request-reopen-dialog";
 
@@ -159,4 +162,38 @@ describe("RequestReopenDialog — failed submit", () => {
     );
     expect(screen.getByLabelText(/Reason/)).toHaveFocus();
   });
+});
+
+describe("RequestReopenDialog — existing reason boundary", () => {
+  it.each([
+    ["non-BMP boundary", "😀".repeat(500), true],
+    ["non-BMP overflow", "😀".repeat(501), false],
+    ["ASCII boundary", "A".repeat(500), true],
+  ] as const)(
+    "uses the router text metric for %s",
+    async (_name, reason, accepted) => {
+      const user = userEvent.setup();
+      // The current requestReopen router uses this max with no extra text policy.
+      expect(
+        z.string().max(MAX_REOPEN_REASON_LENGTH).safeParse(reason).success,
+      ).toBe(accepted);
+      const onConfirm = vi.fn<(value: string | undefined) => void>();
+      renderDialog({ onConfirm });
+      const field = screen.getByRole("textbox", { name: /Reason/ });
+      await user.click(field);
+      await user.paste(reason);
+      const send = screen.getByRole("button", { name: "Send request" });
+      expect(field).toHaveValue(reason);
+      if (accepted) {
+        expect(send).toBeEnabled();
+        await user.click(send);
+        expect(onConfirm).toHaveBeenCalledExactlyOnceWith(reason);
+      } else {
+        expect(send).toBeDisabled();
+        await user.keyboard("{Control>}{Enter}{/Control}");
+        expect(onConfirm).not.toHaveBeenCalled();
+        expect(field).toHaveValue(reason);
+      }
+    },
+  );
 });

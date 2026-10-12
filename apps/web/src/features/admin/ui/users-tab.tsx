@@ -48,7 +48,6 @@ export function UsersTab({ users, groups }: UsersTabProps) {
           onFormChange={state.setForm}
           groupOptions={state.groupOptions}
           activeGroups={state.activeGroups}
-          groups={groups}
           canSave={state.canSave}
           isSaving={state.isSaving}
           onSave={state.handleSave}

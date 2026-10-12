@@ -46,7 +46,7 @@ export function ProductsTab({
 
         <ProductsTable
           activeProducts={state.activeProducts}
-          hasData={products.length > 0}
+          isFiltering={state.isFiltering}
           archivedProducts={state.archivedProducts}
           getUserById={state.getUserById}
           stageCountByProject={state.stageCountByProject}

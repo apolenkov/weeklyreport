@@ -3,6 +3,7 @@ import {
   reportAssistantOutcomeSchema,
 } from "@customreport/shared";
 
+import { GroundingContextBudgetExceededError } from "../domain/context-builder.js";
 import {
   PROVIDER_RESPONSE_INCOMPLETE,
   ReportAssistantProviderError,
@@ -51,6 +52,9 @@ export const failureOutcome = (
     });
   }
   if (signals.deadline.aborted) return { kind: "provider_unavailable" };
+  if (error instanceof GroundingContextBudgetExceededError) {
+    return { kind: "result_set_too_large" };
+  }
   if (!(error instanceof ReportAssistantProviderError)) return null;
   if (error.providerCode === PROVIDER_RESPONSE_INCOMPLETE) {
     return { kind: "provider_response_incomplete" };

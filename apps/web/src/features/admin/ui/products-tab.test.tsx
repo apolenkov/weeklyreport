@@ -659,3 +659,61 @@ describe("ProductsTab — unresolved lead owner", () => {
     expect(toast.error).toHaveBeenCalledWith(expect.stringMatching(/lead/i));
   });
 });
+
+describe("ProductsTab — truthful empty states", () => {
+  it.each([
+    {
+      name: "archived-only without a filter",
+      products: [{ ...mockProduct, status: "archived" as const }],
+      filter: null,
+      search: "",
+      expected: "No active products yet.",
+    },
+    {
+      name: "empty catalog without a filter",
+      products: [],
+      filter: null,
+      search: "",
+      expected: "No active products yet.",
+    },
+    {
+      name: "unmatched search",
+      products: [mockProduct],
+      filter: null,
+      search: "missing",
+      expected: "No products match the search.",
+    },
+    {
+      name: "empty catalog with search",
+      products: [],
+      filter: null,
+      search: "missing",
+      expected: "No products match the search.",
+    },
+    {
+      name: "unmatched product deep link",
+      products: [mockProduct],
+      filter: "missing",
+      search: "",
+      expected: "No products match the search.",
+    },
+  ])("$name", async ({ products, filter, search, expected }) => {
+    const user = userEvent.setup();
+    renderTab({ products, productFilter: filter });
+    if (search)
+      await user.type(screen.getByTestId("products-local-search"), search);
+    expect(screen.getByTestId("products-table")).toHaveTextContent(expected);
+    if (products.some((product) => product.status === "archived")) {
+      expect(
+        screen.getByRole("heading", { name: "Archived (1)" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: `Restore ${mockProduct.name}` }),
+      ).toBeEnabled();
+    }
+    if (filter)
+      expect(
+        screen.getByText("Product from search not found"),
+      ).toBeInTheDocument();
+  });
+});

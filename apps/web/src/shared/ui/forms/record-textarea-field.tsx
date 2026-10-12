@@ -97,10 +97,11 @@ export function RecordTextareaField({
   // field's own), so the focus effect only ever READS .current.
   const elementRef = textareaRef ?? ownRef;
   useInitialTextareaFocus(focusOnMount, elementRef);
+  const characterCount = Array.from(value).length;
   const overBy =
     characterLimit === undefined
       ? 0
-      : Math.max(0, value.length - characterLimit);
+      : Math.max(0, characterCount - characterLimit);
   const isInvalid = Boolean(error) || overBy > 0;
 
   return (
@@ -146,7 +147,7 @@ export function RecordTextareaField({
               : "text-[var(--color-muted-foreground)]"
           }`}
         >
-          {value.length} / {characterLimit} characters
+          {characterCount} / {characterLimit} characters
           {overBy > 0 ? ` — ${overBy} over the limit` : ""}
         </p>
       )}

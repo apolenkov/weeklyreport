@@ -16,7 +16,6 @@ interface UserEditDialogProps {
   readonly onFormChange: (form: UserFormData) => void;
   readonly groupOptions: readonly AdminGroupView[];
   readonly activeGroups: readonly AdminGroupView[];
-  readonly groups: readonly AdminGroupView[];
   readonly canSave: boolean;
   readonly isSaving: boolean;
   readonly onSave: () => void;
@@ -29,7 +28,6 @@ export function UserEditDialog({
   onFormChange,
   groupOptions,
   activeGroups,
-  groups,
   canSave,
   isSaving,
   onSave,
@@ -74,7 +72,6 @@ export function UserEditDialog({
             onFormChange={onFormChange}
             groupOptions={groupOptions}
             activeGroups={activeGroups}
-            groups={groups}
             roleLocked={isOwnAdminRow}
           />
         </fieldset>

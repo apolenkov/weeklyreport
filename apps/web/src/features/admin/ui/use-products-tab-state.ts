@@ -105,6 +105,7 @@ function useProductFilters(
   return {
     localSearch,
     setLocalSearch,
+    isFiltering: Boolean(productFilter) || localSearch.trim() !== "",
     filterMatched: !!productFilter && filteredProducts.length > 0,
     activeProducts: filteredProducts.filter((p) => p.status === "active"),
     archivedProducts: filteredProducts.filter((p) => p.status === "archived"),

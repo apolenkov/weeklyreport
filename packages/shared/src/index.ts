@@ -272,7 +272,11 @@ export {
   searchQueryOutputSchema,
 } from "./schemas/search/search.js";
 export type { StageName } from "./schemas/stages/stage-names.js";
-export { riskCoversStage, STAGE_NAMES } from "./schemas/stages/stage-names.js";
+export {
+  riskCoversStage,
+  STAGE,
+  STAGE_NAMES,
+} from "./schemas/stages/stage-names.js";
 export * from "./schemas/status/canonical-status.js";
 export * from "./schemas/telemetry/telemetry.js";
 export { deriveEffectiveProductStatus } from "./status/effective-product-status.js";

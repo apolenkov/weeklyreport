@@ -43,7 +43,6 @@ function renderDialog(sessionUserId: string) {
         onFormChange={vi.fn()}
         groupOptions={[]}
         activeGroups={[]}
-        groups={[]}
         canSave
         isSaving={false}
         onSave={vi.fn()}

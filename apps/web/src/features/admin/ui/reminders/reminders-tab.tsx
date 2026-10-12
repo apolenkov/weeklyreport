@@ -40,9 +40,13 @@ export function RemindersTab({
         previousEditor.current.mode === "edit"
           ? `edit-${previousEditor.current.id}`
           : "new-policy-button";
-      document
-        .querySelector<HTMLElement>(`[data-testid="${CSS.escape(testId)}"]`)
-        ?.focus();
+      const target = document.querySelector<HTMLElement>(
+        `[data-testid="${CSS.escape(testId)}"]`,
+      );
+      const fallback = document.querySelector<HTMLElement>(
+        '[data-testid="reminders-search"]',
+      );
+      (target ?? fallback)?.focus();
     }
     previousEditor.current = state.editor;
   }, [state.editor]);

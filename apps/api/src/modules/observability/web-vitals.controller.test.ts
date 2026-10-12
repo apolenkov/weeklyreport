@@ -108,6 +108,48 @@ describe("WebVitalsController.record", () => {
     expect(await countFor(webVitalCls, "other")).toBe(1);
   });
 
+  it.each([10.0001, MAX_WEB_VITAL_VALUE])(
+    "rejects CLS %s with 400 before observing a sample",
+    async (value) => {
+      let error: unknown;
+      try {
+        controller.record({ name: "CLS", value, id: "oversized-cls" });
+      } catch (error_) {
+        error = error_;
+      }
+
+      expect(await countFor(webVitalCls, "other")).toBe(0);
+      expect(error).toBeInstanceOf(BadRequestException);
+      if (error instanceof BadRequestException) {
+        expect(error.getStatus()).toBe(400);
+      }
+    },
+  );
+
+  it("records the inclusive CLS input boundary", async () => {
+    controller.record({ name: "CLS", value: 10, id: "cls-boundary" });
+
+    expect(await countFor(webVitalCls, "other")).toBe(1);
+  });
+
+  it.each([
+    ["LCP", webVitalLcp],
+    ["FCP", webVitalFcp],
+    ["INP", webVitalInp],
+    ["TTFB", webVitalTtfb],
+  ] as const)(
+    "preserves the inclusive %s timing boundary",
+    async (name, histogram) => {
+      controller.record({
+        name,
+        value: MAX_WEB_VITAL_VALUE,
+        id: "timing-boundary",
+      });
+
+      expect(await countFor(histogram, "other")).toBe(1);
+    },
+  );
+
   it("rejects an empty id with 400", () => {
     expect(() => controller.record({ name: "LCP", value: 1, id: "" })).toThrow(
       BadRequestException,

@@ -200,7 +200,9 @@ export function JobsTabView(props: JobsTabViewProps) {
         count={
           props.isLoading
             ? "Loading…"
-            : loadedCount(props.jobs, props.hasNextPage)
+            : props.search.trim() !== ""
+              ? `${props.filteredJobs.length} matches · ${loadedCount(props.jobs, props.hasNextPage)}`
+              : loadedCount(props.jobs, props.hasNextPage)
         }
         search={
           <TabSearch

@@ -147,7 +147,6 @@ function withRole(
   form: UserFormData,
   role: DbRole,
   activeGroups: readonly AdminGroupView[],
-  _groups: readonly AdminGroupView[],
 ): UserFormData {
   return {
     ...form,
@@ -161,11 +160,9 @@ function RoleField({
   form,
   onFormChange,
   activeGroups,
-  groups,
   roleLocked,
 }: FormBinding & {
   readonly activeGroups: readonly AdminGroupView[];
-  readonly groups: readonly AdminGroupView[];
   readonly roleLocked: boolean;
 }) {
   return (
@@ -181,9 +178,7 @@ function RoleField({
         disabled={roleLocked}
         aria-describedby={roleLocked ? "user-role-hint" : undefined}
         onChange={(e) =>
-          onFormChange(
-            withRole(form, e.target.value as DbRole, activeGroups, groups),
-          )
+          onFormChange(withRole(form, e.target.value as DbRole, activeGroups))
         }
         className={CONTROL_CLASS}
       >
@@ -249,12 +244,10 @@ export function UserEditDialogFields({
   onFormChange,
   groupOptions,
   activeGroups,
-  groups,
   roleLocked,
 }: FormBinding & {
   readonly groupOptions: readonly AdminGroupView[];
   readonly activeGroups: readonly AdminGroupView[];
-  readonly groups: readonly AdminGroupView[];
   readonly roleLocked: boolean;
 }) {
   return (
@@ -264,7 +257,6 @@ export function UserEditDialogFields({
         form={form}
         onFormChange={onFormChange}
         activeGroups={activeGroups}
-        groups={groups}
         roleLocked={roleLocked}
       />
       <GroupField
