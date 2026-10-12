@@ -267,3 +267,98 @@ describe("RisksSection — severity toggle", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe("RisksSection — readOnly raise-prefill (C3044)", () => {
+  it("a raise signal arriving under readOnly opens nothing and leaves no prefill for the next plain +Add", () => {
+    const prefill = {
+      signal: 1,
+      productId: "p1",
+      stageNames: [],
+      severity: "blocked" as const,
+    };
+    const { rerender } = render(
+      <RisksSection
+        risks={[]}
+        products={[
+          { id: "p1", name: "Product", overallStatus: "on-track", stages: [] },
+        ]}
+        addPrefill={prefill}
+        readOnly
+      />,
+    );
+
+    // Existing readOnly contract: the dialog never opens while read-only.
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    // A later plain +Add back in editable mode must open blank — the
+    // readOnly-window signal must not leak its severity into the create form.
+    rerender(
+      <RisksSection
+        risks={[]}
+        products={[
+          { id: "p1", name: "Product", overallStatus: "on-track", stages: [] },
+        ]}
+        addPrefill={prefill}
+        readOnly={false}
+        addSignal={1}
+      />,
+    );
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Blocked" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(screen.getByRole("button", { name: "At risk" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+});
+
+describe("RisksSection — foreign stage nudge (C5142)", () => {
+  it("a stage-less foreign card on a flagged product shows no actionable nudge but keeps its lock disclosure", () => {
+    render(
+      <SdlcTooltipProvider>
+        <RisksSection
+          risks={[{ ...foreignRisk, stageNames: [] }]}
+          products={[
+            { id: "p1", name: "Product", overallStatus: "at-risk", stages: [] },
+          ]}
+        />
+      </SdlcTooltipProvider>,
+    );
+
+    // The nudge implies an edit the viewer cannot take (LockBadge, no actions).
+    expect(
+      screen.queryByText(/Select at least one stage/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByLabelText("Read-only — authored by Alice"),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("RisksSection — empty product name labels (C5144)", () => {
+  it.each(["", " ".repeat(3)])(
+    "names toggle/edit/delete actions with a fallback for productName %s",
+    (productName) => {
+      const { unmount } = render(
+        <RisksSection risks={[{ ...baseRisk, productName }]} />,
+      );
+
+      expect(
+        screen.getByRole("button", { name: "Edit risk for untitled" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", {
+          name: "Escalate risk for untitled to blocked",
+        }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Delete risk for untitled" }),
+      ).toBeInTheDocument();
+      unmount();
+    },
+  );
+});

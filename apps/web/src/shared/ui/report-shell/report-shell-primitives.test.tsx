@@ -1,6 +1,10 @@
+import { reportSectionReadModelSchema } from "@customreport/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import { DecisionCard } from "../../../features/period/ui/decision-card";
+import { mapLeadDecisions } from "../../../features/report-sections/model/lead-form-decisions";
+import { makeReportSectionFixture } from "../../../test-utils/report-section-fixtures";
 import { AccordionSection } from "./accordion-section";
 import { ArchiveToggle } from "./archive-toggle";
 import { MetaRow } from "./meta-row";
@@ -115,6 +119,61 @@ describe("MetaRow", () => {
     render(<MetaRow authorName="Alice" stageTags={["Planning", "Dev"]} />);
     expect(screen.getByText("Planning")).toBeInTheDocument();
     expect(screen.getByText("Dev")).toBeInTheDocument();
+  });
+
+  it("preserves repeated admitted decision stages without duplicate-key diagnostics", () => {
+    const error = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const section = makeReportSectionFixture({
+      decisions: [
+        {
+          id: "10000000-0000-4000-8000-000000000030",
+          productId: "10000000-0000-4000-8000-000000000004",
+          text: "Review the release",
+          owner: "Test Lead",
+          impact: "Release readiness",
+          stageNames: ["Planning", "Planning", "Design"],
+        },
+      ],
+    });
+    const card = (stageNames: readonly string[]) => {
+      const admitted = reportSectionReadModelSchema.parse({
+        ...section,
+        decisions: section.decisions.map((decision) => ({
+          ...decision,
+          stageNames,
+        })),
+      });
+      const decision = mapLeadDecisions(admitted)[0];
+      if (!decision) throw new Error("Admitted decision is missing");
+      return (
+        <DecisionCard
+          decision={decision}
+          readOnly
+          publishedLocked={false}
+          onEdit={vi.fn()}
+          onDelete={vi.fn()}
+        />
+      );
+    };
+    const { rerender } = render(card(["Planning", "Planning", "Design"]));
+    expect(screen.getAllByText("Planning")).toHaveLength(2);
+    expect(screen.getAllByText("Design")).toHaveLength(1);
+    expect(
+      error.mock.calls.filter(([message]) =>
+        String(message).includes("same key"),
+      ),
+    ).toHaveLength(0);
+
+    rerender(card(["Design", "Planning", "Planning", "Planning"]));
+    expect(screen.getAllByText("Planning")).toHaveLength(3);
+    expect(screen.getAllByText("Design")).toHaveLength(1);
+    expect(
+      error.mock.calls.filter(([message]) =>
+        String(message).includes("same key"),
+      ),
+    ).toHaveLength(0);
   });
 
   it("renders empty string when authorName is null", () => {

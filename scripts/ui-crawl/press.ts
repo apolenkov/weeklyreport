@@ -189,7 +189,21 @@ export function runBatch(
       maxQuietMs: MAX_QUIET_MS,
       mode: ctx.config.mode,
     });
-    settleRate("trpc", reservedAt, BATCH_COST, outcome.req);
+    if (outcome.error !== undefined) {
+      for (const kind of ["press-batch-failed", "coverage-incomplete"])
+        add(
+          ctx,
+          { page: target.key, shot: null },
+          {
+            severity: "medium",
+            kind,
+            detail: outcome.error,
+          },
+        );
+      return { outcome, hungReason: outcome.error, restored: false };
+    }
+    if (outcome.req !== null)
+      settleRate("trpc", reservedAt, BATCH_COST, outcome.req);
     const total = Math.round(performance.now() - sent);
     if (total > STALL_MS)
       console.error(
@@ -216,7 +230,7 @@ export function recoveredPress(
     tag: control.tag,
     ...NO_EFFECT,
     action: result.status === "ok" ? "pressed" : "error",
-    reason: result.status === "ok" ? null : result.status,
+    reason: result.status === "ok" ? null : (result.reason ?? result.status),
     urlChanged: result.urlChanged,
     stateChanged: result.after !== result.before,
     responseMs: result.status === "ok" ? result.ms : null,

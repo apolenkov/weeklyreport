@@ -1,7 +1,10 @@
 import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 
-const ARTICLE_GRID_CLASS =
-  "grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-[1.35fr_1.25fr_0.85fr_0.85fr]";
+import {
+  SLIDE_ARTICLE_LAYOUT_KEY,
+  SLIDE_CANVAS_CLASS,
+  SLIDE_GRID_CLASS,
+} from "./slide-layout";
 
 function DensitySkeleton() {
   return (
@@ -50,7 +53,7 @@ function LeadCarouselSkeleton() {
 
 function ArticleRowSkeleton() {
   return (
-    <div className={`grid ${ARTICLE_GRID_CLASS} items-start`}>
+    <div className={`grid ${SLIDE_GRID_CLASS} items-start`}>
       <div className="space-y-2">
         <Skeleton className="h-4 w-5/6" />
         <Skeleton className="h-4 w-3/5" />
@@ -73,9 +76,9 @@ function ArticleSkeleton() {
     >
       <article
         data-testid="slide-skeleton-article"
-        data-layout-key="slide-article"
+        data-layout-key={SLIDE_ARTICLE_LAYOUT_KEY}
         data-layout-stability="position-width"
-        className="slide-canvas mx-auto flex w-full min-h-[var(--slide-canvas-min-h)] min-w-0 max-w-[var(--slide-canvas-max-w)] flex-col gap-3 rounded-[var(--radius)] border border-[var(--card-surface-border)] bg-[var(--color-card)] p-5 shadow-[0_1px_2px_var(--color-border-subtle)] sm:min-w-[var(--slide-canvas-min-w)]"
+        className={SLIDE_CANVAS_CLASS}
       >
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[var(--color-border-subtle)] pb-3">
           <div className="min-w-0 max-w-full space-y-2">
@@ -93,7 +96,7 @@ function ArticleSkeleton() {
 
         <div
           data-testid="slide-skeleton-column-headers"
-          className={`hidden sm:grid ${ARTICLE_GRID_CLASS}`}
+          className={`hidden sm:grid ${SLIDE_GRID_CLASS}`}
         >
           {Array.from({ length: 4 }, (_, index) => (
             <Skeleton key={index} className="h-4 w-full max-w-full" />

@@ -1,5 +1,5 @@
 import type { AppSettings } from "@customreport/shared";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -117,6 +117,24 @@ describe("PeriodBaseFields", () => {
       );
     },
   );
+
+  it("keeps both fields when two update in the same tick before re-render", () => {
+    render(<FieldsHarness />);
+    const periodLength = screen.getByLabelText("Period length (days)");
+    const gracePeriod = screen.getByLabelText("Grace period (hours)");
+
+    // Both onChange callbacks close over the same render's draft; with a
+    // stale `{ ...draft }` spread the second commit would overwrite the
+    // first and the period length would snap back to 7.
+    act(() => {
+      fireEvent.change(periodLength, { target: { value: "14" } });
+      fireEvent.change(gracePeriod, { target: { value: "48" } });
+    });
+
+    expect(periodLength).toHaveValue(14);
+    expect(gracePeriod).toHaveValue(48);
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
 
   it("accepts a valid integer within bounds and reports validity", () => {
     render(<FieldsHarness />);

@@ -29,9 +29,12 @@ import {
   PRODUCT_ID_B,
   REPORT_ID,
 } from "./__tests__/weekly-report-page-harness";
+import { WeeklyReportPage } from "./weekly-report-page";
 import { renderWeeklyReportPage } from "./weekly-report-page-test-harness";
 
 const AUTHOR_ID_B = "11111111-1111-4111-8111-bbbbbbbbbbbb";
+const AUTHOR_ID_C = "11111111-1111-4111-8111-cccccccccccc";
+const PRODUCT_ID_C = "11111111-1111-4111-8111-eeeeeeeeeeee";
 
 describe("WeeklyReportPage author highlighting", () => {
   beforeEach(() => {
@@ -296,5 +299,126 @@ describe("WeeklyReportPage author highlighting", () => {
     expect(navigationScrollIds).toContain(aliceLeadSection.id);
     expect(navigationScrollIds).not.toContain(aliceRootId);
     expect(navigationScrollIds).not.toContain(bobRootId);
+  });
+
+  it("drops a stale overview target when the author focus changes while mounted", async () => {
+    const user = userEvent.setup();
+    const sectionFor = (
+      reportSectionId: string,
+      authorId: string,
+      authorName: string,
+      productId: string,
+      productName: string,
+      itemId: string,
+    ) => ({
+      reportSectionId,
+      reportId: REPORT_ID,
+      authorId,
+      authorName,
+      status: "submitted" as const,
+      submittedAt: new Date("2026-04-14T09:00:00Z"),
+      projects: [
+        {
+          projectId: productId,
+          projectName: productName,
+          trafficLight: "green" as const,
+        },
+      ],
+      items: [
+        {
+          id: itemId,
+          projectId: productId,
+          type: "current" as const,
+          text: `${authorName} task`,
+          tag: "Dev",
+          workflowStatus: "done" as const,
+          stageNames: ["Development"],
+          carriedOver: false,
+        },
+      ],
+      risks: [],
+      decisions: [],
+    });
+    const data = makeWeeklyReportData("published", {
+      portfolioOverview: [
+        {
+          productId: PRODUCT_ID_A,
+          productName: "Product Alpha",
+          worstStatus: "green",
+          stageCount: 1,
+          leadNames: ["Alice"],
+          leadIds: [AUTHOR_ID_A],
+        },
+        {
+          productId: PRODUCT_ID_B,
+          productName: "Product Beta",
+          worstStatus: "green",
+          stageCount: 1,
+          leadNames: ["Bob"],
+          leadIds: [AUTHOR_ID_B],
+        },
+        {
+          productId: PRODUCT_ID_C,
+          productName: "Product Gamma",
+          worstStatus: "green",
+          stageCount: 1,
+          leadNames: ["Carol"],
+          leadIds: [AUTHOR_ID_C],
+        },
+      ],
+      leadSections: [
+        sectionFor(
+          "22222222-2222-4222-8222-aaaaaaaaaaa1",
+          AUTHOR_ID_A,
+          "Alice",
+          PRODUCT_ID_A,
+          "Product Alpha",
+          "33333333-3333-4333-8333-aaaaaaaaaa01",
+        ),
+        sectionFor(
+          "22222222-2222-4222-8222-bbbbbbbbbbb1",
+          AUTHOR_ID_B,
+          "Bob",
+          PRODUCT_ID_B,
+          "Product Beta",
+          "33333333-3333-4333-8333-bbbbbbbbbb01",
+        ),
+        sectionFor(
+          "22222222-2222-4222-8222-ccccccccccc1",
+          AUTHOR_ID_C,
+          "Carol",
+          PRODUCT_ID_C,
+          "Product Gamma",
+          "33333333-3333-4333-8333-cccccccccc01",
+        ),
+      ],
+    });
+
+    const { rerender } = renderWeeklyReportPage(data, {
+      authorId: AUTHOR_ID_A,
+    });
+    const toggleFor = (productId: string) => {
+      const root = document.getElementById(`report-product-${productId}`);
+      const toggle = root?.querySelector("button[aria-expanded]");
+      if (!toggle) throw new Error(`No accordion toggle for ${productId}`);
+      return toggle;
+    };
+    // Deep-link focus lands on Alice's product.
+    await waitFor(() =>
+      expect(toggleFor(PRODUCT_ID_A)).toHaveAttribute("aria-expanded", "true"),
+    );
+    // Real production navigator: the overview card lifts its target into the
+    // page-level navigation state.
+    await user.click(screen.getByTitle("Open Product Gamma details"));
+    await waitFor(() =>
+      expect(toggleFor(PRODUCT_ID_C)).toHaveAttribute("aria-expanded", "true"),
+    );
+    // The author focus transitions while the page stays mounted (authorId is
+    // not part of the weeklyReport.get query key): the fresh deep-link focus
+    // must win over the stale overview target.
+    rerender(<WeeklyReportPage authorId={AUTHOR_ID_B} />);
+    await waitFor(() =>
+      expect(toggleFor(PRODUCT_ID_B)).toHaveAttribute("aria-expanded", "true"),
+    );
   });
 });

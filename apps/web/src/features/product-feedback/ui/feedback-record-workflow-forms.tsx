@@ -54,13 +54,19 @@ export function FeedbackEditForm({
   const [value, setValue] = useState(item.message);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  // Ref guard: two submits in the same tick share one render closure, so a
+  // state flag alone cannot stop the second call. Reset only on failure;
+  // success unmounts via onCancel.
+  const busyRef = useRef(false);
   return (
     <form
+      id={`feedback-edit-${item.id}`}
       className="mt-4 grid w-full gap-2"
       onSubmit={(event) => {
         event.preventDefault();
         void (async () => {
-          if (!value.trim()) return;
+          if (busyRef.current || !value.trim()) return;
+          busyRef.current = true;
           setPending(true);
           setError("");
           try {
@@ -68,7 +74,7 @@ export function FeedbackEditForm({
             onCancel();
           } catch {
             setError("Could not update feedback. Try again.");
-          } finally {
+            busyRef.current = false;
             setPending(false);
           }
         })();
@@ -112,13 +118,17 @@ export function FeedbackReplyForm({
   const [value, setValue] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  // Same-tick double-submit guard; see FeedbackEditForm.
+  const busyRef = useRef(false);
   return (
     <form
+      id={`feedback-reply-${item.id}`}
       className="mt-4 grid w-full gap-2"
       onSubmit={(event) => {
         event.preventDefault();
         void (async () => {
-          if (!value.trim()) return;
+          if (busyRef.current || !value.trim()) return;
+          busyRef.current = true;
           setPending(true);
           setError("");
           try {
@@ -126,7 +136,7 @@ export function FeedbackReplyForm({
             onCancel();
           } catch {
             setError("Could not send reply. Try again.");
-          } finally {
+            busyRef.current = false;
             setPending(false);
           }
         })();
@@ -171,12 +181,15 @@ export function FeedbackDismissForm({
   const [reason, setReason] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  // Same-tick double-submit guard; see FeedbackEditForm.
+  const busyRef = useRef(false);
   const reasonRef = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     reasonRef.current?.focus();
   }, []);
   return (
     <section
+      id={`feedback-dismiss-${item.id}`}
       aria-label="Confirm dismissal"
       className="mt-4 w-full rounded-lg border border-red-200 bg-red-50 p-4"
     >
@@ -205,6 +218,8 @@ export function FeedbackDismissForm({
           disabled={!reason.trim() || pending}
           onClick={() => {
             void (async () => {
+              if (busyRef.current || !reason.trim()) return;
+              busyRef.current = true;
               setPending(true);
               setError("");
               try {
@@ -212,7 +227,7 @@ export function FeedbackDismissForm({
                 onCancel();
               } catch {
                 setError("Could not dismiss feedback. Try again.");
-              } finally {
+                busyRef.current = false;
                 setPending(false);
               }
             })();
@@ -242,12 +257,16 @@ export function FeedbackDeleteForm({
 }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  // Same-tick double-submit guard; see FeedbackEditForm.
+  const busyRef = useRef(false);
   return (
     <ConfirmationDialog
       open={true}
       onClose={onCancel}
       onConfirm={() => {
         void (async () => {
+          if (busyRef.current) return;
+          busyRef.current = true;
           setPending(true);
           setError("");
           try {
@@ -255,7 +274,7 @@ export function FeedbackDeleteForm({
             onCancel();
           } catch {
             setError("Could not delete feedback. Try again.");
-          } finally {
+            busyRef.current = false;
             setPending(false);
           }
         })();

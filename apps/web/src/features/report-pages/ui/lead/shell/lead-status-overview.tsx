@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useContext } from "react";
 
 import { useQueryErrorHandler } from "../../../../../shared/hooks/query/use-query-error-handler";
+import { isHeadLike } from "../../../../../shared/lib/auth/role-predicates";
 import { SessionContext } from "../../../../../shared/lib/auth/session-provider";
 import { formatClientErrorMessage } from "../../../../../shared/lib/errors/client-error-reporting";
 import { useTRPC } from "../../../../../shared/lib/trpc/trpc-context";
@@ -121,8 +122,7 @@ export function LeadStatusOverview({
   const activeQ = useQuery(trpc.reports.getActive.queryOptions());
   const { activeReportId } = deriveActiveIds(activeQ.data);
   const targetReportId = deriveTargetReportId(pinnedReportId, activeReportId);
-  const shouldRouteAway =
-    session?.user?.role === "head" || session?.user?.role === "admin";
+  const shouldRouteAway = isHeadLike(session?.user?.role ?? null);
   const overviewQ = useQuery({
     ...trpc.leadForm.statusOverview.queryOptions({
       reportId: targetReportId ?? "",

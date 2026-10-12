@@ -38,6 +38,8 @@ export type BatchOutcome = Readonly<{
   req: number | null;
   /** Time spent inside the page script. */
   took: number;
+  /** A failed evidence write returned with its completed rows. */
+  error?: string;
 }>;
 
 /** Installs console, error, fetch and XHR listeners once per document and tracks page activity. */
@@ -148,9 +150,17 @@ function batchScript(
   const items = ${JSON.stringify(items)};
   const results = [];
   S.req = 0;
-  const keep = () => sessionStorage.setItem('__crawlRes', JSON.stringify(results));
-  keep();
   const started = performance.now();
+  const keep = () => {
+    try { sessionStorage.setItem('__crawlRes', JSON.stringify(results)); }
+    catch (error) {
+      return {results, stopped: true, req: null, took: Math.round(performance.now() - started),
+        error: 'sessionStorage: ' + (error?.name ? error.name + ': ' : '') + (error?.message ?? String(error))};
+    }
+    return null;
+  };
+  const initialFailure = keep();
+  if (initialFailure) return initialFailure;
   const covered = (el) => {
     const r = el.getBoundingClientRect();
     const top = document.elementFromPoint(Math.max(0, Math.min(innerWidth - 1, r.x + r.width / 2)), Math.max(0, Math.min(innerHeight - 1, r.y + r.height / 2)));
@@ -165,15 +175,15 @@ function batchScript(
       el = document.querySelector(items[n].selector);
     }
     const base = {n, before: '', after: '', urlChanged: false, ms: 0, blockedMs: 0, logs: []};
-    if (!el) { results.push({...base, status: 'gone'}); keep(); continue; }
+    if (!el) { results.push({...base, status: 'gone'}); const failure = keep(); if (failure) return failure; continue; }
     let alternative = items[n].alternative;
     if (items[n].tag === 'select') {
       const assignment = selectAssignment(el, items[n], ${JSON.stringify(options.mode)});
-      if (assignment.reason) {results.push({...base, status: 'stale', reason: assignment.reason}); keep(); continue;}
+      if (assignment.reason) {results.push({...base, status: 'stale', reason: assignment.reason}); const failure = keep(); if (failure) return failure; continue;}
       alternative = assignment.value;
     }
     el.scrollIntoView?.({block: 'nearest'});
-    if (items[n].alternative === undefined && covered(el)) { results.push({...base, status: 'obstructed'}); keep(); continue; }
+    if (items[n].alternative === undefined && covered(el)) { results.push({...base, status: 'obstructed'}); const failure = keep(); if (failure) return failure; continue; }
     S.logs = []; S.longTasks = []; S.longObserver?.takeRecords();
     const before = state();
     const url = location.href;
@@ -191,7 +201,8 @@ function batchScript(
     const after = state();
     const urlChanged = location.href !== url;
     results.push({...base, status: 'ok', before, after, urlChanged, ms: Math.round(Math.min(S.last, Math.max(S.net, t0) + ${DOM_GRACE_MS}) - t0), blockedMs, logs: S.logs});
-    keep();
+    const persistenceFailure = keep();
+    if (persistenceFailure) return persistenceFailure;
     if (after !== before || urlChanged || performance.now() - started > ${options.budgetMs}) return {results, stopped: n + 1 < items.length || after !== before || urlChanged, req: S.req, took: Math.round(performance.now() - started)};
   }
   return {results, stopped: false, req: S.req, took: Math.round(performance.now() - started)};
@@ -203,14 +214,13 @@ export function pressBatch(
   browser: Browser,
   controls: readonly ProbedControl[],
   options: BatchOptions,
-): BatchOutcome & Readonly<{ req: number }> {
+): BatchOutcome {
   const items = controls.map((c) =>
     c.tag === "select" && c.alternatives[0] !== undefined
       ? { selector: c.selector, tag: c.tag, alternative: c.alternatives[0] }
       : { selector: c.selector, tag: c.tag },
   );
-  return browser.evaluate(batchScript(items, options)) as BatchOutcome &
-    Readonly<{ req: number }>;
+  return browser.evaluate(batchScript(items, options)) as BatchOutcome;
 }
 
 /** Presses one control again (undoes an expander or a toggle) and returns the quiet state signature. */

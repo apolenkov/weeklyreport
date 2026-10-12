@@ -47,7 +47,7 @@ function ContextToolbarSkeleton({ isSlidesMode = false } = {}) {
       data-testid="lead-skeleton-context-toolbar"
       data-layout-key="report-context-toolbar"
       data-layout-stability="position-size"
-      className="sticky top-0 z-20 flex min-w-0 flex-wrap items-center justify-start gap-1.5 rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-hover)] px-2 py-1.5 shadow-md"
+      className="flex min-w-0 flex-wrap items-center justify-start gap-1.5 rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-hover)] px-2 py-1.5 md:sticky md:top-0 md:z-20 md:shadow-md"
     >
       <div data-testid="lead-skeleton-period-cluster" className="contents">
         <div className="flex min-w-0 max-w-full basis-full items-center gap-1.5 md:basis-auto">

@@ -1,10 +1,16 @@
 "use client";
 
+import { SAFE_TEXT_MAX_LENGTH } from "@customreport/shared";
 import { useRef, useState } from "react";
 
 import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
 import { DialogSurface } from "../../../shared/ui/dialogs/dialog-surface";
 import { DocumentBodyPortal } from "../../../shared/ui/dialogs/document-body-portal";
+import { RecordTextareaField } from "../../../shared/ui/forms/record-textarea-field";
+
+// Persisted pause reasons pass through safeText's default bound
+// (section-record pausedReason); gate the confirmed trimmed value on the
+// same bound so oversized pastes fail visibly instead of at persistence.
 
 interface PauseReasonDialogProps {
   readonly open: boolean;
@@ -38,6 +44,7 @@ function PauseReasonDialogContent({
   useDialogFocus({ open: true, onClose: onCancel, containerRef: surfaceRef });
 
   const trimmed = reason.trim();
+  const isTooLong = trimmed.length > SAFE_TEXT_MAX_LENGTH;
 
   return (
     <DocumentBodyPortal>
@@ -50,7 +57,7 @@ function PauseReasonDialogContent({
         <PauseReasonPreview preview={preview} />
         <PauseReasonField reason={reason} onReasonChange={setReason} />
         <PauseReasonActions
-          canConfirm={trimmed.length > 0}
+          canConfirm={trimmed.length > 0 && !isTooLong}
           onCancel={onCancel}
           onConfirm={() => onConfirm(trimmed)}
         />
@@ -87,25 +94,19 @@ function PauseReasonField({
   readonly onReasonChange: (next: string) => void;
 }) {
   return (
-    <>
-      <label
-        className="mt-4 mb-1 block text-xs font-semibold text-[var(--color-muted-foreground)]"
-        htmlFor="pause-reason-input"
-      >
-        Reason *
-      </label>
-      <textarea
+    <div className="mt-4">
+      <RecordTextareaField
         id="pause-reason-input"
-        name="pauseReason"
-        autoComplete="off"
-        className="w-full resize-y rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-card)] px-3 py-2.5 text-sm text-[var(--color-foreground)] placeholder:text-[var(--color-muted-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)] focus:outline-none"
-        style={{ minHeight: "64px" }}
-        value={reason}
+        label="Reason"
         required
-        onChange={(e) => onReasonChange(e.target.value)}
+        value={reason}
+        onChange={onReasonChange}
         placeholder="Why is this paused? (e.g. waiting on a dependency)"
+        minHeightPx={64}
+        characterLimit={SAFE_TEXT_MAX_LENGTH}
+        fill={false}
       />
-    </>
+    </div>
   );
 }
 

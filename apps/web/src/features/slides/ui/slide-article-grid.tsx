@@ -19,12 +19,10 @@ import type {
   GridSubsection,
 } from "../model/slide-grid-products";
 import { SlideCell, type SlideRowActivateHandler } from "./slide-article-rows";
+import { SLIDE_GRID_CLASS } from "./slide-layout";
 import { SLIDE_PRODUCT_STATUS_PRESENTATION } from "./slide-product-status";
 
 // Desktop columns align across every subsection; mobile reads the same cells in order.
-const GRID_TEMPLATE =
-  "grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-[1.35fr_1.25fr_0.85fr_0.85fr]";
-
 const COLUMNS = [
   {
     key: "current" as const,
@@ -57,7 +55,7 @@ const COLUMNS = [
 export function SlideColumnHeaderRow() {
   return (
     <div
-      className={`hidden sm:grid ${GRID_TEMPLATE}`}
+      className={`hidden sm:grid ${SLIDE_GRID_CLASS}`}
       data-testid="slide-column-headers"
     >
       {COLUMNS.map(({ key, label, icon: Icon, accent }) => (
@@ -169,7 +167,7 @@ function SubsectionRow({
     <div className="border-t border-dashed border-[var(--card-surface-border)] pt-2 first:border-t-0 first:pt-0">
       <SubsectionHeader subsection={subsection} />
       {!empty && (
-        <div className={`grid ${GRID_TEMPLATE} mt-1.5`}>
+        <div className={`grid ${SLIDE_GRID_CLASS} mt-1.5`}>
           {COLUMNS.map(({ key, label, icon: Icon, accent }) => {
             // On a phone an empty cell drops its heading and shows one
             // "No <label>" line instead of a ruled heading above a lone dash.

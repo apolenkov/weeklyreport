@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
+import { SAFE_TEXT_MAX_LENGTH } from "@customreport/shared";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
@@ -62,6 +63,63 @@ describe("PauseReasonDialog", () => {
       />,
     );
     expect(screen.getByLabelText("Reason *")).toHaveValue("was on hold");
+  });
+
+  it("accepts exactly the shared safe-text limit and blocks one char over", () => {
+    const onConfirm = vi.fn();
+    render(
+      <PauseReasonDialog
+        open
+        preview="Implement CI pipeline"
+        onConfirm={onConfirm}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    const reason = screen.getByLabelText("Reason *");
+    const pause = screen.getByRole("button", { name: "Pause" });
+
+    fireEvent.change(reason, {
+      target: { value: "a".repeat(SAFE_TEXT_MAX_LENGTH + 1) },
+    });
+    expect(pause).toBeDisabled();
+    expect(
+      screen.getByText(
+        new RegExp(
+          `${SAFE_TEXT_MAX_LENGTH + 1} / ${SAFE_TEXT_MAX_LENGTH} characters`,
+        ),
+      ),
+    ).toBeVisible();
+    expect(screen.getByText(/1 over the limit/)).toBeVisible();
+
+    fireEvent.change(reason, {
+      target: { value: "a".repeat(SAFE_TEXT_MAX_LENGTH) },
+    });
+    expect(pause).toBeEnabled();
+    fireEvent.click(pause);
+    expect(onConfirm).toHaveBeenCalledWith("a".repeat(SAFE_TEXT_MAX_LENGTH));
+  });
+
+  it("measures the limit on the trimmed value that is actually confirmed", () => {
+    const onConfirm = vi.fn();
+    render(
+      <PauseReasonDialog
+        open
+        preview="Implement CI pipeline"
+        onConfirm={onConfirm}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    // Raw input exceeds the limit only because of surrounding whitespace;
+    // the confirmed trimmed value fits, so Pause stays enabled.
+    fireEvent.change(screen.getByLabelText("Reason *"), {
+      target: { value: `  ${"b".repeat(SAFE_TEXT_MAX_LENGTH)}  ` },
+    });
+    const pause = screen.getByRole("button", { name: "Pause" });
+    expect(pause).toBeEnabled();
+    fireEvent.click(pause);
+    expect(onConfirm).toHaveBeenCalledWith("b".repeat(SAFE_TEXT_MAX_LENGTH));
   });
 
   it("renders nothing when closed", () => {

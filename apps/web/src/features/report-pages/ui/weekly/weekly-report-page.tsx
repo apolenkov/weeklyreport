@@ -156,10 +156,22 @@ function WeeklyReportBody({
 }) {
   // Overview-card clicks lift their target into React state here; the accordion
   // and lead sections react to it. No component reaches into another's DOM.
+  // The report/deep-link basis rides inside the state (render-phase
+  // adjustment) so a stale overview target can never shadow the fresh
+  // focusedProductId after the basis changes while this body stays mounted.
+  const navBasis = `${page.reportId}::${page.focusedProductId ?? ""}`;
   const [overviewNavigation, setOverviewNavigation] = useState<{
+    readonly basis: string;
     readonly targetId: string | undefined;
     readonly epochs: ReadonlyMap<string, number>;
-  }>({ targetId: undefined, epochs: new Map() });
+  }>({ basis: navBasis, targetId: undefined, epochs: new Map() });
+  if (overviewNavigation.basis !== navBasis) {
+    setOverviewNavigation({
+      basis: navBasis,
+      targetId: undefined,
+      epochs: new Map(),
+    });
+  }
   const focusedTargetId = overviewNavigation.targetId;
   const focusedProductId = focusedTargetId ?? page.focusedProductId;
   const focusedLeadId =
@@ -169,7 +181,7 @@ function WeeklyReportBody({
     setOverviewNavigation((current) => {
       const epochs = new Map(current.epochs);
       epochs.set(targetId, (epochs.get(targetId) ?? 0) + 1);
-      return { targetId, epochs };
+      return { basis: navBasis, targetId, epochs };
     });
   };
 

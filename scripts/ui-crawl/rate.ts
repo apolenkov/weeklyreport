@@ -39,8 +39,14 @@ function entries(file: string): readonly (readonly [number, number])[] {
       .flatMap(([at, n]) =>
         at !== undefined && n !== undefined ? [[at, n] as const] : [],
       );
-  } catch {
-    // no ledger yet: nothing used
+  } catch (error) {
+    if (
+      !(error instanceof Error) ||
+      !("code" in error) ||
+      error.code !== "ENOENT"
+    )
+      throw error;
+    // An absent ledger has no reservations yet.
     return [];
   }
 }

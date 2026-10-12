@@ -1,0 +1,50 @@
+## MODIFIED Requirements
+
+### Requirement: Pausing an item requires and records a reason
+
+When a lead pauses an item, the UI MUST require a non-blank reason before the
+pause takes effect, and the reason MUST be persisted with the item
+(`Item.pausedReason`) and surfaced on the item card. Both pause entry points —
+the quick "Pause" action on a current-week card and the "Paused" status choice
+in the item edit dialog — MUST enforce the reason. This is a hard invariant at
+every write boundary: a paused item MUST have a non-blank trimmed
+`pausedReason`, and every non-paused item MUST have `pausedReason = null` (or
+omit it before persistence). Leaving the paused status clears the reason.
+
+#### Scenario: the quick pause action requires a reason
+
+- **WHEN** the lead clicks Pause on a current-week in-progress item
+- **THEN** a reason prompt opens and the item is not paused until a non-blank
+  reason is confirmed
+- **AND** the confirmed reason is persisted and shown on the card as a
+  "Paused: …" line
+
+#### Scenario: the edit dialog requires a reason for the paused status
+
+- **WHEN** the lead selects the Paused status in the item edit dialog
+- **THEN** a required reason field appears and the item cannot be saved while it
+  is blank
+
+#### Scenario: editing a paused item preserves its reason
+
+- **GIVEN** a paused item with a reason
+- **WHEN** the lead opens the edit dialog, changes an unrelated field, and saves
+  while keeping the Paused status
+- **THEN** the pause reason is preserved, not dropped
+
+#### Scenario: leaving the paused status clears the reason
+
+- **GIVEN** a paused item with a reason
+- **WHEN** the item moves to any non-paused status
+- **THEN** its pause reason is cleared
+
+#### Scenario: A quick-pause reason exceeds the persisted-text bound
+
+- **WHEN** the confirmed trimmed reason exceeds the shared persisted pause-reason limit
+- **THEN** the quick-pause dialog blocks confirmation and exposes the limit
+- **AND** it keeps the entered reason available for correction without truncation
+
+#### Scenario: Surrounding whitespace does not consume the confirmed reason's bound
+
+- **WHEN** the trimmed reason is nonblank and exactly within the shared persisted-text limit
+- **THEN** surrounding whitespace does not prevent confirmation of that trimmed reason

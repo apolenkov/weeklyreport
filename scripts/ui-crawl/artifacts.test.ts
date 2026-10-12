@@ -1,3 +1,6 @@
+/// <reference lib="dom" />
+// @vitest-environment jsdom
+
 import {
   existsSync,
   mkdirSync,
@@ -10,13 +13,16 @@ import { join } from "node:path";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { PressResult } from "./batch.ts";
+import { pressBatch, type PressResult } from "./batch.ts";
 import { parseCli } from "./config.ts";
 import { crawlFullPages } from "./full.ts";
+import type { FullControl, FullProbe } from "./full-probe.ts";
 import { mergeReports } from "./merge.ts";
 import { crawlPages } from "./page.ts";
-import { finishPress } from "./press.ts";
+import { finishPress, runBatch } from "./press.ts";
 import type { ProbedControl } from "./probe.ts";
+import { settleRate } from "./rate.ts";
+import { identity, planEntries, pressEntries } from "./round.ts";
 import { testContext } from "./test-context.fixture.ts";
 import { crawlRole } from "./worker.ts";
 vi.mock("./rate.ts", () => ({
@@ -30,6 +36,8 @@ const dirs: string[] = [];
 afterEach(() => {
   vi.restoreAllMocks();
   vi.clearAllMocks();
+  document.body.replaceChildren();
+  sessionStorage.clear();
   for (const dir of dirs.splice(0))
     rmSync(dir, { recursive: true, force: true });
 });
@@ -64,6 +72,208 @@ const press: PressResult = {
   logs: [],
 };
 describe("crawler screenshot evidence", () => {
+  it.each(["initial", "completed"] as const)(
+    "retains current evidence and aborts traversal after %s storage failure",
+    async (phase) => {
+      const iframe = document.createElement("iframe");
+      document.body.append(iframe);
+      const pageWindow = iframe.contentWindow;
+      const pageDocument = iframe.contentDocument;
+      if (!pageWindow || !pageDocument)
+        throw new Error("Missing JSDOM iframe realm");
+      Object.defineProperty(pageWindow, "__crawl2", {
+        value: { req: 0 },
+        configurable: true,
+      });
+      expect(pageWindow).not.toBe(window);
+      expect(
+        Object.getOwnPropertyDescriptor(pageWindow, "__crawl2"),
+      ).toMatchObject({ value: { req: 0 } });
+      const storage = pageWindow.sessionStorage;
+      pageDocument.body.innerHTML =
+        '<select id="mode" disabled><option value="a">Alpha</option><option value="b">Beta</option></select><select id="next"><option value="a">Alpha</option><option value="b">Beta</option></select>';
+      const ctx = { ...testContext(), dir: output() };
+      const first: FullControl = {
+        ...control,
+        selector: "#mode",
+        tag: "select",
+        role: "combobox",
+        alternatives: ["b"],
+        elementId: "mode",
+        row: null,
+        surface: null,
+        form: false,
+        group: null,
+        value: "a",
+        expanded: false,
+        options: ["a", "b"],
+      };
+      const next: FullControl = {
+        ...first,
+        selector: "#next",
+        elementId: "next",
+        name: "Inspect next",
+      };
+      let actions = 0;
+      pageDocument
+        .getElementById("next")
+        ?.addEventListener("input", () => actions++);
+      const generated = async (
+        controls: readonly ProbedControl[],
+      ): Promise<unknown> => {
+        let source = "";
+        vi.mocked(ctx.browser.evaluate).mockImplementation((script) => {
+          source = script;
+        });
+        pressBatch(ctx.browser, controls, {
+          budgetMs: 1000,
+          maxQuietMs: 100,
+          mode: "quick",
+        });
+        const result = new Promise<unknown>((resolve) => {
+          pageDocument.addEventListener(
+            "crawl-batch-result",
+            (event) => {
+              resolve((event as CustomEvent<unknown>).detail);
+            },
+            { once: true },
+          );
+        });
+        const script = pageDocument.createElement("script");
+        script.textContent = `document.dispatchEvent(new CustomEvent('crawl-batch-result', {detail: ${source}}));`;
+        pageDocument.body.append(script);
+        try {
+          return await result;
+        } finally {
+          script.remove();
+        }
+      };
+      if (phase === "initial") {
+        await generated([first]);
+        expect(
+          JSON.parse(storage.getItem("__crawlRes") ?? "null"),
+        ).toMatchObject([
+          { n: 0, status: "stale", reason: "select is disabled" },
+        ]);
+      }
+      const nativeSetItem = storage.setItem.bind(storage);
+      const setItem = vi.spyOn(
+        Object.getPrototypeOf(storage) as Storage,
+        "setItem",
+      );
+      if (phase === "completed") setItem.mockImplementationOnce(nativeSetItem);
+      setItem.mockImplementation(() => {
+        throw new DOMException(
+          "Completed evidence quota exceeded",
+          "QuotaExceededError",
+        );
+      });
+      const outcome = await generated([first, next]);
+      if (phase === "completed")
+        expect(storage.getItem("__crawlRes")).toBe("[]");
+      const rows =
+        phase === "initial"
+          ? []
+          : [{ n: 0, status: "stale", reason: "select is disabled" }];
+      expect(outcome).toMatchObject({
+        results: rows,
+        stopped: true,
+        req: null,
+        error:
+          "sessionStorage: QuotaExceededError: Completed evidence quota exceeded",
+      });
+      expect(outcome).toHaveProperty("took", expect.any(Number));
+      expect(actions).toBe(0);
+      vi.mocked(ctx.browser.evaluate).mockReturnValue(outcome);
+      const target = {
+        key: "/fixture",
+        url: "http://127.0.0.1:50123/fixture",
+        shotBase: "fixture",
+      };
+      const result = runBatch(ctx, target, [first, next]);
+      expect(result).toMatchObject({
+        outcome: { results: rows, req: null },
+        hungReason:
+          "sessionStorage: QuotaExceededError: Completed evidence quota exceeded",
+        restored: false,
+      });
+      expect(settleRate).not.toHaveBeenCalled();
+      expect(ctx.findings.map((f) => f.kind)).toEqual([
+        "press-batch-failed",
+        "coverage-incomplete",
+      ]);
+      const probe: FullProbe = {
+        url: target.url,
+        title: "Fixture",
+        viewport: { width: 1280, height: 720 },
+        controls: [first, next],
+        links: [],
+        geometry: [],
+        signature: "baseline",
+        surface: null,
+      };
+      const counters = { pressed: 0, families: new Map<string, number>() };
+      const entries = planEntries(
+        ctx,
+        {
+          probe,
+          live: new Map(probe.controls.map((c) => [identity(c), c])),
+          counters,
+        },
+        0,
+      );
+      const round = pressEntries(
+        ctx,
+        { ...target, tag: "fixture" },
+        entries,
+        counters,
+      );
+      expect(round).toMatchObject({ next: null, aborted: true });
+      if (phase === "completed")
+        expect(round.steps[0]).toMatchObject({
+          reason: "select is disabled",
+          shot: null,
+        });
+      let failed = false;
+      let attempts = 0;
+      let dependentReads = 0;
+      let dependentCommands = 0;
+      vi.mocked(ctx.browser.evaluate).mockImplementation((source): unknown => {
+        if (source.includes("const items =")) {
+          failed = true;
+          attempts++;
+          return outcome;
+        }
+        if (failed) {
+          dependentReads++;
+          throw new Error("Dependent probe/rebase on failed page");
+        }
+        if (source === "location.pathname") return "/fixture";
+        if (source.includes("const GEOM =")) return probe;
+        if (source.includes("await axe.run")) return [];
+        if (source.includes("const n = S.req")) return 0;
+        return "baseline";
+      });
+      vi.mocked(ctx.browser.batch).mockImplementation((commands) => {
+        if (failed) {
+          dependentCommands++;
+          throw new Error("Dependent screenshot/action on failed page");
+        }
+        return commands.map(() => ({ ok: true, error: null, value: {} }));
+      });
+      const page = crawlFullPages(
+        { ...ctx, config: { ...ctx.config, mode: "full" } },
+        target.url,
+        "",
+      )[0];
+      expect(page?.completion).toBe("error");
+      expect(attempts).toBe(1);
+      expect(dependentReads).toBe(0);
+      expect(dependentCommands).toBe(0);
+      expect(actions).toBe(0);
+    },
+  );
+
   it("does not reference a failed step capture and still restores the changed surface", () => {
     const ctx = testContext();
     vi.mocked(ctx.browser.batch).mockReturnValue([

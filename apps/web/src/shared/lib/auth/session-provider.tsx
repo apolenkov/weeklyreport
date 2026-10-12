@@ -17,6 +17,7 @@ import {
 } from "react";
 
 import { useQueryErrorHandler } from "../../hooks/query/use-query-error-handler";
+import { webEnv } from "../runtime/web-env";
 import { useTRPC } from "../trpc/trpc-context";
 import { writeLastRole } from "./last-role";
 
@@ -139,7 +140,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   // Client-only write so the landing page can offer a 1-click resume hint.
   useEffect(() => {
-    if (!value.isAuthenticated || !value.user) return;
+    if (!webEnv.authStub() || !value.isAuthenticated || !value.user) return;
     writeLastRole({
       role: value.user.role,
       email: value.user.email,

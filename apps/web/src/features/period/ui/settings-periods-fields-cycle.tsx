@@ -100,7 +100,7 @@ function useReopenWindowState({
     }
     setError(null);
     onValidityChange?.(REOPEN_WINDOW_FIELD_ID, true);
-    setDraft({ ...draft, reopenWindowHours: parsed });
+    setDraft((current) => ({ ...current, reopenWindowHours: parsed }));
   }
 
   return { raw, error, handleChange };
@@ -120,10 +120,10 @@ function DeadlineTimeField({ draft, setDraft }: DraftFieldProps) {
         step={60}
         value={draft.deadlineTime}
         onChange={(e) =>
-          setDraft({
-            ...draft,
+          setDraft((current) => ({
+            ...current,
             deadlineTime: e.target.value,
-          })
+          }))
         }
         className={FIELD_INPUT_CLASS}
       />
@@ -153,10 +153,10 @@ function AllowReopenField({
             REOPEN_WINDOW_FIELD_ID,
             enabled ? reopenWindowValid : true,
           );
-          setDraft({
-            ...draft,
+          setDraft((current) => ({
+            ...current,
             allowReopenAfterPublish: enabled,
-          });
+          }));
         }}
         className="mt-1 h-4 w-4 rounded border-[var(--color-border)] accent-[var(--color-starbucks-accent)]"
       />

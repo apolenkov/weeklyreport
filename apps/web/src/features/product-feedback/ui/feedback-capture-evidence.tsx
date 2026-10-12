@@ -35,19 +35,33 @@ export interface FeedbackCaptureItem {
 const PERCENT = 100;
 const FALLBACK_VIEWPORT_WIDTH = 1280;
 const FALLBACK_VIEWPORT_HEIGHT = 720;
+// Admitted captures are already bounded by the shared diagnostics schema
+// (50 console / 20 network entries); the renderer preserves every entry.
 
 function captureDimensions(viewport: string): {
   readonly width: number;
   readonly height: number;
 } {
+  const fallback = {
+    width: FALLBACK_VIEWPORT_WIDTH,
+    height: FALLBACK_VIEWPORT_HEIGHT,
+  };
   const match = /^(\d+)x(\d+)$/.exec(viewport);
-  if (!match) {
-    return {
-      width: FALLBACK_VIEWPORT_WIDTH,
-      height: FALLBACK_VIEWPORT_HEIGHT,
-    };
+  if (!match) return fallback;
+  const width = Number(match[1]);
+  const height = Number(match[2]);
+  // Fall back only for unparseable or zero-area dimensions (a 0-width or
+  // 0-height screenshot renders nothing in the card); every valid finite
+  // positive size, including 5K and larger captures, is preserved as stored.
+  if (
+    !Number.isSafeInteger(width) ||
+    !Number.isSafeInteger(height) ||
+    width < 1 ||
+    height < 1
+  ) {
+    return fallback;
   }
-  return { width: Number(match[1]), height: Number(match[2]) };
+  return { width, height };
 }
 
 function CaptureScreenshot({ item }: { readonly item: FeedbackCaptureItem }) {
@@ -80,9 +94,26 @@ function CaptureScreenshot({ item }: { readonly item: FeedbackCaptureItem }) {
   );
 }
 
+// Collision-safe key for one diagnostics row: the JSON tuple of the row's
+// content plus its per-content occurrence count. Tuple encoding (not string
+// concatenation) keeps identical duplicates distinct without colliding with
+// a message that literally ends in a suffix like "#1", and without
+// array-index keys.
+function diagnosticKey(
+  seen: Map<string, number>,
+  parts: readonly (string | number)[],
+): string {
+  const base = JSON.stringify(parts);
+  const occurrence = seen.get(base) ?? 0;
+  seen.set(base, occurrence + 1);
+  return JSON.stringify([...parts, occurrence]);
+}
+
 function CaptureDiagnostics({ item }: { readonly item: FeedbackCaptureItem }) {
   const consoleEntries = item.diagnostics?.console ?? [];
   const networkEntries = item.diagnostics?.network ?? [];
+  const consoleSeen = new Map<string, number>();
+  const networkSeen = new Map<string, number>();
   return (
     <div className="space-y-3 text-xs text-[var(--color-muted-foreground)]">
       <div className="grid grid-cols-3 gap-2">
@@ -110,7 +141,11 @@ function CaptureDiagnostics({ item }: { readonly item: FeedbackCaptureItem }) {
             {consoleEntries.map((entry) => (
               <li
                 className="break-words font-mono"
-                key={`${entry.timestamp}-${entry.level}-${entry.message}`}
+                key={diagnosticKey(consoleSeen, [
+                  entry.timestamp,
+                  entry.level,
+                  entry.message,
+                ])}
               >
                 [{entry.level}] {entry.message}
               </li>
@@ -127,7 +162,12 @@ function CaptureDiagnostics({ item }: { readonly item: FeedbackCaptureItem }) {
             {networkEntries.map((entry) => (
               <li
                 className="break-all font-mono"
-                key={`${entry.timestamp}-${entry.method}-${entry.status}-${entry.url}`}
+                key={diagnosticKey(networkSeen, [
+                  entry.timestamp,
+                  entry.method,
+                  entry.status,
+                  entry.url,
+                ])}
               >
                 {entry.method} {entry.status} {entry.url}
               </li>

@@ -58,7 +58,7 @@ function PeriodShapeFields({
         bounds={fieldLimits.PERIOD_LENGTH_DAYS}
         value={draft.periodLengthDays}
         onChange={(periodLengthDays) =>
-          setDraft({ ...draft, periodLengthDays })
+          setDraft((current) => ({ ...current, periodLengthDays }))
         }
         {...(onValidityChange === undefined ? {} : { onValidityChange })}
         hint="How many days each reporting period spans (default 7 = weekly)."
@@ -66,7 +66,9 @@ function PeriodShapeFields({
 
       <WorkingDaysField
         value={draft.workingDays}
-        onChange={(workingDays) => setDraft({ ...draft, workingDays })}
+        onChange={(workingDays) =>
+          setDraft((current) => ({ ...current, workingDays }))
+        }
       />
 
       <ToggleField
@@ -75,7 +77,7 @@ function PeriodShapeFields({
         description="Create the next reporting period automatically when the schedule advances."
         checked={draft.autoCreatePeriods}
         onChange={(autoCreatePeriods) =>
-          setDraft({ ...draft, autoCreatePeriods })
+          setDraft((current) => ({ ...current, autoCreatePeriods }))
         }
       />
     </>
@@ -97,7 +99,7 @@ function SubmissionWindowFields({
         bounds={fieldLimits.DEFAULT_DEADLINE_DAYS}
         value={draft.defaultDeadlineDays}
         onChange={(defaultDeadlineDays) =>
-          setDraft({ ...draft, defaultDeadlineDays })
+          setDraft((current) => ({ ...current, defaultDeadlineDays }))
         }
         {...(onValidityChange === undefined ? {} : { onValidityChange })}
         hint="Number of days after period start before reports are due."
@@ -109,7 +111,7 @@ function SubmissionWindowFields({
         bounds={fieldLimits.GRACE_PERIOD_HOURS}
         value={draft.gracePeriodHours}
         onChange={(gracePeriodHours) =>
-          setDraft({ ...draft, gracePeriodHours })
+          setDraft((current) => ({ ...current, gracePeriodHours }))
         }
         {...(onValidityChange === undefined ? {} : { onValidityChange })}
         hint="Submissions within this many hours past the deadline are always accepted, regardless of «allow late submissions». Must be 0..168 (one week)."
@@ -121,7 +123,7 @@ function SubmissionWindowFields({
         description="Governs only what happens AFTER the grace window. When on, submissions are still accepted past the grace window. When off, submissions past deadline + grace are rejected."
         checked={draft.allowLateSubmissions}
         onChange={(allowLateSubmissions) =>
-          setDraft({ ...draft, allowLateSubmissions })
+          setDraft((current) => ({ ...current, allowLateSubmissions }))
         }
       />
     </>
@@ -150,7 +152,7 @@ function PublicationFields({
         }
         checked={draft.autoPublishAfterDeadline}
         onChange={(autoPublishAfterDeadline) =>
-          setDraft({ ...draft, autoPublishAfterDeadline })
+          setDraft((current) => ({ ...current, autoPublishAfterDeadline }))
         }
       />
 
@@ -160,7 +162,7 @@ function PublicationFields({
         bounds={fieldLimits.AUTO_ARCHIVE_WEEKS}
         value={draft.autoArchiveWeeksAfterPublish}
         onChange={(autoArchiveWeeksAfterPublish) =>
-          setDraft({ ...draft, autoArchiveWeeksAfterPublish })
+          setDraft((current) => ({ ...current, autoArchiveWeeksAfterPublish }))
         }
         {...(onValidityChange === undefined ? {} : { onValidityChange })}
         hint="0 = never archive. Otherwise: a published period drops out of the default «active» views after N weeks."
