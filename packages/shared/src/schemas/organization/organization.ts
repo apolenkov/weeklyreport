@@ -13,6 +13,9 @@ const orgBrandString = (max: number) =>
     .string()
     .min(1)
     .max(max)
+    .refine((value) => value.trim().length > 0, {
+      message: "must not be blank",
+    })
     .refine((v) => !v.includes("<") && !v.includes(">"), {
       message: "must not contain '<' or '>'",
     });

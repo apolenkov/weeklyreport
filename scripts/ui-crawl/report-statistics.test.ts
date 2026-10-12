@@ -1,13 +1,21 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import { drainLogs } from "./logs.ts";
+import { pageKey } from "./policy.ts";
 import { renderMarkdown } from "./report.ts";
-import type { StepRecord } from "./types.ts";
-function report(values: readonly (number | null)[]) {
+import { testContext } from "./test-context.fixture.ts";
+import type { Finding, StepRecord } from "./types.ts";
+function report(
+  values: readonly (number | null)[],
+  findings: readonly Finding[] = [],
+  key = "/fixture",
+  reason: string | null = null,
+) {
   const steps: StepRecord[] = values.map((responseMs, index) => ({
     name: `Action ${index}`,
     tag: "button",
-    action: "pressed",
-    reason: null,
+    action: reason === null ? "pressed" : "skipped",
+    reason,
     urlChanged: false,
     stateChanged: false,
     restoredBy: "none",
@@ -34,7 +42,7 @@ function report(values: readonly (number | null)[]) {
             pages: [
               {
                 url: "http://127.0.0.1:50123/fixture",
-                key: "/fixture",
+                key,
                 loadMs: 0,
                 shot: null,
                 controlsFound: steps.length,
@@ -43,7 +51,7 @@ function report(values: readonly (number | null)[]) {
                 steps,
               },
             ],
-            findings: [],
+            findings,
           },
         ],
       },
@@ -63,4 +71,47 @@ describe("crawler response statistics", () => {
     expect(report([null, 0, null])).toContain("0 ms (n=1)");
     expect(report([7])).toContain("7 ms (n=1)");
   });
+
+  it.each(["\n", "\r\n", "\r"])(
+    "keeps observed console text, page labels and skip reasons inside their report entries (%j)",
+    (lineBreak) => {
+      const ctx = testContext();
+      const detail = [
+        "Error: failed",
+        "# Forged heading",
+        "* Forged item",
+        "    at [handler](url)",
+      ].join(lineBreak);
+      const key = pageKey("http://127.0.0.1:50123/fixture?mode=**highlight**");
+      vi.mocked(ctx.browser.batch).mockImplementation((commands) =>
+        commands.map(() => ({
+          ok: true,
+          error: null,
+          value: { messages: [{ type: "error", text: detail }] },
+        })),
+      );
+      drainLogs(ctx, { page: key, shot: null });
+      const before = JSON.stringify(ctx.findings);
+      const rendered = report(
+        [null],
+        ctx.findings,
+        key,
+        ["gone: # Missing", "* Not another item"].join(lineBreak),
+      );
+
+      expect(rendered).not.toContain("\n# Forged heading");
+      expect(rendered).not.toContain("\n* Forged item");
+      expect(rendered).not.toContain("\n* Not another item");
+      expect(rendered).toContain(String.raw`\# Forged heading`);
+      expect(rendered).toContain(String.raw`\* Forged item`);
+      expect(rendered).toContain(String.raw`at \[handler\]\(url\)`);
+      expect(rendered).toContain(String.raw`/fixture?mode=\*\*highlight\*\*`);
+      expect(rendered).not.toContain("/fixture?mode=**highlight**");
+      expect(rendered).toContain(
+        String.raw`gone: \# Missing \* Not another item`,
+      );
+      expect(ctx.findings[0]?.detail).toBe(detail);
+      expect(JSON.stringify(ctx.findings)).toBe(before);
+    },
+  );
 });

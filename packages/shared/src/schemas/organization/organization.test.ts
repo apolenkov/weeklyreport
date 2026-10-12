@@ -83,3 +83,27 @@ describe("organization schemas current bounds", () => {
     ).toBe(false);
   });
 });
+
+// Direct API writes and persisted/public projections share the brand boundary.
+describe.each([
+  ["update", organizationUpdateSchema],
+  ["stored", organizationSchema],
+  ["public", organizationPublicSchema],
+] as const)("%s organization nonblank identity", (_name, schema) => {
+  it.each(["shortName", "fullName"] as const)(
+    "rejects whitespace-only %s while preserving meaningful spaced names",
+    (field) => {
+      const identity = {
+        id: "singleton",
+        shortName: " Acme ",
+        fullName: "Acme Platforms & Co.",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      expect(schema.safeParse(identity).success).toBe(true);
+      expect(schema.safeParse({ ...identity, [field]: " \t\n " }).success).toBe(
+        false,
+      );
+    },
+  );
+});

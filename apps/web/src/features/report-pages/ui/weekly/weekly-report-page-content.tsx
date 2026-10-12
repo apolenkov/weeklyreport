@@ -73,7 +73,11 @@ export function ReportAccordionBody({
         scrollIntoViewOnHighlight={
           scrollTargetProductId === report.id && targetsInstance
         }
-        navigationEpoch={overviewNavigationEpochs.get(report.id) ?? 0}
+        navigationEpoch={
+          scope === "product"
+            ? (overviewNavigationEpochs.get(report.id) ?? 0)
+            : 0
+        }
         review={review}
       />
     );

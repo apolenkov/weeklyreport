@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runMigrateDeploy } from "./migrate-deploy.js";
 
@@ -8,6 +8,10 @@ const environment = {
   NODE_ENV: "test",
   PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
 } as const;
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+});
 
 describe("migrate deploy boundary", () => {
   it.each([
@@ -30,6 +34,55 @@ describe("migrate deploy boundary", () => {
       ),
     ).toThrow(/must equal/u);
     expect(spawn).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "DATABASE_URL",
+    "PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION",
+  ] as const)(
+    "requires explicit input %s even when the ambient environment supplies it",
+    (key) => {
+      vi.stubEnv("DATABASE_URL", environment.DATABASE_URL);
+      vi.stubEnv(
+        "PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION",
+        environment.PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION,
+      );
+      const { [key]: _omitted, ...input } = environment;
+      const spawn = vi.fn(() => ({ status: 0, signal: null }));
+
+      expect(() => runMigrateDeploy(input, spawn)).toThrow();
+      expect(spawn).not.toHaveBeenCalled();
+    },
+  );
+
+  it("rejects inherited production before spawning when the input omits NODE_ENV", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const { NODE_ENV: _omitted, ...input } = environment;
+    const spawn = vi.fn(() => ({ status: 0, signal: null }));
+
+    expect(() => runMigrateDeploy(input, spawn)).toThrow(
+      /NODE_ENV=production/u,
+    );
+    expect(spawn).not.toHaveBeenCalled();
+  });
+
+  it("passes the explicit non-production override to the child", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const childEnvironments: Pick<
+      NodeJS.ProcessEnv,
+      "NODE_ENV" | "DATABASE_URL"
+    >[] = [];
+    runMigrateDeploy(environment, (_command, _args, options) => {
+      childEnvironments.push({
+        NODE_ENV: options.env.NODE_ENV,
+        DATABASE_URL: options.env.DATABASE_URL,
+      });
+      return { status: 0, signal: null };
+    });
+
+    expect(childEnvironments).toHaveLength(1);
+    expect(childEnvironments[0]?.NODE_ENV).toBe("test");
+    expect(childEnvironments[0]?.DATABASE_URL).toBe(environment.DATABASE_URL);
   });
 
   it("spawns only the guarded exact deploy command", () => {

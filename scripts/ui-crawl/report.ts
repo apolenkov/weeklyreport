@@ -29,6 +29,13 @@ function cell(value: TableCell): string {
     .replaceAll(/\r?\n/g, " ");
 }
 
+// Observed text stays inside its report entry; structured evidence is unchanged.
+function markdownText(value: string): string {
+  return value
+    .replaceAll(/[\\`*_{}[\]()#+.!<>~&-]/g, String.raw`\$&`)
+    .replaceAll(/\r\n?|\n/g, " ");
+}
+
 function table(
   headers: readonly string[],
   rows: readonly (readonly TableCell[])[],
@@ -41,7 +48,7 @@ function table(
 }
 
 function pageLine(page: PageRecord): string {
-  return `${page.key} (${page.controlsFound} controls, load ${page.loadMs} ms)`;
+  return `${markdownText(page.key)} (${page.controlsFound} controls, load ${page.loadMs} ms)`;
 }
 
 function seconds(ms: number): string {
@@ -89,7 +96,7 @@ function findingGroups(findings: readonly Finding[]): string[] {
         ...new Set(group.map((item) => `${item.role}@${item.width}`)),
       ].join(", ");
       const shot = finding.shot ? ` [shot](${finding.shot})` : "";
-      return `- **${finding.severity}** \`${finding.kind}\` ${finding.page} — ${finding.detail} (${where})${shot}`;
+      return `- **${finding.severity}** \`${finding.kind}\` ${markdownText(finding.page)} — ${markdownText(finding.detail)} (${where})${shot}`;
     });
 }
 
@@ -99,14 +106,14 @@ function pageRows(run: RunRecord): readonly (readonly TableCell[])[] {
     return [
       run.role,
       run.width,
-      page.key,
+      markdownText(page.key),
       page.state ?? "observed",
       page.completion ?? "unreported",
       counts.found,
       counts.pressed,
       counts.skipped,
       counts.errors,
-      JSON.stringify(counts.reasons),
+      markdownText(JSON.stringify(counts.reasons)),
     ];
   });
 }
@@ -130,7 +137,7 @@ function pairwiseRow(page: PageRecord): readonly TableCell[] {
     observed,
     skipped,
     errors,
-    JSON.stringify(Object.fromEntries(reasons)),
+    markdownText(JSON.stringify(Object.fromEntries(reasons))),
   ];
 }
 
@@ -172,7 +179,7 @@ function coverageTables(runs: readonly RunRecord[]): readonly string[] {
         run.pages.map((page) => [
           run.role,
           run.width,
-          page.key,
+          markdownText(page.key),
           page.state ?? "observed",
           ...pairwiseRow(page),
         ]),
@@ -193,7 +200,7 @@ function matrixTable(results: readonly RoleResult[]): readonly string[] {
       ["role", "page", "element", ...states],
       rows.map((row) => [
         row.role,
-        row.page,
+        markdownText(row.page),
         row.element,
         ...states.map((state) => row.cells.get(state) ?? "—"),
       ]),
@@ -207,7 +214,7 @@ function skippedControls(runs: readonly RunRecord[]): readonly string[] {
   return countBy(
     steps.filter((step) => step.action === "skipped"),
     (step) => (step.reason ?? "unspecified").replace(/^cap.*/, "cap"),
-  ).map(([reason, count]) => `- ${reason}: ${count}`);
+  ).map(([reason, count]) => `- ${markdownText(reason)}: ${count}`);
 }
 
 export function renderMarkdown(

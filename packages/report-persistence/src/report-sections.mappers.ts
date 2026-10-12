@@ -189,7 +189,11 @@ function toActivityViews(
           productId: link.product.id,
           productName: link.product.name,
         }))
-        .sort((a, b) => a.productName.localeCompare(b.productName, "ru")),
+        .sort(
+          (a, b) =>
+            a.productName.localeCompare(b.productName, "ru") ||
+            a.productId.localeCompare(b.productId),
+        ),
       ...deriveActivityStatus(
         asTraffic(status.status),
         sectionRisks
@@ -197,7 +201,11 @@ function toActivityViews(
           .map((risk) => ({ severity: risk.severity as RiskSeverity })),
       ),
     }))
-    .sort((a, b) => a.activityName.localeCompare(b.activityName, "ru"));
+    .sort(
+      (a, b) =>
+        a.activityName.localeCompare(b.activityName, "ru") ||
+        a.activityId.localeCompare(b.activityId),
+    );
 }
 
 function assertProductRelationsLoaded(row: SectionRow): void {

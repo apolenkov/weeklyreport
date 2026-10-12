@@ -91,4 +91,49 @@ describe("buildEscalationsFromReadSections", () => {
       }),
     ]);
   });
+
+  it("deduplicates a shared red product while retaining each lead's blocker", () => {
+    const sections = [
+      section({
+        reportSectionId: FIRST_SECTION_ID,
+        authorId: FIRST_AUTHOR_ID,
+        projectId: FIRST_PRODUCT_ID,
+        trafficLight: "red",
+        risk: "First blocker",
+        severity: "blocked",
+      }),
+      section({
+        reportSectionId: SECOND_SECTION_ID,
+        authorId: SECOND_AUTHOR_ID,
+        projectId: FIRST_PRODUCT_ID,
+        trafficLight: "red",
+        risk: "Second blocker",
+        severity: "blocked",
+      }),
+    ];
+    const before = structuredClone(sections);
+
+    const escalations = buildEscalationsFromReadSections(sections);
+
+    expect(escalations).toEqual([
+      expect.objectContaining({
+        type: "blocked",
+        productId: FIRST_PRODUCT_ID,
+        authorId: FIRST_AUTHOR_ID,
+        description: "First blocker",
+      }),
+      expect.objectContaining({
+        type: "at_risk",
+        productId: FIRST_PRODUCT_ID,
+        authorId: FIRST_AUTHOR_ID,
+      }),
+      expect.objectContaining({
+        type: "blocked",
+        productId: FIRST_PRODUCT_ID,
+        authorId: SECOND_AUTHOR_ID,
+        description: "Second blocker",
+      }),
+    ]);
+    expect(sections).toEqual(before);
+  });
 });
