@@ -1,9 +1,18 @@
-import { render, screen } from "@testing-library/react";
+import { reportSectionReadModelSchema } from "@customreport/shared";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { Product, RiskEntry } from "../../../../report-sections";
+import { makeDraftMergeSection } from "../../../../report-sections/model/lead-form/draft/lead-form-draft-merge-test-fixtures";
+import { InMemoryLeadFormWriteAdapter } from "../../../../report-sections/model/lead-form/lead-form-write-port.in-memory";
+import { useLeadFormDraft } from "../../../../report-sections/model/lead-form/use-lead-form-draft";
+import { useLeadFormQuickAdd } from "../../../../report-sections/model/lead-form/use-lead-form-quick-add";
+import { mapLeadProducts } from "../../../../report-sections/model/lead-form-periods-products";
+import { mapLeadRisks } from "../../../../report-sections/model/lead-form-risks";
+import { buildDraftActions } from "../chrome/lead-form-draft-actions";
+import { useLeadFormAddSignals } from "../chrome/use-lead-form-add-signals";
 import {
   LeadFormSyncBridge,
   type RiskPrefillRequest,
@@ -20,6 +29,95 @@ const { toast } = await import("sonner");
 // reset it before each so a toast.info assertion never reads a prior test's call.
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+it("preserves both public pipeline edits in one React batch through the latest raw draft", () => {
+  const initial = makeDraftMergeSection();
+  const section = reportSectionReadModelSchema.parse({
+    ...initial,
+    risks: initial.risks.map((risk) => ({
+      ...risk,
+      severity: "blocked",
+      stageNames: ["Analysis"],
+    })),
+    projects: initial.projects.map((project) => ({
+      ...project,
+      trafficLight: "yellow",
+      stageSet: [
+        ...project.stageSet,
+        {
+          stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaac",
+          stageName: "Analysis",
+          sortOrder: 3,
+        },
+      ],
+      ownedStages: [
+        ...project.ownedStages.map((stage) => ({ ...stage, status: null })),
+        {
+          stageId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaac",
+          stageName: "Analysis",
+          sortOrder: 3,
+          status: "yellow",
+        },
+      ],
+    })),
+  });
+  const writePort = new InMemoryLeadFormWriteAdapter({
+    saveDraft: () => Promise.resolve(section),
+    submit: () => Promise.resolve(section),
+  });
+
+  function DraftPipeline() {
+    const draft = useLeadFormDraft({
+      generation: `${section.reportId}:${section.reportSectionId}`,
+      serverSection: section,
+      sectionIdForActions: section.reportSectionId,
+      serverReadOnly: false,
+      refetchSection: () => Promise.resolve(),
+      crossAuthors: [],
+      isEveryone: false,
+      writePort,
+    });
+    const products = draft.draft ? mapLeadProducts(draft.draft) : [];
+    const risks = draft.draft ? mapLeadRisks(draft.draft) : [];
+    const quickAdd = useLeadFormQuickAdd({
+      apply: draft.apply,
+      generation: draft.generation,
+      loaded: { products, currentWeekItems: [], nextWeekItems: [] },
+    });
+    const signals = useLeadFormAddSignals();
+    const actions = buildDraftActions({ ...draft, ...quickAdd }, signals, {
+      products,
+    });
+    return (
+      <LeadFormSyncBridge.Provider
+        products={products}
+        risks={risks}
+        onProductsChange={actions.onProductsChange}
+        onRisksChange={actions.onRisksChange}
+      >
+        <output data-testid="raw-draft">{JSON.stringify(draft.draft)}</output>
+        <LeadFormSyncBridge.Pipeline />
+      </LeadFormSyncBridge.Provider>
+    );
+  }
+
+  render(<DraftPipeline />);
+  const development = screen.getByRole("button", { name: /^Development:/ });
+  const testing = screen.getByRole("button", { name: /^Testing:/ });
+  expect(
+    screen.getByRole("button", { name: /^Analysis: Blocked/ }),
+  ).toBeInTheDocument();
+  act(() => {
+    fireEvent.click(development);
+    fireEvent.click(testing);
+  });
+  const current = reportSectionReadModelSchema.parse(
+    JSON.parse(screen.getByTestId("raw-draft").textContent),
+  );
+  expect(current.projects[0]?.ownedStages.map((stage) => stage.status)).toEqual(
+    ["green", "green", "yellow"],
+  );
 });
 
 function buildProduct(overrides?: Partial<Product>): Product {
@@ -99,8 +197,11 @@ function Harness({
       externalRiskPrefill={blockerPrefill}
       stagesForProduct={stagesForProduct}
       onProductsChange={(next) => {
-        setProducts([...next]);
-        onProductsChangeSpy?.(next);
+        setProducts((previous) => {
+          const resolved = typeof next === "function" ? next(previous) : next;
+          onProductsChangeSpy?.(resolved);
+          return [...resolved];
+        });
       }}
       onRisksChange={(next) => {
         setRisks([...next]);

@@ -2,9 +2,7 @@
 
 import { useCallback } from "react";
 
-import type { Product, StageStatus } from "../types";
-type ProductsUpdater =
-  readonly Product[] | ((prev: readonly Product[]) => Product[]);
+import type { Product, ProductsUpdater, StageStatus } from "../types";
 
 export interface UseStatusRiskSyncArgs {
   onProductsChange: (next: ProductsUpdater) => void;

@@ -30,8 +30,12 @@ function foreignLockAuthor(
 ): string | undefined {
   const own = highestAlarmSeverity(covering.filter((r) => r.foreign !== true));
   if (alarm === null || own === alarm) return undefined;
-  return covering.find((r) => r.foreign === true && r.severity === alarm)
-    ?.authorName;
+  return covering.find(
+    (r) =>
+      r.foreign === true &&
+      r.severity === alarm &&
+      Boolean(r.authorName?.trim()),
+  )?.authorName;
 }
 
 // Pill from covering-risk roll-up (not free status). Activity items stay

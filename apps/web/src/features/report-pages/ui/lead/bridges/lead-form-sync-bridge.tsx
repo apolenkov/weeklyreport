@@ -10,6 +10,7 @@ import {
   annotateOwnRiskCoverage,
   applyRiskSeverityFloor,
   coveringRisksForStage,
+  type DraftPatch,
   type Product,
   type RiskEntry,
   type RiskPrefillRequest,
@@ -41,7 +42,9 @@ export type { StagesForProduct } from "./lead-form-sync-context";
 interface LeadFormSyncBridgeProviderProps {
   readonly products: readonly Product[];
   readonly risks: readonly RiskEntry[];
-  readonly onProductsChange: (next: readonly Product[]) => void;
+  readonly onProductsChange: (
+    next: Extract<DraftPatch, { readonly kind: "products" }>["products"],
+  ) => void;
   readonly onRisksChange: (next: readonly RiskEntry[]) => void;
   readonly readOnly?: boolean | undefined;
   readonly activities?: readonly { id: string; name: string }[] | undefined;
@@ -90,19 +93,10 @@ type BridgeHandlers = Pick<
 function useBridgeHandlers(
   props: LeadFormSyncBridgeProviderProps,
 ): BridgeHandlers {
-  const {
-    products,
-    risks,
-    readOnly = false,
-    onProductsChange,
-    onRisksChange,
-  } = props;
+  const { risks, readOnly = false, onProductsChange, onRisksChange } = props;
 
   const sync = useStatusRiskSync({
-    onProductsChange: (updater) => {
-      const next = typeof updater === "function" ? updater(products) : updater;
-      onProductsChange(next);
-    },
+    onProductsChange,
   });
 
   const handleStageStatusChange = useCallback(

@@ -34,6 +34,9 @@ export interface Product {
   readonly riskCount?: number | undefined;
 }
 
+export type ProductsUpdater =
+  readonly Product[] | ((previous: readonly Product[]) => Product[]);
+
 interface KanbanItemFields {
   readonly id: string;
   readonly stableId?: string | undefined;

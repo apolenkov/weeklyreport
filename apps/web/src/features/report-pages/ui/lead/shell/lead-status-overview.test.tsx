@@ -419,7 +419,7 @@ describe("LeadForm Overview", () => {
     ).toBeNull();
   });
 
-  it("replans historical open work through immutable prior lineage", async () => {
+  it("replans historical work after choosing a parent with one automatically applied stage", async () => {
     const user = userEvent.setup();
     const sourceReportId = "a0000000-0000-4000-8000-000000000020";
     const sourceRecordId = "a0000000-0000-4000-8000-000000000021";
@@ -479,11 +479,25 @@ describe("LeadForm Overview", () => {
     expect(
       within(composer).getByRole("button", { name: "Plan next" }),
     ).toHaveAttribute("aria-pressed", "true");
+    await user.click(within(composer).getByText("Parent and stages"));
+    await user.selectOptions(
+      within(composer).getByLabelText("Product"),
+      `product:${SECOND_PROJECT_ID}`,
+    );
+    expect(within(composer).getByText("Applied automatically")).toBeVisible();
     await user.click(
       within(composer).getByRole("button", { name: "Save outcome" }),
     );
 
-    await pollUntil(() => expect(resolvePlan).toHaveBeenCalledTimes(1));
+    await vi.waitFor(
+      () => {
+        expect(
+          screen.queryByText("Select at least one stage."),
+        ).not.toBeInTheDocument();
+        expect(resolvePlan).toHaveBeenCalledTimes(1);
+      },
+      { timeout: 1000 },
+    );
     expect(resolvePlan.mock.calls[0]?.[0]).toMatchObject({
       source: {
         kind: "prior",
@@ -492,6 +506,8 @@ describe("LeadForm Overview", () => {
       },
       outcome: "plan_next",
       text: "Deferred provider rollout",
+      parent: { kind: "product", id: SECOND_PROJECT_ID },
+      stageNames: ["Analysis"],
     });
     await pollUntil(() =>
       expect(
