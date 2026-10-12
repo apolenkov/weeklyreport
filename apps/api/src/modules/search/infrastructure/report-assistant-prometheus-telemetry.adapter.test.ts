@@ -31,19 +31,19 @@ describe("ReportAssistantPrometheusTelemetry", () => {
     const text = await metricsRegistry.metrics();
 
     expect(text).toContain(
-      'customreport_assistant_requests_total{mode="semantic_ranked",outcome="ok"} 1',
+      'weeklyreport_assistant_requests_total{mode="semantic_ranked",outcome="ok"} 1',
     );
     expect(text).toContain(
-      'customreport_assistant_cache_events_total{mode="semantic_ranked",result="hit"} 10',
+      'weeklyreport_assistant_cache_events_total{mode="semantic_ranked",result="hit"} 10',
     );
     expect(text).toContain(
-      'customreport_assistant_repairs_total{kind="planner"} 1',
+      'weeklyreport_assistant_repairs_total{kind="planner"} 1',
     );
     expect(text).toContain(
-      'customreport_assistant_tokens_total{kind="total"} 140',
+      'weeklyreport_assistant_tokens_total{kind="total"} 140',
     );
     expect(text).toContain(
-      'customreport_assistant_candidate_count_count{mode="semantic_ranked",stage="retrieved"} 1',
+      'weeklyreport_assistant_candidate_count_count{mode="semantic_ranked",stage="retrieved"} 1',
     );
   });
 

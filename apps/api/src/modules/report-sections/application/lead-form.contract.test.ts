@@ -295,7 +295,7 @@ describe("LeadFormService — getCrossAuthorContent authorization", () => {
   ): Promise<number> {
     const text = await metricsRegistry.metrics();
     const match = new RegExp(
-      String.raw`customreport_cross_author_content_reads_total\{result="${result}"\} (\d+)`,
+      String.raw`weeklyreport_cross_author_content_reads_total\{result="${result}"\} (\d+)`,
     ).exec(text);
     return match ? Number(match[1]) : 0;
   }

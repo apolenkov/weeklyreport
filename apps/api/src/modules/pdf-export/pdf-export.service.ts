@@ -98,7 +98,7 @@ export class PdfExportService {
   async requestPdfExport(
     reportId: string,
     session: UserSession,
-    // Role label for customreport_pdf_export_requests_total; worker/cron default to 'system'.
+    // Role label for weeklyreport_pdf_export_requests_total; worker/cron default to 'system'.
     requestedByRole?: string,
   ): Promise<PdfExportJob> {
     const report = await this.repository.getPublishedReportForExport(
