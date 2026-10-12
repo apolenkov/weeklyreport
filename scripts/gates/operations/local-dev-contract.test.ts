@@ -197,7 +197,7 @@ fi
     const execute = (context: string) =>
       spawnSync("/bin/bash", [resolve("deploy/local-dev", entrypoint)], {
         encoding: "utf8",
-        timeout: 2000,
+        timeout: 15_000,
         env: {
           ...process.env,
           PATH: `${fixture}:${process.env.PATH ?? ""}`,

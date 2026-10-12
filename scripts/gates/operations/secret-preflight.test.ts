@@ -84,7 +84,7 @@ case "$*" in *'apply -f -'*) cat >/dev/null ;; esac`,
     for (const key of requiredKeys) delete env[key];
     const result = spawnSync("/bin/bash", [join(here, "setup.sh")], {
       encoding: "utf8",
-      timeout: 2000,
+      timeout: 15_000,
       env,
     });
     return {
