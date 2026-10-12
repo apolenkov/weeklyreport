@@ -64,7 +64,7 @@ const baseSection: ReportSectionReadModel = {
   reviews: [],
 };
 
-// Verifies the submit path bumps `customreport_sections_submitted_total{late}`
+// Verifies the submit path bumps `weeklyreport_sections_submitted_total{late}`
 // with the stamped label and observes a positive latency-histogram value when
 // the submission lands AFTER the deadline.
 describe("ReportSectionsService — product telemetry", () => {

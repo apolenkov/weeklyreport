@@ -510,7 +510,7 @@ describe("PdfExportService", () => {
   // Role-labelled counter. Three labels exercised (head | viewer | system)
   // confirm the optional `requestedByRole` is threaded through and the
   // omission path defaults to 'system' (worker / cron callers).
-  it("bumps customreport_pdf_export_requests_total{role} per call", async () => {
+  it("bumps weeklyreport_pdf_export_requests_total{role} per call", async () => {
     const service = createPdfExportService(
       createRepository(publishedReport),
       undefined,

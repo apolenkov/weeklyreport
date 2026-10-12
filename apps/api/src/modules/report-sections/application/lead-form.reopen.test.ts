@@ -204,7 +204,7 @@ describe("LeadFormService — requestReopen", () => {
   });
 
   // The reopen-funnel counter's `requested` slice increments only on success.
-  it('increments customreport_reopen_requests_total{state="requested"} on success', async () => {
+  it('increments weeklyreport_reopen_requests_total{state="requested"} on success', async () => {
     const repo = createMockRepository({
       getSectionReopenContext: vi.fn().mockResolvedValue(reopenContext()),
     });
