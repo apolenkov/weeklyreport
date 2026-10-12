@@ -160,7 +160,8 @@ as a CronJob with `concurrencyPolicy: Forbid`, a required schedule, and a
 required retention in days, using the repository backup image and a one-shot
 mode of `backup-loop.sh` that exits with the dump's status. The one-shot mode
 MUST NOT require `BACKUP_INTERVAL_SECONDS`. The chart MUST NOT claim off-cluster
-protection.
+protection. Backup dumps MUST use the `weeklyreport-*.dump` name pattern; the
+chart MUST NOT emit or prune `customreport-*.dump` names.
 
 #### Scenario: One-shot backup
 
