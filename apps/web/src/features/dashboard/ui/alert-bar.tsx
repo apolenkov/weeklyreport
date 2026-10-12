@@ -5,8 +5,10 @@ import { useMutation } from "@tanstack/react-query";
 import Link from "next/link";
 import { toast } from "sonner";
 
+import { toastMutationError } from "../../../shared/lib/errors/mutation-error-message";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { IfRole } from "../../../shared/ui/auth-runtime/if-role";
+import { ADMIN_ROUTE } from "../../../shared/ui/navigation/nav-links";
 
 interface AlertBarProps {
   readonly pendingLeads: readonly string[];
@@ -95,7 +97,7 @@ function ConfigureRemindersLink() {
   return (
     <IfRole forRole="admin">
       <Link
-        href="/admin?tab=reminders"
+        href={`${ADMIN_ROUTE}?tab=reminders`}
         className="text-xs font-semibold text-[var(--color-starbucks-accent)] underline-offset-4 hover:underline"
       >
         Configure reminders
@@ -109,11 +111,7 @@ export function AlertBar({ pendingLeads, reportId, ruleId }: AlertBarProps) {
   const dispatchMut = useMutation(
     trpc.reminders.dispatchPending.mutationOptions({
       onSuccess: toastDispatchOutcome,
-      onError: (err) => {
-        toast.error(
-          err instanceof Error ? err.message : "Failed to send reminder",
-        );
-      },
+      onError: toastMutationError("Failed to send reminder"),
     }),
   );
 

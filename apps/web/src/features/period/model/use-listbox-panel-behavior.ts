@@ -18,21 +18,48 @@ import {
 // hugs the right edge — content may still widen it via minWidth, so left is
 // clamped by the trigger width, not the eventual content width.
 const PANEL_VIEWPORT_GUTTER_PX = 16;
+const PERIOD_PANEL_MAX_HEIGHT_PX = 280;
 
 // Left-anchored and width-matched so the panel lines up under the trigger.
 // Module-level so its identity stays stable across renders — the anchoring
 // effect keys on it and would otherwise re-bind its scroll/resize listeners.
-const leftAnchoredPosition = (rect: DOMRect) => ({
-  top: rect.bottom + ANCHORED_PANEL_GAP_PX,
-  left: Math.min(
-    rect.left,
-    Math.max(
-      PANEL_VIEWPORT_GUTTER_PX,
-      window.innerWidth - PANEL_VIEWPORT_GUTTER_PX - rect.width,
+const leftAnchoredPosition = (rect: DOMRect) => {
+  const roomBelow = Math.max(
+    0,
+    window.innerHeight -
+      PANEL_VIEWPORT_GUTTER_PX -
+      rect.bottom -
+      ANCHORED_PANEL_GAP_PX,
+  );
+  const roomAbove = Math.max(
+    0,
+    rect.top - ANCHORED_PANEL_GAP_PX - PANEL_VIEWPORT_GUTTER_PX,
+  );
+  const above = roomBelow < PERIOD_PANEL_MAX_HEIGHT_PX && roomAbove > roomBelow;
+  return {
+    top: above
+      ? undefined
+      : Math.max(PANEL_VIEWPORT_GUTTER_PX, rect.bottom + ANCHORED_PANEL_GAP_PX),
+    bottom: above
+      ? Math.max(
+          PANEL_VIEWPORT_GUTTER_PX,
+          window.innerHeight - rect.top + ANCHORED_PANEL_GAP_PX,
+        )
+      : undefined,
+    maxHeight: Math.min(
+      PERIOD_PANEL_MAX_HEIGHT_PX,
+      above ? roomAbove : roomBelow,
     ),
-  ),
-  width: rect.width,
-});
+    left: Math.min(
+      rect.left,
+      Math.max(
+        PANEL_VIEWPORT_GUTTER_PX,
+        window.innerWidth - PANEL_VIEWPORT_GUTTER_PX - rect.width,
+      ),
+    ),
+    width: rect.width,
+  };
+};
 
 // Scroll active option into view; block: "nearest" avoids hover-driven panel jerks.
 function useActiveOptionScroll(

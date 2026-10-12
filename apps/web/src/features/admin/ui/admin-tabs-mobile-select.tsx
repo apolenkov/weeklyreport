@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
+import { ADMIN_ROUTE } from "../../../shared/ui/navigation/nav-links";
 import {
   ADMIN_TAB_LABELS,
   ADMIN_TABS,
@@ -116,7 +117,7 @@ function AdminTabsMobileAlerts() {
         singularCount="1 pending reopen request"
         pluralCount="pending reopen requests"
         count={reopenCount}
-        href="/admin?tab=reopen"
+        href={`${ADMIN_ROUTE}?tab=reopen`}
         testId="mobile-reopen-tab-count"
         unavailable={reopenUnavailable}
         unavailableCount="Pending reopen count unavailable"
@@ -125,7 +126,7 @@ function AdminTabsMobileAlerts() {
         singularCount="1 failed job in DLQ"
         pluralCount="failed jobs in DLQ"
         count={dlqCount}
-        href="/admin?tab=jobs"
+        href={`${ADMIN_ROUTE}?tab=jobs`}
         testId="mobile-jobs-tab-count"
         unavailable={dlqUnavailable}
         unavailableCount="Failed job count unavailable"
@@ -150,7 +151,7 @@ export function AdminTabsMobileSelect({ activeTab }: Props) {
         id="admin-tab-select"
         className="mt-1 block h-11 w-full rounded-md border border-[var(--color-border)] bg-[var(--color-card)] px-3 text-sm font-medium text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2 lg:hidden"
         value={activeTab}
-        onChange={(e) => router.push(`/admin?tab=${e.target.value}`)}
+        onChange={(e) => router.push(`${ADMIN_ROUTE}?tab=${e.target.value}`)}
       >
         {ADMIN_TABS.map((tab) => (
           <option key={tab} value={tab}>

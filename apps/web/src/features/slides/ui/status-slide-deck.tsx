@@ -31,6 +31,10 @@ interface StatusSlideDeckProps {
   readonly onRowActivate?: SlideRowActivateHandler | undefined;
 }
 
+function slideArticleKey(slide: SectionSlideModel): string {
+  return `${slide.id}:${String(slide.pageIndex ?? 0)}`;
+}
+
 function selectedSlide(
   slides: readonly SectionSlideModel[],
   index: number,
@@ -90,10 +94,7 @@ function HeadSlideFrame({
       data-testid="head-slide-scroll-host"
     >
       <DeckFullscreenOverlay isFullscreen={isFullscreen} onToggle={onToggle} />
-      <SlideArticle
-        key={`${slide.id}:${String(slide.pageIndex ?? 0)}`}
-        slide={slide}
-      />
+      <SlideArticle key={slideArticleKey(slide)} slide={slide} />
     </div>
   );
 }
@@ -173,7 +174,7 @@ function DeckArticle(props: DeckArticleProps) {
       data-testid="lead-slide-scroll-host"
     >
       <SlideArticle
-        key={`${props.slide.id}:${String(props.slide.pageIndex ?? 0)}`}
+        key={slideArticleKey(props.slide)}
         slide={props.slide}
         heroControls={props.heroControls}
         onRowActivate={props.onRowActivate}

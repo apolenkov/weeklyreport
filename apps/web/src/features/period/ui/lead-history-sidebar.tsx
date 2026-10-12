@@ -150,7 +150,8 @@ function StreakLine({
   if (streak === 1) {
     return (
       <p className="text-[13px] text-[var(--color-foreground)]">
-        Last week submitted. {!viewerMode && "Keep the streak going."}
+        Most recent period {viewerMode ? "completed." : "submitted."}{" "}
+        {!viewerMode && "Keep the streak going."}
       </p>
     );
   }
@@ -166,8 +167,8 @@ function StreakLine({
   return (
     <p className="text-[13px] text-[var(--color-foreground)]">
       {viewerMode
-        ? "Most recent week is still a draft."
-        : "Most recent week is still a draft. Submit to extend your streak."}
+        ? "Most recent period is not completed."
+        : "Most recent period is not completed. Submit to extend your streak."}
     </p>
   );
 }

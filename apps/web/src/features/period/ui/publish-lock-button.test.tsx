@@ -79,6 +79,38 @@ describe("PublishLockButton", () => {
     expect(onPublish).not.toHaveBeenCalled();
   });
 
+  it("requires a fresh opener after publish eligibility is lost and restored", async () => {
+    const user = userEvent.setup();
+    const onPublish = vi.fn();
+    const onReopen = vi.fn();
+    const control = (canPublish: boolean) => (
+      <PublishLockButton
+        pendingCount={0}
+        totalLeads={6}
+        periodStatus="open"
+        onPublish={onPublish}
+        onReopen={onReopen}
+        canPublish={canPublish}
+      />
+    );
+    const { rerender } = render(control(true));
+    await user.click(screen.getByRole("button", { name: /publish & lock/i }));
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+
+    rerender(control(false));
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /nothing to publish/i }),
+    ).toBeDisabled();
+    expect(onPublish).not.toHaveBeenCalled();
+    rerender(control(true));
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /publish & lock/i }));
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /^cancel$/i }));
+    expect(onPublish).not.toHaveBeenCalled();
+  });
+
   it("confirming the dialog calls onPublish exactly once", async () => {
     const onPublish = vi.fn();
     render(

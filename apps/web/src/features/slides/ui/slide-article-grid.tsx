@@ -1,4 +1,7 @@
-import type { CanonicalStatus, TrafficLightStatus } from "@customreport/shared";
+import {
+  type TrafficLightStatus,
+  trafficLightToCanonical,
+} from "@customreport/shared";
 import {
   AlertTriangle,
   ArrowRight,
@@ -71,15 +74,9 @@ export function SlideColumnHeaderRow() {
   );
 }
 
-function trafficDotStatus(status: TrafficLightStatus): CanonicalStatus {
-  if (status === "red") return "blocked";
-  if (status === "yellow") return "at-risk";
-  return "on-track";
-}
-
 function StatusDot({ status }: { readonly status: SlideTrafficStatus }) {
   if (status == null) return null;
-  const canonical = trafficDotStatus(status);
+  const canonical = trafficLightToCanonical(status);
   return (
     <>
       <span
@@ -164,7 +161,7 @@ function SubsectionRow({
   // a 4-column row of em-dashes says nothing the status dot doesn't.
   const empty = columnsRowCount(subsection.columns) === 0;
   return (
-    <div className="border-t border-dashed border-[var(--card-surface-border)] pt-2 first:border-t-0 first:pt-0">
+    <div className="border-t border-dashed border-[var(--card-surface-border)] pt-2">
       <SubsectionHeader subsection={subsection} />
       {!empty && (
         <div className={`grid ${SLIDE_GRID_CLASS} mt-1.5`}>

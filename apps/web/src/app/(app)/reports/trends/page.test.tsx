@@ -212,6 +212,27 @@ describe("TrendsPage — three-section analytics shell", () => {
     expect(screen.getByTestId("period-comparison-table")).toBeInTheDocument();
   });
 
+  it("retries both failed comparison dependencies with cached history", () => {
+    const historyRefetch = vi.fn().mockResolvedValue(undefined);
+    const comparisonRefetch = vi.fn().mockResolvedValue(undefined);
+    historyState = makeQueryState({
+      data: HISTORY,
+      error: new Error("history down"),
+      refetch: historyRefetch,
+    });
+    comparisonState = makeQueryState({
+      data: COMPARISON,
+      error: new Error("comparison down"),
+      refetch: comparisonRefetch,
+    });
+    render(<TrendsPage />);
+    fireEvent.click(
+      expectDefined(screen.getAllByRole("button", { name: "Retry" })[1]),
+    );
+    expect(historyRefetch).toHaveBeenCalledOnce();
+    expect(comparisonRefetch).toHaveBeenCalledOnce();
+  });
+
   it("retries the history query when the history error breaks the comparison", () => {
     const historyRefetch = vi.fn().mockResolvedValue(undefined);
     historyState = makeQueryState({

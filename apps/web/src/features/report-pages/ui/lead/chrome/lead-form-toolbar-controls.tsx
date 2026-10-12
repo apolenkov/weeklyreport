@@ -6,6 +6,7 @@ import type { ComponentProps, ReactNode, RefObject } from "react";
 
 import type { FullscreenHandle } from "../../../../../shared/hooks/browser/use-fullscreen";
 import { useSession } from "../../../../../shared/lib/auth/session-provider";
+import { LEAD_REPORT_ROUTE } from "../../../../../shared/ui/navigation/nav-links";
 import { ArchiveToggle } from "../../../../../shared/ui/report-shell/archive-toggle";
 import { ReportToolbar } from "../../../../../shared/ui/report-shell/report-toolbar";
 import { PeriodNavigator } from "../../../../period";
@@ -22,7 +23,6 @@ import { LeadReportViewModeToggle } from "./lead-report-view-mode-toggle";
 import { RecordVisibilityToggle } from "./visibility/record-visibility-toggle";
 
 type SlidesFullscreen = FullscreenHandle;
-const LEAD_REPORT_PATH = "/lead/report";
 type LeadSubmittedAt = ComponentProps<
   typeof PeriodNavigator
 >["leadSubmittedAt"];
@@ -140,8 +140,8 @@ export function LeadOverviewToolbarControls({
 }: LeadOverviewToolbarControlsProps) {
   const { user } = useSession();
   const overviewHref = targetReportId
-    ? `/lead/report/${encodeURIComponent(targetReportId)}`
-    : LEAD_REPORT_PATH;
+    ? `${LEAD_REPORT_ROUTE}/${encodeURIComponent(targetReportId)}`
+    : LEAD_REPORT_ROUTE;
 
   return (
     <ReportToolbar
@@ -240,8 +240,8 @@ function ToolbarViewCluster({
   desktopLabels,
 }: ToolbarViewClusterProps) {
   const reportHref = targetReportId
-    ? `/lead/report/${encodeURIComponent(targetReportId)}`
-    : LEAD_REPORT_PATH;
+    ? `${LEAD_REPORT_ROUTE}/${encodeURIComponent(targetReportId)}`
+    : LEAD_REPORT_ROUTE;
   return (
     <>
       {/* Always rendered so trailing controls never shift between modes. */}
@@ -255,7 +255,7 @@ function ToolbarViewCluster({
         mode={isSlidesMode ? "slides" : "report"}
         reportHref={reportHref}
         slidesHref={
-          targetReportId ? `${reportHref}?mode=slides` : LEAD_REPORT_PATH
+          targetReportId ? `${reportHref}?mode=slides` : LEAD_REPORT_ROUTE
         }
         desktopLabels={desktopLabels}
       />

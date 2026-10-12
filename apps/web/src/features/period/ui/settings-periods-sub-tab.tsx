@@ -2,7 +2,7 @@
 
 import type { AppSettings } from "@customreport/shared";
 import type { Dispatch, SetStateAction } from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { useServerSeededDraft } from "../../../shared/hooks/drafts/use-server-seeded-draft";
 import {
@@ -142,13 +142,6 @@ function usePeriodPolicyForm(serverSettings: AppSettings) {
 
   // The shared draft hook installs only accepted clean server values by reference.
   const acceptedServerSeed = draft === serverSettings ? serverSettings : null;
-
-  const firstInvalidFieldId = [...invalidFields][0];
-  useEffect(() => {
-    if (firstInvalidFieldId !== undefined) {
-      document.getElementById(firstInvalidFieldId)?.focus();
-    }
-  }, [firstInvalidFieldId]);
 
   return {
     acceptedServerSeed,

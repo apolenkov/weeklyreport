@@ -36,15 +36,18 @@ type MarkdownBlock =
 
 const inlineNodes = (value: string): ReactNode[] => {
   const occurrences = new Map<string, number>();
-  return value.split("**").map((part, position) => {
+  const parts = value.split("**");
+  return parts.map((part, position) => {
     const occurrence = occurrences.get(part) ?? 0;
     occurrences.set(part, occurrence + 1);
-    const isEmphasized = position % MARKER_STRIDE === ODD_MARKER_POSITION;
+    const isOddSegment = position % MARKER_STRIDE === ODD_MARKER_POSITION;
+    const isEmphasized = isOddSegment && position < parts.length - 1;
+    const text = isOddSegment && !isEmphasized ? `**${part}` : part;
     const key = `${isEmphasized ? "strong" : "plain"}-${part}-${occurrence}`;
     return isEmphasized ? (
       <strong key={key}>{part}</strong>
     ) : (
-      <span key={key}>{part}</span>
+      <span key={key}>{text}</span>
     );
   });
 };

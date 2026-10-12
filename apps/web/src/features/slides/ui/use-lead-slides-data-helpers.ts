@@ -9,6 +9,7 @@ import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-erro
 import { SessionContext } from "../../../shared/lib/auth/session-provider";
 import { getScalarSearchParam } from "../../../shared/lib/navigation/scalar-search-param";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
+import { LEAD_REPORT_ROUTE } from "../../../shared/ui/navigation/nav-links";
 import {
   buildLeadSlidePeriodOptions,
   resolveLeadSlideReportId,
@@ -42,7 +43,7 @@ export function useLeadDeckRequest(
   const searchParams = useSearchParams();
   const session = useContext(SessionContext);
 
-  const inReportMode = pathname.startsWith("/lead/report/");
+  const inReportMode = pathname.startsWith(`${LEAD_REPORT_ROUTE}/`);
   const authorId = getScalarSearchParam(searchParams, "authorId") ?? undefined;
   const currentUserId = session?.user?.id ?? null;
   const isOwnDeck = isOwnLeadDeck(authorId, currentUserId);

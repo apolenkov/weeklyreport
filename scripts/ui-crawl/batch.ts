@@ -58,7 +58,9 @@ const HOOKS = `(() => {
     console[level] = (...args) => { push('console-' + level, args.map(String).join(' ')); original(...args); };
   }
   addEventListener('error', (e) => push('page-error', e.message || 'resource failed: ' + (e.target?.src ?? e.target?.href ?? e.target?.tagName)), true);
-  addEventListener('unhandledrejection', (e) => push('page-error', 'unhandled rejection: ' + (e.reason?.message ?? e.reason)));
+  // Rejections the fetch wrapper already reported must not surface a second time.
+  const reportedRejections = new WeakSet();
+  addEventListener('unhandledrejection', (e) => { if (e.reason !== null && typeof e.reason === 'object' && reportedRejections.has(e.reason)) return; push('page-error', 'unhandled rejection: ' + (e.reason?.message ?? e.reason)); });
   const failed = (status, method, url) => { push('network', status + ' ' + method + ' ' + url); if (status >= 400) push(status === 429 ? 'rate-limited' : 'http-error', status + ' ' + method + ' ' + url); };
   const nativeFetch = window.fetch.bind(window);
   window.fetch = async (input, init) => {
@@ -67,6 +69,12 @@ const HOOKS = `(() => {
       const response = await nativeFetch(input, init);
       failed(response.status, init?.method ?? input?.method ?? 'GET', input?.url ?? input);
       return response;
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        push('page-error', 'fetch failed: ' + (init?.method ?? input?.method ?? 'GET') + ' ' + String(input?.url ?? input).split(/[?#]/)[0]);
+        if (typeof error === 'object' && error !== null) reportedRejections.add(error);
+      }
+      throw error;
     } finally { S.inflight--; touchNet(); }
   };
   const open = XMLHttpRequest.prototype.open;

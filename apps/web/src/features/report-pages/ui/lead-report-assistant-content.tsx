@@ -12,6 +12,7 @@ import { Button } from "@customreport/ui/components/ui/button";
 import { AlertCircle, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
+import { LEAD_REPORT_ROUTE } from "../../../shared/ui/navigation/nav-links";
 import { LeadReportAssistantMarkdown } from "./lead-report-assistant-markdown";
 
 type AssistantOutcome = Exclude<ReportAssistantOutcome, { kind: "ok" }>;
@@ -57,7 +58,7 @@ const outcomeGuidance = (kind: AssistantOutcome["kind"]): string => {
 };
 
 const citationHref = (citation: SourceCitation): string =>
-  `/lead/report/${encodeURIComponent(citation.reportId)}`;
+  `${LEAD_REPORT_ROUTE}/${encodeURIComponent(citation.reportId)}`;
 
 const retryAfterLabel = (seconds: number): string =>
   `${seconds} ${seconds === 1 ? "second" : "seconds"}`;

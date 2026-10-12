@@ -50,7 +50,7 @@ describe("useQueryErrorHandler", () => {
     const { rerender } = renderHook(
       ({ isError }: { isError: boolean }) =>
         useQueryErrorHandler(
-          { isError, error: isError ? error : null },
+          { isError, isSuccess: !isError, error: isError ? error : null },
           {
             event: "leadForm.byPeriod.load_failed",
             component: "LeadForm",
@@ -85,7 +85,7 @@ describe("useQueryErrorHandler", () => {
     renderHook(
       () =>
         useQueryErrorHandler(
-          { isError: true, error },
+          { isError: true, isSuccess: false, error },
           {
             event: "leadForm.byPeriod.load_failed",
             component: "LeadForm",
@@ -112,7 +112,7 @@ describe("useQueryErrorHandler", () => {
     renderHook(
       () =>
         useQueryErrorHandler(
-          { isError: true, error },
+          { isError: true, isSuccess: false, error },
           {
             event: "leadSlides.getActive.load_failed",
             component: "LeadSlidesClient",
@@ -134,7 +134,7 @@ describe("useQueryErrorHandler", () => {
     const { rerender } = renderHook(
       ({ isError }: { isError: boolean }) =>
         useQueryErrorHandler(
-          { isError, error: isError ? error : null },
+          { isError, isSuccess: !isError, error: isError ? error : null },
           {
             event: "leadForm.byPeriod.load_failed",
             component: "LeadForm",
@@ -162,7 +162,7 @@ describe("useQueryErrorHandler", () => {
     const { rerender } = renderHook(
       ({ ctx }: { ctx: Record<string, unknown> }) =>
         useQueryErrorHandler(
-          { isError: true, error },
+          { isError: true, isSuccess: false, error },
           {
             event: "leadForm.byPeriod.load_failed",
             component: "LeadForm",
@@ -186,4 +186,44 @@ describe("useQueryErrorHandler", () => {
     expect(logClientError).toHaveBeenCalledTimes(1);
     expect(toast.error).toHaveBeenCalledTimes(1);
   });
+  it.each([false, true])(
+    "toasts once until success across new failures (pending retry: %s)",
+    (pendingRetry) => {
+      const opts = {
+        event: "load_failed",
+        component: "Surface",
+        procedure: "load",
+        toastPrefix: "Load failed",
+      };
+      const first = new Error("first");
+      const initialProps: {
+        state: { isError: boolean; isSuccess: boolean; error: Error | null };
+      } = { state: { isError: true, isSuccess: false, error: first } };
+      const { rerender } = renderHook(
+        ({
+          state,
+        }: {
+          state: { isError: boolean; isSuccess: boolean; error: Error | null };
+        }) => useQueryErrorHandler(state, opts),
+        { initialProps },
+      );
+      if (pendingRetry)
+        rerender({ state: { isError: false, isSuccess: false, error: null } });
+      rerender({
+        state: { isError: true, isSuccess: false, error: new Error("second") },
+      });
+      expect(logClientError).toHaveBeenCalledTimes(2);
+      expect(toast.error).toHaveBeenCalledTimes(1);
+      rerender({ state: { isError: false, isSuccess: true, error: null } });
+      rerender({
+        state: {
+          isError: true,
+          isSuccess: false,
+          error: new Error("after recovery"),
+        },
+      });
+      expect(logClientError).toHaveBeenCalledTimes(3);
+      expect(toast.error).toHaveBeenCalledTimes(2);
+    },
+  );
 });

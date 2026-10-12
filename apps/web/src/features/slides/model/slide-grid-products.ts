@@ -169,7 +169,7 @@ export function deriveProductCards(
       noData:
         status === null &&
         rowCount === 0 &&
-        !subsections.some((s) => s.kind === "project"),
+        !subsections.some((s) => s.kind === "project" && s.status !== null),
       subsections,
     };
   };

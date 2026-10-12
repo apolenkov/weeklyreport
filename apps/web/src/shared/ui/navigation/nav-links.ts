@@ -1,4 +1,5 @@
 import type { Role } from "@customreport/shared";
+import { ROLE_HOME_PATH } from "@customreport/shared";
 
 export interface NavLink {
   href: string;
@@ -13,13 +14,13 @@ export interface NavLink {
 }
 
 const HISTORY_LINK_TITLE = "Past weeks and closed reports";
-export const LEAD_REPORT_ROUTE = "/lead/report";
+export const LEAD_REPORT_ROUTE = ROLE_HOME_PATH.lead;
 export const REPORTS_ROUTE = "/reports";
-export const ADMIN_ROUTE = "/admin";
+export const ADMIN_ROUTE = ROLE_HOME_PATH.admin;
 export const PDF_EXPORTS_ROUTE = "/pdf-exports";
-export const REPORTS_LATEST_ROUTE = "/reports/latest";
+export const REPORTS_LATEST_ROUTE = ROLE_HOME_PATH.viewer;
 export const REPORTS_TRENDS_ROUTE = "/reports/trends";
-export const HEAD_DASHBOARD_ROUTE = "/head/dashboard";
+export const HEAD_DASHBOARD_ROUTE = ROLE_HOME_PATH.head;
 export const HEAD_REPORT_ROUTE = "/head/report";
 const FEEDBACK_ROUTE = "/feedback";
 

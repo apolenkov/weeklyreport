@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { joinPeriodLabel } from "../../../shared/lib/format/format-date";
+import { LEAD_REPORT_ROUTE } from "../../../shared/ui/navigation/nav-links";
 import type { HistoryEntry } from "../../report-sections";
 
 interface LeadHistoryListProps {
@@ -174,7 +175,7 @@ function HistoryCard({ entry }: { readonly entry: HistoryEntry }) {
       // card clicks land on the addressed URL so the browser tab can be
       // bookmarked and shared. `entry.periodId` already maps to the
       // report id via mapHistoryEntries.
-      href={entry.href ?? `/lead/report/${entry.periodId}`}
+      href={entry.href ?? `${LEAD_REPORT_ROUTE}/${entry.periodId}`}
       className="card-surface card-surface-hover group block p-5 transition-[box-shadow,border-color,background-color]"
       // 3px tealA left strip gives submitted reports the same visual
       // anchor as kanban current-week cards, so the history page reads as

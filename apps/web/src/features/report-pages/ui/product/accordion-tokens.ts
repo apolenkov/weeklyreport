@@ -19,9 +19,8 @@ export const CSS = {
   mutedForeground: "var(--color-muted-foreground)",
 } as const;
 
-// Red is the only alarm hue (blocked); at-risk goes neutral here — the amber
-// signal lives on the row's left stripe, not on a flooded amber fill. No
-// hardcoded status hex.
+// Product avatars remain neutral at risk. Item rows signal at-risk through
+// their amber badge; Risk/Escalation rows use amber rails. Blocked stays red.
 export const STATUS_CONFIG = {
   "on-track": {
     avatarBg: CSS.success,
@@ -106,6 +105,10 @@ export const STATUS_BADGE = {
 // is carried by the right-side badge, so the rail stays a neutral spine.
 export function itemRailTone(status: string): string {
   return status === "blocked" ? CSS.destructive : "var(--color-border)";
+}
+
+export function severityRailTone(severity: "blocked" | "at-risk"): string {
+  return severity === "blocked" ? CSS.destructive : CSS.statusAtRiskBorder;
 }
 
 export const SECTION_DIVIDER =

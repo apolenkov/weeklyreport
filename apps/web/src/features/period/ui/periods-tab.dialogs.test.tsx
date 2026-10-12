@@ -30,6 +30,7 @@ vi.mock("sonner", () => ({
 }));
 
 import {
+  archivedRow,
   makeRow,
   openRow,
   publishedFresh,
@@ -673,7 +674,7 @@ describe("PeriodsTab — deadline UTC round-trip under a non-UTC timezone", () =
     );
     expect(deadlineInput).toHaveAccessibleName(/deadline.*utc/i);
     expect(deadlineInput).toHaveAccessibleDescription(
-      "Enter the deadline date and time in UTC.",
+      "Enter the deadline date and time in UTC. Dates and deadline are frozen for published or archived periods. You can edit the label.",
     );
     expect(deadlineInput.value).toBe("2026-05-09T18:00");
 
@@ -700,9 +701,7 @@ describe("PeriodsTab — deadline UTC round-trip under a non-UTC timezone", () =
     const user = userEvent.setup();
     const { captured } = renderTab();
 
-    await user.click(
-      await screen.findByTestId(`action-edit-${publishedFresh.id}`),
-    );
+    await user.click(await screen.findByTestId(`action-edit-${openRow.id}`));
 
     const deadlineInput = screen.getByTestId("periods-create-deadline");
     fireEvent.change(deadlineInput, { target: { value: "2026-05-04T01:00" } });
@@ -724,5 +723,75 @@ describe("PeriodsTab — deadline UTC round-trip under a non-UTC timezone", () =
       deadline?: Date;
     };
     expect(payload.deadline?.toISOString()).toBe("2026-05-04T01:00:00.000Z");
+  });
+});
+
+it.each([publishedFresh, archivedRow])(
+  "locks the frozen envelope for $periodState but allows a label-only edit",
+  async (row) => {
+    const { captured } = renderTab({ active: [row], archive: [] });
+    await userEvent.click(await screen.findByTestId(`action-edit-${row.id}`));
+    for (const id of [
+      "periods-create-start",
+      "periods-create-end",
+      "periods-create-deadline",
+    ])
+      expect(screen.getByTestId(id)).toBeDisabled();
+    expect(
+      screen.getByText(
+        "Dates and deadline are frozen for published or archived periods. You can edit the label.",
+      ),
+    ).toBeVisible();
+    const label = screen.getByTestId("periods-create-label");
+    expect(label).toBeEnabled();
+    fireEvent.change(label, { target: { value: "Final label" } });
+    await userEvent.click(screen.getByTestId("periods-create-submit"));
+    const update = expectDefined(captured["admin.updatePeriodManual"]);
+    await waitFor(() => expect(update.mutationFn).toHaveBeenCalledTimes(1));
+    expect(update.calls[0]).toMatchObject({
+      reportId: row.id,
+      weekLabel: "Final label",
+    });
+  },
+);
+
+it.each([new Date("2026-05-09T18:00:37.456Z"), null])(
+  "preserves exact frozen instants and nullable deadline during a label edit: %s",
+  async (deadline) => {
+    const row = makeRow({
+      ...publishedFresh,
+      periodEnd: new Date("2026-05-10T23:59:59.000Z"),
+      deadline,
+    });
+    const { captured } = renderTab({ active: [row] });
+    await userEvent.click(await screen.findByTestId(`action-edit-${row.id}`));
+    fireEvent.change(screen.getByTestId("periods-create-label"), {
+      target: { value: "Precise label" },
+    });
+    await userEvent.click(screen.getByTestId("periods-create-submit"));
+    const update = expectDefined(captured["admin.updatePeriodManual"]);
+    await waitFor(() => expect(update.mutationFn).toHaveBeenCalledTimes(1));
+    expect(update.calls[0]).toEqual({
+      reportId: row.id,
+      periodStart: new Date("2026-05-04T00:00:00.000Z"),
+      periodEnd: new Date("2026-05-10T23:59:59.000Z"),
+      deadline,
+      weekLabel: "Precise label",
+    });
+  },
+);
+
+it("retains allowed minute-precision deadline edits for an open envelope", async () => {
+  const { captured } = renderTab();
+  await userEvent.click(await screen.findByTestId(`action-edit-${openRow.id}`));
+  fireEvent.change(screen.getByTestId("periods-create-deadline"), {
+    target: { value: "2026-05-09T17:45" },
+  });
+  await userEvent.click(screen.getByTestId("periods-create-submit"));
+  const update = expectDefined(captured["admin.updatePeriodManual"]);
+  await waitFor(() => expect(update.mutationFn).toHaveBeenCalledTimes(1));
+  expect(update.calls[0]).toMatchObject({
+    reportId: openRow.id,
+    deadline: new Date("2026-05-09T17:45:00.000Z"),
   });
 });

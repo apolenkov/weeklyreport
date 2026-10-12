@@ -133,6 +133,22 @@ describe("PrintReportPage server gate", () => {
     ).rejects.toThrow(`NEXT_REDIRECT:/head/report/${REPORT_ID}`);
   });
 
+  it("treats repeated worker jobId as absent without reading the export", async () => {
+    getPrintRouteContextMock.mockResolvedValue({
+      session: session("head"),
+      isPdfExport: true,
+      pdfReportId: REPORT_ID,
+      pdfJobId: "job-123",
+    });
+    await expect(
+      PrintReportPage({
+        params: Promise.resolve({ reportId: REPORT_ID }),
+        searchParams: Promise.resolve({ jobId: ["job-123", "job-456"] }),
+      }),
+    ).rejects.toThrow(`NEXT_REDIRECT:/head/report/${REPORT_ID}`);
+    expect(getPdfExportRenderMock).not.toHaveBeenCalled();
+  });
+
   it.each([
     ["head", `/head/report/${REPORT_ID}`],
     ["admin", `/head/report/${REPORT_ID}`],

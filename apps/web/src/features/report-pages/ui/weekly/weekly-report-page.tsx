@@ -7,7 +7,11 @@ import {
   DocumentActionGroup,
   ReportToolbar,
 } from "../../../../shared/ui/report-shell/report-toolbar";
-import { PeriodNavigator, PublishLockButton } from "../../../period";
+import {
+  PeriodNavigator,
+  PUBLISH_REQUIREMENT_HINT,
+  PublishLockButton,
+} from "../../../period";
 import { ArchiveRestoreActions } from "./archive-restore-actions";
 import { useWeeklyReportPage } from "./use-weekly-report-page";
 import { ReportContent } from "./weekly-report-content";
@@ -56,7 +60,6 @@ function PeriodLifecycleActions({
           onReopen={page.handlers.reopen}
           isPending={page.mutationState.isPublishOrReopenPending}
           canPublish={page.canPublishReport}
-          publishDisabledReason="Publish requires at least one submitted section."
         />
       )}
     </>
@@ -96,7 +99,7 @@ function WeeklyReportHeader({
           </span>
           {page.showPublishHint && (
             <span className="text-xs text-[var(--color-muted-foreground)]">
-              Publish requires at least one submitted section.
+              {PUBLISH_REQUIREMENT_HINT}
             </span>
           )}
           {headerContextLabel}

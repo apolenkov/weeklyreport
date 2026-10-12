@@ -189,6 +189,44 @@ describe("ActivitiesTab — rendering", () => {
     ).toBeInTheDocument();
   });
 
+  it.each([
+    { activities: [] },
+    { activities: [{ ...activity, archived: true }] },
+  ])(
+    "shows the active empty state without a search even with archived rows",
+    async ({ activities }) => {
+      renderTab({ activities });
+      await screen.findByTestId("activities-table");
+      if (activities.length > 0) await screen.findByText("Archived (1)");
+      expect(screen.getByText("No active activities yet.")).toBeInTheDocument();
+      expect(
+        screen.queryByText("No activities match the search."),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it("shows the search empty state only for a nonblank filter", async () => {
+    const user = userEvent.setup();
+    renderTab();
+    await screen.findByText("Onboarding Revamp");
+    await user.type(
+      screen.getByLabelText("Filter activities by name"),
+      "absent",
+    );
+    expect(
+      screen.getByText("No activities match the search."),
+    ).toBeInTheDocument();
+  });
+
+  it("lets accepted unbroken archived names wrap beside Restore", async () => {
+    const name = "x".repeat(200);
+    renderTab({ activities: [{ ...activity, name, archived: true }] });
+    expect(await screen.findByText(name)).toHaveClass("min-w-0", "break-words");
+    expect(
+      screen.getByRole("button", { name: `Restore ${name}` }),
+    ).toBeEnabled();
+  });
+
   it("filters the list by name", async () => {
     const user = userEvent.setup();
     renderTab({

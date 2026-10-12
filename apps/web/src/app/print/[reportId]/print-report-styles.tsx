@@ -2,7 +2,6 @@ const PRINT_STYLES = `
             @media print {
               html, body { margin: 0; padding: 0; background: #fff; }
               body nav, body .no-print { display: none; }
-              * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
               .page-break-before { page-break-before: always; }
               .print-section-heading, .print-entity-header, h4 {
                 break-after: avoid-page;

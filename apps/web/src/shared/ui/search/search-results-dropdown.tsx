@@ -117,6 +117,7 @@ function SearchHitOption({
       type="button"
       role="option"
       aria-selected={isActive}
+      onMouseDown={(event) => event.preventDefault()}
       onMouseEnter={() => onHoverHit(index)}
       onClick={() => onSelectHit(target.url)}
       className={`flex w-full flex-col gap-1 border-b border-[var(--color-border)] px-3 py-2 text-left transition-colors last:border-b-0 ${

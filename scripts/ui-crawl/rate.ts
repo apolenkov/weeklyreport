@@ -57,14 +57,32 @@ function used(file: string, now: number): number {
     .reduce((total, [, n]) => total + n, 0);
 }
 
+function errCode(error: unknown, code: string): boolean {
+  return error instanceof Error && "code" in error && error.code === code;
+}
+
 /** A crashed holder never releases its lock: take it over after a few seconds. */
 function dropStaleLock(lock: string): void {
   try {
     if (Date.now() - statSync(lock).mtimeMs > STALE_LOCK_MS)
       rmSync(lock, { recursive: true, force: true });
-  } catch {
-    // released meanwhile
+  } catch (error) {
+    // a lock released between attempts is expected; other filesystem failures are not
+    if (!errCode(error, "ENOENT")) throw error;
   }
+}
+
+/** A failed release is secondary evidence, never a replacement for the action's cause. */
+function releaseAfterFailure(lock: string, error: unknown): never {
+  try {
+    rmSync(lock, { recursive: true, force: true });
+  } catch (releaseError) {
+    throw new AggregateError(
+      [error, releaseError],
+      error instanceof Error ? error.message : "ledger action failed",
+    );
+  }
+  throw error;
 }
 
 /** Runs `action` under a lock directory; whoever holds it has the ledger to itself. */
@@ -74,16 +92,21 @@ function locked<T>(file: string, action: () => T): T {
     try {
       mkdirSync(lock);
       break;
-    } catch {
+    } catch (error) {
+      // only an existing lock is contention; permanent failures must surface
+      if (!errCode(error, "EEXIST")) throw error;
       dropStaleLock(lock);
       sleep(LOCK_POLL_MS);
     }
   }
+  let result: T;
   try {
-    return action();
-  } finally {
-    rmSync(lock, { recursive: true, force: true });
+    result = action();
+  } catch (error) {
+    releaseAfterFailure(lock, error);
   }
+  rmSync(lock, { recursive: true, force: true });
+  return result;
 }
 
 /** Reserves `cost` requests, waiting until they fit into the last minute; returns the reservation time. */

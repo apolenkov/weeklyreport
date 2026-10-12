@@ -155,3 +155,37 @@ describe("LeadHistorySidebar completed-week stats", () => {
     expect(screen.queryByText(/not included/i)).not.toBeInTheDocument();
   });
 });
+
+describe.each([false, true])(
+  "History neutral streak copy viewerMode=%s",
+  (viewerMode) => {
+    it("does not call a reopened latest period a draft", () => {
+      render(
+        <LeadHistorySidebar
+          entries={[makeEntry("reopened", 0), makeEntry("published", 1)]}
+          viewerMode={viewerMode}
+        />,
+      );
+      expect(
+        screen.getByText(/Most recent period is not completed/),
+      ).toBeVisible();
+      expect(screen.queryByText(/still a draft/)).toBeNull();
+    });
+    it("does not invent last-week recency for one old completed entry", () => {
+      render(
+        <LeadHistorySidebar
+          entries={[makeEntry(viewerMode ? "published" : "submitted", 0)]}
+          viewerMode={viewerMode}
+        />,
+      );
+      expect(
+        screen.getByText(
+          new RegExp(
+            `Most recent period ${viewerMode ? "completed" : "submitted"}`,
+          ),
+        ),
+      ).toBeVisible();
+      expect(screen.queryByText(/Last week/)).toBeNull();
+    });
+  },
+);

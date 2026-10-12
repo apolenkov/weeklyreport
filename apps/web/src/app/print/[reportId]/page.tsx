@@ -10,7 +10,7 @@ import { PrintReportTemplate } from "./print-report-template";
 
 interface Props {
   params: Promise<{ reportId: string }>;
-  searchParams: Promise<{ jobId?: string }>;
+  searchParams: Promise<{ jobId?: string | string[] }>;
 }
 
 // Human bounce targets; lead → own report home (no per-report ownership check).

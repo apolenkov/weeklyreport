@@ -87,7 +87,7 @@ export function LeadOverviewCard({
   return (
     <button
       type="button"
-      className="group grid min-h-[76px] w-full cursor-pointer grid-cols-[1.75rem_minmax(0,1fr)_1.5rem] items-center gap-2 overflow-hidden rounded-lg p-2.5 text-left transition-[box-shadow,border-color,background-color] hover:shadow-[var(--shadow-portfolio-card-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-starbucks-accent)] focus-visible:ring-offset-2"
+      className={`${PRODUCT_CARD_BASE} ${PRODUCT_CARD_INTERACTIVE}`}
       style={{ background: STATUS_BG[lead.worstStatus] }}
       title={`Jump to ${lead.name}'s section`}
       onClick={() => onNavigate(lead.id)}
@@ -110,7 +110,7 @@ export function LeadOverviewCard({
         </span>
       </span>
       <span
-        className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-card)_55%,transparent)] text-[13px] font-semibold text-[var(--color-primary)] opacity-60 shadow-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+        className={`${PRODUCT_CHEVRON_BASE} ${PRODUCT_CHEVRON_REVEAL}`}
         aria-hidden="true"
       >
         ↓

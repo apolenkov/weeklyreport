@@ -7,7 +7,7 @@ import { ActiveActivityRow } from "./active-activity-row";
 
 interface ActivitiesTableProps {
   readonly activeActivities: readonly ProjectActivity[];
-  readonly hasData: boolean;
+  readonly isFiltering: boolean;
   readonly archivedActivities: readonly ProjectActivity[];
   readonly groupNameById: ReadonlyMap<string, string>;
   readonly users: readonly AdminUserView[];
@@ -21,7 +21,7 @@ interface ActivitiesTableProps {
 
 export function ActivitiesTable({
   activeActivities,
-  hasData,
+  isFiltering,
   archivedActivities,
   groupNameById,
   users,
@@ -37,7 +37,7 @@ export function ActivitiesTable({
       <div className="space-y-3" data-testid="activities-table">
         {activeActivities.length === 0 ? (
           <p className="text-sm text-[var(--color-muted-foreground)]">
-            {hasData
+            {isFiltering
               ? "No activities match the search."
               : "No active activities yet."}
           </p>
@@ -87,7 +87,7 @@ function ArchivedActivityList({
           key={activity.id}
           className="flex items-center justify-between rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-background)] px-4 py-3"
         >
-          <span className="text-sm text-[var(--color-muted-foreground)]">
+          <span className="min-w-0 break-words text-sm text-[var(--color-muted-foreground)]">
             {activity.name}
           </span>
           <button

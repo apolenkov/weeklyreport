@@ -42,9 +42,6 @@ function useOverviewCompletion(
 ) {
   return useCompletionPresentation({
     autosave: editor?.view.autosave ?? FALLBACK_AUTOSAVE,
-    products: editor?.view.viewModel.products ?? [],
-    activityCount: editor?.view.viewModel.activityOptions.length ?? 0,
-    onQuickAdd: editor?.view.draftActions.onQuickAdd ?? (() => undefined),
     handleSubmit: editor?.view.writeActions.handleSubmit ?? (() => undefined),
     readiness: editor?.view.submitReadiness ?? FALLBACK_READINESS,
     isSlidesMode: false,

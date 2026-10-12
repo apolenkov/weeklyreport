@@ -37,8 +37,8 @@ export default function ReportsPage() {
             <h1 className="font-[family-name:var(--font-sans)] text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
               History
             </h1>
-            <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-              {historySubtitle(role)}
+            <p className="mt-1 min-h-5 text-sm text-[var(--color-muted-foreground)]">
+              {isSessionLoading ? null : historySubtitle(role)}
             </p>
           </header>
 

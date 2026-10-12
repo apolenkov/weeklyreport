@@ -10,17 +10,20 @@ import {
 } from "./login-page-roles";
 
 describe("login navigation helpers", () => {
-  it("builds an encoded dev-login URL with the role home redirect", () => {
-    const href = devLoginHref("head", "head+qa@example.test");
-    const url = new URL(href, "http://web.test");
+  it.each(sessionRoleSchema.options)(
+    "builds an encoded %s dev-login URL with the role home redirect",
+    (role) => {
+      const href = devLoginHref(role, "head+qa@example.test");
+      const url = new URL(href, "http://web.test");
 
-    expect(url.pathname).toBe("/auth/dev-login");
-    expect(Object.fromEntries(url.searchParams)).toEqual({
-      role: "head",
-      email: "head+qa@example.test",
-      redirect: ROLE_HOME_PATH.head,
-    });
-  });
+      expect(url.pathname).toBe("/auth/dev-login");
+      expect(Object.fromEntries(url.searchParams)).toEqual({
+        role,
+        email: "head+qa@example.test",
+        redirect: ROLE_HOME_PATH[role],
+      });
+    },
+  );
 
   it("returns each known role's canonical home path", () => {
     for (const role of sessionRoleSchema.options) {

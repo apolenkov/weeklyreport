@@ -11,7 +11,10 @@ export { HeadPublishLockAction } from "./ui/head-publish-lock-action";
 export { PeriodNavigationSkeleton } from "./ui/navigation/period-navigation-skeleton";
 export { PeriodNavigator } from "./ui/period-navigator";
 export { PeriodsTab } from "./ui/periods-tab";
-export { PublishLockButton } from "./ui/publish-lock-button";
+export {
+  PUBLISH_REQUIREMENT_HINT,
+  PublishLockButton,
+} from "./ui/publish-lock-button";
 export { HistoryPanel } from "./ui/report-history-panel";
 export { HistoryToolbar } from "./ui/report-history-toolbar";
 export { RequestReopenDialog } from "./ui/request-reopen-dialog";

@@ -142,6 +142,18 @@ vi.mock("../../../../shared/lib/trpc/trpc-context", () => ({
 
 /* ---- Import under test (after all vi.mock registrations) ---- */
 
+import { logClientError } from "../../../../shared/lib/errors/client-error-reporting";
+
+vi.mock(
+  "../../../../shared/lib/errors/client-error-reporting",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("../../../../shared/lib/errors/client-error-reporting")
+    >()),
+    logClientError: vi.fn(),
+  }),
+);
+
 import { HeadReportShell } from "./head-report-shell";
 
 const TEST_REPORT_ID = "test-report-001";
@@ -558,5 +570,34 @@ describe("HeadReportShell — view-mode toggle reflects mode + URL view state", 
       "aria-checked",
       "true",
     );
+  });
+});
+
+describe("HeadReportShell active query failure policy", () => {
+  it("logs only the active transport failure and retains the addressed shell", () => {
+    const error = new Error("active transport failed");
+    vi.mocked(useQuery).mockImplementation((options) =>
+      options.queryKey[0] === "weeklyReport.get" && options.queryKey[1] === null
+        ? makeQueryState({ data: undefined, error })
+        : makeQueryState({
+            data:
+              options.queryKey[0] === "weeklyReport.get"
+                ? { status: "no-period" }
+                : { entries: [] },
+          }),
+    );
+    const rendered = render(
+      <HeadReportShell reportId={TEST_REPORT_ID} mode="form" />,
+    );
+    expect(screen.getByTestId("weekly-report-page-stub")).toBeInTheDocument();
+    expect(logClientError).toHaveBeenCalledWith(
+      "headReport.active.load_failed",
+      error,
+      { component: "HeadReportShell", procedure: "weeklyReport.get" },
+    );
+    rendered.rerender(
+      <HeadReportShell reportId={TEST_REPORT_ID} mode="form" />,
+    );
+    expect(logClientError).toHaveBeenCalledTimes(1);
   });
 });

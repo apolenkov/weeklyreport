@@ -52,6 +52,12 @@ function useHeadPeriodData(reportId: string, includeArchive: boolean) {
     procedure: "reports.compiledHistory",
   });
 
+  useQueryErrorHandler(activeQ, {
+    event: "headReport.active.load_failed",
+    component: "HeadReportShell",
+    procedure: "weeklyReport.get",
+  });
+
   const periods: readonly ReportPeriod[] = useMemo(
     () =>
       deriveHeadPeriods(

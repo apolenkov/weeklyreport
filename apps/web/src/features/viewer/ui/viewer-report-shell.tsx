@@ -217,7 +217,11 @@ export function ViewerReportShell({
     procedure: "reports.compiledHistory",
   });
   useQueryErrorHandler(
-    { isError: shouldRecover && displayedQ.isError, error: displayedQ.error },
+    {
+      isError: shouldRecover && displayedQ.isError,
+      isSuccess: displayedQ.isSuccess,
+      error: displayedQ.error,
+    },
     {
       event: "viewerReport.get.load_failed",
       component: "ViewerReportShell",

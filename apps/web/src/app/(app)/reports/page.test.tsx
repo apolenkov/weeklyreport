@@ -287,8 +287,21 @@ describe("ReportsPage history archive toggle", () => {
         expect.objectContaining({ enabled: false }),
       );
 
+      expect(screen.queryByText(/report history\./i)).not.toBeInTheDocument();
+
       setRole(role);
       rerender(<ReportsPage />);
+      expect(
+        screen.getByText(
+          role === "lead"
+            ? "Your submitted reports and drafts."
+            : role === "head"
+              ? "Compiled group report history."
+              : role === "viewer"
+                ? "Published report history."
+                : "Compiled report history.",
+        ),
+      ).toBeInTheDocument();
 
       expect(
         screen.queryByRole("status", { name: "Loading history" }),

@@ -17,6 +17,7 @@ const html = `<!doctype html><html><body style="margin:0">
 <button id="scroll" style="position:absolute;left:100px;top:500px;width:80px;height:35px;white-space:nowrap;overflow:auto">A long content string accessible by scrolling</button>
 <button id="ellipsis" style="position:absolute;left:100px;top:550px;width:80px;height:35px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">A long content string intentionally truncated</button>
 <button id="heavy" onclick="const end=performance.now()+250;while(performance.now()<end){}">Heavy work</button><button id="fast">Fast work</button>
+<button id="fetchfail" onclick="window.__fetchCaught=null;fetch('http://127.0.0.1:1/?token=secret').then(r=>r.text()).catch(e=>{window.__fetchCaught=e.name})">Refused request</button>
 </body></html>`;
 
 describe.runIf(process.env.CRAWL_BROWSER_TESTS === "1")(
@@ -114,6 +115,29 @@ describe.runIf(process.env.CRAWL_BROWSER_TESTS === "1")(
         .results[0];
       expect(heavy?.blockedMs).toBeGreaterThanOrEqual(200);
       expect(fast?.blockedMs).toBeLessThan(100);
+    }, 30_000);
+    it("records a handled transport failure in press evidence without secrets", async () => {
+      const probe = fixture.browser.evaluate(PAGE_PROBE) as PageProbe;
+      const target = probe.controls.find((c) => c.name === "Refused request");
+      if (!target) throw new Error("Missing fixture control");
+      const [result] = pressBatch(fixture.browser, [target], {
+        budgetMs: 3000,
+        maxQuietMs: 500,
+        mode: "quick",
+      }).results;
+      await fixture.browser.evaluate(
+        `(() => { const s = performance.now(); return new Promise((r) => { const t = () => window.__fetchCaught !== undefined ? r() : (performance.now() - s > 5000 ? r() : setTimeout(t, 50)); t(); }); })()`,
+      );
+      const failures =
+        result?.logs.filter(
+          (log) =>
+            log.kind === "page-error" && log.detail.includes("fetch failed"),
+        ) ?? [];
+      expect(failures).toHaveLength(1);
+      expect(failures[0]?.detail).not.toContain("secret");
+      expect(fixture.browser.evaluate("window.__fetchCaught")).toBe(
+        "TypeError",
+      );
     }, 30_000);
   },
 );

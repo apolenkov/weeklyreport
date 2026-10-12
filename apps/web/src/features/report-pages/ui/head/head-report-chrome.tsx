@@ -4,6 +4,7 @@ import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 import { type ReactNode, useCallback, useContext } from "react";
 
 import { SessionContext } from "../../../../shared/lib/auth/session-provider";
+import { HEAD_REPORT_ROUTE } from "../../../../shared/ui/navigation/nav-links";
 import { ArchiveToggle } from "../../../../shared/ui/report-shell/archive-toggle";
 import {
   DocumentActionGroup,
@@ -60,8 +61,8 @@ function HeadContextTrailing({
       />
       {fullscreenControl}
       <ViewModeToggle
-        editHref={`/head/report/${encodeURIComponent(reportId)}${buildQuery({ mode: null })}`}
-        slidesHref={`/head/report/${encodeURIComponent(reportId)}${buildQuery({ mode: "slides" })}`}
+        editHref={`${HEAD_REPORT_ROUTE}/${encodeURIComponent(reportId)}${buildQuery({ mode: null })}`}
+        slidesHref={`${HEAD_REPORT_ROUTE}/${encodeURIComponent(reportId)}${buildQuery({ mode: "slides" })}`}
         mode={mode === "slides" ? "slides" : "edit"}
         desktopLabels
       />
@@ -89,7 +90,7 @@ export function HeadContextControls({
   const { buildQuery, includeArchive, setIncludeArchive } = urlState;
   const urlBuilder = useCallback(
     (periodId: string) =>
-      `/head/report/${encodeURIComponent(periodId)}${buildQuery({})}`,
+      `${HEAD_REPORT_ROUTE}/${encodeURIComponent(periodId)}${buildQuery({})}`,
     [buildQuery],
   );
 

@@ -94,7 +94,10 @@ export function useLeadSlidesData({
     inReportMode: request.inReportMode,
     targetReportId,
     isLoading:
-      period.isLoading || queries.byPeriodQ.isLoading || foreignContentPending,
+      period.isLoading ||
+      queries.byPeriodQ.isLoading ||
+      (request.isOwnDeck && queries.crossAuthorsQ.isLoading) ||
+      foreignContentPending,
     isError: period.isError || queries.byPeriodQ.isError,
     slides,
     section: queries.byPeriodQ.data?.section ?? null,

@@ -1,5 +1,6 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
 
+import { initialsFromName } from "../../../shared/lib/format/user-initials";
 import type { CrossAuthorContentRow } from "../../report-sections";
 import type { GridAuthor } from "./slide-grid-rows";
 
@@ -8,17 +9,6 @@ const AUTHOR_COLOR_COUNT = 6;
 // Reserve the owner's slot 0; foreign authors cycle only through the remaining
 // colors so they never silently collide with the owner's swatch.
 const FOREIGN_COLOR_COUNT = AUTHOR_COLOR_COUNT - 1;
-
-const INITIALS_TOKENS = 2;
-
-function initialsOf(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/u)
-    .slice(0, INITIALS_TOKENS)
-    .map((token) => token.charAt(0).toUpperCase())
-    .join("");
-}
 
 export interface AuthorRoster {
   readonly owner: GridAuthor;
@@ -36,7 +26,7 @@ export function buildContributorRoster(
     id: section.authorId,
     name: section.authorName,
     role: section.authorRole,
-    initials: initialsOf(section.authorName),
+    initials: initialsFromName(section.authorName),
     colorIndex: index % AUTHOR_COLOR_COUNT,
     isOwner: false,
   }));
@@ -61,7 +51,7 @@ export function buildAuthorRoster(
     id: section.authorId,
     name: section.authorName,
     role: section.authorRole,
-    initials: initialsOf(section.authorName),
+    initials: initialsFromName(section.authorName),
     colorIndex: 0,
     isOwner: true,
   };
@@ -71,7 +61,7 @@ export function buildAuthorRoster(
       id,
       name,
       role,
-      initials: initialsOf(name),
+      initials: initialsFromName(name),
       colorIndex: (index % FOREIGN_COLOR_COUNT) + 1,
       isOwner: false,
     })),
