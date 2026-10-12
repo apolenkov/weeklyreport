@@ -61,7 +61,7 @@ describe("PeriodsSubTab — disabled reopen-window validity", () => {
     const save = screen.getByRole("button", { name: "Save period policy" });
 
     fireEvent.change(windowInput, { target: { value: "999" } });
-    expect(windowInput).toHaveValue(999);
+    expect(windowInput).toHaveValue("999");
     expect(save).toBeDisabled();
 
     await user.click(allowReopen);
@@ -79,10 +79,33 @@ describe("PeriodsSubTab — disabled reopen-window validity", () => {
     await user.click(allowReopen);
     await waitFor(() => expect(save).toBeDisabled());
     expect(windowInput).toBeEnabled();
-    expect(windowInput).toHaveValue(999);
+    expect(windowInput).toHaveValue("999");
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Whole number between 0 and 168 required",
     );
+  });
+
+  it("keeps a non-numeric reopen window visible and blocks Save", () => {
+    render(<PeriodsSubTab serverSettings={SETTINGS} />);
+
+    const windowInput = screen.getByLabelText("Reopen window (hours)");
+    fireEvent.change(windowInput, { target: { value: "12days" } });
+
+    expect(windowInput).toHaveValue("12days");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Whole number between 0 and 168 required",
+    );
+    expect(
+      screen.getByRole("button", { name: "Save period policy" }),
+    ).toBeDisabled();
+  });
+
+  it("states the reopen window range in its description", () => {
+    render(<PeriodsSubTab serverSettings={SETTINGS} />);
+
+    expect(
+      screen.getByLabelText("Reopen window (hours)"),
+    ).toHaveAccessibleDescription(/0\.\.168/);
   });
 
   it("accepts a valid server window after a disabled-policy save", async () => {
@@ -113,11 +136,11 @@ describe("PeriodsSubTab — disabled reopen-window validity", () => {
       />,
     );
 
-    await waitFor(() => expect(windowInput).toHaveValue(48));
+    await waitFor(() => expect(windowInput).toHaveValue("48"));
     await user.click(allowReopen);
 
     expect(windowInput).toBeEnabled();
-    expect(windowInput).toHaveValue(48);
+    expect(windowInput).toHaveValue("48");
     expect(screen.queryByRole("alert")).toBeNull();
     expect(save).toBeEnabled();
   });
@@ -147,9 +170,9 @@ describe("PeriodsSubTab — disabled reopen-window validity", () => {
     });
     rendered.rerender(<PeriodsSubTab serverSettings={initialSettings} />);
 
-    await waitFor(() => expect(windowInput).toHaveValue(48));
+    await waitFor(() => expect(windowInput).toHaveValue("48"));
     await user.click(allowReopen);
-    expect(windowInput).toHaveValue(48);
+    expect(windowInput).toHaveValue("48");
     expect(screen.queryByRole("alert")).toBeNull();
     expect(save).toBeEnabled();
   });
@@ -164,7 +187,7 @@ describe("PeriodsSubTab — disabled reopen-window validity", () => {
       <PeriodsSubTab serverSettings={{ ...SETTINGS, reopenWindowHours: 72 }} />,
     );
 
-    expect(windowInput).toHaveValue(999);
+    expect(windowInput).toHaveValue("999");
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Whole number between 0 and 168 required",
     );
@@ -181,7 +204,7 @@ describe("PeriodsSubTab — disabled reopen-window validity", () => {
       <PeriodsSubTab serverSettings={{ ...SETTINGS, periodLengthDays: 14 }} />,
     );
 
-    expect(lengthInput).toHaveValue(999);
+    expect(lengthInput).toHaveValue("999");
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Whole number between 1 and 31 required",
     );

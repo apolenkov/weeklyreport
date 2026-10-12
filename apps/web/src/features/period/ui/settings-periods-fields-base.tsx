@@ -61,7 +61,7 @@ function PeriodShapeFields({
           setDraft((current) => ({ ...current, periodLengthDays }))
         }
         {...(onValidityChange === undefined ? {} : { onValidityChange })}
-        hint="How many days each reporting period spans (default 7 = weekly)."
+        hint={`How many days each reporting period spans (default 7 = weekly). Must be ${fieldLimits.PERIOD_LENGTH_DAYS.min}..${fieldLimits.PERIOD_LENGTH_DAYS.max} days.`}
       />
 
       <WorkingDaysField
@@ -102,7 +102,7 @@ function SubmissionWindowFields({
           setDraft((current) => ({ ...current, defaultDeadlineDays }))
         }
         {...(onValidityChange === undefined ? {} : { onValidityChange })}
-        hint="Number of days after period start before reports are due."
+        hint={`Number of days after period start before reports are due. Must be ${fieldLimits.DEFAULT_DEADLINE_DAYS.min}..${fieldLimits.DEFAULT_DEADLINE_DAYS.max} days.`}
       />
 
       <NumberField
@@ -165,7 +165,7 @@ function PublicationFields({
           setDraft((current) => ({ ...current, autoArchiveWeeksAfterPublish }))
         }
         {...(onValidityChange === undefined ? {} : { onValidityChange })}
-        hint="0 = never archive. Otherwise: a published period drops out of the default «active» views after N weeks."
+        hint={`0 = never archive. Otherwise: a published period drops out of the default «active» views after N weeks. Must be ${fieldLimits.AUTO_ARCHIVE_WEEKS.min}..${fieldLimits.AUTO_ARCHIVE_WEEKS.max} weeks.`}
       />
     </>
   );

@@ -69,7 +69,7 @@ const forms = [
     render: (value: AppSettings) => <PeriodsSubTab serverSettings={value} />,
     field: /period length/i,
     save: /save period policy/i,
-    value: 14,
+    value: "14",
     replacement: "15",
     mutation: "admin.updateSettings",
     input: { periodLengthDays: 14 },
@@ -149,7 +149,7 @@ describe.each(forms)("$name pending draft", (form) => {
       const harness = mountForm(form);
       const user = userEvent.setup();
       const control = await screen.findByLabelText(form.field);
-      await editControl(user, control, String(form.value));
+      await editControl(user, control, form.value);
       await user.click(screen.getByRole("button", { name: form.save }));
       await waitFor(() => expect(harness.mutation.calls).toHaveLength(1));
       expect(harness.mutation.calls[0]).toMatchObject(form.input);
@@ -175,11 +175,7 @@ describe.each(forms)("$name pending draft", (form) => {
       }
       expect(control).toHaveValue(form.value);
       await editControl(user, control, form.replacement);
-      expect(control).toHaveValue(
-        typeof form.value === "number"
-          ? Number(form.replacement)
-          : form.replacement,
-      );
+      expect(control).toHaveValue(form.replacement);
       expect(harness.mutation.calls).toHaveLength(1);
     },
   );

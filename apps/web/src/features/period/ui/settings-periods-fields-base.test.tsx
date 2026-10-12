@@ -93,9 +93,70 @@ describe("NumberField", () => {
       "period-length-days-error",
     );
   });
+
+  it("keeps a non-numeric draft visible and reports it invalid", () => {
+    const onValidityChange = vi.fn();
+    render(
+      <NumberField
+        id="period-length-days"
+        label="Period length (days)"
+        bounds={{ min: 1, max: 31 }}
+        value={7}
+        onChange={vi.fn()}
+        onValidityChange={onValidityChange}
+        hint="How many days each period spans"
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Period length (days)"), {
+      target: { value: "12days" },
+    });
+
+    expect(screen.getByLabelText("Period length (days)")).toHaveValue("12days");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Whole number between 1 and 31 required",
+    );
+    expect(onValidityChange).toHaveBeenLastCalledWith(
+      "period-length-days",
+      false,
+    );
+  });
+
+  it("commits a signed draft the integer parser accepts", () => {
+    const onChange = vi.fn();
+    render(
+      <NumberField
+        id="period-length-days"
+        label="Period length (days)"
+        bounds={{ min: 1, max: 31 }}
+        value={7}
+        onChange={onChange}
+        hint="How many days each period spans"
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Period length (days)"), {
+      target: { value: "+8" },
+    });
+
+    expect(onChange).toHaveBeenLastCalledWith(8);
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
 });
 
 describe("PeriodBaseFields", () => {
+  it.each([
+    ["Period length (days)", 1, 31],
+    ["Default deadline days", 1, 30],
+    ["Grace period (hours)", 0, 168],
+    ["Auto-archive published periods after (weeks)", 0, 52],
+  ])("%s states its accepted range in its description", (label, min, max) => {
+    render(<FieldsHarness />);
+    expect(screen.getByLabelText(label)).toHaveAccessibleDescription(
+      new RegExp(String.raw`Must be ${min}\.\.${max} `),
+    );
+  });
+
   it.each([
     ["Period length (days)", 1, 31],
     ["Default deadline days", 1, 30],
@@ -111,7 +172,7 @@ describe("PeriodBaseFields", () => {
 
       // The raw invalid text is retained and a validation error surfaces
       // instead of the value silently snapping to the bounds maximum.
-      expect(input).toHaveValue(999);
+      expect(input).toHaveValue("999");
       expect(screen.getByRole("alert")).toHaveTextContent(
         `Whole number between ${min} and ${maximum} required`,
       );
@@ -131,8 +192,8 @@ describe("PeriodBaseFields", () => {
       fireEvent.change(gracePeriod, { target: { value: "48" } });
     });
 
-    expect(periodLength).toHaveValue(14);
-    expect(gracePeriod).toHaveValue(48);
+    expect(periodLength).toHaveValue("14");
+    expect(gracePeriod).toHaveValue("48");
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
@@ -142,7 +203,7 @@ describe("PeriodBaseFields", () => {
 
     fireEvent.change(input, { target: { value: "14" } });
 
-    expect(input).toHaveValue(14);
+    expect(input).toHaveValue("14");
     expect(screen.queryByRole("alert")).toBeNull();
   });
 });
