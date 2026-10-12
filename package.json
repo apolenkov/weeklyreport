@@ -26,7 +26,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint:eslint": "NODE_OPTIONS=--max-old-space-size=8192 eslint . --max-warnings 0 --concurrency off",
-    "lint:stylelint": "stylelint \"**/*.css\" \"!**/.next/**\" --allow-empty-input --max-warnings 0",
+    "lint:stylelint": "stylelint \"**/*.css\" \"!**/.next*/**\" \"!**/dist/**\" \"!.worktrees/**\" \"!.pnpm-store/**\" \"!.abide/**\" --allow-empty-input --max-warnings 0",
     "lint:runtime-node": "node scripts/gates/environment/check-runtime-node-sync.ts",
     "lint:knip": "knip --include exports,types,files,dependencies",
     "lint:cleanliness": "tsx scripts/gates/repository-cleanliness.ts",
