@@ -2,7 +2,7 @@ import {
   AI_PROVIDER_PROFILE_CAPABILITIES,
   type AiProviderConfigurationRead,
   type AiProviderControlRead,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../../../lib/logger.js";

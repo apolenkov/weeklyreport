@@ -1,4 +1,4 @@
-import type { ReminderPolicy } from "@customreport/shared";
+import type { ReminderPolicy } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { saveReminderPolicy } from "./admin-reminder-policy.queries.js";

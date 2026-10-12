@@ -4,13 +4,13 @@ import path from "node:path";
 import url from "node:url";
 import { promisify } from "node:util";
 
+import type { PrismaClient } from "@prisma/client";
+import { TRPCError } from "@trpc/server";
 import {
   MS_PER_MINUTE,
   type ReseedVariant,
   reseedVariantSchema,
-} from "@customreport/shared";
-import type { PrismaClient } from "@prisma/client";
-import { TRPCError } from "@trpc/server";
+} from "@weeklyreport/shared";
 import { z } from "zod";
 
 import type { EnvConfig } from "../../config/env.schema";

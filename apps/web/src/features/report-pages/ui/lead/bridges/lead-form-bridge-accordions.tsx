@@ -3,7 +3,7 @@
 import type {
   ReportSectionReadModel,
   TrafficLightStatus,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import {
   type AccordionOpenSignal,

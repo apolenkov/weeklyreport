@@ -1,8 +1,8 @@
+import type { Prisma, ReminderPolicy, ReminderRule } from "@prisma/client";
 import {
   computeReminderFireAt,
   reminderPolicyAppliesTo,
-} from "@customreport/shared";
-import type { Prisma, ReminderPolicy, ReminderRule } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { DueDeadlineRule, DueEscalationRule } from "./reminders.types.js";

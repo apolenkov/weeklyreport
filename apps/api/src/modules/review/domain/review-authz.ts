@@ -1,4 +1,4 @@
-import type { PeriodStatus, UserSession } from "@customreport/shared";
+import type { PeriodStatus, UserSession } from "@weeklyreport/shared";
 
 import { computeAllowedGroupIds } from "../../../lib/group-scope.js";
 

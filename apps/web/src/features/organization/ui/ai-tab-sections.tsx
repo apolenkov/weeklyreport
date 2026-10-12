@@ -1,4 +1,4 @@
-import { TabsList, TabsTrigger } from "@customreport/ui/components/ui/tabs";
+import { TabsList, TabsTrigger } from "@weeklyreport/ui/components/ui/tabs";
 
 export function ReadinessSummary({
   readiness,

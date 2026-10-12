@@ -1,4 +1,4 @@
-import { draftSaveSchema, type UserSession } from "@customreport/shared";
+import { draftSaveSchema, type UserSession } from "@weeklyreport/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import {

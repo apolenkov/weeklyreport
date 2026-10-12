@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import type {
   AiProviderConfigurationRead,
   AiProviderDraft,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { AI_PROVIDER_TEST_SUITE_VERSION } from "../infrastructure/ai-provider-test.queue.js";
 import { saveAiProviderDraft } from "./ai-provider.draft-service.save.js";

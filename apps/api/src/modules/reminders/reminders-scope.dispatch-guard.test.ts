@@ -1,7 +1,7 @@
 import {
   adminReminderExecutionSchema,
   type UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { createNullLogger } from "../../lib/logger.js";

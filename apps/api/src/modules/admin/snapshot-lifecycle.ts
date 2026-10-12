@@ -1,7 +1,7 @@
 import type {
   CurrentPeriodLifecycle,
   ReportPeriod,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 // Governed lifecycle fields a snapshot restore writes back (period-dual-state).
 export type ResolvedLifecycle = CurrentPeriodLifecycle;

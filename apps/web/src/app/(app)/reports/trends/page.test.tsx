@@ -2,10 +2,10 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import type { PeriodComparisonInput } from "@customreport/shared";
 import type { QueryObserverResult } from "@tanstack/react-query";
 import { useQuery } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { PeriodComparisonInput } from "@weeklyreport/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../../../test-utils/expect-defined";

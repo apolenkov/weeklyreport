@@ -1,8 +1,8 @@
+import type { Prisma } from "@prisma/client";
 import {
   type AssembledReport,
   buildPublishedProjections,
-} from "@customreport/shared";
-import type { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import {
   buildAssembledReportFromPrismaRow,

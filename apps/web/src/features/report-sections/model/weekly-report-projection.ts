@@ -1,8 +1,8 @@
 import type {
   PortfolioProductOverview,
   WeeklyReportReadModel,
-} from "@customreport/shared";
-import { shortNameFromName } from "@customreport/shared";
+} from "@weeklyreport/shared";
+import { shortNameFromName } from "@weeklyreport/shared";
 
 import { statusLabel } from "../../../shared/lib/status/status-presentation";
 import { reportHasContent } from "./report-content";

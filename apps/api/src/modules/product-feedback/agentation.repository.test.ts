@@ -1,4 +1,4 @@
-import type { AgentationAnnotationCreate } from "@customreport/shared";
+import type { AgentationAnnotationCreate } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";

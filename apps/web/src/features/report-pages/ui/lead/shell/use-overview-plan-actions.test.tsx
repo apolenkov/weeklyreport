@@ -1,8 +1,8 @@
+import { act, render, renderHook, waitFor } from "@testing-library/react";
 import type {
   LeadStatusOverviewOutput,
   ReportSectionReadModel,
-} from "@customreport/shared";
-import { act, render, renderHook, waitFor } from "@testing-library/react";
+} from "@weeklyreport/shared";
 import { toast } from "sonner";
 import { describe, expect, it, vi } from "vitest";
 

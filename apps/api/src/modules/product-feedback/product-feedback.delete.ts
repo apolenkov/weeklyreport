@@ -1,4 +1,4 @@
-import type { UserSession } from "@customreport/shared";
+import type { UserSession } from "@weeklyreport/shared";
 import type { Response } from "express";
 
 import { annotationIdFromInboxId } from "./agentation-inbox.repository.js";

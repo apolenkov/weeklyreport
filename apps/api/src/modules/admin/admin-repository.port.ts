@@ -11,7 +11,7 @@ import type {
   ReportingGroup,
   StageAssignment,
   UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type {
   DecideReopenRequestInput,

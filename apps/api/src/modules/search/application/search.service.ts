@@ -5,7 +5,7 @@ import {
   type SearchQueryOutput,
   searchQueryOutputSchema,
   type UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { computeAllowedGroupIds } from "../../../lib/group-scope.js";
 import { type AppLogger } from "../../../lib/logger.js";

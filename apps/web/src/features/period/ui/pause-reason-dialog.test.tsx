@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { SAFE_TEXT_MAX_LENGTH } from "@customreport/shared";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { SAFE_TEXT_MAX_LENGTH } from "@weeklyreport/shared";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 

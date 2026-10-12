@@ -1,4 +1,4 @@
-import type { Role } from "@customreport/shared";
+import type { Role } from "@weeklyreport/shared";
 
 export const ADMIN_ROUTE_ROLES: readonly Role[] = ["admin"];
 export const HEAD_ROUTE_ROLES: readonly Role[] = ["head", "admin"];

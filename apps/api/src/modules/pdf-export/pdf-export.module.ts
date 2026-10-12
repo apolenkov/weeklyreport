@@ -1,6 +1,6 @@
-import { PDF_EXPORT_QUEUE_NAME } from "@customreport/shared";
 import { getQueueToken } from "@nestjs/bullmq";
 import { Module } from "@nestjs/common";
+import { PDF_EXPORT_QUEUE_NAME } from "@weeklyreport/shared";
 import type { Queue } from "bullmq";
 import { ClsService } from "nestjs-cls";
 

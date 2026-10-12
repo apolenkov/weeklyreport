@@ -1,4 +1,4 @@
-import type { SearchPlan } from "@customreport/shared";
+import type { SearchPlan } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { createClarificationTokenCodec } from "../application/clarification-token.js";

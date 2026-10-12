@@ -32,7 +32,7 @@ vi.mock("../../lib/trpc/trpc-context", () => ({
   }),
 }));
 
-import type { DbRole } from "@customreport/shared";
+import type { DbRole } from "@weeklyreport/shared";
 import { expectTypeOf } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";

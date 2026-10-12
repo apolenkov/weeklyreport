@@ -1,7 +1,7 @@
 import type {
   ItemWorkflowStatus,
   ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { deriveItemAlarmFromRisks } from "../alarms/item-alarm";
 import { workflowToItemStatus } from "../item-status";

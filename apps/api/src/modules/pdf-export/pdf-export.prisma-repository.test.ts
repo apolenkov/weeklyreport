@@ -2,7 +2,7 @@ import {
   type PdfExportJob,
   publishedReportSnapshotSchema,
   type UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";

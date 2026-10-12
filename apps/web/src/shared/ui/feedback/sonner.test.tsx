@@ -1,5 +1,5 @@
-import { Toaster } from "@customreport/ui/components/ui/sonner";
 import { render } from "@testing-library/react";
+import { Toaster } from "@weeklyreport/ui/components/ui/sonner";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

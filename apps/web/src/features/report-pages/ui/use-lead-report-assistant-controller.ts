@@ -3,7 +3,7 @@
 import type {
   ClarificationOption,
   ReportAssistantOutcome,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import type { SyntheticEvent } from "react";
 
 import { useLeadReportAssistantStore } from "./lead-report-assistant-store";

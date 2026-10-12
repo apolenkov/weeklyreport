@@ -1,5 +1,5 @@
-import { EMAIL_REMINDER_QUEUE_NAME } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
+import { EMAIL_REMINDER_QUEUE_NAME } from "@weeklyreport/shared";
 import { type Job, type WorkerOptions } from "bullmq";
 import { ClsService } from "nestjs-cls";
 

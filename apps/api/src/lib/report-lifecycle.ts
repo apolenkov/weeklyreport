@@ -1,5 +1,5 @@
-import { currentPeriodLifecycleSchema } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
+import { currentPeriodLifecycleSchema } from "@weeklyreport/shared";
 
 const EDITABLE_REPORT_LIFECYCLES = [
   {

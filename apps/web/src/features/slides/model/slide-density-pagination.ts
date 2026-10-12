@@ -1,4 +1,4 @@
-import { aggregateTrafficLight } from "@customreport/shared";
+import { aggregateTrafficLight } from "@weeklyreport/shared";
 
 import type {
   SectionSlideModel,

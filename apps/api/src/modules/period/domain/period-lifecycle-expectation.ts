@@ -1,4 +1,4 @@
-import type { CurrentPeriodLifecycle } from "@customreport/shared";
+import type { CurrentPeriodLifecycle } from "@weeklyreport/shared";
 
 export type PeriodLifecycleExpectation = CurrentPeriodLifecycle & {
   readonly periodStart: Date;

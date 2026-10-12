@@ -1,7 +1,7 @@
 import type {
   PeriodStatus,
   ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type {
   LeadOverviewRow,

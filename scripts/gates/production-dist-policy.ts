@@ -13,8 +13,8 @@ export const checksApiRuntime = (mode: ProductionDistMode): boolean =>
   mode === "--all" || mode === "--api";
 
 const INTERNAL_PACKAGES = [
-  "@customreport/shared",
-  "@customreport/report-persistence",
+  "@weeklyreport/shared",
+  "@weeklyreport/report-persistence",
 ] as const;
 
 const isInternalPackageSpecifier = (specifier: string): boolean =>

@@ -1,7 +1,7 @@
 "use client";
 
-import { Toaster } from "@customreport/ui/components/ui/sonner";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { Toaster } from "@weeklyreport/ui/components/ui/sonner";
 import { type ReactNode, useEffect, useState } from "react";
 
 import { makeQueryClient } from "../query/query-client";

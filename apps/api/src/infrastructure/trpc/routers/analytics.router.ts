@@ -2,7 +2,7 @@ import {
   leadVelocityInputSchema,
   periodComparisonInputSchema,
   trafficLightHistoryInputSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { AnalyticsService } from "../../../modules/analytics/index.js";
 import { withDomainErrorMapping } from "../trpc.error-mapper.js";

@@ -5,9 +5,9 @@ import {
   type RiskSeverity,
   riskSeverityToCanonicalFloor,
   type TrafficLightStatus,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
-export { deriveEffectiveProductStatus } from "@customreport/shared";
+export { deriveEffectiveProductStatus } from "@weeklyreport/shared";
 
 type TrafficLight = TrafficLightStatus;
 
@@ -18,7 +18,7 @@ export function aggregateStageTraffic(
 }
 
 // Preserve the existing persistence export while shared owns normalization.
-export { asTrafficLight as asTraffic } from "@customreport/shared";
+export { asTrafficLight as asTraffic } from "@weeklyreport/shared";
 
 // An activity has no SDLC stage, so its pill is floored by its own risks only.
 // `alarmFloor` is that record-only floor — the lead picker gates a manual lower

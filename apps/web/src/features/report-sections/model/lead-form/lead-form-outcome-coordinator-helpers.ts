@@ -4,7 +4,7 @@ import type {
   ReportSectionReadModel,
   ResolvePlanInput,
   RestorePlanInput,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { AutosaveSnapshot } from "../autosave/autosave-types";
 import type { LeadFormGeneration } from "./lead-form-generation";

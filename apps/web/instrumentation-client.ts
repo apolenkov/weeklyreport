@@ -3,8 +3,8 @@
 // statements, so this cannot be a call in the body below.
 import "./src/shared/lib/runtime/zod-jitless";
 
-import { createSentryPrivacyOptions } from "@customreport/shared";
 import * as Sentry from "@sentry/nextjs";
+import { createSentryPrivacyOptions } from "@weeklyreport/shared";
 
 import { BROWSER_SENTRY_TUNNEL } from "./sentry-options.config";
 import { webEnv } from "./src/shared/lib/runtime/web-env";

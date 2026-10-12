@@ -1,4 +1,4 @@
-import type { ActivityLiveResponse, UserSession } from "@customreport/shared";
+import type { ActivityLiveResponse, UserSession } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { type ActivityRepository, ActivityService } from "./activity.service";

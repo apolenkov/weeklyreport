@@ -1,7 +1,7 @@
 import {
   type DraftSaveInput,
   type ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { mergeSection } from "./report-section-merge";

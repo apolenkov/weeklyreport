@@ -4,7 +4,7 @@ import {
   DEV_LOGIN_EMAIL_BY_ROLE,
   ROLE_HOME_PATH,
   ROLE_LABEL,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { E2E_BASE_URL } from "../setup/base-url.js";
 import { LEAD_FORM_FIXTURE } from "../setup/fixture-data.js";

@@ -5,7 +5,7 @@ import type {
   ItemResolution,
   RecordCommentView,
   WeeklyReportReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { ItemStatus } from "./item-status";
 

@@ -1,4 +1,4 @@
-import type { AdminReminderExecution } from "@customreport/shared";
+import type { AdminReminderExecution } from "@weeklyreport/shared";
 import { describe, expect, expectTypeOf, it } from "vitest";
 
 import type { DeadlineReminderPayload } from "./reminders.types.js";

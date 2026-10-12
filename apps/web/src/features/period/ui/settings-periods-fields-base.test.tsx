@@ -1,5 +1,5 @@
-import type { AppSettings } from "@customreport/shared";
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import type { AppSettings } from "@weeklyreport/shared";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 

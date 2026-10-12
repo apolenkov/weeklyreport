@@ -1,4 +1,4 @@
-import { isReopenAutoCloseNote } from "@customreport/shared";
+import { isReopenAutoCloseNote } from "@weeklyreport/shared";
 import { type Ref, useEffect, useRef } from "react";
 
 import {

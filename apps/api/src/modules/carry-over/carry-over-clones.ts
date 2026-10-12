@@ -2,7 +2,7 @@ import {
   type CarryOverRecord,
   carryOverRecordSchema,
   type ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 export function cloneCarriedItem(
   sourceReportId: string,

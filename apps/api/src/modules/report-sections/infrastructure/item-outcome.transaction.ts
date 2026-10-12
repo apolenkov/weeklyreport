@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import {
   draftSaveSchema,
   type ItemOutcomeResult,
@@ -8,8 +9,7 @@ import {
   type RestorePlanInput,
   validateRecordActivityIds,
   validateStageOwnership,
-} from "@customreport/shared";
-import { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import { ReportSectionDomainError } from "../application/report-sections.service.js";

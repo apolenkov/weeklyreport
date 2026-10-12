@@ -2,7 +2,7 @@ import type {
   ArchiveReportDetail,
   ArchiveReportSummary,
   UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import type { AuditLogger } from "../../../lib/audit-logger.js";

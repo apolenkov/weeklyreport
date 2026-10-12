@@ -1,7 +1,7 @@
-# @customreport/shared
+# @weeklyreport/shared
 
 Shared Zod schemas, TypeScript types, and tRPC role middleware/guard contracts
-used by both `@customreport/api` and `@customreport/web`. The API owns the
+used by both `@weeklyreport/api` and `@weeklyreport/web`. The API owns the
 router definitions; this package owns the shared role checks and data contracts.
 Its source-of-truth consumers are the API, Web, report-persistence writers and
 read models, and Prisma seed profiles.
@@ -27,5 +27,5 @@ read models, and Prisma seed profiles.
 ## Testing
 
 ```bash
-pnpm --filter @customreport/shared test
+pnpm --filter @weeklyreport/shared test
 ```

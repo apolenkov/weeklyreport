@@ -1,6 +1,5 @@
 import "dotenv/config";
 
-import { aiProviderDraftSchema } from "@customreport/shared";
 import { PrismaPg } from "@prisma/adapter-pg";
 import type { Prisma } from "@prisma/client";
 import {
@@ -8,6 +7,7 @@ import {
   AiProviderProfile,
   PrismaClient,
 } from "@prisma/client";
+import { aiProviderDraftSchema } from "@weeklyreport/shared";
 import pg from "pg";
 
 import {

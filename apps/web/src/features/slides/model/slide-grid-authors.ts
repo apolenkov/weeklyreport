@@ -1,4 +1,4 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 
 import { initialsFromName } from "../../../shared/lib/format/user-initials";
 import type { CrossAuthorContentRow } from "../../report-sections";

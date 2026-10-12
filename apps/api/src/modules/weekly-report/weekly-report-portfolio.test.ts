@@ -1,7 +1,7 @@
 import {
   buildPortfolioProductsFromSnapshotSections,
   type ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {

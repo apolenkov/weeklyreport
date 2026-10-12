@@ -2,7 +2,7 @@ import type {
   ArchiveReportDetail,
   ArchiveReportSummary,
   ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 import { ZodError } from "zod";
 

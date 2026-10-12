@@ -1,9 +1,9 @@
+import { Inject, Injectable } from "@nestjs/common";
 import {
   isWithinReopenWindow,
   type PeriodStatus,
   type UserSession,
-} from "@customreport/shared";
-import { Inject, Injectable } from "@nestjs/common";
+} from "@weeklyreport/shared";
 
 import { APP_LOGGER } from "../../../lib/audit-logger.js";
 import type { AppLogger } from "../../../lib/logger.js";

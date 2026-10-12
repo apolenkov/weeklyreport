@@ -1,5 +1,5 @@
-import type { TrafficLightStatus } from "@customreport/shared";
 import type { $Enums } from "@prisma/client";
+import type { TrafficLightStatus } from "@weeklyreport/shared";
 import { describe, expectTypeOf, it } from "vitest";
 
 // Type-level identity proof: if either side gains, loses, or renames a member,

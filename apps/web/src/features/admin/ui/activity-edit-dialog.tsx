@@ -1,6 +1,6 @@
 "use client";
 
-import type { ProjectActivity } from "@customreport/shared";
+import type { ProjectActivity } from "@weeklyreport/shared";
 import { useRef } from "react";
 
 import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";

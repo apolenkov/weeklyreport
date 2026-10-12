@@ -123,24 +123,24 @@ test("all and API modes inspect the embedded API runtime", () => {
 
 test("bare workspace imports cannot remain in the API runtime", () => {
   for (const source of [
-    "import '@customreport/shared';",
-    "import value from '@customreport/shared/schema';",
-    "export * from '@customreport/report-persistence';",
-    "export { value } from '@customreport/report-persistence/runtime';",
-    "import('@customreport/shared')",
-    "import('@customreport/shared/schema.json', { with: { type: 'json' } })",
-    "import(`@customreport/report-persistence/runtime`)",
+    "import '@weeklyreport/shared';",
+    "import value from '@weeklyreport/shared/schema';",
+    "export * from '@weeklyreport/report-persistence';",
+    "export { value } from '@weeklyreport/report-persistence/runtime';",
+    "import('@weeklyreport/shared')",
+    "import('@weeklyreport/shared/schema.json', { with: { type: 'json' } })",
+    "import(`@weeklyreport/report-persistence/runtime`)",
   ]) {
     assert.equal(hasBareInternalPackageImport(source), true, source);
   }
 
   for (const source of [
     "import '../packages/report-persistence/src/index.js';",
-    "import '@customreport/shared-extra';",
-    "const message = \"import '@customreport/shared'\";",
-    "// import '@customreport/shared';",
-    "const packageName = '@customreport/shared'; import(packageName);",
-    "import(`@customreport/$" + "{packageName}`);",
+    "import '@weeklyreport/shared-extra';",
+    "const message = \"import '@weeklyreport/shared'\";",
+    "// import '@weeklyreport/shared';",
+    "const packageName = '@weeklyreport/shared'; import(packageName);",
+    "import(`@weeklyreport/$" + "{packageName}`);",
   ]) {
     assert.equal(hasBareInternalPackageImport(source), false, source);
   }

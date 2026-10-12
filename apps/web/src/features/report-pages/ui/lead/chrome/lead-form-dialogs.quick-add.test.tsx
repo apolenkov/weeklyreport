@@ -1,6 +1,6 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 

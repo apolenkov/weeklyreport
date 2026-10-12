@@ -6,7 +6,7 @@
 import {
   DEFAULT_REPORTING_GROUP,
   DEV_LOGIN_EMAIL_BY_ROLE,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 export const HEAD_USER_ID = "a0000000-0000-4000-8000-000000000099";
 export const VIEWER_USER_ID = "a0000000-0000-4000-8000-000000000098";

@@ -1,5 +1,5 @@
-import { requirePublishedSnapshot } from "@customreport/report-persistence";
 import type { Prisma } from "@prisma/client";
+import { requirePublishedSnapshot } from "@weeklyreport/report-persistence";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import {

@@ -1,6 +1,6 @@
-import type { PeriodListItem } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
+import type { PeriodListItem } from "@weeklyreport/shared";
 import type { ReactNode } from "react";
 
 import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";

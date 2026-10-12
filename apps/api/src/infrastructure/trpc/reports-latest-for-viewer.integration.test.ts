@@ -1,4 +1,4 @@
-import type { ReportStatus, UserSession } from "@customreport/shared";
+import type { ReportStatus, UserSession } from "@weeklyreport/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createNullLogger } from "../../lib/logger.js";

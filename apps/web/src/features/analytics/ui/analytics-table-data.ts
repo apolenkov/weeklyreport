@@ -1,4 +1,4 @@
-import type { AnalyticsPeriod, LeadVelocityOutput } from "@customreport/shared";
+import type { AnalyticsPeriod, LeadVelocityOutput } from "@weeklyreport/shared";
 
 interface TableSeries {
   readonly dataKey: string;

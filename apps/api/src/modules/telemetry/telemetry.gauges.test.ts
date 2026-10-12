@@ -2,9 +2,9 @@ import { Logger } from "@nestjs/common";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  customreportActiveLeadsTotal,
-  customreportReportsOnTimeRatio,
   metricsRegistry,
+  weeklyreportActiveLeadsTotal,
+  weeklyreportReportsOnTimeRatio,
 } from "../../infrastructure/metrics/metrics.registry.js";
 import {
   TelemetryGauges,
@@ -61,7 +61,7 @@ describe("TelemetryGauges", () => {
     gauges.onModuleInit();
 
     // eslint-disable-next-line sonarjs/no-floating-point-equality -- asserts the port value (0.85) passes through the gauge unchanged; exact equality is intended
-    expect(await gaugeValue(customreportReportsOnTimeRatio)).toBe(0.85);
+    expect(await gaugeValue(weeklyreportReportsOnTimeRatio)).toBe(0.85);
 
     gauges.onModuleDestroy();
   });
@@ -70,7 +70,7 @@ describe("TelemetryGauges", () => {
     const gauges = new TelemetryGauges(buildPort({ activeLeads: 6 }));
     gauges.onModuleInit();
 
-    expect(await gaugeValue(customreportActiveLeadsTotal)).toBe(6);
+    expect(await gaugeValue(weeklyreportActiveLeadsTotal)).toBe(6);
 
     gauges.onModuleDestroy();
   });
@@ -84,13 +84,13 @@ describe("TelemetryGauges", () => {
       onTimeRatioLastNPeriods,
       activeLeadsLastPublishedPeriod: vi.fn().mockResolvedValue(0),
     };
-    const set = vi.spyOn(customreportReportsOnTimeRatio, "set");
+    const set = vi.spyOn(weeklyreportReportsOnTimeRatio, "set");
     const gauges = new TelemetryGauges(port);
     gauges.onModuleInit();
 
     // eslint-disable-next-line sonarjs/no-floating-point-equality -- asserts the port value passes through unchanged before the no-data transition
-    expect(await gaugeValue(customreportReportsOnTimeRatio)).toBe(0.42);
-    expect(Number.isNaN(await gaugeValue(customreportReportsOnTimeRatio))).toBe(
+    expect(await gaugeValue(weeklyreportReportsOnTimeRatio)).toBe(0.42);
+    expect(Number.isNaN(await gaugeValue(weeklyreportReportsOnTimeRatio))).toBe(
       true,
     );
     expect(set).toHaveBeenNthCalledWith(1, 0.42);
@@ -102,14 +102,14 @@ describe("TelemetryGauges", () => {
   it("onModuleDestroy clears the collect callback so a torn-down port does not fire", async () => {
     const gauges = new TelemetryGauges(buildPort({ activeLeads: 9 }));
     gauges.onModuleInit();
-    expect(await gaugeValue(customreportActiveLeadsTotal)).toBe(9);
+    expect(await gaugeValue(weeklyreportActiveLeadsTotal)).toBe(9);
 
     // Destruction detaches collection. A manual reset therefore remains
     // unchanged when the gauge is read again.
     gauges.onModuleDestroy();
-    customreportActiveLeadsTotal.set(0);
+    weeklyreportActiveLeadsTotal.set(0);
     // Re-fetching does not invoke a collection callback.
-    expect(await gaugeValue(customreportActiveLeadsTotal)).toBe(0);
+    expect(await gaugeValue(weeklyreportActiveLeadsTotal)).toBe(0);
   });
 });
 
@@ -124,16 +124,16 @@ describe("TelemetryGauges — DB-outage fault isolation", () => {
       .mockImplementation(() => undefined);
     // Pre-set a sentinel so we can prove the failing collect callback cleared
     // it — the gauge must not keep publishing 0.42 during a DB outage.
-    customreportReportsOnTimeRatio.set(0.42);
+    weeklyreportReportsOnTimeRatio.set(0.42);
     const gauges = new TelemetryGauges(buildThrowingPort(new Error("db down")));
     gauges.onModuleInit();
 
     // gaugeValue triggers the collect callback; it must resolve, not reject.
-    expect(Number.isNaN(await gaugeValue(customreportReportsOnTimeRatio))).toBe(
+    expect(Number.isNaN(await gaugeValue(weeklyreportReportsOnTimeRatio))).toBe(
       true,
     );
     expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining("customreportReportsOnTimeRatio"),
+      expect.stringContaining("weeklyreportReportsOnTimeRatio"),
       expect.anything(),
     );
 
@@ -144,15 +144,15 @@ describe("TelemetryGauges — DB-outage fault isolation", () => {
     const errorSpy = vi
       .spyOn(Logger.prototype, "error")
       .mockImplementation(() => undefined);
-    customreportActiveLeadsTotal.set(7);
+    weeklyreportActiveLeadsTotal.set(7);
     const gauges = new TelemetryGauges(buildThrowingPort(new Error("db down")));
     gauges.onModuleInit();
 
-    expect(Number.isNaN(await gaugeValue(customreportActiveLeadsTotal))).toBe(
+    expect(Number.isNaN(await gaugeValue(weeklyreportActiveLeadsTotal))).toBe(
       true,
     );
     expect(errorSpy).toHaveBeenCalledWith(
-      expect.stringContaining("customreportActiveLeadsTotal"),
+      expect.stringContaining("weeklyreportActiveLeadsTotal"),
       expect.anything(),
     );
 
@@ -167,8 +167,8 @@ describe("TelemetryGauges — DB-outage fault isolation", () => {
     gauges.onModuleInit();
 
     // Exercise both collect callbacks in the same scrape cycle.
-    await gaugeValue(customreportReportsOnTimeRatio);
-    await gaugeValue(customreportActiveLeadsTotal);
+    await gaugeValue(weeklyreportReportsOnTimeRatio);
+    await gaugeValue(weeklyreportActiveLeadsTotal);
 
     expect(errorSpy).toHaveBeenCalledTimes(2);
 

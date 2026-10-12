@@ -3,8 +3,8 @@ import type {
   PdfExportJob,
   PublishedReportSnapshot,
   UserSession,
-} from "@customreport/shared";
-import { AUTH_COOKIE_NAME } from "@customreport/shared";
+} from "@weeklyreport/shared";
+import { AUTH_COOKIE_NAME } from "@weeklyreport/shared";
 import {
   afterEach,
   beforeEach,

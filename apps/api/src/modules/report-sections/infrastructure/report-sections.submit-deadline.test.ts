@@ -1,7 +1,7 @@
 import {
   type ReportSectionReadModel,
   type SubmitSectionPayload,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";

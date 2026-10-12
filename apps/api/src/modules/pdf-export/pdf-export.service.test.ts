@@ -5,7 +5,7 @@ import {
   pdfExportJobSchema,
   type PublishedReportSnapshot,
   type UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import jwt from "jsonwebtoken";
 import {
   afterEach,
@@ -18,7 +18,7 @@ import {
 } from "vitest";
 
 import type { EnvConfig } from "../../infrastructure/config/env.schema.js";
-import { customreportPdfExportRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
+import { weeklyreportPdfExportRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import { NOOP_PDF_EXPORT_TELEMETRY } from "../../test-utils/pdf-export.js";
@@ -451,7 +451,7 @@ describe("PdfExportService", () => {
       queue,
       new PdfExportInfrastructureTelemetry(null),
     );
-    const before = await getCounterValue(customreportPdfExportRequestsTotal, {
+    const before = await getCounterValue(weeklyreportPdfExportRequestsTotal, {
       role: "head",
     });
 
@@ -460,7 +460,7 @@ describe("PdfExportService", () => {
     ).rejects.toThrow("Redis down");
 
     expect(
-      await getCounterValue(customreportPdfExportRequestsTotal, {
+      await getCounterValue(weeklyreportPdfExportRequestsTotal, {
         role: "head",
       }),
     ).toBe(before);
@@ -518,19 +518,19 @@ describe("PdfExportService", () => {
       new PdfExportInfrastructureTelemetry(null),
     );
     const beforeHead = await getCounterValue(
-      customreportPdfExportRequestsTotal,
+      weeklyreportPdfExportRequestsTotal,
       {
         role: "head",
       },
     );
     const beforeViewer = await getCounterValue(
-      customreportPdfExportRequestsTotal,
+      weeklyreportPdfExportRequestsTotal,
       {
         role: "viewer",
       },
     );
     const beforeSystem = await getCounterValue(
-      customreportPdfExportRequestsTotal,
+      weeklyreportPdfExportRequestsTotal,
       {
         role: "system",
       },
@@ -545,17 +545,17 @@ describe("PdfExportService", () => {
     await service.requestPdfExport(reportId, requesterSession);
 
     expect(
-      await getCounterValue(customreportPdfExportRequestsTotal, {
+      await getCounterValue(weeklyreportPdfExportRequestsTotal, {
         role: "head",
       }),
     ).toBe(beforeHead + 1);
     expect(
-      await getCounterValue(customreportPdfExportRequestsTotal, {
+      await getCounterValue(weeklyreportPdfExportRequestsTotal, {
         role: "viewer",
       }),
     ).toBe(beforeViewer + 1);
     expect(
-      await getCounterValue(customreportPdfExportRequestsTotal, {
+      await getCounterValue(weeklyreportPdfExportRequestsTotal, {
         role: "system",
       }),
     ).toBe(beforeSystem + 1);

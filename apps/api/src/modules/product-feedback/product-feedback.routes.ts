@@ -3,7 +3,7 @@ import {
   MAX_FEEDBACK_DISMISS_REASON_LENGTH,
   MAX_FEEDBACK_MESSAGE_LENGTH,
   type UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import type { Request, Response } from "express";
 import { z } from "zod";
 

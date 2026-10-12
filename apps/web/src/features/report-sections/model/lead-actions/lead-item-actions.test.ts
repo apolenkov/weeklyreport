@@ -1,5 +1,5 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
-import { draftSaveSchema } from "@customreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
+import { draftSaveSchema } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../../test-utils/expect-defined";

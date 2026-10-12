@@ -3,7 +3,7 @@ import {
   draftSaveSchema,
   paginationInputSchema,
   submitSectionSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { ReportSectionsService } from "../../../modules/report-sections/index.js";
 import type { WeeklyReportService } from "../../../modules/weekly-report/index.js";

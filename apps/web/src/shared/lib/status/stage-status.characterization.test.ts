@@ -1,4 +1,4 @@
-import type { CanonicalStatus, RiskSeverity } from "@customreport/shared";
+import type { CanonicalStatus, RiskSeverity } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { deriveEffectiveStageStatus } from "./stage-status";

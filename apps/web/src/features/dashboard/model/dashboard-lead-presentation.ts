@@ -1,4 +1,4 @@
-import type { DbRole, SectionReviewView } from "@customreport/shared";
+import type { DbRole, SectionReviewView } from "@weeklyreport/shared";
 
 import type { LeadStatus } from "../../report-sections";
 

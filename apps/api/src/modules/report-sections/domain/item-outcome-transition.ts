@@ -4,7 +4,7 @@ import {
   type PromotePlanInput,
   type ReportSectionReadModel,
   type ResolvePlanInput,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { LeadFormConstraintError } from "./lead-form-shared.js";
 

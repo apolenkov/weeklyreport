@@ -12,10 +12,10 @@
     ],
     "noEmit": true,
     "paths": {
-      "@customreport/shared": ["../../packages/shared/src/index.ts"],
-      "@customreport/shared/*": ["../../packages/shared/src/*"],
-      "@customreport/ui/*": ["../../packages/ui/src/*"],
-      "@customreport/api/*": ["../../apps/api/src/*"]
+      "@weeklyreport/shared": ["../../packages/shared/src/index.ts"],
+      "@weeklyreport/shared/*": ["../../packages/shared/src/*"],
+      "@weeklyreport/ui/*": ["../../packages/ui/src/*"],
+      "@weeklyreport/api/*": ["../../apps/api/src/*"]
     }
   },
   "include": [

@@ -1,4 +1,4 @@
-import type { PeriodState } from "@customreport/shared";
+import type { PeriodState } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { mapDomainError } from "../../infrastructure/trpc/trpc.error-mapper.js";

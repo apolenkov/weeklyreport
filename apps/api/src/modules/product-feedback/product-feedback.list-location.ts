@@ -1,4 +1,4 @@
-import { normalizeFeedbackPath } from "@customreport/shared";
+import { normalizeFeedbackPath } from "@weeklyreport/shared";
 import { z } from "zod";
 
 export function requestedFeedbackLocation(

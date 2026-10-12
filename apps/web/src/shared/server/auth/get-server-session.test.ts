@@ -1,4 +1,4 @@
-import { AUTH_COOKIE_NAME } from "@customreport/shared";
+import { AUTH_COOKIE_NAME } from "@weeklyreport/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // `server-only` throws if imported from a non-server module — under vitest

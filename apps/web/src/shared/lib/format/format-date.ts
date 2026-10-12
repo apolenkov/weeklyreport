@@ -9,7 +9,7 @@ import {
   MS_PER_SECOND,
   MS_PER_WEEK,
   SECONDS_PER_MINUTE,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 type DateInput = Date | string | null | undefined;
 export type RelativePastVariant = "compact" | "long" | "activity";

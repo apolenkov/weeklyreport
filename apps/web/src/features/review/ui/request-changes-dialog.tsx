@@ -1,10 +1,10 @@
 "use client";
 
+import { useMutation } from "@tanstack/react-query";
 import {
   REVIEW_COMMENT_MAX_LENGTH,
   type ReviewVerdictResult,
-} from "@customreport/shared";
-import { useMutation } from "@tanstack/react-query";
+} from "@weeklyreport/shared";
 import { useId, useRef, useState } from "react";
 
 import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";

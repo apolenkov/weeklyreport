@@ -1,4 +1,4 @@
-import type { PeriodState, ReportStatus } from "@customreport/shared";
+import type { PeriodState, ReportStatus } from "@weeklyreport/shared";
 
 // The single, pure source of truth for the `Report` lifecycle field set; the
 // `Report_lifecycle_tuple_check` CHECK only rejects illegal tuples, not stale

@@ -1,8 +1,8 @@
+import type { Prisma } from "@prisma/client";
 import {
   type PublishedReportSnapshot,
   publishedReportSnapshotSchema,
-} from "@customreport/shared";
-import type { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";

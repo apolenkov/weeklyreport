@@ -9,7 +9,7 @@ import {
   aiPromptFeatureReadSchema,
   aiPromptOperationResultSchema,
   aiPromptRestoreInputSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { AiPromptService } from "../../../../modules/ai-prompts/index.js";
 import { withDomainErrorMapping } from "../../trpc.error-mapper.js";

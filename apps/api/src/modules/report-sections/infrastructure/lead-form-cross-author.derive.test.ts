@@ -71,7 +71,7 @@ function frozenCrossAuthorSnapshot() {
     },
     sections: [section(AUTHOR_A, PROJECT_1), section(AUTHOR_B, PROJECT_1)],
   } as unknown as ReturnType<
-    typeof import("@customreport/report-persistence").requirePublishedSnapshot
+    typeof import("@weeklyreport/report-persistence").requirePublishedSnapshot
   >;
 }
 

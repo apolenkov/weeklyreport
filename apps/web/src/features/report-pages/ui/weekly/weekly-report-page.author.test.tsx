@@ -1,8 +1,8 @@
 import "@testing-library/jest-dom/vitest";
 
-import { weeklyReportReadModelSchema } from "@customreport/shared";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { weeklyReportReadModelSchema } from "@weeklyreport/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../../../../shared/lib/query/cache-keys", () => ({

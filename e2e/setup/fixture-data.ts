@@ -1,4 +1,4 @@
-import { shortNameFromName } from "@customreport/shared";
+import { shortNameFromName } from "@weeklyreport/shared";
 
 import {
   LEAD_1,

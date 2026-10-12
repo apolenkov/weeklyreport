@@ -1,13 +1,13 @@
-import type { DbRole, Role } from "@customreport/shared";
-import { ROLE_HOME_PATH, sessionRoleSchema } from "@customreport/shared";
+import type { DbRole, Role } from "@weeklyreport/shared";
+import { ROLE_HOME_PATH, sessionRoleSchema } from "@weeklyreport/shared";
 
 import { buildDevLoginHref } from "../shared/lib/navigation/dev-login-href";
 
 // Homed in shared so login, role-switcher, and api dev-login cannot drift.
-export { ROLE_LABEL } from "@customreport/shared";
+export { ROLE_LABEL } from "@weeklyreport/shared";
 
 // Fallback email when no last-role hint; keyed by DbRole (pre-session lookup).
-export { DEV_LOGIN_EMAIL_BY_ROLE as DEV_EMAIL_FOR_ROLE } from "@customreport/shared";
+export { DEV_LOGIN_EMAIL_BY_ROLE as DEV_EMAIL_FOR_ROLE } from "@weeklyreport/shared";
 
 export function devLoginHref(role: DbRole, email: string): string {
   return buildDevLoginHref(role, email, ROLE_HOME_PATH[role]);

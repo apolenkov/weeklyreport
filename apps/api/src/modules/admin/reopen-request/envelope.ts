@@ -1,4 +1,4 @@
-import type { ReportSectionStatus } from "@customreport/shared";
+import type { ReportSectionStatus } from "@weeklyreport/shared";
 
 import type { ReopenRequestRow } from "../admin-shared.js";
 

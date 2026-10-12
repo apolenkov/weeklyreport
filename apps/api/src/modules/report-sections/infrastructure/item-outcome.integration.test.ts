@@ -1,4 +1,4 @@
-import type { ItemOutcomeResult } from "@customreport/shared";
+import type { ItemOutcomeResult } from "@weeklyreport/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";

@@ -1,5 +1,5 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
 import { AiProviderLifecycle, AiProviderProfile } from "@prisma/client";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { describe, expect, it, type Mock, vi } from "vitest";
 
 import type { StoredAiProviderRevision } from "../../ai-provider/infrastructure/ai-provider.repository.js";

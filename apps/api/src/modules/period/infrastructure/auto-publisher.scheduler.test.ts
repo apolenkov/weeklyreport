@@ -1,5 +1,5 @@
-import type { AppSettings } from "@customreport/shared";
 import type { Report } from "@prisma/client";
+import type { AppSettings } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";

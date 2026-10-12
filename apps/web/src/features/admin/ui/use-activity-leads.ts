@@ -1,7 +1,7 @@
 "use client";
 
-import type { ProjectActivity } from "@customreport/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { ProjectActivity } from "@weeklyreport/shared";
 import { useMemo } from "react";
 import { toast } from "sonner";
 

@@ -2,7 +2,7 @@ import {
   computeReportProgress,
   type PeriodState,
   type ReportProgress,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { lockAllReminderPolicies } from "../reminders/index.js";

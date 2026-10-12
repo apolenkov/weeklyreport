@@ -2,7 +2,7 @@ import {
   organizationPublicSchema,
   organizationSchema,
   organizationUpdateSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 // shortName/fullName bounds and the singleton id are load-bearing for

@@ -1,10 +1,10 @@
-import type { AiPromptContents } from "@customreport/shared";
+import type { AiPromptContents } from "@weeklyreport/shared";
 import {
   AI_PROMPT_CORE_LIMIT,
   AI_PROMPT_EDITABLE_TAIL_SEPARATOR,
   AI_PROMPT_SLOT_CONTENT_LIMIT,
   aiPromptSlotReadSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {

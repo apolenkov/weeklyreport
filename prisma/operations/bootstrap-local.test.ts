@@ -73,7 +73,7 @@ describe("local disposable database bootstrap", () => {
     expect(spawn).toHaveBeenCalledTimes(4);
     expect(spawn.mock.calls[0]?.slice(0, 2)).toEqual([
       "pnpm",
-      ["--filter", "@customreport/api", "db:generate"],
+      ["--filter", "@weeklyreport/api", "db:generate"],
     ]);
     expect(
       spawn.mock.calls

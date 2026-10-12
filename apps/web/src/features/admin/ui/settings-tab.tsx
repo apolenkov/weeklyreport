@@ -1,11 +1,11 @@
 "use client";
-import type { AppSettings } from "@customreport/shared";
+import type { AppSettings } from "@weeklyreport/shared";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@customreport/ui/components/ui/tabs";
+} from "@weeklyreport/ui/components/ui/tabs";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { type DbRole, ROLE_LABEL } from "@customreport/shared";
+import { type DbRole, ROLE_LABEL } from "@weeklyreport/shared";
 import { type FocusEventHandler, type SyntheticEvent, useState } from "react";
 
 import type { AdminGroupView } from "../model/admin-types";

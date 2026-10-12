@@ -1,9 +1,9 @@
+import type { Prisma } from "@prisma/client";
 import {
   type AdminSnapshot,
   composeName,
   normalizeEmail,
-} from "@customreport/shared";
-import type { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import { AdminLastAdminError } from "../admin-errors.js";
 

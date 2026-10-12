@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import type { AdminActionLogEvent } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { AdminActionLogEvent } from "@weeklyreport/shared";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 

@@ -1,11 +1,11 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import type {
   AiProviderConfigurationRead,
   AiProviderControlRead,
   AiProviderDraft,
-} from "@customreport/shared";
-import { useQuery } from "@tanstack/react-query";
+} from "@weeklyreport/shared";
 import { useEffect, useState } from "react";
 
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";

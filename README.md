@@ -140,7 +140,7 @@ pnpm spec:check     # строгая проверка всех специфик�
 Корневой `pnpm test` запускает unit-тесты workspace, Prisma-тесты и проверки
 repository cleanliness и operations. Интеграционные тесты API с базой данных в
 него не входят: запускайте их отдельно через
-`pnpm --filter @customreport/api test:integration`.
+`pnpm --filter @weeklyreport/api test:integration`.
 
 Полезное при локальной отладке: читай структурированный лог API в
 `apps/api/.logs/app.log`; в production Kubernetes API пишет в stdout

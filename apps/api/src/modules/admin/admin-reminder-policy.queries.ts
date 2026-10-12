@@ -1,7 +1,7 @@
 import {
   type ReminderPolicy,
   reminderPolicySchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import {

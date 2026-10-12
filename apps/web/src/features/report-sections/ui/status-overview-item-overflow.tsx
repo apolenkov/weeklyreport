@@ -3,7 +3,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@customreport/ui/components/ui/dropdown-menu";
+} from "@weeklyreport/ui/components/ui/dropdown-menu";
 import { CalendarPlus, Ellipsis, Undo2 } from "lucide-react";
 
 import { shortItemLabel } from "../../../shared/lib/format/short-label";

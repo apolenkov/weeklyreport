@@ -1,10 +1,10 @@
-import type { Role } from "@customreport/shared";
-import { Button } from "@customreport/ui/components/ui/button";
+import type { Role } from "@weeklyreport/shared";
+import { Button } from "@weeklyreport/ui/components/ui/button";
 import {
   Card,
   CardContent,
   CardHeader,
-} from "@customreport/ui/components/ui/card";
+} from "@weeklyreport/ui/components/ui/card";
 import Link from "next/link";
 
 // Only requiredRoles is rendered — the viewer's own role is withheld so

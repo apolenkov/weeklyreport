@@ -1,9 +1,9 @@
+import type { Prisma, PrismaClient } from "@prisma/client";
 import {
   draftSaveSchema,
   reportSectionReadModelSchema,
   validateStageOwnership,
-} from "@customreport/shared";
-import type { Prisma, PrismaClient } from "@prisma/client";
+} from "@weeklyreport/shared";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { seedCrossAuthorOverlay } from "./seed-simple.cross-author-overlay.js";

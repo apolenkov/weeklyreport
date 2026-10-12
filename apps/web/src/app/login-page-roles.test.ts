@@ -1,4 +1,4 @@
-import { ROLE_HOME_PATH, sessionRoleSchema } from "@customreport/shared";
+import { ROLE_HOME_PATH, sessionRoleSchema } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {

@@ -1,4 +1,4 @@
-import type { Role } from "@customreport/shared";
+import type { Role } from "@weeklyreport/shared";
 
 // Role classification shared by client presentation and server route gates.
 // API middleware remains the

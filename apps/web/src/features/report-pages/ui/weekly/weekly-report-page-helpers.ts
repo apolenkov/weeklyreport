@@ -4,7 +4,7 @@ import {
   type ReportSectionReadModel,
   type ReportSectionStatus,
   type WeeklyReportReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { getClientErrorDetails } from "../../../../shared/lib/errors/client-error-reporting";
 import {

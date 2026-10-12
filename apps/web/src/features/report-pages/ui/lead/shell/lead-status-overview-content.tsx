@@ -1,6 +1,6 @@
 "use client";
 
-import type { ItemWorkflowStatus } from "@customreport/shared";
+import type { ItemWorkflowStatus } from "@weeklyreport/shared";
 import { useSearchParams } from "next/navigation";
 import type { ComponentProps } from "react";
 

@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 import type {
   AgentationAnnotationCreate,
   AgentationAnnotationResponse,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import {
   Agentation,
   type Annotation,

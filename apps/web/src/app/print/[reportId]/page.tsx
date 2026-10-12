@@ -1,4 +1,4 @@
-import type { Role } from "@customreport/shared";
+import type { Role } from "@weeklyreport/shared";
 import { redirect } from "next/navigation";
 
 import {

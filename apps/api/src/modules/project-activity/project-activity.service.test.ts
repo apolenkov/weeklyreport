@@ -1,4 +1,4 @@
-import type { DbRole, ProjectActivity } from "@customreport/shared";
+import type { DbRole, ProjectActivity } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import {

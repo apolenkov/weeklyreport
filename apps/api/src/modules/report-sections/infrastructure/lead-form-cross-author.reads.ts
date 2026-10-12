@@ -1,5 +1,5 @@
-import { requirePublishedSnapshot } from "@customreport/report-persistence";
-import type { Role } from "@customreport/shared";
+import { requirePublishedSnapshot } from "@weeklyreport/report-persistence";
+import type { Role } from "@weeklyreport/shared";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import type { CrossAuthorSectionRow } from "../application/lead-form.service";

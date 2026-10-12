@@ -8,8 +8,8 @@ import {
 import type { Gauge } from "@prometheus-io/client";
 
 import {
-  customreportActiveLeadsTotal,
-  customreportReportsOnTimeRatio,
+  weeklyreportActiveLeadsTotal,
+  weeklyreportReportsOnTimeRatio,
 } from "../../infrastructure/metrics/metrics.registry.js";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import {
@@ -66,8 +66,8 @@ export class TelemetryGauges implements OnModuleInit, OnModuleDestroy {
   ) {}
 
   onModuleInit(): void {
-    const onTimeRatio = collectAssignable(customreportReportsOnTimeRatio);
-    const activeLeads = collectAssignable(customreportActiveLeadsTotal);
+    const onTimeRatio = collectAssignable(weeklyreportReportsOnTimeRatio);
+    const activeLeads = collectAssignable(weeklyreportActiveLeadsTotal);
 
     onTimeRatio.collect = async () => {
       // A rejection here fails the client's Promise.all over all collect
@@ -80,27 +80,27 @@ export class TelemetryGauges implements OnModuleInit, OnModuleDestroy {
         if (value === null) {
           // Overwrite the last good sample so a has-data-to-no-data transition
           // cannot leave a stale ratio visible in subsequent scrapes.
-          customreportReportsOnTimeRatio.set(Number.NaN);
+          weeklyreportReportsOnTimeRatio.set(Number.NaN);
           return;
         }
-        customreportReportsOnTimeRatio.set(value);
+        weeklyreportReportsOnTimeRatio.set(value);
       } catch (error) {
         // A DB outage must not publish the last good value as current: clear
         // the gauge (NaN) so the scrape reflects the unknown state.
         this.logger.error(
-          "customreportReportsOnTimeRatio collect failed",
+          "weeklyreportReportsOnTimeRatio collect failed",
           error,
         );
-        customreportReportsOnTimeRatio.set(Number.NaN);
+        weeklyreportReportsOnTimeRatio.set(Number.NaN);
       }
     };
     activeLeads.collect = async () => {
       try {
         const value = await this.repo.activeLeadsLastPublishedPeriod();
-        customreportActiveLeadsTotal.set(value);
+        weeklyreportActiveLeadsTotal.set(value);
       } catch (error) {
-        this.logger.error("customreportActiveLeadsTotal collect failed", error);
-        customreportActiveLeadsTotal.set(Number.NaN);
+        this.logger.error("weeklyreportActiveLeadsTotal collect failed", error);
+        weeklyreportActiveLeadsTotal.set(Number.NaN);
       }
     };
   }
@@ -108,8 +108,8 @@ export class TelemetryGauges implements OnModuleInit, OnModuleDestroy {
   onModuleDestroy(): void {
     // Reset to no-op so subsequent module reloads (rare outside tests)
     // do not invoke a torn-down prisma client.
-    const onTimeRatio = collectAssignable(customreportReportsOnTimeRatio);
-    const activeLeads = collectAssignable(customreportActiveLeadsTotal);
+    const onTimeRatio = collectAssignable(weeklyreportReportsOnTimeRatio);
+    const activeLeads = collectAssignable(weeklyreportActiveLeadsTotal);
     onTimeRatio.collect = () => Promise.resolve();
     activeLeads.collect = () => Promise.resolve();
   }

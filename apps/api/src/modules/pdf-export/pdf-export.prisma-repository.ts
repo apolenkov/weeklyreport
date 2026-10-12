@@ -1,11 +1,11 @@
+import { Inject, Injectable } from "@nestjs/common";
 import {
   type AssembledReport,
   type PdfExportJob,
   type PublishedReportSnapshot,
   publishedReportSnapshotSchema,
   type UserSession,
-} from "@customreport/shared";
-import { Inject, Injectable } from "@nestjs/common";
+} from "@weeklyreport/shared";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import {

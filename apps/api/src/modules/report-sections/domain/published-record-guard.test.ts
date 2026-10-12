@@ -1,4 +1,4 @@
-import type { DraftSaveInput } from "@customreport/shared";
+import type { DraftSaveInput } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { findPublishedRecordViolation } from "./published-record-guard";

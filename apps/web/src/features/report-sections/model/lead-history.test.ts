@@ -1,7 +1,7 @@
 import type {
   CompiledHistoryEntry,
   MyHistoryEntry,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {

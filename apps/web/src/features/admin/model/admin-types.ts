@@ -3,9 +3,9 @@ import type {
   DbRole,
   ReminderAudience,
   ReminderPolicyKind,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
-export type { StageName } from "@customreport/shared";
+export type { StageName } from "@weeklyreport/shared";
 
 export interface AdminUserView {
   id: string;
@@ -36,7 +36,7 @@ export interface AdminGroupView {
 }
 
 export interface StageAssignment {
-  stage: import("@customreport/shared").StageName;
+  stage: import("@weeklyreport/shared").StageName;
   assigneeId: string | null;
 }
 

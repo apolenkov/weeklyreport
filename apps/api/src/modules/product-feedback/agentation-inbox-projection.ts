@@ -1,8 +1,8 @@
+import type { Prisma } from "@prisma/client";
 import {
   type FeedbackStatus,
   normalizeFeedbackPath,
-} from "@customreport/shared";
-import type { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import type { AnnotationWithThread } from "./agentation-mappers.js";
 import {

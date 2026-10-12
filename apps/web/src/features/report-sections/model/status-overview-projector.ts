@@ -1,11 +1,11 @@
 import type {
   CanonicalStatus,
   ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import {
   trafficLightToCanonical,
   worstCanonicalStatus,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { activityDisplayTitle } from "../../../shared/lib/activity/activity-display";
 import { deriveEffectiveStageStatus } from "../../../shared/lib/status/stage-status";

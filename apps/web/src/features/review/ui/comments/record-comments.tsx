@@ -1,6 +1,6 @@
 "use client";
 
-import { type RecordCommentView } from "@customreport/shared";
+import { type RecordCommentView } from "@weeklyreport/shared";
 
 import { shortItemLabel } from "../../../../shared/lib/format/short-label";
 import { ReviewCommentList } from "../../../../shared/ui/feedback/review-comment-list";

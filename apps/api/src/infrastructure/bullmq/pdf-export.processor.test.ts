@@ -2,7 +2,7 @@ import {
   AUTH_COOKIE_NAME,
   type PdfExportJob,
   pdfExportJobSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import type { Job, Queue } from "bullmq";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -61,7 +61,7 @@ vi.mock("bullmq", () => ({
   },
 }));
 
-// Mock the service (and its transitive @customreport/shared dependency)
+// Mock the service (and its transitive @weeklyreport/shared dependency)
 vi.mock("../../modules/pdf-export/index.js", () => ({
   PDF_RENDERER: Symbol("PdfRenderer"),
   PdfExportService: class {

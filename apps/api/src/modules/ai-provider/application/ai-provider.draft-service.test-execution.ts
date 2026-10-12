@@ -1,4 +1,4 @@
-import type { AiProviderConfigurationRead } from "@customreport/shared";
+import type { AiProviderConfigurationRead } from "@weeklyreport/shared";
 
 import {
   type AiProviderServiceDependencies,

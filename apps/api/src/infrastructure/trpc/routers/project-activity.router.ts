@@ -3,7 +3,7 @@ import {
   projectActivityCreateSchema,
   projectActivityLeadEdgeSchema,
   projectActivityUpdateSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { ProjectActivityService } from "../../../modules/project-activity/index.js";
 import { withDomainErrorMapping } from "../trpc.error-mapper.js";

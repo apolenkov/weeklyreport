@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { ReportAssistantOutcome } from "@customreport/shared";
+import type { ReportAssistantOutcome } from "@weeklyreport/shared";
 
 import { PROD_CRM_360 } from "../../prisma/seeds/simple/seed-simple.ids.js";
 import { DEMO_STAGE_ASSIGNMENTS } from "../../prisma/seeds/simple/seed-simple.stages.js";

@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import {
   draftSaveSchema,
   type ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined";

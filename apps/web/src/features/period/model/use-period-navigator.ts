@@ -1,6 +1,6 @@
 "use client";
 
-import type { PeriodState } from "@customreport/shared";
+import type { PeriodState } from "@weeklyreport/shared";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useId, useMemo } from "react";
 

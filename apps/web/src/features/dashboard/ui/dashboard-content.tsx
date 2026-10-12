@@ -4,7 +4,7 @@ import type {
   ActivityLiveResponse,
   SubmissionDashboardRow,
   WeeklyReportReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import {
   mapReviewDashboardData,

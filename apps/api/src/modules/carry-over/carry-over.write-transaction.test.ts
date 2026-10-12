@@ -2,7 +2,7 @@ import type {
   CarryOverExecution,
   CarryOverRecord,
   ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { ReportSectionNotFoundError } from "../report-sections/index.js";

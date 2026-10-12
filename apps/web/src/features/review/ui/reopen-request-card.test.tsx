@@ -1,5 +1,5 @@
-import { REOPEN_AUTO_CLOSE_NOTES } from "@customreport/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
+import { REOPEN_AUTO_CLOSE_NOTES } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { type ReopenRequest, ReopenRequestCard } from "./reopen-request-card";

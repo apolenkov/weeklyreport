@@ -1,4 +1,4 @@
-import type { ReportSectionStatus } from "@customreport/shared";
+import type { ReportSectionStatus } from "@weeklyreport/shared";
 
 // API has two ReportSectionStatus values (draft, submitted); UI exposes three
 // LeadStatus values. 'pending' is presentation-only (no Prisma/Zod equivalent)

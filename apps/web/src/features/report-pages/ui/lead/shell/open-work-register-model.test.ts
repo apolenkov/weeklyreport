@@ -1,4 +1,4 @@
-import type { LeadOpenWorkHistoryOccurrence } from "@customreport/shared";
+import type { LeadOpenWorkHistoryOccurrence } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {

@@ -1,13 +1,13 @@
-import type {
-  AiProviderCapabilityTestResult,
-  AiProviderTestOutcome,
-} from "@customreport/shared";
 import {
   AiProviderLifecycle,
   type AiProviderProfile,
   type AiProviderReasoningMode,
   type Prisma,
 } from "@prisma/client";
+import type {
+  AiProviderCapabilityTestResult,
+  AiProviderTestOutcome,
+} from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import { aiProviderRevisionSelect } from "./ai-provider.repository.select.js";

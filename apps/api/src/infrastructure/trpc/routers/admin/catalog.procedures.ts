@@ -2,7 +2,7 @@ import {
   adminProjectSchema,
   groupProductEdgeInputSchema,
   reportingGroupSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { z } from "zod";
 
 import type { ProjectAdminService } from "../../../../modules/admin/index.js";

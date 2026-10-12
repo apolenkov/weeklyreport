@@ -1,7 +1,7 @@
 import type {
   AiProviderConnectionRole,
   AiProviderProfileCapability,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import type { RefObject } from "react";
 
 import {

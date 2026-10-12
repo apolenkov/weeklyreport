@@ -1,6 +1,6 @@
 "use client";
 
-import type { PeriodState } from "@customreport/shared";
+import type { PeriodState } from "@weeklyreport/shared";
 import { type KeyboardEvent as ReactKeyboardEvent } from "react";
 
 import { DocumentBodyPortal } from "../../../shared/ui/dialogs/document-body-portal";

@@ -1,4 +1,4 @@
-import type { RecordCommentView } from "@customreport/shared";
+import type { RecordCommentView } from "@weeklyreport/shared";
 import type { ReactNode } from "react";
 
 import type { AccordionReviewContext } from "../../model/report-review-model";

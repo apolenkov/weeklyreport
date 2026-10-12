@@ -1,6 +1,6 @@
-import { reportSectionReadModelSchema } from "@customreport/shared";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { reportSectionReadModelSchema } from "@weeklyreport/shared";
 import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

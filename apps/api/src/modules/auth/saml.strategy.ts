@@ -1,9 +1,9 @@
-import { type Role, SamlProfileSchema } from "@customreport/shared";
 import {
   type PassportSamlConfig,
   Strategy as SamlStrategy,
   type VerifyWithoutRequest,
 } from "@node-saml/passport-saml";
+import { type Role, SamlProfileSchema } from "@weeklyreport/shared";
 
 import { requireEnv } from "../../lib/env.js";
 import { SAML_ENV_KEYS } from "../../lib/saml-env-keys.js";

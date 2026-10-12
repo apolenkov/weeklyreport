@@ -98,7 +98,7 @@ export const immutabilityConfig: Linter.Config[] = [
     rules: { "functional/prefer-tacit": "error" },
   },
   // Zone 6 — ui stays domain-free (package-name zone). packages/ui primitives must
-  // not import @customreport/shared domain schemas; charts receive finished series
+  // not import @weeklyreport/shared domain schemas; charts receive finished series
   // as props. Currently 0 violations.
   {
     files: ["packages/ui/**/*.{ts,tsx}"],
@@ -108,9 +108,9 @@ export const immutabilityConfig: Linter.Config[] = [
         {
           patterns: [
             {
-              group: ["@customreport/shared", "@customreport/shared/*"],
+              group: ["@weeklyreport/shared", "@weeklyreport/shared/*"],
               message:
-                "packages/ui must stay domain-free: no @customreport/shared schemas; shape data in the web slice or api and pass finished series as props (module-import-boundaries).",
+                "packages/ui must stay domain-free: no @weeklyreport/shared schemas; shape data in the web slice or api and pass finished series as props (module-import-boundaries).",
             },
           ],
         },

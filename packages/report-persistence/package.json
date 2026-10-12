@@ -1,5 +1,5 @@
 {
-  "name": "@customreport/report-persistence",
+  "name": "@weeklyreport/report-persistence",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,7 +11,7 @@
     "test": "TZ=UTC vitest run --config ../../vitest.base.config.ts --exclude '**/dist/**'"
   },
   "dependencies": {
-    "@customreport/shared": "workspace:*"
+    "@weeklyreport/shared": "workspace:*"
   },
   "peerDependencies": {
     "@prisma/client": "^7.10.0"

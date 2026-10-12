@@ -2,7 +2,7 @@ import type {
   DraftSavePayload,
   ReportSectionReadModel,
   TrafficLightStatus,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 // The draft producer owns content without optimistic-lock metadata; writers
 // inject the current version only when they issue a mutation.

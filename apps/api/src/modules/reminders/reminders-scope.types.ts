@@ -1,4 +1,4 @@
-import type { UserSession } from "@customreport/shared";
+import type { UserSession } from "@weeklyreport/shared";
 
 export interface RemindersScopeRepository {
   readonly getRuleReportId: (ruleId: string) => Promise<string | null>;

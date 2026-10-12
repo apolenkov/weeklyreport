@@ -1,4 +1,3 @@
-import type { AiProviderTestOutcome } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
 import {
   AiProviderLifecycle,
@@ -6,6 +5,7 @@ import {
   AiProviderReasoningMode,
   type Prisma,
 } from "@prisma/client";
+import type { AiProviderTestOutcome } from "@weeklyreport/shared";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import {

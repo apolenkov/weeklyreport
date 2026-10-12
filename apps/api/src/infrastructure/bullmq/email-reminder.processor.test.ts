@@ -23,7 +23,7 @@ vi.mock("bullmq", () => ({
   },
 }));
 
-// Mock services (and their transitive @customreport/shared dependency)
+// Mock services (and their transitive @weeklyreport/shared dependency)
 vi.mock("../../modules/reminders/index.js", () => ({
   parseReminderQueueJobData: (data: unknown) => {
     if (

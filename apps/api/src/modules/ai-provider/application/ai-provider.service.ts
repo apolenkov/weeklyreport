@@ -1,3 +1,4 @@
+import { Inject, Injectable, Optional } from "@nestjs/common";
 import type {
   AiProviderAvailabilityRead,
   AiProviderConfigurationRead,
@@ -5,8 +6,7 @@ import type {
   AiProviderDiscardResult,
   AiProviderDraft,
   AiProviderPreparationProgress,
-} from "@customreport/shared";
-import { Inject, Injectable, Optional } from "@nestjs/common";
+} from "@weeklyreport/shared";
 
 import { ENV_CONFIG } from "../../../infrastructure/config/config.module.js";
 import { AiProviderPrometheusMetrics } from "../../../infrastructure/metrics/ai-provider.metrics.js";

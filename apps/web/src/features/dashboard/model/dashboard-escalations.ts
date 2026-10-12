@@ -1,5 +1,5 @@
-import type { Escalation } from "@customreport/shared";
-import { shortNameFromName } from "@customreport/shared";
+import type { Escalation } from "@weeklyreport/shared";
+import { shortNameFromName } from "@weeklyreport/shared";
 
 // Presentation row for one escalation. Product and author identities remain
 // available for grouping and rendering even when display names collide.

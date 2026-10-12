@@ -3,7 +3,7 @@
 import type {
   ActivityLiveRow,
   ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 export function countActivityLiveContent(
   row: ActivityLiveRow | undefined,

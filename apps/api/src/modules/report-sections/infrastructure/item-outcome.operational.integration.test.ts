@@ -1,5 +1,5 @@
-import type { ItemOutcomeResult } from "@customreport/shared";
 import { Prisma, type PrismaClient } from "@prisma/client";
+import type { ItemOutcomeResult } from "@weeklyreport/shared";
 import pg from "pg";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 

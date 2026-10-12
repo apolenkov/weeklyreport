@@ -1,4 +1,4 @@
-import { reportSectionReadModelSchema } from "@customreport/shared";
+import { reportSectionReadModelSchema } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { chunks, semanticDocuments } from "./semantic-preparation.documents.js";

@@ -1,8 +1,8 @@
-import { MS_PER_SECOND } from "@customreport/shared";
 import {
   defaultShouldDehydrateQuery,
   QueryClient,
 } from "@tanstack/react-query";
+import { MS_PER_SECOND } from "@weeklyreport/shared";
 import superjson from "superjson";
 
 import { getClientErrorDetails } from "../errors/client-error-reporting";

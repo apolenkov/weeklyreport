@@ -1,4 +1,4 @@
-import type { UserSession } from "@customreport/shared";
+import type { UserSession } from "@weeklyreport/shared";
 
 // Prisma where fragment for per-role group visibility. Always a plain object
 // (safe to spread). Project ownership uses the explicit GroupProduct M:M edge.

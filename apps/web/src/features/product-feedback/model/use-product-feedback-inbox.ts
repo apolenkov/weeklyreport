@@ -5,7 +5,7 @@ import {
   feedbackResponseSchema,
   type FeedbackStatus,
   type FeedbackType,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import {
   type Dispatch,
   type SetStateAction,

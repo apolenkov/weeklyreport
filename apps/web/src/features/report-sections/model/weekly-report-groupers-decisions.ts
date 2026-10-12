@@ -1,7 +1,7 @@
 import type {
   ReportSectionReadModel,
   WeeklyReportReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { initialsFromName } from "./weekly-report-groupers";
 import type {

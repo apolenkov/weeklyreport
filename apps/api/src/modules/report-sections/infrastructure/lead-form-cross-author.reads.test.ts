@@ -1,4 +1,4 @@
-import { publishedReportSnapshotSchema } from "@customreport/shared";
+import { publishedReportSnapshotSchema } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { publishedSnapshotFixture } from "../../../test-utils/prisma-test-helper.js";

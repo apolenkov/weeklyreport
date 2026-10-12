@@ -1,4 +1,4 @@
-import { reminderPolicySchema } from "@customreport/shared";
+import { reminderPolicySchema } from "@weeklyreport/shared";
 import { z } from "zod";
 
 import type { ReminderAdminService } from "../../../../modules/admin/index.js";

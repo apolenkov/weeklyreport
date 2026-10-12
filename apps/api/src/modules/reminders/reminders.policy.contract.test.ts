@@ -1,4 +1,4 @@
-import { reminderPolicySchema } from "@customreport/shared";
+import { reminderPolicySchema } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 // Pins reminderPolicySchema so a client cannot drift audience/kind or

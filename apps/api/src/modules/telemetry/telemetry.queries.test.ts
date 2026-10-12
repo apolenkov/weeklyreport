@@ -1,5 +1,5 @@
-import type { UserSession } from "@customreport/shared";
 import { Prisma } from "@prisma/client";
+import type { UserSession } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";

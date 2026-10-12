@@ -2,7 +2,7 @@ import type {
   PeriodStatus,
   Role,
   WeeklyReportReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import {
   isAdmin,

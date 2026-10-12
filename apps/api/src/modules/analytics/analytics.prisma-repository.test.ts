@@ -1,4 +1,4 @@
-import type { TrafficLightCell, UserSession } from "@customreport/shared";
+import type { TrafficLightCell, UserSession } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";

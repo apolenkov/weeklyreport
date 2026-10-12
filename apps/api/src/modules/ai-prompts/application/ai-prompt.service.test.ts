@@ -1,13 +1,13 @@
-import type { AiPromptContents } from "@customreport/shared";
-import {
-  AI_PROMPT_SLOT_CONTENT_LIMIT,
-  AI_PROMPT_SLOT_KEYS,
-} from "@customreport/shared";
 import {
   AiPromptBundleLifecycle,
   AiProviderLifecycle,
   AiProviderProfile,
 } from "@prisma/client";
+import type { AiPromptContents } from "@weeklyreport/shared";
+import {
+  AI_PROMPT_SLOT_CONTENT_LIMIT,
+  AI_PROMPT_SLOT_KEYS,
+} from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import type { StoredAiProviderRevision } from "../../ai-provider/infrastructure/ai-provider.repository.js";

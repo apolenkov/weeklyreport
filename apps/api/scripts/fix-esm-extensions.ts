@@ -68,8 +68,8 @@ export function transformModuleSource(
 
   const rewrite = (specifier: string, start: number, end: number): void => {
     const internalPackages = [
-      ["@customreport/shared", roots.apiSharedDistRoot],
-      ["@customreport/report-persistence", roots.apiPersistenceDistRoot],
+      ["@weeklyreport/shared", roots.apiSharedDistRoot],
+      ["@weeklyreport/report-persistence", roots.apiPersistenceDistRoot],
     ] as const;
     const internalPackage = internalPackages.find(([name]) =>
       specifier.startsWith(name),

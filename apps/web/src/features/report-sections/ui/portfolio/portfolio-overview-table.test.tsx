@@ -1,6 +1,6 @@
 // GridIcon is aria-hidden so "Portfolio Overview" is the sole accessible label.
-import { weeklyReportReadModelSchema } from "@customreport/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
+import { weeklyReportReadModelSchema } from "@weeklyreport/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { makeWeeklyReportFixture } from "../../../../test-utils/report-section-fixtures";

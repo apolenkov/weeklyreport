@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import type {
   AiProviderProfile,
   AiProviderReasoningMode,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 const AI_PROVIDER_IDENTITY_VERSION = "ai-provider-identities/v1";
 const AI_PROVIDER_PROFILE_REGISTRY_VERSION = "provider-profile-registry/v1";

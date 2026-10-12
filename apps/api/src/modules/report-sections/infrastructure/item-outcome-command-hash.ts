@@ -4,7 +4,7 @@ import type {
   PromotePlanInput,
   ResolvePlanInput,
   RestorePlanInput,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 export type OutcomeCommandOperation = "resolve" | "restore" | "promote";
 type OutcomeCommand = ResolvePlanInput | RestorePlanInput | PromotePlanInput;

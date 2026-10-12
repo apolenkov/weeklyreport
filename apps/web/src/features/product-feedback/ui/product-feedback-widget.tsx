@@ -4,8 +4,8 @@ import {
   Alert,
   AlertDescription,
   AlertTitle,
-} from "@customreport/ui/components/ui/alert";
-import { Button } from "@customreport/ui/components/ui/button";
+} from "@weeklyreport/ui/components/ui/alert";
+import { Button } from "@weeklyreport/ui/components/ui/button";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";

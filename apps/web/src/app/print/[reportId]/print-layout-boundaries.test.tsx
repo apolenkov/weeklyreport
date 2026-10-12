@@ -1,5 +1,5 @@
-import { weeklyReportReadModelSchema } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
+import { weeklyReportReadModelSchema } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import type { WeeklyProductReport } from "../../../features/report-sections";

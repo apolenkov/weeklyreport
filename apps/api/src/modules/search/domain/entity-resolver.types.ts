@@ -1,4 +1,4 @@
-import type { ClarificationOption, SearchPlan } from "@customreport/shared";
+import type { ClarificationOption, SearchPlan } from "@weeklyreport/shared";
 
 import type { AliasKind, EntityAliasIndex } from "./entity-alias-index.js";
 import type {

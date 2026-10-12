@@ -4,7 +4,7 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@customreport/ui/components/ui/tooltip";
+} from "@weeklyreport/ui/components/ui/tooltip";
 import type { CSSProperties } from "react";
 
 import { statusLabel } from "../../../shared/lib/status/status-presentation";

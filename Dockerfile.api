@@ -10,7 +10,7 @@ RUN npm install -g pnpm@12.11.2 turbo@2.11.7
 FROM base AS pruner
 WORKDIR /app
 COPY . .
-RUN turbo prune @customreport/api --docker
+RUN turbo prune @weeklyreport/api --docker
 
 # Stage 3: Install build dependencies and generate Prisma (devDeps stay in this stage only)
 FROM base AS installer
@@ -34,8 +34,8 @@ RUN DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport 
 # is copied into the published migration image.
 FROM installer AS migrator-deps
 RUN --mount=type=cache,id=customreport-pnpm-store-v11,target=/pnpm/store,sharing=locked \
-    pnpm --filter @customreport/migrator-runtime deploy --prod --legacy --frozen-lockfile /tmp/migrate-deps && \
-    rm -rf /tmp/migrate-deps/node_modules/@customreport && \
+    pnpm --filter @weeklyreport/migrator-runtime deploy --prod --legacy --frozen-lockfile /tmp/migrate-deps && \
+    rm -rf /tmp/migrate-deps/node_modules/@weeklyreport && \
     find /app/prisma/migrations -type f \
       ! -name 'migration_lock.toml' ! -name '*.sql' -delete
 
@@ -64,7 +64,7 @@ RUN test -f /app/package.json && \
     test ! -e /app/node_modules/.bin/turbo && \
     test ! -e /usr/local/bin/pnpm && \
     test ! -e /usr/local/bin/turbo && \
-    test ! -e /app/node_modules/@customreport && \
+    test ! -e /app/node_modules/@weeklyreport && \
     find /app/prisma/migrations -type f -name '*.sql' -print -quit | grep -q .
 CMD ["./node_modules/.bin/prisma", "migrate", "deploy"]
 
@@ -75,7 +75,7 @@ FROM installer AS builder
 ENV PNPM_CONFIG_VERIFY_DEPS_BEFORE_RUN=false
 COPY scripts/gates/production-dist.ts ./scripts/gates/production-dist.ts
 COPY scripts/gates/production-dist-policy.ts ./scripts/gates/production-dist-policy.ts
-RUN ./node_modules/.bin/turbo build --filter=@customreport/api
+RUN ./node_modules/.bin/turbo build --filter=@weeklyreport/api
 
 # Stage 7: Production dependencies, installed fresh from the same lockfile.
 # Deploy the API closure into an isolated production tree. A workspace-root
@@ -91,9 +91,9 @@ COPY scripts/gates/production-deps-prune.ts ./scripts/gates/production-deps-prun
 COPY scripts/gates/production-deps-prune.fixture.test.ts ./scripts/gates/production-deps-prune.fixture.test.ts
 RUN node --experimental-strip-types --test ./scripts/gates/production-deps-prune.fixture.test.ts
 RUN --mount=type=cache,id=customreport-pnpm-store-v11,target=/pnpm/store,sharing=locked \
-    pnpm --filter=@customreport/api deploy --prod --legacy --frozen-lockfile --ignore-scripts /tmp/api-deps && \
+    pnpm --filter=@weeklyreport/api deploy --prod --legacy --frozen-lockfile --ignore-scripts /tmp/api-deps && \
     node --experimental-strip-types ./scripts/gates/production-deps-prune.ts /tmp/api-deps && \
-    test ! -e /tmp/api-deps/node_modules/@customreport/migrator-runtime && \
+    test ! -e /tmp/api-deps/node_modules/@weeklyreport/migrator-runtime && \
     test ! -e /tmp/api-deps/node_modules/.bin/prisma
 # Prisma's generated runtime is an artifact of the builder, not a production
 # dependency install input. Transfer it into the hoisted production tree.
@@ -118,10 +118,10 @@ COPY --from=builder --chown=node:node /app/apps/api/package.json ./apps/api/pack
 # Runtime images must not carry migration/configuration or test-only sources.
 RUN test ! -e /app/prisma && test ! -e /app/prisma.config.ts && \
     test ! -e /app/node_modules/.bin/prisma && \
-    test ! -e /app/node_modules/@customreport/migrator-runtime && \
+    test ! -e /app/node_modules/@weeklyreport/migrator-runtime && \
     test ! -e /app/node_modules/@typescript/typescript6 && \
     test ! -e /app/node_modules/prisma && \
-    ! find /app/node_modules/.pnpm -maxdepth 1 -type d \( -name 'prisma@*' -o -name '@customreport+migrator-runtime@*' -o -name '@prisma+dev@*' -o -name '@prisma+studio*' -o -name '@typescript+typescript6@*' -o -name 'typescript@*' \) -print -quit | grep -q . && \
+    ! find /app/node_modules/.pnpm -maxdepth 1 -type d \( -name 'prisma@*' -o -name '@weeklyreport+migrator-runtime@*' -o -name '@prisma+dev@*' -o -name '@prisma+studio*' -o -name '@typescript+typescript6@*' -o -name 'typescript@*' \) -print -quit | grep -q . && \
     ! find /app/apps -type d \( -name test-utils -o -name __tests__ -o -name seeds -o -name guards -o -name operations \) -print | grep -q .
 # Verify the two runtime dependency surfaces.
 RUN test ! -e /app/node_modules/.bin/pnpm && test ! -e /app/node_modules/.bin/turbo && \

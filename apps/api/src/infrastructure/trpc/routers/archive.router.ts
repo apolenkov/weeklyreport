@@ -1,4 +1,4 @@
-import { paginationInputSchema } from "@customreport/shared";
+import { paginationInputSchema } from "@weeklyreport/shared";
 import { z } from "zod";
 
 import type { PeriodAdminService } from "../../../modules/admin/index.js";

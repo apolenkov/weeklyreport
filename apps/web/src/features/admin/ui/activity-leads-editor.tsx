@@ -1,6 +1,6 @@
 "use client";
 
-import { type ProjectActivity, shortName } from "@customreport/shared";
+import { type ProjectActivity, shortName } from "@weeklyreport/shared";
 
 import type { AdminUserView } from "../model/admin-types";
 import { useActivityLeads } from "./use-activity-leads";

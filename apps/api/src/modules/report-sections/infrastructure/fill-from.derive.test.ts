@@ -1,7 +1,7 @@
 // Characterization pins for the fill-from row-mappers and predicates extracted
 // from LeadFormPrismaRepository.fillFromSection: the next→current status remap
 // table, the activityId carry rule, and the exact createMany field mapping.
-import { draftSaveSchema } from "@customreport/shared";
+import { draftSaveSchema } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {

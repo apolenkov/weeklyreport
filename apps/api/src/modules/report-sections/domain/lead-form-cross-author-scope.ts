@@ -3,7 +3,7 @@ import {
   type Role,
   type SharedReportSectionReadModel,
   sharedReportSectionReadModelSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import {
   LeadFormAccessError,

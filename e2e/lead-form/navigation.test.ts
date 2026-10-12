@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { draftSaveSchema, shortNameFromName } from "@customreport/shared";
+import { draftSaveSchema, shortNameFromName } from "@weeklyreport/shared";
 import superjson from "superjson";
 
 import { formatPeriodRangeWithYear } from "../../apps/web/src/shared/lib/format/format-date.js";

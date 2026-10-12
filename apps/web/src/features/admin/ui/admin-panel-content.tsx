@@ -1,4 +1,4 @@
-import type { AppSettings } from "@customreport/shared";
+import type { AppSettings } from "@weeklyreport/shared";
 
 import { AiTab } from "../../organization";
 import { PeriodsTab } from "../../period";

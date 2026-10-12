@@ -1,13 +1,13 @@
 "use client";
 
-import type { Role } from "@customreport/shared";
+import type { Role } from "@weeklyreport/shared";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@customreport/ui/components/ui/sheet";
+} from "@weeklyreport/ui/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { useState } from "react";
 

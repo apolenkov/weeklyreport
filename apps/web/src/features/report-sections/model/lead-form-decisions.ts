@@ -1,4 +1,4 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 
 import { toIsoDateString } from "../../../shared/lib/format/format-date";
 import { buildActivityIndex, buildProjectIndex } from "./lead-form-shared";

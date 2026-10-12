@@ -1,6 +1,6 @@
 "use client";
 
-import { REVIEW_COMMENT_MAX_LENGTH } from "@customreport/shared";
+import { REVIEW_COMMENT_MAX_LENGTH } from "@weeklyreport/shared";
 import { useId } from "react";
 
 interface RecordCommentComposerProps {

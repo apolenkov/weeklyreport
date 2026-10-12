@@ -1,4 +1,4 @@
-import type { PublishedLineage } from "@customreport/shared";
+import type { PublishedLineage } from "@weeklyreport/shared";
 
 // Published lineage: durable item/decision `stableId`s that have appeared in a
 // published report; the delete-lock rejects save payloads omitting/rewriting

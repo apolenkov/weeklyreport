@@ -1,7 +1,7 @@
 import type {
   AdminReminderExecution,
   AdminReminderRule,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { EnvConfig } from "../../../infrastructure/config/env.schema";
 import type { OrganizationService } from "../../organization/organization.service";

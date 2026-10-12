@@ -49,13 +49,13 @@ and receives its client through a port, so the domain stays pure and testable.
 
 ### Requirement: Shared UI stays domain-free
 
-`packages/ui` MUST NOT import `@customreport/shared` schemas; data is shaped in
+`packages/ui` MUST NOT import `@weeklyreport/shared` schemas; data is shaped in
 the consuming slice or API and passed to the UI as finished props. The
 immutability/UI zone in `eslint-config/immutability.ts` owns this rule.
 
 #### Scenario: A UI package file imports a shared schema
 
-- **WHEN** a file under `packages/ui` imports a schema from `@customreport/shared`
+- **WHEN** a file under `packages/ui` imports a schema from `@weeklyreport/shared`
 - **THEN** the zone reports the import and names the prop boundary
 
 ### Requirement: Each zone names its rule owner and is proven by a real CLI run

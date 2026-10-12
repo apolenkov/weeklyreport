@@ -1,5 +1,5 @@
-import { searchQueryInputSchema } from "@customreport/shared";
 import { TRPCError } from "@trpc/server";
+import { searchQueryInputSchema } from "@weeklyreport/shared";
 
 import {
   SearchAuthorizationError,

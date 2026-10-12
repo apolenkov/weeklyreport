@@ -43,8 +43,8 @@ describe("fix-esm-extensions transformModuleSource", () => {
       'export { b } from "./dep";',
       'export * from "./dep";',
       'const d = import("./dep");',
-      'import { x } from "@customreport/shared";',
-      'import { mapper } from "@customreport/report-persistence";',
+      'import { x } from "@weeklyreport/shared";',
+      'import { mapper } from "@weeklyreport/report-persistence";',
     ].join("\n");
 
     const result = transformModuleSource(source, file("mod.js"), roots);
@@ -82,7 +82,7 @@ describe("fix-esm-extensions transformModuleSource", () => {
 
   it("rewrites the shared package only for API output", () => {
     const apiOut = transformModuleSource(
-      'import { x } from "@customreport/shared";',
+      'import { x } from "@weeklyreport/shared";',
       file("shared-import.js"),
       roots,
     ).source;
@@ -91,16 +91,16 @@ describe("fix-esm-extensions transformModuleSource", () => {
     );
 
     const nonApiOut = transformModuleSource(
-      'import { x } from "@customreport/shared";',
+      'import { x } from "@weeklyreport/shared";',
       join(apiSharedDistRoot, "peer.js"),
       roots,
     ).source;
-    expect(nonApiOut).toBe('import { x } from "@customreport/shared";');
+    expect(nonApiOut).toBe('import { x } from "@weeklyreport/shared";');
   });
 
   it("rewrites the report-persistence package into the API runtime tree", () => {
     const result = transformModuleSource(
-      'import { mapper } from "@customreport/report-persistence";',
+      'import { mapper } from "@weeklyreport/report-persistence";',
       file("persistence-import.js"),
       roots,
     );
@@ -109,7 +109,7 @@ describe("fix-esm-extensions transformModuleSource", () => {
     );
 
     const persistenceOut = transformModuleSource(
-      'import { x } from "@customreport/shared";',
+      'import { x } from "@weeklyreport/shared";',
       join(apiPersistenceDistRoot, "peer.js"),
       roots,
     );

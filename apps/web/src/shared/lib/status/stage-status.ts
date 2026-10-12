@@ -3,7 +3,7 @@ import {
   type RiskSeverity,
   riskSeverityToCanonicalFloor,
   worstCanonicalStatus,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 // Severity is max over covering risks; orphaned manual
 // at-risk/blocked collapses to on-track so the read model matches handleRisksChange.

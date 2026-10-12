@@ -1,7 +1,7 @@
 import {
   MAX_ACTIVITY_NAME_LENGTH,
   SAFE_TEXT_MAX_LENGTH,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { Pencil } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 

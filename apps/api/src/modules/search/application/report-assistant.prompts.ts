@@ -1,4 +1,4 @@
-import { searchReportEntriesToolInputSchema } from "@customreport/shared";
+import { searchReportEntriesToolInputSchema } from "@weeklyreport/shared";
 import { z } from "zod";
 
 import type { AiComposedPromptSet } from "../../ai-prompts/index.js";

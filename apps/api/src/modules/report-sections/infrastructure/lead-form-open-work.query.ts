@@ -1,12 +1,12 @@
-import { publishedSnapshotFailure } from "@customreport/report-persistence";
+import type { Prisma } from "@prisma/client";
+import { publishedSnapshotFailure } from "@weeklyreport/report-persistence";
 import {
   type LeadOpenWorkHistoryOccurrence,
   leadOpenWorkHistoryOccurrenceSchema,
   type LeadOpenWorkHistoryOutput,
   leadOpenWorkHistoryOutputSchema,
   type ReportSectionReadModel,
-} from "@customreport/shared";
-import type { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 import { z } from "zod";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import type { ReportSectionReadModel } from "@customreport/shared";
 import { act, renderHook } from "@testing-library/react";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

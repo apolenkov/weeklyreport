@@ -1,6 +1,6 @@
 "use client";
 
-import type { ProjectActivity } from "@customreport/shared";
+import type { ProjectActivity } from "@weeklyreport/shared";
 
 import type { AdminUserView } from "../model/admin-types";
 import { ActiveActivityRow } from "./active-activity-row";

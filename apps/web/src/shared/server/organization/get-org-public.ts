@@ -1,11 +1,11 @@
 import "server-only";
 
-import type { OrganizationPublic } from "@customreport/shared";
+import * as Sentry from "@sentry/nextjs";
+import type { OrganizationPublic } from "@weeklyreport/shared";
 import {
   DEFAULT_ORGANIZATION_IDENTITY,
   organizationPublicSchema,
-} from "@customreport/shared";
-import * as Sentry from "@sentry/nextjs";
+} from "@weeklyreport/shared";
 import { PHASE_PRODUCTION_BUILD } from "next/constants";
 
 import {

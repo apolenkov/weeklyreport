@@ -1,4 +1,4 @@
-import type { WeeklyReportReadModel } from "@customreport/shared";
+import type { WeeklyReportReadModel } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";

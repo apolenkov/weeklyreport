@@ -4,8 +4,8 @@ import type {
   ReportSectionReadModel,
   SubmissionDashboardRow,
   WeeklyReportReadModel,
-} from "@customreport/shared";
-import { shortNameFromName } from "@customreport/shared";
+} from "@weeklyreport/shared";
+import { shortNameFromName } from "@weeklyreport/shared";
 
 import { toIsoDateString } from "../../../shared/lib/format/format-date";
 import { initialsFromName } from "../../../shared/lib/format/user-initials";

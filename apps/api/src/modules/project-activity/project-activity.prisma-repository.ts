@@ -1,10 +1,10 @@
+import { Inject, Injectable } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 import {
   type ProjectActivity,
   type ProjectActivityLeadEdge,
   projectActivitySchema,
-} from "@customreport/shared";
-import { Inject, Injectable } from "@nestjs/common";
-import type { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import {

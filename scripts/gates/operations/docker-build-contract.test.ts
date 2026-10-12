@@ -151,7 +151,7 @@ test("the migrator target contains only the canonical migration runtime", () => 
   assert.match(migrator, /test ! -e \/app\/node_modules\/\.bin\/turbo/u);
   assert.match(migrator, /test ! -e \/usr\/local\/bin\/pnpm/u);
   assert.match(migrator, /test ! -e \/usr\/local\/bin\/turbo/u);
-  assert.match(migrator, /test ! -e \/app\/node_modules\/@customreport/u);
+  assert.match(migrator, /test ! -e \/app\/node_modules\/@weeklyreport/u);
   assert.match(migrator, /test ! -e \/app\/scripts/u);
   assert.match(migrator, /test ! -e \/app\/prisma\/operations/u);
   assert.match(migrator, /test ! -e \/app\/prisma\/guards/u);
@@ -169,7 +169,7 @@ test("the migrator target contains only the canonical migration runtime", () => 
 test("the API runner excludes migration-only tooling", () => {
   assert.match(
     apiDockerfile,
-    /pnpm --filter=@customreport\/api deploy --prod --legacy --frozen-lockfile --ignore-scripts \/tmp\/api-deps/u,
+    /pnpm --filter=@weeklyreport\/api deploy --prod --legacy --frozen-lockfile --ignore-scripts \/tmp\/api-deps/u,
   );
   assert.match(
     apiDockerfile,
@@ -185,7 +185,7 @@ test("the API runner excludes migration-only tooling", () => {
   assert.match(runner, /test ! -e \/app\/node_modules\/\.bin\/prisma/u);
   assert.match(
     runner,
-    /test ! -e \/app\/node_modules\/@customreport\/migrator-runtime/u,
+    /test ! -e \/app\/node_modules\/@weeklyreport\/migrator-runtime/u,
   );
   assert.match(runner, /find \/app\/node_modules\/\.pnpm -maxdepth 1 -type d/u);
   assert.match(
@@ -221,12 +221,12 @@ test("post-install production tools bypass pnpm dependency preflight", () => {
     [
       "Dockerfile.api",
       apiDockerfile,
-      "RUN ./node_modules/.bin/turbo build --filter=@customreport/api",
+      "RUN ./node_modules/.bin/turbo build --filter=@weeklyreport/api",
     ],
     [
       "Dockerfile.web",
       webDockerfile,
-      "RUN ./node_modules/.bin/turbo build --filter=@customreport/web",
+      "RUN ./node_modules/.bin/turbo build --filter=@weeklyreport/web",
     ],
   ] as const) {
     const builderStart = dockerfile.indexOf("FROM installer AS builder");
@@ -268,11 +268,11 @@ test("post-install production tools bypass pnpm dependency preflight", () => {
   );
   assert.match(
     apiDockerfile,
-    /RUN \.\/node_modules\/\.bin\/turbo build --filter=@customreport\/api/u,
+    /RUN \.\/node_modules\/\.bin\/turbo build --filter=@weeklyreport\/api/u,
   );
   assert.match(
     webDockerfile,
-    /RUN \.\/node_modules\/\.bin\/turbo build --filter=@customreport\/web/u,
+    /RUN \.\/node_modules\/\.bin\/turbo build --filter=@weeklyreport\/web/u,
   );
 
   const forbiddenPnpmCommands = [

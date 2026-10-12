@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import {
   adminProjectSchema,
   adminReportPeriodSchema,
@@ -8,8 +9,7 @@ import {
   adminUserSchema,
   reminderPolicySchema,
   reportingGroupSchema,
-} from "@customreport/shared";
-import { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { audienceFromPrisma } from "./admin-enum-mappers";

@@ -1,5 +1,5 @@
-import type { PublishedLineage } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
+import type { PublishedLineage } from "@weeklyreport/shared";
 
 import { queryPublishedLineage } from "./published-lineage.query.js";
 

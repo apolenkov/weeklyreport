@@ -1,6 +1,6 @@
 "use client";
 
-import type { AppSettings } from "@customreport/shared";
+import type { AppSettings } from "@weeklyreport/shared";
 import type { Dispatch, SetStateAction } from "react";
 import { useState } from "react";
 

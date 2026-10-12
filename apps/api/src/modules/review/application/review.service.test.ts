@@ -1,4 +1,4 @@
-import type { SubmissionDashboardRow, UserSession } from "@customreport/shared";
+import type { SubmissionDashboardRow, UserSession } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { createAppRouter } from "../../../infrastructure/trpc/trpc.router.js";

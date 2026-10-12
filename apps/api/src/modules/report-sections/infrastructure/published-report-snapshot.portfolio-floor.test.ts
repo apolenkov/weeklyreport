@@ -4,11 +4,11 @@ import {
   PublishedSnapshotIntegrityError,
   requirePublishedSnapshot,
   toPublishedSnapshotJson,
-} from "@customreport/report-persistence";
+} from "@weeklyreport/report-persistence";
 import {
   buildEscalationsFromReadSections,
   buildPortfolioProductsFromSnapshotSections,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { publishedSnapshotFixture } from "../../../test-utils/prisma-test-helper";

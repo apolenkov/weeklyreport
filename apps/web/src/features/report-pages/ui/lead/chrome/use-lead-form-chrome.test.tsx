@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import type { MyHistoryEntry } from "@customreport/shared";
 import { render } from "@testing-library/react";
+import type { MyHistoryEntry } from "@weeklyreport/shared";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { SessionContext } from "../../../../../shared/lib/auth/session-provider";

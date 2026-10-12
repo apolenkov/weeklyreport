@@ -1,4 +1,4 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { buildSetItemStatusPatch } from "./lead-item-status-patch";

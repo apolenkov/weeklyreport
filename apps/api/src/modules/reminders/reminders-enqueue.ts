@@ -2,7 +2,7 @@ import {
   type AdminReminderExecution,
   adminReminderExecutionSchema,
   type AdminReminderRule,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { errorMessage } from "../../lib/error-message.js";
 import type { AppLogger } from "../../lib/logger";

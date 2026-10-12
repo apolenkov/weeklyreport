@@ -1,7 +1,7 @@
 import {
   leadStatusOverviewPredecessorSchema,
   publishedReportSnapshotSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import {

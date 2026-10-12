@@ -1,7 +1,7 @@
 // Keep the always-fetched status projection independent of UI types; full
 // foreign content is a separate, Everyone-only read.
 
-import type { TrafficLightStatus } from "@customreport/shared";
+import type { TrafficLightStatus } from "@weeklyreport/shared";
 
 import { type LeadProduct } from "./lead-form";
 import { type StageStatus, trafficToStageStatus } from "./traffic-light";

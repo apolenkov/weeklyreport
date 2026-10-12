@@ -1,4 +1,4 @@
-import type { PeriodListItem } from "@customreport/shared";
+import type { PeriodListItem } from "@weeklyreport/shared";
 
 import { formatPeriodRangeWithYear } from "../../../shared/lib/format/format-date";
 import {

@@ -5,7 +5,7 @@ import {
   aiProviderDraftSchema,
   aiProviderPreparationProgressSchema,
   aiProviderRevisionInputSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { AiProviderConfigurationService } from "../../../../modules/ai-provider/index.js";
 import { withDomainErrorMapping } from "../../trpc.error-mapper.js";

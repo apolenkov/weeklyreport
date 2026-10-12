@@ -1,11 +1,11 @@
 // Feature-domain bridge for traffic-light ↔ StageStatus. Both directions
 // delegate to the shared canonical adapters — the single home of the vocabulary.
 
-import type { CanonicalStatus, TrafficLightStatus } from "@customreport/shared";
+import type { CanonicalStatus, TrafficLightStatus } from "@weeklyreport/shared";
 import {
   canonicalToTrafficLight,
   trafficLightToCanonical,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 export type StageStatus = CanonicalStatus;
 

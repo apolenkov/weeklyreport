@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { normalizeFeedbackPath } from "@customreport/shared";
+import { normalizeFeedbackPath } from "@weeklyreport/shared";
 
 import {
   type FeedbackAccess,

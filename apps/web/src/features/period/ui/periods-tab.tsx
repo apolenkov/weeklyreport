@@ -1,7 +1,7 @@
 "use client";
 
-import type { PeriodListItem } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
+import type { PeriodListItem } from "@weeklyreport/shared";
 import { useMemo, useState } from "react";
 
 import {

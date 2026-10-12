@@ -47,7 +47,7 @@ const nextConfig: NextConfig = {
     ],
   },
   reactCompiler: true,
-  transpilePackages: ["@customreport/ui"],
+  transpilePackages: ["@weeklyreport/ui"],
   experimental: {
     useTypeScriptCli: false,
     optimizePackageImports: ["lucide-react"],

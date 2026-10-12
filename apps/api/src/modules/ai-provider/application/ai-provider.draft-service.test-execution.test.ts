@@ -1,4 +1,4 @@
-import { aiProviderTestCheckSchema } from "@customreport/shared";
+import { aiProviderTestCheckSchema } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { providerChecksFor } from "./ai-provider.draft-service.test-execution.js";

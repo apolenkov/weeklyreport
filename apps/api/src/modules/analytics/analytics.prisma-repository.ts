@@ -1,3 +1,5 @@
+import { Inject, Injectable } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 import type {
   AnalyticsPeriod,
   LeadVelocityInput,
@@ -8,9 +10,7 @@ import type {
   TrafficLightHistoryInput,
   TrafficLightHistoryOutput,
   UserSession,
-} from "@customreport/shared";
-import { Inject, Injectable } from "@nestjs/common";
-import type { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { guardGroupScope } from "../../lib/group-scope.js";

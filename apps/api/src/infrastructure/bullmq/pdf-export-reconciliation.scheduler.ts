@@ -1,6 +1,6 @@
-import { PDF_EXPORT_QUEUE_NAME } from "@customreport/shared";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
+import { PDF_EXPORT_QUEUE_NAME } from "@weeklyreport/shared";
 import type { Job } from "bullmq";
 
 import {

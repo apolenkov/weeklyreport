@@ -1,5 +1,5 @@
 {
-  "name": "@customreport/web",
+  "name": "@weeklyreport/web",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -11,8 +11,8 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@customreport/shared": "workspace:*",
-    "@customreport/ui": "workspace:*",
+    "@weeklyreport/shared": "workspace:*",
+    "@weeklyreport/ui": "workspace:*",
     "@sentry/nextjs": "^11.6.0",
     "@tanstack/react-query": "^5.104.2",
     "@trpc/client": "^11.19.0",
@@ -29,7 +29,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@customreport/api": "workspace:*",
+    "@weeklyreport/api": "workspace:*",
     "@tailwindcss/postcss": "^4.3.3",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",

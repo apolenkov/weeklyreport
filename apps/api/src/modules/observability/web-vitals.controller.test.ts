@@ -1,6 +1,6 @@
-import { MAX_WEB_VITAL_VALUE } from "@customreport/shared";
 import { BadRequestException } from "@nestjs/common";
 import type { Histogram } from "@prometheus-io/client";
+import { MAX_WEB_VITAL_VALUE } from "@weeklyreport/shared";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {

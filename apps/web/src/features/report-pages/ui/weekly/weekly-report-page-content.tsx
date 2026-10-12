@@ -1,5 +1,5 @@
-import type { PeriodStatus } from "@customreport/shared";
-import { shortNameFromName } from "@customreport/shared";
+import type { PeriodStatus } from "@weeklyreport/shared";
+import { shortNameFromName } from "@weeklyreport/shared";
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
 

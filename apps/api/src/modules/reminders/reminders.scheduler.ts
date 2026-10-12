@@ -1,6 +1,6 @@
-import type { OrganizationBrand } from "@customreport/shared";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Cron, CronExpression } from "@nestjs/schedule";
+import type { OrganizationBrand } from "@weeklyreport/shared";
 
 import { ENV_CONFIG } from "../../infrastructure/config/config.module.js";
 import type { EnvConfig } from "../../infrastructure/config/env.schema";

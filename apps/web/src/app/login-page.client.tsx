@@ -1,7 +1,7 @@
 "use client";
 
-import type { OrganizationPublic } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
+import type { OrganizationPublic } from "@weeklyreport/shared";
 import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useReducer } from "react";
 

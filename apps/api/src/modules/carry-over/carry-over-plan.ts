@@ -4,7 +4,7 @@ import {
   type CarryOverRecord,
   type ReportSectionReadModel,
   reportSectionReadModelSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { cloneCarriedItem, cloneUnresolvedDecision } from "./carry-over-clones";
 

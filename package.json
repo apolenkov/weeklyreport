@@ -1,5 +1,5 @@
 {
-  "name": "customreport",
+  "name": "weeklyreport",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -8,8 +8,8 @@
     "node": ">=26.0.0 <27.0.0"
   },
   "dependencies": {
-    "@customreport/report-persistence": "workspace:*",
-    "@customreport/shared": "workspace:*",
+    "@weeklyreport/report-persistence": "workspace:*",
+    "@weeklyreport/shared": "workspace:*",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
     "dotenv": "^18.0.7",
@@ -38,11 +38,11 @@
     "test:eslint-suppressions": "vitest run --testTimeout=30000 scripts/gates/eslint-suppressions.test.ts",
     "test:cleanliness": "vitest run scripts/gates/repository-cleanliness.test.ts",
     "test:operations": "vitest run --testTimeout=30000 scripts/gates/production-dist-policy.test.ts scripts/gates/operations && node --import tsx --test scripts/gates/production-deps-prune.fixture.test.ts",
-    "test:coverage": "pnpm --filter @customreport/api test:coverage && pnpm --filter @customreport/web test:coverage",
+    "test:coverage": "pnpm --filter @weeklyreport/api test:coverage && pnpm --filter @weeklyreport/web test:coverage",
     "db:bootstrap:local": "node --import tsx prisma/operations/bootstrap-local.ts",
     "db:seed:profile": "tsx prisma/seeds/profiles/seed-profile.ts",
     "db:seed:verify": "tsx prisma/seeds/profiles/seed-profile-proof.ts",
-    "db:reset:hard": "pnpm --filter @customreport/api exec tsx ../../prisma/operations/reset-hard.ts",
+    "db:reset:hard": "pnpm --filter @weeklyreport/api exec tsx ../../prisma/operations/reset-hard.ts",
     "logs": "tail -f apps/api/.logs/app.log",
     "logs:errors": "tail -f apps/api/.logs/app.log | grep -E '\"level\":\"(error|warn)\"'",
     "prepare": "git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0; lefthook install"

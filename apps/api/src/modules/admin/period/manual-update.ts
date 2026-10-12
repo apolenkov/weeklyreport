@@ -1,10 +1,10 @@
+import type { Prisma } from "@prisma/client";
 import {
   currentPeriodLifecycleSchema,
   type PeriodState,
   type PeriodStatus,
   type ReportStatus,
-} from "@customreport/shared";
-import type { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { lockStatusGraph } from "../../../lib/status-graph-lock.js";

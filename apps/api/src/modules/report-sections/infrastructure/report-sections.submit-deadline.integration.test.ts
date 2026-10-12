@@ -1,7 +1,7 @@
 import { setTimeout as delay } from "node:timers/promises";
 
-import type { SubmitSectionPayload } from "@customreport/shared";
 import type { Prisma, PrismaClient } from "@prisma/client";
+import type { SubmitSectionPayload } from "@weeklyreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";

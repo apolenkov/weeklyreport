@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReportSectionReadModel } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useContext, useMemo } from "react";
 

@@ -1,7 +1,7 @@
-import { MS_PER_DAY } from "@customreport/shared";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
 import type { Prisma, PrismaClient } from "@prisma/client";
+import { MS_PER_DAY } from "@weeklyreport/shared";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { AUDIT_LOGGER, type AuditLogger } from "../../../lib/audit-logger.js";

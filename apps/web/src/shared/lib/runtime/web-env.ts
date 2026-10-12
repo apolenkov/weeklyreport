@@ -2,7 +2,7 @@
 // components load it in the browser. Full literals + lazy parse are mandatory
 // (openspec/specs/web-env-validation, "A typed accessor is the single seam").
 
-import type { Role } from "@customreport/shared";
+import type { Role } from "@weeklyreport/shared";
 import { z } from "zod";
 
 const emptyToUndefined = (value: unknown): unknown =>

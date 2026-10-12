@@ -1,10 +1,10 @@
 // @vitest-environment jsdom
 
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import {
   buildEscalationsFromReadSections,
   reportSectionReadModelSchema,
-} from "@customreport/shared";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+} from "@weeklyreport/shared";
 import * as React from "react";
 import { describe, expect, it, vi } from "vitest";
 

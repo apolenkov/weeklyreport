@@ -1,6 +1,6 @@
 "use client";
 
-import { SAFE_TEXT_MAX_LENGTH } from "@customreport/shared";
+import { SAFE_TEXT_MAX_LENGTH } from "@weeklyreport/shared";
 import { useRef, useState } from "react";
 
 import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";

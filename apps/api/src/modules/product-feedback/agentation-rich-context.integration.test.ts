@@ -6,7 +6,7 @@ import {
   agentationSessionResponseSchema,
   FEEDBACK_DISMISSAL_PREFIX,
   type UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { startAgentationContractServer } from "../../test-utils/agentation-contract-server";

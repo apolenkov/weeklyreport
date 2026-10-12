@@ -1,4 +1,4 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { useCallback, useState } from "react";
 
 import type { LeadFormWritePort } from "../lead-form/lead-form-write-port";

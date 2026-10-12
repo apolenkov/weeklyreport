@@ -1,9 +1,9 @@
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type {
   TrafficLightHistoryOutput,
   TrafficLightStatus,
-} from "@customreport/shared";
-import { render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+} from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";

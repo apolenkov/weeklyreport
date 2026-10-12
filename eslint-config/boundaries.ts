@@ -122,7 +122,7 @@ export const boundaryConfig: Linter.Config[] = [
         {
           patterns: [
             {
-              group: ["@customreport/api", "@customreport/api/*"],
+              group: ["@weeklyreport/api", "@weeklyreport/api/*"],
               allowTypeImports: true,
               message:
                 "apps/web must not import apps/api at runtime; only `import type` is allowed (e.g. AppRouter for the tRPC client).",

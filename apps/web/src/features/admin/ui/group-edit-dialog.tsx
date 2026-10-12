@@ -1,6 +1,6 @@
 "use client";
 
-import { shortName } from "@customreport/shared";
+import { shortName } from "@weeklyreport/shared";
 import { useRef } from "react";
 
 import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";

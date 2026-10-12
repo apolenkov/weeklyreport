@@ -8,7 +8,7 @@ import {
   type RestorePlanInput,
   restorePlanInputSchema,
   type Role,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import {
   computeReopenEligibility,

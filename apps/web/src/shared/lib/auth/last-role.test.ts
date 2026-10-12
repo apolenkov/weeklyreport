@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { sessionRoleSchema } from "@customreport/shared";
+import { sessionRoleSchema } from "@weeklyreport/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {

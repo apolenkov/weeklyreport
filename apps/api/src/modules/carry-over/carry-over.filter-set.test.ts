@@ -2,7 +2,7 @@ import type {
   CarryOverExecution,
   CarryOverRecord,
   ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { createNullLogger } from "../../lib/logger";

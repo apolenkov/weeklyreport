@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { customreportReopenRequestsTotal } from "../../../infrastructure/metrics/metrics.registry.js";
+import { weeklyreportReopenRequestsTotal } from "../../../infrastructure/metrics/metrics.registry.js";
 import { ReportSectionsPrometheusTelemetry } from "../infrastructure/report-sections-prometheus-telemetry.adapter.js";
 import {
   AUTHOR_ID,
@@ -213,14 +213,14 @@ describe("LeadFormService — requestReopen", () => {
       new ReportSectionsPrometheusTelemetry(),
     );
 
-    const before = await getCounterValue(customreportReopenRequestsTotal, {
+    const before = await getCounterValue(weeklyreportReopenRequestsTotal, {
       state: "requested",
     });
 
     await service.requestReopen(SECTION_ID, AUTHOR_ID, "typo");
 
     expect(
-      await getCounterValue(customreportReopenRequestsTotal, {
+      await getCounterValue(weeklyreportReopenRequestsTotal, {
         state: "requested",
       }),
     ).toBe(before + 1);

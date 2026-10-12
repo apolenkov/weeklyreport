@@ -1,9 +1,9 @@
+import { Inject, Injectable } from "@nestjs/common";
 import {
   type CarryOverExecution,
   type CarryOverRecord,
   type ReportSectionReadModel,
-} from "@customreport/shared";
-import { Inject, Injectable } from "@nestjs/common";
+} from "@weeklyreport/shared";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";

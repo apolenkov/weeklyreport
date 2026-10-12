@@ -1,4 +1,4 @@
-import { SEMANTIC_INDEX_QUEUE_NAME } from "@customreport/shared";
+import { SEMANTIC_INDEX_QUEUE_NAME } from "@weeklyreport/shared";
 import type { DefaultJobOptions } from "bullmq";
 
 export { SEMANTIC_INDEX_QUEUE_NAME };

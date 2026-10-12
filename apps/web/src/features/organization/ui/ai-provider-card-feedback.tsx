@@ -1,7 +1,7 @@
 import type {
   AiProviderConfigurationRead,
   AiProviderControlRead,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { AiProviderOperationError } from "./ai-provider-operation-error";
 

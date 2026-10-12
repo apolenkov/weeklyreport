@@ -1,5 +1,5 @@
-import type { WorkingDays } from "@customreport/shared";
-import { DAYS_PER_WEEK } from "@customreport/shared";
+import type { WorkingDays } from "@weeklyreport/shared";
+import { DAYS_PER_WEEK } from "@weeklyreport/shared";
 import { DateTime } from "luxon";
 
 // Luxon wall-clock days via setZone — not 24h steps — so DST is correct

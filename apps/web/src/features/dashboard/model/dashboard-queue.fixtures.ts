@@ -4,7 +4,7 @@ import type {
   SectionReviewView,
   SubmissionDashboardRow,
   WeeklyReportReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 const REPORT_ID = "10000000-0000-4000-8000-000000000001";
 const GROUP_ID = "10000000-0000-4000-8000-000000000002";

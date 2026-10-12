@@ -4,7 +4,7 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@customreport/ui/components/ui/tooltip";
+} from "@weeklyreport/ui/components/ui/tooltip";
 import {
   cloneElement,
   type MouseEvent,

@@ -1,4 +1,4 @@
-import type { Role } from "@customreport/shared";
+import type { Role } from "@weeklyreport/shared";
 import Link from "next/link";
 
 import { isActiveLink } from "./nav-active";

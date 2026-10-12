@@ -1,6 +1,6 @@
 // Mirrors LeadHistoryList card grid dimensions to avoid layout shift on data arrival.
 
-import { Skeleton } from "@customreport/ui/components/ui/skeleton";
+import { Skeleton } from "@weeklyreport/ui/components/ui/skeleton";
 
 interface LeadHistorySkeletonProps {
   readonly count?: number;

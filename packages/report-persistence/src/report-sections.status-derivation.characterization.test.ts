@@ -1,4 +1,4 @@
-import type { RiskSeverity, TrafficLightStatus } from "@customreport/shared";
+import type { RiskSeverity, TrafficLightStatus } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {

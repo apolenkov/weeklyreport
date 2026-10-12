@@ -4,8 +4,8 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import type { Role, WeeklyReportReadModel } from "@customreport/shared";
 import { render, screen, within } from "@testing-library/react";
+import type { Role, WeeklyReportReadModel } from "@weeklyreport/shared";
 import type { ReactElement, ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 

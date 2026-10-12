@@ -1,4 +1,4 @@
-import { AUTH_COOKIE_NAME } from "@customreport/shared";
+import { AUTH_COOKIE_NAME } from "@weeklyreport/shared";
 import type { Request, Response } from "express";
 import { describe, expect, it, vi } from "vitest";
 

@@ -1,9 +1,9 @@
 // Row builders for the mapper and repository suites. Shared rather than copied
 // because a fabricated row must stay identical across both to be worth
 // asserting on.
-import type { PrismaReportSectionWithRelations } from "@customreport/report-persistence";
-import { mapPrismaToReportSection } from "@customreport/report-persistence";
-import type { TrafficLightStatus } from "@customreport/shared";
+import type { PrismaReportSectionWithRelations } from "@weeklyreport/report-persistence";
+import { mapPrismaToReportSection } from "@weeklyreport/report-persistence";
+import type { TrafficLightStatus } from "@weeklyreport/shared";
 
 export const SECTION_ID = "11111111-1111-4111-8111-111111111111";
 const REPORT_ID = "22222222-2222-4222-8222-222222222222";

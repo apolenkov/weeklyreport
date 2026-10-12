@@ -2,7 +2,7 @@ import {
   type ReportSectionReadModel,
   submitSectionSchema,
   validateSubmitInput,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { AutosaveState } from "./autosave/autosave-types";
 import { isUnconfirmedCarried } from "./lead-actions/lead-item-actions";

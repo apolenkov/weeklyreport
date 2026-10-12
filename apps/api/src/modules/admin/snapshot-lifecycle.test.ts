@@ -1,4 +1,4 @@
-import type { ReportPeriod } from "@customreport/shared";
+import type { ReportPeriod } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { resolveLifecycle } from "./snapshot-lifecycle.js";

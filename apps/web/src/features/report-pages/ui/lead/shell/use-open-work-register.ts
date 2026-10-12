@@ -1,11 +1,11 @@
 "use client";
 
+import { useInfiniteQuery } from "@tanstack/react-query";
 import type {
   LeadOpenWorkHistoryOccurrence,
   LeadOpenWorkHistoryOutput,
   ReportSectionReadModel,
-} from "@customreport/shared";
-import { useInfiniteQuery } from "@tanstack/react-query";
+} from "@weeklyreport/shared";
 import { useEffect, useMemo } from "react";
 
 import { useTRPC } from "../../../../../shared/lib/trpc/trpc-context";

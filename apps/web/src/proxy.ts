@@ -1,4 +1,4 @@
-import { AUTH_COOKIE_NAME } from "@customreport/shared";
+import { AUTH_COOKIE_NAME } from "@weeklyreport/shared";
 import { type NextRequest, NextResponse } from "next/server";
 
 // Next.js 16 proxy.ts must live HERE (apps/web/src/proxy.ts) because the

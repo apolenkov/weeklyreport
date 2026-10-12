@@ -3,7 +3,7 @@ import {
   adminUpdatePeriodManualSchema,
   omitUndefinedProperties,
   periodListBucketSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { z } from "zod";
 
 import type {

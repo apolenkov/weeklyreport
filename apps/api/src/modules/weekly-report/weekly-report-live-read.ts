@@ -1,11 +1,11 @@
+import type { Prisma } from "@prisma/client";
 import {
   computeReminderFireAt,
   computeReportProgress,
   reminderPolicyAppliesTo,
   type ReportSectionReadModel,
   type UserSession,
-} from "@customreport/shared";
-import type { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { editableReminderReportWhere } from "../reminders/index.js";

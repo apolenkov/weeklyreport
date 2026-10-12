@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import type { ReminderDispatchResult } from "@customreport/shared";
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import type { ReminderDispatchResult } from "@weeklyreport/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {

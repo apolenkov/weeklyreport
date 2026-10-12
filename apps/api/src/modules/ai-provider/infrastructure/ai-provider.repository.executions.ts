@@ -1,5 +1,5 @@
-import type { AiProviderTestOutcome } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
+import type { AiProviderTestOutcome } from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 export type ProviderExecutionRequest = Readonly<{

@@ -1,4 +1,4 @@
-import type { ActivityLiveRow } from "@customreport/shared";
+import type { ActivityLiveRow } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { buildActivitySlideModel } from "./activity-slide-model";

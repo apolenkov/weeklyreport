@@ -3,7 +3,7 @@ import {
   type DraftPeriodState,
   draftPeriodStateSchema,
   type PeriodState,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import {

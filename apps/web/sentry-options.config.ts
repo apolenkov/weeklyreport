@@ -1,6 +1,6 @@
 /// <reference types="node" />
 
-import { createSentryPrivacyOptions } from "@customreport/shared";
+import { createSentryPrivacyOptions } from "@weeklyreport/shared";
 import { z } from "zod";
 
 // Runtime-neutral Sentry options shared by the edge and server entrypoints,

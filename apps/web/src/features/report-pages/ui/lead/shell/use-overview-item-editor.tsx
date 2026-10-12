@@ -1,4 +1,4 @@
-import type { LeadStatusOverviewOutput } from "@customreport/shared";
+import type { LeadStatusOverviewOutput } from "@weeklyreport/shared";
 import { useEffect, useRef, useState } from "react";
 
 import type {

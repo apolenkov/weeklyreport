@@ -1,5 +1,5 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
 import { act, renderHook } from "@testing-library/react";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../../../test-utils/expect-defined";

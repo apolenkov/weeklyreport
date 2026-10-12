@@ -1,7 +1,7 @@
 import {
   type TrafficLightStatus,
   trafficLightToCanonical,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import {
   AlertTriangle,
   ArrowRight,

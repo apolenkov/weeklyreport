@@ -1,13 +1,13 @@
 "use client";
 
-import type { Role, UserSession } from "@customreport/shared";
+import { useQuery } from "@tanstack/react-query";
+import type { Role, UserSession } from "@weeklyreport/shared";
 import {
   Alert,
   AlertDescription,
   AlertTitle,
-} from "@customreport/ui/components/ui/alert";
-import { Button } from "@customreport/ui/components/ui/button";
-import { useQuery } from "@tanstack/react-query";
+} from "@weeklyreport/ui/components/ui/alert";
+import { Button } from "@weeklyreport/ui/components/ui/button";
 import {
   createContext,
   type ReactNode,

@@ -1,8 +1,8 @@
 import { resolve } from "node:path";
 import { performance } from "node:perf_hooks";
 
-import { PDF_EXPORT_QUEUE_NAME } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
+import { PDF_EXPORT_QUEUE_NAME } from "@weeklyreport/shared";
 import { type Job, UnrecoverableError } from "bullmq";
 import { ClsService } from "nestjs-cls";
 

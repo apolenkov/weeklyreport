@@ -5,8 +5,8 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { AUTH_COOKIE_NAME, type UserSession } from "@customreport/shared";
 import type { INestApplication } from "@nestjs/common";
+import { AUTH_COOKIE_NAME, type UserSession } from "@weeklyreport/shared";
 import cookieParser from "cookie-parser";
 import express, { type RequestHandler } from "express";
 import { afterEach, describe, expect, it, vi } from "vitest";

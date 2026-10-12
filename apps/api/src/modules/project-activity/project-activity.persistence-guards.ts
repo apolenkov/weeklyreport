@@ -1,5 +1,5 @@
-import type { ProjectActivityLeadEdge } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
+import type { ProjectActivityLeadEdge } from "@weeklyreport/shared";
 
 import {
   ProjectActivityDomainError,

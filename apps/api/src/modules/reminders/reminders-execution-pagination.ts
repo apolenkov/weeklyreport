@@ -3,7 +3,7 @@ import {
   adminReminderExecutionSchema,
   type PaginatedResult,
   type PaginationInput,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 export interface ExecutionPageRequest {
   readonly cursor: string | null;

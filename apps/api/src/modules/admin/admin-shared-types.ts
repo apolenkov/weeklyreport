@@ -4,7 +4,7 @@ import type {
   ReopenRequestListInput,
   ReportSectionStatus,
   UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 export type ListReopenRequestsInput = ReopenRequestListInput & {
   readonly session: UserSession;

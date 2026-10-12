@@ -1,5 +1,5 @@
-import type { AssembledReport } from "@customreport/shared";
 import { MODULE_METADATA } from "@nestjs/common/constants.js";
+import type { AssembledReport } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { APP_LOGGER } from "../../lib/audit-logger.js";

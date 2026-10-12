@@ -1,4 +1,3 @@
-import { reportAssistantOutcomeSchema } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
@@ -8,6 +7,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { reportAssistantOutcomeSchema } from "@weeklyreport/shared";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

@@ -1,5 +1,5 @@
-import { type SearchPlan } from "@customreport/shared";
 import type { PrismaClient } from "@prisma/client";
+import { type SearchPlan } from "@weeklyreport/shared";
 
 import { authorizeReportOccurrences } from "../src/modules/search/application/authorized-report-retrieval.js";
 import {

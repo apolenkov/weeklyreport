@@ -2,8 +2,8 @@
 // co-owners' item/risk/decision text into Foreign* rows rendered read-only
 // beside the author's own records. Status-only stage maps live in ./lead-cross-author.
 
-import type { DbRole, RiskSeverity } from "@customreport/shared";
-import { shortNameFromName } from "@customreport/shared";
+import type { DbRole, RiskSeverity } from "@weeklyreport/shared";
+import { shortNameFromName } from "@weeklyreport/shared";
 
 import { toIsoDateString } from "../../../shared/lib/format/format-date";
 import {

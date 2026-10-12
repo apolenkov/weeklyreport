@@ -1,5 +1,5 @@
-import { QUEUE_NAMES, type QueueName } from "@customreport/shared";
 import type { OnModuleDestroy } from "@nestjs/common";
+import { QUEUE_NAMES, type QueueName } from "@weeklyreport/shared";
 import type { Queue } from "bullmq";
 
 import { closeBullMqResource } from "./bounded-shutdown.js";

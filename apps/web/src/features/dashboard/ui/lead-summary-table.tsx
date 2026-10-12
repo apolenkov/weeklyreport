@@ -1,6 +1,6 @@
 "use client";
 
-import { ROLE_LABEL } from "@customreport/shared";
+import { ROLE_LABEL } from "@weeklyreport/shared";
 import { ChevronDown } from "lucide-react";
 import type { RefObject } from "react";
 import { useRef, useState } from "react";

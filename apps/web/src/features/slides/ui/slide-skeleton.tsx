@@ -1,4 +1,4 @@
-import { Skeleton } from "@customreport/ui/components/ui/skeleton";
+import { Skeleton } from "@weeklyreport/ui/components/ui/skeleton";
 
 import {
   SLIDE_ARTICLE_LAYOUT_KEY,

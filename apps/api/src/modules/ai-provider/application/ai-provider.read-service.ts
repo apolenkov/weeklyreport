@@ -2,7 +2,7 @@ import type {
   AiProviderAvailabilityRead,
   AiProviderControlRead,
   AiProviderPreparationProgress,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import {
   type AiProviderServiceDependencies,

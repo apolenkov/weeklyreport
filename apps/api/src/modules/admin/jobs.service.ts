@@ -7,7 +7,7 @@ import {
   type PdfRecoveryRetryInput,
   type PdfRecoveryRetryResult,
   type QueueName,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { AppLogger } from "../../lib/logger";
 import type {

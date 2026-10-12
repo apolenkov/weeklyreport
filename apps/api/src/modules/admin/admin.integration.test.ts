@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
 
+import { Prisma, type PrismaClient } from "@prisma/client";
 import {
   buildPublishedProjections,
   composeName,
   publishedReportSnapshotSchema,
   type ReminderPolicy,
   type ReminderQueuePayload,
-} from "@customreport/shared";
-import { Prisma, type PrismaClient } from "@prisma/client";
+} from "@weeklyreport/shared";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../lib/logger";

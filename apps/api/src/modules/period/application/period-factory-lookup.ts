@@ -1,6 +1,6 @@
-import { currentPeriodLifecycleSchema } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 import type { PrismaClient } from "@prisma/client";
+import { currentPeriodLifecycleSchema } from "@weeklyreport/shared";
 
 import type { EnsuredPeriod } from "./period-factory-types.js";
 

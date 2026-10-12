@@ -1,7 +1,7 @@
 import { constants, createReadStream, open as openFile } from "node:fs";
 import { resolve, sep } from "node:path";
 
-import type { UserSession } from "@customreport/shared";
+import type { UserSession } from "@weeklyreport/shared";
 import type { Request, RequestHandler, Response } from "express";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";

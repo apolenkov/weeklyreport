@@ -1,6 +1,6 @@
 import "server-only";
 
-import { AUTH_COOKIE_NAME } from "@customreport/shared";
+import { AUTH_COOKIE_NAME } from "@weeklyreport/shared";
 import { cookies } from "next/headers";
 
 import {

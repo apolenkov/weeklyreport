@@ -1,4 +1,4 @@
-import type { AiProviderControlRead } from "@customreport/shared";
+import type { AiProviderControlRead } from "@weeklyreport/shared";
 
 export const AI_RUNTIME_HEALTH = Symbol("AiRuntimeHealth");
 

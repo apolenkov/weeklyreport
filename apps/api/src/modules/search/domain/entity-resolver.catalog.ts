@@ -1,4 +1,4 @@
-import type { ClarificationOption } from "@customreport/shared";
+import type { ClarificationOption } from "@weeklyreport/shared";
 
 import {
   type AliasKind,

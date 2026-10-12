@@ -1,9 +1,9 @@
+import type { Prisma } from "@prisma/client";
 import {
   feedbackDiagnosticsSchema,
   feedbackScreenshotRegionSchema,
   normalizeFeedbackPath,
-} from "@customreport/shared";
-import type { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import {
   type FeedbackAccess,

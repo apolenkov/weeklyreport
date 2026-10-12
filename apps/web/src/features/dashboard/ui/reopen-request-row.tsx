@@ -1,6 +1,6 @@
 "use client";
 
-import { shortNameFromName } from "@customreport/shared";
+import { shortNameFromName } from "@weeklyreport/shared";
 import { type RefObject, useEffect, useRef } from "react";
 
 import {

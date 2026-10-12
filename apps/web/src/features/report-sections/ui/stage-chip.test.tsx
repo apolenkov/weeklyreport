@@ -4,8 +4,8 @@
 // decorative and mirrors the same status.
 import "@testing-library/jest-dom/vitest";
 
-import { TooltipProvider } from "@customreport/ui/components/ui/tooltip";
 import { fireEvent, render as rtlRender, screen } from "@testing-library/react";
+import { TooltipProvider } from "@weeklyreport/ui/components/ui/tooltip";
 import type { ReactElement } from "react";
 import { describe, expect, it, vi } from "vitest";
 

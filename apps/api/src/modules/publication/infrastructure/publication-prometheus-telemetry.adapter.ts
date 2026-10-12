@@ -1,6 +1,6 @@
 import {
-  customreportPeriodStateTransitionsTotal,
-  customreportReportsSubmittedTotal,
+  weeklyreportPeriodStateTransitionsTotal,
+  weeklyreportReportsSubmittedTotal,
 } from "../../../infrastructure/metrics/metrics.registry.js";
 import type {
   PublicationSourceState,
@@ -9,10 +9,10 @@ import type {
 
 export class PublicationPrometheusTelemetry implements PublicationTelemetry {
   readonly recordPublishedReport = (): void => {
-    customreportReportsSubmittedTotal.inc({ state: "published" });
+    weeklyreportReportsSubmittedTotal.inc({ state: "published" });
   };
 
   readonly recordPeriodPublished = (from: PublicationSourceState): void => {
-    customreportPeriodStateTransitionsTotal.inc({ from, to: "published" });
+    weeklyreportPeriodStateTransitionsTotal.inc({ from, to: "published" });
   };
 }

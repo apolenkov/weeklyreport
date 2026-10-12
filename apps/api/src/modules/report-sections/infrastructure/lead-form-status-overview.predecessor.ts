@@ -1,9 +1,10 @@
+import type { Prisma } from "@prisma/client";
 import {
   mapPrismaToReportSection,
   PublishedSnapshotIntegrityError,
   reportSectionFullInclude,
   requirePublishedSnapshot,
-} from "@customreport/report-persistence";
+} from "@weeklyreport/report-persistence";
 import {
   type LeadStatusOverviewPredecessor,
   leadStatusOverviewPredecessorSchema,
@@ -13,8 +14,7 @@ import {
   type Role,
   type SharedPublishedReportSectionReadModel,
   sharedPublishedReportSectionReadModelSchema,
-} from "@customreport/shared";
-import type { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import { filterSectionToSharedProducts } from "../domain/lead-form-cross-author-scope.js";
 import {

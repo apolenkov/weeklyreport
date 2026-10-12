@@ -1,8 +1,8 @@
-import { requirePublishedSnapshot } from "@customreport/report-persistence";
+import { requirePublishedSnapshot } from "@weeklyreport/report-persistence";
 import {
   publishedReportSnapshotSchema,
   type UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { canReadPublishedSnapshot } from "../../../test-utils/report-read-access.js";

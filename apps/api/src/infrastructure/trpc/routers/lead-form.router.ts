@@ -10,7 +10,7 @@ import {
   reportAssistantRequestSchema,
   resolvePlanInputSchema,
   restorePlanInputSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { z } from "zod";
 
 import { groupScopeFilter } from "../../../lib/group-scope.js";

@@ -5,8 +5,8 @@ import type {
   AiProviderControlRead,
   AiProviderDraft,
   AiProviderProfileCapability,
-} from "@customreport/shared";
-import { aiProviderGenerationDraftSchema } from "@customreport/shared";
+} from "@weeklyreport/shared";
+import { aiProviderGenerationDraftSchema } from "@weeklyreport/shared";
 import { useId, useRef, useState } from "react";
 
 import {

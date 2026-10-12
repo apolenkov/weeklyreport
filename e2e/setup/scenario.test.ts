@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { Prisma } from "@prisma/client";
 import {
   draftSaveSchema,
   MAX_RECORDS_PER_SECTION_SAVE,
-} from "@customreport/shared";
-import { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import { ACTIVITY_ID, buildSectionItemLimitData } from "./overlay-items.js";
 import { parseE2eScenario } from "./reset.js";

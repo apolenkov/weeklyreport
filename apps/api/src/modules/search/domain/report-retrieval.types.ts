@@ -2,7 +2,7 @@ import type {
   CanonicalStatus,
   ReportSectionReadModel,
   SearchPlan,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 type ReportSourceKind = "live" | "snapshot";
 type CandidateKind =

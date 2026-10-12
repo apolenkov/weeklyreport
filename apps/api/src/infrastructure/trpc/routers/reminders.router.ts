@@ -1,8 +1,8 @@
+import { TRPCError } from "@trpc/server";
 import {
   paginationInputSchema,
   reminderDispatchResultSchema,
-} from "@customreport/shared";
-import { TRPCError } from "@trpc/server";
+} from "@weeklyreport/shared";
 import { z } from "zod";
 
 import type { RemindersService } from "../../../modules/reminders/index.js";

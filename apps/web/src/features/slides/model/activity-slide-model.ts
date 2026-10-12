@@ -1,5 +1,5 @@
-import type { ActivityLiveRow } from "@customreport/shared";
-import { shortNameFromName } from "@customreport/shared";
+import type { ActivityLiveRow } from "@weeklyreport/shared";
+import { shortNameFromName } from "@weeklyreport/shared";
 
 import type {
   SectionSlideModel,

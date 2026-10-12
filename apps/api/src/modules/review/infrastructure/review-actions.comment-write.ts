@@ -1,5 +1,5 @@
-import type { RecordCommentView } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
+import type { RecordCommentView } from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import { isForeignKeyViolation } from "../../../lib/prisma-foreign-key-violation.js";

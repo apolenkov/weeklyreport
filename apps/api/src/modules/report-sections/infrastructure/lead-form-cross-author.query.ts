@@ -1,12 +1,12 @@
-import { requirePublishedSnapshot } from "@customreport/report-persistence";
+import type { Prisma } from "@prisma/client";
+import { requirePublishedSnapshot } from "@weeklyreport/report-persistence";
 import {
   initialsFromName,
   itemWorkflowStatusSchema,
   type PublishedReportSectionReadModel,
   riskSeveritySchema,
   shortNameFromName,
-} from "@customreport/shared";
-import type { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import type {
   CrossAuthorSectionRow,

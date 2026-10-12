@@ -1,6 +1,6 @@
 import { inspect } from "node:util";
 
-import { MS_PER_SECOND } from "@customreport/shared";
+import { MS_PER_SECOND } from "@weeklyreport/shared";
 import type { RequestHandler } from "express";
 import rateLimit, {
   ipKeyGenerator,

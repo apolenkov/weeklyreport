@@ -1,7 +1,7 @@
 import {
   computeReminderFireAt,
   reminderPolicyAppliesTo,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";

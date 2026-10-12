@@ -283,13 +283,13 @@ beforeAll(async () => {
         ],
         [
           "package-type",
-          'import type { AppRouter } from "@customreport/api";\nexport type Probe = AppRouter;\n',
+          'import type { AppRouter } from "@weeklyreport/api";\nexport type Probe = AppRouter;\n',
         ],
         [
           "source-disable",
           '/* eslint-disable weeklyreport/web-api-runtime */\nimport "../../../../../api/src/app.module.js";\n',
         ],
-        ["package-value", 'import "@customreport/api";\n'],
+        ["package-value", 'import "@weeklyreport/api";\n'],
         [
           "dynamic-value",
           'void import("../../../../../api/src/app.module.js");\n',
@@ -333,7 +333,7 @@ beforeAll(async () => {
     {
       key: `${UI_BOUNDARY_CASE.name}:forbidden`,
       path: probePath(UI_BOUNDARY_CASE.filename, "ui-forbidden"),
-      source: 'import "@customreport/shared";\n',
+      source: 'import "@weeklyreport/shared";\n',
     },
     {
       key: `${UI_BOUNDARY_CASE.name}:local`,

@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 
-import type { UserSession } from "@customreport/shared";
+import type { UserSession } from "@weeklyreport/shared";
 import {
   PDF_EXPORT_QUEUE_NAME,
   publishedReportSnapshotSchema,
   type QueueName,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { Queue } from "bullmq";
 import {
   afterAll,

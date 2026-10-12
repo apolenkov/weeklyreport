@@ -1,13 +1,13 @@
 import type {
   ClarificationOption,
   ReportAssistantOutcome,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import {
   Alert,
   AlertDescription,
   AlertTitle,
-} from "@customreport/ui/components/ui/alert";
-import { Button } from "@customreport/ui/components/ui/button";
+} from "@weeklyreport/ui/components/ui/alert";
+import { Button } from "@weeklyreport/ui/components/ui/button";
 import { AlertCircle, LoaderCircle } from "lucide-react";
 
 import { LeadReportAssistantContent } from "./lead-report-assistant-content";

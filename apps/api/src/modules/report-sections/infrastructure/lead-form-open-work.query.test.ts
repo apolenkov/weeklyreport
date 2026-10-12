@@ -1,4 +1,4 @@
-import { PublishedSnapshotIntegrityError } from "@customreport/report-persistence";
+import { PublishedSnapshotIntegrityError } from "@weeklyreport/report-persistence";
 import { describe, expect, it, vi } from "vitest";
 
 import {

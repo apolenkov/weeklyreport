@@ -1,4 +1,4 @@
-import type { AssembledReport } from "@customreport/shared";
+import type { AssembledReport } from "@weeklyreport/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { freezePublishedSnapshot } from "../../search/index.js";

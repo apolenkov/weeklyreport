@@ -1,7 +1,7 @@
 "use client";
 
-import type { AiProviderConfigurationRead } from "@customreport/shared";
 import { useMutation } from "@tanstack/react-query";
+import type { AiProviderConfigurationRead } from "@weeklyreport/shared";
 import type { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
 

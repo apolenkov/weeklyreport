@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReminderDispatchResult } from "@customreport/shared";
 import { useMutation } from "@tanstack/react-query";
+import type { ReminderDispatchResult } from "@weeklyreport/shared";
 import { Bell, BellRing, Check } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 

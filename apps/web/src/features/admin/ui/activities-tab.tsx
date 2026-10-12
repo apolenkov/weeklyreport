@@ -1,6 +1,6 @@
 "use client";
 
-import type { ProjectActivity } from "@customreport/shared";
+import type { ProjectActivity } from "@weeklyreport/shared";
 import { useMemo } from "react";
 
 import { ConfirmDeleteDialog } from "../../../shared/ui/dialogs/confirm-delete-dialog";

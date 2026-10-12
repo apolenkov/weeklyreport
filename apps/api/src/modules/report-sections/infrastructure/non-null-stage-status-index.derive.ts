@@ -1,4 +1,4 @@
-import type { TrafficLightStatus } from "@customreport/shared";
+import type { TrafficLightStatus } from "@weeklyreport/shared";
 
 interface NullableStageStatus {
   status: TrafficLightStatus | null;

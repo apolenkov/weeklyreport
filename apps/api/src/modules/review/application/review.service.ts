@@ -2,7 +2,7 @@ import {
   type SubmissionDashboardRow,
   submissionDashboardRowSchema,
   type UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { type AppLogger } from "../../../lib/logger.js";
 

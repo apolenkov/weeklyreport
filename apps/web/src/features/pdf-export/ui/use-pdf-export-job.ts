@@ -1,5 +1,5 @@
-import { MS_PER_SECOND, type PeriodStatus } from "@customreport/shared";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { MS_PER_SECOND, type PeriodStatus } from "@weeklyreport/shared";
 import { useEffect, useReducer, useRef, useState } from "react";
 import { toast } from "sonner";
 

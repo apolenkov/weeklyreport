@@ -1,5 +1,5 @@
-import type { DbRole } from "@customreport/shared";
 import type { $Enums } from "@prisma/client";
+import type { DbRole } from "@weeklyreport/shared";
 import { describe, expectTypeOf, it } from "vitest";
 
 // Pins the persistence-axis guarantee: shared `DbRole` and the Prisma `Role`

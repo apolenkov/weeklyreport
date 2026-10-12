@@ -1,4 +1,4 @@
-import { QUEUE_NAMES } from "@customreport/shared";
+import { QUEUE_NAMES } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { createAdminJobHandle } from "./admin-jobs-queue.adapter";

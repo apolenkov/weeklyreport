@@ -1,4 +1,4 @@
-import { currentPeriodLifecycleSchema } from "@customreport/shared";
+import { currentPeriodLifecycleSchema } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { ReportSectionDomainError } from "../application/report-sections.service.js";

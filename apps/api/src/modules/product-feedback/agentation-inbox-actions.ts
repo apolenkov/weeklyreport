@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import {
   FEEDBACK_DISMISSAL_PREFIX,
   type FeedbackStatus,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import {

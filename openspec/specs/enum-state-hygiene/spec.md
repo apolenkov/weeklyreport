@@ -11,7 +11,7 @@ consistently from persistence, shared schemas, and domain mappings.
 
 Every persisted enum value MUST either be written by some production code path or
 be removed. This applies to each Prisma enum and its Zod mirror in
-`@customreport/shared` plus the domain-to-db mapper. A value that is read, indexed,
+`@weeklyreport/shared` plus the domain-to-db mapper. A value that is read, indexed,
 or anticipated but never written MUST NOT linger as a dead state; it is either
 implemented (writer + test) or deleted.
 

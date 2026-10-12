@@ -98,7 +98,7 @@ export function runLocalBootstrap(
   const steps = [
     {
       command: "pnpm",
-      args: ["--filter", "@customreport/api", "db:generate"],
+      args: ["--filter", "@weeklyreport/api", "db:generate"],
       label: "db:generate",
     },
     {

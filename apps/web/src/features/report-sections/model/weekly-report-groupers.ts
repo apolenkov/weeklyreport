@@ -3,8 +3,8 @@
 import type {
   PortfolioProductOverview,
   ReportSectionReadModel,
-} from "@customreport/shared";
-import { shortNameFromName } from "@customreport/shared";
+} from "@weeklyreport/shared";
+import { shortNameFromName } from "@weeklyreport/shared";
 
 import { initialsFromName } from "../../../shared/lib/format/user-initials";
 import { statusLabel } from "../../../shared/lib/status/status-presentation";

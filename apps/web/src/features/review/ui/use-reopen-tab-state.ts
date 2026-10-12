@@ -1,10 +1,10 @@
-import type { ReopenRequestStatusFilter } from "@customreport/shared";
 import {
   type QueryClient,
   useInfiniteQuery,
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
+import type { ReopenRequestStatusFilter } from "@weeklyreport/shared";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 

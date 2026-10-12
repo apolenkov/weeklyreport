@@ -1,4 +1,4 @@
-import { searchPlanSchema } from "@customreport/shared";
+import { searchPlanSchema } from "@weeklyreport/shared";
 
 import { baselineReportAssistantPrompts } from "../../ai-prompts/index.js";
 import type {

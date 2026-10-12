@@ -1,7 +1,7 @@
 // The 9 canonical seed identities (1 head, 1 viewer, 1 admin, 6 leads) and the
 // reporting group they belong to.
 
-import { type DbRole, DEFAULT_REPORTING_GROUP } from "@customreport/shared";
+import { type DbRole, DEFAULT_REPORTING_GROUP } from "@weeklyreport/shared";
 
 import {
   ADMIN_EMAIL,

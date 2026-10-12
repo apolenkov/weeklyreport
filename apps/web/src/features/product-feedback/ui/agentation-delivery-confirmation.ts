@@ -1,4 +1,4 @@
-import { agentationSessionResponseSchema } from "@customreport/shared";
+import { agentationSessionResponseSchema } from "@weeklyreport/shared";
 
 // Single owner for the Agentation REST base path; the widget's transport and
 // the delivery readback must never diverge on it.

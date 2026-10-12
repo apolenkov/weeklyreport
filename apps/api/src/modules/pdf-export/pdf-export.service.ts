@@ -1,10 +1,10 @@
+import { Inject, Injectable } from "@nestjs/common";
 import {
   AUTH_COOKIE_NAME,
   type PdfExportJob,
   pdfExportJobSchema,
   type UserSession,
-} from "@customreport/shared";
-import { Inject, Injectable } from "@nestjs/common";
+} from "@weeklyreport/shared";
 
 import { ENV_CONFIG } from "../../infrastructure/config/config.module.js";
 import type { EnvConfig } from "../../infrastructure/config/env.schema.js";

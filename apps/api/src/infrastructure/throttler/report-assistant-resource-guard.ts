@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
-import { REPORT_ASSISTANT_RESOURCE_RETRY_MAX_SECONDS } from "@customreport/shared";
 import type { OnModuleDestroy } from "@nestjs/common";
+import { REPORT_ASSISTANT_RESOURCE_RETRY_MAX_SECONDS } from "@weeklyreport/shared";
 import { Redis } from "ioredis";
 
 import type { AppLogger } from "../../lib/logger.js";
@@ -11,7 +11,7 @@ import type {
 } from "../../modules/search/index.js";
 import type { EnvConfig } from "../config/env.schema.js";
 import { buildRedisConnectionOptions } from "../config/redis-connection.js";
-import { customreportAssistantResourceEventsTotal } from "../metrics/report-assistant.metrics.js";
+import { weeklyreportAssistantResourceEventsTotal } from "../metrics/report-assistant.metrics.js";
 
 const REQUEST_LIMIT = 20;
 const WINDOW_MS = 60_000;
@@ -240,7 +240,7 @@ export class ReportAssistantResourceGuard
       "denied" | "granted" | "released" | "release_failed" | "renew_failed",
     reason: "budget" | "concurrency" | "expired" | "none" | "unavailable",
   ): void {
-    customreportAssistantResourceEventsTotal.inc({ outcome, reason });
+    weeklyreportAssistantResourceEventsTotal.inc({ outcome, reason });
   }
 
   private logUnavailable(

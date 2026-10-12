@@ -1,5 +1,5 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 
 import { ReportSectionDomainError } from "../application/report-sections.service";
 

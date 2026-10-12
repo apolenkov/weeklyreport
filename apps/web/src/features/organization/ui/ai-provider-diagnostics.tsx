@@ -3,7 +3,7 @@
 import type {
   AiProviderConfigurationRead,
   AiProviderControlRead,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { ChevronDown } from "lucide-react";
 import { useId, useState } from "react";
 

@@ -1,9 +1,9 @@
+import type { Prisma } from "@prisma/client";
 import {
   mapPrismaToReportSection,
   reportSectionFullInclude,
-} from "@customreport/report-persistence";
-import { type ReportSectionReadModel } from "@customreport/shared";
-import type { Prisma } from "@prisma/client";
+} from "@weeklyreport/report-persistence";
+import { type ReportSectionReadModel } from "@weeklyreport/shared";
 
 import { lockCurrentEditableReport } from "../../../lib/report-lifecycle.js";
 import { lockStatusGraph } from "../../../lib/status-graph-lock.js";

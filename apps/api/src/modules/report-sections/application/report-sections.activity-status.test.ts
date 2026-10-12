@@ -1,8 +1,8 @@
 // Activity-status slice of the lead section save: statuses fold onto the
 // SEEDED server-side set, an omitted slice keeps the seeded values, and an
 // unattached activityId is a hard reject (delete-recreate never trusts client ids).
-import type { TrafficLightStatus } from "@customreport/shared";
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type { TrafficLightStatus } from "@weeklyreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { createNullLogger } from "../../../lib/logger.js";

@@ -1,12 +1,12 @@
 "use client";
 
-import type { PeriodStatus } from "@customreport/shared";
+import type { PeriodStatus } from "@weeklyreport/shared";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@customreport/ui/components/ui/tooltip";
+} from "@weeklyreport/ui/components/ui/tooltip";
 import { useState } from "react";
 
 import { usePdfExportJob } from "./use-pdf-export-job";

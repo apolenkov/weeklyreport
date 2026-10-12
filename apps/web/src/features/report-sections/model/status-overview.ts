@@ -5,8 +5,8 @@ import type {
   LeadStatusOverviewOutput,
   RecordCommentView,
   ReportSectionReadModel,
-} from "@customreport/shared";
-import { MS_PER_WEEK } from "@customreport/shared";
+} from "@weeklyreport/shared";
+import { MS_PER_WEEK } from "@weeklyreport/shared";
 
 import { formatPeriodRangeWithYear } from "../../../shared/lib/format/format-date";
 import {

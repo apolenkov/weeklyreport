@@ -1,8 +1,8 @@
 // Typed text survives autosave-driven parent renders with a new stages ref;
 // the ref is not form state. Also covers backdrop Escape and autofocus a11y.
 
-import { SAFE_TEXT_MAX_LENGTH } from "@customreport/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
+import { SAFE_TEXT_MAX_LENGTH } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import type { DecisionEntry, Product } from "../../report-sections";

@@ -1,4 +1,4 @@
-import { MINUTES_PER_DAY } from "@customreport/shared";
+import { MINUTES_PER_DAY } from "@weeklyreport/shared";
 
 import { toIsoDateString } from "../../../shared/lib/format/format-date";
 import type { AdminReminderPolicyFormInput } from "./admin";

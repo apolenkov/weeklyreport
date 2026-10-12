@@ -1,5 +1,5 @@
-import type { UserSession } from "@customreport/shared";
 import { TRPCError } from "@trpc/server";
+import type { UserSession } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 

@@ -1,9 +1,9 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {
-  customreportSectionsSubmittedTotal,
-  customreportSectionSubmissionLatencySeconds,
+  weeklyreportSectionsSubmittedTotal,
+  weeklyreportSectionSubmissionLatencySeconds,
 } from "../../../infrastructure/metrics/metrics.registry.js";
 import { createNullLogger } from "../../../lib/logger.js";
 import { ReportSectionsPrometheusTelemetry } from "../infrastructure/report-sections-prometheus-telemetry.adapter.js";
@@ -134,11 +134,11 @@ describe("ReportSectionsService — product telemetry", () => {
   }
 
   it("increments late=false counter and observes a negative latency when submitted before deadline", async () => {
-    const before = await counterValue(customreportSectionsSubmittedTotal, {
+    const before = await counterValue(weeklyreportSectionsSubmittedTotal, {
       late: "false",
     });
     const histBefore = await histogramSum(
-      customreportSectionSubmissionLatencySeconds,
+      weeklyreportSectionSubmissionLatencySeconds,
     );
 
     const service = new ReportSectionsService(
@@ -185,19 +185,19 @@ describe("ReportSectionsService — product telemetry", () => {
     );
 
     expect(
-      await counterValue(customreportSectionsSubmittedTotal, {
+      await counterValue(weeklyreportSectionsSubmittedTotal, {
         late: "false",
       }),
     ).toBe(before + 1);
     // sum delta must be negative (submitted ahead of deadline).
     const histAfter = await histogramSum(
-      customreportSectionSubmissionLatencySeconds,
+      weeklyreportSectionSubmissionLatencySeconds,
     );
     expect(histAfter - histBefore).toBeLessThan(0);
   });
 
   it("increments late=true counter when submission lands past deadline", async () => {
-    const before = await counterValue(customreportSectionsSubmittedTotal, {
+    const before = await counterValue(weeklyreportSectionsSubmittedTotal, {
       late: "true",
     });
 
@@ -245,7 +245,7 @@ describe("ReportSectionsService — product telemetry", () => {
     );
 
     expect(
-      await counterValue(customreportSectionsSubmittedTotal, {
+      await counterValue(weeklyreportSectionsSubmittedTotal, {
         late: "true",
       }),
     ).toBe(before + 1);

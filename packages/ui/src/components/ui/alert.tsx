@@ -1,4 +1,4 @@
-import { cn } from "@customreport/ui/lib/utils";
+import { cn } from "@weeklyreport/ui/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
 

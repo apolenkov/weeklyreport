@@ -3,7 +3,7 @@
 import type {
   MyHistoryEntry,
   ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { useState } from "react";
 
 import type { CrossAuthorRow } from "../../../../report-sections";

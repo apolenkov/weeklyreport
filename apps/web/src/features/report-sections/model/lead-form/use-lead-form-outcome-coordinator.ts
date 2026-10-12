@@ -1,6 +1,6 @@
 "use client";
 
-import type { ItemOutcomeResult } from "@customreport/shared";
+import type { ItemOutcomeResult } from "@weeklyreport/shared";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {

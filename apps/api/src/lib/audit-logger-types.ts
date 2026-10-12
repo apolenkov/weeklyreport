@@ -2,7 +2,7 @@ import type {
   PeriodState,
   ReminderPolicyKind,
   Role,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 // Fixed envelopes keep SIEM queries structural. Emitters enumerate fields
 // instead of spreading requests, and IPs arrive from trust-proxy-aware req.ip,

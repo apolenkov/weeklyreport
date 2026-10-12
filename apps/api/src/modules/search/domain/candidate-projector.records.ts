@@ -1,4 +1,4 @@
-import { trafficLightToCanonical } from "@customreport/shared";
+import { trafficLightToCanonical } from "@weeklyreport/shared";
 
 import {
   assertProjectableScope,

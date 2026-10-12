@@ -3,7 +3,7 @@ import type {
   PublishedLineage,
   ReopenBlockedReason,
   ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type {
   CrossAuthorContentRow,

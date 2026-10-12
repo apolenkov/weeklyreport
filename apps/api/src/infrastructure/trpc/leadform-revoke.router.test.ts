@@ -1,5 +1,5 @@
-import type { Role } from "@customreport/shared";
 import { TRPCError } from "@trpc/server";
+import type { Role } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../lib/logger.js";

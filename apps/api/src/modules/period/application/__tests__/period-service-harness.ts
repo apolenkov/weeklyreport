@@ -2,7 +2,7 @@ import {
   type PeriodStatus,
   type ReportStatus,
   type UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { vi } from "vitest";
 
 import type { PeriodLifecycleExpectation } from "../../domain/period-lifecycle-expectation.js";

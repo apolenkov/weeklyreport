@@ -1,6 +1,6 @@
 "use client";
 
-import type { PeriodListItem, PeriodState } from "@customreport/shared";
+import type { PeriodListItem, PeriodState } from "@weeklyreport/shared";
 
 import {
   formatDateWithYear,

@@ -1,4 +1,4 @@
-import type { CanonicalStatus } from "@customreport/shared";
+import type { CanonicalStatus } from "@weeklyreport/shared";
 import { createElement } from "react";
 
 import {

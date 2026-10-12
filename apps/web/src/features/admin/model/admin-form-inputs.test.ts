@@ -1,4 +1,4 @@
-import { composeName } from "@customreport/shared";
+import { composeName } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {

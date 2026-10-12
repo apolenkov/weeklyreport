@@ -1,10 +1,10 @@
+import { Inject, Injectable } from "@nestjs/common";
 import {
   type AdminReminderExecution,
   adminReminderExecutionSchema,
   type PaginatedResult,
   type PaginationInput,
-} from "@customreport/shared";
-import { Inject, Injectable } from "@nestjs/common";
+} from "@weeklyreport/shared";
 
 import { ENV_CONFIG } from "../../infrastructure/config/config.module.js";
 import type { EnvConfig } from "../../infrastructure/config/env.schema.js";

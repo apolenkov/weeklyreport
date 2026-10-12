@@ -5,7 +5,7 @@ import {
   canonicalToTrafficLight,
   riskSeverityToCanonicalFloor,
   worstCanonicalStatus,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 export type ActivityAlarmFloor = "yellow" | "red" | null;
 

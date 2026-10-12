@@ -1,4 +1,4 @@
-import type { ReminderDispatchResult, UserSession } from "@customreport/shared";
+import type { ReminderDispatchResult, UserSession } from "@weeklyreport/shared";
 
 import { errorMessage } from "../../lib/error-message.js";
 import type { AppLogger } from "../../lib/logger.js";

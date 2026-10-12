@@ -1,4 +1,4 @@
-import type { AiProviderControlRead } from "@customreport/shared";
+import type { AiProviderControlRead } from "@weeklyreport/shared";
 
 import { embeddingDimensionsLabel } from "./ai-provider-configuration-fields.types";
 import { profileLabel } from "./ai-provider-form";

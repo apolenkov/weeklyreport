@@ -11,9 +11,9 @@ publish-path observability.
 
 ### Requirement: Live manual publish path emits the publish counters
 
-The system MUST increment `customreportReportsSubmittedTotal`
+The system MUST increment `weeklyreportReportsSubmittedTotal`
 (`{ state: "published" }`) and
-`customreportPeriodStateTransitionsTotal`
+`weeklyreportPeriodStateTransitionsTotal`
 (`{ from: <prior periodStatus>, to: "published" }`) when
 `PeriodService.publishPeriod` (consumer surface: tRPC procedure
 `period.publish`, `apps/api/src/modules/period/application/period.service.ts`)

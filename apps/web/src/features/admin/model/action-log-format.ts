@@ -1,4 +1,4 @@
-import type { AdminActionLogEvent } from "@customreport/shared";
+import type { AdminActionLogEvent } from "@weeklyreport/shared";
 
 import { formatDateTime } from "../../../shared/lib/format/format-date";
 

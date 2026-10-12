@@ -1,7 +1,7 @@
 import {
   shortNameFromName,
   trafficLightToCanonical,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import type { ReactNode } from "react";
 
 import { SlideStatusBadge } from "../../../shared/ui/feedback/slide-status-badge";

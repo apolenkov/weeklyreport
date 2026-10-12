@@ -1,10 +1,10 @@
-import {
-  EMAIL_REMINDER_QUEUE_NAME,
-  PDF_EXPORT_QUEUE_NAME,
-} from "@customreport/shared";
 import { Inject, Injectable, Logger } from "@nestjs/common";
 import type { HealthIndicatorResult } from "@nestjs/terminus";
 import { HealthIndicatorService } from "@nestjs/terminus";
+import {
+  EMAIL_REMINDER_QUEUE_NAME,
+  PDF_EXPORT_QUEUE_NAME,
+} from "@weeklyreport/shared";
 
 import { QUEUE_NAMES, QueueRegistry } from "../bullmq/queue-registry.js";
 import { WorkerLivenessRegistry } from "../bullmq/worker-liveness.registry.js";

@@ -1,7 +1,7 @@
 import {
   CANONICAL_STATUS_PRECEDENCE,
   type CanonicalStatus,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 interface StatusNamed {
   readonly status: CanonicalStatus;

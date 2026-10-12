@@ -163,7 +163,7 @@ export const trpcRequestTotal = new Counter({
 
 // Counts report transitions by destination state across manual and automatic
 // publication paths.
-export const customreportReportsSubmittedTotal = new Counter({
+export const weeklyreportReportsSubmittedTotal = new Counter({
   name: "customreport_reports_submitted_total",
   help: "Total Report state transitions, labelled by destination state",
   labelNames: ["state"] as const,
@@ -172,7 +172,7 @@ export const customreportReportsSubmittedTotal = new Counter({
 
 // Counts section submissions by the bounded on-time flag stamped at submit
 // time, allowing deadline performance to be aggregated without author labels.
-export const customreportSectionsSubmittedTotal = new Counter({
+export const weeklyreportSectionsSubmittedTotal = new Counter({
   name: "customreport_sections_submitted_total",
   help: "Total section submissions, labelled by on-time flag",
   labelNames: ["late"] as const,
@@ -181,7 +181,7 @@ export const customreportSectionsSubmittedTotal = new Counter({
 
 // Signed deadline distance distinguishes early from late submissions; buckets
 // cover the useful range for a weekly reporting cadence.
-export const customreportSectionSubmissionLatencySeconds = new Histogram({
+export const weeklyreportSectionSubmissionLatencySeconds = new Histogram({
   name: "customreport_section_submission_latency_seconds",
   help: "Signed seconds (observation time − deadline), sampled after a successful section submission. Negative = early, positive = late.",
   buckets: SUBMISSION_LATENCY_BUCKETS,
@@ -190,7 +190,7 @@ export const customreportSectionSubmissionLatencySeconds = new Histogram({
 
 // Rolling section ratio over four published periods, refreshed lazily by the
 // TelemetryGauges scrape callback.
-export const customreportReportsOnTimeRatio = new Gauge({
+export const weeklyreportReportsOnTimeRatio = new Gauge({
   name: "customreport_reports_on_time_ratio",
   help: "Fraction of submitted sections that were on time over the last 4 published periods",
   registers: [metricsRegistry],
@@ -198,7 +198,7 @@ export const customreportReportsOnTimeRatio = new Gauge({
 
 // Distinct recent lead authors separates broader engagement from repeated
 // submissions by the same people.
-export const customreportActiveLeadsTotal = new Gauge({
+export const weeklyreportActiveLeadsTotal = new Gauge({
   name: "customreport_active_leads_total",
   help: "Distinct lead authors who submitted in the most recently published period",
   registers: [metricsRegistry],
@@ -206,7 +206,7 @@ export const customreportActiveLeadsTotal = new Gauge({
 
 // Three-state reopen funnel exposes both request demand and approval policy
 // without user-level cardinality.
-export const customreportReopenRequestsTotal = new Counter({
+export const weeklyreportReopenRequestsTotal = new Counter({
   name: "customreport_reopen_requests_total",
   help: "Reopen-request lifecycle counter (requested / approved / rejected)",
   labelNames: ["state"] as const,
@@ -215,7 +215,7 @@ export const customreportReopenRequestsTotal = new Counter({
 
 // PDF export requests by role support checking whether intended viewers request
 // exports directly or rely on heads to export for them.
-export const customreportPdfExportRequestsTotal = new Counter({
+export const weeklyreportPdfExportRequestsTotal = new Counter({
   name: "customreport_pdf_export_requests_total",
   help: "Total PDF export requests, labelled by requesting role",
   labelNames: ["role"] as const,
@@ -224,7 +224,7 @@ export const customreportPdfExportRequestsTotal = new Counter({
 
 // Period transitions distinguish a stopped publication pipeline from one that
 // is merely progressing slowly.
-export const customreportPeriodStateTransitionsTotal = new Counter({
+export const weeklyreportPeriodStateTransitionsTotal = new Counter({
   name: "customreport_period_state_transitions_total",
   help: "Period state-machine transitions, labelled by from / to states",
   labelNames: ["from", "to"] as const,
@@ -233,7 +233,7 @@ export const customreportPeriodStateTransitionsTotal = new Counter({
 
 // Audits cross-author lead-form reads. The result label distinguishes denied
 // access from an authorized empty response without exposing payload content.
-export const customreportCrossAuthorContentReadsTotal = new Counter({
+export const weeklyreportCrossAuthorContentReadsTotal = new Counter({
   name: "customreport_cross_author_content_reads_total",
   help: "Full-content cross-author lead-form reads, labelled by authorization result (allowed / denied / empty)",
   labelNames: ["result"] as const,

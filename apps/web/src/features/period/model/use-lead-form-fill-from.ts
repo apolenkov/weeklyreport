@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { toast } from "sonner";
 
 import type { LeadFormGeneration } from "../../report-sections";

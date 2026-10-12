@@ -1,9 +1,9 @@
-import type { ReminderRecoverySnapshot } from "@customreport/shared";
+import type { Prisma, ReminderPolicy, ReminderRule } from "@prisma/client";
+import type { ReminderRecoverySnapshot } from "@weeklyreport/shared";
 import {
   computeReminderFireAt,
   reminderPolicyAppliesTo,
-} from "@customreport/shared";
-import type { Prisma, ReminderPolicy, ReminderRule } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 type LockedReminderReport = ReminderRecoverySnapshot["periods"][number];
 

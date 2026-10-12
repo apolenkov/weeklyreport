@@ -2,7 +2,7 @@ import {
   type ActivityLiveResponse,
   activityLiveResponseSchema,
   type UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 export interface ActivityRepository {
   // Synthetic draft row when a lead has no section yet.

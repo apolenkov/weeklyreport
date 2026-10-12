@@ -26,12 +26,12 @@ afterEach(async () => {
   fixtureRoots.clear();
 });
 
-async function makeDeployRoot(name = "@customreport/api"): Promise<string> {
+async function makeDeployRoot(name = "@weeklyreport/api"): Promise<string> {
   const root = await mkdtemp(join(tmpdir(), "weeklyreport-prune-fixture-"));
   fixtureRoots.add(root);
   await writeFile(
     join(root, "package.json"),
-    JSON.stringify({ name, private: name === "@customreport/api" }),
+    JSON.stringify({ name, private: name === "@weeklyreport/api" }),
   );
   await mkdir(join(root, "node_modules", ".pnpm", "node_modules"), {
     recursive: true,

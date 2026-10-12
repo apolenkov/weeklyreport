@@ -1,3 +1,5 @@
+import { Inject, Injectable } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 import {
   archiveReportDetailSchema,
   type ArchiveReportSummary,
@@ -5,9 +7,7 @@ import {
   type AssembledReport,
   type PaginatedResult,
   type PaginationInput,
-} from "@customreport/shared";
-import { Inject, Injectable } from "@nestjs/common";
-import type { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import {

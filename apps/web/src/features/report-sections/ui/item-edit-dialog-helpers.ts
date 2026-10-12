@@ -1,4 +1,4 @@
-import { SAFE_TEXT_MAX_LENGTH, safeText } from "@customreport/shared";
+import { SAFE_TEXT_MAX_LENGTH, safeText } from "@weeklyreport/shared";
 
 import { deriveItemAlarmFromRisks } from "../model/alarms/item-alarm";
 import type { ParentActivityOption } from "../model/record-parent";

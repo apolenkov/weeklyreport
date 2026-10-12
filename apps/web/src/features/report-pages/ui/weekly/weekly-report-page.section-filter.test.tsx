@@ -1,17 +1,17 @@
 // Submission-filter and empty-state behavior through the page harness.
 
 import {
-  buildEscalationsFromReadSections,
-  buildPortfolioProductsFromSnapshotSections,
-  weeklyReportReadModelSchema,
-} from "@customreport/shared";
-import {
   screen,
   waitFor,
   waitForElementToBeRemoved,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import {
+  buildEscalationsFromReadSections,
+  buildPortfolioProductsFromSnapshotSections,
+  weeklyReportReadModelSchema,
+} from "@weeklyreport/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // We mock cache-keys to verify invalidation cascade without actually inspecting

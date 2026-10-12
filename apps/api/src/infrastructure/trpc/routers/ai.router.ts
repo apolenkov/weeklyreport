@@ -1,4 +1,4 @@
-import { aiProviderAvailabilityReadSchema } from "@customreport/shared";
+import { aiProviderAvailabilityReadSchema } from "@weeklyreport/shared";
 
 import type { AiProviderConfigurationService } from "../../../modules/ai-provider/index.js";
 import { withDomainErrorMapping } from "../trpc.error-mapper.js";

@@ -4,7 +4,7 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@customreport/ui/components/ui/tooltip";
+} from "@weeklyreport/ui/components/ui/tooltip";
 
 import type { StageStatus } from "../../report-sections";
 import { STAGE_CHIP_BOX_HEIGHT, STATUS_CONFIG } from "../../report-sections";

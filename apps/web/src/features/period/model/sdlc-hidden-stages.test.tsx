@@ -1,5 +1,5 @@
 // @vitest-environment node
-import type { TrafficLightStatus } from "@customreport/shared";
+import type { TrafficLightStatus } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import type { StageAssignment } from "../../report-sections";

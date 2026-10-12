@@ -49,15 +49,15 @@ test("every repository Vitest runner inherits the shared reporter contract", () 
 test("CI executes the combined API coverage contour exactly once", () => {
   const gitlab = readFileSync(resolve(".gitlab-ci.yml"), "utf8");
   assert.equal(
-    [...gitlab.matchAll(/@customreport\/api test:coverage/gu)].length,
+    [...gitlab.matchAll(/@weeklyreport\/api test:coverage/gu)].length,
     1,
   );
   const gitlabApiJob = gitlab.slice(
     gitlab.indexOf("\napi-integration:"),
     gitlab.indexOf("\nmigrate-reset:"),
   );
-  assert.match(gitlabApiJob, /@customreport\/api test:coverage/u);
-  assert.doesNotMatch(gitlabApiJob, /@customreport\/api test:integration/u);
+  assert.match(gitlabApiJob, /@weeklyreport\/api test:coverage/u);
+  assert.doesNotMatch(gitlabApiJob, /@weeklyreport\/api test:integration/u);
 });
 
 test("API verification summary fails closed when evidence is unusable", () => {

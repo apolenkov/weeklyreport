@@ -1,9 +1,9 @@
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import {
   type AdminReminderExecution,
   type AdminReminderRule,
   type UserSession,
-} from "@customreport/shared";
-import { Inject, Injectable, Logger } from "@nestjs/common";
+} from "@weeklyreport/shared";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type {

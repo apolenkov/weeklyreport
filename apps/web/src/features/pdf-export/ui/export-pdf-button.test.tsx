@@ -4,11 +4,11 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { type PdfExportJob, pdfExportJobSchema } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TRPCClientError } from "@trpc/client";
+import { type PdfExportJob, pdfExportJobSchema } from "@weeklyreport/shared";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

@@ -5,7 +5,7 @@ import {
   MAX_ACTIVITY_NAME_LENGTH,
   MAX_REOPEN_REASON_LENGTH,
   SAFE_TEXT_MAX_LENGTH,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { shortItemLabel } from "../../apps/web/src/shared/lib/format/short-label.js";
 import { loginAsHead, openLeadReport } from "./access.js";

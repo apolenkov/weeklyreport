@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import type { PeriodStatus } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
+import type { PeriodStatus } from "@weeklyreport/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeWeeklyReportFixture } from "../../../test-utils/report-section-fixtures";

@@ -1,5 +1,5 @@
-import { type PdfExportJob, pdfExportJobSchema } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
+import { type PdfExportJob, pdfExportJobSchema } from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { PdfExportJobRecord } from "./pdf-export.ports.js";

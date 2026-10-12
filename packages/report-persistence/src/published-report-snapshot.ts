@@ -1,4 +1,5 @@
-import type { TrafficLightStatus } from "@customreport/shared";
+import type { Prisma } from "@prisma/client";
+import type { TrafficLightStatus } from "@weeklyreport/shared";
 import {
   type AssembledReport,
   assembledReportSchema,
@@ -8,8 +9,7 @@ import {
   publishedReportSectionReadModelSchema,
   publishedReportSnapshotSchema,
   type ReportSectionReadModel,
-} from "@customreport/shared";
-import type { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import { publishedSnapshotFailure } from "./published-snapshot.js";
 import { reportSectionFullInclude } from "./report-sections.include.js";

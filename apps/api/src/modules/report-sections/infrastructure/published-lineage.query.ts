@@ -1,9 +1,9 @@
-import { requirePublishedSnapshot } from "@customreport/report-persistence";
+import type { Prisma } from "@prisma/client";
+import { requirePublishedSnapshot } from "@weeklyreport/report-persistence";
 import type {
   PublishedLineage,
   ReportSectionReadModel,
-} from "@customreport/shared";
-import type { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import {
   EMPTY_PUBLISHED_LINEAGE,

@@ -1,7 +1,7 @@
 import type {
   CompiledHistoryEntry,
   WeeklyReportGetResponse,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { ReportPeriod } from "../../report-sections";
 import { toNavigationPeriod } from "../../report-sections";

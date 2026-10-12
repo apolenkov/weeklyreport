@@ -1,4 +1,4 @@
-import type { AdminActionLogEvent } from "@customreport/shared";
+import type { AdminActionLogEvent } from "@weeklyreport/shared";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import {

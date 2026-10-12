@@ -1,6 +1,6 @@
 "use client";
 
-import { SAFE_TEXT_MAX_LENGTH } from "@customreport/shared";
+import { SAFE_TEXT_MAX_LENGTH } from "@weeklyreport/shared";
 
 import { RecordTextareaField } from "../../../shared/ui/forms/record-textarea-field";
 

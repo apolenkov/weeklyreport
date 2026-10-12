@@ -1,4 +1,4 @@
-import { MS_PER_HOUR } from "@customreport/shared";
+import { MS_PER_HOUR } from "@weeklyreport/shared";
 
 export function evaluateSubmissionDeadline(
   deadline: Date,

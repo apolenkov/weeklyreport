@@ -1,8 +1,8 @@
 import type {
   ReportSectionReadModel,
   WeeklyReportReadModel,
-} from "@customreport/shared";
-import { aggregateTrafficLight } from "@customreport/shared";
+} from "@weeklyreport/shared";
+import { aggregateTrafficLight } from "@weeklyreport/shared";
 
 import type {
   WeeklyProductStatus,

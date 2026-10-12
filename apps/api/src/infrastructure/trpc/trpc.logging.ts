@@ -1,6 +1,6 @@
-import { MS_PER_SECOND, type Role } from "@customreport/shared";
 import type { TRPCError } from "@trpc/server";
 import { getHTTPStatusCodeFromError } from "@trpc/server/http";
+import { MS_PER_SECOND, type Role } from "@weeklyreport/shared";
 
 import { httpRequestDurationSeconds } from "../metrics/metrics.registry.js";
 import type { TrpcContext } from "./trpc.context.js";

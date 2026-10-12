@@ -12,7 +12,7 @@ import {
   type TrafficLightHistoryOutput,
   trafficLightHistoryOutputSchema,
   type UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { scopeDiscriminator } from "../../lib/group-scope.js";
 

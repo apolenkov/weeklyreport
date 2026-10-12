@@ -5,7 +5,7 @@ import {
   publishedReportSnapshotSchema,
   QUEUE_NAMES,
   type QueueName,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import {
   type Job,
   Queue,

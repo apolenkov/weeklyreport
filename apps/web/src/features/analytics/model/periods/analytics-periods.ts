@@ -1,7 +1,7 @@
 import type {
   AnalyticsPeriod,
   PeriodComparisonInput,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 // `analytics.trafficLightHistory` returns periods ascending by periodEnd
 // (repository `orderBy: { periodEnd: "asc" }`), so the last two are the latest

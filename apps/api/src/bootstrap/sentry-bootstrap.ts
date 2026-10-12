@@ -1,5 +1,5 @@
-import { createSentryPrivacyOptions } from "@customreport/shared";
 import * as Sentry from "@sentry/nestjs";
+import { createSentryPrivacyOptions } from "@weeklyreport/shared";
 
 import { envSchema } from "../infrastructure/config/env.schema.js";
 import { stampActiveTrace } from "../infrastructure/otel/sentry-trace-correlation.js";

@@ -1,7 +1,7 @@
 import type {
   RecordCommentView,
   ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { buildActivityIndex, buildProjectIndex } from "./lead-form-shared";
 

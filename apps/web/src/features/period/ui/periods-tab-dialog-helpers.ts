@@ -1,4 +1,4 @@
-import { DAYS_PER_WEEK } from "@customreport/shared";
+import { DAYS_PER_WEEK } from "@weeklyreport/shared";
 
 import { toIsoDateString } from "../../../shared/lib/format/format-date";
 

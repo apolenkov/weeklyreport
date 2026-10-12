@@ -1,4 +1,4 @@
-import type { ItemWorkflowStatus } from "@customreport/shared";
+import type { ItemWorkflowStatus } from "@weeklyreport/shared";
 
 import type { ReportHealthPulse } from "../model/report-health-pulse";
 import type {
