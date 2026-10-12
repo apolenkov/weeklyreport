@@ -25,22 +25,48 @@ export function sectionId(
   return `${UUID_PREFIX}0000000040${reportSuffix}${leadIndex}`;
 }
 
-// 000000005{r}{N}{S}: report suffix, lead slot, and item sequence.
+const SEQUENCE_FIELD_WIDTH = 3;
+const ASSIGNMENT_PRODUCT_FIELD_WIDTH = 3;
+const ASSIGNMENT_STAGE_FIELD_WIDTH = 1;
+
+const fixedHex = (value: number, width: number): string => {
+  const capacity = HEX_RADIX ** width;
+  if (!Number.isInteger(value) || value < 0 || value >= capacity) {
+    throw new RangeError(
+      `Seed ID field must be an integer in 0..${capacity - 1}`,
+    );
+  }
+  return value.toString(HEX_RADIX).padStart(width, "0");
+};
+
+// High digits fill old zero-prefix slots; low digits retain existing valid IDs.
+const recordId = (
+  marker: "5" | "6",
+  reportSuffix: ReportSuffix,
+  leadIndex: number,
+  sequence: number,
+): string => {
+  const lead = fixedHex(leadIndex, LEAD_FIELD_WIDTH);
+  const slot = fixedHex(sequence, SEQUENCE_FIELD_WIDTH);
+  return `${UUID_PREFIX}00000${lead.slice(0, 1)}${slot.slice(0, 2)}${marker}${reportSuffix}${lead.slice(1)}${slot.slice(2)}`;
+};
+
+/** Item sequence uses a fixed 8-bit lead and 12-bit sequence field. */
 export function itemId(
   reportSuffix: ReportSuffix,
   leadIndex: number,
   itemSeq: number,
 ): string {
-  return `${UUID_PREFIX}000000005${reportSuffix}${leadIndex}${itemSeq}`;
+  return recordId("5", reportSuffix, leadIndex, itemSeq);
 }
 
-// 000000006{r}{N}{P}: report suffix, lead slot, and product sequence.
+/** Product status retains a distinct marker with the same physical fields. */
 export function projectStatusId(
   reportSuffix: ReportSuffix,
   leadIndex: number,
   prodSeq: number,
 ): string {
-  return `${UUID_PREFIX}000000006${reportSuffix}${leadIndex}${prodSeq}`;
+  return recordId("6", reportSuffix, leadIndex, prodSeq);
 }
 
 export function stageStatusId(
@@ -67,5 +93,7 @@ export function decisionId(seq: number): string {
 
 // Stage assignments use a distinct marker followed by product and stage slots.
 export function stageAssignmentId(prodSeq: number, stageSeq: number): string {
-  return `${UUID_PREFIX}00000000b0${prodSeq.toString(HEX_RADIX)}${stageSeq}`;
+  const product = fixedHex(prodSeq, ASSIGNMENT_PRODUCT_FIELD_WIDTH);
+  const stage = fixedHex(stageSeq, ASSIGNMENT_STAGE_FIELD_WIDTH);
+  return `${UUID_PREFIX}000000${product.slice(0, 2)}b0${product.slice(2)}${stage}`;
 }

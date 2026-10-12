@@ -234,6 +234,20 @@ export async function validateSeedProfile(
     decisionRecords,
   ] = await loadProfileRecords(prisma, profile);
 
+  const scope = SEED_PROFILE_SCOPES[profile];
+  for (const [dimension, expected, actual] of [
+    ["users", scope.userIds, users.map(({ id }) => id)],
+    ["projects", scope.projectIds, projects.map(({ id }) => id)],
+    ["reports", scope.reportIds, reports.map(({ id }) => id)],
+  ] as const) {
+    const present = new Set(actual);
+    const missing = expected.filter((id) => !present.has(id));
+    if (missing.length > 0) {
+      throw new Error(
+        `Seed profile ${profile} missing ${dimension}: ${missing.join(", ")}`,
+      );
+    }
+  }
   assertCountBounds(profile, counts);
   assertProjectGroupIntegrity(profile, users, projects);
   assertPublishedSnapshotIntegrity(profile, reports);

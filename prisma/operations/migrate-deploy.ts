@@ -11,6 +11,7 @@ import { requireEnv } from "../guards/_require-env.js";
 interface SpawnResult {
   readonly status: number | null;
   readonly signal: NodeJS.Signals | null;
+  readonly error?: Error;
 }
 
 type MigrateDeploySpawn = (
@@ -40,15 +41,22 @@ export function runMigrateDeploy(
     delete childEnvironment.PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION;
   assertE2eRuntimeDestructive("migrate-deploy", childEnvironment);
   const repoRoot = path.resolve(import.meta.dirname, "../..");
-  const result = spawn("pnpm", ["exec", "prisma", "migrate", "deploy"], {
-    cwd: repoRoot,
-    env: childEnvironment,
-    shell: false,
-    stdio: "inherit",
-  });
-  if (result.status !== 0)
+  let result: SpawnResult;
+  try {
+    result = spawn("pnpm", ["exec", "prisma", "migrate", "deploy"], {
+      cwd: repoRoot,
+      env: childEnvironment,
+      shell: false,
+      stdio: "inherit",
+    });
+  } catch (error) {
+    throw new Error(`prisma migrate deploy could not start`, { cause: error });
+  }
+  const spawnDetail = result.error ? ` error=${result.error.message}` : "";
+  if (result.error || result.status !== 0)
     throw new Error(
-      `prisma migrate deploy failed with exit code ${result.status ?? "unknown"}`,
+      `prisma migrate deploy failed with exit code ${result.status ?? "unknown"} signal=${String(result.signal)}${spawnDetail}`,
+      { cause: result.error },
     );
 }
 

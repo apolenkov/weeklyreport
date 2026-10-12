@@ -55,7 +55,7 @@ export async function seedMinimal(prisma: PrismaClient): Promise<void> {
   };
   const active = SEED_REPORTS.active;
 
-  console.log("[seed-demo] Wiping existing data...");
+  console.log("[seed-minimal] Wiping existing data...");
   await wipeSeedData(prisma);
   await seedScaffold(prisma, dataset);
   await prisma.report.create({

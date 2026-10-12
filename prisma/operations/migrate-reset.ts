@@ -8,13 +8,15 @@ import {
 import { isEntrypoint } from "../guards/_entrypoint.js";
 import { requireEnv } from "../guards/_require-env.js";
 
-interface MigrateResetEnvironment extends DestructiveTargetEnv {
+interface MigrateResetEnvironment
+  extends DestructiveTargetEnv, NodeJS.ProcessEnv {
   readonly DATABASE_URL?: string;
 }
 
 interface SpawnResult {
   readonly status: number | null;
   readonly signal: NodeJS.Signals | null;
+  readonly error?: Error;
 }
 
 type Spawn = (
@@ -34,38 +36,30 @@ export function runMigrateReset(
   spawn: Spawn = (command, args, options) =>
     spawnSync(command, [...args], options),
 ): void {
-  const databaseUrl = requireEnvFrom(environment, "DATABASE_URL");
+  const databaseUrl = requireEnv("DATABASE_URL", environment);
   assertE2eRuntimeDestructiveTarget("migrate-reset", databaseUrl, environment);
-  const result = spawn(
-    "pnpm",
-    ["exec", "prisma", "migrate", "reset", "--force"],
-    {
+  let result: SpawnResult;
+  try {
+    result = spawn("pnpm", ["exec", "prisma", "migrate", "reset", "--force"], {
       cwd: path.resolve(import.meta.dirname, "../.."),
       env: { ...environment, DATABASE_URL: databaseUrl },
       shell: false,
       stdio: "inherit",
-    },
-  );
-  if (result.status !== 0) {
+    });
+  } catch (error) {
+    throw new Error(`[migrate-reset] prisma migrate reset could not start`, {
+      cause: error,
+    });
+  }
+  const spawnDetail = result.error ? ` error=${result.error.message}` : "";
+  if (result.error || result.status !== 0) {
     throw new Error(
-      `[migrate-reset] prisma migrate reset failed with ` +
-        `exit=${String(result.status)} signal=${String(result.signal)}`,
+      `[migrate-reset] prisma migrate reset failed with exit=${String(result.status)} signal=${String(result.signal)}${spawnDetail}`,
+      { cause: result.error },
     );
   }
 }
 
-const requireEnvFrom = (
-  environment: MigrateResetEnvironment,
-  key: "DATABASE_URL",
-): string => {
-  const value = environment[key];
-  if (!value) throw new Error(`Missing required environment variable: ${key}`);
-  return value;
-};
-
 if (isEntrypoint(import.meta.url)) {
-  runMigrateReset({
-    ...process.env,
-    DATABASE_URL: requireEnv("DATABASE_URL"),
-  });
+  runMigrateReset(process.env);
 }

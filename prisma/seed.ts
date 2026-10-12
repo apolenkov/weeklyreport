@@ -44,8 +44,12 @@ const DATABASE_URL = requireEnv("DATABASE_URL");
 async function main(): Promise<void> {
   assertE2eRuntimeDestructive("seed");
   const pool = new pg.Pool({ connectionString: DATABASE_URL });
-  const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
+  let prisma: PrismaClient | undefined;
+  let primaryFailed = false;
+  let primary: unknown;
+  let summary: Parameters<typeof logSeedSummary>[0] | undefined;
   try {
+    prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
     const organization = await seedOrganizationBaseline(prisma);
     const { ownership, count: stageAssignments } =
       await seedStageAssignments(prisma);
@@ -72,7 +76,7 @@ async function main(): Promise<void> {
     await assertSeedCoverage(prisma, "seed", SEED_REPORTS.active.id);
     assertAssistantReadiness("full");
 
-    logSeedSummary({
+    summary = {
       ...organization,
       stageAssignments,
       reports:
@@ -88,11 +92,37 @@ async function main(): Promise<void> {
       reminderPolicies: reminders.policies,
       reminderRules: reminders.rules,
       ...adminExamples,
-    });
-  } finally {
-    await prisma.$disconnect();
-    await pool.end();
+    };
+  } catch (error) {
+    primaryFailed = true;
+    primary = error;
   }
+  const cleanupErrors: unknown[] = [];
+  if (prisma) {
+    try {
+      await prisma.$disconnect();
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+  }
+  try {
+    await pool.end();
+  } catch (error) {
+    cleanupErrors.push(error);
+  }
+  if (primaryFailed) {
+    if (cleanupErrors.length > 0) {
+      throw new AggregateError(
+        [primary, ...cleanupErrors],
+        "seed failed during cleanup",
+        { cause: primary },
+      );
+    }
+    throw primary;
+  }
+  if (cleanupErrors.length > 0)
+    throw new AggregateError(cleanupErrors, "seed cleanup failed");
+  if (summary) logSeedSummary(summary);
 }
 
 void main().catch((error: unknown) => {

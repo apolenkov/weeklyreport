@@ -53,17 +53,46 @@ export async function createE2eDatabase(
   const client = new pg.Client({
     connectionString: maintenanceUrlFor(targetUrl),
   });
-  await client.connect();
+  const primary: { present: boolean; value: unknown } = {
+    present: false,
+    value: undefined,
+  };
   try {
+    await client.connect();
     const existing = await client.query<{ datname: string }>(
       "SELECT datname FROM pg_database WHERE datname = $1",
       [E2E_DATABASE_NAME],
     );
-    if (existing.rows[0] !== undefined) return;
-    await client.query(`CREATE DATABASE ${quoteIdentifier(E2E_DATABASE_NAME)}`);
-  } finally {
-    await client.end();
+    if (existing.rows[0] === undefined) {
+      await client.query(
+        `CREATE DATABASE ${quoteIdentifier(E2E_DATABASE_NAME)}`,
+      );
+    }
+  } catch (error) {
+    primary.present = true;
+    primary.value = error;
   }
+  const cleanupErrors: unknown[] = [];
+  try {
+    await client.end();
+  } catch (error) {
+    cleanupErrors.push(error);
+  }
+  if (primary.present) {
+    if (cleanupErrors.length > 0) {
+      throw new AggregateError(
+        [primary.value, ...cleanupErrors],
+        "create-e2e-database failed during cleanup",
+        { cause: primary.value },
+      );
+    }
+    throw primary.value;
+  }
+  if (cleanupErrors.length > 0)
+    throw new AggregateError(
+      cleanupErrors,
+      "create-e2e-database cleanup failed",
+    );
 }
 
 if (isEntrypoint(import.meta.url)) {

@@ -2,11 +2,16 @@ import type { PrismaClient } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 
 import { provisionalPublishedSnapshot } from "../support/published-snapshot.js";
-import { ACTIVE_REPORT_ID } from "../support/seed-constants.js";
+import {
+  ACTIVE_REPORT_ID,
+  HEAD_USER_ID,
+  LEAD_1_ID,
+} from "../support/seed-constants.js";
 import {
   assertActiveReminderRuleIntegrity,
   assertPendingReopenRequestIntegrity,
 } from "./seed-profile-journeys.js";
+import { SEED_PROFILE_SCOPES } from "./seed-profile-scope.js";
 import {
   assertProjectGroupIntegrity,
   assertPublishedSnapshotIntegrity,
@@ -227,48 +232,192 @@ describe("seed profile snapshot content proof", () => {
   function profilePrisma(dataset: {
     items: readonly (typeof baseItem)[];
     risks: readonly (typeof baseRisk)[];
+    missing?: { dimension: "users" | "projects" | "reports"; id: string };
+    extraUser?: string;
   }): PrismaClient {
+    const scope = SEED_PROFILE_SCOPES.minimal;
+    const missing = dataset.missing;
+    const users: {
+      id: string;
+      email: string;
+      name: string;
+      reportingGroupId: string;
+    }[] = scope.userIds
+      .filter((id) => missing?.dimension !== "users" || id !== missing.id)
+      .map((id) => ({
+        id,
+        email: `${id}@synthetic.invalid`,
+        name: "Synthetic actor",
+        reportingGroupId: GROUP,
+      }));
+    if (dataset.extraUser)
+      users.push({
+        id: dataset.extraUser,
+        email: "outside@synthetic.invalid",
+        name: "Outside actor",
+        reportingGroupId: GROUP,
+      });
+    const projects = scope.projectIds
+      .filter((id) => missing?.dimension !== "projects" || id !== missing.id)
+      .map((id) => ({
+        id,
+        name: "Synthetic product",
+        leadId: LEAD_1_ID,
+        groupProducts: [{ groupId: GROUP }],
+      }));
+    const reports = scope.reportIds
+      .filter((id) => missing?.dimension !== "reports" || id !== missing.id)
+      .map((id) => ({
+        id,
+        weekLabel: "Synthetic week",
+        status: "draft",
+        publishedSnapshot: null,
+        periodState: "open",
+        sections: [{ id: sectionId, status: "draft", items: dataset.items }],
+      }));
+    interface IdFilter {
+      where: { id: { in: readonly string[] } };
+    }
+    interface ReportFilter {
+      where: { reportId: { in: readonly string[] } };
+    }
+    interface RecordFilter {
+      where: { reportSection: { reportId: { in: readonly string[] } } };
+      select: Record<string, unknown>;
+    }
+    const sections = reports.flatMap((report) =>
+      report.sections.map((section) => ({ ...section, reportId: report.id })),
+    );
+    const recordRows = <T extends { reportSectionId: string }>(
+      rows: readonly T[],
+      reportIds: readonly string[],
+    ) =>
+      rows.filter((row) =>
+        sections.some(
+          (section) =>
+            section.id === row.reportSectionId &&
+            reportIds.includes(section.reportId),
+        ),
+      );
+    const selected = <T extends { id: string }>(
+      rows: readonly T[],
+      args: { where: { id: { in: readonly string[] } } },
+    ): readonly T[] => rows.filter((row) => args.where.id.in.includes(row.id));
     return {
       user: {
-        count: vi.fn().mockResolvedValue(4),
-        findMany: vi.fn().mockResolvedValue([]),
+        count: vi.fn((args: IdFilter) =>
+          Promise.resolve(selected(users, args).length),
+        ),
+        findMany: vi.fn((args: IdFilter) =>
+          Promise.resolve(selected(users, args)),
+        ),
       },
       project: {
-        count: vi.fn().mockResolvedValue(1),
-        findMany: vi.fn().mockResolvedValue([]),
+        count: vi.fn((args: IdFilter) =>
+          Promise.resolve(selected(projects, args).length),
+        ),
+        findMany: vi.fn((args: IdFilter) =>
+          Promise.resolve(selected(projects, args)),
+        ),
       },
       report: {
-        count: vi.fn().mockResolvedValue(1),
-        findMany: vi.fn().mockResolvedValue([]),
-        findUnique: vi.fn().mockResolvedValue({
-          periodState: "open",
-          sections: [
-            {
-              status: "draft",
-              items: [{ id: "a0000000-0000-4000-8000-000000000501" }],
-            },
-          ],
-        }),
+        count: vi.fn((args: IdFilter) =>
+          Promise.resolve(selected(reports, args).length),
+        ),
+        findMany: vi.fn((args: IdFilter) =>
+          Promise.resolve(
+            selected(reports, args).map(
+              ({
+                periodState: _periodState,
+                sections: reportSections,
+                ...report
+              }) => ({
+                ...report,
+                sections: reportSections.map(({ id }) => ({ id })),
+              }),
+            ),
+          ),
+        ),
+        findUnique: vi.fn(({ where }: { where: { id: string } }) =>
+          Promise.resolve(reports.find((row) => row.id === where.id) ?? null),
+        ),
       },
-      reportSection: { count: vi.fn().mockResolvedValue(1) },
+      reportSection: {
+        count: vi.fn((args: ReportFilter) =>
+          Promise.resolve(
+            sections.filter((section) =>
+              args.where.reportId.in.includes(section.reportId),
+            ).length,
+          ),
+        ),
+      },
       item: {
-        count: vi.fn().mockResolvedValue(dataset.items.length),
+        count: vi.fn((args: RecordFilter) =>
+          Promise.resolve(
+            recordRows(dataset.items, args.where.reportSection.reportId.in)
+              .length,
+          ),
+        ),
         findMany: vi
           .fn()
-          .mockImplementation((args: { select: Record<string, unknown> }) =>
-            Promise.resolve(applySelect(dataset.items, args.select)),
+          .mockImplementation((args: RecordFilter) =>
+            Promise.resolve(
+              applySelect(
+                recordRows(dataset.items, args.where.reportSection.reportId.in),
+                args.select,
+              ),
+            ),
           ),
       },
       risk: {
         findMany: vi
           .fn()
-          .mockImplementation((args: { select: Record<string, unknown> }) =>
-            Promise.resolve(applySelect(dataset.risks, args.select)),
+          .mockImplementation((args: RecordFilter) =>
+            Promise.resolve(
+              applySelect(
+                recordRows(dataset.risks, args.where.reportSection.reportId.in),
+                args.select,
+              ),
+            ),
           ),
       },
       decision: { findMany: vi.fn().mockResolvedValue([]) },
     } as unknown as PrismaClient;
   }
+
+  it.each([
+    ["users", HEAD_USER_ID],
+    ["projects", SEED_PROFILE_SCOPES.minimal.projectIds[0]],
+    ["reports", ACTIVE_REPORT_ID],
+  ] as const)(
+    "rejects the missing required %s identity %s before volume checks",
+    async (dimension, id) => {
+      await expect(
+        validateSeedProfile(
+          profilePrisma({
+            items: [baseItem],
+            risks: [baseRisk],
+            missing: { dimension, id },
+          }),
+          "minimal",
+        ),
+      ).rejects.toThrow(`Seed profile minimal missing ${dimension}: ${id}`);
+    },
+  );
+
+  it("does not let an outside-scope actor replace the required Head", async () => {
+    await expect(
+      validateSeedProfile(
+        profilePrisma({
+          items: [baseItem],
+          risks: [baseRisk],
+          missing: { dimension: "users", id: HEAD_USER_ID },
+          extraUser: "a0000000-0000-4000-8000-00000000eff5",
+        }),
+        "minimal",
+      ),
+    ).rejects.toThrow(`Seed profile minimal missing users: ${HEAD_USER_ID}`);
+  });
 
   it("returns equal snapshots for identical reads", async () => {
     const dataset = { items: [baseItem], risks: [baseRisk] };

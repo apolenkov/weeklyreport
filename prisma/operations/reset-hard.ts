@@ -195,7 +195,11 @@ async function truncateAll(prisma: PrismaClient): Promise<void> {
     console.warn("[reset-hard] No app tables found in public schema");
     return;
   }
-  const quoted = rows.map((r) => quotePgIdentifier(r.tablename)).join(", ");
+  const quoted = rows
+    .map(
+      (r) => `${quotePgIdentifier("public")}.${quotePgIdentifier(r.tablename)}`,
+    )
+    .join(", ");
   await prisma.$executeRawUnsafe(
     `TRUNCATE TABLE ${quoted} RESTART IDENTITY CASCADE;`,
   );
@@ -224,9 +228,13 @@ export async function runResetHard(): Promise<void> {
       cwd: REPO_ROOT,
       env: { ...process.env },
     });
-    if (migrate.status !== 0) {
+    const migrateDetail = migrate.error
+      ? ` error=${migrate.error.message}`
+      : "";
+    if (migrate.error || migrate.status !== 0) {
       throw new Error(
-        `prisma migrate deploy failed with exit code ${migrate.status ?? "unknown"}`,
+        `prisma migrate deploy failed with exit code ${migrate.status ?? "unknown"} signal=${String(migrate.signal)}${migrateDetail}`,
+        { cause: migrate.error },
       );
     }
 
@@ -252,9 +260,11 @@ export async function runResetHard(): Promise<void> {
         env: { ...process.env },
       },
     );
-    if (seed.status !== 0) {
+    const seedDetail = seed.error ? ` error=${seed.error.message}` : "";
+    if (seed.error || seed.status !== 0) {
       throw new Error(
-        `seed profile ${profile} exited with code ${seed.status ?? "unknown"}`,
+        `seed profile ${profile} exited with code ${seed.status ?? "unknown"} signal=${String(seed.signal)}${seedDetail}`,
+        { cause: seed.error },
       );
     }
 

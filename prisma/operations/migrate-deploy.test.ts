@@ -1,3 +1,5 @@
+import { spawnSync } from "node:child_process";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { runMigrateDeploy } from "./migrate-deploy.js";
@@ -94,4 +96,67 @@ describe("migrate deploy boundary", () => {
       expect.objectContaining({ shell: false, stdio: "inherit" }),
     );
   });
+});
+
+it("reports a genuine OS spawn failure and stops before another action", () => {
+  const result = spawnSync("/f09-no-such-executable", [], {
+    shell: false,
+    timeout: 1000,
+    stdio: "pipe",
+  });
+  expect(result.status).toBeNull();
+  expect(result.signal).toBeNull();
+  expect(result.error?.message).toContain("ENOENT");
+  console.log("Synthetic OS receipt", {
+    status: result.status,
+    signal: result.signal,
+    error: result.error?.message,
+  });
+  const spawn = vi.fn(() => result);
+  let failure: unknown;
+  try {
+    runMigrateDeploy(environment, spawn);
+  } catch (error) {
+    failure = error;
+  }
+  expect(spawn).toHaveBeenCalledOnce();
+  expect(failure).toBeInstanceOf(Error);
+  if (!(failure instanceof Error)) throw new Error("Expected producer failure");
+  expect(failure.message).toContain("migrate deploy");
+  expect(failure.message).toContain("ENOENT");
+  expect(failure.cause).toBe(result.error);
+});
+
+it("preserves the actual signal from a bounded self-terminated Node child", () => {
+  const result = spawnSync(
+    process.execPath,
+    ["-e", "process.kill(process.pid, 'SIGTERM')"],
+    { shell: false, timeout: 5000, stdio: "pipe" },
+  );
+  expect(result.error).toBeUndefined();
+  expect(result.status).toBeNull();
+  expect(result.signal).toBe("SIGTERM");
+  console.log("Synthetic OS receipt", {
+    status: result.status,
+    signal: result.signal,
+    error: result.error,
+  });
+  expect(() => runMigrateDeploy(environment, () => result)).toThrow("SIGTERM");
+});
+
+it("keeps context and cause when the spawn boundary itself throws", () => {
+  const primary = new Error("Synthetic spawn boundary failure");
+  let failure: unknown;
+  try {
+    runMigrateDeploy(environment, () => {
+      throw primary;
+    });
+  } catch (error) {
+    failure = error;
+  }
+  expect(failure).toBeInstanceOf(Error);
+  if (!(failure instanceof Error))
+    throw new Error("Expected contextual producer failure");
+  expect(failure.message).toContain("migrate deploy");
+  expect(failure.cause).toBe(primary);
 });
