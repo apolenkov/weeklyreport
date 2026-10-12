@@ -161,7 +161,7 @@ required retention in days, using the repository backup image and a one-shot
 mode of `backup-loop.sh` that exits with the dump's status. The one-shot mode
 MUST NOT require `BACKUP_INTERVAL_SECONDS`. The chart MUST NOT claim off-cluster
 protection. Backup dumps MUST use the `weeklyreport-*.dump` name pattern; the
-chart MUST NOT emit or prune `customreport-*.dump` names.
+chart MUST NOT emit or prune dumps under another product prefix.
 
 #### Scenario: One-shot backup
 

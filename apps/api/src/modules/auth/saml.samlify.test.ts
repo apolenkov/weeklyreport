@@ -34,7 +34,7 @@ const spCert = readFileSync(resolve(fixtures, "sp-cert.pem"), "utf8");
 const IDP_ENTITY_ID = "http://idp.test/metadata";
 const SP_ENTITY_ID = "http://sp.test/metadata";
 const SP_ACS = "http://sp.test/acs";
-const TEST_EMAIL = "saml-user@customreport.test";
+const TEST_EMAIL = "saml-user@weeklyreport.test";
 const TEST_DISPLAY_NAME = "SAML Test User";
 
 type IdPInstance = ReturnType<typeof samlify.IdentityProvider>;
@@ -201,7 +201,7 @@ describe("SAML hardening — samlify mock IdP integration", () => {
     const signed = await mintResponse(buildIdP());
     const xml = Buffer.from(signed, "base64").toString("utf8");
     const mutated = Buffer.from(
-      xml.replace(TEST_EMAIL, "attacker@customreport.test"),
+      xml.replace(TEST_EMAIL, "attacker@weeklyreport.test"),
     ).toString("base64");
 
     await expect(parseIdentity(mutated)).rejects.toThrow(/signature/i);

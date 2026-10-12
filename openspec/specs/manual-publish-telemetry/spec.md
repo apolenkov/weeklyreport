@@ -22,7 +22,7 @@ The system MUST increment `weeklyreportReportsSubmittedTotal`
 successfully publishes a period. The increments MUST happen only after
 the repository write succeeds. The `from` label MUST carry the actual
 prior `periodStatus` (`"open"` or `"reopened"`), not a hardcoded
-value. The publish path MUST NOT emit `customreport_*` series.
+value. The publish path MUST NOT emit series under another product prefix.
 
 #### Scenario: Head publishes an open period
 
