@@ -1,11 +1,11 @@
 import {
   assertE2eRuntimeDestructive,
-  E2E_DATABASE_NAME,
   E2E_DESTRUCTIVE_CONSENT,
   parseE2eRuntimeDatabaseTarget,
   parseE2eRuntimeRedisTarget,
   sameLocalPostgresDatabaseTarget,
 } from "../../prisma/guards/_destructive-guard.js";
+import { resolveE2eLane } from "./lane.js";
 
 export interface E2eRuntimeTarget {
   readonly databaseUrl: string;
@@ -34,9 +34,10 @@ export function validateE2eRuntimeTarget(
   }
 
   const e2eTarget = parseE2eRuntimeDatabaseTarget(scriptName, e2eDatabaseUrl);
-  if (e2eTarget.database !== E2E_DATABASE_NAME) {
+  const lane = resolveE2eLane(env);
+  if (e2eTarget.database !== lane.database) {
     throw new Error(
-      `[${scriptName}] E2E_DATABASE_URL database must be exactly ${E2E_DATABASE_NAME}; got "${e2eTarget.database}".`,
+      `[${scriptName}] E2E_DATABASE_URL database must be exactly ${lane.database}; got "${e2eTarget.database}".`,
     );
   }
   if (

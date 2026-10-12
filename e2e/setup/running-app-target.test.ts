@@ -74,3 +74,30 @@ void test("rejects an app without the probe procedure", async () => {
 void test("rejects an unreachable app", async () => {
   await expectRejection(new Error("connect ECONNREFUSED"), "ECONNREFUSED");
 });
+
+void test("a lane run accepts only its own database and Redis DB", async () => {
+  const previous = process.env.E2E_LANE;
+  process.env.E2E_LANE = "a";
+  try {
+    await assertRunningAppTarget(SIGNAL, () =>
+      Promise.resolve(
+        trpcResponse({ database: "customreport_e2e_lane_a_test", redisDb: 1 }),
+      ),
+    );
+    await expectRejection(
+      trpcResponse({ database: "customreport_e2e", redisDb: 15 }),
+      "customreport_e2e_lane_a_test",
+    );
+    await expectRejection(
+      trpcResponse({ database: "customreport_e2e_lane_b_test", redisDb: 2 }),
+      "customreport_e2e_lane_a_test",
+    );
+    await expectRejection(
+      trpcResponse({ database: "customreport_e2e_lane_a_test", redisDb: 2 }),
+      "Redis DB 1",
+    );
+  } finally {
+    if (previous === undefined) delete process.env.E2E_LANE;
+    else process.env.E2E_LANE = previous;
+  }
+});

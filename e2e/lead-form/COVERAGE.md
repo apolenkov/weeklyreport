@@ -6,10 +6,17 @@ against the running web/API; it resets and seeds `customreport_e2e` with Redis
 DB 15 before every test, so exactly one e2e process may use that database at a
 time: a second process (another session, an agent, an IDE run) wipes it
 mid-test and shows up as `P2025` seeder failures or fields that lose their
-value. The e2e global setup accepts only `customreport_e2e` and rejects every
-lane database, so a second runner queues behind the first; lane databases
-(`customreport_e2e_lane_a_test` with Redis DB 1, lane b with DB 2) serve API
-integration tests and manual checks on their own dev ports. The denominator is the controls a Lead can reach
+value. The e2e global setup accepts `customreport_e2e` by default; setting
+`E2E_LANE=a` or `b` selects the provisioned lane database
+(`customreport_e2e_lane_a_test` with Redis DB 1, `customreport_e2e_lane_b_test`
+with DB 2) instead, and the setup then accepts only that lane's database and
+Redis DB, from both the environment and the running app. Two runners with
+different lanes share no data, but each lane still allows one process at a
+time and must be claimed first (coordinator-inbox `LANE`), because API
+integration tests and manual checks use the same lane databases. A lane run
+needs its own app: API `PORT` and `API_URL`, web `--port`, `DATABASE_URL`,
+`E2E_DATABASE_URL`, `REDIS_DB` for that lane, and `E2E_BASE_URL` pointing at
+that web origin. The denominator is the controls a Lead can reach
 through `/lead/report` and `/lead/report/<reportId>`, including Report, Slides
 and their dialogs. Head actions appear only where they complete a Lead
 lifecycle scenario.
