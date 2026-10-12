@@ -1,8 +1,12 @@
+import type { Prisma, PrismaClient } from "@prisma/client";
+import pg from "pg";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { requireEnv } from "../../lib/env.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
+  assertTestDatabaseUrl,
   cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
@@ -12,6 +16,97 @@ import { AdminPrismaRepository } from "./admin.prisma-repository.js";
 import { AdminUserConflictError } from "./admin-errors.js";
 
 const HISTORY_KINDS = ["acknowledgement", "verdict", "comment"] as const;
+type HistoryKind = (typeof HISTORY_KINDS)[number];
+
+const LOCK_POLL_MS = 25;
+const LOCK_WAIT_TIMEOUT_MS = 10_000;
+
+type InteractiveTransaction = <T>(
+  callback: (tx: Prisma.TransactionClient) => Promise<T>,
+  options?: { timeout?: number },
+) => Promise<T>;
+
+// Resolves the backend PID of the next interactive transaction so the lock
+// oracle can attribute an observed wait to this exact connection.
+function observeTransactionBackend(
+  prisma: PrismaClient,
+  observedPid: PromiseWithResolvers<number>,
+): PrismaService {
+  const transaction = prisma.$transaction.bind(
+    prisma,
+  ) as InteractiveTransaction;
+  return new Proxy(prisma, {
+    get(target, property): unknown {
+      if (property === "$transaction") {
+        return <T>(
+          callback: (tx: Prisma.TransactionClient) => Promise<T>,
+          options?: { timeout?: number },
+        ) =>
+          transaction(async (tx) => {
+            const rows = await tx.$queryRaw<{ pid: number }[]>`
+              SELECT pg_backend_pid()::int AS pid
+            `;
+            observedPid.resolve(expectDefined(rows[0]).pid);
+            return callback(tx);
+          }, options);
+      }
+      return Reflect.get(target, property, target) as unknown;
+    },
+  }) as unknown as PrismaService;
+}
+
+async function within<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  label: string,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(
+          () =>
+            reject(new Error(`${label} did not settle within ${timeoutMs}ms`)),
+          timeoutMs,
+        );
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
+}
+
+// Polls PostgreSQL until `waitingPid` is verifiably blocked on `blockerPid` —
+// elapsed time alone never proves a lock wait.
+async function waitForLockWaiter(
+  oracle: pg.Client,
+  waitingPid: number,
+  blockerPid: number,
+): Promise<void> {
+  const deadline = Date.now() + LOCK_WAIT_TIMEOUT_MS;
+  while (Date.now() < deadline) {
+    const observed = await oracle.query<{ blocked: boolean }>(
+      `SELECT EXISTS (
+         SELECT 1 FROM pg_stat_activity AS activity
+         WHERE activity.pid = $1
+           AND activity.state = 'active'
+           AND activity.wait_event_type = 'Lock'
+       )
+       AND EXISTS (
+         SELECT 1 FROM pg_locks AS lock
+         WHERE lock.pid = $1 AND NOT lock.granted
+       )
+       AND $2::int = ANY (pg_blocking_pids($1::int)) AS blocked`,
+      [waitingPid, blockerPid],
+    );
+    if (observed.rows[0]?.blocked === true) return;
+    await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
+  }
+  throw new Error(
+    `Timed out after ${String(LOCK_WAIT_TIMEOUT_MS)}ms waiting for backend ${String(waitingPid)} to block on ${String(blockerPid)}`,
+  );
+}
 
 describe("admin user deletion retains live reviewer history (integration)", () => {
   const prisma = createTestPrisma();
@@ -61,6 +156,53 @@ describe("admin user deletion retains live reviewer history (integration)", () =
         data: { reviewerId, itemId, text: "Retained review comment" },
       });
     }
+  }
+
+  function historyInsert(
+    kind: HistoryKind,
+    rowId: string,
+    userId: string,
+  ): { constraint: string; text: string; values: unknown[] } {
+    if (kind === "acknowledgement") {
+      return {
+        constraint: "ReviewAcknowledgement_userId_fkey",
+        text: 'INSERT INTO "ReviewAcknowledgement" ("id", "userId", "reportId", "groupId", "seenAt") VALUES ($1, $2, $3, $4, now())',
+        values: [
+          rowId,
+          userId,
+          data.report.id,
+          expectDefined(data.lead.reportingGroupId),
+        ],
+      };
+    }
+    if (kind === "verdict") {
+      return {
+        constraint: "SectionReview_reviewerId_fkey",
+        text: 'INSERT INTO "SectionReview" ("id", "reviewerId", "reportSectionId", "judgedVersion", "verdict", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, \'approved\', now(), now())',
+        values: [rowId, userId, data.section.id, data.section.version],
+      };
+    }
+    return {
+      constraint: "RecordComment_reviewerId_fkey",
+      text: 'INSERT INTO "RecordComment" ("id", "reviewerId", "itemId", "text", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, now(), now())',
+      values: [rowId, userId, itemId, "Retained review comment"],
+    };
+  }
+
+  function historyRow(kind: HistoryKind, rowId: string) {
+    if (kind === "acknowledgement") {
+      return prisma.reviewAcknowledgement.findUnique({ where: { id: rowId } });
+    }
+    if (kind === "verdict") {
+      return prisma.sectionReview.findUnique({ where: { id: rowId } });
+    }
+    return prisma.recordComment.findUnique({ where: { id: rowId } });
+  }
+
+  function historyCount(kind: HistoryKind): Promise<number> {
+    if (kind === "acknowledgement") return prisma.reviewAcknowledgement.count();
+    if (kind === "verdict") return prisma.sectionReview.count();
+    return prisma.recordComment.count();
   }
 
   async function readHistoryAndAnchors() {
@@ -182,4 +324,150 @@ describe("admin user deletion retains live reviewer history (integration)", () =
     ).toEqual(unrelated);
     expect(await readHistoryAndAnchors()).toEqual(before);
   });
+
+  it.each(HISTORY_KINDS)(
+    "rejects the racing delete as a conflict when the %s reference commits first",
+    async (kind) => {
+      // An uncommitted reference INSERT holds FOR KEY SHARE on the user row,
+      // so removeUser's delete waits on that transaction; once it commits the
+      // RESTRICT FK refuses the delete and P2003 maps to the conflict error.
+      const rowId = crypto.randomUUID();
+      const reference = historyInsert(kind, rowId, subject.id);
+      const databaseUrl = requireEnv(process.env, "E2E_DATABASE_URL");
+      assertTestDatabaseUrl(databaseUrl);
+      const referenceClient = new pg.Client({ connectionString: databaseUrl });
+      const oracle = new pg.Client({ connectionString: databaseUrl });
+      const observedPid = Promise.withResolvers<number>();
+      let removal: Promise<void> | undefined;
+      try {
+        await Promise.all([referenceClient.connect(), oracle.connect()]);
+        const referencePid = expectDefined(
+          (
+            await referenceClient.query<{ pid: number }>(
+              "SELECT pg_backend_pid()::int AS pid",
+            )
+          ).rows[0],
+        ).pid;
+        await referenceClient.query("BEGIN");
+        await referenceClient.query(reference.text, reference.values);
+
+        const observedRepo = new AdminPrismaRepository(
+          observeTransactionBackend(prisma, observedPid),
+        );
+        removal = observedRepo.removeUser(subject.id);
+        const waitingPid = await within(
+          observedPid.promise,
+          LOCK_WAIT_TIMEOUT_MS,
+          "removeUser backend observation",
+        );
+        await waitForLockWaiter(oracle, waitingPid, referencePid);
+        await referenceClient.query("COMMIT");
+        await expect(
+          within(removal, LOCK_WAIT_TIMEOUT_MS, "removeUser settlement"),
+        ).rejects.toBeInstanceOf(AdminUserConflictError);
+        await expect(removal).rejects.toThrow(
+          "User is referenced by existing records; deactivate the user instead.",
+        );
+      } finally {
+        await referenceClient.query("ROLLBACK").catch(() => undefined);
+        await (removal ?? Promise.resolve()).then(
+          () => undefined,
+          () => undefined,
+        );
+        await Promise.allSettled([referenceClient.end(), oracle.end()]);
+      }
+      // User and the just-committed reference both survive; nothing else moved.
+      expect(
+        await prisma.user.findUnique({ where: { id: subject.id } }),
+      ).toEqual(subject);
+      expect(await historyRow(kind, rowId)).not.toBeNull();
+      for (const other of HISTORY_KINDS) {
+        expect(await historyCount(other)).toBe(other === kind ? 2 : 1);
+      }
+      expect(
+        await prisma.user.findUnique({ where: { id: unrelated.id } }),
+      ).toEqual(unrelated);
+    },
+  );
+
+  it.each(HISTORY_KINDS)(
+    "fails the racing %s reference with 23503 when the delete commits first",
+    async (kind) => {
+      // The DELETE holds the user row, so the reference insert's FOR KEY SHARE
+      // check waits on it; committing the delete leaves the FK unsatisfied.
+      const rowId = crypto.randomUUID();
+      const reference = historyInsert(kind, rowId, subject.id);
+      const before = await readHistoryAndAnchors();
+      const databaseUrl = requireEnv(process.env, "E2E_DATABASE_URL");
+      assertTestDatabaseUrl(databaseUrl);
+      const removal = new pg.Client({ connectionString: databaseUrl });
+      const referencer = new pg.Client({ connectionString: databaseUrl });
+      const oracle = new pg.Client({ connectionString: databaseUrl });
+      let insertion: Promise<unknown> | undefined;
+      try {
+        await Promise.all([
+          removal.connect(),
+          referencer.connect(),
+          oracle.connect(),
+        ]);
+        const removalPid = expectDefined(
+          (
+            await removal.query<{ pid: number }>(
+              "SELECT pg_backend_pid()::int AS pid",
+            )
+          ).rows[0],
+        ).pid;
+        await removal.query("BEGIN");
+        // Mirrors removeUser's statement so the held lock is the same one the
+        // production delete takes before the RESTRICT FK arbitrates the race.
+        await removal.query('DELETE FROM "User" WHERE "id" = $1', [subject.id]);
+        const referencerPid = expectDefined(
+          (
+            await referencer.query<{ pid: number }>(
+              "SELECT pg_backend_pid()::int AS pid",
+            )
+          ).rows[0],
+        ).pid;
+        insertion = referencer.query(reference.text, reference.values);
+        await waitForLockWaiter(oracle, referencerPid, removalPid);
+        await removal.query("COMMIT");
+        await expect(
+          within(
+            insertion,
+            LOCK_WAIT_TIMEOUT_MS,
+            "reference insert settlement",
+          ),
+        ).rejects.toMatchObject({
+          code: "23503",
+          constraint: reference.constraint,
+        });
+      } finally {
+        await Promise.allSettled([
+          removal.query("ROLLBACK").catch(() => undefined),
+        ]);
+        await (insertion ?? Promise.resolve()).then(
+          () => undefined,
+          () => undefined,
+        );
+        await Promise.allSettled([
+          referencer.query("ROLLBACK").catch(() => undefined),
+        ]);
+        await Promise.allSettled([
+          removal.end(),
+          referencer.end(),
+          oracle.end(),
+        ]);
+      }
+      // The delete won the arbitration: the raced reference never landed and
+      // every unrelated row survived untouched.
+      expect(
+        await prisma.user.findUnique({ where: { id: subject.id } }),
+      ).toBeNull();
+      expect(await historyRow(kind, rowId)).toBeNull();
+      expect(
+        await prisma.user.findUnique({ where: { id: unrelated.id } }),
+      ).toEqual(unrelated);
+      expect(await readHistoryAndAnchors()).toEqual(before);
+    },
+  );
 });

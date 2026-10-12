@@ -705,6 +705,11 @@ void test("pending canonical save locks write actions until connectivity returns
     await setOffline(false);
   }
   await waitClosed(ACTIVITY_FORM);
+  assert.equal(
+    refsByRole(await snapshot(), "alertdialog", "Discard changes?").length,
+    0,
+    "The settled pending save leaves no discard dialog behind",
+  );
   await saveDraft();
   await assertSavePost();
   await assertPersistedItem(text);

@@ -607,6 +607,28 @@ describe("ReportSectionsService — edge cases", () => {
     expect(saved.decisions).toHaveLength(0);
   });
 
+  it("saveDraft forwards the client-loaded version to the compare-and-set write", async () => {
+    const repository = createRepository({ ...baseSection, version: 2 });
+    const seenExpectedVersions: number[] = [];
+    const baseSaveSection = repository.saveSection.bind(repository);
+    repository.saveSection = (nextSection, expectedVersion) => {
+      seenExpectedVersions.push(expectedVersion);
+      return baseSaveSection(nextSection, expectedVersion);
+    };
+    const service = new ReportSectionsService(
+      repository,
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
+
+    // The stored row moved to v2 while the client loaded v1. The CAS must see
+    // the stale client value so the repository rejects the write — passing the
+    // fresh row's version would make the optimistic lock always match.
+    await service.saveDraft(validDraft({ version: 1 }), AUTHOR_ID);
+
+    expect(seenExpectedVersions).toEqual([1]);
+  });
+
   it("section with max boundary items (100) can be saved", async () => {
     const service = new ReportSectionsService(
       createRepository(baseSection),
