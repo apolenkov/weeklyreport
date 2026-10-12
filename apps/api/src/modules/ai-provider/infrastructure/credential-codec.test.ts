@@ -21,6 +21,24 @@ describe("AesGcmCredentialCodec", () => {
     });
   });
 
+  // Produced outside the module with the original domain strings: renaming the
+  // product must not change them, or stored credentials stop decrypting.
+  it("decrypts a credential and reproduces its fingerprint under the original domains", () => {
+    const codec = new AesGcmCredentialCodec(KEY, 7);
+    const stored = {
+      ciphertext: "+6AeInKS+ZCmHSDIjma9fjEY",
+      nonce: "AAECAwQFBgcICQoL",
+      tag: "Ko/yrby/JfIM9jlKBPW0cg==",
+      keyVersion: 7,
+      maskedSuffix: "••••cret",
+    };
+
+    expect(codec.decrypt(stored, context)).toBe("sk-provider-secret");
+    expect(codec.fingerprint("sk-provider-secret")).toBe(
+      "a83643ae60715ad3f04d323f6fb66635d63cd124b0afe276aa4e9910baeb02a7",
+    );
+  });
+
   it.each(["a", "abcd"])(
     "uses only the fixed mask for a short credential (%s)",
     (credential) => {

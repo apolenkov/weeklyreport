@@ -240,14 +240,14 @@ describe("createAppLogger", () => {
     const logger = createAppLogger();
 
     logger.info("org update", {
-      fullName: "CustomReport Department",
+      fullName: "WeeklyReport Department",
       shortName: "CR",
     });
 
     const parsed = JSON.parse(
       expectDefined(spy.mock.calls[0])[0] as string,
     ) as Record<string, unknown>;
-    expect(parsed.fullName).toBe("CustomReport Department");
+    expect(parsed.fullName).toBe("WeeklyReport Department");
     expect(parsed.shortName).toBe("CR");
   });
 

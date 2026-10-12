@@ -25,7 +25,7 @@ const DECISION_PART_COUNT = 3;
 const ACQUIRE_KEY_COUNT = 3;
 const CANCEL_KEY_COUNT = 3;
 const CANCEL_TOMBSTONE_MS = Math.max(WINDOW_MS, LEASE_MS) * 2;
-const KEY_PREFIX = "customreport:assistant-resource:v1:";
+const KEY_PREFIX = "weeklyreport:assistant-resource:v1:";
 
 export const REPORT_ASSISTANT_ACQUIRE_SCRIPT = `
 local time = redis.call('TIME')

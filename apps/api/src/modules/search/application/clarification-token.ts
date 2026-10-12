@@ -13,7 +13,7 @@ const CLARIFICATION_TOKEN_TTL_SECONDS =
   CLARIFICATION_TOKEN_TTL_MINUTES * SECONDS_PER_MINUTE;
 const MIN_AUTH_JWT_SECRET_LENGTH = 32;
 const CLARIFICATION_TOKEN_PURPOSE =
-  "customreport/lead-report-assistant/clarification/v1";
+  "weeklyreport/lead-report-assistant/clarification/v1";
 const CLARIFICATION_TOKEN_ALGORITHM = "HS256" as const;
 
 export const CLARIFICATION_TOKEN_KIND =

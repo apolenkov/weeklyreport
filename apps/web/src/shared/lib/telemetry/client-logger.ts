@@ -20,7 +20,7 @@ interface Entry {
 const FLUSH_MS = 2000;
 const FLUSH_AT_COUNT = 50;
 const MAX_QUEUE = 500;
-const INSTALLED_MARK = Symbol.for("customreport.client-logger.installed");
+const INSTALLED_MARK = Symbol.for("weeklyreport.client-logger.installed");
 
 // Mutable by design: a batching buffer producers push into and flush drains;
 // patchConsole reassigns console.error/warn because intercepting the global is

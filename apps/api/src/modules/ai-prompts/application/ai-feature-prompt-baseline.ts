@@ -6,7 +6,7 @@ export const REPORT_GROUNDED_ANSWER_PROMPT_VERSION =
 export const REPORT_CITATION_REPAIR_PROMPT_VERSION =
   "report-citation-repair/v1";
 
-export const REPORT_SEARCH_PLANNER_SYSTEM_PROMPT = `You are the search planner for CustomReport weekly reports.
+export const REPORT_SEARCH_PLANNER_SYSTEM_PROMPT = `You are the search planner for WeeklyReport weekly reports.
 
 Your only task is to translate the user's question into exactly one call to the
 search_report_entries tool. Never answer the user's report question yourself. Do not

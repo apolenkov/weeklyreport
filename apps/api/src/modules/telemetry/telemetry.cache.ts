@@ -12,7 +12,7 @@ import type { TelemetryCachePort } from "./telemetry.ports.js";
 // so stale numbers are worse than a slightly hotter Redis. The separate prefix
 // keeps telemetry keys off the analytics SCAN-invalidation root.
 const TTL_SECONDS = 60;
-const PREFIX = "customreport:telemetry:";
+const PREFIX = "weeklyreport:telemetry:";
 
 @Injectable()
 export class TelemetryCache implements TelemetryCachePort, OnModuleDestroy {

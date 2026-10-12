@@ -40,11 +40,11 @@ export interface AnalyticsCachePort {
   ) => Promise<T>;
 }
 
-// Under customreport:analytics: so SCAN invalidation reaches all three.
+// Under weeklyreport:analytics: so SCAN invalidation reaches all three.
 // v2 under that root orphans stale pre-bump entries without breaking invalidateAll.
-const PREFIX_HISTORY = "customreport:analytics:traffic-light:v2:";
-const PREFIX_VELOCITY = "customreport:analytics:lead-velocity:v2:";
-const PREFIX_COMPARISON = "customreport:analytics:period-comparison:v2:";
+const PREFIX_HISTORY = "weeklyreport:analytics:traffic-light:v2:";
+const PREFIX_VELOCITY = "weeklyreport:analytics:lead-velocity:v2:";
+const PREFIX_COMPARISON = "weeklyreport:analytics:period-comparison:v2:";
 
 // Sort keys at every nesting depth — JSON.stringify key whitelist would drop nested keys.
 export function stableHash(value: unknown): string {
