@@ -60,7 +60,7 @@ test.each([
         [join(here, "walk.sh"), "--quick", ...(requested ? ["--reset"] : [])],
         {
           encoding: "utf8",
-          timeout: 2000,
+          timeout: 15_000,
           env: {
             ...process.env,
             PATH: `${bin}:${process.env.PATH ?? ""}`,

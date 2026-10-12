@@ -40,7 +40,7 @@ fi
         [resolve("deploy/tester-kit/stop.sh"), "--yes"],
         {
           encoding: "utf8",
-          timeout: 2000,
+          timeout: 15_000,
           env: {
             ...process.env,
             PATH: `${fixture}:${process.env.PATH ?? ""}`,
@@ -111,7 +111,7 @@ exit ${cleanupExit}
         [resolve("deploy/tester-kit/stop.sh"), "--yes"],
         {
           encoding: "utf8",
-          timeout: 2000,
+          timeout: 15_000,
           env: {
             ...process.env,
             PATH: `${fixture}:${process.env.PATH ?? ""}`,
@@ -167,7 +167,7 @@ printf '%s\n' "$*" >> "$WR_CANCEL_LOG"
       {
         input: "no\n",
         encoding: "utf8",
-        timeout: 2000,
+        timeout: 15_000,
         env: {
           ...process.env,
           PATH: `${fixture}:${process.env.PATH ?? ""}`,

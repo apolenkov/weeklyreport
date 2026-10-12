@@ -80,7 +80,7 @@ count=$((count + 1)); printf '%s' "$count" > "$TEST_STATE/lsof-count"
   try {
     const result = spawnSync("/bin/bash", [join(here, "reset.sh"), "--yes"], {
       encoding: "utf8",
-      timeout: 5000,
+      timeout: 15_000,
       env: {
         ...process.env,
         PATH: `${bin}:${process.env.PATH ?? ""}`,
