@@ -1008,7 +1008,7 @@ model ReviewAcknowledgement {
   // Refreshed on every idempotent re-acknowledge (@default on create,
   // @updatedAt on upsert-update).
   seenAt   DateTime       @default(now()) @updatedAt
-  user     User           @relation("ReviewAckUser", fields: [userId], references: [id], onDelete: Cascade)
+  user     User           @relation("ReviewAckUser", fields: [userId], references: [id], onDelete: Restrict)
   report   Report         @relation(fields: [reportId], references: [id], onDelete: Cascade)
   group    ReportingGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
@@ -1033,7 +1033,7 @@ model SectionReview {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   reportSection   ReportSection @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
-  reviewer        User          @relation("SectionReviewReviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewer        User          @relation("SectionReviewReviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
 
   @@unique([reportSectionId, reviewerId])
   @@index([reportSectionId])
@@ -1054,7 +1054,7 @@ model RecordComment {
   decisionId String?
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
-  reviewer   User      @relation("RecordCommentReviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
+  reviewer   User      @relation("RecordCommentReviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
   item       Item?     @relation(fields: [itemId], references: [id], onDelete: Cascade)
   risk       Risk?     @relation(fields: [riskId], references: [id], onDelete: Cascade)
   decision   Decision? @relation(fields: [decisionId], references: [id], onDelete: Cascade)
