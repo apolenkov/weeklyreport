@@ -47,6 +47,7 @@ export function ReopenRequestsPaging({
 }) {
   return listQuery.isError ? (
     <DashboardNextPageIssue
+      focusOnMount={listQuery.isFetchNextPageError}
       error={listQuery.error}
       isRetrying={listQuery.isFetching}
       onRetry={() => {
@@ -89,10 +90,12 @@ function DashboardLoadMore({
 }
 
 function DashboardNextPageIssue({
+  focusOnMount,
   error,
   isRetrying,
   onRetry,
 }: {
+  readonly focusOnMount: boolean;
   readonly error: unknown;
   readonly isRetrying: boolean;
   readonly onRetry: () => void;
@@ -112,7 +115,7 @@ function DashboardNextPageIssue({
         {error instanceof Error ? error.message : "Unknown error"}
       </span>
       <button
-        ref={focusRetry}
+        ref={focusOnMount ? focusRetry : undefined}
         type="button"
         disabled={isRetrying}
         onClick={onRetry}

@@ -1,6 +1,7 @@
 import {
   AI_PROVIDER_PROFILE_CAPABILITIES,
   type AiProviderConfigurationRead,
+  aiProviderConfigurationReadSchema,
   type AiProviderControlRead,
   type AiProviderDraft,
   aiProviderDraftSchema,
@@ -1123,4 +1124,90 @@ describe("AiProviderRetainedRevisions", () => {
     expect(screen.getByRole("button", { name: "Discarding…" })).toBeDisabled();
     expect(screen.getAllByRole("button", { name: "Discard" })).toHaveLength(1);
   });
+});
+
+describe("provider persisted test and measurement state", () => {
+  it.each(["queued", "running"] as const)(
+    "locks activation while the latest test is %s",
+    (state) => {
+      const tested = aiProviderConfigurationReadSchema.parse({
+        ...revision("validated", "22222222-2222-4222-8222-222222222222"),
+        latestExecution: {
+          id: "33333333-3333-4333-8333-333333333333",
+          testSuiteVersion: "v1",
+          state,
+          outcome: null,
+          failureCode: null,
+          checks: [],
+          requestedAt: new Date(),
+          startedAt: state === "running" ? new Date() : null,
+          completedAt: null,
+        },
+      });
+      render(
+        <AiProviderCardContent
+          data={{ ...control(null), revisions: [tested] }}
+          savedRevision={tested}
+          message={null}
+          mutations={mutations() as never}
+          onSave={vi.fn()}
+        />,
+      );
+      expect(screen.getByRole("button", { name: "Activate" })).toBeDisabled();
+      expect(
+        screen.getByRole("button", {
+          name: state === "queued" ? "Queued…" : "Testing…",
+        }),
+      ).toBeDisabled();
+      expect(
+        screen.getByText(
+          "Wait for the capability test to finish before activating.",
+        ),
+      ).toBeVisible();
+      const workflow = screen.getByRole("list", {
+        name: "AI provider setup workflow",
+      });
+      expect(
+        screen.getByText("Next: Wait for capability test completion."),
+      ).toBeVisible();
+      expect(within(workflow).queryByText("Available")).toBeNull();
+      expect(
+        within(workflow).getByText("Waiting for capability test"),
+      ).toBeVisible();
+    },
+  );
+
+  it.each(["draft", "failed"] as const)(
+    "shows unmeasured dimensions for a %s revision",
+    (lifecycle) => {
+      const unmeasured = aiProviderConfigurationReadSchema.parse({
+        ...revision(lifecycle, "22222222-2222-4222-8222-222222222222"),
+        embeddings: {
+          mode: "reuse_generation",
+          model: "embed",
+          dimensions: null,
+        },
+      });
+      render(
+        <>
+          <AiProviderRevisionDetails revision={unmeasured} />
+          <AiProviderRetainedRevisions
+            revisions={[unmeasured]}
+            activeRevisionId={null}
+            busy={false}
+            restorePendingRevisionId={null}
+            discardPendingRevisionId={null}
+            onRestore={vi.fn()}
+            onDiscard={vi.fn()}
+          />
+        </>,
+      );
+      expect(screen.getByTestId("integration-ai-rag")).toHaveTextContent(
+        "embed / not measured",
+      );
+      expect(
+        screen.getByText(/· (draft|failed) · embed \/ not measured/),
+      ).toBeVisible();
+    },
+  );
 });

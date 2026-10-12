@@ -63,8 +63,7 @@ export function annotationPatchScope(
 ): Prisma.AgentationAnnotationWhereInput {
   const authorOnly =
     source === "native-delete" ||
-    patch.comment !== undefined ||
-    patch.intent !== undefined;
+    Object.keys(patch).some((key) => key !== "status");
   return {
     ...annotationScope(access),
     ...(!mayUpdateAnnotationStatus(access, actor, source, patch.status)

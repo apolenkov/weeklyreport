@@ -1,4 +1,5 @@
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { THREAD_MESSAGES_INCLUDE } from "./agentation.repository.helpers.js";
 import { mapAnnotation, mapEvent, mapSession } from "./agentation-mappers.js";
 import { annotationScope, sessionScope } from "./agentation-scope.js";
 import type { FeedbackAccess } from "./product-feedback.repository.js";
@@ -49,7 +50,7 @@ export class AgentationReadRepository {
       include: {
         annotations: {
           orderBy: { timestamp: "asc" },
-          include: { threadMessages: { orderBy: { timestamp: "asc" } } },
+          include: THREAD_MESSAGES_INCLUDE,
         },
       },
     });
@@ -62,7 +63,7 @@ export class AgentationReadRepository {
   ): Promise<ReturnType<typeof mapAnnotation> | null> {
     const row = await this.prisma.agentationAnnotation.findFirst({
       where: { id, ...annotationScope(access) },
-      include: { threadMessages: { orderBy: { timestamp: "asc" } } },
+      include: THREAD_MESSAGES_INCLUDE,
     });
     return row ? mapAnnotation(row) : null;
   }
@@ -78,7 +79,7 @@ export class AgentationReadRepository {
         ...annotationScope(access),
       },
       orderBy: [{ createdAt: "asc" }, { id: "asc" }],
-      include: { threadMessages: { orderBy: { timestamp: "asc" } } },
+      include: THREAD_MESSAGES_INCLUDE,
     });
     return rows.map(mapAnnotation);
   }

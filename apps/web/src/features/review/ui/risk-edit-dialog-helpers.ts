@@ -11,6 +11,7 @@ import { canonicalStageNames } from "../../report-sections";
 export type RiskSeverity = "at-risk" | "blocked";
 
 export interface RiskFieldErrors {
+  parent?: string;
   text?: string;
   impact?: string;
   mitigation?: string;

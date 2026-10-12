@@ -75,7 +75,7 @@ export class ProductFeedbackMemoryRepository implements ProductFeedbackRepositor
       if (existing.authorUserId !== access.userId) {
         return Promise.reject(new FeedbackDuplicateError());
       }
-      return Promise.resolve(existing.record);
+      return Promise.resolve(structuredClone(existing.record));
     }
     const id = randomUUID();
     const now = new Date();
@@ -120,11 +120,11 @@ export class ProductFeedbackMemoryRepository implements ProductFeedbackRepositor
       agentationContext: null,
     };
     this.rows.set(id, {
-      record,
+      record: structuredClone(record),
       authorUserId: access.userId,
       authorReportingGroupId: access.reportingGroupId,
     });
-    return Promise.resolve(record);
+    return Promise.resolve(structuredClone(record));
   }
 
   list(
@@ -153,10 +153,12 @@ export class ProductFeedbackMemoryRepository implements ProductFeedbackRepositor
       focused && !pageRows.some((feedback) => feedback.id === focused.id)
         ? [focused, ...pageRows.slice(0, Math.max(0, limit - 1))]
         : pageRows;
-    return Promise.resolve({
-      feedbacks,
-      total: matches.length,
-    });
+    return Promise.resolve(
+      structuredClone({
+        feedbacks,
+        total: matches.length,
+      }),
+    );
   }
 
   update(
@@ -180,8 +182,8 @@ export class ProductFeedbackMemoryRepository implements ProductFeedbackRepositor
         : {}),
       updatedAt: new Date(),
     };
-    this.rows.set(id, { ...existing, record: updated });
-    return Promise.resolve(updated);
+    this.rows.set(id, { ...existing, record: structuredClone(updated) });
+    return Promise.resolve(structuredClone(updated));
   }
 
   delete(access: FeedbackAccess, id: string): Promise<void> {

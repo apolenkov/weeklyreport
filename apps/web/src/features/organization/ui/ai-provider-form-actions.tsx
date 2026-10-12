@@ -5,6 +5,7 @@ import type {
 import { useState } from "react";
 
 import { ConfirmationDialog } from "../../../shared/ui/dialogs/confirmation-dialog";
+import { hasPendingExecution } from "./ai-provider-configuration-fields.types";
 
 type RevisionRead = AiProviderConfigurationRead;
 
@@ -13,7 +14,10 @@ type Confirmation = "activate" | "disable" | null;
 const actionCopy = (
   lifecycle: RevisionRead["lifecycle"] | null,
   revisionId: string | null,
+  executionPending: boolean,
 ): string => {
+  if (executionPending)
+    return "Wait for the capability test to finish before activating.";
   if (lifecycle === "validated") return "Activate this tested configuration.";
   if (lifecycle === "preparing") {
     return "Embedding preparation is ready to resume.";
@@ -33,11 +37,6 @@ const testButtonLabel = (
   if (state === "queued") return "Queued…";
   if (state === "running") return "Testing…";
   return "Test capabilities";
-};
-
-const hasPendingExecution = (revision: RevisionRead | null): boolean => {
-  const state = revision?.latestExecution?.state;
-  return state === "queued" || state === "running";
 };
 
 const activateButtonLabel = (pending: boolean, preparing: boolean): string => {
@@ -86,7 +85,9 @@ function ProviderActionButtons({
   const executionPending = hasPendingExecution(revision);
   const canTest = revisionId !== null && !preparing && !executionPending;
   const canActivate =
-    revision?.lifecycle === "validated" || revision?.lifecycle === "preparing";
+    !executionPending &&
+    (revision?.lifecycle === "validated" ||
+      revision?.lifecycle === "preparing");
   return (
     <div className="flex flex-wrap gap-2">
       <button
@@ -165,7 +166,11 @@ export function AiProviderActions({
         id="ai-provider-action-guidance"
         className="text-sm text-[var(--color-muted-foreground)]"
       >
-        {actionCopy(revision?.lifecycle ?? null, revisionId)}
+        {actionCopy(
+          revision?.lifecycle ?? null,
+          revisionId,
+          hasPendingExecution(revision),
+        )}
       </p>
       <ProviderActionButtons
         revision={revision}

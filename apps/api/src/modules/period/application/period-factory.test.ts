@@ -10,6 +10,7 @@ import {
   ensureCurrentPeriod,
   type PeriodFactorySettings,
 } from "./period-factory.js";
+import { readBoundaryPeriod } from "./period-factory-lookup.js";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -301,6 +302,74 @@ describe("ensureCurrentPeriod", () => {
       message: "Stored period lifecycle is inconsistent.",
     });
     expect(create).not.toHaveBeenCalled();
+  });
+
+  it.each(["exact", "containing"] as const)(
+    "never returns a reopened %s row as the current draft",
+    async (lookup) => {
+      const reopened = makePeriodRow({
+        status: "published",
+        periodStatus: "reopened",
+        publishedAt: ANCHOR_MONDAY,
+        publishedById: PUBLISHER_ID,
+        reopenedAt: ANCHOR_MONDAY,
+      });
+      const { client, create } = makePrisma({
+        ...(lookup === "exact"
+          ? { existing: reopened }
+          : { containing: reopened }),
+        raced: reopened,
+        createThrows: P2039_PERIOD_OVERLAP,
+      });
+
+      await expect(
+        ensureCurrentPeriod(client, ANCHOR_MONDAY, SETTINGS, {
+          now: ANCHOR_MONDAY,
+        }),
+      ).rejects.toMatchObject({ name: "PeriodOverlapError" });
+      expect(create).toHaveBeenCalledOnce();
+    },
+  );
+
+  it.each([
+    {
+      label: "one eligible draft beside excluded publication",
+      extra: makePeriodRow({
+        status: "published",
+        periodStatus: "published",
+        periodState: "published",
+        publishedAt: ANCHOR_MONDAY,
+        publishedById: PUBLISHER_ID,
+      }),
+      fails: false,
+    },
+    {
+      label: "contradictory excluded row",
+      extra: makePeriodRow({ archived: true }),
+      fails: true,
+    },
+    {
+      label: "two eligible live drafts",
+      extra: makePeriodRow({ id: "second-draft" }),
+      fails: true,
+    },
+  ])("validates every returned row: $label", async ({ extra, fails }) => {
+    const { client, findMany } = makePrisma({});
+    findMany.mockReset().mockResolvedValue([makePeriodRow(), extra]);
+    const read = readBoundaryPeriod(
+      client.report,
+      ANCHOR_MONDAY,
+      ANCHOR_MONDAY,
+    );
+    if (fails)
+      await expect(read).rejects.toMatchObject({
+        name: "PeriodLifecycleIntegrityError",
+      });
+    else
+      await expect(read).resolves.toMatchObject({
+        reportId: "period-existing",
+        created: false,
+      });
   });
 
   it("concurrent create (range exclusion) re-reads and returns the winner", async () => {

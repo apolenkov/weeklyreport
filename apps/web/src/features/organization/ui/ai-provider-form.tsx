@@ -155,28 +155,6 @@ const updateEmbeddings = (
   },
 });
 
-const updateFormState = <K extends keyof AiProviderFormState>(
-  current: AiProviderFormState,
-  key: K,
-  value: AiProviderFormState[K],
-  profileCapabilities: readonly AiProviderProfileCapability[],
-): AiProviderFormState => {
-  if (key === "generation") {
-    return updateGeneration(
-      current,
-      value as AiProviderFormState["generation"],
-      profileCapabilities,
-    );
-  }
-  if (key === "embeddings") {
-    return updateEmbeddings(
-      current,
-      value as AiProviderFormState["embeddings"],
-    );
-  }
-  return { ...current, [key]: value };
-};
-
 type AiProviderFormProps = Readonly<{
   initial: AiProviderFormState;
   revision: RevisionRead | null;
@@ -238,21 +216,20 @@ export function AiProviderForm({
             ? props.revision.embeddings.credentialConfigured
             : false
         }
-        onChange={(key, value) => {
-          if (key === "generation") {
-            const generation = value as AiProviderFormState["generation"];
-            if (
-              generation.reasoningMode !== "custom" ||
-              aiProviderGenerationDraftSchema.shape.reasoningCustomValue.safeParse(
-                generation.reasoningCustomValue,
-              ).success
-            ) {
-              setReasoningError(null);
-            }
-          }
+        onGenerationChange={(generation) => {
+          if (
+            generation.reasoningMode !== "custom" ||
+            aiProviderGenerationDraftSchema.shape.reasoningCustomValue.safeParse(
+              generation.reasoningCustomValue,
+            ).success
+          )
+            setReasoningError(null);
           setForm((current) =>
-            updateFormState(current, key, value, props.profileCapabilities),
+            updateGeneration(current, generation, props.profileCapabilities),
           );
+        }}
+        onEmbeddingsChange={(embeddings) => {
+          setForm((current) => updateEmbeddings(current, embeddings));
         }}
         reasoningInvalid={visibleReasoningError !== null}
         reasoningErrorId={reasoningErrorId}

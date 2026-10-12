@@ -145,6 +145,7 @@ function ReopenPagination({
 }) {
   return listQuery.isError && hasRequests ? (
     <ReopenNextPageIssue
+      focusOnMount={listQuery.isFetchNextPageError}
       errorMessage={formatClientErrorMessage(
         "Some requests could not be loaded",
         listQuery.error,

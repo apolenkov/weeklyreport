@@ -33,7 +33,11 @@ function runEvalSha(rest: string[], state: FakeRedisState): unknown {
   const isIncrement = state.scripts.get(sha)?.includes("INCR") ?? false;
 
   if (!isIncrement) {
-    return bucket ? [bucket.count, bucket.resetAt - now] : [false, -1];
+    if (!bucket || bucket.resetAt <= now) {
+      state.buckets.delete(key);
+      return [false, -1];
+    }
+    return [bucket.count, bucket.resetAt - now];
   }
   const windowMs = Number(rest[3]);
   if (!bucket || bucket.resetAt <= now) {
@@ -77,6 +81,11 @@ export function createFakeRedisCall(): FakeRedisCall {
         return Promise.resolve(sha);
       }
       if (command === "EVALSHA") {
+        if (!state.scripts.has(rest[0] ?? "")) {
+          return Promise.reject(
+            new Error("NOSCRIPT No matching script. Please use EVAL."),
+          );
+        }
         return Promise.resolve(runEvalSha(rest, state));
       }
       if (command === "DECR" || command === "DEL") {

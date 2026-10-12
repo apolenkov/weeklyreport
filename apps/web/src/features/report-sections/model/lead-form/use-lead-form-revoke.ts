@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 
+import { mutationErrorMessage } from "../../../../shared/lib/errors/mutation-error-message";
 import type { LeadFormGeneration } from "./lead-form-generation";
 import type { LeadFormWritePort } from "./lead-form-write-port";
 import { useGenerationState } from "./use-generation-state";
@@ -52,8 +53,7 @@ export function useLeadFormRevoke({
       toast.success("Section unlocked");
     } catch (error: unknown) {
       if (!isCurrent()) return;
-      const message = error instanceof Error ? error.message : "Revoke failed";
-      toast.error(message);
+      toast.error(mutationErrorMessage(error, "Revoke failed"));
     }
   };
 

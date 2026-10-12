@@ -1,9 +1,10 @@
-import { Logger, Module } from "@nestjs/common";
+import { Module } from "@nestjs/common";
 
 import { ConfigModule } from "../../infrastructure/config/config.module.js";
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { AuditLogger } from "../../lib/audit-logger.js";
-import { AUDIT_LOGGER } from "../../lib/audit-logger.js";
+import { APP_LOGGER, AUDIT_LOGGER } from "../../lib/audit-logger.js";
+import type { AppLogger } from "../../lib/logger.js";
 import { AdminModule, SnapshotAdminService } from "../admin/index.js";
 import { AnalyticsCache, AnalyticsModule } from "../analytics/index.js";
 import {
@@ -61,24 +62,24 @@ import { PeriodPrometheusTelemetry } from "./infrastructure/period-prometheus-te
         prisma: PrismaService,
         carryOverService: CarryOverService,
         carryOverRepository: CarryOverPrismaRepository,
+        logger: AppLogger,
       ): AutoCarryOver => {
-        // The carry-over orchestrator logs through a Nest Logger adapter —
-        // its deps contract predates APP_LOGGER and expects the Nest shape.
-        const nestLogger = new Logger("AutoCarryOver");
+        // Preserve outcome fields through the same structured logger as bootstrap carry-over.
         const autoCarryOverDeps = buildAutoCarryOverDeps({
           prisma,
           repository: carryOverRepository,
           carryOverService,
-          logger: {
-            info: (message, context) => nestLogger.log({ message, ...context }),
-            warn: (message, context) =>
-              nestLogger.warn({ message, ...context }),
-          },
+          logger: logger.child({ service: "AutoCarryOver" }),
         });
         return (targetReportId) =>
           carryOverIntoOpenedPeriod(autoCarryOverDeps, targetReportId);
       },
-      inject: [PrismaService, CarryOverService, CarryOverPrismaRepository],
+      inject: [
+        PrismaService,
+        CarryOverService,
+        CarryOverPrismaRepository,
+        APP_LOGGER,
+      ],
     },
     PeriodCreatorScheduler,
     {

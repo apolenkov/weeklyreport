@@ -1,6 +1,9 @@
 import type { Prisma } from "@prisma/client";
 
-import { lockCurrentEditableReport } from "./report-lifecycle.js";
+import {
+  editableReportLifecycleWhere,
+  lockCurrentEditableReport,
+} from "./report-lifecycle.js";
 import { lockStatusGraph } from "./status-graph-lock.js";
 import { lockAndValidateProjectOwnership } from "./user-activity-assignment.js";
 
@@ -103,14 +106,7 @@ export async function lockAllEditableReports(
   tx: Prisma.TransactionClient,
 ): Promise<string[]> {
   const candidates = await tx.report.findMany({
-    where: {
-      archived: false,
-      periodState: "open",
-      OR: [
-        { status: "draft", periodStatus: "open" },
-        { status: "published", periodStatus: "reopened" },
-      ],
-    },
+    where: editableReportLifecycleWhere(),
     select: { id: true },
     orderBy: { id: "asc" },
   });

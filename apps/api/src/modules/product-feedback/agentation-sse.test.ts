@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   type AgentationSseEvent,
   type AgentationSseSource,
+  getAgentationSseConnectionCounts,
   runAgentationSsePoll,
   startAgentationSse,
 } from "./agentation-sse";
@@ -28,6 +29,7 @@ function harness(
     set: vi.fn().mockReturnThis(),
     write: vi.fn(),
     flushHeaders: vi.fn(),
+    end: vi.fn(),
   });
   return { req: req as never, res: res as never, response: res };
 }
@@ -293,6 +295,135 @@ describe("Agentation SSE transport", () => {
     });
     (req as unknown as EventEmitter).emit("close");
     expect(clear).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    "loadLatestSequence",
+    "loadDeletionEvents",
+    "loadPending",
+    "loadEvents",
+  ] as const)(
+    "ends a post-flush %s failure without leaking listeners",
+    async (phase) => {
+      const { req, res, response } = harness();
+      const s = source();
+      s.loadLatestSequence = () => Promise.resolve(1n);
+      s[phase] = (): Promise<never> =>
+        Promise.reject(new Error("private source failure"));
+      const timers = vi.fn();
+      const before = getAgentationSseConnectionCounts();
+
+      await expect(
+        startAgentationSse({
+          req,
+          res,
+          source: s,
+          agent: phase === "loadPending",
+          allowGlobal: true,
+          ...(phase === "loadDeletionEvents" ? { scopedSessionId: "s-1" } : {}),
+          setIntervalFn: timers,
+        }),
+      ).resolves.toBeUndefined();
+
+      expect(response.flushHeaders).toHaveBeenCalledOnce();
+      expect(response.end).toHaveBeenCalledOnce();
+      expect(response.json).not.toHaveBeenCalled();
+      expect(timers).not.toHaveBeenCalled();
+      expect(getAgentationSseConnectionCounts()).toEqual(before);
+      expect(response.write.mock.calls).toEqual([[": connected\n\n"]]);
+    },
+  );
+
+  it("does not deliver or advance a deferred poll after disconnect", async () => {
+    const { req, res, response } = harness();
+    const pending = Promise.withResolvers<readonly AgentationSseEvent[]>();
+    const s = source();
+    s.loadEvents = () => pending.promise;
+    const poll = runAgentationSsePoll(
+      { req, res, source: s, agent: false, allowGlobal: true },
+      4n,
+    );
+    response.destroyed = true;
+    pending.resolve([
+      {
+        type: "annotation.updated",
+        sequence: 5n,
+        timestamp: "now",
+        payload: {},
+      },
+    ]);
+
+    expect(await poll).toBe(4n);
+    expect(response.write).not.toHaveBeenCalled();
+  });
+
+  it.each(["loadPending", "loadDeletionEvents"] as const)(
+    "does not deliver a deferred initial %s after disconnect",
+    async (phase) => {
+      const { req, res, response } = harness();
+      const pending = Promise.withResolvers<readonly AgentationSseEvent[]>();
+      const s = source();
+      s.loadLatestSequence = () => Promise.resolve(1n);
+      const entered = Promise.withResolvers<void>();
+      s[phase] = () => {
+        entered.resolve();
+        return pending.promise;
+      };
+      const timers = vi.fn();
+      const startup = startAgentationSse({
+        req,
+        res,
+        source: s,
+        agent: phase === "loadPending",
+        allowGlobal: true,
+        ...(phase === "loadDeletionEvents" ? { scopedSessionId: "s-1" } : {}),
+        setIntervalFn: timers,
+      });
+      await entered.promise;
+      response.destroyed = true;
+      pending.resolve([
+        {
+          type: "annotation.updated",
+          sequence: 1,
+          timestamp: "now",
+          payload: {},
+        },
+      ]);
+      await startup;
+
+      expect(response.write.mock.calls).toEqual([[": connected\n\n"]]);
+      expect(timers).not.toHaveBeenCalled();
+    },
+  );
+
+  it("does not poll or heartbeat a destroyed response and cleans listeners once", async () => {
+    const { req, res, response } = harness();
+    const s = source();
+    const callbacks: (() => void)[] = [];
+    const clear = vi.fn();
+    const before = getAgentationSseConnectionCounts();
+    await startAgentationSse({
+      req,
+      res,
+      source: s,
+      agent: true,
+      allowGlobal: true,
+      setIntervalFn: (callback) => {
+        callbacks.push(callback);
+        return callbacks.length;
+      },
+      clearIntervalFn: clear,
+    });
+    const writes = response.write.mock.calls.length;
+    response.destroyed = true;
+    for (const callback of callbacks) callback();
+    (req as unknown as EventEmitter).emit("close");
+    response.emit("close");
+
+    expect(response.write).toHaveBeenCalledTimes(writes);
+    expect(s.loadEvents).toHaveBeenCalledOnce();
+    expect(clear).toHaveBeenCalledTimes(2);
+    expect(getAgentationSseConnectionCounts()).toEqual(before);
   });
 
   it("exports one bounded polling cycle", async () => {

@@ -220,6 +220,28 @@ describe("AgentationPrismaRepository", () => {
       expect.objectContaining({ role: "agent", content: "Implemented" }),
     ]);
     expect(count).toBe(1);
+    // This query contract supplies stable persisted thread ties; native SQL is separate acceptance.
+    expect(tx.agentationAnnotation.findUnique).toHaveBeenCalledWith({
+      where: { id: "annotation-1" },
+      include: {
+        session: true,
+        threadMessages: { orderBy: [{ timestamp: "asc" }, { id: "asc" }] },
+      },
+    });
+    expect(tx.agentationSession.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        include: {
+          annotations: {
+            include: {
+              threadMessages: {
+                orderBy: [{ timestamp: "asc" }, { id: "asc" }],
+              },
+            },
+          },
+        },
+      }),
+    );
+
     expect(eventCreate).toHaveBeenCalledTimes(2);
     expect(eventCreate.mock.calls[0]?.[0]).toMatchObject({
       data: { type: "thread.message", annotationId: "annotation-1" },

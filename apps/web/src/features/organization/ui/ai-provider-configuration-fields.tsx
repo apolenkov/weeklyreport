@@ -17,10 +17,8 @@ type ConfigurationFieldsProps = Readonly<{
   profileCapabilities: readonly AiProviderProfileCapability[];
   generationCredentialConfigured: boolean;
   embeddingCredentialConfigured: boolean;
-  onChange: <K extends keyof AiProviderFormState>(
-    key: K,
-    value: AiProviderFormState[K],
-  ) => void;
+  onGenerationChange: (value: AiProviderFormState["generation"]) => void;
+  onEmbeddingsChange: (value: AiProviderFormState["embeddings"]) => void;
   reasoningInvalid: boolean;
   reasoningErrorId: string;
   reasoningRef: RefObject<HTMLInputElement | null>;
@@ -40,7 +38,8 @@ export function AiProviderConfigurationFields({
   profileCapabilities,
   generationCredentialConfigured,
   embeddingCredentialConfigured,
-  onChange,
+  onGenerationChange,
+  onEmbeddingsChange,
   reasoningInvalid,
   reasoningErrorId,
   reasoningRef,
@@ -61,7 +60,7 @@ export function AiProviderConfigurationFields({
           busy={busy}
           profiles={generationProfiles}
           credentialConfigured={generationCredentialConfigured}
-          onChange={(generation) => onChange("generation", generation)}
+          onChange={onGenerationChange}
           reasoningInvalid={reasoningInvalid}
           reasoningErrorId={reasoningErrorId}
           reasoningRef={reasoningRef}
@@ -74,7 +73,7 @@ export function AiProviderConfigurationFields({
           profiles={embeddingProfiles}
           requiresSeparateEmbeddings={requiresSeparateEmbeddings}
           credentialConfigured={embeddingCredentialConfigured}
-          onChange={(embeddings) => onChange("embeddings", embeddings)}
+          onChange={onEmbeddingsChange}
         />
       </div>
     </div>

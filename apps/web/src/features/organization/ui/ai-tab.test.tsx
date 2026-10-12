@@ -7,7 +7,7 @@ import {
   type AiProviderControlRead,
 } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -818,4 +818,51 @@ describe("AiTab", () => {
       }),
     );
   });
+});
+
+it("keeps prompt discard pending feedback until the deferred mutation settles", async () => {
+  navigation.search = "tab=settings";
+  const feature = makeFeature(
+    makeBundle({
+      id: CANDIDATE_ID,
+      revision: 2,
+      lifecycle: "failed",
+      hash: HASH_B,
+    }),
+  );
+  const { captured } = renderWorkspace(feature);
+  const mutation = captured["admin.aiPrompts.discard"];
+  if (!mutation) throw new Error("Missing discard mutation fixture");
+  let resolveDiscard: ((value: AiPromptBundleRead) => void) | undefined;
+  const pending = new Promise<AiPromptBundleRead>((resolve) => {
+    resolveDiscard = resolve;
+  });
+  mutation.mutationFn.mockReturnValue(pending);
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("tab", { name: "Features" }));
+  await screen.findByRole("button", { name: "Report Assistant" });
+  await user.click(screen.getByRole("button", { name: "Discard" }));
+  await user.click(
+    within(screen.getByRole("alertdialog")).getByRole("button", {
+      name: "Discard",
+    }),
+  );
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Save Draft" })).toBeDisabled(),
+  );
+  expect(screen.getByRole("button", { name: "Discarding…" })).toBeDisabled();
+  expect(mutation.mutationFn).toHaveBeenCalledTimes(1);
+  expect(mutation.calls).toEqual([
+    { featureKey: "lead-report-assistant", revisionId: CANDIDATE_ID },
+  ]);
+  const active = feature.control.activeBundle;
+  if (!active) throw new Error("Missing active bundle fixture");
+  await act(async () => {
+    resolveDiscard?.(active);
+    await pending;
+  });
+  await waitFor(() =>
+    expect(screen.queryByRole("button", { name: "Discarding…" })).toBeNull(),
+  );
+  expect(screen.queryByRole("button", { name: "Discard" })).toBeNull();
 });

@@ -1,4 +1,5 @@
 import type {
+  AiProviderConfigurationRead,
   AiProviderProfile,
   AiProviderReasoningMode,
 } from "@customreport/shared";
@@ -35,3 +36,13 @@ export interface AiProviderFormState {
     credential: string;
   };
 }
+
+export const hasPendingExecution = (
+  revision: AiProviderConfigurationRead | null,
+): boolean => {
+  const state = revision?.latestExecution?.state;
+  return state === "queued" || state === "running";
+};
+
+export const embeddingDimensionsLabel = (dimensions: number | null): string =>
+  dimensions === null ? "not measured" : String(dimensions);

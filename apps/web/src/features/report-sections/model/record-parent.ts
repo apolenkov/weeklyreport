@@ -8,7 +8,9 @@ export interface ParentActivityOption {
   readonly name: string;
 }
 
-// Create-mode seed has at most one parent side set, matching the row invariant.
+// Create-mode seed may carry both sides: an activity-lane create passes an
+// explicit activity next to a baked/default product. The activity seed wins
+// (branch order below); the resolved record parent still holds one side only.
 export interface RecordParentSeed {
   readonly productId?: string | undefined;
   readonly activityId?: string | undefined;

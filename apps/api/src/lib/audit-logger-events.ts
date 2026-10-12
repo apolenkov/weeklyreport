@@ -8,6 +8,15 @@ export type AuditEmit = (
   payload: { event: AuditEvent } & Record<string, unknown>,
 ) => void;
 
+type ActorFields = Pick<
+  Parameters<AuditLogger["loginSuccess"]>[0],
+  "userId" | "role" | "ip"
+>;
+
+function pickActor(input: ActorFields): ActorFields {
+  return { userId: input.userId, role: input.role, ip: input.ip };
+}
+
 export function createAuthAuditEvents(
   emit: AuditEmit,
 ): Pick<AuditLogger, "loginSuccess" | "loginFail" | "logout"> {
@@ -15,26 +24,20 @@ export function createAuthAuditEvents(
     loginSuccess(input) {
       emit("info", {
         event: "login-success",
-        userId: input.userId,
-        role: input.role,
-        ip: input.ip,
+        ...pickActor(input),
       });
     },
     loginFail(input) {
       emit("warn", {
         event: "login-fail",
-        userId: input.userId,
-        role: input.role,
-        ip: input.ip,
+        ...pickActor(input),
         reason: input.reason,
       });
     },
     logout(input) {
       emit("info", {
         event: "logout",
-        userId: input.userId,
-        role: input.role,
-        ip: input.ip,
+        ...pickActor(input),
       });
     },
   };
@@ -47,18 +50,14 @@ export function createAuthorizationAuditEvents(
     roleDenied(input) {
       emit("warn", {
         event: "role-denied",
-        userId: input.userId,
-        role: input.role,
+        ...pickActor(input),
         attemptedRole: input.attemptedRole,
-        ip: input.ip,
       });
     },
     scopeDenied(input) {
       emit("warn", {
         event: "scope-denied",
-        userId: input.userId,
-        role: input.role,
-        ip: input.ip,
+        ...pickActor(input),
         attemptedScope: input.attemptedScope,
         resourceId: input.resourceId,
       });
@@ -66,9 +65,7 @@ export function createAuthorizationAuditEvents(
     scopeAccessed(input) {
       emit("info", {
         event: "scope-accessed",
-        userId: input.userId,
-        role: input.role,
-        ip: input.ip,
+        ...pickActor(input),
         accessedScope: input.accessedScope,
         productIds: input.productIds,
         groupIds: input.groupIds,
@@ -85,9 +82,7 @@ export function createMutationAuditEvents(
     mutation(input) {
       emit(input.status === "success" ? "info" : "warn", {
         event: "mutation",
-        userId: input.userId,
-        role: input.role,
-        ip: input.ip,
+        ...pickActor(input),
         procedure: input.procedure,
         ...(input.target !== undefined ? { target: input.target } : {}),
         ...(input.targets ? { targets: input.targets } : {}),
@@ -106,9 +101,7 @@ export function createAdminAuditEvents(
     policySave(input) {
       emit("info", {
         event: "admin.policy.save",
-        userId: input.userId,
-        role: input.role,
-        ip: input.ip,
+        ...pickActor(input),
         policyId: input.policyId,
         kind: input.kind,
         action: input.action,
@@ -117,18 +110,14 @@ export function createAdminAuditEvents(
     policyRemove(input) {
       emit("info", {
         event: "admin.policy.remove",
-        userId: input.userId,
-        role: input.role,
-        ip: input.ip,
+        ...pickActor(input),
         policyId: input.policyId,
       });
     },
     organizationUpdate(input) {
       emit("info", {
         event: "admin.organization.update",
-        userId: input.userId,
-        role: input.role,
-        ip: input.ip,
+        ...pickActor(input),
         previousShortName: input.previousShortName,
         previousFullName: input.previousFullName,
         nextShortName: input.nextShortName,
@@ -194,9 +183,7 @@ export function createPeriodManualAuditEvents(
     periodManualCreate(input) {
       emit("info", {
         event: "period.manual-create",
-        userId: input.userId,
-        role: input.role,
-        ip: input.ip,
+        ...pickActor(input),
         periodId: input.periodId,
         periodStart: input.periodStart,
         periodEnd: input.periodEnd,
@@ -208,9 +195,7 @@ export function createPeriodManualAuditEvents(
     periodManualEdit(input) {
       emit("info", {
         event: "period.manual-edit",
-        userId: input.userId,
-        role: input.role,
-        ip: input.ip,
+        ...pickActor(input),
         periodId: input.periodId,
         changes: input.changes,
       });

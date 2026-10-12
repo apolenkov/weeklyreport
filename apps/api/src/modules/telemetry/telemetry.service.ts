@@ -29,16 +29,15 @@ export class TelemetryService {
 
   // Cached 60s per group-scope partition; key version suffix for clean invalidation.
   async getSummary(session: UserSession): Promise<TelemetrySummary> {
-    const cacheKey = `summary:v1:${scopeDiscriminator(session)}`;
+    const cacheKey = `summary:v2:${scopeDiscriminator(session)}`;
     return this.cache.getOrCompute<TelemetrySummary>(
       cacheKey,
       async () => {
-        const sparkline = await this.repository.onTimeRatioPerPeriod(
+        const window = await this.repository.onTimeRatioPerPeriod(
           SPARKLINE_PERIOD_COUNT,
           session,
         );
-        // Headline = freshest period only; Prometheus gauge pools last N — not collapsed.
-        const latestPeriodOnTimeRatio = sparkline.at(-1) ?? null;
+        // Compact history may omit the latest period; it cannot supply the headline.
 
         const [
           reportsThisPeriod,
@@ -56,12 +55,12 @@ export class TelemetryService {
 
         return telemetrySummarySchema.parse({
           reportsThisPeriod,
-          onTimeRatio: latestPeriodOnTimeRatio,
+          onTimeRatio: window.latestPeriodRatio,
           activeLeads,
           lateSections,
           pendingReopens,
           pdfExportsLast7d,
-          sparkline,
+          sparkline: window.ratios,
         });
       },
       (value): value is TelemetrySummary =>

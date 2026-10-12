@@ -10,10 +10,6 @@ import { MS_PER_WEEK } from "@customreport/shared";
 
 import { formatPeriodRangeWithYear } from "../../../shared/lib/format/format-date";
 import {
-  hasNextCommitment,
-  hasStatusOverviewParent,
-} from "./status-overview-items";
-import {
   buildStatusOverviewUnit,
   collectOrderedStatusOverviewUnitIds,
 } from "./status-overview-projector";
@@ -220,6 +216,19 @@ export function projectStatusOverview(
     ).map((id) => buildStatusOverviewUnit(kind, id, input, previousSection)),
   );
 
+  // The rendered columns are the counting authority: a source count is the
+  // number of item rows the lead actually sees in that temporal lane, so
+  // intentionally visible resolved history is counted too.
+  const sourceCounts = units.reduce(
+    (counts, unit) => ({
+      previouslyPlanned:
+        counts.previouslyPlanned + unit.columns.previouslyPlanned.items.length,
+      currentWeek: counts.currentWeek + unit.columns.currentWeek.items.length,
+      nextWeek: counts.nextWeek + unit.columns.nextWeek.items.length,
+    }),
+    { previouslyPlanned: 0, currentWeek: 0, nextWeek: 0 },
+  );
+
   return {
     periods: input.periods,
     previousPlanSource:
@@ -227,26 +236,6 @@ export function projectStatusOverview(
         ? input.previousPlan.source
         : null,
     units,
-    sourceCounts: {
-      previouslyPlanned:
-        previousSection?.items.filter(
-          (item) =>
-            hasNextCommitment(item) &&
-            item.resolution == null &&
-            hasStatusOverviewParent(item),
-        ).length ?? 0,
-      currentWeek: input.currentSection.items.filter(
-        (item) =>
-          item.type === "current" &&
-          item.resolution == null &&
-          hasStatusOverviewParent(item),
-      ).length,
-      nextWeek: input.currentSection.items.filter(
-        (item) =>
-          hasNextCommitment(item) &&
-          item.resolution == null &&
-          hasStatusOverviewParent(item),
-      ).length,
-    },
+    sourceCounts,
   };
 }

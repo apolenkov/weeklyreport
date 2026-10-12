@@ -1,6 +1,26 @@
 import { currentPeriodLifecycleSchema } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
 
+const EDITABLE_REPORT_LIFECYCLES = [
+  {
+    status: "draft",
+    periodStatus: "open",
+    periodState: "open",
+    archived: false,
+  },
+  {
+    status: "published",
+    periodStatus: "reopened",
+    periodState: "open",
+    archived: false,
+  },
+] as const;
+
+/** Lifecycle-only selector for scans whose existing policy has no date bound. */
+export function editableReportLifecycleWhere(): Prisma.ReportWhereInput {
+  return { OR: EDITABLE_REPORT_LIFECYCLES.map((tuple) => ({ ...tuple })) };
+}
+
 type EditableReportLockTarget =
   { readonly reportId: string } | { readonly sectionId: string };
 
@@ -58,13 +78,13 @@ export async function lockCurrentEditableReport(
   if (!report) return { kind: "not-found" };
   const lifecycle = currentPeriodLifecycleSchema.safeParse(report);
   if (!lifecycle.success) return { kind: "inconsistent" };
-  const editable =
-    !lifecycle.data.archived &&
-    lifecycle.data.periodState === "open" &&
-    ((lifecycle.data.status === "draft" &&
-      lifecycle.data.periodStatus === "open") ||
-      (lifecycle.data.status === "published" &&
-        lifecycle.data.periodStatus === "reopened"));
+  const editable = EDITABLE_REPORT_LIFECYCLES.some(
+    ({ status, periodStatus, periodState, archived }) =>
+      lifecycle.data.status === status &&
+      lifecycle.data.periodStatus === periodStatus &&
+      lifecycle.data.periodState === periodState &&
+      lifecycle.data.archived === archived,
+  );
   return editable
     ? { kind: "editable", reportId: report.id }
     : { kind: "not-editable" };
@@ -76,19 +96,6 @@ export function currentEditableReportWhere(
 ): Prisma.ReportWhereInput {
   return {
     periodStart: { lte: now },
-    OR: [
-      {
-        status: "draft",
-        periodStatus: "open",
-        periodState: "open",
-        archived: false,
-      },
-      {
-        status: "published",
-        periodStatus: "reopened",
-        periodState: "open",
-        archived: false,
-      },
-    ],
+    ...editableReportLifecycleWhere(),
   };
 }

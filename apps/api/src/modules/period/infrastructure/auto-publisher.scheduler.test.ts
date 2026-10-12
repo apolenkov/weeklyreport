@@ -41,10 +41,16 @@ type SchedulerReportSectionCount = (
 type PublishAutoResult = Awaited<ReturnType<PublicationService["publishAuto"]>>;
 type SchedulerPublishAutoResult =
   | Pick<Extract<PublishAutoResult, { published: false }>, "published">
-  | Pick<
+  | (Pick<
       Extract<PublishAutoResult, { published: true }>,
       "published" | "wasAlreadyPublished"
-    >;
+    > & {
+      readonly report: {
+        readonly sections: readonly {
+          readonly status: "draft" | "submitted";
+        }[];
+      };
+    });
 type SchedulerPublishAuto = (
   ...args: Parameters<PublicationService["publishAuto"]>
 ) => Promise<SchedulerPublishAutoResult>;
@@ -123,6 +129,7 @@ describe("AutoPublisherScheduler", () => {
       publishAuto: mockPublishAuto().mockResolvedValue({
         published: true,
         wasAlreadyPublished: false,
+        report: { sections: [{ status: "draft" }, { status: "draft" }] },
       }),
     };
     const audit = {
@@ -162,6 +169,57 @@ describe("AutoPublisherScheduler", () => {
       to: "published",
     });
   });
+
+  it.each([0, 2])(
+    "keeps committed success and audits %s drafts without a post-commit read",
+    async (drafts) => {
+      const count = mockReportSectionCount().mockRejectedValue(
+        new Error("post-commit read unavailable"),
+      );
+      const prisma = {
+        report: {
+          findMany: mockReportFindMany().mockResolvedValue([
+            { id: "committed", deadline: overdueDeadline },
+          ]),
+        },
+        reportSection: { count },
+      };
+      const admin = {
+        getSettings: mockGetSettings().mockResolvedValue(makeSettings()),
+      };
+      const publication = {
+        publishAuto: mockPublishAuto().mockResolvedValue({
+          published: true,
+          wasAlreadyPublished: false,
+          report: {
+            sections: [
+              ...Array.from({ length: drafts }, () => ({
+                status: "draft" as const,
+              })),
+              { status: "submitted" },
+            ],
+          },
+        }),
+      };
+      const audit = {
+        ...createNullAuditLogger(),
+        periodAutoPublish: mockPeriodAutoPublish(),
+      };
+
+      expect(
+        await createScheduler(prisma, admin, publication, audit).runOnce(
+          new Date("2026-05-12T12:00:00Z"),
+        ),
+      ).toEqual({ published: true, periodIds: ["committed"], failures: [] });
+      expect(audit.periodAutoPublish).toHaveBeenCalledWith({
+        periodId: "committed",
+        missingSectionsCount: drafts,
+        from: "open",
+        to: "published",
+      });
+      expect(count).not.toHaveBeenCalled();
+    },
+  );
 
   it("idempotent: no eligible drafts → no-op, no publishAuto, no audit", async () => {
     const prisma = {
@@ -209,6 +267,7 @@ describe("AutoPublisherScheduler", () => {
           Promise.resolve({
             published: true,
             wasAlreadyPublished: false,
+            report: { sections: [] },
           }),
         ),
     };
@@ -320,6 +379,7 @@ describe("AutoPublisherScheduler", () => {
         .mockResolvedValueOnce({
           published: true,
           wasAlreadyPublished: false,
+          report: { sections: [{ status: "draft" }] },
         }),
     };
     const audit = {
@@ -343,7 +403,7 @@ describe("AutoPublisherScheduler", () => {
       from: "open",
       to: "published",
     });
-    expect(prisma.reportSection.count).toHaveBeenCalledTimes(1);
+    expect(prisma.reportSection.count).not.toHaveBeenCalled();
   });
 
   // Manual publish between selection and publishAuto must not audit as auto.
@@ -363,6 +423,7 @@ describe("AutoPublisherScheduler", () => {
       publishAuto: mockPublishAuto().mockResolvedValue({
         published: true,
         wasAlreadyPublished: true,
+        report: { sections: [] },
       }),
     };
     const audit = {
@@ -404,10 +465,18 @@ describe("AutoPublisherScheduler", () => {
         .mockResolvedValueOnce({
           published: true,
           wasAlreadyPublished: true,
+          report: { sections: [] },
         })
         .mockResolvedValueOnce({
           published: true,
           wasAlreadyPublished: false,
+          report: {
+            sections: [
+              { status: "draft" },
+              { status: "draft" },
+              { status: "draft" },
+            ],
+          },
         }),
     };
     const audit = {
@@ -431,6 +500,6 @@ describe("AutoPublisherScheduler", () => {
       from: "open",
       to: "published",
     });
-    expect(prisma.reportSection.count).toHaveBeenCalledTimes(1);
+    expect(prisma.reportSection.count).not.toHaveBeenCalled();
   });
 });

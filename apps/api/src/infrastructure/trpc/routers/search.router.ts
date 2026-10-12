@@ -34,6 +34,7 @@ export function createSearchRouter(deps: SearchRouterDeps) {
             throw new TRPCError({
               code: "FORBIDDEN",
               message: error.message,
+              cause: error,
             });
           }
           throw mapDomainError(error);

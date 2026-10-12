@@ -16,6 +16,7 @@ import {
 } from "../admin/index.js";
 import { AnalyticsCache } from "../analytics/index.js";
 import {
+  type AutoCarryOver,
   CarryOverPrismaRepository,
   CarryOverService,
 } from "../carry-over/index.js";
@@ -79,7 +80,11 @@ describe("PeriodModule wiring", () => {
       .overrideProvider(CarryOverService)
       .useValue({})
       .overrideProvider(CarryOverPrismaRepository)
-      .useValue({})
+      .useValue({
+        findPreviousReportId: vi
+          .fn()
+          .mockRejectedValue(new Error("source read unavailable")),
+      })
       .overrideProvider(PublicationService)
       .useValue({})
       .overrideProvider(PolicyApplicatorService)
@@ -110,5 +115,15 @@ describe("PeriodModule wiring", () => {
     );
     expect(moduleRef.get(AUDIT_LOGGER)).toBeDefined();
     expect(moduleRef.get(PERIOD_AUTO_CARRY_OVER)).toEqual(expect.any(Function));
+    const carry = moduleRef.get<AutoCarryOver>(PERIOD_AUTO_CARRY_OVER);
+    appLogger.warn.mockClear();
+    expect(await carry("target-report")).toMatchObject({
+      status: "failed",
+      expected: false,
+    });
+    expect(appLogger.warn).toHaveBeenCalledWith("auto carry-over skipped", {
+      targetReportId: "target-report",
+      reason: "source read unavailable",
+    });
   });
 });

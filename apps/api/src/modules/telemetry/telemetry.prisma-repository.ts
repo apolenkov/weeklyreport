@@ -10,7 +10,10 @@ import {
 } from "../../lib/group-scope.js";
 import { currentEditableReportWhere } from "../../lib/report-lifecycle.js";
 import { publishedReportScopeWhere } from "../report-sections/index.js";
-import type { TelemetryRepository } from "./telemetry.ports.js";
+import type {
+  TelemetryOnTimeWindow,
+  TelemetryRepository,
+} from "./telemetry.ports.js";
 import {
   queryActiveLeadsLastPublishedPeriod,
   querySettledPeriodSnapshots,
@@ -112,7 +115,7 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
   readonly onTimeRatioPerPeriod = async (
     n: number,
     session: UserSession,
-  ): Promise<readonly number[]> => {
+  ): Promise<TelemetryOnTimeWindow> => {
     guardGroupScope(session);
     const snapshots = await querySettledPeriodSnapshots(
       this.prisma,
@@ -120,13 +123,21 @@ export class TelemetryPrismaRepository implements TelemetryRepository {
       session,
     );
 
-    return [...snapshots].reverse().reduce<number[]>((ratios, snapshot) => {
+    const ratio = (snapshot: (typeof snapshots)[number]): number | null => {
       const submitted = snapshot.sections.filter(
         (section) => section.status === "submitted",
       );
-      const total = submitted.length;
-      const onTime = submitted.filter((section) => !section.late).length;
-      return total > 0 ? [...ratios, onTime / total] : ratios;
-    }, []);
+      return submitted.length === 0
+        ? null
+        : submitted.filter((section) => !section.late).length /
+            submitted.length;
+    };
+    return {
+      latestPeriodRatio: snapshots[0] ? ratio(snapshots[0]) : null,
+      ratios: [...snapshots].reverse().flatMap((snapshot) => {
+        const value = ratio(snapshot);
+        return value === null ? [] : [value];
+      }),
+    };
   };
 }

@@ -1,5 +1,6 @@
 import type { AiProviderControlRead } from "@customreport/shared";
 
+import { embeddingDimensionsLabel } from "./ai-provider-configuration-fields.types";
 import { profileLabel } from "./ai-provider-form";
 
 export function AiProviderRevisionDetails({
@@ -51,7 +52,8 @@ export function AiProviderRevisionDetails({
             ? "Uses generation credential"
             : (revision.embeddings.credentialMaskedSuffix ?? "not configured")}
           <span className="ml-2 font-sans text-[var(--color-muted-foreground)]">
-            · {revision.embeddings.model} / {revision.embeddings.dimensions}
+            · {revision.embeddings.model} /{" "}
+            {embeddingDimensionsLabel(revision.embeddings.dimensions)}
           </span>
         </dd>
       </div>

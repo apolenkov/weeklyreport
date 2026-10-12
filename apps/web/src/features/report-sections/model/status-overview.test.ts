@@ -370,7 +370,7 @@ describe("projectStatusOverview", () => {
     );
   });
 
-  it("preserves resolution audit metadata, keeps cancelled plans non-editable, and excludes them from active counts", () => {
+  it("preserves resolution audit metadata, keeps cancelled plans non-editable, and counts rendered rows", () => {
     const currentSection = makeReportSectionFixture({
       projects: [
         {
@@ -453,9 +453,11 @@ describe("projectStatusOverview", () => {
       canResolve: false,
       canRestore: true,
     });
+    // Resolved rows stay visible, and each source count equals its rendered
+    // item count — including the resolved rows.
     expect(result.sourceCounts).toEqual({
-      previouslyPlanned: 0,
-      currentWeek: 0,
+      previouslyPlanned: 1,
+      currentWeek: 1,
       nextWeek: 0,
     });
   });

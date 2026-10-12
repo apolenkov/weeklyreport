@@ -571,3 +571,30 @@ describe("Admin reopen pagination through the real tRPC transport", () => {
     ]);
   });
 });
+
+it("preserves response focus when a background refetch fails", async () => {
+  let failRefresh = false;
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  renderAdminList(() => {
+    if (failRefresh)
+      return Promise.reject(new Error("background refresh failed"));
+    return { items: [requests[0]], nextCursor: NEXT_CURSOR };
+  }, queryClient);
+  const alice = expectDefined((await screen.findByText("Alice")).closest("li"));
+  await userEvent.click(within(alice).getByRole("button", { name: "Respond" }));
+  const response = within(alice).getByRole("textbox");
+  await userEvent.type(response, "Unsaved response");
+  expect(response).toHaveFocus();
+  failRefresh = true;
+  await act(async () => {
+    await queryClient.refetchQueries({ type: "active" });
+  });
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "background refresh failed",
+  );
+  expect(screen.getByRole("button", { name: "Retry" })).toBeEnabled();
+  expect(response).toHaveFocus();
+  expect(response).toHaveValue("Unsaved response");
+});

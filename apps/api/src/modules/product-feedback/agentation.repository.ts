@@ -21,6 +21,7 @@ import {
   findDeletionForSync,
   lockAgentationSession,
   lockVisibleAnnotation,
+  THREAD_MESSAGES_INCLUDE,
   updateData,
 } from "./agentation.repository.helpers.js";
 import { AgentationReadRepository } from "./agentation.repository.reads.js";
@@ -35,7 +36,7 @@ export type AgentationRole = "human" | "agent";
 
 const THREAD_WITH_SESSION_INCLUDE = {
   session: true,
-  threadMessages: { orderBy: { timestamp: "asc" as const } },
+  ...THREAD_MESSAGES_INCLUDE,
 } as const;
 
 export type AgentationThreadWriteRow = Prisma.AgentationAnnotationGetPayload<{
@@ -108,7 +109,7 @@ export class AgentationPrismaRepository extends AgentationReadRepository {
         },
         include: {
           annotations: {
-            include: { threadMessages: { orderBy: { timestamp: "asc" } } },
+            include: THREAD_MESSAGES_INCLUDE,
           },
         },
       });
@@ -165,7 +166,7 @@ export class AgentationPrismaRepository extends AgentationReadRepository {
           },
           update: {},
           create: annotationData(proposedId, access, session, input),
-          include: { threadMessages: { orderBy: { timestamp: "asc" } } },
+          include: THREAD_MESSAGES_INCLUDE,
         });
         const annotation = agentationAnnotationResponseSchema.parse(
           mapAnnotation(row),
@@ -196,7 +197,7 @@ export class AgentationPrismaRepository extends AgentationReadRepository {
     return this.prisma.$transaction(async (db) => {
       const current = await db.agentationAnnotation.findFirst({
         where: { id, ...annotationPatchScope(access, patch, role, source) },
-        include: { threadMessages: { orderBy: { timestamp: "asc" } } },
+        include: THREAD_MESSAGES_INCLUDE,
       });
       if (!current) return null;
       const data = updateData(patch, role, current);
@@ -204,7 +205,7 @@ export class AgentationPrismaRepository extends AgentationReadRepository {
       const row = await db.agentationAnnotation.update({
         where: { id },
         data,
-        include: { threadMessages: { orderBy: { timestamp: "asc" } } },
+        include: THREAD_MESSAGES_INCLUDE,
       });
       const annotation = mapAnnotation(row);
       await emit(db, {
@@ -284,7 +285,7 @@ export class AgentationPrismaRepository extends AgentationReadRepository {
         where: { id: sessionId, ...sessionScope(access) },
         include: {
           annotations: {
-            include: { threadMessages: { orderBy: { timestamp: "asc" } } },
+            include: THREAD_MESSAGES_INCLUDE,
           },
         },
       });

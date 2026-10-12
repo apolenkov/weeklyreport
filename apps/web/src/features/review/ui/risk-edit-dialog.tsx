@@ -122,6 +122,7 @@ function RiskDialogBody({
         mitigationError={dialog.mitigationError}
         mitigationRef={mitigationRef}
         parent={dialog.parent}
+        parentError={dialog.parentError}
         products={products}
         activities={activities}
         onParentChange={dialog.onParentChange}

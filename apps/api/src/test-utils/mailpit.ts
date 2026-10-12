@@ -5,9 +5,13 @@ export function mailpitBase(): string {
   return process.env.MAILPIT_API_URL ?? "http://localhost:8025";
 }
 
+function messagesUrl(): string {
+  return `${mailpitBase()}/api/v1/messages`;
+}
+
 export async function isMailpitUp(): Promise<boolean> {
   try {
-    const res = await fetch(`${mailpitBase()}/api/v1/messages`, {
+    const res = await fetch(messagesUrl(), {
       signal: AbortSignal.timeout(2000),
     });
     return res.ok;
@@ -38,7 +42,7 @@ interface MailpitMessagesResponse {
 }
 
 async function listMessages(signal: AbortSignal): Promise<MailpitMessage[]> {
-  const res = await fetch(`${mailpitBase()}/api/v1/messages`, { signal });
+  const res = await fetch(messagesUrl(), { signal });
   if (!res.ok) throw new Error(`Mailpit GET failed: ${res.status}`);
   const body = (await res.json()) as MailpitMessagesResponse;
   return body.messages ?? [];
