@@ -1,9 +1,17 @@
+import { writeSync } from "node:fs";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createShutdownCoordinator } from "./shutdown-coordinator.js";
 
+vi.mock("node:fs", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("node:fs")>()),
+  writeSync: vi.fn(),
+}));
+
 describe("shutdown coordinator", () => {
   afterEach(() => {
+    vi.mocked(writeSync).mockReset();
     vi.restoreAllMocks();
     vi.useRealTimers();
   });
@@ -23,6 +31,7 @@ describe("shutdown coordinator", () => {
     expect(drain).toHaveBeenCalledOnce();
     expect(exit).toHaveBeenCalledExactlyOnceWith(1);
     expect(stderr).not.toHaveBeenCalled();
+    expect(writeSync).not.toHaveBeenCalled();
   });
 
   it.each(["resolve", "reject"] as const)(
@@ -52,7 +61,9 @@ describe("shutdown coordinator", () => {
 
       expect(drain).toHaveBeenCalledOnce();
       expect(exit).toHaveBeenCalledExactlyOnceWith(1);
-      expect(stderr).toHaveBeenCalledExactlyOnceWith(
+      expect(stderr).not.toHaveBeenCalled();
+      expect(writeSync).toHaveBeenCalledExactlyOnceWith(
+        process.stderr.fd,
         "[fatal] shutdown timed out\n",
       );
       expect(vi.getTimerCount()).toBe(0);
@@ -78,9 +89,52 @@ describe("shutdown coordinator", () => {
 
       expect(drain).toHaveBeenCalledOnce();
       expect(exit).toHaveBeenCalledExactlyOnceWith(1);
-      expect(stderr).toHaveBeenCalledExactlyOnceWith(
+      expect(stderr).not.toHaveBeenCalled();
+      expect(writeSync).toHaveBeenCalledExactlyOnceWith(
+        process.stderr.fd,
         "[shutdown] shutdown failed: drain failure\n",
       );
+      expect(vi.getTimerCount()).toBe(0);
+    },
+  );
+
+  it("writes the diagnostic synchronously before requesting exit", async () => {
+    vi.useFakeTimers();
+    const exit = vi.fn();
+    const coordinator = createShutdownCoordinator(
+      () => new Promise<void>(() => undefined),
+      {
+        exit,
+      },
+    );
+
+    coordinator.request("fatal");
+    await vi.advanceTimersByTimeAsync(5000);
+
+    expect(vi.mocked(writeSync).mock.invocationCallOrder[0]).toBeLessThan(
+      exit.mock.invocationCallOrder[0] ?? Number.NEGATIVE_INFINITY,
+    );
+  });
+
+  it.each(["fatal deadline", "drain rejection"] as const)(
+    "still exits once, without waiting, when stderr is unwritable (%s)",
+    async (path) => {
+      vi.useFakeTimers();
+      vi.mocked(writeSync).mockImplementation(() => {
+        throw Object.assign(new Error("EAGAIN"), { code: "EAGAIN" });
+      });
+      const exit = vi.fn();
+      const drain =
+        path === "fatal deadline"
+          ? () => new Promise<void>(() => undefined)
+          : () => Promise.reject(new Error("drain failure"));
+      const coordinator = createShutdownCoordinator(drain, { exit });
+
+      coordinator.request(path === "fatal deadline" ? "fatal" : "signal");
+      await vi.advanceTimersByTimeAsync(5000);
+
+      expect(writeSync).toHaveBeenCalledOnce();
+      expect(exit).toHaveBeenCalledExactlyOnceWith(1);
       expect(vi.getTimerCount()).toBe(0);
     },
   );

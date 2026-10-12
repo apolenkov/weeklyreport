@@ -1,6 +1,12 @@
+import { writeSync } from "node:fs";
+
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@sentry/nestjs", () => ({ captureException: vi.fn() }));
+vi.mock("node:fs", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("node:fs")>()),
+  writeSync: vi.fn(),
+}));
 
 import * as Sentry from "@sentry/nestjs";
 
@@ -20,6 +26,7 @@ afterEach(() => {
   for (const listener of originalRejectionListeners) {
     process.on("unhandledRejection", listener);
   }
+  vi.mocked(writeSync).mockReset();
   vi.restoreAllMocks();
 });
 
@@ -57,7 +64,6 @@ describe("registerProcessErrorHandlers", () => {
   });
 
   it("falls back to stderr when the fatal drain exceeds its deadline", async () => {
-    const stderrSpy = vi.spyOn(process.stderr, "write").mockReturnValue(true);
     const exit = vi.fn<(code: number) => never>(() => undefined as never);
     registerProcessErrorHandlers(
       createNullLogger(),
@@ -70,7 +76,8 @@ describe("registerProcessErrorHandlers", () => {
     if (!listener) throw new Error("uncaughtException listener not registered");
     listener(new Error("boom"), "uncaughtException");
     await vi.waitFor(() => expect(exit).toHaveBeenCalledWith(1));
-    expect(stderrSpy).toHaveBeenCalledWith(
+    expect(writeSync).toHaveBeenCalledWith(
+      process.stderr.fd,
       expect.stringContaining("shutdown timed out"),
     );
   });

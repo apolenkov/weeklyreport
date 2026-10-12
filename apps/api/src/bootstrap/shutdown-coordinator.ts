@@ -1,4 +1,16 @@
+import { writeSync } from "node:fs";
+
 const FATAL_SHUTDOWN_DEADLINE_MS = 5000;
+
+// One synchronous write so process.exit cannot discard the line; reading .fd opens
+// stderr non-blocking on POSIX, so a full pipe throws instead of delaying the exit.
+const reportTerminal = (line: string): void => {
+  try {
+    writeSync(process.stderr.fd, line);
+  } catch {
+    // Best effort: an unwritable stderr must not delay the bounded exit.
+  }
+};
 
 export interface ShutdownCoordinator {
   readonly request: (cause: "signal" | "fatal") => void;
@@ -35,7 +47,7 @@ export function createShutdownCoordinator(
       if (cause === "fatal" && !state.fatal) {
         state.fatal = true;
         state.fatalTimeout = setTimeout(() => {
-          process.stderr.write("[fatal] shutdown timed out\n");
+          reportTerminal("[fatal] shutdown timed out\n");
           finish(1);
         }, deadlineMs);
       }
@@ -45,7 +57,7 @@ export function createShutdownCoordinator(
         () => finish(state.fatal ? 1 : 0),
         (error: unknown) => {
           if (state.finished) return;
-          process.stderr.write(
+          reportTerminal(
             `[${state.fatal ? "fatal" : "shutdown"}] shutdown failed: ${error instanceof Error ? error.message : "unknown failure"}\n`,
           );
           finish(1);
