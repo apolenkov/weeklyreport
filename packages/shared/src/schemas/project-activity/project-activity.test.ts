@@ -26,6 +26,97 @@ describe("projectActivitySchema", () => {
     expect(parsed.leadIds).toEqual([]);
   });
 
+  it.each(
+    (["name", "jiraAccounts"] as const).flatMap((field) =>
+      [" ".repeat(3), "\u200B\u200D", "visible\u0000text"].map((text) => ({
+        field,
+        text,
+      })),
+    ),
+  )("rejects persisted $field text $text independently", ({ field, text }) => {
+    const base = {
+      id: ACTIVITY_ID,
+      name: "Ops",
+      groupId: GROUP_ID,
+      archived: false,
+    };
+    const result = projectActivitySchema.safeParse({
+      ...base,
+      [field]: field === "name" ? text : [text],
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.path).toEqual(
+      field === "name" ? ["name"] : ["jiraAccounts", 0],
+    );
+  });
+
+  it("retains write guards for invisible and null-byte text", () => {
+    for (const text of [" ".repeat(3), "\u200B\u200D", "visible\u0000text"]) {
+      expect(
+        projectActivityCreateSchema.safeParse({ name: text, groupId: GROUP_ID })
+          .success,
+      ).toBe(false);
+      expect(
+        projectActivityUpdateSchema.safeParse({
+          id: ACTIVITY_ID,
+          name: "Ops",
+          groupId: GROUP_ID,
+          jiraAccounts: [text],
+        }).success,
+      ).toBe(false);
+    }
+  });
+
+  it.each([" Ops ", "one\ntwo", "x".repeat(100)])(
+    "preserves visible persisted text bytes %j",
+    (text) => {
+      const result = projectActivitySchema.parse({
+        id: ACTIVITY_ID,
+        name: text,
+        groupId: GROUP_ID,
+        archived: false,
+        jiraAccounts: [text],
+      });
+      expect(result.name).toBe(text);
+      expect(result.jiraAccounts).toEqual([text]);
+      expect(Object.isFrozen(result)).toBe(true);
+      expect(Object.isFrozen(result.jiraAccounts)).toBe(true);
+    },
+  );
+
+  it("retains exact name and Jira length bounds without adding read cardinality limits", () => {
+    const base = {
+      id: ACTIVITY_ID,
+      name: "x".repeat(200),
+      groupId: GROUP_ID,
+      archived: false,
+      jiraAccounts: ["x".repeat(100)],
+    };
+    expect(projectActivitySchema.safeParse(base).success).toBe(true);
+    expect(
+      projectActivitySchema.safeParse({ ...base, name: "x".repeat(201) })
+        .success,
+    ).toBe(false);
+    expect(
+      projectActivitySchema.safeParse({
+        ...base,
+        jiraAccounts: ["x".repeat(101)],
+      }).success,
+    ).toBe(false);
+    expect(projectActivitySchema.safeParse({ ...base, name: "" }).success).toBe(
+      false,
+    );
+    expect(
+      projectActivitySchema.safeParse({ ...base, jiraAccounts: [""] }).success,
+    ).toBe(false);
+    expect(
+      projectActivitySchema.parse({
+        ...base,
+        jiraAccounts: Array.from({ length: 21 }, () => "JIRA"),
+      }).jiraAccounts,
+    ).toHaveLength(21);
+  });
+
   it("rejects a create without a group (groupId is authoritative + required)", () => {
     const result = projectActivityCreateSchema.safeParse({
       name: "Ops rotation",

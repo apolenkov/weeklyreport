@@ -128,12 +128,23 @@ export const feedbackAnnotationAnchorSchema = z
   })
   .strict();
 
+/** Validates the annotation position inside a captured screenshot. */
+export const feedbackScreenshotRegionSchema = z
+  .object({
+    xPct: z.number().min(0).max(1),
+    yPct: z.number().min(0).max(1),
+    wPct: z.number().min(0).max(1),
+    hPct: z.number().min(0).max(1),
+  })
+  .strict();
+/** Screenshot annotation position. */
+export type FeedbackScreenshotRegion = z.infer<
+  typeof feedbackScreenshotRegionSchema
+>;
+
 /** Validates the flat annotation form persisted by feedback repositories. */
 export const feedbackAnnotationSchema = feedbackAnnotationAnchorSchema.extend({
-  xPct: z.number().min(0).max(1),
-  yPct: z.number().min(0).max(1),
-  wPct: z.number().min(0).max(1),
-  hPct: z.number().min(0).max(1),
+  ...feedbackScreenshotRegionSchema.shape,
   scrollX: z.number().nonnegative(),
   scrollY: z.number().nonnegative(),
   viewportW: z.number().int().positive(),
@@ -148,20 +159,6 @@ export const feedbackScreenshotDataUrlSchema = z
   .string()
   .max(MAX_SCREENSHOT_DATA_URL_LENGTH)
   .regex(/^data:image\/(jpeg|png|webp);base64,/);
-
-/** Validates the annotation position inside a captured screenshot. */
-export const feedbackScreenshotRegionSchema = z
-  .object({
-    xPct: z.number().min(0).max(1),
-    yPct: z.number().min(0).max(1),
-    wPct: z.number().min(0).max(1),
-    hPct: z.number().min(0).max(1),
-  })
-  .strict();
-/** Screenshot annotation position. */
-export type FeedbackScreenshotRegion = z.infer<
-  typeof feedbackScreenshotRegionSchema
->;
 
 const feedbackConsoleDiagnosticSchema = z
   .object({

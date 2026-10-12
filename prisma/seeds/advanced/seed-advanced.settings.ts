@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import { ReminderAudience } from "@prisma/client";
 
+import { ORGANIZATION_SINGLETON_ID } from "../../../packages/shared/src/schemas/organization/organization.js";
 import { MOSCOW_TIMEZONE } from "./seed-advanced.period.js";
 
 const SINGLETON_ID = "singleton";
@@ -44,8 +45,8 @@ export async function seedSingletons(prisma: PrismaClient): Promise<void> {
     create: { id: SINGLETON_ID, ...APP_SETTINGS },
   });
   await prisma.organization.upsert({
-    where: { id: SINGLETON_ID },
+    where: { id: ORGANIZATION_SINGLETON_ID },
     update: ORGANIZATION,
-    create: { id: SINGLETON_ID, ...ORGANIZATION },
+    create: { id: ORGANIZATION_SINGLETON_ID, ...ORGANIZATION },
   });
 }

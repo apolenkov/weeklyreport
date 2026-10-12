@@ -20,6 +20,8 @@ interface RecordTextareaFieldProps {
   readonly textareaRef?: RefObject<HTMLTextAreaElement | null> | undefined;
   readonly hint?: ReactNode | undefined;
   readonly characterLimit?: number | undefined;
+  // A normalized payload may differ from the raw editable draft.
+  readonly characterCount?: number | undefined;
   // Extra ids (space-separated) that describe the textarea besides limit/error.
   readonly describedBy?: string | undefined;
   // When true, wrapper and textarea take flex-1 to fill a multi-field column;
@@ -72,6 +74,16 @@ function minHeightStyle(
     : { minHeight: `${minHeightPx}px` };
 }
 
+function limitState(
+  value: string,
+  limit: number | undefined,
+  suppliedCount: number | undefined,
+): { characterCount: number; overBy: number } {
+  const characterCount = suppliedCount ?? Array.from(value).length;
+  const overBy = limit === undefined ? 0 : Math.max(0, characterCount - limit);
+  return { characterCount, overBy };
+}
+
 export function RecordTextareaField({
   id,
   label,
@@ -85,6 +97,7 @@ export function RecordTextareaField({
   textareaRef,
   hint,
   characterLimit,
+  characterCount: count,
   describedBy,
   fill = true,
   disabled = false,
@@ -97,11 +110,7 @@ export function RecordTextareaField({
   // field's own), so the focus effect only ever READS .current.
   const elementRef = textareaRef ?? ownRef;
   useInitialTextareaFocus(focusOnMount, elementRef);
-  const characterCount = Array.from(value).length;
-  const overBy =
-    characterLimit === undefined
-      ? 0
-      : Math.max(0, characterCount - characterLimit);
+  const { characterCount, overBy } = limitState(value, characterLimit, count);
   const isInvalid = Boolean(error) || overBy > 0;
 
   return (

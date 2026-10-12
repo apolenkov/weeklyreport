@@ -54,7 +54,7 @@ function commentValidationError(
   if (validationSucceeded || (draft.length === 0 && !validationAttempted)) {
     return undefined;
   }
-  return draft.length > REVIEW_COMMENT_MAX_LENGTH
+  return Array.from(draft).length > REVIEW_COMMENT_MAX_LENGTH
     ? `Comment must be ${REVIEW_COMMENT_MAX_LENGTH} characters or fewer.`
     : "Comment must contain visible characters.";
 }

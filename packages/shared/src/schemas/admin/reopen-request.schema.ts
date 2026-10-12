@@ -4,6 +4,9 @@ const DEFAULT_REOPEN_REQUEST_PAGE_LIMIT = 50;
 const MAX_REOPEN_REQUEST_PAGE_LIMIT = 100;
 const MAX_REOPEN_REQUEST_SEARCH_LENGTH = 500;
 
+/** Numeric cap for the optional Head/Admin responder note. */
+export const MAX_REOPEN_NOTE_LENGTH = 500;
+
 /** Why a lead cannot request a section reopen; the read model ships it to the UI. */
 export type ReopenBlockedReason =
   | "not_submitted"

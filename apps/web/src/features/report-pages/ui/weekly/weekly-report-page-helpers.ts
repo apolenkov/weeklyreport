@@ -39,7 +39,7 @@ export function resolveTerminalNotice(query: {
       body: "A temporary problem prevented loading this report. Refresh the page to try again.",
     };
   }
-  if (!query.data || query.data.status === "no-period") {
+  if (query.data?.status === "no-period") {
     return {
       title: "No active reporting period",
       body: "Ask an admin to open a new period to start collecting status reports.",

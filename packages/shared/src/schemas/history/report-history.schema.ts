@@ -70,6 +70,21 @@ export const compiledHistoryInputSchema = z
   })
   .readonly();
 
+const historyTotalsSchema = z.object({
+  trafficLights: z
+    .object({
+      green: z.number().int().min(0),
+      yellow: z.number().int().min(0),
+      red: z.number().int().min(0),
+    })
+    .readonly(),
+  itemCount: z.number().int().min(0),
+  riskCount: z.number().int().min(0),
+  decisionCount: z.number().int().min(0),
+  priorityCount: z.number().int().min(0),
+  productCount: z.number().int().min(0),
+});
+
 /** Validates aggregate counts for one completed reporting period. */
 export const compiledHistoryEntrySchema = z
   .object({
@@ -82,19 +97,8 @@ export const compiledHistoryEntrySchema = z
     // the last publication.
     reopened: z.boolean(),
     publishedByName: z.string().min(1),
-    trafficLights: z
-      .object({
-        green: z.number().int().min(0),
-        yellow: z.number().int().min(0),
-        red: z.number().int().min(0),
-      })
-      .readonly(),
-    itemCount: z.number().int().min(0),
-    riskCount: z.number().int().min(0),
-    decisionCount: z.number().int().min(0),
-    priorityCount: z.number().int().min(0),
+    ...historyTotalsSchema.shape,
     sectionCount: z.number().int().min(0),
-    productCount: z.number().int().min(0),
   })
   .readonly();
 
@@ -111,8 +115,8 @@ export const myHistoryEntrySchema = z
   .object({
     sectionId: z.uuid(),
     reportId: z.uuid(),
-    periodStart: z.coerce.date(),
-    periodEnd: z.coerce.date(),
+    periodStart: reportDate(),
+    periodEnd: reportDate(),
     reportStatus: reportStatusSchema,
     sectionStatus: reportSectionStatusSchema,
     archived: z.boolean().optional(),
@@ -124,19 +128,7 @@ export const myHistoryEntrySchema = z
     createdAt: z.coerce.date().optional(),
     updatedAt: z.coerce.date().optional(),
     lastEditAt: z.coerce.date().nullable().optional(),
-    itemCount: z.number().int().min(0).optional(),
-    riskCount: z.number().int().min(0).optional(),
-    decisionCount: z.number().int().min(0).optional(),
-    priorityCount: z.number().int().min(0).optional(),
-    productCount: z.number().int().min(0).optional(),
-    trafficLights: z
-      .object({
-        green: z.number().int().min(0),
-        yellow: z.number().int().min(0),
-        red: z.number().int().min(0),
-      })
-      .readonly()
-      .optional(),
+    ...historyTotalsSchema.partial().shape,
   })
   .readonly();
 

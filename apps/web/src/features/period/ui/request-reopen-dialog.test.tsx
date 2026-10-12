@@ -166,6 +166,34 @@ describe("RequestReopenDialog — failed submit", () => {
 
 describe("RequestReopenDialog — existing reason boundary", () => {
   it.each([
+    ["padded ASCII", `hello${" ".repeat(500)}`, "hello"],
+    ["padded non-BMP", "😀".repeat(500) + " ".repeat(500), "😀".repeat(500)],
+    ["only whitespace", " ".repeat(501), undefined],
+  ] as const)(
+    "limits and submits the normalized payload for %s",
+    async (_label, raw, payload) => {
+      const user = userEvent.setup();
+      const onConfirm = vi.fn();
+      renderDialog({ onConfirm });
+      const field = screen.getByRole("textbox", { name: /Reason/ });
+      await user.click(field);
+      await user.paste(raw);
+      expect(field).toHaveValue(raw);
+      expect(
+        screen.getByText(
+          `${Array.from(payload ?? "").length} / ${MAX_REOPEN_REASON_LENGTH} characters`,
+        ),
+      ).toBeInTheDocument();
+      expect(field).toHaveAttribute("aria-invalid", "false");
+      expect(
+        screen.getByRole("button", { name: "Send request" }),
+      ).toBeEnabled();
+      await user.click(screen.getByRole("button", { name: "Send request" }));
+      expect(onConfirm).toHaveBeenCalledExactlyOnceWith(payload);
+    },
+  );
+
+  it.each([
     ["non-BMP boundary", "😀".repeat(500), true],
     ["non-BMP overflow", "😀".repeat(501), false],
     ["ASCII boundary", "A".repeat(500), true],

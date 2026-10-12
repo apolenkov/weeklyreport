@@ -1,9 +1,19 @@
 // @vitest-environment jsdom
 
+import {
+  buildEscalationsFromReadSections,
+  reportSectionReadModelSchema,
+} from "@customreport/shared";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import * as React from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import { makeReportSectionFixture } from "../../../test-utils/report-section-fixtures";
+import {
+  escalationToBlockedItem,
+  groupByProduct,
+} from "../model/dashboard-escalations";
+import { ProductCard } from "./blocked-at-risk-product-card";
 import { BlockedAtRiskTable } from "./blocked-at-risk-table";
 
 const oneItem = [
@@ -266,5 +276,91 @@ describe("BlockedAtRiskTable", () => {
     fireEvent.click(trigger);
     expect(trigger).toHaveAttribute("aria-expanded", "false");
     expect(panel).toHaveStyle({ gridTemplateRows: "0fr" });
+  });
+});
+
+describe("ProductCard — admitted repeated risks and canonical avatars", () => {
+  function admittedGroup(duplicate: boolean) {
+    const projectId = "90000000-0000-4000-8000-000000000001";
+    const risks = [
+      {
+        id: "90000000-0000-4000-8000-000000000002",
+        stableId: "90000000-0000-4000-8000-000000000003",
+        projectId,
+        risk: "Needs approval",
+        impact: "Delayed",
+        mitigation: "Ask owner",
+        severity: "blocked" as const,
+        stageNames: ["Testing"],
+      },
+      {
+        id: "90000000-0000-4000-8000-000000000004",
+        stableId: "90000000-0000-4000-8000-000000000005",
+        projectId,
+        risk: duplicate ? "Needs approval" : "Other approval",
+        impact: "Delayed",
+        mitigation: "Ask owner",
+        severity: "blocked" as const,
+        stageNames: ["Testing"],
+      },
+    ];
+    const section = reportSectionReadModelSchema.parse(
+      makeReportSectionFixture({
+        projects: [
+          { projectId, projectName: "Billing", trafficLight: "green" },
+        ],
+        risks,
+      }),
+    );
+    const group = groupByProduct(
+      buildEscalationsFromReadSections([section])
+        .filter((row) => row.type === "blocked")
+        .map(escalationToBlockedItem),
+    )[0];
+    if (!group) throw new Error("Expected admitted product group");
+    return group;
+  }
+  it.each([true, false])(
+    "retains all admitted risks without duplicate keys, duplicate=%s",
+    (duplicate) => {
+      const errors = vi
+        .spyOn(console, "error")
+        .mockImplementation(() => undefined);
+      try {
+        const group = admittedGroup(duplicate);
+        const rendered = render(<ProductCard group={group} />);
+        expect(
+          rendered.container.querySelectorAll("[data-blocked-row]"),
+        ).toHaveLength(2);
+        const keyWarnings = errors.mock.calls.filter((args) =>
+          args.some(
+            (arg) => typeof arg === "string" && arg.includes("same key"),
+          ),
+        );
+
+        const first = group.items[0];
+        if (!first) throw new Error("Expected admitted risk");
+        rendered.rerender(<ProductCard group={{ ...group, items: [first] }} />);
+        expect(
+          rendered.container.querySelectorAll("[data-blocked-row]"),
+        ).toHaveLength(1);
+        rendered.rerender(<ProductCard group={group} />);
+        expect(
+          rendered.container.querySelectorAll("[data-blocked-row]"),
+        ).toHaveLength(2);
+        expect(keyWarnings).toEqual([]);
+      } finally {
+        errors.mockRestore();
+      }
+    },
+  );
+  it.each([
+    ["Billing", "BI"],
+    ["Marketing Portal", "MP"],
+    ["😀 Portal", "😀P"],
+    [" ".repeat(3), "??"],
+  ])("uses the existing canonical avatar for %s", (product, initials) => {
+    render(<ProductCard group={{ ...admittedGroup(false), product }} />);
+    expect(screen.getByText(initials)).toBeInTheDocument();
   });
 });

@@ -114,12 +114,13 @@ describe("client-logs proxy route", () => {
       "content-type": "application/json",
       "content-length": String(CLIENT_LOGS_MAX_BODY_BYTES + 1),
     });
-    const textSpy = vi.spyOn(req, "text");
+    if (!req.body) throw new TypeError("Expected a request body stream");
+    const readerSpy = vi.spyOn(req.body, "getReader");
 
     const res = await POST(req);
 
     expect(res.status).toBe(413);
-    expect(textSpy).not.toHaveBeenCalled();
+    expect(readerSpy).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -161,8 +162,29 @@ describe("client-logs proxy route", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it.each(["NaN", "1, 2", "not-a-number"])(
+    "bounds malformed Content-Length %j and releases the request lock",
+    async (contentLength) => {
+      const fetchMock = vi.fn();
+      vi.stubGlobal("fetch", fetchMock);
+      const onCancel = vi.fn();
+      const chunk = new Uint8Array(64 * 1024).fill(120);
+      const request = makeStreamRequest(
+        [chunk, chunk, chunk],
+        { "content-type": "application/json", "content-length": contentLength },
+        onCancel,
+      );
+      const response = await POST(request);
+      expect(response.status).toBe(413);
+      expect(onCancel).toHaveBeenCalledOnce();
+      expect(request.body?.locked).toBe(false);
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
+
   it("forwards a body of exactly the byte limit unchanged", async () => {
-    const payload = "é".repeat(64 * 1024); // 2 bytes each — exactly 128 KiB.
+    const payload = JSON.stringify({ message: "é".repeat(65_529) });
+    expect(new TextEncoder().encode(payload).byteLength).toBe(128 * 1024);
     const fetchMock = vi.fn<typeof fetch>(() =>
       Promise.resolve(new Response(null, { status: 204 })),
     );

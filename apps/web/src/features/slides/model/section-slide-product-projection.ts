@@ -72,7 +72,7 @@ function floorSlideStageStatus(
     (risk) => nonEmpty(risk.risk) && riskCoversStage(risk, stageName),
   );
   return stageStatusToTraffic(
-    deriveEffectiveStageStatus(trafficToStageStatus(status), covering, []),
+    deriveEffectiveStageStatus(trafficToStageStatus(status), covering),
   );
 }
 

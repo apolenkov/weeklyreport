@@ -1,6 +1,7 @@
 // Structural minimum for the content check: both the mapper's
 // `WeeklyProductReport` and the presentation `ProductReport` satisfy it.
 export interface ReportContentSummary {
+  readonly hasOwnRedProductSignal?: boolean;
   readonly needsAttention?: string | undefined;
   readonly currentWeek: readonly unknown[];
   readonly nextWeek: readonly unknown[];
@@ -13,6 +14,7 @@ export interface ReportContentSummary {
 // per-lead grouping so those views cannot diverge on what "has content" means.
 export function reportHasContent(report: ReportContentSummary): boolean {
   return (
+    report.hasOwnRedProductSignal === true ||
     (report.needsAttention?.trim().length ?? 0) > 0 ||
     report.currentWeek.length > 0 ||
     report.nextWeek.length > 0 ||

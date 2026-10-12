@@ -39,6 +39,36 @@ export function collectItemErrors(args: {
   };
 }
 
+// Save and status changes apply the same normalized status-dependent rules.
+export function collectItemStatusErrors(args: {
+  readonly status: ItemStatus;
+  readonly trimmedNextStepText: string;
+  readonly trimmedPausedReason: string;
+}): { nextStepText?: string; pausedReason?: string } {
+  return {
+    ...(Array.from(args.trimmedNextStepText).length > SAFE_TEXT_MAX_LENGTH
+      ? {
+          nextStepText: `Next step must be ${SAFE_TEXT_MAX_LENGTH} characters or fewer.`,
+        }
+      : {}),
+    ...(args.status === "completed" && args.trimmedNextStepText.length > 0
+      ? {
+          nextStepText:
+            "A completed item cannot have a next step. Resume it or clear the plan.",
+        }
+      : {}),
+    ...(args.status === "paused" && args.trimmedPausedReason.length === 0
+      ? { pausedReason: "A reason is required to pause an item." }
+      : {}),
+    ...(args.status === "paused" &&
+    Array.from(args.trimmedPausedReason).length > SAFE_TEXT_MAX_LENGTH
+      ? {
+          pausedReason: `Pause reason must be ${SAFE_TEXT_MAX_LENGTH} characters or fewer.`,
+        }
+      : {}),
+  };
+}
+
 // Focus order: text → next step → stage → paused reason; later errors never
 // jump past earlier fields.
 export function firstInvalidControl(

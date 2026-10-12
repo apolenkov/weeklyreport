@@ -180,8 +180,9 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
   async revokeSectionSubmission(
     sectionId: string,
     revokedBy: string,
+    scope: Record<string, unknown>,
   ): Promise<void> {
-    await revokeSectionSubmissionTx(this.prisma, sectionId, revokedBy);
+    await revokeSectionSubmissionTx(this.prisma, sectionId, revokedBy, scope);
   }
 
   // Revoke every submitted section in a report.

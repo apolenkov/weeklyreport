@@ -184,3 +184,64 @@ describe.each(forms)("$name pending draft", (form) => {
     },
   );
 });
+
+describe("Notifications — shared email admission", () => {
+  const notifications = expectDefined(
+    forms.find((form) => form.name === "Notifications"),
+  );
+  const email254 = `${"a".repeat(64)}@${"b".repeat(63)}.${"c".repeat(63)}.${"d".repeat(56)}.test`;
+  const email255 = `${"a".repeat(64)}@${"b".repeat(63)}.${"c".repeat(63)}.${"d".repeat(57)}.test`;
+
+  it.each([
+    { name: "255-character email", value: email255 },
+    { name: "consecutive local dots", value: "name..last@example.test" },
+  ])("rejects $name before mutation", async ({ value }) => {
+    const harness = mountForm(notifications);
+    const user = userEvent.setup();
+    const field = await screen.findByLabelText(/notification from-email/i);
+    await editControl(user, field, value);
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(field).toHaveAccessibleDescription(
+      "Enter a valid email or leave the field empty.",
+    );
+    const save = screen.getByRole("button", {
+      name: /save notification settings/i,
+    });
+    expect(save).toBeDisabled();
+    await user.click(save);
+    expect(harness.mutation.calls).toHaveLength(0);
+  });
+
+  it.each([
+    { name: "254-character email", value: email254, expected: email254 },
+    {
+      name: "ordinary trimmed address",
+      value: "  owner@example.test  ",
+      expected: "owner@example.test",
+    },
+    { name: "empty clear", value: "", expected: null },
+    { name: "whitespace clear", value: " ".repeat(3), expected: null },
+  ])(
+    "accepts $name and preserves the wire payload",
+    async ({ value, expected }) => {
+      const harness = mountForm(notifications);
+      const user = userEvent.setup();
+      const field = await screen.findByLabelText(/notification from-email/i);
+      await user.clear(field);
+      if (value !== "") await user.type(field, value);
+      expect(field).toHaveAttribute("aria-invalid", "false");
+      await user.click(
+        screen.getByRole("button", { name: /save notification settings/i }),
+      );
+      await waitFor(() =>
+        expect(harness.mutation.calls).toEqual([
+          { notificationFromEmail: expected },
+        ]),
+      );
+      await act(async () => {
+        harness.pending.resolve();
+        await harness.pending.promise;
+      });
+    },
+  );
+});

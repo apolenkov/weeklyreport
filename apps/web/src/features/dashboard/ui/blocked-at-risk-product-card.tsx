@@ -1,9 +1,11 @@
+import { initialsFromName } from "../../../shared/lib/format/user-initials";
 import { statusLabel } from "../../../shared/lib/status/status-presentation";
 import { Rail } from "../../../shared/ui/report-shell/rail";
 import type {
   BlockedAtRiskItem,
   ProductGroup,
 } from "../model/dashboard-escalations";
+import { keyIssues } from "../model/dashboard-escalations";
 
 type Severity = BlockedAtRiskItem["severity"];
 
@@ -61,18 +63,6 @@ function headerLabel(group: ProductGroup, severity: Severity): string {
     : statusLabel(severity, "screen");
 }
 
-// Up to two leading initials from the product name (e.g. "Marketing Portal" →
-// "MP"), the same avatar treatment the report cards use for leads.
-function productInitials(product: string): string {
-  return product
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((word) => word[0])
-    .join("")
-    .toUpperCase();
-}
-
 // Distinct assignees in first-appearance order for the header sub-line.
 function assigneeLine(group: ProductGroup): string {
   return [...new Set(group.items.map((item) => item.assignee))].join(" · ");
@@ -118,7 +108,7 @@ export function ProductCard({ group }: { readonly group: ProductGroup }) {
           style={{ background: avatar.bg, color: avatar.fg }}
           aria-hidden="true"
         >
-          {productInitials(group.product)}
+          {initialsFromName(group.product)}
         </div>
         <div className="flex min-w-0 flex-col gap-0.5">
           <div className="flex min-w-0 items-center gap-2.5">
@@ -147,11 +137,8 @@ export function ProductCard({ group }: { readonly group: ProductGroup }) {
         </div>
       </div>
       <div className="space-y-1 border-t border-[var(--color-border-subtle)] px-4 py-3">
-        {group.items.map((item) => (
-          <IssueRow
-            key={`${item.productId}|${item.authorId}|${item.stage}|${item.severity}|${item.description}`}
-            item={item}
-          />
+        {keyIssues(group.items).map(({ item, key }) => (
+          <IssueRow key={key} item={item} />
         ))}
       </div>
     </div>

@@ -120,7 +120,11 @@ export interface LeadFormRepository {
   getPublishedLineage(
     section: ReportSectionReadModel,
   ): Promise<PublishedLineage>;
-  revokeSectionSubmission(sectionId: string, revokedBy: string): Promise<void>;
+  revokeSectionSubmission(
+    sectionId: string,
+    revokedBy: string,
+    scope: Record<string, unknown>,
+  ): Promise<void>;
   fillFromSection(
     targetSectionId: string,
     sourceSectionId: string,

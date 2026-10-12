@@ -8,6 +8,7 @@ import type {
   PublishedReportSectionReadModel,
 } from "@customreport/shared";
 import { Prisma } from "@prisma/client";
+import { z } from "zod";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { ReportSectionDomainError } from "../application/report-sections.contract.js";
@@ -17,8 +18,7 @@ import {
 } from "../domain/my-history.js";
 import { requireScopedPublishedSnapshot } from "./published-report-scope.js";
 
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const cursorIdSchema = z.uuid();
 
 interface HistoryCursor {
   periodStart: Date;
@@ -59,7 +59,7 @@ export function decodeMyHistoryCursor(cursor: string): HistoryCursor {
       typeof parsed.eventAt !== "string" ||
       !(parsed.source === "live" || parsed.source === "published") ||
       typeof parsed.id !== "string" ||
-      !UUID_RE.test(parsed.id)
+      !cursorIdSchema.safeParse(parsed.id).success
     )
       throw new Error("invalid cursor");
     const periodStart = new Date(parsed.periodStart);

@@ -3,6 +3,7 @@
 import {
   buildEscalationsFromReadSections,
   buildPortfolioProductsFromSnapshotSections,
+  weeklyReportReadModelSchema,
 } from "@customreport/shared";
 import {
   screen,
@@ -924,4 +925,98 @@ describe("WeeklyReportPage — Submitted/All filter + anti-empty-state (§7)", (
     // A lead sees content unfiltered (no submitted-only narrowing).
     expect(accordionCard(PRODUCT_ID_B)).not.toBeNull();
   });
+});
+
+describe("WeeklyReportPage — red-only draft co-owner delivery", () => {
+  it.each(["submitted-first", "draft-first"] as const)(
+    "reveals draft own red panel without copying global attention, %s",
+    async (order) => {
+      const submitted = {
+        ...submittedSection(),
+        projects: [
+          {
+            projectId: PRODUCT_ID_A,
+            projectName: "Shared red product",
+            trafficLight: "red" as const,
+          },
+        ],
+      };
+      const draft = {
+        ...draftSection(),
+        items: [],
+        projects: [
+          {
+            projectId: PRODUCT_ID_A,
+            projectName: "Shared red product",
+            trafficLight: "red" as const,
+          },
+        ],
+      };
+      const data = makeWeeklyReportData("open", {
+        leadSections:
+          order === "submitted-first" ? [submitted, draft] : [draft, submitted],
+        portfolioOverview: [],
+      });
+      const escalations = buildEscalationsFromReadSections(data.leadSections);
+      expect(escalations.filter((row) => row.type === "at_risk")).toHaveLength(
+        1,
+      );
+      renderWeeklyReportPage(
+        weeklyReportReadModelSchema.parse({
+          ...data,
+          escalations,
+          portfolioOverview: buildPortfolioProductsFromSnapshotSections(
+            data.leadSections,
+          ),
+        }),
+        { scope: "lead" },
+      );
+      await waitFor(() =>
+        expect(
+          screen.queryByTestId("weekly-report-skeleton"),
+        ).not.toBeInTheDocument(),
+      );
+      expect(screen.getByTestId("draft-hidden-signal")).toHaveTextContent(
+        "1 section in draft",
+      );
+      await userEvent
+        .setup()
+        .click(screen.getByRole("button", { name: /show all/i }));
+      const bob = document.getElementById(
+        `report-lead-${AUTHOR_ID_B}-product-${PRODUCT_ID_A}`,
+      );
+      expect(bob).not.toBeNull();
+      const alice = document.getElementById(
+        `report-lead-${AUTHOR_ID_A}-product-${PRODUCT_ID_A}`,
+      );
+      expect(alice).not.toBeNull();
+      if (!bob || !alice) throw new Error("Expected both own product panels");
+      expect(
+        within(bob).getByRole("button", { name: /shared red product/i }),
+      ).toBeEnabled();
+      await userEvent
+        .setup()
+        .click(
+          within(bob).getByRole("button", { name: /shared red product/i }),
+        );
+      await userEvent
+        .setup()
+        .click(
+          within(alice).getByRole("button", { name: /shared red product/i }),
+        );
+      expect(
+        screen.getAllByText("Project Shared red product is flagged red."),
+      ).toHaveLength(1);
+      const representative = order === "submitted-first" ? alice : bob;
+      const other = order === "submitted-first" ? bob : alice;
+      expect(
+        within(representative).getByText(
+          "Project Shared red product is flagged red.",
+        ),
+      ).toBeInTheDocument();
+      expect(
+        within(other).queryByText("Project Shared red product is flagged red."),
+      ).not.toBeInTheDocument();
+    },
+  );
 });

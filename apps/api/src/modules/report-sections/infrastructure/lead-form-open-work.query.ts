@@ -7,6 +7,7 @@ import {
   type ReportSectionReadModel,
 } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
+import { z } from "zod";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { LeadFormConstraintError } from "../domain/lead-form-shared.js";
@@ -15,8 +16,7 @@ import {
   type StatusOverviewPredecessorRow,
 } from "./lead-form-status-overview.predecessor.js";
 
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const cursorIdSchema = z.uuid();
 
 interface OpenWorkCursor {
   readonly periodStart: Date;
@@ -63,7 +63,7 @@ export function decodeOpenWorkCursor(cursor: string): OpenWorkCursor {
       !("createdAt" in value) ||
       !("id" in value) ||
       typeof value.id !== "string" ||
-      !UUID_RE.test(value.id)
+      !cursorIdSchema.safeParse(value.id).success
     ) {
       throw new Error("invalid cursor shape");
     }

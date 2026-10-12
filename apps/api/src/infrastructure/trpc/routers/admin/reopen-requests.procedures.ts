@@ -1,4 +1,7 @@
-import { reopenRequestListInputSchema } from "@customreport/shared";
+import {
+  MAX_REOPEN_NOTE_LENGTH,
+  reopenRequestListInputSchema,
+} from "@customreport/shared";
 import { z } from "zod";
 
 import type { ReopenRequestAdminService } from "../../../../modules/admin/index.js";
@@ -7,8 +10,6 @@ import {
   captureMutationAuditInputMiddleware,
   headProcedure,
 } from "../../trpc.middleware.js";
-
-const MAX_REOPEN_NOTE_LENGTH = 500;
 
 interface ReopenRequestsDeps {
   readonly reopenRequestAdminService: ReopenRequestAdminService;

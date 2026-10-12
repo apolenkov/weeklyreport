@@ -134,3 +134,41 @@ describe("compiledHistoryEntrySchema", () => {
     ).toBe(false);
   });
 });
+
+describe("myHistoryEntrySchema — Report period date format", () => {
+  const entry = {
+    sectionId: "10000000-0000-4000-8000-000000000001",
+    reportId: "10000000-0000-4000-8000-000000000002",
+    periodStart: "2000-01-01T00:00:00.000Z",
+    periodEnd: "2000-01-01T00:00:00.000Z",
+    reportStatus: "draft",
+    sectionStatus: "draft",
+    submittedAt: null,
+    publishedAt: null,
+  };
+  it.each(["periodStart", "periodEnd"] as const)(
+    "rejects pre-2000 %s",
+    (field) => {
+      const result = myHistoryEntrySchema.safeParse({
+        ...entry,
+        [field]: "1999-12-31T23:59:59.999Z",
+      });
+      expect(result.success).toBe(false);
+      if (!result.success)
+        expect(result.error.issues).toContainEqual(
+          expect.objectContaining({ path: [field] }),
+        );
+    },
+  );
+  it("keeps boundary, optional totals, nullable publication and nonperiod timestamps", () => {
+    const result = myHistoryEntrySchema.parse({
+      ...entry,
+      submittedAt: "1999-12-31T23:59:59.999Z",
+    });
+    expect(result.periodStart.toISOString()).toBe("2000-01-01T00:00:00.000Z");
+    expect(result.periodEnd.toISOString()).toBe("2000-01-01T00:00:00.000Z");
+    expect(result.publishedAt).toBeNull();
+    expect(result.itemCount).toBeUndefined();
+    expect(result.submittedAt?.toISOString()).toBe("1999-12-31T23:59:59.999Z");
+  });
+});

@@ -2,6 +2,13 @@ import { z } from "zod";
 
 import { organizationPublicSchema } from "../organization/organization.js";
 
+const requiredRecoveryDateSchema = z
+  .unknown()
+  .refine((value) => value !== null, {
+    message: "A required reminder date must not be null.",
+  })
+  .pipe(z.coerce.date());
+
 // 'escalation' fires the T+2h heads-only digest and bypasses
 // User.notificationOptOut because heads must always be notified.
 /** Reminder rule categories stored by the admin scheduler. */
@@ -17,7 +24,7 @@ export const adminReminderRuleSchema = z
     reportId: z.uuid(),
     policyId: z.uuid(),
     kind: adminReminderRuleKindSchema,
-    fireAt: z.coerce.date(),
+    fireAt: requiredRecoveryDateSchema,
     timezone: z.string().min(1),
     status: adminReminderRuleStatusSchema,
     version: z.number().int().min(1),
@@ -26,7 +33,7 @@ export const adminReminderRuleSchema = z
 
 /** Recovery-only rule identity, including its immutable schedule basis. */
 export const adminSnapshotReminderRuleSchema = adminReminderRuleSchema
-  .and(z.object({ deadline: z.coerce.date() }))
+  .and(z.object({ deadline: requiredRecoveryDateSchema }))
   .readonly();
 
 /** Delivery lifecycle recorded for one reminder execution. */
@@ -88,7 +95,7 @@ const adminReminderExecutionFields = {
   reportId: z.uuid(),
   dedupeKey: z.string().min(1),
   status: adminReminderExecutionStatusSchema,
-  scheduledFor: z.coerce.date(),
+  scheduledFor: requiredRecoveryDateSchema,
   sentAt: z.coerce.date().nullable(),
   recipientEmail: z.email(),
   errorMessage: z
@@ -137,8 +144,8 @@ export const adminSnapshotReminderExecutionSchema = z
   .object({
     ...adminReminderExecutionFields,
     queuePayload: reminderQueuePayloadSchema,
-    createdAt: z.coerce.date(),
-    updatedAt: z.coerce.date(),
+    createdAt: requiredRecoveryDateSchema,
+    updatedAt: requiredRecoveryDateSchema,
   })
   .superRefine(validateReminderLifecycleTuple)
   .readonly();

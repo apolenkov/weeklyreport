@@ -9,6 +9,9 @@ import { NavLogoutButton } from "./nav-logout-button";
 const RIGHT_RAIL_CLASS =
   "relative flex items-center justify-end gap-2.5 justify-self-end xl:w-[272px]";
 
+const RIGHT_RAIL_SKELETON_BASE_CLASS =
+  "h-[var(--toolbar-control-h)] min-w-[var(--toolbar-control-h)] w-10 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40";
+
 function shouldRenderDevRoleSwitcher() {
   return webEnv.devRoleSwitcher();
 }
@@ -19,17 +22,11 @@ function RightRailSkeleton() {
   return (
     <>
       <div
-        className="h-[var(--toolbar-control-h)] min-w-[var(--toolbar-control-h)] w-10 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40 xl:w-[92px]"
+        className={`${RIGHT_RAIL_SKELETON_BASE_CLASS} xl:w-[92px]`}
         aria-hidden="true"
       />
-      <div
-        className="h-[var(--toolbar-control-h)] min-w-[var(--toolbar-control-h)] w-10 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40"
-        aria-hidden="true"
-      />
-      <div
-        className="h-[var(--toolbar-control-h)] min-w-[var(--toolbar-control-h)] w-10 rounded-[var(--radius-pill)] bg-[var(--color-muted)]/40"
-        aria-hidden="true"
-      />
+      <div className={RIGHT_RAIL_SKELETON_BASE_CLASS} aria-hidden="true" />
+      <div className={RIGHT_RAIL_SKELETON_BASE_CLASS} aria-hidden="true" />
     </>
   );
 }

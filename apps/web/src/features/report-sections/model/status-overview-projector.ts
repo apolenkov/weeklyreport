@@ -38,17 +38,11 @@ function projectStatus(
         risk.risk.trim().length > 0 &&
         risk.stageNames.includes(stage.stageName),
     );
-    const coveringItems = section.items.filter(
-      (item) =>
-        item.projectId === project.projectId &&
-        item.stageNames.includes(stage.stageName),
-    );
     return {
       name: stage.stageName,
       status: deriveEffectiveStageStatus(
         trafficLightToCanonical(stage.status),
         coveringRisks,
-        coveringItems,
       ),
     };
   });

@@ -155,12 +155,10 @@ async function prepareSection(
       },
     });
     assert.equal(
-      await applyRevokeTransition(
-        tx,
-        section.id,
-        HEAD_USER_ID,
-        section.version,
-      ),
+      await applyRevokeTransition(tx, section.id, HEAD_USER_ID, {
+        scope: { reportId: ACTIVE_REPORT_ID, authorId: LEAD_1_ID },
+        expectedVersion: section.version,
+      }),
       1,
     );
   }

@@ -2,6 +2,7 @@ import type { UserSession } from "@customreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import { groupScopeFilter } from "../../../lib/group-scope.js";
 import {
   createPauseGate,
   pauseBeforeTransaction,
@@ -163,6 +164,14 @@ describe("lead-form published-period write locks (integration)", () => {
     const revoke = pausedRepo.revokeSectionSubmission(
       testData.section.id,
       testData.head.id,
+      groupScopeFilter(
+        {
+          role: "head",
+          reportingGroupId: testData.head.reportingGroupId ?? undefined,
+          viewerGroupAccess: [],
+        },
+        "reportSection",
+      ),
     );
     await gate.paused;
     await publishTarget(prisma, testData);

@@ -90,8 +90,8 @@ Web uses port 3000; API port 3002. Dev authentication is forbidden in production
 - Rollover creates at most one active W+1 item per stableId. Explicit Next wins;
   unfinished Current continues otherwise. Previous stays read-only.
 
-Read and link the owning OpenSpec scenario for each write-path change. Only the
-Report lifecycle tuple has the corresponding database check constraint.
+Read and link the owning OpenSpec scenario for each write-path change. The Report
+lifecycle tuple and its autoArchived-implies-archived flag have database check constraints.
 
 ## Files leaving the repository
 

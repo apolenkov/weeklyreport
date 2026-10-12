@@ -1,4 +1,5 @@
 import {
+  ORGANIZATION_SINGLETON_ID,
   type OrganizationPublic,
   type UserSession,
 } from "@customreport/shared";
@@ -7,9 +8,6 @@ import { PrismaService } from "../prisma/prisma.service.js";
 
 // Short TTL: admin renames visible within ~5s without a DB hit per request.
 const ORG_CACHE_TTL_MS = 5000;
-// One Organization row per deployment; the fixed id is the schema-level
-// singleton invariant (`organizationSchema.id` is `z.literal("singleton")`).
-const ORGANIZATION_SINGLETON_ID = "singleton";
 class OrganizationCache {
   private entry: {
     readonly value: OrganizationPublic;

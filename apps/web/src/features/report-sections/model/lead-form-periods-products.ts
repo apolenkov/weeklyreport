@@ -65,7 +65,6 @@ function deriveOwnedStageRow(
         : deriveEffectiveStageStatus(
             explicit,
             risks.filter((r) => riskCoversStage(r, stageName)),
-            [],
           ),
     ownership: "mine" as const,
     // Stage owner labels render the short form ("Иванов В.П."); the full ФИО

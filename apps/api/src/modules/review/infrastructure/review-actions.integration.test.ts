@@ -609,7 +609,9 @@ describe("review-actions (integration)", () => {
           verdict: "changes_requested",
           expectedVersion: 1,
         }),
-        applyRevokeTransition(prisma, testData.section.id, admin.id),
+        applyRevokeTransition(prisma, testData.section.id, admin.id, {
+          scope: {},
+        }),
       ]);
       const transitions = (verdict.unsubmitted ? 1 : 0) + revokeCount;
       expect(transitions).toBe(1);

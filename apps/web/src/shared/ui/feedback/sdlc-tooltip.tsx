@@ -191,7 +191,11 @@ export function SdlcTooltipProvider({
             data-testid="sdlc-tooltip"
             data-placement={state.placement}
             className={`pointer-events-none fixed z-[var(--layer-overlay)] -translate-x-1/2 whitespace-pre-line rounded-md bg-[var(--color-foreground)] px-2 py-1 text-left text-xs font-medium leading-relaxed text-[var(--color-on-dark)] shadow-lg ${state.placement === "above" ? "-translate-y-full" : "translate-y-0"}`}
-            style={{ top: state.top, left: state.left, maxWidth: 280 }}
+            style={{
+              top: state.top,
+              left: state.left,
+              maxWidth: TOOLTIP_MAX_WIDTH_PX,
+            }}
           >
             {state.content}
           </div>

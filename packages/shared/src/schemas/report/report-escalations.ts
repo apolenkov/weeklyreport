@@ -16,7 +16,7 @@ function productNamesFor(
   section: ReportSectionReadModel,
 ): ReadonlyMap<string, string> {
   return new Map(
-    [...section.projects, ...section.referencedProjects].map(
+    [...section.referencedProjects, ...section.projects].map(
       (project) => [project.projectId, project.projectName] as const,
     ),
   );

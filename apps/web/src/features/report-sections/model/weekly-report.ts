@@ -1,6 +1,7 @@
 // Maps weeklyReport.get into aggregate and per-lead presentation slices.
 import type { WeeklyReportReadModel } from "@customreport/shared";
 import {
+  buildEscalationsFromReadSections,
   CANONICAL_STATUS_PRECEDENCE,
   shortNameFromName,
   worstCanonicalStatus,
@@ -137,16 +138,20 @@ function buildLeadProductReport(
   section: LeadSection,
   proj: LeadProductCandidate,
   records: LeadProductRecords,
-  escalations: WeeklyReportReadModel["escalations"],
+  signals: {
+    readonly escalations: WeeklyReportReadModel["escalations"];
+    readonly hasOwnRedProductSignal: boolean;
+  },
 ): WeeklyProductReport {
   const status = trafficToProductStatus(proj.trafficLight);
-  const attention = escalations.find(
+  const attention = signals.escalations.find(
     (escalation) =>
       escalation.productId === proj.projectId &&
       escalation.authorId === section.authorId,
   );
 
   return {
+    ...(signals.hasOwnRedProductSignal ? { hasOwnRedProductSignal: true } : {}),
     id: proj.projectId,
     authorIds: [section.authorId],
     initials: initialsFromName(proj.projectName),
@@ -184,6 +189,11 @@ export function mapWeeklyReportLeadGroups(
   return api.leadSections
     .map((section) => {
       const single = [section];
+      const ownRedProducts = new Set(
+        buildEscalationsFromReadSections(single)
+          .filter((row) => row.type === "at_risk")
+          .map((row) => row.productId),
+      );
       const itemsByProject = groupItemsByProject(single);
       const risksByProject = groupRisksByProject(single, projectNames);
       const decisionsByProject = groupDecisionsByProject(single, projectNames);
@@ -206,7 +216,10 @@ export function mapWeeklyReportLeadGroups(
               decisions: decisionsByProject.get(proj.projectId) ?? [],
               priorities: prioritiesByProject.get(proj.projectId) ?? [],
             },
-            api.escalations,
+            {
+              escalations: api.escalations,
+              hasOwnRedProductSignal: ownRedProducts.has(proj.projectId),
+            },
           ),
         )
         .filter(reportHasContent);

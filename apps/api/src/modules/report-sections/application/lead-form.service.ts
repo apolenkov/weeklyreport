@@ -105,7 +105,11 @@ export class LeadFormService {
     // published reports; a reopened period stays revocable.
     await this.assertPeriodNotPublished(sectionId, "revoke a submission in");
 
-    await this.repository.revokeSectionSubmission(sectionId, revokedByUserId);
+    await this.repository.revokeSectionSubmission(
+      sectionId,
+      revokedByUserId,
+      scope,
+    );
     return { success: true };
   }
 

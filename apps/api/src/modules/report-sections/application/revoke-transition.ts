@@ -6,17 +6,27 @@ export async function applyRevokeTransition(
   tx: Pick<Prisma.TransactionClient, "reportSection">,
   sectionId: string,
   revokedBy: string,
-  expectedVersion?: number,
+  options: {
+    readonly scope: Prisma.ReportSectionWhereInput;
+    readonly expectedVersion?: number;
+  },
 ): Promise<number> {
   const result = await tx.reportSection.updateMany({
     where: {
-      id: sectionId,
-      status: "submitted",
-      report: {
-        archived: false,
-        periodStatus: { in: ["open", "reopened"] },
-      },
-      ...(expectedVersion === undefined ? {} : { version: expectedVersion }),
+      AND: [
+        {
+          id: sectionId,
+          status: "submitted",
+          report: {
+            archived: false,
+            periodStatus: { in: ["open", "reopened"] },
+          },
+          ...(options.expectedVersion === undefined
+            ? {}
+            : { version: options.expectedVersion }),
+        },
+        options.scope,
+      ],
     },
     data: {
       status: "draft",

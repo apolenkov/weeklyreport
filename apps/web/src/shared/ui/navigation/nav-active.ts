@@ -2,9 +2,11 @@ import { type Role, ROLE_HOME_PATH } from "@customreport/shared";
 
 import { isViewer } from "../../lib/auth/role-predicates";
 import {
+  ADMIN_ROUTE,
   HEAD_DASHBOARD_ROUTE,
   HEAD_REPORT_ROUTE,
   REPORTS_LATEST_ROUTE,
+  REPORTS_ROUTE,
 } from "./nav-links";
 
 function isReportDetailPath(pathname: string): boolean {
@@ -21,7 +23,7 @@ function viewerActiveLink(pathname: string, href: string): boolean | undefined {
   if (href === REPORTS_LATEST_ROUTE) {
     return pathname === REPORTS_LATEST_ROUTE || isReportDetailPath(pathname);
   }
-  if (href === "/reports") return pathname === "/reports";
+  if (href === REPORTS_ROUTE) return pathname === REPORTS_ROUTE;
   return undefined;
 }
 
@@ -30,17 +32,17 @@ export function isActiveLink(
   href: string,
   role: Role | null,
 ): boolean {
-  if (href === "/admin") return pathname.startsWith("/admin");
+  if (href === ADMIN_ROUTE) return pathname.startsWith(ADMIN_ROUTE);
   if (href === HEAD_REPORT_ROUTE) return pathname.startsWith(HEAD_REPORT_ROUTE);
   if (href === HEAD_DASHBOARD_ROUTE) return pathname === HEAD_DASHBOARD_ROUTE;
   if (isViewer(role)) {
     const viewerMatch = viewerActiveLink(pathname, href);
     if (viewerMatch !== undefined) return viewerMatch;
   }
-  if (href === "/reports") {
+  if (href === REPORTS_ROUTE) {
     // Exact match (not startsWith) so report subpaths hit the detail-path
     // check, not History. Independent of archive toggle / stray `?tab`.
-    return pathname === "/reports" || isReportDetailPath(pathname);
+    return pathname === REPORTS_ROUTE || isReportDetailPath(pathname);
   }
   return pathname.startsWith(href);
 }

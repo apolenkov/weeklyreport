@@ -76,7 +76,7 @@ async function unsubmitOnChangesRequested(
     tx,
     params.sectionId,
     params.reviewerId,
-    params.expectedVersion,
+    { scope: {}, expectedVersion: params.expectedVersion },
   );
   return count > 0;
 }
