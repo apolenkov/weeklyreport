@@ -74,6 +74,32 @@ describe("leadOpenWorkHistoryOutputSchema", () => {
     });
   });
 
+  it("reads a stored occurrence whose period ends before it starts", () => {
+    // Order is enforced on writes (snapshot restore); reads of stored data must not fail.
+    const result = leadOpenWorkHistoryOutputSchema.safeParse({
+      occurrences: [
+        {
+          ...occurrence,
+          periodStart: new Date("2026-08-23T00:00:00.000Z"),
+          periodEnd: new Date("2026-08-17T23:59:59.999Z"),
+        },
+      ],
+      nextCursor: null,
+    });
+
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a same-day period", () => {
+    const day = new Date("2026-08-17T00:00:00.000Z");
+    expect(
+      leadOpenWorkHistoryOutputSchema.safeParse({
+        occurrences: [{ ...occurrence, periodStart: day, periodEnd: day }],
+        nextCursor: null,
+      }).success,
+    ).toBe(true);
+  });
+
   it("accepts an explicitly unavailable frozen parent name", () => {
     expect(
       leadOpenWorkHistoryOutputSchema.safeParse({
