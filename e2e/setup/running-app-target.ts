@@ -1,5 +1,6 @@
 import { assertObservedRuntimeTarget } from "../../prisma/guards/_destructive-guard.js";
 import { E2E_BASE_URL } from "./base-url.js";
+import { resolveE2eLane } from "./lane.js";
 
 const SCRIPT_NAME = "e2e-running-app-target";
 // Through the web rewrite, so the web to API link the browser uses is probed.
@@ -22,7 +23,8 @@ function observedTarget(body: unknown): {
 }
 
 /**
- * Prove that the running app uses customreport_e2e and Redis DB 15. Runs in
+ * Prove that the running app uses the selected lane's database and Redis DB
+ * (customreport_e2e and DB 15 unless E2E_LANE is set). Runs in
  * global setup, before any scenario; `/health/ready` only proves connectivity.
  */
 export async function assertRunningAppTarget(
@@ -39,5 +41,6 @@ export async function assertRunningAppTarget(
   assertObservedRuntimeTarget(
     SCRIPT_NAME,
     observedTarget(await response.json()),
+    resolveE2eLane(),
   );
 }

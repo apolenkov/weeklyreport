@@ -76,6 +76,49 @@ void test("rejects all authorized lane names", () => {
   }
 });
 
+void test("E2E_LANE selects the lane database and its own Redis DB", () => {
+  for (const [lane, redisDb] of [
+    ["a", "1"],
+    ["b", "2"],
+  ] as const) {
+    const url = `postgresql://u:p@127.0.0.1:5432/customreport_e2e_lane_${lane}_test`;
+    const result = validateE2eRuntimeTarget(
+      "runtime-target-test",
+      baseEnv({
+        E2E_LANE: lane,
+        E2E_DATABASE_URL: url,
+        DATABASE_URL: url,
+        REDIS_DB: redisDb,
+      }),
+    );
+    assert.strictEqual(result.redisDb, redisDb);
+  }
+});
+
+void test("a lane never accepts another lane's database or Redis DB", () => {
+  const laneB = "postgresql://u:p@127.0.0.1:5432/customreport_e2e_lane_b_test";
+  expectRejection(
+    baseEnv({
+      E2E_LANE: "a",
+      E2E_DATABASE_URL: laneB,
+      DATABASE_URL: laneB,
+      REDIS_DB: "2",
+    }),
+    "customreport_e2e_lane_a_test",
+  );
+  expectRejection(baseEnv({ E2E_LANE: "b" }), "customreport_e2e_lane_b_test");
+  const laneA = "postgresql://u:p@127.0.0.1:5432/customreport_e2e_lane_a_test";
+  expectRejection(
+    baseEnv({
+      E2E_LANE: "a",
+      E2E_DATABASE_URL: laneA,
+      DATABASE_URL: laneA,
+      REDIS_DB: "15",
+    }),
+    "REDIS_DB must be exactly 1",
+  );
+});
+
 void test("rejects wrong database name", () => {
   const url = "postgresql://u:p@127.0.0.1:5432/customreport_test";
   expectRejection(

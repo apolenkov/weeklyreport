@@ -103,23 +103,25 @@ export function parseE2eRuntimeRedisTarget(
 }
 
 /**
- * Assert that the running application reports the disposable database and the
- * reserved Redis DB. `observed` comes from the app itself, not from setup env.
+ * Assert that the running application reports the expected disposable database
+ * and its assigned Redis DB. `observed` comes from the app itself, not from
+ * setup env; `expected` is the lane the E2E process selected.
  */
 export function assertObservedRuntimeTarget(
   scriptName: string,
   observed: { readonly database: string; readonly redisDb: number },
+  expected: { readonly database: string; readonly redisDb: string },
 ): void {
-  if (observed.database !== E2E_DATABASE_NAME) {
+  if (observed.database !== expected.database) {
     throw new Error(
       `[${scriptName}] The running app uses database "${observed.database}", ` +
-        `not ${E2E_DATABASE_NAME}. Restart it with the E2E environment.`,
+        `not ${expected.database}. Restart it with the E2E environment.`,
     );
   }
-  if (String(observed.redisDb) !== E2E_REDIS_DB) {
+  if (String(observed.redisDb) !== expected.redisDb) {
     throw new Error(
       `[${scriptName}] The running app uses Redis DB ${observed.redisDb}, ` +
-        `not Redis DB ${E2E_REDIS_DB}. Restart it with REDIS_DB=${E2E_REDIS_DB}.`,
+        `not Redis DB ${expected.redisDb}. Restart it with REDIS_DB=${expected.redisDb}.`,
     );
   }
 }
