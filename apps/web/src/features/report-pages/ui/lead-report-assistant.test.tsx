@@ -1,3 +1,4 @@
+import { reportAssistantOutcomeSchema } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
@@ -268,26 +269,48 @@ describe("LeadReportAssistant", () => {
     consoleError.mockRestore();
   });
 
-  it("preserves Markdown heading levels and list semantics", () => {
-    render(
-      <LeadReportAssistantMarkdown
-        markdown={"# Overview\n## Details\n### Note\n- First\n* Second"}
-      />,
-    );
+  it.each([4, 5, 6] as const)(
+    "preserves original H%d answer headings and semantic bullets through Chat",
+    async (level) => {
+      const mutation = renderAssistant();
+      const heading = `Depth ${level}`;
+      const answerMarkdown = [
+        "# Overview",
+        "## Details",
+        "### Note",
+        `${"#".repeat(level)} ${heading}`,
+        "- First",
+        "* Second",
+      ].join("\n");
+      mutation.mutationFn.mockResolvedValueOnce(
+        reportAssistantOutcomeSchema.parse({
+          ...successOutcome,
+          answerMarkdown,
+        }),
+      );
+      const dialog = await openAssistant();
+      submitQuestion();
 
-    expect(
-      screen.getByRole("heading", { level: 1, name: "Overview" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { level: 2, name: "Details" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("heading", { level: 3, name: "Note" }),
-    ).toBeInTheDocument();
-    expect(
-      within(screen.getByRole("list")).getAllByRole("listitem"),
-    ).toHaveLength(2);
-  });
+      expect(
+        await within(dialog).findByRole("heading", {
+          level: 1,
+          name: "Overview",
+        }),
+      ).toBeInTheDocument();
+      expect(
+        within(dialog).getByRole("heading", { level: 2, name: "Details" }),
+      ).toBeInTheDocument();
+      expect(
+        within(dialog).getByRole("heading", { level: 3, name: "Note" }),
+      ).toBeInTheDocument();
+      expect(
+        within(within(dialog).getByRole("list")).getAllByRole("listitem"),
+      ).toHaveLength(2);
+      expect(
+        within(dialog).getByRole("heading", { level, name: heading }),
+      ).toBeInTheDocument();
+    },
+  );
 
   it("uses the shared mobile touch target for assistant submit", async () => {
     renderAssistant();

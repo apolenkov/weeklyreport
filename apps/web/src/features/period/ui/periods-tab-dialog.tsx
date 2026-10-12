@@ -130,6 +130,25 @@ function buildCreatePeriodValues(
   };
 }
 
+function computePeriodEndError(
+  {
+    periodStart,
+    periodEnd,
+  }: Pick<PeriodFieldValues, "periodStart" | "periodEnd">,
+  isEdit: boolean,
+): string | null {
+  if (isEdit && periodEnd === "") return PERIOD_END_REQUIRED_ERROR;
+  if (
+    periodStart &&
+    periodEnd &&
+    new Date(`${periodEnd}T23:59:59.999Z`) <
+      new Date(`${periodStart}T00:00:00.000Z`)
+  ) {
+    return "End date cannot be before period start.";
+  }
+  return null;
+}
+
 // An empty deadline in edit-mode is a legal explicit clear, so it earns a
 // consequence hint rather than an error. An end date cannot be cleared — a
 // period must end — so emptying it in edit-mode is a loud error.
@@ -148,8 +167,7 @@ function derivePeriodDialogValidation(
     periodStart: values.periodStart,
     periodEnd: values.periodEnd,
   });
-  const periodEndError =
-    isEdit && values.periodEnd === "" ? PERIOD_END_REQUIRED_ERROR : null;
+  const periodEndError = computePeriodEndError(values, isEdit);
 
   return {
     deadlineError,

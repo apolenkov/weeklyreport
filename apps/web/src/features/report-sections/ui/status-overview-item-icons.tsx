@@ -6,8 +6,8 @@ import type { PlanVerdict } from "../model/status-overview-verdict";
 // shape so colour is never the only signal.
 const ICON_CLASS = "h-5 w-5 shrink-0";
 
-// Only completion and active work take a semantic hue; waiting states stay
-// neutral so the amber/red alarm hues keep meaning health, not progress.
+// Completion and active work use semantic hues; paused uses the alarm-family
+// hue, while postponed, planned and wont-do states stay neutral.
 const NEUTRAL_TONE = "text-[var(--color-muted-foreground)]";
 const PROGRESS_TONE: Readonly<
   Record<StatusOverviewItem["workflowStatus"] | "wont_do", string>

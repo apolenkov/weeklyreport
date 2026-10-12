@@ -2,12 +2,19 @@ import type { ReactElement, ReactNode } from "react";
 
 const MARKER_STRIDE = 2;
 const ODD_MARKER_POSITION = 1;
+const H6_PREFIX_LENGTH = 7;
+const H5_PREFIX_LENGTH = 6;
+const H4_PREFIX_LENGTH = 5;
 const H3_PREFIX_LENGTH = 4;
 const H2_PREFIX_LENGTH = 3;
 const H1_PREFIX_LENGTH = 2;
 
 type MarkdownLine =
-  | Readonly<{ kind: "heading"; tag: "h1" | "h2" | "h3"; text: string }>
+  | Readonly<{
+      kind: "heading";
+      tag: "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
+      text: string;
+    }>
   | Readonly<{ kind: "list"; text: string }>
   | Readonly<{ kind: "paragraph"; text: string }>
   | Readonly<{ kind: "spacer" }>;
@@ -16,7 +23,7 @@ type MarkdownBlock =
   | Readonly<{
       key: string;
       kind: "heading";
-      tag: "h1" | "h2" | "h3";
+      tag: "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
       text: string;
     }>
   | Readonly<{
@@ -44,6 +51,27 @@ const inlineNodes = (value: string): ReactNode[] => {
 
 const lineContent = (line: string): MarkdownLine => {
   const trimmed = line.trim();
+  if (trimmed.startsWith("###### ")) {
+    return {
+      kind: "heading",
+      tag: "h6",
+      text: trimmed.slice(H6_PREFIX_LENGTH),
+    };
+  }
+  if (trimmed.startsWith("##### ")) {
+    return {
+      kind: "heading",
+      tag: "h5",
+      text: trimmed.slice(H5_PREFIX_LENGTH),
+    };
+  }
+  if (trimmed.startsWith("#### ")) {
+    return {
+      kind: "heading",
+      tag: "h4",
+      text: trimmed.slice(H4_PREFIX_LENGTH),
+    };
+  }
   if (trimmed.startsWith("### ")) {
     return {
       kind: "heading",
@@ -123,13 +151,14 @@ const renderHeading = (
       </h2>
     );
   }
+  const Heading = content.tag;
   return (
-    <h3
+    <Heading
       key={content.key}
       className="mt-2 text-sm font-medium text-[var(--color-foreground)] first:mt-0"
     >
       {inlineNodes(content.text)}
-    </h3>
+    </Heading>
   );
 };
 

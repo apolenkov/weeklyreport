@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import {
-  addItemTypeStatusIssue,
   addNextStepTextIssue,
   addPausedReasonIssues,
   itemTypeSchema,
@@ -33,7 +32,6 @@ const addOutcomeStateIssues = (
   },
   ctx: z.RefinementCtx,
 ): void => {
-  addItemTypeStatusIssue(value.type, value.workflowStatus, ctx);
   addPausedReasonIssues(value, ctx);
   addNextStepTextIssue(value, ctx);
 };

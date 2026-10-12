@@ -231,6 +231,42 @@ describe.each([
     vi.clearAllMocks();
   });
 
+  it("blocks a reversed range and submits an ordered same-day range after correction", async () => {
+    const user = userEvent.setup();
+    const { captured } = renderTab();
+    const mutation = expectDefined(captured[scenario.mutation]);
+    await user.click(await screen.findByTestId(scenario.triggerTestId));
+    const start = screen.getByTestId<HTMLInputElement>("periods-create-start");
+    const end = screen.getByTestId<HTMLInputElement>("periods-create-end");
+    const submit = screen.getByTestId("periods-create-submit");
+
+    fireEvent.change(start, { target: { value: "2026-05-12" } });
+    fireEvent.change(end, { target: { value: "2026-05-11" } });
+    await user.clear(screen.getByTestId("periods-create-deadline"));
+
+    expect(start.value).toBe("2026-05-12");
+    expect(end.value).toBe("2026-05-11");
+    expect(submit).toBeDisabled();
+    expect(screen.getByTestId("periods-end-error")).toHaveTextContent(
+      "End date cannot be before period start.",
+    );
+    expect(end).toHaveAttribute("aria-invalid", "true");
+    expect(end).toHaveAttribute("aria-describedby", "period-end-error");
+    await user.click(submit);
+    expect(mutation.mutationFn).not.toHaveBeenCalled();
+
+    fireEvent.change(end, { target: { value: "2026-05-12" } });
+    expect(screen.queryByTestId("periods-end-error")).not.toBeInTheDocument();
+    expect(submit).toBeEnabled();
+    await user.click(submit);
+    await waitFor(() => expect(mutation.mutationFn).toHaveBeenCalledOnce());
+    expect(mutation.mutationFn.mock.calls[0]?.[0]).toMatchObject({
+      periodStart: new Date("2026-05-12T00:00:00.000Z"),
+      periodEnd: new Date("2026-05-12T23:59:59.999Z"),
+      ...(scenario.mode === "edit" ? { deadline: null } : {}),
+    });
+  });
+
   it.each(["success", "failure"] as const)(
     "locks the submitted draft until %s settles",
     async (outcome) => {
