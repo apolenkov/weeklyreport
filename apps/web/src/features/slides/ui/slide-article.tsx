@@ -15,13 +15,14 @@ import {
   type SlideRowActivateHandler,
   StageLegend,
 } from "./slide-article-rows";
+import { SLIDE_ARTICLE_LAYOUT_KEY, SLIDE_CANVAS_CLASS } from "./slide-layout";
 
 // Activity-feed fallback slides carry no section or grid, so only their
 // available identity is rendered.
 function ActivityFeedSlide({ slide }: { readonly slide: SectionSlideModel }) {
   return (
     <article
-      data-layout-key="slide-article"
+      data-layout-key={SLIDE_ARTICLE_LAYOUT_KEY}
       data-layout-stability="position-width"
       className="slide-canvas mx-auto w-full min-h-[var(--slide-canvas-min-h)] min-w-0 max-w-[var(--slide-canvas-max-w)] rounded-[var(--radius)] border border-[var(--card-surface-border)] bg-[var(--color-card)] p-5 shadow-[0_1px_2px_var(--color-border-subtle)] sm:min-w-[var(--slide-canvas-min-w)]"
     >
@@ -81,9 +82,9 @@ export function SlideArticle({
   return (
     <article
       data-testid="slide-article"
-      data-layout-key="slide-article"
+      data-layout-key={SLIDE_ARTICLE_LAYOUT_KEY}
       data-layout-stability="position-width"
-      className="slide-canvas mx-auto flex w-full min-h-[var(--slide-canvas-min-h)] min-w-0 max-w-[var(--slide-canvas-max-w)] flex-col gap-3 rounded-[var(--radius)] border border-[var(--card-surface-border)] bg-[var(--color-card)] p-5 shadow-[0_1px_2px_var(--color-border-subtle)] sm:min-w-[var(--slide-canvas-min-w)]"
+      className={SLIDE_CANVAS_CLASS}
     >
       <SlideGridHeader
         ownerName={slide.ownerName}

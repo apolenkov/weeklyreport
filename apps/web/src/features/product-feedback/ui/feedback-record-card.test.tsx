@@ -1,7 +1,13 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { ComponentProps } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -279,5 +285,178 @@ describe("FeedbackRecordCard workbench", () => {
       expect(onDelete).toHaveBeenLastCalledWith(agentationItem.id),
     );
     await waitFor(() => expect(trigger).toHaveFocus());
+  });
+
+  it("exposes workflow disclosure state via aria-expanded", () => {
+    renderCard(agentationItem);
+
+    const edit = screen.getByRole("button", { name: "Edit" });
+    expect(edit).toHaveAttribute("aria-expanded", "false");
+    expect(edit).toHaveAttribute(
+      "aria-controls",
+      `feedback-edit-${agentationItem.id}`,
+    );
+    fireEvent.click(edit);
+    expect(edit).toHaveAttribute("aria-expanded", "true");
+    expect(
+      screen.getByRole("textbox", { name: "Original feedback" }),
+    ).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(edit).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("renders every admitted diagnostic, duplicates and '#1' suffixes included", () => {
+    // The capture schema already bounds admitted diagnostics (50 console /
+    // 20 network); the renderer must preserve all of them with keys that
+    // keep identical duplicates distinct without colliding with a message
+    // that literally ends in "#1".
+    const duplicate = {
+      level: "error",
+      message: "same failure",
+      timestamp: "2026-09-04T10:05:00.000Z",
+    };
+    const suffixed = { ...duplicate, message: "same failure#1" };
+    const failedFetch = {
+      method: "GET",
+      status: 500,
+      url: "https://example.com/api",
+      timestamp: "2026-09-04T10:05:00.000Z",
+    };
+    renderCard({
+      ...agentationItem,
+      screenshotUrl: "https://example.com/shot.png",
+      diagnostics: {
+        console: [
+          ...Array.from({ length: 55 }, () => ({ ...duplicate })),
+          ...Array.from({ length: 2 }, () => ({ ...suffixed })),
+        ],
+        network: Array.from({ length: 25 }, () => ({ ...failedFetch })),
+      },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
+    // Nothing is truncated: all 57 console rows and all 25 network rows show.
+    expect(screen.getAllByText(/same failure/)).toHaveLength(57);
+    expect(screen.getAllByText(/example\.com\/api/)).toHaveLength(25);
+    expect(screen.queryByText(/more$/)).toBeNull();
+  });
+
+  it("preserves large valid viewport dimensions as stored", () => {
+    renderCard({
+      ...agentationItem,
+      viewport: "5120x2880",
+      screenshotUrl: "https://example.com/shot.png",
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
+    const shot = screen.getByAltText(
+      "Page screenshot captured with this annotation",
+    );
+    expect(shot).toHaveAttribute("width", "5120");
+    expect(shot).toHaveAttribute("height", "2880");
+  });
+
+  it("remounts the edit form with the newly selected record's message", () => {
+    const { rerender } = renderCard(agentationItem);
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    expect(
+      screen.getByRole("textbox", { name: "Original feedback" }),
+    ).toHaveValue(agentationItem.message);
+
+    const next = {
+      ...agentationItem,
+      id: "agentation_annotation-2",
+      message: "A different record's message",
+    };
+    rerender(
+      <FeedbackRecordCard
+        item={next}
+        onChangeStatus={vi.fn()}
+        onEdit={vi.fn(() => Promise.resolve())}
+        onReply={vi.fn(() => Promise.resolve())}
+        onDismiss={vi.fn(() => Promise.resolve())}
+        onDelete={vi.fn(() => Promise.resolve())}
+      />,
+    );
+
+    // Without a per-record key the form would keep showing the first
+    // record's seeded text and could save over the wrong record.
+    expect(
+      screen.getByRole("textbox", { name: "Original feedback" }),
+    ).toHaveValue("A different record's message");
+  });
+
+  it("fires the edit handler once for two same-tick submits", async () => {
+    let resolveEdit!: () => void;
+    const onEdit = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveEdit = resolve;
+        }),
+    );
+    renderCard(agentationItem, { onEdit });
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "Original feedback" }),
+      { target: { value: "Clearer wording" } },
+    );
+
+    const save = screen.getByRole("button", { name: "Save changes" });
+    // Both clicks share one render closure, so a state-only pending flag
+    // cannot stop the second call; the ref guard must.
+    act(() => {
+      fireEvent.click(save);
+      fireEvent.click(save);
+    });
+
+    expect(onEdit).toHaveBeenCalledTimes(1);
+    expect(onEdit).toHaveBeenCalledWith(agentationItem.id, "Clearer wording");
+    resolveEdit();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Edit" })).toHaveFocus(),
+    );
+  });
+
+  it("fires the delete handler once for two same-tick confirms", async () => {
+    let resolveDelete!: () => void;
+    const onDelete = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveDelete = resolve;
+        }),
+    );
+    renderCard(agentationItem, { onDelete });
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    const confirm = screen.getByRole("button", {
+      name: "Delete permanently",
+    });
+    act(() => {
+      fireEvent.click(confirm);
+      fireEvent.click(confirm);
+    });
+
+    expect(onDelete).toHaveBeenCalledTimes(1);
+    expect(onDelete).toHaveBeenCalledWith(agentationItem.id);
+    resolveDelete();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Delete" })).toHaveFocus(),
+    );
+  });
+
+  it("falls back to default dimensions for a degenerate viewport", () => {
+    renderCard({
+      ...agentationItem,
+      viewport: "0x0",
+      screenshotUrl: "https://example.com/shot.png",
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
+    const shot = screen.getByAltText(
+      "Page screenshot captured with this annotation",
+    );
+    expect(shot).toHaveAttribute("width", "1280");
+    expect(shot).toHaveAttribute("height", "720");
   });
 });

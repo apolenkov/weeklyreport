@@ -1,6 +1,6 @@
 "use client";
 
-import { type MouseEvent, useRef, useState } from "react";
+import { type MouseEvent, type ReactNode, useRef, useState } from "react";
 
 import type { FeedbackCardItem } from "./feedback-record-card";
 import {
@@ -37,8 +37,6 @@ export function FeedbackRecordWorkflows({
 }: WorkflowProps) {
   const [active, setActive] = useState<WorkflowKind | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const restore = () =>
-    requestAnimationFrame(() => triggerRef.current?.focus());
   const open = (
     kind: WorkflowKind,
     toggle: boolean,
@@ -49,36 +47,37 @@ export function FeedbackRecordWorkflows({
   };
   const close = () => {
     setActive(null);
-    restore();
+    requestAnimationFrame(() => triggerRef.current?.focus());
   };
   return (
     <>
       {onEdit ? (
-        <button
-          className={NEUTRAL_BUTTON}
-          onClick={(event) => open("edit", true, event)}
-          type="button"
+        <WorkflowToggleButton
+          active={active === "edit"}
+          controlsId={`feedback-edit-${item.id}`}
+          onOpen={(event) => open("edit", true, event)}
         >
           Edit
-        </button>
+        </WorkflowToggleButton>
       ) : null}
       {onReply ? (
-        <button
-          className={NEUTRAL_BUTTON}
-          onClick={(event) => open("reply", true, event)}
-          type="button"
+        <WorkflowToggleButton
+          active={active === "reply"}
+          controlsId={`feedback-reply-${item.id}`}
+          onOpen={(event) => open("reply", true, event)}
         >
           Reply
-        </button>
+        </WorkflowToggleButton>
       ) : null}
       {onDismiss ? (
-        <button
-          className={DANGER_BUTTON}
-          onClick={(event) => open("dismiss", false, event)}
-          type="button"
+        <WorkflowToggleButton
+          active={active === "dismiss"}
+          controlsId={`feedback-dismiss-${item.id}`}
+          danger
+          onOpen={(event) => open("dismiss", false, event)}
         >
           Dismiss
-        </button>
+        </WorkflowToggleButton>
       ) : null}
       <DeleteWorkflow
         active={active === "delete"}
@@ -88,7 +87,12 @@ export function FeedbackRecordWorkflows({
         onCancel={close}
       />
       {active === "edit" && onEdit ? (
-        <FeedbackEditForm item={item} onEdit={onEdit} onCancel={close} />
+        <FeedbackEditForm
+          key={item.id}
+          item={item}
+          onEdit={onEdit}
+          onCancel={close}
+        />
       ) : null}
       {active === "reply" && onReply ? (
         <FeedbackReplyForm item={item} onReply={onReply} onCancel={close} />
@@ -101,6 +105,32 @@ export function FeedbackRecordWorkflows({
         />
       ) : null}
     </>
+  );
+}
+
+function WorkflowToggleButton({
+  active,
+  controlsId,
+  danger = false,
+  onOpen,
+  children,
+}: {
+  readonly active: boolean;
+  readonly controlsId: string;
+  readonly danger?: boolean | undefined;
+  readonly onOpen: (event: MouseEvent<HTMLButtonElement>) => void;
+  readonly children: ReactNode;
+}) {
+  return (
+    <button
+      className={danger ? DANGER_BUTTON : NEUTRAL_BUTTON}
+      onClick={onOpen}
+      type="button"
+      aria-expanded={active}
+      aria-controls={controlsId}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -120,7 +150,12 @@ function DeleteWorkflow({
   if (!onDelete) return null;
   return (
     <>
-      <button className={DANGER_BUTTON} onClick={onOpen} type="button">
+      <button
+        className={DANGER_BUTTON}
+        onClick={onOpen}
+        type="button"
+        aria-expanded={active}
+      >
         Delete
       </button>
       {active ? (

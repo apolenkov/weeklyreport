@@ -47,7 +47,7 @@ function SearchCombobox({
       type="search"
       role="combobox"
       aria-expanded={expanded}
-      aria-controls={resultsId}
+      aria-controls={expanded ? resultsId : undefined}
       aria-activedescendant={activeOptionId}
       aria-autocomplete="list"
       autoComplete="off"

@@ -52,10 +52,13 @@ function deriveRiskCardState(
       : isActivityRisk
         ? "Activity — no SDLC stage"
         : undefined;
+  // A locked card (read-only section or foreign row) offers no edit
+  // affordance, so the stage nudge — which implies an action — stays hidden.
+  const locked = readOnly || risk.foreign === true;
   // Warn when the linked product is at-risk/blocked but no explicit stage is
   // selected for this risk row.
   const needsStage =
-    !readOnly &&
+    !locked &&
     !isActivityRisk &&
     (linkedProductStatus === "at-risk" || linkedProductStatus === "blocked") &&
     stageTags.length === 0;
@@ -65,7 +68,7 @@ function deriveRiskCardState(
     stageTags,
     stageTagsLabel,
     needsStage,
-    locked: readOnly || risk.foreign === true,
+    locked,
   };
 }
 

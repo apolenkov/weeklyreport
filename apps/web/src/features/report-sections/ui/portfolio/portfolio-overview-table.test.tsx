@@ -1,9 +1,14 @@
 // GridIcon is aria-hidden so "Portfolio Overview" is the sole accessible label.
+import { weeklyReportReadModelSchema } from "@customreport/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { makeWeeklyReportFixture } from "../../../../test-utils/report-section-fixtures";
-import { mapWeeklyReport } from "../../model/weekly-report";
+import {
+  mapWeeklyReport,
+  mapWeeklyReportLeadGroups,
+  mapWeeklyReportLeadOverview,
+} from "../../model/weekly-report";
 import type {
   LeadOverviewRow,
   WeeklyPortfolioProduct,
@@ -376,5 +381,105 @@ describe("PortfolioOverviewTable jump affordance (R60)", () => {
       .getByRole("button", { name: /Product Alpha/u })
       .querySelector("[aria-hidden='true'].opacity-60");
     expect(chevron).not.toBeNull();
+  });
+});
+
+describe("PortfolioOverviewTable — native button content", () => {
+  const projectId = "10000000-0000-4000-8000-000000000004";
+  const authorId = "10000000-0000-4000-8000-000000000003";
+
+  function acceptedReport(hasContent: boolean) {
+    return weeklyReportReadModelSchema.parse(
+      makeWeeklyReportFixture({
+        portfolioOverview: [
+          {
+            productId: projectId,
+            productName: "Product Alpha",
+            worstStatus: "green",
+            stageCount: 1,
+            leadNames: ["Test Lead"],
+            leadIds: [authorId],
+          },
+        ],
+        leadSections: [
+          {
+            authorId,
+            projects: [
+              {
+                projectId,
+                projectName: "Product Alpha",
+                trafficLight: "green",
+              },
+            ],
+            decisions: hasContent
+              ? [
+                  {
+                    id: "10000000-0000-4000-8000-000000000006",
+                    productId: projectId,
+                    text: "Approve fallback",
+                    owner: "Test Lead",
+                    impact: "Keep delivery available",
+                    stageNames: ["Planning"],
+                  },
+                ]
+              : [],
+          },
+        ],
+      }),
+    );
+  }
+
+  it.each(["product", "lead"] as const)(
+    "keeps flow div elements outside the %s navigation button from an accepted report",
+    (scope) => {
+      const report = acceptedReport(true);
+      const onNavigate = vi.fn();
+      if (scope === "product") {
+        render(
+          <PortfolioOverviewTable
+            products={mapWeeklyReport(report).portfolio}
+            mountedProductIds={new Set([projectId])}
+            onNavigate={onNavigate}
+          />,
+        );
+      } else {
+        render(
+          <PortfolioOverviewTable
+            scope="lead"
+            leads={mapWeeklyReportLeadOverview(
+              mapWeeklyReportLeadGroups(report),
+            )}
+            onNavigate={onNavigate}
+          />,
+        );
+      }
+      const card = screen.getByRole("button", {
+        name: scope === "product" ? /Product Alpha/u : /Test/u,
+      });
+      // WHATWG button content is phrasing; flow div wrappers are invalid even
+      // when jsdom accepts them. This checks the public rendered consumer.
+      expect(card.querySelector("div")).toBeNull();
+      expect(card).toBeEnabled();
+      fireEvent.click(card);
+      expect(onNavigate).toHaveBeenCalledWith(
+        scope === "product" ? projectId : authorId,
+      );
+    },
+  );
+
+  it("keeps an accepted empty product button phrasing and disabled", () => {
+    const onNavigate = vi.fn();
+    render(
+      <PortfolioOverviewTable
+        products={mapWeeklyReport(acceptedReport(false)).portfolio}
+        onNavigate={onNavigate}
+      />,
+    );
+    const card = screen.getByRole("button", { name: /Product Alpha/u });
+    expect(card.querySelector("div")).toBeNull();
+    expect(card).toBeDisabled();
+    expect(card).toHaveTextContent("No updates");
+    fireEvent.click(card);
+    expect(onNavigate).not.toHaveBeenCalled();
   });
 });

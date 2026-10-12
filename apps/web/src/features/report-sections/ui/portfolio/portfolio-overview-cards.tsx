@@ -92,23 +92,23 @@ export function LeadOverviewCard({
       title={`Jump to ${lead.name}'s section`}
       onClick={() => onNavigate(lead.id)}
     >
-      <div
+      <span
         className={STATUS_BADGE_CLASS}
         style={statusBadgeStyle(lead.worstStatus)}
       >
         {STATUS_ICON[lead.worstStatus]}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">
+      </span>
+      <span className="block min-w-0 flex-1">
+        <span className="block truncate text-sm font-medium">
           {shortNameFromName(lead.name)}
-        </div>
-        <div className="text-xs text-[var(--color-muted-foreground)]">
+        </span>
+        <span className="block text-xs text-[var(--color-muted-foreground)]">
           {statusLabel(lead.worstStatus, "screen")}
-        </div>
+        </span>
         <span className="text-xs text-[var(--color-muted-foreground)]">
           {countLabel(lead.currentCount, lead.nextCount, lead.riskCount)}
         </span>
-      </div>
+      </span>
       <span
         className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--color-card)_55%,transparent)] text-[13px] font-semibold text-[var(--color-primary)] opacity-60 shadow-sm transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
         aria-hidden="true"
@@ -127,11 +127,11 @@ function ProductCardBody({
   readonly isEmpty: boolean;
 }) {
   return (
-    <div className="min-w-0 flex-1">
-      <div className="truncate text-sm font-medium">{product.name}</div>
-      <div className="text-xs text-[var(--color-muted-foreground)]">
+    <span className="block min-w-0 flex-1">
+      <span className="block truncate text-sm font-medium">{product.name}</span>
+      <span className="block text-xs text-[var(--color-muted-foreground)]">
         {isEmpty ? "No updates" : product.statusLabel}
-      </div>
+      </span>
       <span className="text-xs text-[var(--color-muted-foreground)]">
         {countLabel(
           product.currentWeekCount,
@@ -139,7 +139,7 @@ function ProductCardBody({
           product.riskCount,
         )}
       </span>
-    </div>
+    </span>
   );
 }
 
@@ -170,12 +170,12 @@ export function ProductOverviewCard({
         if (!isEmpty) onNavigate(product.id);
       }}
     >
-      <div
+      <span
         className={STATUS_BADGE_CLASS}
         style={isEmpty ? EMPTY_BADGE_STYLE : statusBadgeStyle(product.status)}
       >
         {isEmpty ? "–" : STATUS_ICON[product.status]}
-      </div>
+      </span>
       <ProductCardBody product={product} isEmpty={isEmpty} />
       <span
         className={`${PRODUCT_CHEVRON_BASE} ${isEmpty ? "opacity-0" : PRODUCT_CHEVRON_REVEAL}`}

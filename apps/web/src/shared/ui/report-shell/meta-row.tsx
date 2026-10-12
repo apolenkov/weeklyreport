@@ -2,19 +2,24 @@
 
 function StageChips({ stageTags }: { readonly stageTags: readonly string[] }) {
   if (stageTags.length === 0) return null;
+  const occurrences = new Map<string, number>();
   return (
     <span
       className="inline-flex flex-wrap items-center gap-1"
       title={stageTags.join(", ")}
     >
-      {stageTags.map((stage) => (
-        <span
-          key={stage}
-          className="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-xs font-semibold text-[var(--color-primary)]"
-        >
-          {stage}
-        </span>
-      ))}
+      {stageTags.map((stage) => {
+        const occurrence = occurrences.get(stage) ?? 0;
+        occurrences.set(stage, occurrence + 1);
+        return (
+          <span
+            key={`${stage}:${occurrence}`}
+            className="inline-flex items-center rounded-[var(--radius-pill)] border border-[var(--color-primary)]/40 px-2.5 py-0.5 text-xs font-semibold text-[var(--color-primary)]"
+          >
+            {stage}
+          </span>
+        );
+      })}
     </span>
   );
 }

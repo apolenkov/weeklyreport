@@ -1113,6 +1113,69 @@ describe("LeadForm Overview", () => {
     },
   );
 
+  it("keeps Cancel reachable and fields locked while an update save is in flight", async () => {
+    const user = userEvent.setup();
+    let releaseSave: (() => void) | undefined;
+    const saveDraft = vi.fn(
+      (input: unknown, current: ReportSectionReadModel) =>
+        new Promise<ReportSectionReadModel>((resolve) => {
+          releaseSave = () => {
+            const draft = input as {
+              readonly version: number;
+              readonly items: ReportSectionReadModel["items"];
+            };
+            resolve({
+              ...current,
+              version: draft.version + 1,
+              items: draft.items,
+            });
+          };
+        }),
+    );
+    render(
+      <Wrapper saveDraft={saveDraft}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "Edit item: Current work" }),
+    );
+    const editor = await screen.findByRole("form", {
+      name: "Current week update for Payments",
+    });
+    const description = within(editor).getByRole("textbox", {
+      name: /Description/,
+    });
+    await user.type(description, " — in-flight edit");
+    await user.click(
+      within(editor).getByRole("button", { name: "Save update" }),
+    );
+    await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
+    // In-flight window: the editable fields stay locked…
+    await pollUntil(() => expect(description).toBeDisabled());
+    expect(
+      within(editor).getByRole("button", { name: "Save update" }),
+    ).toBeDisabled();
+    // …but Cancel is never trapped behind the save.
+    const cancel = within(editor).getByRole("button", { name: "Cancel" });
+    expect(cancel).toBeEnabled();
+    await user.click(cancel);
+    const discard = screen.queryByRole("button", { name: "Discard" });
+    if (discard) await user.click(discard);
+    await pollUntil(() =>
+      expect(
+        screen.queryByRole("form", {
+          name: "Current week update for Payments",
+        }),
+      ).toBeNull(),
+    );
+    // No cancellation guarantee: the in-flight save still lands once it
+    // resolves; the dialog simply stops driving it.
+    releaseSave?.();
+    await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
+  });
+
   it("opens quick-create with the selected product and saves through the live draft", async () => {
     const user = userEvent.setup();
     const serverItemId = "a0000000-0000-4000-8000-000000000020";

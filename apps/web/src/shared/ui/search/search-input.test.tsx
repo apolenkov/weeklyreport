@@ -80,6 +80,38 @@ describe("SearchInput", () => {
     expect(screen.getByRole("combobox")).toHaveAttribute("name", "search");
   });
 
+  it("references only a mounted popup across collapsed, expanded, and escaped states", () => {
+    render(<SearchInput scope="all" />);
+    const input = screen.getByRole("combobox");
+    const relationships: { controls: string | null; mounted: boolean }[] = [];
+    const recordRelationship = () => {
+      const controls = input.getAttribute("aria-controls");
+      relationships.push({
+        controls,
+        mounted:
+          controls !== null && document.getElementById(controls) !== null,
+      });
+    };
+    recordRelationship();
+    fireEvent.change(input, { target: { value: "PR" } });
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(input).toHaveAttribute("aria-expanded", "true");
+    expect(input.getAttribute("aria-controls")).toBe(
+      screen.getByRole("listbox").id,
+    );
+    recordRelationship();
+    fireEvent.keyDown(input, { key: "Escape" });
+    expect(input).toHaveAttribute("aria-expanded", "false");
+    recordRelationship();
+    expect(
+      relationships.filter(
+        ({ controls, mounted }) => controls !== null && !mounted,
+      ),
+    ).toEqual([]);
+  });
+
   it("passes enabled:false to useQuery while q is below the 2-char floor", () => {
     render(<SearchInput scope="mine" />);
     const input = screen.getByRole("combobox");

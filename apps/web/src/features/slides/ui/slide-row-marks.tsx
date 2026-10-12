@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { useSdlcTooltip } from "../../../shared/ui/feedback/sdlc-tooltip";
 import { STAGE_ICONS } from "../../report-sections";
 import type { GridAuthor, GridTone } from "../model/slide-grid-model";
+import { SLIDE_AUTHOR_BADGE_CLASS } from "./slide-layout";
 
 export function useHoverTooltip<T extends HTMLElement = HTMLSpanElement>(
   content: string,
@@ -46,7 +47,7 @@ export function AuthorBadge({
     <span
       {...tooltip}
       data-testid="slide-author-badge"
-      className="inline-flex h-[18px] w-[26px] shrink-0 items-center justify-center rounded text-xs font-semibold text-[var(--color-foreground)]"
+      className={SLIDE_AUTHOR_BADGE_CLASS}
       style={
         unknown
           ? { background: "var(--color-muted)" }

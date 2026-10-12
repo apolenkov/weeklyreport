@@ -74,6 +74,7 @@ const nextRisksAfterSave = (
 function useRiskRaisePrefill(
   addPrefill: RiskAddPrefill | undefined,
   openCreate: (seed?: CreateSeed) => void,
+  readOnly: boolean,
 ) {
   const lastHandledSignal = useRef(0);
   const [createPrefill, setCreatePrefill] = useReducer(
@@ -86,6 +87,9 @@ function useRiskRaisePrefill(
     if (!addPrefill || addPrefill.signal === 0) return;
     if (addPrefill.signal <= lastHandledSignal.current) return;
     lastHandledSignal.current = addPrefill.signal;
+    // readOnly cannot open the dialog (openCreate no-ops): never cache a
+    // prefill that would leak into the next non-readOnly plain +Add.
+    if (readOnly) return;
     setCreatePrefill({
       stageNames: addPrefill.stageNames,
       severity: addPrefill.severity,
@@ -94,7 +98,7 @@ function useRiskRaisePrefill(
       productId: addPrefill.productId,
       activityId: addPrefill.activityId,
     });
-  }, [addPrefill, openCreate]);
+  }, [addPrefill, openCreate, readOnly]);
 
   return [createPrefill, setCreatePrefill] as const;
 }
@@ -117,6 +121,7 @@ export function useRiskListEditing({
   const [createPrefill, setCreatePrefill] = useRiskRaisePrefill(
     addPrefill,
     dialog.openCreate,
+    readOnly,
   );
 
   return {

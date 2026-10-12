@@ -11,6 +11,7 @@ import type {
   SlideGridModel,
 } from "../model/slide-grid-model";
 import { authorSlotBackground } from "./slide-article-rows";
+import { SLIDE_AUTHOR_BADGE_CLASS } from "./slide-layout";
 
 function metric(count: number, singular: string, plural = singular) {
   const label = count === 1 ? singular : plural;
@@ -94,7 +95,7 @@ function PriorityAuthorBadge({
       <span
         data-testid="slide-priority-author-badge"
         title="Unknown author"
-        className="inline-flex h-[18px] w-[26px] shrink-0 items-center justify-center rounded text-xs font-semibold text-[var(--color-foreground)]"
+        className={SLIDE_AUTHOR_BADGE_CLASS}
         style={{ background: "var(--color-muted)" }}
       >
         <span aria-hidden="true">?</span>
@@ -106,7 +107,7 @@ function PriorityAuthorBadge({
     <span
       data-testid="slide-priority-author-badge"
       title={author.name}
-      className="inline-flex h-[18px] w-[26px] shrink-0 items-center justify-center rounded text-xs font-semibold text-[var(--color-foreground)]"
+      className={SLIDE_AUTHOR_BADGE_CLASS}
       style={{ background: authorSlotBackground(author) }}
     >
       <span aria-hidden="true">{author.initials}</span>
@@ -205,7 +206,7 @@ export function SlideLegend({
           className="inline-flex min-w-0 max-w-full items-center gap-1.5"
         >
           <span
-            className="inline-flex h-[18px] w-[26px] shrink-0 items-center justify-center rounded text-xs font-semibold text-[var(--color-foreground)]"
+            className={SLIDE_AUTHOR_BADGE_CLASS}
             style={{ background: authorSlotBackground(author) }}
           >
             {author.initials}

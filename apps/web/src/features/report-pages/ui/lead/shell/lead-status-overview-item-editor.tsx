@@ -159,7 +159,9 @@ function OverviewItemDialog({
       onWeekChange={onWeekChange}
       showNextStep={false}
       showPriority={false}
-      confirmationOnly={dialog.mode === "edit" && dialog.promotion != null}
+      confirmationOnly={
+        (dialog.mode === "edit" && dialog.promotion != null) || saveDisabled
+      }
       currentUserName={viewModel.currentUser.name}
       defaultProductId={
         createTarget?.unitKind === "product" ? createTarget.unitId : undefined
@@ -197,17 +199,18 @@ export function OverviewEditorDialog({
 }) {
   if (!editor || !dialog || isReadOnly) return null;
   if (dialog.generation !== editor.generation) return null;
+  // saveDisabled locks only the editable fields (via confirmationOnly inside
+  // the editor); Cancel stays reachable so a hung save never traps the lead.
+  // Abandoning mid-flight restores nothing — a save in flight may still land.
   return (
-    <fieldset disabled={saveDisabled} className="min-w-0 border-0 p-0">
-      <OverviewItemDialog
-        editor={editor}
-        dialog={dialog}
-        saveDisabled={saveDisabled}
-        onSave={onSave}
-        onCancel={onCancel}
-        onWeekChange={onWeekChange}
-      />
-    </fieldset>
+    <OverviewItemDialog
+      editor={editor}
+      dialog={dialog}
+      saveDisabled={saveDisabled}
+      onSave={onSave}
+      onCancel={onCancel}
+      onWeekChange={onWeekChange}
+    />
   );
 }
 

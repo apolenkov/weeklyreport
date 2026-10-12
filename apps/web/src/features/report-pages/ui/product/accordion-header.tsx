@@ -94,7 +94,7 @@ export function AccordionHeader({
       onClick={onToggle}
       disabled={!hasContent}
       aria-disabled={!hasContent}
-      aria-expanded={hasContent ? expanded : false}
+      aria-expanded={hasContent ? expanded : undefined}
       aria-controls={hasContent ? panelId : undefined}
       data-product-accordion-toggle="true"
     >
