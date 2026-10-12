@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
+import { publishedReportSnapshotSchema } from "../report/report.schema.js";
 import {
   adminReportPeriodSchema,
+  adminSnapshotRestoreSchema,
   adminSnapshotSchema,
   pdfRecoveryJobListSchema,
   pdfRecoveryJobSchema,
@@ -203,6 +205,101 @@ describe("adminSnapshotSchema — publisher recovery integrity", () => {
     expect(
       adminSnapshotSchema.safeParse({ ...snapshot, users: [] }).success,
     ).toBe(false);
+  });
+
+  describe("period order", () => {
+    const INVERTED = { periodStart: "2026-08-30", periodEnd: "2026-08-24" };
+    const messages = (snapshot: unknown): string[] => {
+      const result = adminSnapshotRestoreSchema.safeParse(snapshot);
+      return result.success
+        ? []
+        : (JSON.stringify(result.error.issues).match(
+            /Period end must not be before period start\./g,
+          ) ?? []);
+    };
+
+    it("rejects an inverted row and snapshot envelope", () => {
+      const snapshot = {
+        ...snapshotWithUser(user("viewer")),
+        periods: [
+          {
+            ...period,
+            ...INVERTED,
+            publishedSnapshot: { ...period.publishedSnapshot, ...INVERTED },
+          },
+        ],
+      };
+      expect(messages(snapshot).length).toBeGreaterThan(0);
+    });
+
+    it("rejects an inverted retained envelope on a reopened row", () => {
+      const snapshot = {
+        ...snapshotWithUser(user("viewer")),
+        periods: [
+          {
+            ...period,
+            periodStatus: "reopened" as const,
+            periodState: "open" as const,
+            publishedSnapshot: {
+              ...period.publishedSnapshot,
+              ...INVERTED,
+            },
+          },
+        ],
+      };
+      expect(messages(snapshot).length).toBeGreaterThan(0);
+    });
+
+    it("rejects an inverted draft row", () => {
+      const snapshot = {
+        ...snapshotWithUser(user("viewer")),
+        periods: [
+          {
+            ...lifecycle,
+            ...INVERTED,
+            weekLabel: null,
+            status: "draft" as const,
+            publishedSnapshot: null,
+          },
+        ],
+      };
+      expect(messages(snapshot).length).toBeGreaterThan(0);
+    });
+
+    it("keeps a stored inverted period readable outside restore", () => {
+      const snapshot = {
+        ...snapshotWithUser(user("viewer")),
+        periods: [
+          {
+            ...period,
+            ...INVERTED,
+            publishedSnapshot: { ...period.publishedSnapshot, ...INVERTED },
+          },
+        ],
+      };
+      expect(adminSnapshotSchema.safeParse(snapshot).success).toBe(true);
+      expect(
+        publishedReportSnapshotSchema.safeParse({
+          ...period.publishedSnapshot,
+          ...INVERTED,
+        }).success,
+      ).toBe(true);
+    });
+
+    it("keeps a single-day period valid", () => {
+      const day = { periodStart: "2026-08-24", periodEnd: "2026-08-24" };
+      const snapshot = {
+        ...snapshotWithUser(user("viewer")),
+        periods: [
+          {
+            ...period,
+            ...day,
+            publishedSnapshot: { ...period.publishedSnapshot, ...day },
+          },
+        ],
+      };
+      expect(adminSnapshotRestoreSchema.safeParse(snapshot).success).toBe(true);
+    });
   });
 });
 

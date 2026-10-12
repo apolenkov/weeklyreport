@@ -157,6 +157,7 @@ export {
   adminReportPeriodSchema,
   adminSnapshotReminderExecutionSchema,
   adminSnapshotReminderRuleSchema,
+  adminSnapshotRestoreSchema,
   adminSnapshotSchema,
   adminUpdatePeriodManualResultSchema,
   adminUpdatePeriodManualSchema,
