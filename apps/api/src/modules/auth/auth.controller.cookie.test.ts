@@ -7,8 +7,8 @@ const env = {
   AUTH_JWT_SECRET: "phase-01-secret-padded-to-min-32-chars",
   KEYCLOAK_SAML_CALLBACK_URL: "http://localhost:3001/auth/saml/callback",
   KEYCLOAK_SAML_ENTRY_POINT:
-    "http://localhost:8080/realms/customreport/protocol/saml",
-  KEYCLOAK_SAML_ISSUER: "customreport",
+    "http://localhost:8080/realms/weeklyreport/protocol/saml",
+  KEYCLOAK_SAML_ISSUER: "weeklyreport",
   KEYCLOAK_SAML_CERT: "CERT_DATA",
   NODE_ENV: "test",
 } satisfies NodeJS.ProcessEnv;
@@ -18,7 +18,7 @@ describe("auth controller", () => {
     const controller = createAuthController(env);
     const issued = controller.issueSessionCookie({
       userId: "11111111-1111-4111-8111-111111111111",
-      email: "lead1@customreport.local",
+      email: "lead1@weeklyreport.local",
       name: "Lead 1",
       role: "lead",
       activeReportId: "22222222-2222-4222-8222-222222222222",
@@ -50,7 +50,7 @@ describe("auth controller", () => {
       const controller = createAuthController(env);
       const issued = controller.issueSessionCookie({
         userId: "11111111-1111-4111-8111-111111111111",
-        email: "lead1@customreport.local",
+        email: "lead1@weeklyreport.local",
         name: "Lead 1",
         role: "lead",
         activeReportId: "22222222-2222-4222-8222-222222222222",

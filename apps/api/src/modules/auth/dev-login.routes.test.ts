@@ -29,7 +29,7 @@ describe("resolveDevLoginIdentity", () => {
     const identity = await resolveDevLoginIdentity(prisma, "lead", emptyQuery);
 
     expect(identity).toEqual({
-      email: "lead1@customreport.local",
+      email: "lead1@weeklyreport.local",
       role: "lead",
       displayName: "Lead One",
       samlId: "lead-1",
@@ -37,7 +37,7 @@ describe("resolveDevLoginIdentity", () => {
     // The looked-up email is the role default, not a fabricated value.
     const findFirst = vi.mocked(prisma.user.findFirst);
     expect(findFirst.mock.calls[0]?.[0]).toMatchObject({
-      where: { email: "lead1@customreport.local" },
+      where: { email: "lead1@weeklyreport.local" },
     });
   });
 
@@ -45,17 +45,17 @@ describe("resolveDevLoginIdentity", () => {
     const prisma = fakePrisma({ name: "Maria", samlId: "lead-maria" });
 
     const identity = await resolveDevLoginIdentity(prisma, "lead", {
-      email: "maria@customreport.local",
+      email: "maria@weeklyreport.local",
     });
 
     expect(identity).toMatchObject({
-      email: "maria@customreport.local",
+      email: "maria@weeklyreport.local",
       displayName: "Maria",
       samlId: "lead-maria",
     });
     const findFirst = vi.mocked(prisma.user.findFirst);
     expect(findFirst).toHaveBeenCalledWith({
-      where: { email: "maria@customreport.local" },
+      where: { email: "maria@weeklyreport.local" },
       select: { name: true, samlId: true },
     });
   });
@@ -64,7 +64,7 @@ describe("resolveDevLoginIdentity", () => {
     const prisma = fakePrisma(null);
 
     const identity = await resolveDevLoginIdentity(prisma, "head", {
-      email: "ghost@customreport.local",
+      email: "ghost@weeklyreport.local",
     });
 
     expect(identity).toBeNull();

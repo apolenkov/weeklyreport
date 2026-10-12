@@ -18,7 +18,7 @@ import { getServerSession } from "./get-server-session";
 
 const SESSION = {
   userId: "a0000000-0000-4000-8000-000000000001",
-  email: "head@customreport.local",
+  email: "head@weeklyreport.local",
   name: "Head User",
   role: "head" as const,
   activeReportId: null,

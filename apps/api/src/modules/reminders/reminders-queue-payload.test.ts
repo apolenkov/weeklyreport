@@ -27,8 +27,8 @@ const execution: AdminReminderExecution = {
 };
 
 const organization = {
-  shortName: "CustomReport",
-  fullName: "CustomReport Department",
+  shortName: "WeeklyReport",
+  fullName: "WeeklyReport Department",
 };
 
 describe("buildQueuePayload", () => {

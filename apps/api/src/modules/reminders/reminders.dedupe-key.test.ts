@@ -22,7 +22,7 @@ describe("resolveReminderDedupeKey", () => {
     id: "66666666-6666-4666-8666-666666666666",
     fireAt: new Date("2026-04-12T09:00:00.000Z"),
   };
-  const recipientEmail = "lead1@customreport.local";
+  const recipientEmail = "lead1@weeklyreport.local";
   const cycleDate = toReminderCycleDate(rule.fireAt);
 
   it("uses the explicit discriminator and cycle", () => {
@@ -66,10 +66,10 @@ describe("RemindersScopeService.dispatchDraftSections — manual dispatch after 
     policyId: "99999999-9999-4999-8999-999999999999",
   };
   const reportDeadline = new Date("2026-04-13T18:00:00.000Z");
-  const recipientEmail = "lead1@customreport.local";
+  const recipientEmail = "lead1@weeklyreport.local";
   const adminSession: UserSession = {
     userId: "00000000-0000-4000-8000-0000000000ad",
-    email: "admin@customreport.local",
+    email: "admin@weeklyreport.local",
     name: "Platform Admin",
     role: "admin",
     activeReportId: REPORT_ID,

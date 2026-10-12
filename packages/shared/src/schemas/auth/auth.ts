@@ -30,10 +30,10 @@ export const ROLE_HOME_PATH: Readonly<Record<Role, string>> = Object.freeze({
 /** Shared dev-login email roster; api and web must list the same address per role. */
 export const DEV_LOGIN_EMAIL_BY_ROLE: Readonly<Record<DbRole, string>> =
   Object.freeze({
-    lead: "lead1@customreport.local",
-    head: "head@customreport.local",
-    admin: "admin@customreport.local",
-    viewer: "viewer@customreport.local",
+    lead: "lead1@weeklyreport.local",
+    head: "head@weeklyreport.local",
+    admin: "admin@weeklyreport.local",
+    viewer: "viewer@weeklyreport.local",
   });
 
 /**

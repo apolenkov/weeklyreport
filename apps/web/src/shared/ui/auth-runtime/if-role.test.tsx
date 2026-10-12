@@ -31,7 +31,7 @@ function mockMe(role: string | null) {
     data: {
       userId: "00000000-0000-4000-8000-000000000001",
       name: "Test User",
-      email: "test@customreport.local",
+      email: "test@weeklyreport.local",
       role,
     },
   });

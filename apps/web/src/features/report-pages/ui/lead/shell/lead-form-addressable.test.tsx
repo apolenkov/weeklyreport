@@ -366,6 +366,6 @@ describe("LeadForm — addressable URLs", () => {
     );
     await waitFor(() => expect(document.title).toContain("Week 15"));
     expect(document.title).toContain("· Example Software Department");
-    expect(document.title).not.toContain("CustomReport");
+    expect(document.title).not.toContain("WeeklyReport");
   });
 });

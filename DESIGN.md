@@ -1,4 +1,4 @@
-# CustomReport Design System
+# WeeklyReport Design System
 
 This document extracts the visual system already shipped by `packages/ui` and
 `apps/web`. It is a source-of-truth description, not a new visual direction:
@@ -7,7 +7,7 @@ value.
 
 ## 1. Atmosphere & Identity
 
-CustomReport is a calm operational paper surface with editorial-industrial
+WeeklyReport is a calm operational paper surface with editorial-industrial
 character. The working UI is light, warm, and information-dense without being
 harsh: pale sage paper, cream cards, forest-green actions, muted slate/amber
 status cues, and a restrained grid texture. The signature is the contrast

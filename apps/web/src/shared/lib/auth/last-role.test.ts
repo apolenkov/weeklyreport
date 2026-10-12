@@ -48,7 +48,7 @@ describe("last-role helper", () => {
 
   const sample: LastRoleRecord = {
     role: "head",
-    email: "head@customreport.local",
+    email: "head@weeklyreport.local",
     name: "Антон К.",
   };
 
@@ -76,7 +76,7 @@ describe("last-role helper", () => {
       LAST_ROLE_STORAGE_KEY,
       JSON.stringify({
         role: "superuser",
-        email: "x@customreport.local",
+        email: "x@weeklyreport.local",
         name: "X",
       }),
     );

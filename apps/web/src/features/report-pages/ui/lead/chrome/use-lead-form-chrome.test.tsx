@@ -61,7 +61,7 @@ describe("useLeadFormChrome — document title branding", () => {
     );
     expect(document.title).toContain("Week 16");
     expect(document.title).toContain("· Example Software Department");
-    expect(document.title).not.toContain("CustomReport");
+    expect(document.title).not.toContain("WeeklyReport");
   });
 
   it("falls back to the tenant-neutral placeholder, never a product brand, when organization is absent", () => {
@@ -69,6 +69,6 @@ describe("useLeadFormChrome — document title branding", () => {
       <ChromeHarness byPeriodData={{ section: { reportId: REPORT_ID } }} />,
     );
     expect(document.title).toContain("· Organization");
-    expect(document.title).not.toContain("CustomReport");
+    expect(document.title).not.toContain("WeeklyReport");
   });
 });

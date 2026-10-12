@@ -14,7 +14,7 @@ import { unusedAdminRepositoryStubs } from "./admin-repository-unused-stubs.js";
 
 export const adminSession: UserSession = {
   userId: "00000000-0000-4000-8000-0000000000ad",
-  email: "admin@customreport.local",
+  email: "admin@weeklyreport.local",
   name: "Platform Admin",
   role: "admin",
   activeReportId: "22222222-2222-4222-8222-222222222222",
@@ -42,7 +42,7 @@ export function buildAdminCaller(
 
 export const headSession: UserSession = {
   userId: "00000000-0000-4000-8000-000000000001",
-  email: "head@customreport.local",
+  email: "head@weeklyreport.local",
   name: "Department Head",
   role: "head",
   activeReportId: "22222222-2222-4222-8222-222222222222",
@@ -51,7 +51,7 @@ export const headSession: UserSession = {
 
 export const leadSession: UserSession = {
   userId: "33333333-3333-4333-8333-333333333333",
-  email: "lead1@customreport.local",
+  email: "lead1@weeklyreport.local",
   name: "Lead 1",
   role: "lead",
   activeReportId: "22222222-2222-4222-8222-222222222222",

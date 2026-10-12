@@ -17,7 +17,7 @@ const LEAD_ID = "b0000000-0000-4000-a000-0000000000b3";
 
 const headSession: UserSession = {
   userId: "b0000000-0000-4000-a000-0000000000b5",
-  email: "head@customreport.local",
+  email: "head@weeklyreport.local",
   name: "Department Head",
   role: "head",
   activeReportId: REPORT_ID,

@@ -11,7 +11,7 @@ const devEnv = {
   AUTH_DEV_MODE: "true",
   KEYCLOAK_SAML_CALLBACK_URL: "http://localhost:3001/auth/saml/callback",
   KEYCLOAK_SAML_ENTRY_POINT: "http://localhost:8080/realms/dev/protocol/saml",
-  KEYCLOAK_SAML_ISSUER: "customreport-dev",
+  KEYCLOAK_SAML_ISSUER: "weeklyreport-dev",
   KEYCLOAK_SAML_CERT: "DEV_CERT",
 } as unknown as NodeJS.ProcessEnv;
 
@@ -127,9 +127,9 @@ describe("createSamlStrategyOptions — production posture", () => {
     NODE_ENV: "production",
     AUTH_DEV_MODE: "false",
     KEYCLOAK_SAML_CALLBACK_URL:
-      "https://customreport.example.com/auth/saml/callback",
+      "https://weeklyreport.example.com/auth/saml/callback",
     KEYCLOAK_SAML_ENTRY_POINT: "https://kc.example.com/realms/p/protocol/saml",
-    KEYCLOAK_SAML_ISSUER: "customreport-prod",
+    KEYCLOAK_SAML_ISSUER: "weeklyreport-prod",
     KEYCLOAK_SAML_CERT: "-----BEGIN CERT-----\nMIIB...\n-----END CERT-----",
   } as unknown as NodeJS.ProcessEnv;
 

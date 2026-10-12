@@ -28,7 +28,7 @@ const reportId = "aaaa1111-1111-4111-8111-111111111111";
 
 const headSession: UserSession = {
   userId: "00000000-0000-4000-8000-000000000001",
-  email: "head@customreport.local",
+  email: "head@weeklyreport.local",
   name: "Department Head",
   role: "head",
   activeReportId: reportId,

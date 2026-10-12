@@ -46,7 +46,7 @@ describe("PeriodService single-active-reopen guard (integration)", () => {
 
   const headSession: UserSession = {
     userId: "00000000-0000-4000-8000-0000000000c1",
-    email: "head@customreport.local",
+    email: "head@weeklyreport.local",
     name: "Department Head",
     role: "head",
     activeReportId: null,

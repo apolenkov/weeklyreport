@@ -14,7 +14,7 @@ const validEntry = {
   level: "error",
   message: "Request failed",
   source: "console",
-  url: "https://customreport.test/lead/report",
+  url: "https://weeklyreport.test/lead/report",
   stack: "Error: Request failed",
   ts: 1_785_608_000_000,
 } as const;

@@ -15,8 +15,8 @@ const queueData: ReminderQueueJobData = {
   deadlineIso: "2026-04-11T00:00:00.000Z",
   sectionUrl: "https://example.test/lead/report",
   organization: {
-    shortName: "CustomReport",
-    fullName: "CustomReport Department",
+    shortName: "WeeklyReport",
+    fullName: "WeeklyReport Department",
   },
 };
 

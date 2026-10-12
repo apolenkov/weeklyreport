@@ -53,7 +53,7 @@ class EmailReminderProcessor extends ProductionEmailReminderProcessor {
 const SMTP_ENV = {
   SMTP_HOST: process.env.SMTP_HOST ?? "localhost",
   SMTP_PORT: Number(process.env.SMTP_PORT ?? 1025),
-  SMTP_FROM: "test-integration@customreport.local",
+  SMTP_FROM: "test-integration@weeklyreport.local",
   REDIS_HOST: "localhost",
   REDIS_PORT: 6379,
   REDIS_DB: 15,

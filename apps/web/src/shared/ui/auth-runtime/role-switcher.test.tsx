@@ -50,7 +50,7 @@ vi.mock("../../lib/errors/client-error-reporting", async (importOriginal) => ({
 
 const SEED_USER = {
   id: "00000000-0000-4000-8000-000000000001",
-  email: "admin@customreport.local",
+  email: "admin@weeklyreport.local",
   name: "Admin User",
   role: "admin" as const,
 };
@@ -163,7 +163,7 @@ describe("DevRoleSwitcher — data-reset controls for every dev role", () => {
     expect(screen.getByTestId("dev-role-switcher-logout")).toBeInTheDocument();
 
     for (const testId of [
-      "dev-role-switcher-admin-admin@customreport.local",
+      "dev-role-switcher-admin-admin@weeklyreport.local",
       "dev-role-switcher-reseed-minimal",
       "dev-role-switcher-reseed-demo",
       "dev-role-switcher-reseed-full",
