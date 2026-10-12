@@ -78,7 +78,9 @@ function parseJobId(req: Request): string | null {
   return JOB_ID_RE.test(jobId) ? jobId : null;
 }
 
-// Containment check against the resolved pdfDir; `null` means "do not serve".
+// Containment check against the resolved pdfDir; `null` means "do not serve"
+// because the path leaves pdfDir, and "ELOOP" is the O_NOFOLLOW symlink refusal
+// that the caller logs.
 // The physical artifact is generation-scoped — `${jobId}-g${generation}.pdf`
 // from the durable row, never the legacy un-suffixed name. The open with
 // O_NOFOLLOW is the atomic enforcement: a symlink planted at the artifact
@@ -87,27 +89,33 @@ async function resolveArtifactPath(
   pdfDir: string,
   jobId: string,
   generation: number,
-): Promise<{ filePath: string; fd: number } | null> {
+): Promise<{ filePath: string; fd: number } | "ENOENT" | "ELOOP" | null> {
   const baseDir = resolve(pdfDir);
   const filePath = resolve(baseDir, `${jobId}-g${generation}.pdf`);
   if (!filePath.startsWith(baseDir + sep)) {
     return null;
   }
-  const fd = await openReadOnlyNoFollow(filePath);
-  return fd === null ? null : { filePath, fd };
+  const opened = await openReadOnlyNoFollow(filePath);
+  return typeof opened === "number" ? { filePath, fd: opened } : opened;
 }
 
-function openReadOnlyNoFollow(filePath: string): Promise<number | null> {
+function openReadOnlyNoFollow(
+  filePath: string,
+): Promise<number | "ENOENT" | "ELOOP"> {
   return new Promise((resolveOpen, rejectOpen) => {
     openFile(
       filePath,
       constants.O_RDONLY | constants.O_NOFOLLOW,
       (error, fd) => {
-        if (error && error.code !== "ENOENT" && error.code !== "ELOOP") {
-          rejectOpen(error);
+        if (!error) {
+          resolveOpen(fd);
           return;
         }
-        resolveOpen(error ? null : fd);
+        if (error.code === "ENOENT" || error.code === "ELOOP") {
+          resolveOpen(error.code);
+          return;
+        }
+        rejectOpen(error);
       },
     );
   });
@@ -150,6 +158,14 @@ function streamArtifact(
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", "attachment");
   stream.pipe(res);
+}
+
+function errorCode(error: unknown): string {
+  return error instanceof Error &&
+    "code" in error &&
+    typeof error.code === "string"
+    ? error.code
+    : "UNKNOWN";
 }
 
 export async function handlePdfDownload(
@@ -200,20 +216,24 @@ export async function handlePdfDownload(
       jobId,
       job.generation,
     );
-    if (artifact === null) {
+    if (artifact === null || typeof artifact === "string") {
+      // Same 404 as a missing file so the response does not reveal tampering; the log tells them apart.
+      if (artifact === "ELOOP") {
+        deps.logger.warn("pdf artifact symlink refused", {
+          jobId,
+          code: "ELOOP",
+        });
+      }
       res.status(HTTP.notFound).end();
       return;
     }
 
     streamArtifact(res, artifact, deps, jobId);
   } catch (error) {
-    const code =
-      error instanceof Error &&
-      "code" in error &&
-      typeof error.code === "string"
-        ? error.code
-        : "UNKNOWN";
-    deps.logger.error("pdf artifact open failed", { jobId, code });
+    deps.logger.error("pdf artifact open failed", {
+      jobId,
+      code: errorCode(error),
+    });
     res.status(HTTP.serverError).end();
   }
 }

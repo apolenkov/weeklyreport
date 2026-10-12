@@ -423,16 +423,22 @@ describe("handlePdfDownload", () => {
 
   it("returns 404 when the job is completed but the file is missing on disk", async () => {
     const res = new MockResponse();
+    const logWarn = vi.fn();
+    const logError = vi.fn();
 
     await handlePdfDownload(
       makeReq({ cookie: "valid" }),
       asResponse(res),
       makeDeps({
         prisma: makePrisma({ job: completedJob(), reportAuthorized: true }),
+        logger: { ...createNullLogger(), warn: logWarn, error: logError },
       }),
     );
 
     expect(res.statusCode).toBe(404);
+    // A missing file stays silent: only the symlink refusal is logged.
+    expect(logWarn).not.toHaveBeenCalled();
+    expect(logError).not.toHaveBeenCalled();
   });
 
   describe.each(["EACCES", "ENOTDIR"] as const)(
@@ -526,17 +532,26 @@ describe("handlePdfDownload", () => {
     writeFileSync(outside, "SECRET-OUTSIDE-BYTES");
     symlinkSync(outside, join(pdfDir, artifactName(1)));
     const res = new MockResponse();
+    const logWarn = vi.fn();
+    const logError = vi.fn();
 
     await handlePdfDownload(
       makeReq({ cookie: "valid" }),
       asResponse(res),
       makeDeps({
         prisma: makePrisma({ job: completedJob(), reportAuthorized: true }),
+        logger: { ...createNullLogger(), warn: logWarn, error: logError },
       }),
     );
 
     expect(res.statusCode).toBe(404);
     expect(res.body).toBe("");
+    expect(logWarn).toHaveBeenCalledExactlyOnceWith(
+      "pdf artifact symlink refused",
+      { jobId: JOB_ID, code: "ELOOP" },
+    );
+    expect(logError).not.toHaveBeenCalled();
+    expect(JSON.stringify(logWarn.mock.calls)).not.toContain(fixtureRoot);
   });
 
   it("returns 404 for a non-completed job even with a same-named file on disk", async () => {
