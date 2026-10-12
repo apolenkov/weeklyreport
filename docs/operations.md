@@ -351,8 +351,9 @@ artifact, and queue entry.
 ### Перед деплоем OCR-правок 287
 
 Run these on the real target database (read-only queries, the owner runs them)
-before applying `20261007003500_user_email_case_insensitive` and
-`20261007120000_semantic_embedding_nonzero_vector`, and before deploying the
+before applying `20261007003500_user_email_case_insensitive`,
+`20261007120000_semantic_embedding_nonzero_vector` and
+`20261012110000_report_autoarchive_flag_check`, and before deploying the
 API that enforces the key format. Take the pre-deploy dump first
 ([Manual and pre-deploy backup](#manual-and-pre-deploy-backup)).
 
@@ -361,7 +362,7 @@ API that enforces the key format. Take the pre-deploy dump first
    an operator decision (no automatic merge) and repeat.
 
    ```sql
-   SELECT lower("email") AS email_key, count(*) AS users, array_agg("id") AS user_ids
+   SELECT lower(btrim("email")) AS email_key, count(*) AS users, array_agg("id") AS user_ids
    FROM "User"
    GROUP BY 1
    HAVING count(*) > 1;
@@ -377,7 +378,29 @@ API that enforces the key format. Take the pre-deploy dump first
    WHERE vector_norm("vector") = 0;
    ```
 
-3. **Key format, without printing the value.** For every environment, the
+3. **Auto-archived reports.** The third migration rejects reports marked as
+   auto-archived without being archived; the result must be empty. Otherwise
+   resolve the listed reports as an operator decision and repeat.
+
+   ```sql
+   SELECT "id" FROM "Report" WHERE "autoArchived" AND NOT "archived";
+   ```
+
+4. **Rollback of the schema changes.** Undo each applied migration separately,
+   only when its schema change must be undone. Deleted cache rows are not
+   restored; they rebuild on demand.
+
+   ```sql
+   DROP INDEX IF EXISTS "User_email_lower_key";
+   ALTER TABLE "SemanticEmbedding" DROP CONSTRAINT IF EXISTS "SemanticEmbedding_vector_nonzero_check";
+   ALTER TABLE "Report" DROP CONSTRAINT IF EXISTS "Report_auto_archived_state_check";
+   ```
+
+   Prisma migration history still lists the applied migrations after this;
+   reconcile it only through the explicitly authorized recovery path, otherwise
+   fix forward with a new migration.
+
+5. **Key format, without printing the value.** For every environment, the
    `AI_PROVIDER_CONFIG_ENCRYPTION_KEY` must be 64 hex characters or canonical
    padded base64 of 32 bytes, otherwise boot fails closed. The value is passed
    through the environment and only `OK`/`INVALID` is printed:
@@ -395,18 +418,6 @@ API that enforces the key format. Take the pre-deploy dump first
    Do not rotate or replace the key to fix the format while encrypted provider
    credentials are retained (see [Rotating secrets](#rotating-secrets)); fix only
    the encoding of the same bytes.
-
-4. **Rollback of the schema changes** (only if both migrations were applied and
-   must be undone; neither restores deleted cache rows, which rebuild on demand):
-
-   ```sql
-   DROP INDEX "User_email_lower_key";
-   ALTER TABLE "SemanticEmbedding" DROP CONSTRAINT "SemanticEmbedding_vector_nonzero_check";
-   ```
-
-   Prisma migration history still lists both migrations after this; reconcile
-   it only through the explicitly authorized recovery path, otherwise fix
-   forward with a new migration.
 
 ### Agentation feedback operations
 
