@@ -1182,9 +1182,29 @@ describe("LeadForm Overview", () => {
     // …but Cancel is never trapped behind the save.
     const cancel = within(editor).getByRole("button", { name: "Cancel" });
     expect(cancel).toBeEnabled();
-    await user.click(cancel);
-    const discard = screen.queryByRole("button", { name: "Discard" });
-    if (discard) await user.click(discard);
+    // Escape routes through the same requestClose as Cancel: the dirty draft
+    // asks for confirmation instead of silently discarding the pending save.
+    fireEvent.keyDown(editor, { key: "Escape" });
+    const discardPrompt = await screen.findByRole("alertdialog", {
+      name: "Discard changes?",
+    });
+    await user.click(
+      within(discardPrompt).getByRole("button", { name: "Keep editing" }),
+    );
+    expect(
+      screen.queryByRole("alertdialog", { name: "Discard changes?" }),
+    ).toBeNull();
+    // Keep editing returns to the still-pending save: fields stay locked with
+    // the dirty input, and Cancel remains reachable.
+    expect(description).toBeDisabled();
+    expect(description).toHaveValue("Current work — in-flight edit");
+    expect(
+      within(editor).getByRole("button", { name: "Save update" }),
+    ).toBeDisabled();
+    expect(cancel).toBeEnabled();
+    // No cancellation guarantee: the in-flight save still lands once it
+    // resolves; the dialog simply stops driving it.
+    releaseSave?.();
     await pollUntil(() =>
       expect(
         screen.queryByRole("form", {
@@ -1192,10 +1212,8 @@ describe("LeadForm Overview", () => {
         }),
       ).toBeNull(),
     );
-    // No cancellation guarantee: the in-flight save still lands once it
-    // resolves; the dialog simply stops driving it.
-    releaseSave?.();
-    await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
+    expect(saveDraft).toHaveBeenCalledOnce();
+    await itemPreview("Current work — in-flight edit");
   });
 
   it("opens quick-create with the selected product and saves through the live draft", async () => {
