@@ -21,7 +21,6 @@ export default mergeConfig(
         include: ["src/**/*.ts"],
         exclude: [
           "src/**/*.test.ts",
-          "src/**/*.integration.test.ts",
           "src/**/__tests__/**",
           "src/**/test-utils/**",
           "src/main.ts",
