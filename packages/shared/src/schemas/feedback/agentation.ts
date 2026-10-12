@@ -247,13 +247,11 @@ export type AgentationSessionResponse = z.infer<
   typeof agentationSessionResponseSchema
 >;
 
-/** Validates the pending annotation collection returned by the adapter. */
+/** Validates the full pending annotation list returned by the adapter; count equals annotations.length, as in the stock agentation-mcp contract. */
 export const agentationPendingResponseSchema = z
   .object({
-    count: z.number().int().min(0).max(AGENTATION_MAX_ARRAY_LENGTH),
-    annotations: z
-      .array(agentationAnnotationResponseSchema)
-      .max(AGENTATION_MAX_ARRAY_LENGTH),
+    count: z.number().int().min(0),
+    annotations: z.array(agentationAnnotationResponseSchema),
   })
   .strip();
 /** Pending annotation collection returned by the Agentation adapter. */

@@ -197,6 +197,21 @@ describe("Agentation bounded wire contract", () => {
         annotations: [annotation],
       }),
     ).toMatchObject({ count: 1 });
+    // The pending response is the full list, not a page: more than one page still parses.
+    const pending = Array.from(
+      { length: AGENTATION_MAX_ARRAY_LENGTH + 1 },
+      (_, index) => ({
+        ...annotation,
+        id: `annotation-${index}`,
+        clientId: `annotation-${index}`,
+      }),
+    );
+    expect(
+      agentationPendingResponseSchema.parse({
+        count: pending.length,
+        annotations: pending,
+      }),
+    ).toMatchObject({ count: pending.length });
     expect(
       agentationSseEventSchema.parse({
         sequence: 1,
