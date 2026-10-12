@@ -11,6 +11,39 @@ import {
   aiProviderPreparationProgressSchema,
 } from "./ai-provider-configuration.js";
 
+const makeActiveRead = () => ({
+  id: "659b2767-0f86-41e2-b025-49730ca010e4",
+  lifecycle: "active",
+  generation: {
+    profile: "mistral",
+    baseUrl: "https://api.mistral.ai/v1",
+    plannerModel: "planner-1",
+    answerModel: "answer-1",
+    reasoningMode: "provider_default",
+    reasoningCustomValue: null,
+    credentialConfigured: true,
+    credentialMaskedSuffix: "••••",
+  },
+  embeddings: {
+    mode: "reuse_generation",
+    model: "embed-1",
+    dimensions: 3,
+  },
+  generationCompatibilityIdentity: "generation:v1:test",
+  semanticInputVersion: "1",
+  testResult: null,
+  progress: {
+    completed: 0,
+    total: 0,
+    failed: 0,
+    elapsedMs: 0,
+    finishedAt: null,
+  },
+  createdAt: "2026-08-10T00:00:00.000Z",
+  updatedAt: "2026-08-10T00:00:00.000Z",
+  activatedAt: "2026-08-10T00:00:00.000Z",
+});
+
 const draft = {
   generation: {
     profile: "custom-openai-compatible" as const,
@@ -326,38 +359,7 @@ describe("ai provider contracts", () => {
   });
 
   it("accepts the fixed short-secret mask and rejects unsafe mask metadata", () => {
-    const activeRead = {
-      id: "659b2767-0f86-41e2-b025-49730ca010e4",
-      lifecycle: "active",
-      generation: {
-        profile: "mistral",
-        baseUrl: "https://api.mistral.ai/v1",
-        plannerModel: "planner-1",
-        answerModel: "answer-1",
-        reasoningMode: "provider_default",
-        reasoningCustomValue: null,
-        credentialConfigured: true,
-        credentialMaskedSuffix: "••••",
-      },
-      embeddings: {
-        mode: "reuse_generation",
-        model: "embed-1",
-        dimensions: 3,
-      },
-      generationCompatibilityIdentity: "generation:v1:test",
-      semanticInputVersion: "1",
-      testResult: null,
-      progress: {
-        completed: 0,
-        total: 0,
-        failed: 0,
-        elapsedMs: 0,
-        finishedAt: null,
-      },
-      createdAt: "2026-08-10T00:00:00.000Z",
-      updatedAt: "2026-08-10T00:00:00.000Z",
-      activatedAt: "2026-08-10T00:00:00.000Z",
-    };
+    const activeRead = makeActiveRead();
 
     expect(
       aiProviderConfigurationReadSchema.safeParse(activeRead).success,
@@ -372,6 +374,53 @@ describe("ai provider contracts", () => {
       }).success,
     ).toBe(false);
   });
+
+  it.each([
+    { completed: 0, total: 0, failed: 0, valid: true, field: "completed" },
+    { completed: 2, total: 2, failed: 1, valid: true, field: "failed" },
+    { completed: 3, total: 2, failed: 0, valid: false, field: "completed" },
+    { completed: 0, total: 2, failed: 3, valid: false, field: "failed" },
+  ])(
+    "preserves both progress boundaries for $completed/$total/$failed",
+    ({ completed, total, failed, valid, field }) => {
+      const read = makeActiveRead();
+      const nested = aiProviderConfigurationReadSchema.safeParse({
+        ...read,
+        progress: { ...read.progress, completed, total, failed },
+      });
+      const top = aiProviderPreparationProgressSchema.safeParse({
+        revisionId: read.id,
+        completed,
+        total,
+        failed,
+        elapsedMs: 1,
+        startedAt: null,
+        finishedAt: null,
+      });
+      expect(nested.success).toBe(valid);
+      expect(top.success).toBe(valid);
+      if (!nested.success)
+        expect(nested.error.issues).toContainEqual(
+          expect.objectContaining({
+            path: ["progress", field],
+            message:
+              field === "completed"
+                ? "Completed progress cannot exceed total progress"
+                : "Failed progress cannot exceed total progress",
+          }),
+        );
+      if (!top.success)
+        expect(top.error.issues).toContainEqual(
+          expect.objectContaining({
+            path: [field],
+            message:
+              field === "completed"
+                ? "Completed progress cannot exceed total progress"
+                : "Failed progress cannot exceed total progress",
+          }),
+        );
+    },
+  );
 
   it("bounds preparation progress", () => {
     expect(

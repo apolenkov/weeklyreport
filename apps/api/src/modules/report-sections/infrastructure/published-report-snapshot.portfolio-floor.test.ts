@@ -28,6 +28,53 @@ const SECOND_PRODUCT = "65064b76-3bec-428d-b2f6-7bf30476909a";
 // OWNED stage covered by the author's own at-risk/blocked risk must
 // floor product status via effectiveProjectStatus (not raw trafficLight).
 describe("buildPortfolioProductsFromSnapshotSections — own-risk floor", () => {
+  it.each([null, "yellow"] as const)(
+    "attributes only valued contributions when the second status is %s",
+    (status) => {
+      const secondAuthor = "7faa772b-dbd6-4a17-a4eb-85f006fcd0e1";
+      const stageSet = [
+        { stageId: OWNED_STAGE_ID, stageName: OWNED_STAGE_NAME, sortOrder: 0 },
+      ];
+      const sections = [
+        makeSection({
+          projects: [
+            {
+              projectId: OWNED_PRODUCT,
+              projectName: "CRM Portal",
+              trafficLight: null,
+              ownedStages: [],
+              stageSet,
+            },
+          ],
+        }),
+        makeSection({
+          reportSectionId: "3b334e9c-d5c3-484d-9b8c-26fdd63206d8",
+          authorId: secondAuthor,
+          authorName: "Bob Lead",
+          projects: [
+            {
+              projectId: OWNED_PRODUCT,
+              projectName: "Other occurrence",
+              trafficLight: status,
+              ownedStages: [],
+              stageSet,
+            },
+          ],
+        }),
+      ];
+      expect(buildPortfolioProductsFromSnapshotSections(sections)).toEqual([
+        {
+          productId: OWNED_PRODUCT,
+          productName: "CRM Portal",
+          worstStatus: status,
+          stageCount: 1,
+          leadIds: status === null ? [] : [secondAuthor],
+          leadNames: status === null ? [] : ["Bob Lead"],
+        },
+      ]);
+    },
+  );
+
   it("1.1 floors red for a blocked own risk on the owned stage", () => {
     const products = buildPortfolioProductsFromSnapshotSections([
       makeSection({

@@ -134,3 +134,29 @@ describe("reminderPolicySchema kind and audience", () => {
     },
   );
 });
+
+describe("reminderPolicySchema signed storage range", () => {
+  it.each([-2_147_483_648, -1440, 0, 1440, 2_147_483_647])(
+    "preserves the signed int32 value %s",
+    (offsetMinutes) => {
+      expect(
+        reminderPolicySchema.parse({ ...validPolicy, offsetMinutes })
+          .offsetMinutes,
+      ).toBe(offsetMinutes);
+    },
+  );
+  it.each([-2_147_483_649, 2_147_483_648, 1.5])(
+    "rejects unsupported offset %s at its own field",
+    (offsetMinutes) => {
+      const result = reminderPolicySchema.safeParse({
+        ...validPolicy,
+        offsetMinutes,
+      });
+      expect(result.success).toBe(false);
+      if (!result.success)
+        expect(result.error.issues).toContainEqual(
+          expect.objectContaining({ path: ["offsetMinutes"] }),
+        );
+    },
+  );
+});

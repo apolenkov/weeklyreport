@@ -84,14 +84,10 @@ export const aiPromptSlotDefinitionSchema = z
   .strict();
 
 /** Validates the complete editable contents of a prompt bundle. */
-export const aiPromptContentsSchema = z
-  .object({
-    planner: safePromptText(AI_PROMPT_SLOT_CONTENT_LIMIT),
-    "planner-repair": safePromptText(AI_PROMPT_SLOT_CONTENT_LIMIT),
-    "grounded-answer": safePromptText(AI_PROMPT_SLOT_CONTENT_LIMIT),
-    "citation-repair": safePromptText(AI_PROMPT_SLOT_CONTENT_LIMIT),
-  })
-  .strict();
+export const aiPromptContentsSchema = z.record(
+  aiPromptSlotSchema,
+  safePromptText(AI_PROMPT_SLOT_CONTENT_LIMIT),
+);
 
 /** Read model for one composed prompt slot. */
 export const aiPromptSlotReadSchema = z
