@@ -175,6 +175,54 @@ describe("AgentationPrismaRepository", () => {
     expect(tx.agentationEvent.create).not.toHaveBeenCalled();
   });
 
+  describe("thread message limit", () => {
+    const limitedTx = (messageCount: number) => {
+      const current = annotationRow();
+      return {
+        $queryRaw: vi.fn().mockResolvedValue([{ id: "annotation-1" }]),
+        agentationAnnotation: {
+          findFirst: vi.fn().mockResolvedValue(current),
+          findUnique: vi.fn().mockResolvedValue(current),
+        },
+        agentationThreadMessage: {
+          count: vi.fn().mockResolvedValue(messageCount),
+          create: vi.fn().mockResolvedValue({
+            id: "thread-1",
+            role: "human",
+            content: "Reply",
+            timestamp: 1_700_000_000_001n,
+          }),
+        },
+        agentationEvent: { create: vi.fn().mockResolvedValue({}) },
+      };
+    };
+
+    it("rejects a reply that would take the reserved dismissal slot, before persisting", async () => {
+      const tx = limitedTx(49);
+      const repository = new AgentationPrismaRepository(transactionPrisma(tx));
+
+      await expect(
+        repository.addThreadMessage(leadA, "annotation-1", {
+          content: "Reply",
+        }),
+      ).rejects.toMatchObject({ code: "STORE_LIMIT" });
+      expect(tx.agentationThreadMessage.create).not.toHaveBeenCalled();
+      expect(tx.agentationEvent.create).not.toHaveBeenCalled();
+    });
+
+    it("still accepts the last reply below the reserved slot", async () => {
+      const tx = limitedTx(48);
+      const repository = new AgentationPrismaRepository(transactionPrisma(tx));
+
+      await repository.addThreadMessage(leadA, "annotation-1", {
+        content: "Reply",
+      });
+
+      expect(tx.agentationThreadMessage.create).toHaveBeenCalledTimes(1);
+      expect(tx.agentationEvent.create).toHaveBeenCalledTimes(1);
+    });
+  });
+
   it("appends thread messages and audits an agent action", async () => {
     const current = annotationRow();
     const threadMessage = {
@@ -192,6 +240,7 @@ describe("AgentationPrismaRepository", () => {
         findUnique: vi.fn().mockResolvedValue(withThread),
       },
       agentationThreadMessage: {
+        count: vi.fn().mockResolvedValue(0),
         create: vi.fn().mockResolvedValue(threadMessage),
       },
       agentationSession: {

@@ -14,11 +14,15 @@ import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { resolveHumanSession } from "../../lib/human-session";
 import { createNullLogger } from "../../lib/logger";
 import { ProductFeedbackMemoryRepository } from "../../test-utils/product-feedback.memory-repository";
+import { AgentationInboxActions } from "./agentation-inbox-actions";
 import {
   createAuthenticatedFeedbackHandler,
   isLoopbackAddress,
 } from "./product-feedback.handler";
-import { feedbackAccessFromSession } from "./product-feedback.repository";
+import {
+  feedbackAccessFromSession,
+  FeedbackLimitError,
+} from "./product-feedback.repository";
 
 vi.mock("../../lib/human-session", () => ({
   resolveHumanSession: vi.fn(),
@@ -403,6 +407,38 @@ describe("authenticated product-feedback ingress", () => {
       ).toBe(404);
     } finally {
       server.close();
+    }
+  });
+
+  it("answers 409 when a reply or dismissal hits the thread message limit", async () => {
+    const limit = new FeedbackLimitError("Thread message limit reached");
+    const reply = vi
+      .spyOn(AgentationInboxActions.prototype, "reply")
+      .mockRejectedValue(limit);
+    const dismiss = vi
+      .spyOn(AgentationInboxActions.prototype, "dismiss")
+      .mockRejectedValue(limit);
+    const server = await createServer({ agentationEnabled: true });
+    try {
+      const replied = await call(server, "/feedback/agentation_a-1/replies", {
+        method: "POST",
+        ...jsonBody({ content: "One more" }),
+      });
+      expect(replied.status).toBe(409);
+      expect(await replied.json()).toEqual({
+        error: "thread_limit_reached",
+        message: "This feedback thread has reached its message limit.",
+      });
+      const dismissed = await call(server, "/feedback/agentation_a-1/dismiss", {
+        method: "POST",
+        role: "admin",
+        ...jsonBody({ reason: "Done" }),
+      });
+      expect(dismissed.status).toBe(409);
+    } finally {
+      server.close();
+      reply.mockRestore();
+      dismiss.mockRestore();
     }
   });
 

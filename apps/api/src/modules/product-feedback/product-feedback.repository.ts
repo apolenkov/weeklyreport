@@ -97,6 +97,10 @@ export class FeedbackInvalidStatusError extends Error {
   readonly code = "STORE_INVALID_STATUS";
 }
 
+export class FeedbackLimitError extends Error {
+  readonly code = "STORE_LIMIT";
+}
+
 export interface FeedbackAccess {
   readonly userId: UserSession["userId"];
   readonly role: UserSession["role"];

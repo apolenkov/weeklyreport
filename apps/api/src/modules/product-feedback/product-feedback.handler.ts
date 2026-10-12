@@ -13,6 +13,7 @@ import {
 import type { AppLogger } from "../../lib/logger.js";
 import {
   FeedbackInvalidStatusError,
+  FeedbackLimitError,
   FeedbackNotFoundError,
   type ProductFeedbackRepository,
 } from "./product-feedback.repository.js";
@@ -26,6 +27,7 @@ const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_FORBIDDEN = 403;
 const HTTP_NOT_FOUND = 404;
+const HTTP_CONFLICT = 409;
 const HTTP_SERVER_ERROR = 500;
 const LOG_PHASE = "product-feedback";
 const AGENTATION_AGENT_ID = "00000000-0000-4000-8000-000000000001";
@@ -177,6 +179,15 @@ function respondToFeedbackFailure({
 }): void {
   if (error instanceof FeedbackNotFoundError) {
     sendError(res, HTTP_NOT_FOUND, "not_found", "Feedback not found.");
+    return;
+  }
+  if (error instanceof FeedbackLimitError) {
+    sendError(
+      res,
+      HTTP_CONFLICT,
+      "thread_limit_reached",
+      "This feedback thread has reached its message limit.",
+    );
     return;
   }
   if (invalidRequest(error)) {

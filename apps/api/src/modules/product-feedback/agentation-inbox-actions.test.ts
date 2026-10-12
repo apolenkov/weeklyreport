@@ -174,6 +174,7 @@ describe("AgentationInboxActions", () => {
         findUniqueOrThrow: vi.fn().mockResolvedValue(changed),
       },
       agentationThreadMessage: {
+        count: vi.fn().mockResolvedValue(0),
         create: vi.fn().mockResolvedValue({
           id: "m-1",
           content: "Dismissed: Not actionable",
@@ -195,6 +196,48 @@ describe("AgentationInboxActions", () => {
       .calls[0]?.[0] as unknown as { data: { type: string } };
     expect(dismissEvent.data.type).toBe("thread.message");
   });
+
+  it.each([
+    [49, true],
+    [50, false],
+  ])(
+    "dismisses a thread holding %s messages: %s",
+    async (messageCount, accepted) => {
+      const current = row();
+      const changed = { ...current, status: "dismissed" };
+      const tx = {
+        agentationAnnotation: {
+          findFirst: vi.fn().mockResolvedValue(current),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          findUniqueOrThrow: vi.fn().mockResolvedValue(changed),
+        },
+        agentationThreadMessage: {
+          count: vi.fn().mockResolvedValue(messageCount),
+          create: vi.fn().mockResolvedValue({
+            id: "m-1",
+            content: "Dismissed: Not actionable",
+            timestamp: 10n,
+          }),
+        },
+        agentationEvent: { create: vi.fn().mockResolvedValue({}) },
+      };
+      const dismissal = new AgentationInboxActions(prismaFor(tx)).dismiss(
+        access,
+        "agentation_a-1",
+        "Not actionable",
+      );
+
+      if (accepted) {
+        await dismissal;
+        expect(tx.agentationThreadMessage.create).toHaveBeenCalledTimes(1);
+      } else {
+        // The throw rolls the claim back; nothing is written or emitted.
+        await expect(dismissal).rejects.toMatchObject({ code: "STORE_LIMIT" });
+        expect(tx.agentationThreadMessage.create).not.toHaveBeenCalled();
+        expect(tx.agentationEvent.create).not.toHaveBeenCalled();
+      }
+    },
+  );
 
   it("returns the winner's row when a concurrent dismiss already claimed it", async () => {
     const pending = row();
@@ -239,7 +282,10 @@ describe("AgentationInboxActions", () => {
         findFirst: vi.fn().mockResolvedValue(current),
         findUnique: vi.fn().mockResolvedValue(changed),
       },
-      agentationThreadMessage: { create: vi.fn().mockResolvedValue(message) },
+      agentationThreadMessage: {
+        count: vi.fn().mockResolvedValue(0),
+        create: vi.fn().mockResolvedValue(message),
+      },
       agentationEvent: { create: vi.fn().mockResolvedValue({}) },
     };
     const prisma = prismaFor(tx);
