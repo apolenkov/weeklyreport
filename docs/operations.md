@@ -352,8 +352,9 @@ artifact, and queue entry.
 
 Run these on the real target database (read-only queries, the owner runs them)
 before applying `20261007003500_user_email_case_insensitive`,
-`20261007120000_semantic_embedding_nonzero_vector` and
-`20261012110000_report_autoarchive_flag_check`, and before deploying the
+`20261007120000_semantic_embedding_nonzero_vector`,
+`20261012110000_report_autoarchive_flag_check` and
+`20261012163000_reviewer_history_delete_restrict`, and before deploying the
 API that enforces the key format. Take the pre-deploy dump first
 ([Manual and pre-deploy backup](#manual-and-pre-deploy-backup)).
 
@@ -386,7 +387,13 @@ API that enforces the key format. Take the pre-deploy dump first
    SELECT "id" FROM "Report" WHERE "autoArchived" AND NOT "archived";
    ```
 
-4. **Rollback of the schema changes.** Undo each applied migration separately,
+4. **Reviewer history.** The fourth migration replaces the three reviewer-user
+   foreign keys with `ON DELETE RESTRICT` in one transaction, without deleting
+   data. A user with any live acknowledgement, verdict or comment must be
+   deactivated instead of deleted. Existing validated foreign keys already
+   prevent orphaned references; no data cleanup is required before replacement.
+
+5. **Rollback of the first three schema changes.** Undo each applied migration separately,
    only when its schema change must be undone. Deleted cache rows are not
    restored; they rebuild on demand.
 
@@ -398,9 +405,12 @@ API that enforces the key format. Take the pre-deploy dump first
 
    Prisma migration history still lists the applied migrations after this;
    reconcile it only through the explicitly authorized recovery path, otherwise
-   fix forward with a new migration.
+   fix forward with a new migration. Do not restore reviewer-user cascades:
+   that would permit deletion of retained history and violate the owner policy.
+   Recover the fourth migration by fixing forward; any reversal requires a new
+   owner decision.
 
-5. **Key format, without printing the value.** For every environment, the
+6. **Key format, without printing the value.** For every environment, the
    `AI_PROVIDER_CONFIG_ENCRYPTION_KEY` must be 64 hex characters or canonical
    padded base64 of 32 bytes, otherwise boot fails closed. The value is passed
    through the environment and only `OK`/`INVALID` is printed:
