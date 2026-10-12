@@ -45,7 +45,7 @@ function RequestReopenDialogContent({
   const dialogSurfaceRef = useRef<HTMLDivElement>(null);
   const reasonRef = useRef<HTMLTextAreaElement>(null);
   const headingId = useId();
-  const isTooLong = reason.length > MAX_REOPEN_REASON_LENGTH;
+  const isTooLong = Array.from(reason).length > MAX_REOPEN_REASON_LENGTH;
   const { requestClose, discardDialog } = useDiscardGuard(
     reason.trim().length > 0,
     onCancel,

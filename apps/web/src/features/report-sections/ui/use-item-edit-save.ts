@@ -56,7 +56,7 @@ function collectSaveErrors(
   });
   return {
     ...errors,
-    ...(text.trimmedNextStepText.length > SAFE_TEXT_MAX_LENGTH
+    ...(Array.from(text.trimmedNextStepText).length > SAFE_TEXT_MAX_LENGTH
       ? {
           nextStepText: `Next step must be ${SAFE_TEXT_MAX_LENGTH} characters or fewer.`,
         }
@@ -71,7 +71,7 @@ function collectSaveErrors(
       ? { pausedReason: "A reason is required to pause an item." }
       : {}),
     ...(args.status === "paused" &&
-    text.trimmedPausedReason.length > SAFE_TEXT_MAX_LENGTH
+    Array.from(text.trimmedPausedReason).length > SAFE_TEXT_MAX_LENGTH
       ? {
           pausedReason: `Pause reason must be ${SAFE_TEXT_MAX_LENGTH} characters or fewer.`,
         }

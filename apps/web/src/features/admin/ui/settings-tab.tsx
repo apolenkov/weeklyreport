@@ -73,10 +73,11 @@ function SettingsNavigation({
           variant="line"
           className="min-w-max justify-start border-b border-[var(--color-border)]"
         >
-          <TabsTrigger value="identity">Identity</TabsTrigger>
-          <TabsTrigger value="periods">Periods</TabsTrigger>
-          <TabsTrigger value="reminders">Reminders</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
+          {SETTINGS_SECTIONS.map((section) => (
+            <TabsTrigger key={section.value} value={section.value}>
+              {section.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
       </div>
     </>

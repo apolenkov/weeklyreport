@@ -1,4 +1,4 @@
-import { STAGE_NAMES } from "@customreport/shared";
+import { STAGE, STAGE_NAMES } from "@customreport/shared";
 
 import { normalizeEntityReference } from "./entity-alias-index.js";
 import {
@@ -22,7 +22,7 @@ const stageReferenceId = (reference: string): string | null => {
     (stage) => normalizeEntityReference(stage) === normalized,
   );
   if (canonical) return canonical;
-  return normalized === "dev" ? "Development" : null;
+  return normalized === "dev" ? STAGE.DEVELOPMENT : null;
 };
 
 const resolveStageReferences = (

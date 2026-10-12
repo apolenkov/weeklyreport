@@ -65,15 +65,14 @@ function OffsetAmountInput({
   const [committedValue, setCommittedValue] = useState(magnitude);
   if (committedValue !== magnitude) {
     setCommittedValue(magnitude);
-    setRaw(String(magnitude));
-    setError(null);
+    if (error === null) setRaw(String(magnitude));
   }
 
   function handleChange(text: string) {
     setRaw(text);
     const parsed = parseOffsetMagnitude(text);
     if (parsed === null) {
-      setError("Enter a non-negative number");
+      setError("Enter a non-negative whole number");
       onValidityChange?.(false);
       return;
     }

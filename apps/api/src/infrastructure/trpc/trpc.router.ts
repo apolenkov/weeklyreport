@@ -16,12 +16,12 @@ import type { AiProviderConfigurationService } from "../../modules/ai-provider/i
 import type { AnalyticsService } from "../../modules/analytics/index.js";
 import type { ArchiveService } from "../../modules/archive/index.js";
 import type { AutoCarryOverOutcome } from "../../modules/carry-over/index.js";
-import { OrganizationService } from "../../modules/organization/index.js";
-import { PdfExportService } from "../../modules/pdf-export/index.js";
+import type { OrganizationService } from "../../modules/organization/index.js";
+import type { PdfExportService } from "../../modules/pdf-export/index.js";
 import type { PeriodService } from "../../modules/period/index.js";
 import type { ProjectActivityService } from "../../modules/project-activity/index.js";
-import { PublicationService } from "../../modules/publication/index.js";
-import { RemindersService } from "../../modules/reminders/index.js";
+import type { PublicationService } from "../../modules/publication/index.js";
+import type { RemindersService } from "../../modules/reminders/index.js";
 import type { LeadFormService } from "../../modules/report-sections/index.js";
 import type { ReportSectionsService } from "../../modules/report-sections/index.js";
 import type { ReviewService } from "../../modules/review/index.js";

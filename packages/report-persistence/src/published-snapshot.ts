@@ -12,13 +12,21 @@ export class PublishedSnapshotIntegrityError extends Error {
   }
 }
 
+const formatPublishedSnapshotFailureMessage = (
+  reportId: string | undefined,
+  detail: string | undefined,
+): string => {
+  const reportSuffix = reportId ? ` for report ${reportId}` : "";
+  const detailSuffix = detail === undefined ? "" : `: ${detail}`;
+  return `Published snapshot integrity failure${reportSuffix}${detailSuffix}`;
+};
+
 export function publishedSnapshotFailure(
   reportId: string | undefined,
   detail: string,
 ): PublishedSnapshotIntegrityError {
-  const reportSuffix = reportId ? ` for report ${reportId}` : "";
   return new PublishedSnapshotIntegrityError(
-    `Published snapshot integrity failure${reportSuffix}: ${detail}`,
+    formatPublishedSnapshotFailureMessage(reportId, detail),
   );
 }
 
@@ -77,10 +85,11 @@ export function requirePublishedSnapshot(
     if (error instanceof PublishedSnapshotIntegrityError) {
       throw error;
     }
-    const suffix = reportId ? ` for report ${reportId}` : "";
-    const detail = error instanceof Error ? `: ${error.message}` : "";
     throw new PublishedSnapshotIntegrityError(
-      `Published snapshot integrity failure${suffix}${detail}`,
+      formatPublishedSnapshotFailureMessage(
+        reportId,
+        error instanceof Error ? error.message : undefined,
+      ),
     );
   }
 }

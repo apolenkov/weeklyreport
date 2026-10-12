@@ -5,6 +5,8 @@ import { safeText } from "../primitives/report-primitives.schema.js";
 /** Maximum length accepted for a review comment. */
 export const REVIEW_COMMENT_MAX_LENGTH = 2000;
 
+const reviewCommentTextSchema = safeText({ max: REVIEW_COMMENT_MAX_LENGTH });
+
 /** Section verdict; requesting changes returns a submitted section to draft. */
 const reviewVerdictSchema = z.enum(["approved", "changes_requested"]);
 
@@ -14,7 +16,7 @@ export const recordCommentViewSchema = z
     id: z.uuid(),
     reviewerId: z.uuid(),
     reviewerName: z.string().min(1).optional(),
-    text: z.string().min(1),
+    text: reviewCommentTextSchema,
     createdAt: z.coerce.date(),
   })
   .readonly();
@@ -27,7 +29,7 @@ export const sectionReviewViewSchema = z
     verdict: reviewVerdictSchema,
     judgedVersion: z.number().int().min(1),
     /** Reviewer reason recorded with `changes_requested`; absent otherwise. */
-    comment: z.string().min(1).optional(),
+    comment: reviewCommentTextSchema.optional(),
     isCurrent: z.boolean(),
     createdAt: z.coerce.date(),
   })
@@ -55,7 +57,7 @@ export const reviewCommentInputSchema = z
     itemId: z.uuid().optional(),
     riskId: z.uuid().optional(),
     decisionId: z.uuid().optional(),
-    text: safeText({ max: REVIEW_COMMENT_MAX_LENGTH }),
+    text: reviewCommentTextSchema,
   })
   .superRefine((value, ctx) => {
     const anchors = [value.itemId, value.riskId, value.decisionId].filter(
@@ -89,11 +91,7 @@ export const reviewVerdictInputSchema = z
     version: z.number().int().min(1),
     // Mandatory reason for changes_requested; forbidden for approved.
     // Trimmed before the non-empty check so padding alone never counts.
-    comment: z
-      .string()
-      .trim()
-      .pipe(safeText({ max: REVIEW_COMMENT_MAX_LENGTH }))
-      .optional(),
+    comment: z.string().trim().pipe(reviewCommentTextSchema).optional(),
   })
   .superRefine((value, ctx) => {
     const requested = value.verdict === "changes_requested";

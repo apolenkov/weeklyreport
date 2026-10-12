@@ -142,6 +142,31 @@ describe("GroundingBundle", () => {
     expect(bundle.aggregates.supportingStatusFacts).toHaveLength(0);
   });
 
+  it("accepts the exact aggregate-only estimate and rejects one token below it", () => {
+    const candidates = [item("one", "short")];
+    const aggregateOnly = buildGroundingBundle(candidates, basePlan, {
+      contextTokenBudget: 1000,
+      classificationContext,
+      evidenceCandidates: [],
+    });
+
+    const exactBudget = aggregateOnly.estimatedTokens;
+    expect(
+      buildGroundingBundle(candidates, basePlan, {
+        contextTokenBudget: exactBudget,
+        classificationContext,
+        evidenceCandidates: [],
+      }),
+    ).toEqual(aggregateOnly);
+    expect(() =>
+      buildGroundingBundle(candidates, basePlan, {
+        contextTokenBudget: exactBudget - 1,
+        classificationContext,
+        evidenceCandidates: [],
+      }),
+    ).toThrow("Complete grounding exceeds the configured context budget");
+  });
+
   it("rejects unknown citations and preserves valid source metadata", () => {
     const bundle = buildGroundingBundle([item("one", "short")], basePlan, {
       contextTokenBudget: 1000,

@@ -1,4 +1,4 @@
-import { safeText } from "@customreport/shared";
+import { INVISIBLE_TEXT_MESSAGE, safeText } from "@customreport/shared";
 
 export function getRequiredProseError(
   value: string,
@@ -13,7 +13,7 @@ export function getRequiredProseError(
   }
   if (
     result.error.issues.some(
-      (issue) => issue.message === "Text must contain visible characters",
+      (issue) => issue.message === INVISIBLE_TEXT_MESSAGE,
     )
   ) {
     return `${label} must contain visible text.`;

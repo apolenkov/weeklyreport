@@ -1,5 +1,8 @@
 import type { ReportSectionReadModel, SearchPlan } from "@customreport/shared";
-import { searchPlanSchema } from "@customreport/shared";
+import {
+  reportSectionReadModelSchema,
+  searchPlanSchema,
+} from "@customreport/shared";
 import {
   afterEach,
   beforeEach,
@@ -138,11 +141,17 @@ const section = (
   activities: [],
 });
 
+const parsedActivities = (
+  activities: unknown,
+): ReportSectionReadModel["activities"] =>
+  reportSectionReadModelSchema.parse({ ...section(), activities }).activities;
+
 const occurrence = (
   itemText = "Ship the release",
   authorName = "Own Lead",
   additionalSections: readonly ReportSectionReadModel[] = [],
   decisions: ReportSectionReadModel["decisions"] = [],
+  activities: ReportSectionReadModel["activities"] = [],
 ): ReportOccurrence => ({
   reportId: REPORT_ID,
   periodId: PERIOD_ID,
@@ -150,7 +159,7 @@ const occurrence = (
   periodStart: new Date("2026-08-03T00:00:00.000Z"),
   source: "live",
   sections: [
-    { ...section(itemText, ACTOR_ID, authorName), decisions },
+    { ...section(itemText, ACTOR_ID, authorName), decisions, activities },
     ...additionalSections,
   ],
 });
@@ -182,6 +191,8 @@ type HarnessOptions = Readonly<{
   authorName?: string;
   additionalSections?: readonly ReportSectionReadModel[];
   decisions?: ReportSectionReadModel["decisions"];
+  activities?: ReportSectionReadModel["activities"];
+  contextTokenBudget?: number;
   sharedProductIds?: readonly string[];
   semanticRetrieval?: SemanticRetrievalService;
   telemetry?: ReportAssistantTelemetry;
@@ -275,6 +286,7 @@ const createHarness = (
           options.authorName,
           options.additionalSections,
           options.decisions,
+          options.activities,
         ),
       ]),
     getAuthorizationSnapshot: vi
@@ -304,7 +316,8 @@ const createHarness = (
         AUTH_JWT_SECRET: "test-jwt-secret-with-at-least-thirty-two-characters",
         REPORT_ASSISTANT_CANDIDATE_LIMIT: 1,
         REPORT_ASSISTANT_EXHAUSTIVE_LIMIT: options.exhaustiveLimit ?? 100,
-        REPORT_ASSISTANT_CONTEXT_TOKEN_BUDGET: 10_000,
+        REPORT_ASSISTANT_CONTEXT_TOKEN_BUDGET:
+          options.contextTokenBudget ?? 10_000,
       },
       options.resourceGuard ?? permissiveResourceGuard,
     ),
@@ -333,6 +346,131 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 describe("ReportAssistantService", () => {
+  it.each([
+    ["Weekly customer duty", "Weekly customer duty"],
+    ["Weekly customer duty", "  weekly CUSTOMER duty  "],
+    ["Weekly customer duty", "Customer duty"],
+    [null, "Customer duty"],
+    [undefined, "Customer duty"],
+  ])(
+    "resolves own live activity title %j by %j",
+    async (titleOverride, reference) => {
+      const activities = parsedActivities([
+        {
+          activityId: "00000001-0000-4000-8000-000000000000",
+          activityName: "Customer duty",
+          titleOverride,
+          status: "green",
+          note: "Owned weekly note",
+          jiraAccounts: [],
+        },
+      ]);
+      const harness = createHarness(
+        {
+          ...basePlan,
+          subjects: { ...basePlan.subjects, activityReferences: [reference] },
+          recordKinds: ["activity_status"],
+        },
+        { activities },
+      );
+
+      const outcome = await harness.service.answer(request, ACTOR_ID);
+
+      expect(outcome.kind).toBe("ok");
+      expect(harness.answerer).toHaveBeenCalledOnce();
+      expect(
+        harness.answerer.mock.calls[0]?.[0].grounding.aggregates.totalCount,
+      ).toBe(1);
+      expect(
+        harness.answerer.mock.calls[0]?.[0].grounding.evidence.map(
+          ({ record }) => record.kind,
+        ),
+      ).toEqual(["activity_status"]);
+    },
+  );
+
+  it("does not resolve a foreign weekly Activity title through shared-product access", async () => {
+    const foreign = {
+      ...section("Foreign product item", FOREIGN_AUTHOR_ID, "Foreign Lead"),
+      reportSectionId: "00000002-0000-4000-8000-000000000000",
+      activities: parsedActivities([
+        {
+          activityId: "00000003-0000-4000-8000-000000000000",
+          activityName: "Private duty",
+          titleOverride: "Foreign weekly private title",
+          status: "green",
+          note: "Foreign private note",
+          jiraAccounts: [],
+        },
+      ]),
+    };
+    const harness = createHarness(
+      {
+        ...basePlan,
+        authors: { mode: "all_visible", references: [], includeSelf: true },
+        subjects: {
+          ...basePlan.subjects,
+          activityReferences: ["Foreign weekly private title"],
+        },
+        recordKinds: ["activity_status"],
+      },
+      { additionalSections: [foreign], sharedProductIds: [PRODUCT_ID] },
+    );
+
+    await expect(harness.service.answer(request, ACTOR_ID)).resolves.toEqual({
+      kind: "no_results",
+    });
+    expect(harness.answerer).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [1000, "result_set_too_large"],
+    [10_000, "ok"],
+  ] as const)(
+    "enforces the configured aggregate context budget %i",
+    async (contextTokenBudget, kind) => {
+      const activities = parsedActivities(
+        Array.from({ length: 40 }, (_, index) => ({
+          activityId: `${String(index + 1).padStart(8, "0")}-0000-4000-8000-000000000000`,
+          activityName: `Activity ${index}: ${"x".repeat(170)}`,
+          status: "green",
+          note: "Own activity result",
+          jiraAccounts: [],
+        })),
+      );
+      const release = vi.fn().mockResolvedValue(undefined);
+      const resourceGuard: ReportAssistantResourceGuardPort = {
+        acquire: vi.fn().mockResolvedValue({
+          kind: "granted",
+          lease: { signal: activeLeaseSignal(), release },
+        }),
+      };
+      const harness = createHarness(
+        {
+          ...basePlan,
+          recordKinds: ["activity_status"],
+          output: { ...basePlan.output, groupBy: ["subject"] },
+        },
+        { activities, contextTokenBudget, resourceGuard },
+      );
+
+      expect((await harness.service.answer(request, ACTOR_ID)).kind).toBe(kind);
+      expect(release).toHaveBeenCalledOnce();
+      expect(harness.answerRepair).not.toHaveBeenCalled();
+      if (kind === "result_set_too_large") {
+        expect(harness.answerer).not.toHaveBeenCalled();
+      } else {
+        expect(harness.answerer).toHaveBeenCalledOnce();
+        const grounding = harness.answerer.mock.calls[0]?.[0].grounding;
+        expect(grounding?.aggregates.totalCount).toBe(40);
+        expect(grounding?.aggregates.groups).toHaveLength(40);
+        expect(grounding?.estimatedTokens).toBeLessThanOrEqual(
+          contextTokenBudget,
+        );
+      }
+    },
+  );
+
   it("releases a lost lease during provider backoff without a second fetch", async () => {
     vi.useFakeTimers();
     const leaseController = new AbortController();

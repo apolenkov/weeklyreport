@@ -1,13 +1,3 @@
-/** Canonical SDLC stage label stored on report records. */
-export type StageName =
-  | "Planning"
-  | "Analysis"
-  | "Design"
-  | "Development"
-  | "Testing"
-  | "DevOps"
-  | "Support";
-
 /**
  * Canonical per-stage constants — the single source for SDLC stage names.
  * Reference these (e.g. `STAGE.DEVELOPMENT`) instead of bare string literals in
@@ -21,18 +11,15 @@ export const STAGE = Object.freeze({
   TESTING: "Testing",
   DEVOPS: "DevOps",
   SUPPORT: "Support",
-} as const satisfies Record<string, StageName>);
+} as const);
+
+/** Canonical SDLC stage label stored on report records. */
+export type StageName = (typeof STAGE)[keyof typeof STAGE];
 
 /** Ordered canonical stage labels used to render an SDLC pipeline. */
-export const STAGE_NAMES: readonly StageName[] = Object.freeze([
-  STAGE.PLANNING,
-  STAGE.ANALYSIS,
-  STAGE.DESIGN,
-  STAGE.DEVELOPMENT,
-  STAGE.TESTING,
-  STAGE.DEVOPS,
-  STAGE.SUPPORT,
-] as const);
+export const STAGE_NAMES: readonly StageName[] = Object.freeze(
+  Object.values(STAGE),
+);
 
 /** Whether an explicitly staged risk covers a stage. */
 export function riskCoversStage(

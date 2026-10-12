@@ -1,6 +1,8 @@
 // One mounted dialog retains its draft across parent callback identity changes.
 
+import { safeText } from "@customreport/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -608,4 +610,71 @@ describe("ItemEditDialog — typing immediately on open", () => {
 
     expect(textField).toHaveValue("existing text — amended");
   });
+});
+
+describe("ItemEditDialog — shared next-step and pause boundaries", () => {
+  const unicodeProductId = "11111111-1111-4111-8111-111111111111";
+  const currentProducts: Product[] = [
+    {
+      id: unicodeProductId,
+      name: "Synthetic product",
+      overallStatus: "on-track",
+      stages: [],
+    },
+  ];
+
+  it.each([
+    ["next step", "non-BMP boundary", "😀".repeat(500), true],
+    ["next step", "non-BMP overflow", "😀".repeat(501), false],
+    ["next step", "ASCII boundary", "A".repeat(500), true],
+    ["pause reason", "non-BMP boundary", "😀".repeat(500), true],
+    ["pause reason", "non-BMP overflow", "😀".repeat(501), false],
+    ["pause reason", "ASCII boundary", "A".repeat(500), true],
+  ] as const)(
+    "saves %s using the shared metric for %s",
+    async (kind, _name, value, accepted) => {
+      const user = userEvent.setup();
+      expect(safeText().safeParse(value).success).toBe(accepted);
+      const onSave = vi.fn<(next: KanbanItem) => void>();
+      render(
+        <ItemEditDialog
+          open
+          item={null}
+          products={currentProducts}
+          week="current"
+          currentUserName="Synthetic lead"
+          defaultProductId={unicodeProductId}
+          stagesForProduct={() => ["Development"]}
+          onSave={onSave}
+          onCancel={vi.fn()}
+        />,
+      );
+      await user.type(
+        screen.getByLabelText("Description *"),
+        "Ship this update",
+      );
+      const paused = kind === "pause reason";
+      if (paused)
+        await user.click(screen.getByRole("button", { name: /Paused/ }));
+      const field = screen.getByRole("textbox", {
+        name: paused ? /Pause reason/ : /Next step/,
+      });
+      await user.click(field);
+      await user.paste(value);
+      await user.click(screen.getByRole("button", { name: "Save item" }));
+      if (accepted) {
+        expect(onSave).toHaveBeenCalledTimes(1);
+        expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+          [paused ? "pausedReason" : "nextStepText"]: value,
+          status: paused ? "paused" : "in-progress",
+          productId: unicodeProductId,
+        });
+      } else {
+        expect(onSave).not.toHaveBeenCalled();
+        expect(field).toHaveValue(value);
+        expect(field).toHaveAttribute("aria-invalid", "true");
+        expect(field).toHaveFocus();
+      }
+    },
+  );
 });

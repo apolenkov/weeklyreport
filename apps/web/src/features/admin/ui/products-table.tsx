@@ -6,7 +6,7 @@ import { useProductOwnership } from "./use-group-products";
 
 interface ProductsTableProps {
   readonly activeProducts: readonly AdminProductView[];
-  readonly hasData: boolean;
+  readonly isFiltering: boolean;
   readonly archivedProducts: readonly AdminProductView[];
   readonly getUserById: (id: string) => AdminUserView | undefined;
   readonly stageCountByProject: ReadonlyMap<string, number>;
@@ -23,7 +23,7 @@ interface ProductsTableProps {
 
 export function ProductsTable({
   activeProducts,
-  hasData,
+  isFiltering,
   archivedProducts,
   getUserById,
   stageCountByProject,
@@ -69,7 +69,7 @@ export function ProductsTable({
         ))}
         {activeProducts.length === 0 && (
           <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-8 text-center text-sm text-[var(--color-muted-foreground)]">
-            {hasData
+            {isFiltering
               ? "No products match the search."
               : "No active products yet."}
           </div>

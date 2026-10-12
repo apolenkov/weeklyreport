@@ -506,11 +506,30 @@ describe("JobsTab — BullMQ DLQ admin UI", () => {
     expect(await screen.findByText("job-000")).toBeInTheDocument();
     expect(screen.getByText("50 loaded+")).toBeInTheDocument();
 
+    const user = userEvent.setup();
+    const search = screen.getByTestId("jobs-search");
+    await user.type(search, "job-049");
+    expect(screen.getByText("1 matches · 50 loaded+")).toBeInTheDocument();
+    expect(screen.queryByText("job-000")).not.toBeInTheDocument();
+    expect(screen.getByText("job-049")).toBeInTheDocument();
+    await user.clear(search);
+    await user.type(search, "missing");
+    expect(screen.getByText("0 matches · 50 loaded+")).toBeInTheDocument();
+    expect(
+      screen.getByText("No failed jobs match the search."),
+    ).toBeInTheDocument();
+    await user.clear(search);
+    expect(screen.getByText("50 loaded+")).toBeInTheDocument();
+    await user.type(search, "job-05");
+    expect(screen.getByText("0 matches · 50 loaded+")).toBeInTheDocument();
+
     const loadMore = screen.getByRole("button", { name: "Load more" });
     await userEvent.setup().click(loadMore);
 
     // Second page rows appear and the cursor is exhausted.
     expect(await screen.findByText("job-050")).toBeInTheDocument();
+    expect(screen.getByText("7 matches · 57 loaded")).toBeInTheDocument();
+    await user.clear(search);
     expect(screen.getByText("57 loaded")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   });
