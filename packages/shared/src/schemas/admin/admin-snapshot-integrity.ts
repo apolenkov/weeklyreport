@@ -169,6 +169,12 @@ function validateUserReferences(
         path: [...path],
         message: "Group headUserId must reference a head or admin user.",
       });
+    } else if (head.role === "head" && head.reportingGroupId !== group.id) {
+      context.addIssue({
+        code: "custom",
+        path: [...path],
+        message: "Group headUserId must belong to that reporting group.",
+      });
     }
   });
   snapshot.projects.forEach((project, index) => {

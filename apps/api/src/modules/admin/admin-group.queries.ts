@@ -39,7 +39,7 @@ export async function saveReportingGroup(
 ): Promise<ReportingGroup> {
   const row = await prisma.$transaction(
     async (tx) => {
-      await lockAndAssertGroupHead(tx, group.headUserId);
+      await lockAndAssertGroupHead(tx, group.headUserId, group.id);
       if (group.archived) await assertNotLastActiveGroup(tx, group.id);
       return tx.reportingGroup.upsert({
         where: { id: group.id },

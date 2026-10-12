@@ -133,6 +133,52 @@ describe("adminSnapshotSchema — reporting group restore integrity", () => {
   });
 });
 
+describe("adminSnapshotSchema — Head membership", () => {
+  it.each([
+    { role: "head", headedIds: [GROUP_ID], isActive: true, valid: true },
+    { role: "head", headedIds: [GROUP_ID], isActive: false, valid: true },
+    { role: "head", headedIds: [ALTERNATE_ID], isActive: true, valid: false },
+    {
+      role: "head",
+      headedIds: [GROUP_ID, ALTERNATE_ID],
+      isActive: true,
+      valid: false,
+    },
+    { role: "admin", headedIds: [ALTERNATE_ID], isActive: true, valid: true },
+    {
+      role: "admin",
+      headedIds: [GROUP_ID, ALTERNATE_ID],
+      isActive: false,
+      valid: true,
+    },
+  ] as const)(
+    "validates $role/$isActive headings $headedIds against snapshot membership",
+    ({ role, headedIds, isActive, valid }) => {
+      const headedGroupIds: readonly string[] = headedIds;
+      const result = adminSnapshotSchema.safeParse({
+        ...snapshotWithUser({
+          ...user(role),
+          reportingGroupId: GROUP_ID,
+          isActive,
+        }),
+        groups: [GROUP_ID, ALTERNATE_ID].map((id) => ({
+          ...group(),
+          id,
+          headUserId: headedGroupIds.includes(id) ? USER_ID : null,
+        })),
+      });
+      expect(result.success).toBe(valid);
+      if (!result.success) {
+        expect(result.error.issues).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ path: ["groups", 1, "headUserId"] }),
+          ]),
+        );
+      }
+    },
+  );
+});
+
 describe("adminSnapshotSchema — publisher recovery integrity", () => {
   const period = {
     ...lifecycle,
