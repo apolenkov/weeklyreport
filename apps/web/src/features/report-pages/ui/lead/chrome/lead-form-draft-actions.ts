@@ -15,10 +15,6 @@ import type {
 } from "../../../../report-sections";
 import {
   continueToNextPatch,
-  markCompletePatch,
-  moveToCurrentWeekPatch,
-  moveToNextWeekPatch,
-  pauseItemPatch,
   promoteContinuationPatch,
 } from "../../../../report-sections";
 import type { QuickAddItem } from "../../../../report-sections/client";
@@ -40,8 +36,9 @@ export interface LeadFormDraftHandle {
 
 function buildCollectionActions(draft: LeadFormDraftHandle) {
   return {
-    onProductsChange: (next: readonly Product[]) =>
-      draft.apply({ kind: "products", products: next }),
+    onProductsChange: (
+      next: Extract<DraftPatch, { readonly kind: "products" }>["products"],
+    ) => draft.apply({ kind: "products", products: next }),
     onRisksChange: (next: readonly RiskEntry[]) =>
       draft.apply({ kind: "risks", risks: next }),
     onDecisionsChange: (next: readonly DecisionEntry[]) =>
@@ -59,13 +56,14 @@ function buildItemPatchActions(draft: LeadFormDraftHandle) {
     patch: Partial<ReportSectionReadModel["items"][number]>,
   ) => draft.apply({ kind: "item-patch", itemId, patch });
   return {
-    onMarkComplete: (itemId: string) => patchItem(itemId, markCompletePatch()),
+    onMarkComplete: (itemId: string) =>
+      draft.apply({ kind: "complete-item", itemId }),
     onMoveToNextWeek: (itemId: string) =>
-      patchItem(itemId, moveToNextWeekPatch()),
+      draft.apply({ kind: "move-item", itemId, target: "next" }),
     onMoveToCurrentWeek: (itemId: string) =>
-      patchItem(itemId, moveToCurrentWeekPatch()),
+      draft.apply({ kind: "move-item", itemId, target: "current" }),
     onPauseItem: (itemId: string, reason: string) =>
-      patchItem(itemId, pauseItemPatch(reason)),
+      draft.apply({ kind: "pause-item", itemId, reason }),
     // Accepted retain-Current continuation: keeps the row and records the Next
     // intent. Callers resolve `continuationConflict` before invoking.
     onContinueToNext: (itemId: string, nextText: string) =>

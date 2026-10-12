@@ -3,6 +3,7 @@
 import { type RefObject, useEffect, useId, useRef } from "react";
 
 import {
+  computeEffectiveStageNames,
   ownedStagesForProject,
   ParentPicker,
   StageStep,
@@ -64,7 +65,21 @@ function OutcomeDetails({
           value={fields.parent}
           products={editorAtOpen.view.viewModel.products}
           activities={editorAtOpen.view.viewModel.activityOptions}
-          onChange={(parent) => onChange({ parent, stageNames: [] })}
+          onChange={(parent) =>
+            onChange({
+              parent,
+              stageNames:
+                parent.kind === "product"
+                  ? computeEffectiveStageNames(
+                      [],
+                      ownedStagesForProject(
+                        editorAtOpen.draft.section,
+                        parent.id,
+                      ),
+                    )
+                  : [],
+            })
+          }
         />
         {fields.parent.kind === "product" ? (
           <StageStep

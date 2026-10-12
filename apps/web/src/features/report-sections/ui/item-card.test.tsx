@@ -6,7 +6,10 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
-import { mapForeignItems } from "../model/lead-cross-author-content";
+import {
+  mapForeignItems,
+  mapForeignRisks,
+} from "../model/lead-cross-author-content";
 import type { KanbanItem, RiskEntry } from "../model/types";
 import { ItemCard } from "./item-card";
 
@@ -410,6 +413,35 @@ describe("ItemCard — foreign covering-risk attribution", () => {
     expect(screen.getByText("Blocked")).toHaveAttribute(
       "title",
       "Status is set by Bob Lead's covering risk/blocker — resolve it with them to change.",
+    );
+  });
+
+  it("retains a named contributor after a nameless foreign covering risk", () => {
+    const foreign = mapForeignRisks(
+      ["", "Lead Bob"].map((authorName, index) => ({
+        authorId: `author-${index}`,
+        authorName,
+        authorRole: "lead" as const,
+        items: [],
+        decisions: [],
+        risks: [
+          {
+            id: `risk-${index}`,
+            projectId: "p1",
+            stageNames: ["Development"],
+            severity: "blocked" as const,
+            risk: "A covering blocker",
+            impact: "Delivery delayed",
+            mitigation: "Resolve the blocker",
+          },
+        ],
+      })),
+      new Map([["p1", "DevOps Tools"]]),
+    );
+    render(<ItemCard item={inProgress} risks={foreign} />);
+    expect(screen.getByText("Blocked")).toHaveAttribute(
+      "title",
+      "Status is set by Lead B.'s covering risk/blocker — resolve it with them to change.",
     );
   });
 

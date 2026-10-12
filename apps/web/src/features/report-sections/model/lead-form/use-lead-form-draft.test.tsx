@@ -1,8 +1,15 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
+import { reportSectionReadModelSchema } from "@customreport/shared";
 import { act, renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { makeReportSectionFixture } from "../../../../test-utils/report-section-fixtures";
+import { buildDraftActions } from "../../../report-pages/ui/lead/chrome/lead-form-draft-actions";
+import { useLeadFormAddSignals } from "../../../report-pages/ui/lead/chrome/use-lead-form-add-signals";
+import {
+  CURRENT_ITEM_ID,
+  makeDraftMergeSection,
+} from "./draft/lead-form-draft-merge-test-fixtures";
 import type { LeadFormLoadedContext } from "./lead-form-submit-context";
 import { InMemoryLeadFormWriteAdapter } from "./lead-form-write-port.in-memory";
 import { useLeadFormDraft } from "./use-lead-form-draft";
@@ -36,7 +43,10 @@ const LOADED: LeadFormLoadedContext = {
   nextWeekItems: [],
 };
 
-function renderDraft(loaded: LeadFormLoadedContext = LOADED) {
+function renderDraft(
+  loaded: LeadFormLoadedContext = LOADED,
+  section = makeSection(),
+) {
   const writePort = new InMemoryLeadFormWriteAdapter({
     saveDraft: () => Promise.resolve({ ...makeSection(), version: 2 }),
     submit: () => Promise.resolve({ ...makeSection(), version: 2 }),
@@ -44,7 +54,7 @@ function renderDraft(loaded: LeadFormLoadedContext = LOADED) {
   const rendered = renderHook(() => {
     const draft = useLeadFormDraft({
       generation: `${REPORT_ID}:${SECTION_ID}`,
-      serverSection: makeSection(),
+      serverSection: section,
       sectionIdForActions: SECTION_ID,
       serverReadOnly: false,
       refetchSection: () => Promise.resolve(),
@@ -57,12 +67,115 @@ function renderDraft(loaded: LeadFormLoadedContext = LOADED) {
       generation: draft.generation,
       loaded,
     });
-    return { ...draft, ...quickAdd };
+    const handle = { ...draft, ...quickAdd };
+    const signals = useLeadFormAddSignals();
+    return { ...handle, actions: buildDraftActions(handle, signals, loaded) };
   });
   return rendered;
 }
 
 describe("useLeadFormDraft merge routing", () => {
+  it.each([
+    {
+      command: "move",
+      type: "next",
+      workflowStatus: "in_progress",
+      pausedReason: null,
+    },
+    {
+      command: "complete",
+      type: "current",
+      workflowStatus: "done",
+      pausedReason: null,
+    },
+    {
+      command: "pause",
+      type: "current",
+      workflowStatus: "paused",
+      pausedReason: "Waiting for access",
+    },
+  ] as const)(
+    "applies an eligible public $command callback while preserving item identity",
+    ({ command, type, workflowStatus, pausedReason }) => {
+      const base = makeDraftMergeSection();
+      const section = reportSectionReadModelSchema.parse({
+        ...base,
+        items: base.items.map((item) =>
+          item.id === CURRENT_ITEM_ID
+            ? { ...item, workflowStatus: "in_progress", pausedReason: null }
+            : item,
+        ),
+      });
+      const { result } = renderDraft(LOADED, section);
+      act(() => {
+        const actions = result.current.actions;
+        if (command === "move") actions.onMoveToNextWeek(CURRENT_ITEM_ID);
+        else if (command === "complete")
+          actions.onMarkComplete(CURRENT_ITEM_ID);
+        else actions.onPauseItem(CURRENT_ITEM_ID, "Waiting for access");
+      });
+      expect(result.current.draft?.items[0]).toMatchObject({
+        id: CURRENT_ITEM_ID,
+        stableId: section.items[0]?.stableId,
+        priorityRank: 2,
+        stageNames: ["Development"],
+        type,
+        workflowStatus,
+        pausedReason,
+      });
+      expect(result.current.dirty).toBe(true);
+      expect(() =>
+        reportSectionReadModelSchema.parse(result.current.draft),
+      ).not.toThrow();
+    },
+  );
+
+  it.each(["move", "complete", "pause"] as const)(
+    "keeps a resolved raw item unchanged through the public %s callback",
+    (command) => {
+      const base = makeDraftMergeSection();
+      const section = reportSectionReadModelSchema.parse({
+        ...base,
+        items: base.items.map((item) =>
+          item.id === CURRENT_ITEM_ID
+            ? {
+                ...item,
+                workflowStatus: "in_progress",
+                pausedReason: null,
+                resolution: {
+                  kind: "wont_do",
+                  eventId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab",
+                  reason: "The dependency was retired",
+                  actorId: AUTHOR_ID,
+                  actorName: "Test Lead",
+                  occurredAt: "2026-09-01T00:00:00.000Z",
+                  previousState: {
+                    type: "current",
+                    workflowStatus: "in_progress",
+                    pausedReason: null,
+                    nextStepText: null,
+                    text: item.text,
+                  },
+                },
+              }
+            : item,
+        ),
+      });
+      const { result } = renderDraft(LOADED, section);
+
+      act(() => {
+        const actions = result.current.actions;
+        if (command === "move") actions.onMoveToNextWeek(CURRENT_ITEM_ID);
+        else if (command === "complete")
+          actions.onMarkComplete(CURRENT_ITEM_ID);
+        else actions.onPauseItem(CURRENT_ITEM_ID, "Waiting for access");
+      });
+
+      expect(result.current.draft?.items).toEqual(section.items);
+      expect(result.current.dirty).toBe(false);
+    },
+  );
+
   it("routes a blocker prefill through pendingRiskPrefill with a monotonic signal", () => {
     const { result } = renderDraft();
 

@@ -5,8 +5,8 @@ import { useCallback, useMemo } from "react";
 
 import type { CrossAuthorEntry } from "../../../../period";
 import type {
+  DraftPatch,
   LeadFormLoadedViewModel,
-  Product,
   RiskEntry,
 } from "../../../../report-sections";
 import {
@@ -27,7 +27,9 @@ import {
 } from "./lead-form-decisions-section";
 
 export interface LeadOverviewSupportActions extends LeadFormDecisionsActions {
-  readonly onProductsChange: (next: readonly Product[]) => void;
+  readonly onProductsChange: (
+    next: Extract<DraftPatch, { readonly kind: "products" }>["products"],
+  ) => void;
   readonly onRisksChange: (next: readonly RiskEntry[]) => void;
   readonly risksAddSignal: number;
   readonly riskPrefill: RiskPrefillRequest | null;
