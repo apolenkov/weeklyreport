@@ -147,7 +147,7 @@ describe("useReportDocumentTitle", () => {
     );
     expect(document.title).toContain("Week 16");
     expect(document.title).toContain("Product Engineering");
-    expect(document.title).not.toContain("CustomReport");
+    expect(document.title).not.toContain("WeeklyReport");
   });
 
   it("falls back to the neutral placeholder brand when organization is absent", () => {

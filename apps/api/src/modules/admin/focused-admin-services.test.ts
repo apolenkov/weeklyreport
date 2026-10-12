@@ -324,7 +324,7 @@ describe("focused admin services", () => {
       const result = await service.upsertUser(
         {
           id: "77777777-7777-4777-8777-777777777777",
-          email: "newlead@customreport.local",
+          email: "newlead@weeklyreport.local",
           name: "New Lead",
           lastName: "New",
           firstName: "Lead",
@@ -339,7 +339,7 @@ describe("focused admin services", () => {
 
       expect(result.users).toHaveLength(2);
       expect(
-        result.users.find((u) => u.email === "newlead@customreport.local"),
+        result.users.find((u) => u.email === "newlead@weeklyreport.local"),
       ).toBeDefined();
     });
 
@@ -367,7 +367,7 @@ describe("focused admin services", () => {
       const result = await service.upsertUser(
         {
           id: leadSession.userId,
-          email: "updated@customreport.local",
+          email: "updated@weeklyreport.local",
           name: "Updated Name",
           lastName: "Updated",
           firstName: "Name",
@@ -383,7 +383,7 @@ describe("focused admin services", () => {
       expect(result.users).toHaveLength(2); // not 3 — updated, not duplicated
       const updated = result.users.find((u) => u.id === leadSession.userId);
       expect(updated?.name).toBe("Updated Name");
-      expect(updated?.email).toBe("updated@customreport.local");
+      expect(updated?.email).toBe("updated@weeklyreport.local");
     });
 
     it("sorts users by name after upsert", async () => {
@@ -529,7 +529,7 @@ describe("removeUser — DB deletion via repository", () => {
         },
         {
           id: "44444444-4444-4444-8444-444444444444",
-          email: "lead2@customreport.local",
+          email: "lead2@weeklyreport.local",
           name: "Lead 2",
           lastName: "Lead",
           firstName: "2",
@@ -552,7 +552,7 @@ describe("removeUser — DB deletion via repository", () => {
       result.users.find((u) => u.id === leadSession.userId),
     ).toBeUndefined();
     expect(
-      result.users.find((u) => u.email === "lead2@customreport.local"),
+      result.users.find((u) => u.email === "lead2@weeklyreport.local"),
     ).toBeDefined();
   });
 

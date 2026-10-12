@@ -72,7 +72,7 @@ const STUB_ORG = {
 
 const HEAD_ROLE = {
   role: "head",
-  email: "head@customreport.local",
+  email: "head@weeklyreport.local",
   name: "Антон К.",
 } as const;
 
@@ -217,7 +217,7 @@ describe("Landing page — last-role hint", () => {
   it("points the primary CTA at the persisted role dev-login URL", async () => {
     storeLastRole({
       role: "lead",
-      email: "lead1@customreport.local",
+      email: "lead1@weeklyreport.local",
       name: "Lead 1",
     });
 
@@ -229,7 +229,7 @@ describe("Landing page — last-role hint", () => {
       expect(cta.getAttribute("href")).toContain("role=lead");
     });
     const href = cta.getAttribute("href") ?? "";
-    expect(href).toContain("email=lead1%40customreport.local");
+    expect(href).toContain("email=lead1%40weeklyreport.local");
     expect(href).toContain("redirect=%2Flead%2Freport");
   });
 
@@ -258,7 +258,7 @@ describe("Landing page — last-role hint", () => {
     const viewerOption = await screen.findByTestId("last-role-option-viewer");
     const href = viewerOption.getAttribute("href") ?? "";
     expect(href).toContain("role=viewer");
-    expect(href).toContain("email=viewer%40customreport.local");
+    expect(href).toContain("email=viewer%40weeklyreport.local");
     // Viewer lands on the Status entry, not History.
     expect(href).toContain("redirect=%2Freports%2Flatest");
   });

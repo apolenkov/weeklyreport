@@ -1,6 +1,6 @@
 ## Purpose
 
-Slide capacity signals are non-blocking advisories for places where CustomReport
+Slide capacity signals are non-blocking advisories for places where WeeklyReport
 can warn an admin before creating overloaded ownership. Slide presentation
 capacity is not handled here: by-product slides are auto-height and governed by
 `lead-slide-by-product-grid`.

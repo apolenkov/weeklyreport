@@ -106,7 +106,7 @@ describe("buildUserSession — admin SAML login", () => {
     const prisma = fakePrisma({ existingUser: null });
     const profile: SamlProfile = {
       samlId: "saml-admin-1",
-      email: "admin@customreport.local",
+      email: "admin@weeklyreport.local",
       displayName: "Administrator",
       role: "admin",
     };
@@ -121,7 +121,7 @@ describe("buildUserSession — admin SAML login", () => {
     const prisma = fakePrisma({ existingUser: null });
     const profile: SamlProfile = {
       samlId: "saml-new-1",
-      email: "newcomer@customreport.local",
+      email: "newcomer@weeklyreport.local",
       displayName: "Department Head",
       role: "viewer",
     };
@@ -152,7 +152,7 @@ describe("buildUserSession — admin SAML login", () => {
     const prisma = fakePrisma({
       existingUser: {
         id: "existing-admin-id",
-        email: "admin@customreport.local",
+        email: "admin@weeklyreport.local",
         name: "Old Name",
         role: "admin",
         samlId: "old-saml-id",
@@ -163,7 +163,7 @@ describe("buildUserSession — admin SAML login", () => {
     // covered by its own describe block below).
     const profile: SamlProfile = {
       samlId: "old-saml-id",
-      email: "admin@customreport.local",
+      email: "admin@weeklyreport.local",
       displayName: "Administrator",
       role: "admin",
     };
@@ -187,7 +187,7 @@ describe("buildUserSession — admin SAML login", () => {
     const prisma = fakePrisma({
       existingUser: {
         id: "existing-lead-id",
-        email: "lead@customreport.local",
+        email: "lead@weeklyreport.local",
         name: "Lead One",
         role: "lead",
         samlId: "lead-saml",
@@ -196,7 +196,7 @@ describe("buildUserSession — admin SAML login", () => {
     });
     const profile: SamlProfile = {
       samlId: "lead-saml",
-      email: "lead@customreport.local",
+      email: "lead@weeklyreport.local",
       displayName: "Lead One",
       role: "head",
     };
@@ -217,7 +217,7 @@ describe("buildUserSession — admin SAML login", () => {
     const prisma = fakePrisma({ existingUser: null });
     const profile: SamlProfile = {
       samlId: "saml-new-2",
-      email: "  NewComer@CustomReport.LOCAL  ",
+      email: "  NewComer@WeeklyReport.LOCAL  ",
       displayName: "New Comer",
       role: "viewer",
     };
@@ -229,12 +229,12 @@ describe("buildUserSession — admin SAML login", () => {
       $queryRaw: ReturnType<typeof vi.fn>;
     };
     expect(queryRaw.mock.calls[0]?.slice(1)).toEqual([
-      "newcomer@customreport.local",
+      "newcomer@weeklyreport.local",
     ]);
     const createMock = vi.mocked(prisma.user.create);
     const data = createMock.mock.calls[0]?.[0] as
       { data: { email: string; samlId: string } } | undefined;
-    expect(data?.data.email).toBe("newcomer@customreport.local");
+    expect(data?.data.email).toBe("newcomer@weeklyreport.local");
     // The external identity stays verbatim — only the email is normalized.
     expect(data?.data.samlId).toBe("saml-new-2");
   });
@@ -246,7 +246,7 @@ describe("buildUserSession — admin SAML login", () => {
 describe("buildUserSession — first-login create race (P2002 reread)", () => {
   const WINNER = {
     id: "winner-user-id",
-    email: "racer@customreport.local",
+    email: "racer@weeklyreport.local",
     name: "Racer",
     lastName: "Racer",
     firstName: " ",
@@ -310,7 +310,7 @@ describe("buildUserSession — first-login create race (P2002 reread)", () => {
     const { prisma, create, findFirst, queryRaw } = racingPrisma();
     const profile: SamlProfile = {
       samlId: "saml-racer",
-      email: "racer@customreport.local",
+      email: "racer@weeklyreport.local",
       displayName: "Racer",
       role: "viewer",
     };
@@ -318,7 +318,7 @@ describe("buildUserSession — first-login create race (P2002 reread)", () => {
     const session = await buildUserSession(prisma, profile, failIfProvisioned);
 
     expect(session.userId).toBe("winner-user-id");
-    expect(session.email).toBe("racer@customreport.local");
+    expect(session.email).toBe("racer@weeklyreport.local");
     expect(create).toHaveBeenCalledTimes(1);
     // Fast path: email miss + samlId miss; catch branch: email hit (no samlId read).
     expect(queryRaw).toHaveBeenCalledTimes(2);
@@ -332,7 +332,7 @@ describe("buildUserSession — first-login create race (P2002 reread)", () => {
     // the loser to the winner's role/group would be an identity takeover.
     const profile: SamlProfile = {
       samlId: "saml-INTRUDER",
-      email: "racer@customreport.local",
+      email: "racer@weeklyreport.local",
       displayName: "Racer",
       role: "viewer",
     };
@@ -350,7 +350,7 @@ describe("buildUserSession — first-login create race (P2002 reread)", () => {
     );
     const profile: SamlProfile = {
       samlId: "saml-racer",
-      email: "racer@customreport.local",
+      email: "racer@weeklyreport.local",
       displayName: "Racer",
       role: "viewer",
     };
@@ -366,7 +366,7 @@ describe("buildUserSession — first-login create race (P2002 reread)", () => {
 describe("buildUserSession — samlId identity cross-check", () => {
   const EXISTING_USER = {
     id: "existing-user-id",
-    email: "reused@customreport.local",
+    email: "reused@weeklyreport.local",
     name: "Original Owner",
     lastName: "Owner",
     firstName: "Original",

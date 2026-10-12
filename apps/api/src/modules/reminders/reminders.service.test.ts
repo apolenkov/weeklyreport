@@ -120,12 +120,12 @@ describe("RemindersService", () => {
     );
     const execution = await service.requestReminderExecution(
       activeRule.id,
-      "lead1@customreport.local",
+      "lead1@weeklyreport.local",
       testPayload,
     );
 
     expect(execution.status).toBe("queued");
-    expect(execution.recipientEmail).toBe("lead1@customreport.local");
+    expect(execution.recipientEmail).toBe("lead1@weeklyreport.local");
   });
 
   it("returns the existing execution when the dedupe key matches", async () => {
@@ -135,12 +135,12 @@ describe("RemindersService", () => {
     );
     const first = await service.requestReminderExecution(
       activeRule.id,
-      "lead1@customreport.local",
+      "lead1@weeklyreport.local",
       testPayload,
     );
     const second = await service.requestReminderExecution(
       activeRule.id,
-      "lead1@customreport.local",
+      "lead1@weeklyreport.local",
       testPayload,
     );
 
@@ -156,7 +156,7 @@ describe("RemindersService", () => {
     await expect(
       service.requestReminderExecution(
         pausedRule.id,
-        "lead1@customreport.local",
+        "lead1@weeklyreport.local",
         testPayload,
       ),
     ).rejects.toBeInstanceOf(ReminderDomainError);
@@ -169,7 +169,7 @@ describe("RemindersService", () => {
     );
     const queued = await service.requestReminderExecution(
       activeRule.id,
-      "lead1@customreport.local",
+      "lead1@weeklyreport.local",
       testPayload,
     );
     expect(await service.claimExecutionForSending(queued.id)).toMatchObject({
@@ -192,12 +192,12 @@ describe("reminder rule domain mapping and deduplication", () => {
     );
     const execution = await service.requestReminderExecution(
       activeRule.id,
-      "lead1@customreport.local",
+      "lead1@weeklyreport.local",
       testPayload,
     );
 
     expect(execution.dedupeKey).toBe(
-      `${activeRule.id}:deadline:2026-04-10:lead1@customreport.local`,
+      `${activeRule.id}:deadline:2026-04-10:lead1@weeklyreport.local`,
     );
   });
 
@@ -208,19 +208,19 @@ describe("reminder rule domain mapping and deduplication", () => {
     );
     const exec1 = await service.requestReminderExecution(
       activeRule.id,
-      "lead1@customreport.local",
+      "lead1@weeklyreport.local",
       testPayload,
     );
     const exec2 = await service.requestReminderExecution(
       activeRule.id,
-      "lead2@customreport.local",
+      "lead2@weeklyreport.local",
       testPayload,
     );
 
     expect(exec1.id).not.toBe(exec2.id);
     expect(exec1.dedupeKey).not.toBe(exec2.dedupeKey);
-    expect(exec1.recipientEmail).toBe("lead1@customreport.local");
-    expect(exec2.recipientEmail).toBe("lead2@customreport.local");
+    expect(exec1.recipientEmail).toBe("lead1@weeklyreport.local");
+    expect(exec2.recipientEmail).toBe("lead2@weeklyreport.local");
   });
 
   it("generates the same dedupeKey for the same email + rule + fireAt (deterministic)", async () => {
@@ -230,12 +230,12 @@ describe("reminder rule domain mapping and deduplication", () => {
     );
     const exec1 = await service.requestReminderExecution(
       activeRule.id,
-      "lead1@customreport.local",
+      "lead1@weeklyreport.local",
       testPayload,
     );
     const exec2 = await service.requestReminderExecution(
       activeRule.id,
-      "lead1@customreport.local",
+      "lead1@weeklyreport.local",
       testPayload,
     );
 
@@ -251,11 +251,11 @@ describe("reminder rule domain mapping and deduplication", () => {
     );
     const execution = await service.requestReminderExecution(
       activeRule.id,
-      "lead1@customreport.local",
+      "lead1@weeklyreport.local",
       testPayload,
     );
 
-    expect(execution.dedupeKey).toContain("lead1@customreport.local");
+    expect(execution.dedupeKey).toContain("lead1@weeklyreport.local");
   });
 });
 

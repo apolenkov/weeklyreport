@@ -30,7 +30,7 @@ const REMINDER_EXECUTION = {
     reportPeriod: "Apr 20–26",
     deadlineIso: "2026-04-25T18:00:00.000Z",
     sectionUrl: `https://example.com/lead/report/${UUID_B}`,
-    organization: { shortName: "CR", fullName: "CustomReport" },
+    organization: { shortName: "CR", fullName: "WeeklyReport" },
   },
   createdAt: new Date("2026-04-25T17:00:00.000Z"),
   updatedAt: new Date("2026-04-25T17:01:00.000Z"),

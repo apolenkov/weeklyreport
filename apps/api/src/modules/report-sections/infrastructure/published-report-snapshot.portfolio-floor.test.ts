@@ -322,7 +322,7 @@ describe("buildAssembledReportFromPrismaRow — portfolio totals floor (Shape B)
     id: AUTHOR_ID,
     createdAt: FIXED_TIMESTAMP,
     updatedAt: FIXED_TIMESTAMP,
-    email: "head@customreport.local",
+    email: "head@weeklyreport.local",
     name: "Head",
     lastName: "Head",
     firstName: "Head",

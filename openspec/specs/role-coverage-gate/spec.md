@@ -1,6 +1,6 @@
 ## Purpose
 
-Every tRPC procedure in CustomReport MUST be constructed through one of 7 canonical
+Every tRPC procedure in WeeklyReport MUST be constructed through one of 7 canonical
 middleware-chain builders that live in `apps/api/src/infrastructure/trpc/`. The CI
 role-coverage gate verifies this by reference identity — not structural equality —
 so that copying a builder's body into a local helper still counts as a violation.

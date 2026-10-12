@@ -38,7 +38,7 @@ export { clearOrgCache } from "./trpc.session-hydration.js";
 // the activity panel to the head's group in dev / integration mode.
 const DEV_SESSION: UserSession = {
   userId: "a0000000-0000-4000-8000-000000000099",
-  email: "head@customreport.local",
+  email: "head@weeklyreport.local",
   name: "Антон К.",
   role: "head",
   activeReportId: "a0000000-0000-4000-8000-000000000001",

@@ -1,6 +1,6 @@
 # @weeklyreport/ui
 
-Shared React primitives for CustomReport. The package uses Tailwind CSS v4,
+Shared React primitives for WeeklyReport. The package uses Tailwind CSS v4,
 Radix primitives, class-variance-authority, Lucide icons, and CSS custom
 properties; it is not a separate OKLCH theme package.
 

@@ -43,16 +43,16 @@ const QUEUE_PAYLOAD = {
   deadlineIso: "2026-04-11T09:00:00.000Z",
   sectionUrl: "https://example.test/lead/report",
   organization: {
-    shortName: "CustomReport",
-    fullName: "CustomReport Department",
+    shortName: "WeeklyReport",
+    fullName: "WeeklyReport Department",
   },
 };
 
 const ORGANIZATION_SERVICE = {
   getPublic: () =>
     Promise.resolve({
-      shortName: "CustomReport",
-      fullName: "CustomReport Department",
+      shortName: "WeeklyReport",
+      fullName: "WeeklyReport Department",
     }),
 } as OrganizationService;
 

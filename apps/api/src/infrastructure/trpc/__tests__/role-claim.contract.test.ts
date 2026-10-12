@@ -33,7 +33,7 @@ describe("SAML profile → JWT → session.role round-trip (role-free)", () => {
   it("an asserted head role is ignored — the session round-trips as viewer", () => {
     const verified = verifySamlProfile({
       nameID: "u-head",
-      email: "head@customreport.local",
+      email: "head@weeklyreport.local",
       displayName: "Department Head",
       role: "head",
     });
@@ -46,13 +46,13 @@ describe("SAML profile → JWT → session.role round-trip (role-free)", () => {
     const session = ctrl.verifySessionToken(token);
 
     expect(session.role).toBe("viewer");
-    expect(session.email).toBe("head@customreport.local");
+    expect(session.email).toBe("head@weeklyreport.local");
   });
 
   it("a role-less profile is accepted and round-trips as viewer (least privilege)", () => {
     const verified = verifySamlProfile({
       nameID: "u-no-role",
-      email: "no-role@customreport.local",
+      email: "no-role@weeklyreport.local",
       displayName: "Roleless",
     });
     expect(verified.ok).toBe(true);
@@ -69,7 +69,7 @@ describe("SAML profile → JWT → session.role round-trip (role-free)", () => {
   it("an asserted admin role does not over-grant — session is still viewer", () => {
     const verified = verifySamlProfile({
       nameID: "u-admin",
-      email: "admin@customreport.local",
+      email: "admin@weeklyreport.local",
       displayName: "Admin",
       role: "admin",
     });
@@ -91,7 +91,7 @@ describe("session name parts survive sign → verify (not Zod-stripped)", () => 
     const ctrl = createAuthController(env);
     const session: UserSession = {
       userId: "a0000000-0000-4000-8000-000000000009",
-      email: "parts@customreport.local",
+      email: "parts@weeklyreport.local",
       name: "Иванов Пётр Сергеевич",
       lastName: "Иванов",
       firstName: "Пётр",

@@ -36,7 +36,7 @@ MUST remain stable for the lifetime of that report.
 
 The page title (`<title>` element) and the in-app breadcrumb MUST
 include identifying metadata for the currently-loaded report (e.g.,
-"Week of YYYY-MM-DD — CustomReport"). The metadata MUST update when
+"Week of YYYY-MM-DD — WeeklyReport"). The metadata MUST update when
 the route's identifier changes.
 
 #### Scenario: Lead navigates from report A to report B

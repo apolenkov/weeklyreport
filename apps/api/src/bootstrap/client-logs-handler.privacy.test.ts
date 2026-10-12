@@ -35,8 +35,8 @@ describe("client log privacy at every AppLogger sink", () => {
 
   it.each([
     [
-      `https://person:${SECRET}@customreport.test/lead/report?token=${SECRET}#${SECRET}`,
-      "https://customreport.test/lead/report",
+      `https://person:${SECRET}@weeklyreport.test/lead/report?token=${SECRET}#${SECRET}`,
+      "https://weeklyreport.test/lead/report",
     ],
     [`data:text/plain,${SECRET}`, undefined],
     [`screen-${SECRET}.tsx`, undefined],

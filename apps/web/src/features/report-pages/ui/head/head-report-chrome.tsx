@@ -20,7 +20,7 @@ import {
 } from "../../../period";
 import type { ReportPeriod } from "../../../report-sections";
 
-const FALLBACK_DEPARTMENT_LABEL = "CustomReport";
+const FALLBACK_DEPARTMENT_LABEL = "WeeklyReport";
 
 export type HeadReportMode = "form" | "slides";
 

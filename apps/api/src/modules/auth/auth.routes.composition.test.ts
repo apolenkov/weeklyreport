@@ -238,7 +238,7 @@ describe("mountAuthRoutes composition", () => {
   it("issues a session cookie and redirects to the selected role home", async () => {
     const user = {
       id: "00000000-0000-4000-8000-000000000701",
-      email: "viewer@customreport.local",
+      email: "viewer@weeklyreport.local",
       name: "Viewer User",
       lastName: "User",
       firstName: "Viewer",

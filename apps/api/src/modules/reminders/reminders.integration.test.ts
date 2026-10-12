@@ -102,8 +102,8 @@ describe("RemindersPrismaRepository (integration)", () => {
     deadlineIso: "2026-04-11T00:00:00.000Z",
     sectionUrl: "https://example.test/lead/report",
     organization: {
-      shortName: "CustomReport",
-      fullName: "CustomReport Department",
+      shortName: "WeeklyReport",
+      fullName: "WeeklyReport Department",
     },
   };
   const queuePayloadJson = queuePayload as unknown as Prisma.InputJsonValue;

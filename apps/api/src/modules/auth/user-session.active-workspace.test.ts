@@ -37,7 +37,7 @@ function invalidReportId(candidate: InvalidCandidate): string {
 function activeWorkspacePrisma(role: Role, candidate: InvalidCandidate) {
   const user = {
     id: USER_ID,
-    email: `${role}@customreport.local`,
+    email: `${role}@weeklyreport.local`,
     name: `${role} user`,
     lastName: role,
     firstName: "User",
@@ -99,7 +99,7 @@ describe("buildUserSession active workspace lifecycle filter", () => {
         activeWorkspacePrisma(role, candidate);
       const profile: SamlProfile = {
         samlId: `${role}-saml`,
-        email: `${role}@customreport.local`,
+        email: `${role}@weeklyreport.local`,
         displayName: `${role} user`,
         role,
       };

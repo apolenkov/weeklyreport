@@ -28,8 +28,8 @@ const pausedRule: AdminReminderRule = {
   status: "paused",
 };
 
-const recipientEmail = "lead1@customreport.local";
-const recipientEmail2 = "lead2@customreport.local";
+const recipientEmail = "lead1@weeklyreport.local";
+const recipientEmail2 = "lead2@weeklyreport.local";
 const REPORT_PERIOD_LABEL = "2026-04-07 → 2026-04-13";
 const testPayload = {
   contractVersion: 1 as const,

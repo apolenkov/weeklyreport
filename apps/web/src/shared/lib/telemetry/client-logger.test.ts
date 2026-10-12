@@ -101,7 +101,7 @@ describe("window capture", () => {
       const eventTime = 1_785_608_000_000;
       vi.setSystemTime(eventTime);
       const secret = "CLIENT_PRIVATE_MARKER";
-      const privateUrl = `https://person:${secret}@customreport.test/lead/report?token=${secret}#${secret}`;
+      const privateUrl = `https://person:${secret}@weeklyreport.test/lead/report?token=${secret}#${secret}`;
       vi.stubGlobal("window", {
         location: { href: privateUrl },
         addEventListener: vi.fn(),
@@ -134,7 +134,7 @@ describe("window capture", () => {
         {
           source,
           level,
-          url: "https://customreport.test/lead/report",
+          url: "https://weeklyreport.test/lead/report",
           ts: eventTime,
         },
       ]);

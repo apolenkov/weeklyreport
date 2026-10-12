@@ -325,7 +325,7 @@ describe("createContextFactory — PDF JWT be-the-requester scope", () => {
     );
     const prisma = makeRequesterPrisma({
       id: HEAD_REQUESTER_ID,
-      email: "head@customreport.local",
+      email: "head@weeklyreport.local",
       name: "Антон К.",
       role: "head",
       reportingGroupId: GRANTED_GROUP_ID,
@@ -359,7 +359,7 @@ describe("createContextFactory — PDF JWT be-the-requester scope", () => {
     );
     const prisma = makeRequesterPrisma({
       id: VIEWER_REQUESTER_ID,
-      email: "viewer@customreport.local",
+      email: "viewer@weeklyreport.local",
       name: "Дарья В.",
       role: "viewer",
       reportingGroupId: null,
@@ -509,7 +509,7 @@ describe("pdfExportGuard — PDF synthetic session restrictions", () => {
     return {
       session: {
         userId: "a0000000-0000-4000-8000-00000000fdb0",
-        email: "pdf-worker@internal.customreport.local",
+        email: "pdf-worker@internal.weeklyreport.local",
         name: "PDF Worker",
         role: "viewer",
         activeReportId: reportId,
