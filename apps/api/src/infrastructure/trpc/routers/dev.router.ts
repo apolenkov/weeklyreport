@@ -13,10 +13,12 @@ import {
 } from "@weeklyreport/shared";
 import { z } from "zod";
 
+import type { AppLogger } from "../../../lib/logger.js";
 import type { EnvConfig } from "../../config/env.schema";
 import { assertE2eRuntimeDestructiveTarget } from "../../prisma/e2e-destructive-target.js";
 import {
   captureMutationAuditInputMiddleware,
+  deriveCauseInfo,
   protectedProcedure,
   publicProcedure,
   router,
@@ -70,6 +72,52 @@ const reseedTimeoutMs = (variant: ReseedVariant): number => {
     ? STRESS_RESEED_TIMEOUT_MS
     : DEFAULT_RESEED_TIMEOUT_MS;
 };
+
+// Child stdout/stderr/message/cmd are free text that can carry credentials or paths; log exit metadata only.
+const childFailureFields = (error: unknown) => ({
+  error: deriveCauseInfo(error) ?? { name: typeof error },
+  exitCode:
+    error instanceof Error && "code" in error && typeof error.code === "number"
+      ? error.code
+      : null,
+  signal:
+    error instanceof Error &&
+    "signal" in error &&
+    typeof error.signal === "string"
+      ? error.signal
+      : null,
+});
+
+async function runReseed(
+  logger: AppLogger,
+  variant: ReseedVariant,
+  repoRoot: string,
+) {
+  const options = {
+    cwd: repoRoot,
+    encoding: "utf8",
+    env: process.env,
+    timeout: reseedTimeoutMs(variant),
+  } as const;
+  const runStep = async (
+    step: "reset" | "seed",
+    args: string[],
+  ): Promise<void> => {
+    try {
+      await execFileAsync(resolveExecutable("pnpm"), args, options);
+    } catch (error) {
+      logger.error("dev reseed step failed", {
+        step,
+        variant,
+        ...childFailureFields(error),
+      });
+      throw error;
+    }
+  };
+  await runStep("reset", ["exec", "prisma", "migrate", "reset", "--force"]);
+  await runStep("seed", ["db:seed:profile", variant]);
+  return { ok: true, variant, output: "Reseed completed" };
+}
 
 // Built Docker paths nest under dist/... so a fixed hop from import.meta.url
 // can miss the repo root; prefer cwd/workspace and verify via schema.prisma.
@@ -138,7 +186,7 @@ export function createDevRouter(deps: DevRouterDeps) {
         }),
       )
       .use(captureMutationAuditInputMiddleware)
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         assertDevMode(deps.env);
         // Run Prisma reset as a child process so "wipe & reseed" is a
         // real clean-slate operation in Docker too.
@@ -160,27 +208,7 @@ export function createDevRouter(deps: DevRouterDeps) {
         }
         reseed.inFlight = true;
         try {
-          const options = {
-            cwd: repoRoot,
-            encoding: "utf8",
-            env: process.env,
-            timeout: reseedTimeoutMs(input.variant),
-          } as const;
-          await execFileAsync(
-            resolveExecutable("pnpm"),
-            ["exec", "prisma", "migrate", "reset", "--force"],
-            options,
-          );
-          await execFileAsync(
-            resolveExecutable("pnpm"),
-            ["db:seed:profile", input.variant],
-            options,
-          );
-          return {
-            ok: true,
-            variant: input.variant,
-            output: "Reseed completed",
-          };
+          return await runReseed(ctx.logger, input.variant, repoRoot);
         } catch {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",
