@@ -681,14 +681,24 @@ void test("pending canonical save locks write actions until connectivity returns
     const saving = oneRef(await snapshot(), "button", "Saving draft");
     assert.equal(await getAttr(saving, "aria-busy"), "true");
     assert.equal((await command(["is", "enabled", saving])).enabled, false);
-    for (const name of ["Save update", "Cancel"])
-      disabledRef(namedScope(await snapshot(), ACTIVITY_FORM), "button", name);
+    const editor = namedScope(await snapshot(), ACTIVITY_FORM);
+    disabledRef(editor, "button", "Save update");
+    assert.equal(
+      (await command(["is", "enabled", oneRef(editor, "button", "Cancel")]))
+        .enabled,
+      true,
+      "Cancel must remain reachable while the canonical save is paused",
+    );
     const pending = await snapshot();
     assert.equal(refsByRole(pending, "button", /^Add item to /).length, 0);
     assert.equal(refsByRole(pending, "button", /^Status of /).length, 0);
     assertPendingSubmissionActions(pending);
     assert.equal(await reportActionsDisabled(), true);
     await command(["press", "Escape"]);
+    await clickIn(
+      { role: "alertdialog", name: "Discard changes?" },
+      "Keep editing",
+    );
     assert.equal(await inputValue(ACTIVITY_FORM, "Description *"), text);
     assert.equal(
       await postCount("reports.saveDraft"),
