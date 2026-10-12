@@ -1,14 +1,14 @@
 import {
-  resolveNavigationType,
-  webVitalBeaconSchema,
-} from "@customreport/shared";
-import {
   BadRequestException,
   Body,
   Controller,
   Logger,
   Post,
 } from "@nestjs/common";
+import {
+  resolveNavigationType,
+  webVitalBeaconSchema,
+} from "@weeklyreport/shared";
 
 import {
   webVitalCls,

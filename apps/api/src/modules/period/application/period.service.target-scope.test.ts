@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { customreportReportsSubmittedTotal } from "../../../infrastructure/metrics/metrics.registry.js";
+import { weeklyreportReportsSubmittedTotal } from "../../../infrastructure/metrics/metrics.registry.js";
 import { createNullLogger } from "../../../lib/logger.js";
 import {
   adminSession,
@@ -179,7 +179,7 @@ describe("PeriodService — publish target scope", () => {
       publishPeriod,
       reopenPeriod: vi.fn(() => Promise.resolve()),
     };
-    const before = await getCounterValue(customreportReportsSubmittedTotal, {
+    const before = await getCounterValue(weeklyreportReportsSubmittedTotal, {
       state: "published",
     });
     const service = new PeriodService(
@@ -195,7 +195,7 @@ describe("PeriodService — publish target scope", () => {
     ).rejects.toBeInstanceOf(PeriodScopeError);
     expect(publishPeriod).not.toHaveBeenCalled();
     expect(
-      await getCounterValue(customreportReportsSubmittedTotal, {
+      await getCounterValue(weeklyreportReportsSubmittedTotal, {
         state: "published",
       }),
     ).toBe(before);
@@ -600,7 +600,7 @@ describe("PeriodService — archive-in-window publish outcome", () => {
       createNullLogger(),
     );
 
-    const before = await getCounterValue(customreportReportsSubmittedTotal, {
+    const before = await getCounterValue(weeklyreportReportsSubmittedTotal, {
       state: "published",
     });
 
@@ -610,7 +610,7 @@ describe("PeriodService — archive-in-window publish outcome", () => {
 
     expect(invalidateAnalyticsCache).not.toHaveBeenCalled();
     expect(
-      await getCounterValue(customreportReportsSubmittedTotal, {
+      await getCounterValue(weeklyreportReportsSubmittedTotal, {
         state: "published",
       }),
     ).toBe(before);

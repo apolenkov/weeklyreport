@@ -1,4 +1,4 @@
-import type { UserSession } from "@customreport/shared";
+import type { UserSession } from "@weeklyreport/shared";
 import type { Request, Response } from "express";
 
 import { executeAgentationRequest } from "./agentation-wire.js";

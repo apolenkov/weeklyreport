@@ -19,16 +19,16 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "paths": {
-      "@customreport/api/*": ["./apps/api/src/*"],
-      "@customreport/report-persistence": [
+      "@weeklyreport/api/*": ["./apps/api/src/*"],
+      "@weeklyreport/report-persistence": [
         "./packages/report-persistence/src/index.ts"
       ],
-      "@customreport/report-persistence/*": [
+      "@weeklyreport/report-persistence/*": [
         "./packages/report-persistence/src/*"
       ],
-      "@customreport/shared": ["./packages/shared/src/index.ts"],
-      "@customreport/shared/*": ["./packages/shared/src/*"],
-      "@customreport/ui/*": ["./packages/ui/src/*"]
+      "@weeklyreport/shared": ["./packages/shared/src/index.ts"],
+      "@weeklyreport/shared/*": ["./packages/shared/src/*"],
+      "@weeklyreport/ui/*": ["./packages/ui/src/*"]
     }
   }
 }

@@ -1,8 +1,9 @@
 "use client";
 
-import type { DbRole, ReseedVariant } from "@customreport/shared";
-import { ROLE_LABEL } from "@customreport/shared";
-import { Button } from "@customreport/ui/components/ui/button";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { DbRole, ReseedVariant } from "@weeklyreport/shared";
+import { ROLE_LABEL } from "@weeklyreport/shared";
+import { Button } from "@weeklyreport/ui/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,8 +11,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@customreport/ui/components/ui/dropdown-menu";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+} from "@weeklyreport/ui/components/ui/dropdown-menu";
 import { Users } from "lucide-react";
 import type { RefObject } from "react";
 import { useEffect, useRef, useState } from "react";

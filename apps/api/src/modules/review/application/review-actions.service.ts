@@ -8,7 +8,7 @@ import {
   type ReviewVerdict,
   type ReviewVerdictResult,
   reviewVerdictResultSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import {
   isDesignatedReviewer,

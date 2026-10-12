@@ -1,4 +1,4 @@
-import { AI_PROVIDER_TEST_QUEUE_NAME } from "@customreport/shared";
+import { AI_PROVIDER_TEST_QUEUE_NAME } from "@weeklyreport/shared";
 import { z } from "zod";
 
 import type { JobEnqueuer } from "../../../infrastructure/bullmq/job-enqueuer.js";

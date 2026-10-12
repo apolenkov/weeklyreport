@@ -1,4 +1,4 @@
-import { INVISIBLE_TEXT_MESSAGE, safeText } from "@customreport/shared";
+import { INVISIBLE_TEXT_MESSAGE, safeText } from "@weeklyreport/shared";
 
 export function getRequiredProseError(
   value: string,

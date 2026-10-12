@@ -1,8 +1,8 @@
-import { type AppSettings, appSettingsSchema } from "@customreport/shared";
 import type {
   ReminderAudience as PrismaReminderAudience,
   WorkingDays as PrismaWorkingDays,
 } from "@prisma/client";
+import { type AppSettings, appSettingsSchema } from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import {

@@ -1,4 +1,4 @@
-import { MS_PER_SECOND } from "@customreport/shared";
+import { MS_PER_SECOND } from "@weeklyreport/shared";
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 
 import { httpRequestDurationSeconds } from "../infrastructure/metrics/metrics.registry";

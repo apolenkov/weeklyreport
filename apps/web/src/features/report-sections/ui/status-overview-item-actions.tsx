@@ -1,10 +1,10 @@
-import type { ItemWorkflowStatus } from "@customreport/shared";
+import type { ItemWorkflowStatus } from "@weeklyreport/shared";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@customreport/ui/components/ui/dropdown-menu";
+} from "@weeklyreport/ui/components/ui/dropdown-menu";
 import { Check } from "lucide-react";
 
 import { itemStatusToWorkflow } from "../model/item-status";

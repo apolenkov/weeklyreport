@@ -1,4 +1,4 @@
-import { computeReminderFireAt } from "@customreport/shared";
+import { computeReminderFireAt } from "@weeklyreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";

@@ -1,4 +1,4 @@
-import type { AiProviderDraft } from "@customreport/shared";
+import type { AiProviderDraft } from "@weeklyreport/shared";
 
 import {
   buildCompositeTestIdentity,

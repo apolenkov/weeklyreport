@@ -1,4 +1,4 @@
-import type { CanonicalStatus, SearchPlan } from "@customreport/shared";
+import type { CanonicalStatus, SearchPlan } from "@weeklyreport/shared";
 
 import { classifyDecision } from "./decision-classification.js";
 import type {

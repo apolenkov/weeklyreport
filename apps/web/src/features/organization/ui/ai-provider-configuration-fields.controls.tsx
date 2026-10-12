@@ -1,7 +1,7 @@
 import type {
   AiProviderConnectionRole,
   AiProviderProfile,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import type { ReactNode } from "react";
 
 import { profileLabel } from "./ai-provider-configuration-fields.types";

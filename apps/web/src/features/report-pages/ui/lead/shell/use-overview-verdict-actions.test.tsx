@@ -1,9 +1,9 @@
+import { act, renderHook } from "@testing-library/react";
 import type {
   ItemOutcomeResult,
   LeadStatusOverviewOutput,
   ReportSectionReadModel,
-} from "@customreport/shared";
-import { act, renderHook } from "@testing-library/react";
+} from "@weeklyreport/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { makeReportSectionFixture } from "../../../../../test-utils/report-section-fixtures";

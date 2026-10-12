@@ -10,49 +10,49 @@ import { metricsRegistry } from "./metrics.registry.js";
 
 const MILLISECONDS_PER_SECOND = 1000;
 
-const customreportAiProviderState = new Gauge({
+const weeklyreportAiProviderState = new Gauge({
   name: "customreport_ai_provider_state",
   help: "Current configured AI provider lifecycle state",
   labelNames: ["profile", "state"] as const,
   registers: [metricsRegistry],
 });
 
-const customreportAiProviderCapabilityTestsTotal = new Counter({
+const weeklyreportAiProviderCapabilityTestsTotal = new Counter({
   name: "customreport_ai_provider_capability_tests_total",
   help: "AI provider synthetic capability test outcomes",
   labelNames: ["profile", "result"] as const,
   registers: [metricsRegistry],
 });
 
-const customreportAiProviderPreparationCompleted = new Gauge({
+const weeklyreportAiProviderPreparationCompleted = new Gauge({
   name: "customreport_ai_provider_preparation_completed",
   help: "Completed semantic preparation entries for the current provider",
   labelNames: ["profile"] as const,
   registers: [metricsRegistry],
 });
 
-const customreportAiProviderPreparationTotal = new Gauge({
+const weeklyreportAiProviderPreparationTotal = new Gauge({
   name: "customreport_ai_provider_preparation_total",
   help: "Total semantic preparation entries for the current provider",
   labelNames: ["profile"] as const,
   registers: [metricsRegistry],
 });
 
-const customreportAiProviderPreparationFailed = new Gauge({
+const weeklyreportAiProviderPreparationFailed = new Gauge({
   name: "customreport_ai_provider_preparation_failed",
   help: "Failed semantic preparation entries for the current provider",
   labelNames: ["profile"] as const,
   registers: [metricsRegistry],
 });
 
-const customreportAiProviderPreparationElapsedSeconds = new Gauge({
+const weeklyreportAiProviderPreparationElapsedSeconds = new Gauge({
   name: "customreport_ai_provider_preparation_elapsed_seconds",
   help: "Elapsed semantic preparation time for the current provider",
   labelNames: ["profile"] as const,
   registers: [metricsRegistry],
 });
 
-const customreportAiProviderActivationsTotal = new Counter({
+const weeklyreportAiProviderActivationsTotal = new Counter({
   name: "customreport_ai_provider_activations_total",
   help: "AI provider activation outcomes",
   labelNames: ["profile", "result"] as const,
@@ -61,34 +61,34 @@ const customreportAiProviderActivationsTotal = new Counter({
 
 export class AiProviderPrometheusMetrics implements AiProviderMetricsSink {
   recordState(input: AiProviderStateMetrics): void {
-    customreportAiProviderState.reset();
-    customreportAiProviderState.set(
+    weeklyreportAiProviderState.reset();
+    weeklyreportAiProviderState.set(
       { profile: input.profile, state: input.state },
       1,
     );
   }
 
   recordCapabilityTest(input: AiProviderCapabilityTestMetrics): void {
-    customreportAiProviderCapabilityTestsTotal.inc({
+    weeklyreportAiProviderCapabilityTestsTotal.inc({
       profile: input.profile,
       result: input.result,
     });
   }
 
   recordPreparation(input: AiProviderPreparationMetrics): void {
-    customreportAiProviderPreparationCompleted.set(
+    weeklyreportAiProviderPreparationCompleted.set(
       { profile: input.profile },
       input.completed,
     );
-    customreportAiProviderPreparationTotal.set(
+    weeklyreportAiProviderPreparationTotal.set(
       { profile: input.profile },
       input.total,
     );
-    customreportAiProviderPreparationFailed.set(
+    weeklyreportAiProviderPreparationFailed.set(
       { profile: input.profile },
       input.failed,
     );
-    customreportAiProviderPreparationElapsedSeconds.set(
+    weeklyreportAiProviderPreparationElapsedSeconds.set(
       { profile: input.profile },
       input.elapsedMs / MILLISECONDS_PER_SECOND,
     );
@@ -98,7 +98,7 @@ export class AiProviderPrometheusMetrics implements AiProviderMetricsSink {
     profile: AiProviderCapabilityTestMetrics["profile"];
     result: "requested" | "succeeded" | "failed";
   }): void {
-    customreportAiProviderActivationsTotal.inc({
+    weeklyreportAiProviderActivationsTotal.inc({
       profile: input.profile,
       result: input.result,
     });

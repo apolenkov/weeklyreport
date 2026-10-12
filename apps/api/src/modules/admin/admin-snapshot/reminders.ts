@@ -1,9 +1,9 @@
+import { Prisma } from "@prisma/client";
 import {
   type AdminSnapshot,
   computeReminderFireAt,
   reminderPolicyAppliesTo,
-} from "@customreport/shared";
-import { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import type { PolicyApplicatorService } from "../../reminders/index.js";
 import { audienceToPrisma } from "../admin-enum-mappers.js";

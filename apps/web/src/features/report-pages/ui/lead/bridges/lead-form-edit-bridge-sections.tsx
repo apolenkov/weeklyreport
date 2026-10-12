@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import type { ComponentProps } from "react";
 
 import type { CrossAuthorEntry } from "../../../../period";

@@ -6,7 +6,7 @@ import {
   type ReportSectionStatus,
   type SubmitSectionInput,
   type TrafficLightStatus,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 type SectionWritePayload = DraftSaveInput | SubmitSectionInput;
 type SectionProject = ReportSectionReadModel["projects"][number];

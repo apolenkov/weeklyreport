@@ -1,4 +1,4 @@
-import type { AiProviderConfigurationRead } from "@customreport/shared";
+import type { AiProviderConfigurationRead } from "@weeklyreport/shared";
 import { type Job, UnrecoverableError } from "bullmq";
 import { describe, expect, it, vi } from "vitest";
 

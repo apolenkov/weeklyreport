@@ -1,9 +1,9 @@
+import { render, screen } from "@testing-library/react";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
-} from "@customreport/ui/components/ui/dialog";
-import { render, screen } from "@testing-library/react";
+} from "@weeklyreport/ui/components/ui/dialog";
 import { describe, expect, it, vi } from "vitest";
 
 function PrimitiveHarness({

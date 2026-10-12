@@ -1,6 +1,6 @@
 "use client";
 
-import type { Role } from "@customreport/shared";
+import type { Role } from "@weeklyreport/shared";
 import { Archive } from "lucide-react";
 
 import { SearchInput } from "../../../shared/ui/search/search-input";

@@ -7,7 +7,7 @@ import {
   canonicalStatusSchema,
   type TrafficLightHistoryOutput,
   trafficLightToCanonical,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { formatPeriodRangeWithYear } from "../../../shared/lib/format/format-date";
 import { compareBySeverityThenName } from "../../../shared/lib/status/status-order";

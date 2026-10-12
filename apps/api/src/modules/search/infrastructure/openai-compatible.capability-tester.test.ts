@@ -1,4 +1,4 @@
-import { searchPlanSchema } from "@customreport/shared";
+import { searchPlanSchema } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import type { ResolvedCompositeProviderProfile } from "../../ai-provider/index.js";

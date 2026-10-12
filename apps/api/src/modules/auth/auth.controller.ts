@@ -3,7 +3,7 @@ import {
   SECONDS_PER_HOUR,
   type UserSession,
   userSessionSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { stringifySetCookie } from "cookie";
 import jwt from "jsonwebtoken";
 

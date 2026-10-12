@@ -1,4 +1,4 @@
-import type { DecisionState, DecisionTiming } from "@customreport/shared";
+import type { DecisionState, DecisionTiming } from "@weeklyreport/shared";
 import { DateTime } from "luxon";
 
 import type { DecisionCandidate } from "./report-retrieval.types.js";

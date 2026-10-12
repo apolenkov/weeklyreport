@@ -1,4 +1,4 @@
-import type { UserSession } from "@customreport/shared";
+import type { UserSession } from "@weeklyreport/shared";
 import jwt from "jsonwebtoken";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

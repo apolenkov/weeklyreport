@@ -2,7 +2,7 @@ import {
   ORGANIZATION_SINGLETON_ID,
   type OrganizationPublic,
   type UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { PrismaService } from "../prisma/prisma.service.js";
 

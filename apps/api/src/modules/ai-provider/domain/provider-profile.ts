@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 
-import type { AiProviderDraft, AiProviderProfile } from "@customreport/shared";
+import type { AiProviderDraft, AiProviderProfile } from "@weeklyreport/shared";
 
 import {
   allowedOrigins,

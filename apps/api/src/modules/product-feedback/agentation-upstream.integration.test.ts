@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { Server as HttpServer } from "node:http";
 
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import {
   agentationAnnotationResponseSchema,
   agentationSessionResponseSchema,
   agentationSseEventSchema,
-} from "@customreport/shared";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+} from "@weeklyreport/shared";
 import pg from "pg";
 import {
   afterAll,

@@ -1,8 +1,8 @@
 // One mounted dialog retains its draft across parent callback identity changes.
 
-import { safeText } from "@customreport/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { safeText } from "@weeklyreport/shared";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 

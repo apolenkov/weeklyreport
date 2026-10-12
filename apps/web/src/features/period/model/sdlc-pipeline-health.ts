@@ -1,4 +1,4 @@
-import { worstCanonicalStatus } from "@customreport/shared";
+import { worstCanonicalStatus } from "@weeklyreport/shared";
 import type { CSSProperties } from "react";
 
 import type {

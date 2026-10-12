@@ -1,5 +1,5 @@
 {
-  "name": "@customreport/migrator-runtime",
+  "name": "@weeklyreport/migrator-runtime",
   "version": "0.1.0",
   "private": true,
   "dependencies": {

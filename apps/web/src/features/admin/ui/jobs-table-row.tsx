@@ -1,4 +1,4 @@
-import type { FailedJob } from "@customreport/shared";
+import type { FailedJob } from "@weeklyreport/shared";
 
 import { formatDateTime } from "../../../shared/lib/format/format-date";
 import { truncate } from "../model/action-log-format";

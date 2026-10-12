@@ -1,5 +1,5 @@
-import { parsePublishedSnapshot } from "@customreport/report-persistence";
 import type { PrismaClient } from "@prisma/client";
+import { parsePublishedSnapshot } from "@weeklyreport/report-persistence";
 import { z } from "zod";
 
 import { projectSectionCandidates } from "../src/modules/search/domain/candidate-projector.js";

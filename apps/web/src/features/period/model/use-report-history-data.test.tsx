@@ -1,8 +1,3 @@
-import {
-  compiledHistoryResultSchema,
-  myHistoryEntrySchema,
-  type Role,
-} from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
@@ -12,6 +7,11 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import {
+  compiledHistoryResultSchema,
+  myHistoryEntrySchema,
+  type Role,
+} from "@weeklyreport/shared";
 import type { ReactNode } from "react";
 import superjson from "superjson";
 import { afterEach, describe, expect, it, vi } from "vitest";

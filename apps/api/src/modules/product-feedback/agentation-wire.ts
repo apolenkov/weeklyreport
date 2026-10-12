@@ -6,7 +6,7 @@ import {
   agentationThreadSchema,
   normalizeAgentationPath,
   type UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import type { Request, Response } from "express";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";

@@ -1,7 +1,7 @@
 import type {
   LeadOpenWorkHistoryOccurrence,
   ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { formatPeriodRangeWithYear } from "../../../../../shared/lib/format/format-date";
 

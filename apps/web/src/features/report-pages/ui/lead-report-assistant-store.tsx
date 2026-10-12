@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReportAssistantOutcome } from "@customreport/shared";
 import { useMutation } from "@tanstack/react-query";
+import type { ReportAssistantOutcome } from "@weeklyreport/shared";
 import {
   createContext,
   type Dispatch,

@@ -1,6 +1,6 @@
-import type { DbRole, UserSession } from "@customreport/shared";
-import { normalizeEmail } from "@customreport/shared";
 import type { Prisma, PrismaClient } from "@prisma/client";
+import type { DbRole, UserSession } from "@weeklyreport/shared";
+import { normalizeEmail } from "@weeklyreport/shared";
 
 import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
 

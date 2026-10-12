@@ -9,7 +9,7 @@ import {
   AI_PROVIDER_CREDENTIAL_MASK,
   AI_PROVIDER_CREDENTIAL_MASK_SUFFIX_LENGTH,
   maskedCredentialSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import {
   AiProviderKeyMaterialError,

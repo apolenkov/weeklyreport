@@ -1,3 +1,6 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import {
   AI_PROVIDER_PROFILE_CAPABILITIES,
   type AiPromptBundleRead,
@@ -5,10 +8,7 @@ import {
   type AiPromptFeatureRead,
   type AiProviderConfigurationRead,
   type AiProviderControlRead,
-} from "@customreport/shared";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+} from "@weeklyreport/shared";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

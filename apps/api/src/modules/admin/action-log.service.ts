@@ -6,7 +6,7 @@ import {
   adminActionLogPageSchema,
   type PaginationInput,
   type Role,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 const DEFAULT_ACTION_LOG_LIMIT = 20;
 

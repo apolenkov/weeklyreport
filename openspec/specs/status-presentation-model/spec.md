@@ -112,18 +112,18 @@ The system MUST declare the canonical status union
 (`"blocked" | "at-risk" | "on-track" | "empty"`) exactly once as
 `CanonicalStatus` in
 `packages/shared/src/schemas/status/canonical-status.ts`, exported by
-`@customreport/shared`. The Web presentation map in
+`@weeklyreport/shared`. The Web presentation map in
 `apps/web/src/shared/lib/status/status-presentation.ts` MUST key its labels,
 icons, and tones by that shared type. Every other name for the vocabulary MUST
 be a type alias of `CanonicalStatus`; for example, `StageStatus` in
 `features/report-sections/model/traffic-light.ts` is the feature-domain alias,
 never a re-declared literal union. Application modules MUST import the canonical
-type from `@customreport/shared`, not from another feature.
+type from `@weeklyreport/shared`, not from another feature.
 
 #### Scenario: a module needs the canonical status type
 
 - **WHEN** an application module needs the vocabulary type
-- **THEN** it imports `CanonicalStatus` from `@customreport/shared`
+- **THEN** it imports `CanonicalStatus` from `@weeklyreport/shared`
 - **AND** no application module imports the canonical type from a feature module
 
 #### Scenario: a feature-domain name is kept

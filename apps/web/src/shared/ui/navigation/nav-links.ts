@@ -1,5 +1,5 @@
-import type { Role } from "@customreport/shared";
-import { ROLE_HOME_PATH } from "@customreport/shared";
+import type { Role } from "@weeklyreport/shared";
+import { ROLE_HOME_PATH } from "@weeklyreport/shared";
 
 export interface NavLink {
   href: string;

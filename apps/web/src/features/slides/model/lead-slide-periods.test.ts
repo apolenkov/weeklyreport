@@ -1,4 +1,4 @@
-import type { MyHistoryEntry } from "@customreport/shared";
+import type { MyHistoryEntry } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {

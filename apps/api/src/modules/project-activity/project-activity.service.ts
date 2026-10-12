@@ -4,7 +4,7 @@ import type {
   ProjectActivityCreateInput,
   ProjectActivityLeadEdge,
   ProjectActivityUpdateInput,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { ProjectActivityNotFoundError } from "./project-activity.errors.js";
 export {

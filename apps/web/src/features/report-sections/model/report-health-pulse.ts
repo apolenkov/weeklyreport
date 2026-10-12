@@ -1,9 +1,9 @@
-import type { CanonicalStatus } from "@customreport/shared";
+import type { CanonicalStatus } from "@weeklyreport/shared";
 import {
   riskSeverityToCanonicalFloor,
   trafficLightToCanonical,
   worstCanonicalStatus,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type {
   StatusOverviewSection,

@@ -1,8 +1,8 @@
+import type { Prisma } from "@prisma/client";
 import {
   type PublishedReportSnapshot,
   publishedReportSnapshotSchema,
-} from "@customreport/shared";
-import type { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 /** Raised when immutable publication content cannot be safely consumed. */
 export class PublishedSnapshotIntegrityError extends Error {

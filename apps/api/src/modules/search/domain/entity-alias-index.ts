@@ -1,4 +1,4 @@
-import { normalizeEntityReference } from "@customreport/shared";
+import { normalizeEntityReference } from "@weeklyreport/shared";
 
 export { normalizeEntityReference };
 

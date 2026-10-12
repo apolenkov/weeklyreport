@@ -1,4 +1,4 @@
-import type { SearchHit } from "@customreport/shared";
+import type { SearchHit } from "@weeklyreport/shared";
 import type { ReactNode } from "react";
 
 import { formatDateWithYear } from "../../lib/format/format-date";

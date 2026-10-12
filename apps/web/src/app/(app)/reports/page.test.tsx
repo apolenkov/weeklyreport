@@ -1,13 +1,13 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type {
   CompiledHistoryEntry,
   MyHistoryEntry,
   Role,
-} from "@customreport/shared";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+} from "@weeklyreport/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SessionState } from "../../../shared/lib/auth/session-provider";

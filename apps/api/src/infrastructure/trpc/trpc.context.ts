@@ -1,10 +1,10 @@
+import type { INestApplication } from "@nestjs/common";
+import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import {
   AUTH_COOKIE_NAME,
   DEFAULT_REPORTING_GROUP,
   type UserSession,
-} from "@customreport/shared";
-import type { INestApplication } from "@nestjs/common";
-import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
+} from "@weeklyreport/shared";
 
 import {
   NO_CORRELATION_ID,

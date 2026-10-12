@@ -1,4 +1,4 @@
-import type { AdminReminderRule } from "@customreport/shared";
+import type { AdminReminderRule } from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { formatPeriodLabel, toRuleDomain } from "./reminders-row-mappers.js";

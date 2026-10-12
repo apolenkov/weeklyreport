@@ -1,13 +1,13 @@
+import { Prisma } from "@prisma/client";
 import {
   mapPrismaToReportSection,
   reportSectionFullInclude,
   requirePublishedSnapshot,
-} from "@customreport/report-persistence";
+} from "@weeklyreport/report-persistence";
 import type {
   MyHistoryResult,
   PublishedReportSectionReadModel,
-} from "@customreport/shared";
-import { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 import { z } from "zod";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";

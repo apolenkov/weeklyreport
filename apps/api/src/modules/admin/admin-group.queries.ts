@@ -1,8 +1,8 @@
+import type { Prisma } from "@prisma/client";
 import {
   type ReportingGroup,
   reportingGroupSchema,
-} from "@customreport/shared";
-import type { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { lockAndAssertGroupHead } from "../../lib/user-activity-assignment.js";

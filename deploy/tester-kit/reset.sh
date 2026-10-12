@@ -71,7 +71,7 @@ export PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай'
 export REDIS_HOST=127.0.0.1 REDIS_PORT=$REDISPORT_LOCAL REDIS_DB=15
 cd "$REPO"
 [ -d node_modules ] || pnpm install --frozen-lockfile
-pnpm --filter @customreport/api db:generate >/dev/null
+pnpm --filter @weeklyreport/api db:generate >/dev/null
 echo "Target: postgresql://***@127.0.0.1:$PGPORT_LOCAL/customreport_e2e; Redis DB 15"
 pnpm exec tsx -e 'import { assertE2eRuntimeDestructive } from "./prisma/guards/_destructive-guard.ts"; assertE2eRuntimeDestructive("tester-reset")'
 # Observability hook (full-run.sh): collect api coverage, logs and database statistics before they are wiped.

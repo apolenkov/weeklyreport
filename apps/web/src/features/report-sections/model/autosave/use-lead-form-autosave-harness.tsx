@@ -1,8 +1,8 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type {
   DraftSavePayload,
   ReportSectionReadModel,
-} from "@customreport/shared";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+} from "@weeklyreport/shared";
 import type { ReactNode } from "react";
 
 import { invalidateLeadForm } from "../../../../shared/lib/query/cache-keys";

@@ -6,7 +6,7 @@ vi.mock("server-only", () => ({}));
 const { captureException } = vi.hoisted(() => ({ captureException: vi.fn() }));
 vi.mock("@sentry/nextjs", () => ({ captureException }));
 
-import { DEFAULT_ORGANIZATION_IDENTITY } from "@customreport/shared";
+import { DEFAULT_ORGANIZATION_IDENTITY } from "@weeklyreport/shared";
 import { PHASE_PRODUCTION_BUILD } from "next/constants";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";

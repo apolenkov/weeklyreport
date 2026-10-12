@@ -4,7 +4,7 @@ import type {
   AiPromptBundleRead,
   AiPromptContents,
   AiPromptFeatureRead,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { useEffect, useRef, useState } from "react";
 
 import { ConfirmationDialog } from "../../../shared/ui/dialogs/confirmation-dialog";

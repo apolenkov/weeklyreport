@@ -2,7 +2,7 @@ import {
   computeReminderFireAt,
   reminderPolicyAppliesTo,
   type UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { groupScopeFilter } from "../../lib/group-scope.js";

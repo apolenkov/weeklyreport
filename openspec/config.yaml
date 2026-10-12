@@ -13,13 +13,13 @@ context: |
   # Stack
   - Monorepo: pnpm workspaces + Turborepo
   - Frontend: Next.js (App Router, React Compiler), React, Tailwind,
-    shadcn/ui via `@customreport/ui`, TanStack Query, tRPC client
+    shadcn/ui via `@weeklyreport/ui`, TanStack Query, tRPC client
   - Backend: NestJS, Express, tRPC server, Prisma with
     `@prisma/adapter-pg`, BullMQ, Redis, PostgreSQL, OpenTelemetry,
     Prometheus @prometheus-io/client
   - Auth: SAML via `@node-saml/passport-saml` + Keycloak (prod); dev-only
     `/auth/dev-login` gated behind `AUTH_DEV_MODE`
-  - Validation: Zod shared schemas in `@customreport/shared`
+  - Validation: Zod shared schemas in `@weeklyreport/shared`
   - Testing: Vitest, Testing Library; PDF export renders through an
     internal Gotenberg service, not an in-process browser
   - Runtime and dependency versions: `.nvmrc`, `package.json`,
@@ -27,12 +27,12 @@ context: |
     Dockerfiles, `.gitlab-ci.yml`, and deployment manifests.
 
   # Workspace layout
-  apps/web         — Next.js frontend (`@customreport/web`)
-  apps/api         — NestJS backend (`@customreport/api`)
-  packages/report-persistence — server-only Prisma mapper and published snapshot assembly (`@customreport/report-persistence`)
-  packages/shared  — Zod schemas + tRPC router types (`@customreport/shared`)
-  packages/ui      — shadcn/ui + composition components (`@customreport/ui`)
-  packages/migrator-runtime — manifest-only Prisma CLI closure for the minimal migration image (`@customreport/migrator-runtime`)
+  apps/web         — Next.js frontend (`@weeklyreport/web`)
+  apps/api         — NestJS backend (`@weeklyreport/api`)
+  packages/report-persistence — server-only Prisma mapper and published snapshot assembly (`@weeklyreport/report-persistence`)
+  packages/shared  — Zod schemas + tRPC router types (`@weeklyreport/shared`)
+  packages/ui      — shadcn/ui + composition components (`@weeklyreport/ui`)
+  packages/migrator-runtime — manifest-only Prisma CLI closure for the minimal migration image (`@weeklyreport/migrator-runtime`)
   prisma/          — schema, migrations, seeds, destructive
                      guard
 
@@ -71,7 +71,7 @@ context: |
     internal messages to clients
   - Zod parse at every layer boundary (service input, repository output,
     router input); use `safeText()` helper for user-facing text fields
-  - Shared schemas/enums live in `@customreport/shared` — update there
+  - Shared schemas/enums live in `@weeklyreport/shared` — update there
     before duplicating in app code
   - Static production UI strings in `apps/web/src/**/*.tsx` stay English;
     Russian is allowed only as data, seeds, comments, or tests

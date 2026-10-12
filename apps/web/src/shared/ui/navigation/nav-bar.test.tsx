@@ -1,12 +1,12 @@
 // @vitest-environment jsdom
 
-import type { Role } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   render as testingRender,
   screen,
   within,
 } from "@testing-library/react";
+import type { Role } from "@weeklyreport/shared";
 import * as React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

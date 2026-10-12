@@ -1,7 +1,7 @@
 import type {
   ReportSectionReadModel,
   TrafficLightStatus,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { persistableItemStatusToWorkflow } from "../../item-status";
 import { isUnconfirmedCarried } from "../../lead-actions/lead-item-actions";

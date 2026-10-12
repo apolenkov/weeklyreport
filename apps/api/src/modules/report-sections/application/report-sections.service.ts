@@ -12,7 +12,7 @@ import {
   validateRecordActivityIds,
   validateStageOwnership,
   validateSubmitInput,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { type AppLogger } from "../../../lib/logger.js";
 import { findPublishedRecordViolation } from "../domain/published-record-guard.js";

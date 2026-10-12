@@ -30,7 +30,7 @@
     "apps/api": {
       "entry": ["src/**/*.test.ts", "src/**/*.fixture.ts", "vitest*.config.ts"],
       "project": ["src/**/*.ts"],
-      "ignoreDependencies": ["@customreport/migrator-runtime"]
+      "ignoreDependencies": ["@weeklyreport/migrator-runtime"]
     },
     "apps/web": {
       "entry": ["src/**/*.test.{ts,tsx}", "src/test-utils/**"],

@@ -1,6 +1,6 @@
-import type { UserSession } from "@customreport/shared";
 import type { Strategy as SamlStrategy } from "@node-saml/passport-saml";
 import type { PrismaClient } from "@prisma/client";
+import type { UserSession } from "@weeklyreport/shared";
 import type {
   Express,
   NextFunction,

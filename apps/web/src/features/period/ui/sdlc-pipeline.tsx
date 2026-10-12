@@ -1,6 +1,6 @@
 "use client";
 
-import { TooltipProvider } from "@customreport/ui/components/ui/tooltip";
+import { TooltipProvider } from "@weeklyreport/ui/components/ui/tooltip";
 
 import type { Product, StageStatus } from "../../report-sections";
 import type { CrossAuthorEntry } from "../model/sdlc-cross-author";

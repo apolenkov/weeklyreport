@@ -1,4 +1,3 @@
-import type { AppRouter } from "@customreport/api/infrastructure/trpc/trpc.router";
 import type { QueryClient } from "@tanstack/react-query";
 import {
   createTRPCClient as createTRPCClientCore,
@@ -14,6 +13,7 @@ import {
   type Unsubscribable,
 } from "@trpc/server/observable";
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
+import type { AppRouter } from "@weeklyreport/api/infrastructure/trpc/trpc.router";
 import superjson from "superjson";
 
 import {

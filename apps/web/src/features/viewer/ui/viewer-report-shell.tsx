@@ -1,8 +1,8 @@
 "use client";
 
-import type { WeeklyReportGetResponse } from "@customreport/shared";
-import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
+import type { WeeklyReportGetResponse } from "@weeklyreport/shared";
+import { Skeleton } from "@weeklyreport/ui/components/ui/skeleton";
 import type { ReactNode } from "react";
 import { useMemo } from "react";
 

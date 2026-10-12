@@ -1,5 +1,5 @@
-import { reportSectionReadModelSchema } from "@customreport/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
+import { reportSectionReadModelSchema } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { DecisionCard } from "../../../features/period/ui/decision-card";

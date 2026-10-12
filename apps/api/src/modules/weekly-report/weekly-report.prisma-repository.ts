@@ -1,6 +1,6 @@
-import type { UserSession } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
+import type { UserSession } from "@weeklyreport/shared";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { guardGroupScope } from "../../lib/group-scope.js";

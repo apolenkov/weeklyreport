@@ -1,4 +1,4 @@
-import { composeName, type ReminderPolicy } from "@customreport/shared";
+import { composeName, type ReminderPolicy } from "@weeklyreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";

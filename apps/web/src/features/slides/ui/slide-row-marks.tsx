@@ -1,4 +1,4 @@
-import { shortNameFromName } from "@customreport/shared";
+import { shortNameFromName } from "@weeklyreport/shared";
 import { useRef } from "react";
 
 import { useSdlcTooltip } from "../../../shared/ui/feedback/sdlc-tooltip";

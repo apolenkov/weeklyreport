@@ -2,7 +2,7 @@ import {
   type SearchPlan,
   searchPlanSchema,
   type SourceCitation,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { validateGroundedAnswerCitations } from "../domain/citation-validator.js";
 import type { SearchCandidate } from "../domain/report-retrieval.types.js";

@@ -2,7 +2,7 @@ import type {
   MyHistoryEntry,
   PublishedLineage,
   ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { activityDisplayTitle } from "../../../../shared/lib/activity/activity-display";
 import type { UnifiedActivityEntry } from "../activity/unified-activity-entry";

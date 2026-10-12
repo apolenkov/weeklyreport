@@ -2,12 +2,12 @@
 
 import "@testing-library/jest-dom/vitest";
 
+import { QueryClientProvider } from "@tanstack/react-query";
+import { render, screen } from "@testing-library/react";
 import type {
   ActivityLiveResponse,
   WeeklyReportReadModel,
-} from "@customreport/shared";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+} from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { makeQueryClient } from "../../../shared/lib/query/query-client";

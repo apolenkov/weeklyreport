@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  customreportPeriodStateTransitionsTotal,
-  customreportReportsSubmittedTotal,
+  weeklyreportPeriodStateTransitionsTotal,
+  weeklyreportReportsSubmittedTotal,
 } from "../../../infrastructure/metrics/metrics.registry.js";
 import { createNullLogger } from "../../../lib/logger.js";
 import { PeriodPrometheusTelemetry } from "../infrastructure/period-prometheus-telemetry.adapter.js";
@@ -39,14 +39,14 @@ describe("PeriodService — manual-publish telemetry", () => {
       new PeriodPrometheusTelemetry(),
       createNullLogger(),
     );
-    const before = await getCounterValue(customreportReportsSubmittedTotal, {
+    const before = await getCounterValue(weeklyreportReportsSubmittedTotal, {
       state: "published",
     });
 
     await service.publishPeriod(reportId, headSession);
 
     expect(
-      await getCounterValue(customreportReportsSubmittedTotal, {
+      await getCounterValue(weeklyreportReportsSubmittedTotal, {
         state: "published",
       }),
     ).toBe(before + 1);
@@ -72,14 +72,14 @@ describe("PeriodService — manual-publish telemetry", () => {
       createNullLogger(),
     );
     const before = await getCounterValue(
-      customreportPeriodStateTransitionsTotal,
+      weeklyreportPeriodStateTransitionsTotal,
       { from: "open", to: "published" },
     );
 
     await service.publishPeriod(reportId, headSession);
 
     expect(
-      await getCounterValue(customreportPeriodStateTransitionsTotal, {
+      await getCounterValue(weeklyreportPeriodStateTransitionsTotal, {
         from: "open",
         to: "published",
       }),
@@ -106,14 +106,14 @@ describe("PeriodService — manual-publish telemetry", () => {
       createNullLogger(),
     );
     const before = await getCounterValue(
-      customreportPeriodStateTransitionsTotal,
+      weeklyreportPeriodStateTransitionsTotal,
       { from: "reopened", to: "published" },
     );
 
     await service.publishPeriod(reportId, headSession);
 
     expect(
-      await getCounterValue(customreportPeriodStateTransitionsTotal, {
+      await getCounterValue(weeklyreportPeriodStateTransitionsTotal, {
         from: "reopened",
         to: "published",
       }),
@@ -156,11 +156,11 @@ describe("PeriodService — manual-publish telemetry", () => {
     );
 
     const submittedBefore = await getCounterValue(
-      customreportReportsSubmittedTotal,
+      weeklyreportReportsSubmittedTotal,
       { state: "published" },
     );
     const transitionsBefore = await getCounterValue(
-      customreportPeriodStateTransitionsTotal,
+      weeklyreportPeriodStateTransitionsTotal,
       { from: "open", to: "published" },
     );
 
@@ -169,12 +169,12 @@ describe("PeriodService — manual-publish telemetry", () => {
     );
 
     expect(
-      await getCounterValue(customreportReportsSubmittedTotal, {
+      await getCounterValue(weeklyreportReportsSubmittedTotal, {
         state: "published",
       }),
     ).toBe(submittedBefore);
     expect(
-      await getCounterValue(customreportPeriodStateTransitionsTotal, {
+      await getCounterValue(weeklyreportPeriodStateTransitionsTotal, {
         from: "open",
         to: "published",
       }),
@@ -214,11 +214,11 @@ describe("PeriodService — manual-publish telemetry", () => {
     );
 
     const submittedBefore = await getCounterValue(
-      customreportReportsSubmittedTotal,
+      weeklyreportReportsSubmittedTotal,
       { state: "published" },
     );
     const transitionsBefore = await getCounterValue(
-      customreportPeriodStateTransitionsTotal,
+      weeklyreportPeriodStateTransitionsTotal,
       { from: "open", to: "published" },
     );
 
@@ -228,12 +228,12 @@ describe("PeriodService — manual-publish telemetry", () => {
 
     expect(invalidateAnalyticsCache).not.toHaveBeenCalled();
     expect(
-      await getCounterValue(customreportReportsSubmittedTotal, {
+      await getCounterValue(weeklyreportReportsSubmittedTotal, {
         state: "published",
       }),
     ).toBe(submittedBefore);
     expect(
-      await getCounterValue(customreportPeriodStateTransitionsTotal, {
+      await getCounterValue(weeklyreportPeriodStateTransitionsTotal, {
         from: "open",
         to: "published",
       }),

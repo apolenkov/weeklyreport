@@ -2,8 +2,8 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import type { Role } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
+import type { Role } from "@weeklyreport/shared";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

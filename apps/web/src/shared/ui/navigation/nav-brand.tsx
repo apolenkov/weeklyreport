@@ -1,4 +1,4 @@
-import { type Role, ROLE_LABEL } from "@customreport/shared";
+import { type Role, ROLE_LABEL } from "@weeklyreport/shared";
 
 import { getLogoHref } from "./nav-active";
 

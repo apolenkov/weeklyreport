@@ -4,7 +4,7 @@ import {
   organizationPublicSchema,
   organizationSchema,
   type OrganizationUpdate,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { AppLogger } from "../../lib/logger.js";
 

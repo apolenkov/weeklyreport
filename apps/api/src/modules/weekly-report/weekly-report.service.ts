@@ -3,11 +3,11 @@ import type {
   LatestForViewerReport,
   UserSession,
   WeeklyReportReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import {
   compiledHistoryResultSchema,
   latestForViewerReportSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { type AppLogger } from "../../lib/logger.js";
 import {

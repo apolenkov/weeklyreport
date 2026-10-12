@@ -1,6 +1,6 @@
 "use client";
 
-import { shortNameFromName } from "@customreport/shared";
+import { shortNameFromName } from "@weeklyreport/shared";
 import type { CSSProperties } from "react";
 
 import { statusLabel } from "../../../../shared/lib/status/status-presentation";

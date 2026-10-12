@@ -70,7 +70,7 @@ WeeklyReport автоматизирует еженедельные статус-
 
 Почему так, а не прямой вызов браузер→api: тот же origin упрощает куки/CORS, а
 проброс через Next даёт единую точку входа. Типобезопасность сквозная — типы
-роутера импортируются на фронт из `@customreport/api`.
+роутера импортируются на фронт из `@weeklyreport/api`.
 
 ## 4. Окружение и переменные
 
@@ -285,7 +285,7 @@ pnpm lint:eslint
 Тесты живут рядом с продуктовым кодом. Корневой `pnpm test` запускает unit-тесты
 workspace, Prisma-тесты и проверки repository cleanliness и operations. Он не
 запускает интеграционные тесты API с базой данных: их запускают отдельно через
-`pnpm --filter @customreport/api test:integration`.
+`pnpm --filter @weeklyreport/api test:integration`.
 
 Конфиги API `vitest.integration.config.ts` и `vitest.coverage.config.ts` загружают
 `.env.test`; `apps/web/vitest.config.ts` этот файл не загружает. По MVP-политике

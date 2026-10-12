@@ -1,7 +1,7 @@
 import type {
   ReportSectionReadModel,
   ResolvePlanInput,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type {
   RecordParent,

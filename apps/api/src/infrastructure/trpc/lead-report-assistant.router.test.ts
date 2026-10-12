@@ -1,10 +1,10 @@
+import { TRPCError } from "@trpc/server";
 import type {
   AiProviderAvailabilityRead,
   ReportAssistantOutcome,
   ReportAssistantRequest,
   Role,
-} from "@customreport/shared";
-import { TRPCError } from "@trpc/server";
+} from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../lib/logger.js";

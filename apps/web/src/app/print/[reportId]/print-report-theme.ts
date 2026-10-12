@@ -1,4 +1,4 @@
-import type { CanonicalStatus } from "@customreport/shared";
+import type { CanonicalStatus } from "@weeklyreport/shared";
 
 // Print palette roles — named semantics, not raw hues, so one ink/contrast
 // contract owns every PDF surface.

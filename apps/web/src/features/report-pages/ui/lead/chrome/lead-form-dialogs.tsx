@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { type ComponentProps, useEffect, useReducer, useRef } from "react";
 
 import { useEditableListDialog } from "../../../../../shared/hooks/dialogs/use-editable-list-dialog";

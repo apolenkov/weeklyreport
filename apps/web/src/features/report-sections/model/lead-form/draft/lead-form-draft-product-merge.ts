@@ -1,8 +1,8 @@
 import type {
   ReportSectionReadModel,
   TrafficLightStatus,
-} from "@customreport/shared";
-import { aggregateTrafficLight } from "@customreport/shared";
+} from "@weeklyreport/shared";
+import { aggregateTrafficLight } from "@weeklyreport/shared";
 
 import { stageStatusToTraffic } from "../../traffic-light";
 import type { Product } from "../../types";

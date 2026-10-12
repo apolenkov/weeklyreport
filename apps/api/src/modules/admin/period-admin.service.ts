@@ -12,7 +12,7 @@ import {
   type PeriodListBucket,
   type PeriodListItem,
   type PeriodState,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { computeDeadline } from "../../lib/business-date.js";
 import type { AppLogger } from "../../lib/logger";

@@ -1,4 +1,4 @@
-import { leadStatusOverviewOutputSchema } from "@customreport/shared";
+import { leadStatusOverviewOutputSchema } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import {

@@ -1,6 +1,6 @@
 "use client";
 
-import type { AdminActionLogEvent } from "@customreport/shared";
+import type { AdminActionLogEvent } from "@weeklyreport/shared";
 import { ChevronDown, Copy } from "lucide-react";
 import { Fragment, useId, useState } from "react";
 

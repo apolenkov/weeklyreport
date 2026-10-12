@@ -1,9 +1,9 @@
+import type { Prisma, PrismaClient } from "@prisma/client";
 import type {
   DraftSavePayload,
   ReportSectionReadModel,
   ResolvePlanInput,
-} from "@customreport/shared";
-import type { Prisma, PrismaClient } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import type { seedTestData } from "../../../test-utils/prisma-test-helper.js";

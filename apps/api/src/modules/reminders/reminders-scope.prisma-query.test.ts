@@ -1,4 +1,4 @@
-import type { UserSession } from "@customreport/shared";
+import type { UserSession } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { editableReminderReportWhere } from "./reminders-editable-report.prisma.js";

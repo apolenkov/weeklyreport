@@ -1,17 +1,17 @@
-import type { PeriodStatus } from "@customreport/shared";
+import type { PeriodStatus } from "@weeklyreport/shared";
 
 import {
-  customreportPeriodStateTransitionsTotal,
-  customreportReportsSubmittedTotal,
+  weeklyreportPeriodStateTransitionsTotal,
+  weeklyreportReportsSubmittedTotal,
 } from "../../../infrastructure/metrics/metrics.registry.js";
 import type { PeriodTelemetry } from "../application/period-telemetry.port.js";
 
 export class PeriodPrometheusTelemetry implements PeriodTelemetry {
   readonly recordPublishedReport = (): void => {
-    customreportReportsSubmittedTotal.inc({ state: "published" });
+    weeklyreportReportsSubmittedTotal.inc({ state: "published" });
   };
 
   readonly recordPeriodPublished = (from: PeriodStatus): void => {
-    customreportPeriodStateTransitionsTotal.inc({ from, to: "published" });
+    weeklyreportPeriodStateTransitionsTotal.inc({ from, to: "published" });
   };
 }

@@ -1,13 +1,13 @@
+import type { Prisma } from "@prisma/client";
 import {
   computePortfolioOverviewFromReadSections,
   publishedSnapshotFailure,
-} from "@customreport/report-persistence";
+} from "@weeklyreport/report-persistence";
 import {
   type PublishedReportSnapshot,
   publishedReportSnapshotSchema,
   type UserSession,
-} from "@customreport/shared";
-import type { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import { computeAllowedGroupIds } from "../../../lib/group-scope.js";
 

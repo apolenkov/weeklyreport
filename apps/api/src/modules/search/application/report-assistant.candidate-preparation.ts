@@ -1,4 +1,4 @@
-import type { ReportAssistantOutcome, SearchPlan } from "@customreport/shared";
+import type { ReportAssistantOutcome, SearchPlan } from "@weeklyreport/shared";
 
 import {
   type CandidateLimitOutcome,

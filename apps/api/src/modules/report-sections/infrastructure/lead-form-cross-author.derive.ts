@@ -1,9 +1,9 @@
-import type { TrafficLightStatus } from "@customreport/shared";
+import type { TrafficLightStatus } from "@weeklyreport/shared";
 import {
   initialsFromName,
   riskSeveritySchema,
   shortNameFromName,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { CrossAuthorStatusRow } from "../domain/lead-form-shared";
 import { indexNonNullStageStatuses } from "./non-null-stage-status-index.derive.js";

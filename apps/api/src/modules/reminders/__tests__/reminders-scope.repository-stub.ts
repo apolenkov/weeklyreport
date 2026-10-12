@@ -1,4 +1,4 @@
-import type { AdminReminderExecution } from "@customreport/shared";
+import type { AdminReminderExecution } from "@weeklyreport/shared";
 import { vi } from "vitest";
 
 import type { RemindersRepository } from "../reminders.types.js";

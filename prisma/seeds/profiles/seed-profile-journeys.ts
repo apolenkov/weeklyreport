@@ -1,13 +1,13 @@
 import {
-  computeReminderFireAt,
-  reminderPolicyAppliesTo,
-} from "@customreport/shared";
-import {
   type PrismaClient,
   type ReminderRuleKind,
   type Report,
   type ReportSectionStatus,
 } from "@prisma/client";
+import {
+  computeReminderFireAt,
+  reminderPolicyAppliesTo,
+} from "@weeklyreport/shared";
 
 import {
   ACTION_LOG_IDS,

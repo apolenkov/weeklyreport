@@ -1,7 +1,7 @@
 import type {
   AdminReminderExecution,
   AdminReminderRule,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../lib/logger";

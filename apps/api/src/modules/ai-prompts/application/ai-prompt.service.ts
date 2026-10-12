@@ -1,16 +1,16 @@
+import { AiPromptBundleLifecycle } from "@prisma/client";
 import type {
   AiPromptCatalogRead,
   AiPromptDraftInput,
   AiPromptFeatureRead,
   AiPromptOperationResult,
   AiPromptRestoreInput,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import {
   aiPromptCatalogReadSchema,
   aiPromptContentsSchema,
   aiPromptFeatureReadSchema,
-} from "@customreport/shared";
-import { AiPromptBundleLifecycle } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import {
   AiProviderConfigurationRepository,

@@ -1,5 +1,5 @@
-import type { AiProviderTestOutcome } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
+import type { AiProviderTestOutcome } from "@weeklyreport/shared";
 import { type Job, UnrecoverableError } from "bullmq";
 import { ClsService } from "nestjs-cls";
 

@@ -1,5 +1,5 @@
-import type { AgentationAnnotationPatch } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
+import type { AgentationAnnotationPatch } from "@weeklyreport/shared";
 
 import {
   type FeedbackAccess,

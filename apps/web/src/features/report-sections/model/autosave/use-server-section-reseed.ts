@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { type Dispatch, type SetStateAction, useEffect } from "react";
 
 import { sectionToDraftPayload } from "../lead-section-draft-payload";

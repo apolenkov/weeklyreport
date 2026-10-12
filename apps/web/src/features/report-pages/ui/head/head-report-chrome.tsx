@@ -1,6 +1,6 @@
 "use client";
 
-import { Skeleton } from "@customreport/ui/components/ui/skeleton";
+import { Skeleton } from "@weeklyreport/ui/components/ui/skeleton";
 import { type ReactNode, useCallback, useContext } from "react";
 
 import { SessionContext } from "../../../../shared/lib/auth/session-provider";

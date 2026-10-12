@@ -1,4 +1,4 @@
-import type { SearchHit } from "@customreport/shared";
+import type { SearchHit } from "@weeklyreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import {

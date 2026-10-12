@@ -1,4 +1,4 @@
-import type { UserSession } from "@customreport/shared";
+import type { UserSession } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { groupScopeFilter, guardGroupScope } from "./group-scope.js";

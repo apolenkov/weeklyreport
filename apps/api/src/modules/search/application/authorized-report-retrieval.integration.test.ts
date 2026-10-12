@@ -1,5 +1,5 @@
-import { toPublishedSnapshotJson } from "@customreport/report-persistence";
-import type { ReportSectionReadModel } from "@customreport/shared";
+import { toPublishedSnapshotJson } from "@weeklyreport/report-persistence";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import {

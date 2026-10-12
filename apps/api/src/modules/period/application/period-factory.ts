@@ -1,6 +1,6 @@
-import { type AppSettings } from "@customreport/shared";
 import { Logger } from "@nestjs/common";
 import type { PrismaClient } from "@prisma/client";
+import { type AppSettings } from "@weeklyreport/shared";
 
 import {
   computeDeadline,

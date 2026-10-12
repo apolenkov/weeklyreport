@@ -4,7 +4,7 @@ import {
   type ReportSectionStatus,
   type ReportStatus,
   type TrafficLightStatus,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 // Prisma-free row shape for myHistory (service must not import @prisma/client).
 export interface MyHistorySectionRow {

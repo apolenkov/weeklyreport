@@ -1,4 +1,4 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
@@ -14,7 +14,7 @@ vi.mock("../../report-sections/index.js", () => ({
   mapPrismaToReportSection: mocks.mapPrismaToReportSection,
   reportSectionFullInclude: {},
 }));
-vi.mock("@customreport/report-persistence", () => ({
+vi.mock("@weeklyreport/report-persistence", () => ({
   parsePublishedSnapshot: mocks.parsePublishedSnapshot,
 }));
 

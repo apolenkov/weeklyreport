@@ -1,6 +1,6 @@
 "use client";
 
-import { shortName, shortNameFromName } from "@customreport/shared";
+import { shortName, shortNameFromName } from "@weeklyreport/shared";
 import type { ReactNode } from "react";
 
 import type { AdminUserView, StageName } from "../../model/admin-types";

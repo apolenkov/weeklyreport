@@ -1,12 +1,12 @@
+import type { Prisma as PrismaTypes } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import {
   type AdminProject,
   type AdminReportPeriod,
   type AdminUser,
   composeName,
   normalizeEmail,
-} from "@customreport/shared";
-import type { Prisma as PrismaTypes } from "@prisma/client";
-import { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../lib/prisma-unique-violation";

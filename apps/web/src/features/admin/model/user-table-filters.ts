@@ -1,4 +1,4 @@
-import { ROLE_LABEL, sessionRoleSchema } from "@customreport/shared";
+import { ROLE_LABEL, sessionRoleSchema } from "@weeklyreport/shared";
 
 import type { AdminGroupView, AdminUserView } from "./admin-types";
 

@@ -1,14 +1,14 @@
 import {
+  type CarryOverExecution as PrismaCarryOverExecutionRow,
+  Prisma,
+} from "@prisma/client";
+import {
   type CarryOverExecution,
   carryOverExecutionSchema,
   type CarryOverRecord,
   carryOverRecordSchema,
   type ReportSectionReadModel,
-} from "@customreport/shared";
-import {
-  type CarryOverExecution as PrismaCarryOverExecutionRow,
-  Prisma,
-} from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import { lockCurrentEditableReport } from "../../lib/report-lifecycle.js";
 import {

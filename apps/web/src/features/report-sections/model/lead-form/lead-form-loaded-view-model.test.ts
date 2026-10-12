@@ -1,7 +1,7 @@
 import type {
   MyHistoryEntry,
   ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import type { CrossAuthorRow } from "../lead-cross-author";

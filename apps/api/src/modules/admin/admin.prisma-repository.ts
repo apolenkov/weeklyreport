@@ -1,3 +1,4 @@
+import { Inject, Injectable } from "@nestjs/common";
 import type {
   AdminProject,
   AdminSnapshot,
@@ -10,8 +11,7 @@ import type {
   ReportingGroup,
   StageAssignment,
   UserSession,
-} from "@customreport/shared";
-import { Inject, Injectable } from "@nestjs/common";
+} from "@weeklyreport/shared";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { APP_LOGGER } from "../../lib/audit-logger.js";

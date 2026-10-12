@@ -1,6 +1,6 @@
 "use client";
 
-import type { RecordCommentView } from "@customreport/shared";
+import type { RecordCommentView } from "@weeklyreport/shared";
 
 import { ConfirmDeleteDialog } from "../../../../shared/ui/dialogs/confirm-delete-dialog";
 

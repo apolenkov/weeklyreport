@@ -5,7 +5,7 @@ import {
   FEEDBACK_TYPES,
   type FeedbackStatus,
   type FeedbackType,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { LoaderCircle, MessageSquareText } from "lucide-react";
 import { useMemo } from "react";
 import { toast } from "sonner";

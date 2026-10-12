@@ -2,7 +2,6 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import type { ReportSectionReadModel } from "@customreport/shared";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
@@ -14,6 +13,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TRPCClientError } from "@trpc/client";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { makeQueryClient } from "../../../shared/lib/query/query-client";

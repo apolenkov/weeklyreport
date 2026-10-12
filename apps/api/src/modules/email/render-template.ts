@@ -1,4 +1,4 @@
-import type { OrganizationBrand } from "@customreport/shared";
+import type { OrganizationBrand } from "@weeklyreport/shared";
 
 interface DeadlineEmailProps {
   leadName: string;

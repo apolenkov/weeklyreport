@@ -2,7 +2,7 @@ import {
   aggregateTrafficLight,
   MS_PER_DAY,
   type TrafficLightCell,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 // ISO YYYY-MM-DD length after toISOString().slice(0, n).
 const ISO_DATE_LENGTH = 10;

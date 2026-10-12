@@ -1,4 +1,4 @@
-import type { AdminReminderRule } from "@customreport/shared";
+import type { AdminReminderRule } from "@weeklyreport/shared";
 
 import type { AdminReminderView } from "./admin-types";
 

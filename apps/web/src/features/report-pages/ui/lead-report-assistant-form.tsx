@@ -1,4 +1,4 @@
-import { Button } from "@customreport/ui/components/ui/button";
+import { Button } from "@weeklyreport/ui/components/ui/button";
 import { ArrowRight, LoaderCircle } from "lucide-react";
 import { type RefObject, type SyntheticEvent, useId } from "react";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@customreport/ui/lib/utils";
+import { cn } from "@weeklyreport/ui/lib/utils";
 import { XIcon } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import * as React from "react";

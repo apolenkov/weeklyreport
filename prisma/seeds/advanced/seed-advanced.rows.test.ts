@@ -1,5 +1,5 @@
-import { itemOutcomeStateSchema } from "@customreport/shared";
 import { type Prisma, type PrismaClient } from "@prisma/client";
+import { itemOutcomeStateSchema } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { type ItemRow, upsertItem } from "./seed-advanced.rows.js";

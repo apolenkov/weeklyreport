@@ -2,18 +2,18 @@ import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
 
 import {
-  itemOutcomeEventSchema,
-  itemOutcomeStateSchema,
-  itemResolutionSchema,
-  MAX_RECORDS_PER_SECTION_SAVE,
-} from "@customreport/shared";
-import {
   ItemType,
   ItemWorkflowStatus,
   Prisma,
   type PrismaClient,
   type ReportSection,
 } from "@prisma/client";
+import {
+  itemOutcomeEventSchema,
+  itemOutcomeStateSchema,
+  itemResolutionSchema,
+  MAX_RECORDS_PER_SECTION_SAVE,
+} from "@weeklyreport/shared";
 
 import { PROJECT_ACTIVITY_IDS } from "../../prisma/seeds/simple/seed-simple.activities.js";
 import {

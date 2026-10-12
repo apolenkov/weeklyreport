@@ -1,4 +1,4 @@
-export { riskCoversStage } from "@customreport/shared";
+export { riskCoversStage } from "@weeklyreport/shared";
 
 // Preserve the selected canonical values while removing duplicates.
 export function canonicalStageNames(ids: readonly string[]): string[] {

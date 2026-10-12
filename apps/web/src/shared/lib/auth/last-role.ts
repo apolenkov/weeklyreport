@@ -1,7 +1,7 @@
 // This localStorage value is a UI-only resume hint, never an auth decision;
 // SSR/parse guards keep corrupted or unavailable storage from breaking render.
 
-import { type Role, sessionRoleSchema } from "@customreport/shared";
+import { type Role, sessionRoleSchema } from "@weeklyreport/shared";
 import { z } from "zod";
 
 export interface LastRoleRecord {

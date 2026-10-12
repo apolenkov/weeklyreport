@@ -1,6 +1,6 @@
 "use client";
 
-import type { AiProviderControlRead } from "@customreport/shared";
+import type { AiProviderControlRead } from "@weeklyreport/shared";
 import { useState } from "react";
 
 import { ConfirmationDialog } from "../../../shared/ui/dialogs/confirmation-dialog";

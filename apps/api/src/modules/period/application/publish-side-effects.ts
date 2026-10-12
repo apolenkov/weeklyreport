@@ -1,4 +1,4 @@
-import type { PeriodStatus } from "@customreport/shared";
+import type { PeriodStatus } from "@weeklyreport/shared";
 
 // S is the telemetry port's label-union width so priorStatus stays in bounds.
 interface PublishSideEffectsTelemetry<S extends PeriodStatus> {

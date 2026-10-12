@@ -1,7 +1,7 @@
-import type { ReopenRequestCursor, UserSession } from "@customreport/shared";
+import type { ReopenRequestCursor, UserSession } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import { customreportReopenRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
+import { weeklyreportReopenRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import { createNullLogger } from "../../lib/logger.js";
 import { unusedAdminRepositoryStubs } from "./__tests__/admin-repository-unused-stubs.js";
 import { AdminPrometheusTelemetry } from "./admin-prometheus-telemetry.adapter.js";
@@ -101,7 +101,7 @@ function createKeysetList(
 }
 
 async function counterValue(state: string): Promise<number> {
-  const snapshot = await customreportReopenRequestsTotal.get();
+  const snapshot = await weeklyreportReopenRequestsTotal.get();
   const match = snapshot.values.find((v) => String(v.labels.state) === state);
   return match?.value ?? 0;
 }

@@ -1,4 +1,4 @@
-import type { ProjectActivity } from "@customreport/shared";
+import type { ProjectActivity } from "@weeklyreport/shared";
 
 export interface ActivityFormData {
   readonly name: string;

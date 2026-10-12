@@ -1,10 +1,10 @@
-import type { DbRole } from "@customreport/shared";
+import type { PrismaClient } from "@prisma/client";
+import type { DbRole } from "@weeklyreport/shared";
 import {
   DEV_LOGIN_EMAIL_BY_ROLE,
   ROLE_HOME_PATH,
   roleSchema,
-} from "@customreport/shared";
-import type { PrismaClient } from "@prisma/client";
+} from "@weeklyreport/shared";
 import type {
   Express,
   NextFunction,

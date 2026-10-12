@@ -1,6 +1,6 @@
-import { publishedSnapshotFailure } from "@customreport/report-persistence";
-import type { ReportSectionReadModel } from "@customreport/shared";
 import { Prisma } from "@prisma/client";
+import { publishedSnapshotFailure } from "@weeklyreport/report-persistence";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 
 import { LeadFormConstraintError } from "../domain/lead-form-shared.js";
 import {

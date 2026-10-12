@@ -1,7 +1,7 @@
 import {
   type ReportSectionReadModel,
   reportSectionReadModelSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import {
   makeProjectReadModel,

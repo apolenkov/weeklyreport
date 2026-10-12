@@ -1,4 +1,4 @@
-import type { ResolvePlanInput } from "@customreport/shared";
+import type { ResolvePlanInput } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import type { OpenWorkRegisterItem } from "./open-work-register-model";

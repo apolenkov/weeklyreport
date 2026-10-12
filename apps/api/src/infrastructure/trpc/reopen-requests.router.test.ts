@@ -1,5 +1,5 @@
-import type { Role } from "@customreport/shared";
 import { TRPCError } from "@trpc/server";
+import type { Role } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../lib/logger.js";
@@ -8,7 +8,7 @@ import { AdminPrismaRepository } from "../../modules/admin/index.js";
 import { ReopenRequestAdminService } from "../../modules/admin/index.js";
 import { createNullAuditLogger } from "../../test-utils/audit-logger.js";
 import { createStubAppRouterDeps } from "../../test-utils/stub-app-router-deps.js";
-import { customreportReopenRequestsTotal } from "../metrics/metrics.registry.js";
+import { weeklyreportReopenRequestsTotal } from "../metrics/metrics.registry.js";
 import { createAppRouter } from "./trpc.router.js";
 
 // Reopen list/respond/count: headProcedure, group-scoped, race-safe decision.
@@ -21,7 +21,7 @@ const USER_ID = "33333333-3333-4333-8333-333333333333";
 const AUTHOR_ID = "44444444-4444-4444-8444-444444444444";
 const prometheusTelemetry: AdminTelemetry = {
   recordReopenRequestDecision: (decision) => {
-    customreportReopenRequestsTotal.inc({ state: decision });
+    weeklyreportReopenRequestsTotal.inc({ state: decision });
   },
 };
 
@@ -139,7 +139,7 @@ function buildCaller(
 }
 
 async function counterValue(state: string): Promise<number> {
-  const snapshot = await customreportReopenRequestsTotal.get();
+  const snapshot = await weeklyreportReopenRequestsTotal.get();
   const match = snapshot.values.find((v) => String(v.labels.state) === state);
   return match?.value ?? 0;
 }

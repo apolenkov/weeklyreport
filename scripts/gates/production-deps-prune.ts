@@ -6,7 +6,7 @@ import { join, relative, resolve } from "node:path";
 // This is an explicit production-image policy: the API never needs these
 // packages at runtime, so remove their virtual-store entries and links.
 const EXPLICITLY_FORBIDDEN_VIRTUAL_STORE_ENTRY = [
-  /^@customreport\+migrator-runtime@/u,
+  /^@weeklyreport\+migrator-runtime@/u,
   /^prisma@/u,
   /^@prisma\+(config|dev|engines|engines-version|fetch-engine|get-platform|query-plan-executor|streams-local|studio-core)@/u,
   /^@typescript\+typescript6@/u,
@@ -23,11 +23,11 @@ const deployManifest = JSON.parse(
 ) as { readonly name?: unknown; readonly private?: unknown };
 if (
   root === resolve(process.cwd()) ||
-  deployManifest.name !== "@customreport/api" ||
+  deployManifest.name !== "@weeklyreport/api" ||
   deployManifest.private !== true
 ) {
   throw new Error(
-    "refusing to prune: target is not an isolated @customreport/api deploy root",
+    "refusing to prune: target is not an isolated @weeklyreport/api deploy root",
   );
 }
 for (const requiredPath of [

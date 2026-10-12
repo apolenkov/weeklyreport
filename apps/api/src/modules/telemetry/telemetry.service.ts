@@ -1,6 +1,6 @@
-import type { TelemetrySummary, UserSession } from "@customreport/shared";
-import { telemetrySummarySchema } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
+import type { TelemetrySummary, UserSession } from "@weeklyreport/shared";
+import { telemetrySummarySchema } from "@weeklyreport/shared";
 
 import { scopeDiscriminator } from "../../lib/group-scope.js";
 import { TelemetryCache } from "./telemetry.cache.js";

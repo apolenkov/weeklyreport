@@ -1,4 +1,4 @@
-import { AUTH_COOKIE_NAME } from "@customreport/shared";
+import { AUTH_COOKIE_NAME } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { createAuthController, createSessionCookie } from "./auth.controller";

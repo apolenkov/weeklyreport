@@ -1,7 +1,7 @@
 import {
   type ReportAssistantOutcome,
   reportAssistantOutcomeSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { GroundingContextBudgetExceededError } from "../domain/context-builder.js";
 import {

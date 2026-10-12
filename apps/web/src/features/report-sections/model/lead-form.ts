@@ -6,8 +6,8 @@ import type {
   MyHistoryEntry,
   ReportSectionReadModel,
   TrafficLightStatus,
-} from "@customreport/shared";
-import { ROLE_LABEL } from "@customreport/shared";
+} from "@weeklyreport/shared";
+import { ROLE_LABEL } from "@weeklyreport/shared";
 
 import { activityDisplayTitle } from "../../../shared/lib/activity/activity-display";
 import { initialsFromName } from "../../../shared/lib/format/user-initials";

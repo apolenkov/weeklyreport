@@ -1,4 +1,4 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 
 import type { SlideProduct } from "./section-slide-contracts";
 import { CROSS_PRODUCT_ID, nonEmpty } from "./section-slide-model-helpers";

@@ -1,8 +1,8 @@
+import type { Prisma } from "@prisma/client";
 import {
   REOPEN_AUTO_CLOSE_NOTES,
   type UserSession,
-} from "@customreport/shared";
-import type { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { groupScopeFilter } from "../../lib/group-scope.js";

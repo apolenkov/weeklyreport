@@ -1,4 +1,4 @@
-import type { CarryOverExecution } from "@customreport/shared";
+import type { CarryOverExecution } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { publishedSnapshotFixture } from "../../test-utils/prisma-test-helper.js";

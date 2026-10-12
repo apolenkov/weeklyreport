@@ -1,9 +1,9 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   type RecordCommentView,
   REVIEW_COMMENT_MAX_LENGTH,
   reviewCommentInputSchema,
-} from "@customreport/shared";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+} from "@weeklyreport/shared";
 import { useState } from "react";
 import { toast } from "sonner";
 

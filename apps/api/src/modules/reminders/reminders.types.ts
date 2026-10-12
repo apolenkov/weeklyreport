@@ -2,7 +2,7 @@ import {
   type AdminReminderExecution,
   type AdminReminderRule,
   type OrganizationBrand,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { EscalationGroupDigest } from "./reminders-escalation-grouping.js";
 import type { ExecutionPageRequest } from "./reminders-execution-pagination.js";

@@ -7,8 +7,8 @@ import type {
   AdminUser,
   ReminderPolicy,
   ReportingGroup,
-} from "@customreport/shared";
-import { STAGE_NAMES } from "@customreport/shared";
+} from "@weeklyreport/shared";
+import { STAGE_NAMES } from "@weeklyreport/shared";
 
 import { mapReminder } from "./admin-reminder-mapper";
 import type {

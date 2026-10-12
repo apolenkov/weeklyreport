@@ -5,7 +5,7 @@ import {
   PDF_EXPORT_QUEUE_NAME,
   type QueueName,
   SEMANTIC_INDEX_QUEUE_NAME,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { TabHeader, TabSearch } from "../../../../shared/ui/tabs/tab-header";
 import { JobsSkeleton } from "../jobs-skeleton";

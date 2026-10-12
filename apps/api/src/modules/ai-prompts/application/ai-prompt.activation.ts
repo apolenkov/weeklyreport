@@ -1,8 +1,8 @@
+import { AiPromptBundleLifecycle } from "@prisma/client";
 import type {
   AiPromptActivationInput,
   AiPromptOperationResult,
-} from "@customreport/shared";
-import { AiPromptBundleLifecycle } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import type {
   AiPromptRepository,

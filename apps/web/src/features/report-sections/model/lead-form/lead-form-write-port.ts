@@ -6,7 +6,7 @@ import type {
   ResolvePlanInput,
   RestorePlanInput,
   SubmitSectionPayload,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 export interface LeadFormFillFromInput {
   readonly targetSectionId: string;

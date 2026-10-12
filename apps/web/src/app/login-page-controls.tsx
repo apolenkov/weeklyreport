@@ -1,7 +1,7 @@
 "use client";
 
-import { sessionRoleSchema } from "@customreport/shared";
-import { Skeleton } from "@customreport/ui/components/ui/skeleton";
+import { sessionRoleSchema } from "@weeklyreport/shared";
+import { Skeleton } from "@weeklyreport/ui/components/ui/skeleton";
 
 import { type LastRoleRecord } from "../shared/lib/auth/last-role";
 import {

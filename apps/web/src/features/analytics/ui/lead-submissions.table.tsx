@@ -1,6 +1,6 @@
 "use client";
 
-import type { LeadVelocityOutput } from "@customreport/shared";
+import type { LeadVelocityOutput } from "@weeklyreport/shared";
 
 import { formatPeriodRangeWithYear } from "../../../shared/lib/format/format-date";
 import {

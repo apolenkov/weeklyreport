@@ -1,7 +1,7 @@
 "use client";
 
-import type { PdfRecoveryJob } from "@customreport/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { PdfRecoveryJob } from "@weeklyreport/shared";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";

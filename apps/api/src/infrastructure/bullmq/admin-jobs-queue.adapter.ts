@@ -3,7 +3,7 @@ import {
   failedJobSchema,
   PDF_EXPORT_QUEUE_NAME,
   type QueueName,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import type { Job, Queue } from "bullmq";
 
 import type {

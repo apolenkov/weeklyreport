@@ -1,4 +1,4 @@
-import { REOPEN_AUTO_CLOSE_NOTES } from "@customreport/shared";
+import { REOPEN_AUTO_CLOSE_NOTES } from "@weeklyreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";

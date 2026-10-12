@@ -1,4 +1,4 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { createNullLogger } from "../../../lib/logger.js";

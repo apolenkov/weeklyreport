@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
-import { AI_PROMPT_HISTORY_LIMIT } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
+import { AI_PROMPT_HISTORY_LIMIT } from "@weeklyreport/shared";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import { createDraft } from "./ai-prompt.repository.commands.js";

@@ -1,4 +1,4 @@
-import type { ResolvePlanInput } from "@customreport/shared";
+import type { ResolvePlanInput } from "@weeklyreport/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LeadFormConstraintError } from "../domain/lead-form-shared.js";

@@ -1,6 +1,6 @@
-import { MS_PER_WEEK, type UserSession } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
 import type { Prisma as PrismaTypes } from "@prisma/client";
+import { MS_PER_WEEK, type UserSession } from "@weeklyreport/shared";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import {

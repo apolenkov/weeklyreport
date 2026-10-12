@@ -1,23 +1,23 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 
-import { Button } from "@customreport/ui/components/ui/button";
+import { render, screen } from "@testing-library/react";
+import { Button } from "@weeklyreport/ui/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogTitle,
-} from "@customreport/ui/components/ui/dialog";
+} from "@weeklyreport/ui/components/ui/dialog";
 import {
   Sheet,
   SheetContent,
   SheetTitle,
-} from "@customreport/ui/components/ui/sheet";
+} from "@weeklyreport/ui/components/ui/sheet";
 import {
   Tabs,
   TabsList,
   TabsTrigger,
-} from "@customreport/ui/components/ui/tabs";
-import { render, screen } from "@testing-library/react";
+} from "@weeklyreport/ui/components/ui/tabs";
 import { describe, expect, it } from "vitest";
 
 const themePath = [

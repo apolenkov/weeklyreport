@@ -1,4 +1,4 @@
-import type { PeriodStatus, WeeklyReportReadModel } from "@customreport/shared";
+import type { PeriodStatus, WeeklyReportReadModel } from "@weeklyreport/shared";
 
 import {
   isHeadLike,

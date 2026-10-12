@@ -1,7 +1,7 @@
 import type {
   AiProviderConfigurationRead,
   AiProviderControlRead,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { type Dispatch, type SetStateAction, useState } from "react";
 
 const WORKING_LIFECYCLES: ReadonlySet<

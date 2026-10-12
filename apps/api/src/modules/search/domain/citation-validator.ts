@@ -1,4 +1,4 @@
-import type { SourceCitation } from "@customreport/shared";
+import type { SourceCitation } from "@weeklyreport/shared";
 
 import type { GroundedAnswer } from "../application/report-assistant.ports.js";
 import type { GroundingBundle } from "./context-builder.js";

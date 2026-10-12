@@ -1,4 +1,4 @@
-import type { PdfRecoveryJob, Role } from "@customreport/shared";
+import type { PdfRecoveryJob, Role } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../../../lib/logger.js";

@@ -1,6 +1,6 @@
 "use client";
 
-import { DEFAULT_ORGANIZATION_IDENTITY } from "@customreport/shared";
+import { DEFAULT_ORGANIZATION_IDENTITY } from "@weeklyreport/shared";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useContext, useEffect, useMemo } from "react";
 

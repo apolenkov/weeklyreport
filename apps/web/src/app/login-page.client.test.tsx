@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { sessionRoleSchema } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
+import { sessionRoleSchema } from "@weeklyreport/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeQueryState } from "./../test-utils/query-state";

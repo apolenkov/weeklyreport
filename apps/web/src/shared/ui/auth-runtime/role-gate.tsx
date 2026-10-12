@@ -1,4 +1,4 @@
-import { type Role, ROLE_HOME_PATH } from "@customreport/shared";
+import { type Role, ROLE_HOME_PATH } from "@weeklyreport/shared";
 import type { ReactNode } from "react";
 
 import { getServerSession } from "../../server/auth/get-server-session";

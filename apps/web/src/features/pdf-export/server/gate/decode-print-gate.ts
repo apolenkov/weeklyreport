@@ -1,6 +1,6 @@
 import "server-only";
 
-import { type UserSession, userSessionSchema } from "@customreport/shared";
+import { type UserSession, userSessionSchema } from "@weeklyreport/shared";
 
 import { decodeTrpcBatchPayload } from "../../../../shared/server/transport/api-url";
 

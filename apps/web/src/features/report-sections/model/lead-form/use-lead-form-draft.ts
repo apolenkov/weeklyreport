@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { useMemo } from "react";
 
 import type { CrossAuthorRow } from "../lead-cross-author";

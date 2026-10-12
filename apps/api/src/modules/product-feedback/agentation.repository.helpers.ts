@@ -1,13 +1,13 @@
 import { randomUUID } from "node:crypto";
 
+import { Prisma, type Prisma as PrismaTypes } from "@prisma/client";
 import {
   type AgentationAnnotationCreate,
   type AgentationAnnotationPatch,
   type AgentationAnnotationResponse,
   agentationAnnotationResponseSchema,
   type AgentationStatus,
-} from "@customreport/shared";
-import { Prisma, type Prisma as PrismaTypes } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import type { AgentationRole } from "./agentation.repository.js";
 import { annotationScope } from "./agentation-scope.js";

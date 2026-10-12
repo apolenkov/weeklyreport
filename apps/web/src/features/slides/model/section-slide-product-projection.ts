@@ -1,5 +1,5 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
-import { aggregateTrafficLight } from "@customreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
+import { aggregateTrafficLight } from "@weeklyreport/shared";
 
 import { deriveEffectiveStageStatus } from "../../../shared/lib/status/stage-status";
 import {

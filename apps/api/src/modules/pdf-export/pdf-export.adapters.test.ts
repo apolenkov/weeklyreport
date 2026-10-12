@@ -2,7 +2,7 @@ import { propagation } from "@opentelemetry/api";
 import type { ClsService } from "nestjs-cls";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { customreportPdfExportRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
+import { weeklyreportPdfExportRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import { PdfExportBullmqEnqueuer } from "./pdf-export-bullmq-enqueuer.adapter.js";
 import { PdfExportInfrastructureTelemetry } from "./pdf-export-telemetry.adapter.js";
 
@@ -101,7 +101,7 @@ describe("PDF export infrastructure adapters", () => {
 
   it("records a request for the caller role", () => {
     const inc = vi
-      .spyOn(customreportPdfExportRequestsTotal, "inc")
+      .spyOn(weeklyreportPdfExportRequestsTotal, "inc")
       .mockImplementation(() => undefined);
 
     const { recordRequest } = new PdfExportInfrastructureTelemetry(null);

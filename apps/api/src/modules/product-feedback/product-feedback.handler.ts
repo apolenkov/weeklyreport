@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "node:crypto";
 import { isIP } from "node:net";
 
-import { AUTH_COOKIE_NAME, type UserSession } from "@customreport/shared";
+import { AUTH_COOKIE_NAME, type UserSession } from "@weeklyreport/shared";
 import type { Request, RequestHandler, Response } from "express";
 import { z } from "zod";
 

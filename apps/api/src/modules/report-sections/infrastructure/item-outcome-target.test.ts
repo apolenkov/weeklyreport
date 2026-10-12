@@ -2,7 +2,7 @@ import type {
   PromotePlanInput,
   ResolvePlanInput,
   RestorePlanInput,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { SectionVersionConflictError } from "../application/report-sections.service";

@@ -1,9 +1,9 @@
-import { PublishedSnapshotIntegrityError } from "@customreport/report-persistence";
+import { PublishedSnapshotIntegrityError } from "@weeklyreport/report-persistence";
 import {
   type PublishedReportSnapshot,
   publishedReportSnapshotSchema,
   type ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";

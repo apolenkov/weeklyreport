@@ -1,7 +1,7 @@
 import type {
   PublishedReportSnapshot,
   UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { PrismaService } from "../infrastructure/prisma/prisma.service.js";
 import { groupScopeFilter } from "../lib/group-scope.js";

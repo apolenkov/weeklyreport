@@ -2,7 +2,7 @@ import {
   appSettingsUpdateSchema,
   omitUndefinedProperties,
   organizationUpdateSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { SnapshotAdminService } from "../../../../modules/admin/index.js";
 import type { OrganizationService } from "../../../../modules/organization/index.js";

@@ -1,13 +1,13 @@
 import type { AddressInfo } from "node:net";
 
+import type { INestApplication } from "@nestjs/common";
+import { TRPCError } from "@trpc/server";
+import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import {
   AUTH_COOKIE_NAME,
   DEFAULT_ORGANIZATION_IDENTITY,
   type UserSession,
-} from "@customreport/shared";
-import type { INestApplication } from "@nestjs/common";
-import { TRPCError } from "@trpc/server";
-import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
+} from "@weeklyreport/shared";
 import cookieParser from "cookie-parser";
 import express from "express";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";

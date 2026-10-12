@@ -1,8 +1,8 @@
+import type { Prisma } from "@prisma/client";
 import {
   type StageAssignment,
   stageAssignmentSchema,
-} from "@customreport/shared";
-import type { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { isForeignKeyViolation } from "../../lib/prisma-foreign-key-violation.js";

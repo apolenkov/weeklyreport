@@ -8,7 +8,7 @@ Define the server-owned search-plan validation, period-source selection, and aut
 
 ### Requirement: A strict SearchPlan expresses user intent without internal controls
 
-`@customreport/shared` MUST own the compact strict `SearchPlan` wire contract, including its field names, enum literals, normalization defaults, no-filter values, bounds, and cross-field rules. It MUST own the Zod schemas and inferred types for report periods, authors, subjects, stages, record kinds, item/risk/decision/status filters, retrieval mode, output mode, grouping, requested limit, and exhaustive intent. Optional user filters MAY be omitted and normalized only through the documented defaults; normalization MUST NOT invent a product or authorization choice. Similarity thresholds, vector dimensions, candidate limits, database IDs, clarification tokens, and ACL decisions MUST NOT be tool parameters.
+`@weeklyreport/shared` MUST own the compact strict `SearchPlan` wire contract, including its field names, enum literals, normalization defaults, no-filter values, bounds, and cross-field rules. It MUST own the Zod schemas and inferred types for report periods, authors, subjects, stages, record kinds, item/risk/decision/status filters, retrieval mode, output mode, grouping, requested limit, and exhaustive intent. Optional user filters MAY be omitted and normalized only through the documented defaults; normalization MUST NOT invent a product or authorization choice. Similarity thresholds, vector dimensions, candidate limits, database IDs, clarification tokens, and ACL decisions MUST NOT be tool parameters.
 
 #### Scenario: Planner omits optional fields
 

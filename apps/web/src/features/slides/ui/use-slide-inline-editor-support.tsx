@@ -1,5 +1,5 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { useMemo } from "react";
 import { toast } from "sonner";
 

@@ -2,7 +2,7 @@ import type {
   DraftSaveInput,
   DraftSaveValidationError,
   SubmitSectionInput,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 // Payload must retain every published item/decision stableId (rewrite = omit).
 // Risks excluded — re-raised, not carried. See openspec durable-record-identity.

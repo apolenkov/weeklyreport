@@ -1,5 +1,5 @@
-import type { ReminderPolicy } from "@customreport/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { ReminderPolicy } from "@weeklyreport/shared";
 import { toast } from "sonner";
 
 import { toastMutationError } from "../../../shared/lib/errors/mutation-error-message";

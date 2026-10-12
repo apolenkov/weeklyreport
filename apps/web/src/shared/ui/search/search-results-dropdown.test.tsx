@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import type { SearchHit } from "@customreport/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { SearchHit } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { SearchResultsDropdown } from "./search-results-dropdown";

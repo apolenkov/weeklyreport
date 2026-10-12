@@ -2,7 +2,7 @@ import {
   type DbRole,
   itemWorkflowStatusSchema,
   riskSeveritySchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { CrossAuthorSectionRow } from "../domain/lead-form-shared";
 import {

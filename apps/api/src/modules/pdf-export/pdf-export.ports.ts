@@ -3,7 +3,7 @@ import type {
   PdfExportJob,
   PublishedReportSnapshot,
   UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { JobTraceContext } from "../../lib/job-trace-context.js";
 

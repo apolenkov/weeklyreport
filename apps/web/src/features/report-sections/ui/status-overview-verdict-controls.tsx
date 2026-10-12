@@ -1,12 +1,12 @@
 "use client";
 
-import { SAFE_TEXT_MAX_LENGTH } from "@customreport/shared";
+import { SAFE_TEXT_MAX_LENGTH } from "@weeklyreport/shared";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@customreport/ui/components/ui/dropdown-menu";
+} from "@weeklyreport/ui/components/ui/dropdown-menu";
 import { Ellipsis } from "lucide-react";
 import { type SubmitEvent, useEffect, useRef, useState } from "react";
 

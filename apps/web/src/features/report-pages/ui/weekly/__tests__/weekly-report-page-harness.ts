@@ -1,4 +1,4 @@
-import type { WeeklyReportReadModel } from "@customreport/shared";
+import type { WeeklyReportReadModel } from "@weeklyreport/shared";
 
 import {
   makeWeeklyReportFixture,

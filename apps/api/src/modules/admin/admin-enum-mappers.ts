@@ -1,8 +1,8 @@
-import type { ReminderAudience, WorkingDays } from "@customreport/shared";
 import type {
   ReminderAudience as PrismaReminderAudience,
   WorkingDays as PrismaWorkingDays,
 } from "@prisma/client";
+import type { ReminderAudience, WorkingDays } from "@weeklyreport/shared";
 
 // Prisma screaming-snake ↔ wire lowercase-hyphen for ReminderAudience.
 export const audienceFromPrisma: Record<

@@ -1,5 +1,5 @@
-import type { ReportStatus } from "@customreport/shared";
 import type { $Enums } from "@prisma/client";
+import type { ReportStatus } from "@weeklyreport/shared";
 import { describe, expectTypeOf, it } from "vitest";
 
 // Shared status remains identical to Prisma's persisted Report enum.

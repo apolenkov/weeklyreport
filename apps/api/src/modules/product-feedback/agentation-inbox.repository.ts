@@ -1,5 +1,5 @@
-import { normalizeFeedbackPath } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
+import { normalizeFeedbackPath } from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { projectAgentation } from "./agentation-inbox-projection.js";

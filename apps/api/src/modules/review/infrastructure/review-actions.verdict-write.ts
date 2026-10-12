@@ -1,5 +1,5 @@
-import type { ReportSectionStatus } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
+import type { ReportSectionStatus } from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import { applyRevokeTransition } from "../../report-sections/index.js";

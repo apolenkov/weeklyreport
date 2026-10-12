@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import type { OrganizationPublic } from "@customreport/shared";
+import type { OrganizationPublic } from "@weeklyreport/shared";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 

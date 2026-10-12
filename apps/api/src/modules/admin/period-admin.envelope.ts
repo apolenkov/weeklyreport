@@ -8,7 +8,7 @@ import {
   type PeriodListItem,
   periodListItemSchema,
   type PeriodState,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { parseDeadlineTime } from "../../lib/business-date.js";
 import { AdminAccessError, type PeriodRowFromRepo } from "./admin-shared";

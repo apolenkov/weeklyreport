@@ -1,6 +1,6 @@
 "use client";
 
-import type { AppSettings } from "@customreport/shared";
+import type { AppSettings } from "@weeklyreport/shared";
 import { useState } from "react";
 
 import { useServerSeededDraft } from "../../../../shared/hooks/drafts/use-server-seeded-draft";

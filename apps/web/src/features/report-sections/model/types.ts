@@ -1,4 +1,4 @@
-import type { PeriodState } from "@customreport/shared";
+import type { PeriodState } from "@weeklyreport/shared";
 
 import type { StageStatus } from "./traffic-light";
 

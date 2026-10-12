@@ -3,7 +3,7 @@
 import {
   type AppSettings,
   appSettingsUpdateSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { useState } from "react";
 
 import { useServerSeededDraft } from "../../../shared/hooks/drafts/use-server-seeded-draft";

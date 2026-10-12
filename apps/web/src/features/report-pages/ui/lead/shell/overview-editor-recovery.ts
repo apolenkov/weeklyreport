@@ -1,7 +1,7 @@
 import type {
   LeadStatusOverviewOutput,
   ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import {
   type KanbanItem,

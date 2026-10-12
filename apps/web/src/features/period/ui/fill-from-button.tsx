@@ -1,6 +1,6 @@
 "use client";
 
-import { TooltipProvider } from "@customreport/ui/components/ui/tooltip";
+import { TooltipProvider } from "@weeklyreport/ui/components/ui/tooltip";
 import { ChevronDown } from "lucide-react";
 import { type RefObject, useId, useRef } from "react";
 

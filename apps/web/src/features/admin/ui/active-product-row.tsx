@@ -1,6 +1,6 @@
 "use client";
 
-import { STAGE_NAMES } from "@customreport/shared";
+import { STAGE_NAMES } from "@weeklyreport/shared";
 
 import { RotatingChevron } from "../../../shared/ui/report-shell/rotating-chevron";
 import type { AdminProductView, AdminUserView } from "../model/admin-types";

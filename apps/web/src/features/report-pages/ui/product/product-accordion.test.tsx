@@ -1,4 +1,3 @@
-import { weeklyReportReadModelSchema } from "@customreport/shared";
 import {
   fireEvent,
   render,
@@ -6,6 +5,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import { weeklyReportReadModelSchema } from "@weeklyreport/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../../../test-utils/expect-defined.js";

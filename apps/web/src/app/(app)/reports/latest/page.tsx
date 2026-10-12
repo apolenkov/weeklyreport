@@ -1,7 +1,7 @@
 "use client";
 
-import { Skeleton } from "@customreport/ui/components/ui/skeleton";
 import { useQuery } from "@tanstack/react-query";
+import { Skeleton } from "@weeklyreport/ui/components/ui/skeleton";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type ReactNode, Suspense, useEffect } from "react";
 

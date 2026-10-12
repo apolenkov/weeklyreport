@@ -1,7 +1,7 @@
 "use client";
 
-import type { Role } from "@customreport/shared";
-import { Separator } from "@customreport/ui/components/ui/separator";
+import type { Role } from "@weeklyreport/shared";
+import { Separator } from "@weeklyreport/ui/components/ui/separator";
 import type { ComponentProps, ReactNode, RefObject } from "react";
 
 import type { FullscreenHandle } from "../../../../../shared/hooks/browser/use-fullscreen";

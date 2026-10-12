@@ -1,4 +1,4 @@
-import { Skeleton } from "@customreport/ui/components/ui/skeleton";
+import { Skeleton } from "@weeklyreport/ui/components/ui/skeleton";
 
 interface AdminTabSkeletonProps {
   readonly variant: "table" | "form";

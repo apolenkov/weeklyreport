@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import {
   buildPortfolioProductsFromSnapshotSections,
   computeReportProgress,
@@ -7,8 +8,7 @@ import {
   type UserSession,
   type WeeklyReportReadModel,
   weeklyReportReadModelSchema,
-} from "@customreport/shared";
-import type { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import { guardGroupScope } from "../../lib/group-scope.js";
 import {

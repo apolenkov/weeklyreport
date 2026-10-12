@@ -3,7 +3,7 @@ import {
   weeklyReportGetResponseSchema,
   type WeeklyReportReadModel,
   weeklyReportReadModelSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { createNullLogger } from "../../lib/logger.js";

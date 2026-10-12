@@ -4,8 +4,8 @@
 // link is admin-only; non-admin sessions never see it when reminders are off.
 import "@testing-library/jest-dom/vitest";
 
-import type { ReminderDispatchResult, Role } from "@customreport/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
+import type { ReminderDispatchResult, Role } from "@weeklyreport/shared";
 import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

@@ -1,12 +1,12 @@
 import { createBullBoard } from "@bull-board/api";
 import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 import { ExpressAdapter } from "@bull-board/express";
+import type { INestApplication } from "@nestjs/common";
 import {
   AUTH_COOKIE_NAME,
   PDF_EXPORT_QUEUE_NAME,
   type UserSession,
-} from "@customreport/shared";
-import type { INestApplication } from "@nestjs/common";
+} from "@weeklyreport/shared";
 import type {
   Express,
   NextFunction,

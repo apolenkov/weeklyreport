@@ -1,5 +1,5 @@
-import type { Role } from "@customreport/shared";
 import type { TRPC_ERROR_CODE_KEY } from "@trpc/server";
+import type { Role } from "@weeklyreport/shared";
 
 import {
   ANONYMOUS_USER_ID,

@@ -1,15 +1,15 @@
+import { Inject, Injectable } from "@nestjs/common";
 import {
   mapPrismaToReportSection,
   reportSectionFullInclude,
-} from "@customreport/report-persistence";
+} from "@weeklyreport/report-persistence";
 import type {
   PromotePlanInput,
   PublishedLineage,
   ReportSectionReadModel,
   ResolvePlanInput,
   RestorePlanInput,
-} from "@customreport/shared";
-import { Inject, Injectable } from "@nestjs/common";
+} from "@weeklyreport/shared";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import type {
@@ -162,7 +162,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     reportId: string,
     authorId: string,
     viewerId: string,
-    role: import("@customreport/shared").Role,
+    role: import("@weeklyreport/shared").Role,
   ): ReturnType<LeadFormRepository["getStatusOverviewPeriods"]> {
     return getStatusOverviewPeriodsRead(this.prisma, reportId, {
       authorId,
@@ -238,7 +238,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
   getCrossAuthors(
     reportId: string,
     userId: string,
-    role?: import("@customreport/shared").Role,
+    role?: import("@weeklyreport/shared").Role,
   ): ReturnType<LeadFormRepository["getCrossAuthors"]> {
     return getCrossAuthorsRead(this.prisma, reportId, userId, role);
   }

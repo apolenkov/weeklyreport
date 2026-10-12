@@ -1,6 +1,6 @@
 "use client";
 
-import { MAX_PRODUCTS_PER_LEAD, shortName } from "@customreport/shared";
+import { MAX_PRODUCTS_PER_LEAD, shortName } from "@weeklyreport/shared";
 import { useRef } from "react";
 
 import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";

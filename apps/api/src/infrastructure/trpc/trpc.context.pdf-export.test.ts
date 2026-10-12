@@ -1,7 +1,7 @@
-import { AUTH_COOKIE_NAME, type DbRole } from "@customreport/shared";
 import type { INestApplication } from "@nestjs/common";
 import { TRPCError } from "@trpc/server";
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
+import { AUTH_COOKIE_NAME, type DbRole } from "@weeklyreport/shared";
 import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

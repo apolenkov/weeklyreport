@@ -1,4 +1,4 @@
-import type { SearchHit } from "@customreport/shared";
+import type { SearchHit } from "@weeklyreport/shared";
 import { useEffect, useState } from "react";
 
 import { ADMIN_ROUTE } from "../navigation/nav-links";

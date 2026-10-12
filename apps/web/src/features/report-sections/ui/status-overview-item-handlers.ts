@@ -1,4 +1,4 @@
-import type { ItemWorkflowStatus } from "@customreport/shared";
+import type { ItemWorkflowStatus } from "@weeklyreport/shared";
 
 import type {
   StatusOverviewCreateTarget,

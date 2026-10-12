@@ -1,6 +1,6 @@
 "use client";
 
-import type { WeeklyReportReadModel } from "@customreport/shared";
+import type { WeeklyReportReadModel } from "@weeklyreport/shared";
 import { useState } from "react";
 
 import { ConfirmationDialog } from "../../../shared/ui/dialogs/confirmation-dialog";

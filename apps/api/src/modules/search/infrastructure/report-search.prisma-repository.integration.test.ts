@@ -1,9 +1,9 @@
-import { toPublishedSnapshotJson } from "@customreport/report-persistence";
+import { Prisma } from "@prisma/client";
+import { toPublishedSnapshotJson } from "@weeklyreport/report-persistence";
 import {
   reportSectionReadModelSchema,
   type SearchPlan,
-} from "@customreport/shared";
-import { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import {

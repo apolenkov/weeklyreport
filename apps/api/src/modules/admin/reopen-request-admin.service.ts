@@ -2,7 +2,7 @@ import type {
   ReopenRequestCursor,
   ReopenRequestListInput,
   UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { AppLogger } from "../../lib/logger";
 import {

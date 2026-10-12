@@ -1,5 +1,5 @@
-import type { TrafficLightStatus } from "@customreport/shared";
-import { type ReportSectionReadModel, STAGE_NAMES } from "@customreport/shared";
+import type { TrafficLightStatus } from "@weeklyreport/shared";
+import { type ReportSectionReadModel, STAGE_NAMES } from "@weeklyreport/shared";
 
 export type SlideTrafficStatus = TrafficLightStatus | null;
 

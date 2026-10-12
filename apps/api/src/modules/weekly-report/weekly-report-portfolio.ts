@@ -2,7 +2,7 @@ import {
   aggregateTrafficLight,
   type PortfolioProductOverview,
   type TrafficLightStatus,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { groupScopeFilter } from "../../lib/group-scope.js";
 import type { WeeklyReportScopeSession } from "./weekly-report.service.js";

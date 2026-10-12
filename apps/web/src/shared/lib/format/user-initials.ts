@@ -1,7 +1,7 @@
 import {
   initials as sharedInitials,
   initialsFromName as sharedInitialsFromName,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 // Avatar initials via the canonical shared helper (surname-first ФИО). The web
 // surfaces render "??" for an empty name, so that placeholder decision lives

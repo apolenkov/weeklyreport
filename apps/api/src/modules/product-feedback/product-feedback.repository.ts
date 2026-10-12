@@ -9,7 +9,7 @@ import type {
   FeedbackThreadItem,
   FeedbackType,
   UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 export const WEEKLY_REPORT_FEEDBACK_PRODUCT = "weekly-report";
 

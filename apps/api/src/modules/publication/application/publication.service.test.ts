@@ -1,12 +1,12 @@
 import type {
   AssembledReport,
   ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  customreportPeriodStateTransitionsTotal,
-  customreportReportsSubmittedTotal,
+  weeklyreportPeriodStateTransitionsTotal,
+  weeklyreportReportsSubmittedTotal,
 } from "../../../infrastructure/metrics/metrics.registry.js";
 import { createNullLogger } from "../../../lib/logger";
 import {
@@ -477,23 +477,23 @@ describe("PublicationService", () => {
         new PublicationPrometheusTelemetry(),
       );
       const submittedBefore = await getCounterValue(
-        customreportReportsSubmittedTotal,
+        weeklyreportReportsSubmittedTotal,
         { state: "published" },
       );
       const transitionsBefore = await getCounterValue(
-        customreportPeriodStateTransitionsTotal,
+        weeklyreportPeriodStateTransitionsTotal,
         { from: "open", to: "published" },
       );
 
       await service.publishAuto(reportId, publishAt);
 
       expect(
-        await getCounterValue(customreportReportsSubmittedTotal, {
+        await getCounterValue(weeklyreportReportsSubmittedTotal, {
           state: "published",
         }),
       ).toBe(submittedBefore + 1);
       expect(
-        await getCounterValue(customreportPeriodStateTransitionsTotal, {
+        await getCounterValue(weeklyreportPeriodStateTransitionsTotal, {
           from: "open",
           to: "published",
         }),

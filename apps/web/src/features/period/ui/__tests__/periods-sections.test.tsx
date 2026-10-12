@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import type { PeriodListItem } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
+import type { PeriodListItem } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { PeriodsActiveSection } from "../periods-active-section";

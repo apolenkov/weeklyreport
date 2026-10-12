@@ -1,8 +1,8 @@
 // Stage selection is required for a product parent (empty = validation error);
 // options come from the lead's StageAssignment rows via stagesForProduct.
 
-import { SAFE_TEXT_MAX_LENGTH } from "@customreport/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
+import { SAFE_TEXT_MAX_LENGTH } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Product, RiskEntry } from "../../report-sections";

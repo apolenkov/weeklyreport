@@ -2,7 +2,7 @@
 import {
   type WeeklyReportReadModel,
   weeklyReportReadModelSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import {

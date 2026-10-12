@@ -3,7 +3,7 @@
 import {
   MAX_FEEDBACK_DISMISS_REASON_LENGTH,
   MAX_FEEDBACK_MESSAGE_LENGTH,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { useEffect, useRef, useState } from "react";
 
 import { ConfirmationDialog } from "../../../shared/ui/dialogs/confirmation-dialog";

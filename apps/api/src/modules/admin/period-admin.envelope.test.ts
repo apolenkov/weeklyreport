@@ -1,4 +1,4 @@
-import { MS_PER_HOUR, type PeriodState } from "@customreport/shared";
+import { MS_PER_HOUR, type PeriodState } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";

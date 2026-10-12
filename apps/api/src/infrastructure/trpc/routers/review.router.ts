@@ -1,11 +1,11 @@
+import { TRPCError } from "@trpc/server";
 import {
   reviewAcknowledgeInputSchema,
   reviewCommentInputSchema,
   reviewDeleteCommentInputSchema,
   reviewListAcknowledgementsInputSchema,
   reviewVerdictInputSchema,
-} from "@customreport/shared";
-import { TRPCError } from "@trpc/server";
+} from "@weeklyreport/shared";
 
 import type { PublicationService } from "../../../modules/publication/index.js";
 import type { ReviewService } from "../../../modules/review/index.js";

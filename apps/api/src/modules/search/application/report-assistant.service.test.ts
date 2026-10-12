@@ -1,8 +1,8 @@
-import type { ReportSectionReadModel, SearchPlan } from "@customreport/shared";
+import type { ReportSectionReadModel, SearchPlan } from "@weeklyreport/shared";
 import {
   reportSectionReadModelSchema,
   searchPlanSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import {
   afterEach,
   beforeEach,

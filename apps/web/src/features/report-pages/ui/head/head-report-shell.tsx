@@ -1,7 +1,7 @@
 "use client";
 
-import type { WeeklyReportGetResponse } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
+import type { WeeklyReportGetResponse } from "@weeklyreport/shared";
 import { type RefObject, useMemo, useRef } from "react";
 
 import { useFullscreen } from "../../../../shared/hooks/browser/use-fullscreen";

@@ -2,7 +2,7 @@ import type {
   AiPromptBundleRead,
   AiPromptContents,
   AiPromptFeatureRead,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 type PromptEditorProps = Readonly<{
   feature: AiPromptFeatureRead;

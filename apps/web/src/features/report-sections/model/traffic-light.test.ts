@@ -1,4 +1,4 @@
-import { trafficLightStatusSchema } from "@customreport/shared";
+import { trafficLightStatusSchema } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { stageStatusToTraffic, trafficToStageStatus } from "./traffic-light";

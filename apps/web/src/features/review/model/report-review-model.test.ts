@@ -1,4 +1,4 @@
-import type { PeriodStatus, Role } from "@customreport/shared";
+import type { PeriodStatus, Role } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { makeWeeklyReportFixture } from "../../../test-utils/report-section-fixtures";

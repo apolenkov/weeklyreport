@@ -13,7 +13,7 @@ import type {
   RiskSeverity,
   Role,
   TrafficLightStatus,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 export interface StatusOverviewPeriodRead {
   readonly current: {

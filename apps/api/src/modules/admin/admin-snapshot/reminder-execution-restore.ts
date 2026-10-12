@@ -1,10 +1,10 @@
 import { isDeepStrictEqual } from "node:util";
 
+import { Prisma } from "@prisma/client";
 import {
   type AdminSnapshot,
   reminderQueuePayloadSchema,
-} from "@customreport/shared";
-import { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import { AdminSnapshotConflictError } from "../admin-errors.js";
 

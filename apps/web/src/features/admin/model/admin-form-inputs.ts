@@ -1,9 +1,9 @@
-import type { DbRole } from "@customreport/shared";
+import type { DbRole } from "@weeklyreport/shared";
 import {
   composeName,
   type ReminderAudience,
   type ReminderPolicyKind,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 // crypto.randomUUID required; throw rather than invent a non-UUID the API rejects.
 function newId(): string {

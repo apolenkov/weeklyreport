@@ -2,14 +2,14 @@ import type {
   AiPromptBundleRead,
   AiPromptContents,
   AiPromptFeatureRead,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import {
   AI_PROMPT_EDITABLE_TAIL_SEPARATOR,
   AI_PROMPT_SLOT_KEYS,
   aiPromptBundleReadSchema,
   aiPromptContentsSchema,
   aiPromptSlotSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { StoredAiProviderRevision } from "../../ai-provider/index.js";
 import type {

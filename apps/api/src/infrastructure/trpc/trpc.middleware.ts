@@ -1,6 +1,6 @@
-import { type Role, type UserSession } from "@customreport/shared";
-import { assertRole } from "@customreport/shared/trpc";
 import { initTRPC, TRPCError } from "@trpc/server";
+import { type Role, type UserSession } from "@weeklyreport/shared";
+import { assertRole } from "@weeklyreport/shared/trpc";
 import superjson from "superjson";
 
 import {

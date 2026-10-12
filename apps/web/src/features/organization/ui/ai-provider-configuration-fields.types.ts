@@ -2,7 +2,7 @@ import type {
   AiProviderConfigurationRead,
   AiProviderProfile,
   AiProviderReasoningMode,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 export const CUSTOM_PROVIDER_PROFILE = "custom-openai-compatible" as const;
 

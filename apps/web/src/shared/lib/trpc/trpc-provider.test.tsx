@@ -18,7 +18,7 @@ vi.mock("../telemetry/client-logger", () => ({
   installClientLogger: providerMocks.installClientLogger,
 }));
 
-vi.mock("@customreport/ui/components/ui/sonner", () => ({
+vi.mock("@weeklyreport/ui/components/ui/sonner", () => ({
   Toaster: (props: Record<string, unknown>) => {
     providerMocks.toasterProps(props);
     return <div data-testid="toaster" />;

@@ -1,5 +1,5 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
 import { act, renderHook } from "@testing-library/react";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { makeReportSectionFixture } from "../../../../../test-utils/report-section-fixtures";

@@ -3,8 +3,8 @@ import type {
   PeriodStatus,
   ReportSectionReadModel,
   SubmitSectionPayload,
-} from "@customreport/shared";
-import { trafficLightStatusSchema } from "@customreport/shared";
+} from "@weeklyreport/shared";
+import { trafficLightStatusSchema } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../../lib/logger.js";

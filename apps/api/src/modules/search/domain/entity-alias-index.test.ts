@@ -1,4 +1,4 @@
-import { normalizeEntityReference as normalizeSharedReference } from "@customreport/shared";
+import { normalizeEntityReference as normalizeSharedReference } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {

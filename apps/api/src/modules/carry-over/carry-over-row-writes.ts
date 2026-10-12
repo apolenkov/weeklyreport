@@ -1,8 +1,8 @@
+import type { Prisma } from "@prisma/client";
 import type {
   CarryOverRecord,
   ReportSectionReadModel,
-} from "@customreport/shared";
-import type { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import { ReportSectionNotFoundError } from "../report-sections/index.js";
 

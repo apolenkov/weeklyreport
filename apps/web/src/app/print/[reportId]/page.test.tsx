@@ -2,8 +2,8 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import type { Role } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
+import type { Role } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrintRouteContext } from "../../../features/pdf-export/server";

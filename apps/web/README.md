@@ -1,4 +1,4 @@
-# @customreport/web
+# @weeklyreport/web
 
 Next.js 16 frontend with App Router, React 19, shadcn/ui, and Tailwind CSS v4.
 
@@ -56,5 +56,5 @@ source of truth.
 ## Testing
 
 ```bash
-pnpm --filter @customreport/web test
+pnpm --filter @weeklyreport/web test
 ```

@@ -1,7 +1,7 @@
 import type {
   AiProviderProfile,
   AiProviderReasoningMode,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 export type OpenAiCompatibleReasoningConfig = Readonly<{
   profile: AiProviderProfile;

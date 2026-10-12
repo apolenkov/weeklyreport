@@ -4,7 +4,7 @@ import {
   type AiProviderConfigurationRead,
   type AiProviderDraft,
   aiProviderDraftSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { resolveProviderProfile } from "../domain/provider-profile.js";
 import {

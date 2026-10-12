@@ -1,6 +1,6 @@
 "use client";
 
-import { SAFE_TEXT_MAX_LENGTH } from "@customreport/shared";
+import { SAFE_TEXT_MAX_LENGTH } from "@weeklyreport/shared";
 import type { RefObject } from "react";
 
 import type { ChipChoice } from "../../../shared/ui/forms/choice-chip-row";

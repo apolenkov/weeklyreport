@@ -1,7 +1,7 @@
 import type {
   AiProviderProfile,
   AiProviderReasoningMode,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import type { RefObject } from "react";
 
 import {

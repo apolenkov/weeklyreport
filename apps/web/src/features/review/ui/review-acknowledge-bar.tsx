@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReviewAcknowledgementView } from "@customreport/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ReviewAcknowledgementView } from "@weeklyreport/shared";
 import { toast } from "sonner";
 
 import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";

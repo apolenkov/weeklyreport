@@ -1,7 +1,7 @@
 import type {
   CompiledHistoryEntry,
   WeeklyReportGetResponse,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { deriveViewerPeriods } from "./derive-viewer-periods";

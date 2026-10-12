@@ -1,9 +1,9 @@
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import type {
   AiProviderConfigurationRead,
   AiProviderControlRead,
   AiProviderDraft,
-} from "@customreport/shared";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+} from "@weeklyreport/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({

@@ -1,7 +1,7 @@
 import type {
   AdminReminderExecution,
   PaginatedResult,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createNullLogger } from "../../lib/logger";

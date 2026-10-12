@@ -1,5 +1,5 @@
-import { groupProductSchema } from "@customreport/shared";
 import type { PrismaClient } from "@prisma/client";
+import { groupProductSchema } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { seedProducts as seedSimpleProducts } from "../simple/seed-simple.products.js";

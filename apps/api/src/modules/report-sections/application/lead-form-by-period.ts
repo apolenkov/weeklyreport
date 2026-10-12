@@ -4,7 +4,7 @@ import {
   type ReopenBlockedReason,
   type ReportSectionReadModel,
   type Role,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import {
   assertHeadTargetInGroup,

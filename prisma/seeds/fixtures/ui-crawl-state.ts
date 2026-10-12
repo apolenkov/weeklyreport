@@ -5,19 +5,19 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { parseArgs } from "node:util";
 
+import { PrismaPg } from "@prisma/adapter-pg";
+import { type Prisma, PrismaClient } from "@prisma/client";
 import {
   buildAssembledReportFromPrismaRow,
   parsePublishedSnapshot,
   reportFullIncludeForSnapshot,
   toPublishedSnapshotJson,
-} from "@customreport/report-persistence";
+} from "@weeklyreport/report-persistence";
 import {
   buildPublishedProjections,
   currentPeriodLifecycleSchema,
   REOPEN_AUTO_CLOSE_NOTES,
-} from "@customreport/shared";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { type Prisma, PrismaClient } from "@prisma/client";
+} from "@weeklyreport/shared";
 import pg from "pg";
 
 import { buildTransition } from "../../../apps/api/src/modules/period/domain/period-transition.js";

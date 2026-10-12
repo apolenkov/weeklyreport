@@ -4,7 +4,7 @@ import {
   reportSectionReadModelSchema,
   type Role,
   sharedReportSectionReadModelSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { ByPeriodRequest } from "../domain/lead-form-cross-author-scope.js";
 import {

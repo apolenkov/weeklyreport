@@ -1,4 +1,4 @@
-import type { ClarificationOption, SearchPlan } from "@customreport/shared";
+import type { ClarificationOption, SearchPlan } from "@weeklyreport/shared";
 
 import { filterCandidates } from "../domain/candidate-filter.js";
 import { projectSectionCandidates } from "../domain/candidate-projector.js";

@@ -1,4 +1,4 @@
-import { type Role, ROLE_HOME_PATH } from "@customreport/shared";
+import { type Role, ROLE_HOME_PATH } from "@weeklyreport/shared";
 
 import { isViewer } from "../../lib/auth/role-predicates";
 import {

@@ -293,7 +293,7 @@ test("operations documentation inventories integration and coverage lanes", () =
   assert.match(gitlabContent, /\nmigrate-reset:/u);
   assert.match(gitlabContent, /\nnode-toolchain:/u);
   assert.equal(
-    [...gitlabContent.matchAll(/@customreport\/api test:coverage/gu)].length,
+    [...gitlabContent.matchAll(/@weeklyreport\/api test:coverage/gu)].length,
     1,
   );
 });

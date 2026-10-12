@@ -1,4 +1,4 @@
-import type { SearchPlan } from "@customreport/shared";
+import type { SearchPlan } from "@weeklyreport/shared";
 
 import { classifyDecision } from "./decision-classification.js";
 import { normalizeEntityReference } from "./entity-alias-index.js";

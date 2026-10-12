@@ -1,6 +1,6 @@
 "use client";
 
-import type { PeriodStatus } from "@customreport/shared";
+import type { PeriodStatus } from "@weeklyreport/shared";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ConfirmDeleteDialog } from "../../../shared/ui/dialogs/confirm-delete-dialog";

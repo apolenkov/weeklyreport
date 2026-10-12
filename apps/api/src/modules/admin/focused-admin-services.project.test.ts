@@ -1,4 +1,4 @@
-import type { AdminSnapshot } from "@customreport/shared";
+import type { AdminSnapshot } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { type AppLogger, createNullLogger } from "../../lib/logger.js";

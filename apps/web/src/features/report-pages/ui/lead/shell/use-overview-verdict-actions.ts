@@ -3,7 +3,7 @@
 import type {
   LeadStatusOverviewOutput,
   ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { useRef } from "react";
 
 import {

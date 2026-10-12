@@ -1,4 +1,4 @@
-import { STAGE, STAGE_NAMES } from "@customreport/shared";
+import { STAGE, STAGE_NAMES } from "@weeklyreport/shared";
 
 import { normalizeEntityReference } from "./entity-alias-index.js";
 import {

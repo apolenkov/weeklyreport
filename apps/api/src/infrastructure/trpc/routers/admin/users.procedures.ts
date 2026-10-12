@@ -1,4 +1,4 @@
-import { adminUserSchema } from "@customreport/shared";
+import { adminUserSchema } from "@weeklyreport/shared";
 import { z } from "zod";
 
 import type {

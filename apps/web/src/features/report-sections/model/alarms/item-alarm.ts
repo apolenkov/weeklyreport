@@ -1,7 +1,7 @@
 import {
   riskSeverityToCanonicalFloor,
   worstCanonicalStatus,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { ItemStatus } from "../item-status";
 import { riskCoversStage } from "../stage-tags";

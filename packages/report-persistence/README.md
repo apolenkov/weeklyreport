@@ -1,11 +1,11 @@
 # Report persistence
 
-`@customreport/report-persistence` is the server-only Prisma boundary for
+`@weeklyreport/report-persistence` is the server-only Prisma boundary for
 report sections and immutable published snapshots. It owns the canonical
 Prisma include graph, row-to-read-model mapper, status derivation, and snapshot
 assembly used by the API and database seeds.
 
-This package depends on `@customreport/shared` for browser-safe schemas and
+This package depends on `@weeklyreport/shared` for browser-safe schemas and
 never contains UI or transport code. The API supplies the generated Prisma
 client at runtime; seeds use the same source through the workspace package.
 `@prisma/client` is therefore an explicit peer. The package's two type-only

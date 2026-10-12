@@ -4,13 +4,13 @@
 // captured at their Prisma boundary so the guarantee is proved without a
 // database and without the simple dataset that `full`/`stress` merge in.
 
+import type { Prisma, PrismaClient } from "@prisma/client";
 import {
   draftSaveSchema,
   itemOutcomeStateSchema,
   reportSectionReadModelSchema,
   validateStageOwnership,
-} from "@customreport/shared";
-import type { Prisma, PrismaClient } from "@prisma/client";
+} from "@weeklyreport/shared";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { seedActiveSections as seedSimpleSections } from "../simple/seed-simple.sections.js";

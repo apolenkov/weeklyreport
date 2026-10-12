@@ -1,5 +1,5 @@
-import type { SearchHit } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
+import type { SearchHit } from "@weeklyreport/shared";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 

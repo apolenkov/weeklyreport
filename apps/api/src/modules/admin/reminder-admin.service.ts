@@ -1,7 +1,7 @@
 import {
   type ReminderPolicy,
   reminderPolicySchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { AppLogger } from "../../lib/logger";
 import type { AdminRepository } from "./admin-shared";

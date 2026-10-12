@@ -7,7 +7,7 @@ import {
   type FeedbackStatus,
   type FeedbackThreadItem,
   type FeedbackType,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { ChevronDown } from "lucide-react";
 import { useState } from "react";
 

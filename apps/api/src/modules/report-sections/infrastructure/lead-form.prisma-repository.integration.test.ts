@@ -1,5 +1,5 @@
-import type { TrafficLightStatus } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
+import type { TrafficLightStatus } from "@weeklyreport/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";

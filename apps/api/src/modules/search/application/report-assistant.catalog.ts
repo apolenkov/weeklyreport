@@ -1,4 +1,4 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 
 import { buildAccessibleEntityCatalog } from "../domain/entity-resolver.catalog.js";
 import type {

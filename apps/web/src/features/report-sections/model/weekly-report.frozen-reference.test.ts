@@ -1,5 +1,5 @@
-import { publishedReportSnapshotSchema } from "@customreport/shared";
-import { buildPortfolioProductsFromSnapshotSections } from "@customreport/shared";
+import { publishedReportSnapshotSchema } from "@weeklyreport/shared";
+import { buildPortfolioProductsFromSnapshotSections } from "@weeklyreport/shared";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";

@@ -1,4 +1,4 @@
-import type { SearchPlan } from "@customreport/shared";
+import type { SearchPlan } from "@weeklyreport/shared";
 
 import { normalizeEntityReference } from "./entity-alias-index.js";
 

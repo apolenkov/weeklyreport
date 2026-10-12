@@ -1,4 +1,4 @@
-# @customreport/ui
+# @weeklyreport/ui
 
 Shared React primitives for CustomReport. The package uses Tailwind CSS v4,
 Radix primitives, class-variance-authority, Lucide icons, and CSS custom
@@ -29,7 +29,7 @@ The source tree currently contains **13 component `.tsx` files**:
   Separator, Sheet, Skeleton, Toaster, Tabs, and Tooltip.
 - `dropdown-menu-items.tsx` and `dialog-focus.ts` (imported by `dialog.tsx`)
   are the internal source modules, absent from the exports map. The package
-  utility is imported from `@customreport/ui/lib/utils`. Only currently
+  utility is imported from `@weeklyreport/ui/lib/utils`. Only currently
   consumed subparts are public: card content/header;
   dialog content/description/title; dropdown
   content/item/label/separator/trigger; sheet
@@ -48,7 +48,7 @@ one light palette; use `--color-on-dark` only for text on deep brand surfaces.
 ## Usage
 
 ```tsx
-import { Button } from "@customreport/ui/components/ui/button";
-import { Card, CardContent } from "@customreport/ui/components/ui/card";
-import "@customreport/ui/styles/globals.css";
+import { Button } from "@weeklyreport/ui/components/ui/button";
+import { Card, CardContent } from "@weeklyreport/ui/components/ui/card";
+import "@weeklyreport/ui/styles/globals.css";
 ```

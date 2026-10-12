@@ -2,7 +2,7 @@ import type {
   ReportSectionReadModel,
   SectionReviewView,
   WeeklyReportReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 export interface SectionReviewRow {
   readonly reportSectionId: string;

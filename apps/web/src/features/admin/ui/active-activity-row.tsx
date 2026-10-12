@@ -1,6 +1,6 @@
 "use client";
 
-import type { ProjectActivity } from "@customreport/shared";
+import type { ProjectActivity } from "@weeklyreport/shared";
 
 import { pluralize } from "../../../shared/lib/format/pluralize";
 import { RotatingChevron } from "../../../shared/ui/report-shell/rotating-chevron";

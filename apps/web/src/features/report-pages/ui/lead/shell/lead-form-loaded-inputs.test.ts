@@ -1,7 +1,7 @@
 import type {
   ReopenBlockedReason,
   ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../../../test-utils/expect-defined";

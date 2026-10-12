@@ -30,7 +30,7 @@ remove the deliberate room for the axes to diverge.
 
 - **WHEN** a maintainer types a role-valued field or variable outside
   `packages/shared`
-- **THEN** they import `Role` or `DbRole` from `@customreport/shared`
+- **THEN** they import `Role` or `DbRole` from `@weeklyreport/shared`
   according to the value's provenance instead of re-declaring the union
 - **AND** the residual sweep (all member orders plus `z.enum` forms) finds
   no type-position re-declaration outside the named exemptions

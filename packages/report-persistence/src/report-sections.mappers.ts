@@ -2,7 +2,7 @@ import {
   type ReportSectionReadModel,
   reportSectionReadModelSchema,
   type RiskSeverity,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import {
   toDecisionViews,

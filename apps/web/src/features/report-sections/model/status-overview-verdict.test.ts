@@ -1,5 +1,5 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
-import { draftSaveSchema, resolvePlanInputSchema } from "@customreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
+import { draftSaveSchema, resolvePlanInputSchema } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { applyDraftPatch } from "./lead-form/draft/lead-form-draft-patch";

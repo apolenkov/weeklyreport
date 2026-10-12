@@ -3,7 +3,7 @@ import {
   leadOpenWorkHistoryInputSchema,
   type LeadOpenWorkHistoryOutput,
   leadOpenWorkHistoryOutputSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import {
   LeadFormDomainError,

@@ -1,7 +1,7 @@
 "use client";
 
-import type { MyHistoryEntry } from "@customreport/shared";
-import { DEFAULT_ORGANIZATION_IDENTITY } from "@customreport/shared";
+import type { MyHistoryEntry } from "@weeklyreport/shared";
+import { DEFAULT_ORGANIZATION_IDENTITY } from "@weeklyreport/shared";
 import { useContext, useEffect, useMemo, useState } from "react";
 
 import { SessionContext } from "../../../../../shared/lib/auth/session-provider";

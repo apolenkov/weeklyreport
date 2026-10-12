@@ -1,11 +1,11 @@
 // Maps weeklyReport.get into aggregate and per-lead presentation slices.
-import type { WeeklyReportReadModel } from "@customreport/shared";
+import type { WeeklyReportReadModel } from "@weeklyreport/shared";
 import {
   buildEscalationsFromReadSections,
   CANONICAL_STATUS_PRECEDENCE,
   shortNameFromName,
   worstCanonicalStatus,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import {
   formatPeriodRangeWithYear,

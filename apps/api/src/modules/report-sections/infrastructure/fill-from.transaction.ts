@@ -1,8 +1,8 @@
+import { Prisma } from "@prisma/client";
 import {
   type PrismaReportSectionWithRelations,
   reportSectionFullInclude,
-} from "@customreport/report-persistence";
-import { Prisma } from "@prisma/client";
+} from "@weeklyreport/report-persistence";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";

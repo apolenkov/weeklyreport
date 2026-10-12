@@ -1,4 +1,4 @@
-import type { PeriodStatus } from "@customreport/shared";
+import type { PeriodStatus } from "@weeklyreport/shared";
 
 const WORKING_REPORT_BANNER = "Working report — includes drafts";
 

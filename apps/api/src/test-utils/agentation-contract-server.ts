@@ -2,13 +2,13 @@ import { randomUUID } from "node:crypto";
 import type { AddressInfo } from "node:net";
 import { resolve } from "node:path";
 
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import {
   AUTH_COOKIE_NAME,
   DEFAULT_ORGANIZATION_IDENTITY,
   type UserSession,
-} from "@customreport/shared";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+} from "@weeklyreport/shared";
 import cookieParser from "cookie-parser";
 import express from "express";
 

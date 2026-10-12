@@ -1,5 +1,5 @@
-import type { AdminReminderExecution } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
+import type { AdminReminderExecution } from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { errorMessage as normalizeErrorMessage } from "../../lib/error-message.js";

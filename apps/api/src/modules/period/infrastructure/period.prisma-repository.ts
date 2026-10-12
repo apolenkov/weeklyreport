@@ -1,8 +1,8 @@
+import { Inject, Injectable } from "@nestjs/common";
 import {
   currentPeriodLifecycleSchema,
   REOPEN_AUTO_CLOSE_NOTES,
-} from "@customreport/shared";
-import { Inject, Injectable } from "@nestjs/common";
+} from "@weeklyreport/shared";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import { AdminPeriodOverlapError } from "../../admin/index.js";

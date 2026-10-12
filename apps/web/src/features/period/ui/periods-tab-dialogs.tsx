@@ -1,6 +1,6 @@
 "use client";
 
-import type { PeriodListItem } from "@customreport/shared";
+import type { PeriodListItem } from "@weeklyreport/shared";
 
 import {
   formatPeriodRangeWithYear,

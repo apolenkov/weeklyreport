@@ -1,7 +1,7 @@
 "use client";
 
-import type { DbRole } from "@customreport/shared";
-import { ROLE_LABEL, shortName } from "@customreport/shared";
+import type { DbRole } from "@weeklyreport/shared";
+import { ROLE_LABEL, shortName } from "@weeklyreport/shared";
 import type { ReactNode } from "react";
 
 import type { AdminUserView } from "../model/admin-types";

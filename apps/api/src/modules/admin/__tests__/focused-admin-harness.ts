@@ -3,7 +3,7 @@ import type {
   AppSettings,
   StageAssignment,
   UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { createAppRouter } from "../../../infrastructure/trpc/trpc.router.js";
 import { createNullLogger } from "../../../lib/logger.js";

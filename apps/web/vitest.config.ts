@@ -47,11 +47,11 @@ const webConfig = defineConfig({
   },
   resolve: {
     alias: {
-      "@customreport/shared": path.resolve(
+      "@weeklyreport/shared": path.resolve(
         import.meta.dirname,
         "../../packages/shared/src",
       ),
-      "@customreport/api": path.resolve(
+      "@weeklyreport/api": path.resolve(
         import.meta.dirname,
         "../../apps/api/src",
       ),

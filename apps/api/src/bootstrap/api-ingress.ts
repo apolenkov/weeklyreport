@@ -1,9 +1,9 @@
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { AUTH_COOKIE_NAME } from "@customreport/shared";
 import type { INestApplication } from "@nestjs/common";
 import * as trpcExpress from "@trpc/server/adapters/express";
+import { AUTH_COOKIE_NAME } from "@weeklyreport/shared";
 import type { Express, RequestHandler } from "express";
 import express from "express";
 

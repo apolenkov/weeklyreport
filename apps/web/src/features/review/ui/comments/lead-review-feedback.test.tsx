@@ -1,7 +1,7 @@
 // Lead read-only feedback surface — no composer (lead has no review capability).
 
-import type { SectionReviewView } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
+import type { SectionReviewView } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { makeReportSectionFixture } from "../../../../test-utils/report-section-fixtures";

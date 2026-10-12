@@ -1,8 +1,8 @@
+import { act, renderHook } from "@testing-library/react";
 import type {
   ItemOutcomeResult,
   ReportSectionReadModel,
-} from "@customreport/shared";
-import { act, renderHook } from "@testing-library/react";
+} from "@weeklyreport/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeReportSectionFixture } from "../../../../test-utils/report-section-fixtures";

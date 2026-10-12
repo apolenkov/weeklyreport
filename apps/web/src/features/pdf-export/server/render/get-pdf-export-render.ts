@@ -4,7 +4,7 @@ import {
   AUTH_COOKIE_NAME,
   type WeeklyReportReadModel,
   weeklyReportReadModelSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { cookies } from "next/headers";
 
 import {

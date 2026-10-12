@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { type Dispatch, type SetStateAction, useMemo } from "react";
 
 import { useDraftServerSync } from "../autosave/use-lead-form-server-sync";

@@ -4,7 +4,7 @@ import {
   captureJobTraceContext,
   resolveCorrelationId,
 } from "../../infrastructure/bullmq/worker-observability.js";
-import { customreportPdfExportRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
+import { weeklyreportPdfExportRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import type {
   PdfExportJobContext,
   PdfExportTelemetry,
@@ -18,6 +18,6 @@ export class PdfExportInfrastructureTelemetry implements PdfExportTelemetry {
   };
 
   readonly recordRequest = (role: string): void => {
-    customreportPdfExportRequestsTotal.inc({ role });
+    weeklyreportPdfExportRequestsTotal.inc({ role });
   };
 }

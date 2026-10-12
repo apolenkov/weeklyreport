@@ -1,4 +1,4 @@
-import { type AdminSnapshot, adminSnapshotSchema } from "@customreport/shared";
+import { type AdminSnapshot, adminSnapshotSchema } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined";

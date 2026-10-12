@@ -1,3 +1,4 @@
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import {
   AI_PROVIDER_PROFILE_CAPABILITIES,
   type AiProviderConfigurationRead,
@@ -5,8 +6,7 @@ import {
   type AiProviderControlRead,
   type AiProviderDraft,
   aiProviderDraftSchema,
-} from "@customreport/shared";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+} from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { AiProviderCardContent } from "./ai-provider-card";

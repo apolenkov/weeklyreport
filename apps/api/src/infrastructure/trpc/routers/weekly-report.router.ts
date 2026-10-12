@@ -1,4 +1,4 @@
-import type { Role } from "@customreport/shared";
+import type { Role } from "@weeklyreport/shared";
 import { z } from "zod";
 
 import type { AppLogger } from "../../../lib/logger.js";

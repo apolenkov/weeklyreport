@@ -1,4 +1,4 @@
-import { type Role, type UserSession } from "@customreport/shared";
+import { type Role, type UserSession } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../../../lib/logger.js";

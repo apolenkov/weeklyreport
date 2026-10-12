@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReminderDispatchResult } from "@customreport/shared";
 import { useMutation } from "@tanstack/react-query";
+import type { ReminderDispatchResult } from "@weeklyreport/shared";
 import Link from "next/link";
 import { toast } from "sonner";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { MAX_REOPEN_NOTE_LENGTH } from "@customreport/shared";
+import { MAX_REOPEN_NOTE_LENGTH } from "@weeklyreport/shared";
 import type { Ref } from "react";
 
 export type ReopenDecision = "approved" | "rejected";

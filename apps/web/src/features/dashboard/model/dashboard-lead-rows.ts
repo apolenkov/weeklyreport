@@ -4,7 +4,7 @@ import type {
   ReportSectionReadModel,
   SubmissionDashboardRow,
   WeeklyReportReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 interface DashboardLeadRowsInput {
   readonly review?: readonly SubmissionDashboardRow[] | undefined;

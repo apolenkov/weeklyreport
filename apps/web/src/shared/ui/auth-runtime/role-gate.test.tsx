@@ -1,5 +1,5 @@
-import type { UserSession } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
+import type { UserSession } from "@weeklyreport/shared";
 import type { ReactElement } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

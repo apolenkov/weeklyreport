@@ -1,6 +1,6 @@
-import { MAX_REOPEN_REASON_LENGTH } from "@customreport/shared";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MAX_REOPEN_REASON_LENGTH } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 

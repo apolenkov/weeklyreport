@@ -5,7 +5,7 @@ import {
   DialogContent,
   DialogDescription,
   DialogTitle,
-} from "@customreport/ui/components/ui/dialog";
+} from "@weeklyreport/ui/components/ui/dialog";
 import { type RefObject, useRef } from "react";
 
 import { usePortalTarget } from "./document-body-portal";

@@ -1,5 +1,5 @@
-import { aiProviderRuntimeFailureSchema } from "@customreport/shared";
 import type { OnModuleDestroy } from "@nestjs/common";
+import { aiProviderRuntimeFailureSchema } from "@weeklyreport/shared";
 import { Redis } from "ioredis";
 
 import type { EnvConfig } from "../../../infrastructure/config/env.schema.js";

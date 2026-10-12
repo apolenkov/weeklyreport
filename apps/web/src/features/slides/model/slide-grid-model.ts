@@ -1,5 +1,5 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
-import { aggregateTrafficLight } from "@customreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
+import { aggregateTrafficLight } from "@weeklyreport/shared";
 
 import type { CrossAuthorContentRow } from "../../report-sections";
 import { buildAuthorRoster } from "./slide-grid-authors";

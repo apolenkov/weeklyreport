@@ -3,7 +3,7 @@
 import {
   MAX_FULL_NAME_LENGTH,
   MAX_SHORT_NAME_LENGTH,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { CheckIcon } from "../../../shared/ui/settings/settings-tab";
 import { useOrgIdentityForm } from "./use-org-identity-form";

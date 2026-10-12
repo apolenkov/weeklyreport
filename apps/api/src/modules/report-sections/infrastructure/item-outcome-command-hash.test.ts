@@ -1,4 +1,4 @@
-import type { PromotePlanInput, ResolvePlanInput } from "@customreport/shared";
+import type { PromotePlanInput, ResolvePlanInput } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { outcomeCommandHash } from "./item-outcome-command-hash.js";

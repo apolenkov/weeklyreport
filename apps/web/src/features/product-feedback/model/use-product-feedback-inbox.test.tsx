@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import type { FeedbackResponse } from "@customreport/shared";
 import { act, renderHook, waitFor } from "@testing-library/react";
+import type { FeedbackResponse } from "@weeklyreport/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useProductFeedbackInbox } from "./use-product-feedback-inbox";

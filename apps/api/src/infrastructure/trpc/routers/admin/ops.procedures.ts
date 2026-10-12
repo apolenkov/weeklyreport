@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import {
   adminActionLogPageSchema,
   omitUndefinedProperties,
@@ -6,8 +7,7 @@ import {
   pdfRecoveryRetryInputSchema,
   pdfRecoveryRetryResultSchema,
   queueNameSchema,
-} from "@customreport/shared";
-import { TRPCError } from "@trpc/server";
+} from "@weeklyreport/shared";
 import { z } from "zod";
 
 import type { ActionLogService } from "../../../../modules/admin/index.js";

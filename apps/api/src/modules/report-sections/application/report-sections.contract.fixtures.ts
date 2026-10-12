@@ -2,7 +2,7 @@ import type {
   DraftSavePayload,
   PeriodStatus,
   ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import {
   OPEN_REPORT_META,

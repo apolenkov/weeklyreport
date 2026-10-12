@@ -5,13 +5,13 @@ import type {
   AiPromptContents,
   AiPromptSlot,
   AiPromptSlotRead,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import {
   AI_PROMPT_BUNDLE_EFFECTIVE_LIMIT,
   AI_PROMPT_EDITABLE_TAIL_SEPARATOR,
   AI_PROMPT_SLOT_KEYS,
   aiPromptContentsSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import {
   REPORT_CITATION_REPAIR_PROMPT_VERSION,

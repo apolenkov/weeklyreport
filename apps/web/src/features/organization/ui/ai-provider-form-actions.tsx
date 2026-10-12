@@ -1,7 +1,7 @@
 import type {
   AiProviderConfigurationRead,
   AiProviderControlRead,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { useState } from "react";
 
 import { ConfirmationDialog } from "../../../shared/ui/dialogs/confirmation-dialog";

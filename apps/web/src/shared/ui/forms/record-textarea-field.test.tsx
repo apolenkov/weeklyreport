@@ -1,5 +1,5 @@
-import { SAFE_TEXT_MAX_LENGTH, safeText } from "@customreport/shared";
 import { fireEvent, render, screen } from "@testing-library/react";
+import { SAFE_TEXT_MAX_LENGTH, safeText } from "@weeklyreport/shared";
 import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 

@@ -1,8 +1,8 @@
+import { Prisma, type Prisma as PrismaTypes } from "@prisma/client";
 import type {
   PublishedReportSnapshot,
   UserSession,
-} from "@customreport/shared";
-import { Prisma, type Prisma as PrismaTypes } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import {

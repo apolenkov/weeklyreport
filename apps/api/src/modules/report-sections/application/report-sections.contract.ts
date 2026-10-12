@@ -5,7 +5,7 @@ import type {
   PublishedLineage,
   ReportSectionReadModel,
   ReportStatus,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 export class ReportSectionDomainError extends Error {
   constructor(

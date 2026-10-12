@@ -1,7 +1,7 @@
 import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 
-import { AUTH_COOKIE_NAME, type UserSession } from "@customreport/shared";
+import { AUTH_COOKIE_NAME, type UserSession } from "@weeklyreport/shared";
 import cookieParser from "cookie-parser";
 import express, {
   type Request,

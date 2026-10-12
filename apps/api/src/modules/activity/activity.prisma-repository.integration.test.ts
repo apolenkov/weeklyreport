@@ -1,5 +1,5 @@
-import type { UserSession } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
+import type { UserSession } from "@weeklyreport/shared";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import { createPauseGate } from "../../test-utils/paused-prisma.js";

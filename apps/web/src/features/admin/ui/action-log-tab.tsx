@@ -1,7 +1,7 @@
 "use client";
 
-import type { AdminActionLogEvent } from "@customreport/shared";
 import { useInfiniteQuery } from "@tanstack/react-query";
+import type { AdminActionLogEvent } from "@weeklyreport/shared";
 import { useId, useMemo, useState } from "react";
 
 import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";

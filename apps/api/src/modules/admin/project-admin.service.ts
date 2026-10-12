@@ -10,7 +10,7 @@ import {
   reportingGroupSchema,
   type StageAssignment,
   stageAssignmentSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { type AppLogger } from "../../lib/logger";
 import type {

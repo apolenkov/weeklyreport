@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 
-import type { AppSettings } from "@customreport/shared";
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import type { AppSettings } from "@weeklyreport/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const navigation = vi.hoisted(() => ({

@@ -1,4 +1,4 @@
-import type { DbRole } from "@customreport/shared";
+import type { DbRole } from "@weeklyreport/shared";
 
 export function buildDevLoginHref(
   role: DbRole,

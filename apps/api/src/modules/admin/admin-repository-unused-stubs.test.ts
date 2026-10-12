@@ -1,4 +1,4 @@
-import type { ReminderPolicy } from "@customreport/shared";
+import type { ReminderPolicy } from "@weeklyreport/shared";
 import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { unusedAdminRepositoryStubs } from "./__tests__/admin-repository-unused-stubs.js";

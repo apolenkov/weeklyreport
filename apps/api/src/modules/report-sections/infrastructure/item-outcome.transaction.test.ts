@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import {
   type ItemOutcomeResult,
   MAX_RECORDS_PER_SECTION_SAVE,
@@ -6,8 +7,7 @@ import {
   type ResolvePlanInput,
   type RestorePlanInput,
   validateSubmitInput,
-} from "@customreport/shared";
-import { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LeadFormConstraintError } from "../domain/lead-form-shared";

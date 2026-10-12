@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 
+import { Prisma } from "@prisma/client";
 import {
   type AgentationAction,
   type AgentationAnnotationCreate,
@@ -9,8 +10,7 @@ import {
   type AgentationSessionCreate,
   type AgentationThread,
   normalizeAgentationPath,
-} from "@customreport/shared";
-import { Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import {
   actorId,

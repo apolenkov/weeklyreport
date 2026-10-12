@@ -1,7 +1,7 @@
 "use client";
 
-import type { ProjectActivity } from "@customreport/shared";
 import { useQuery } from "@tanstack/react-query";
+import type { ProjectActivity } from "@weeklyreport/shared";
 import { useMemo, useState } from "react";
 
 import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";

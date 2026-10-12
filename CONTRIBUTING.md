@@ -65,7 +65,7 @@ not prove that GitLab accepted the update or ran CI.
 - **`pnpm test` runs workspace unit tests, Prisma tests, and the root repository
   cleanliness and operations checks; it does not run database integration
   tests.** For the API's colocated integration tests, start Postgres and run
-  `pnpm --filter @customreport/api test:integration`.
+  `pnpm --filter @weeklyreport/api test:integration`.
 - **`pnpm dev` starts both web (3000) + api (3002) in parallel.** Stop the run
   from its owning terminal with `Ctrl-C`. If a port is occupied, inspect the
   exact listener with `lsof -nP -iTCP:3000 -sTCP:LISTEN` or port `3002`, then

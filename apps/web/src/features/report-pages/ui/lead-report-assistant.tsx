@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import {
   Sheet,
   SheetContent,
@@ -7,9 +8,8 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@customreport/ui/components/ui/sheet";
-import { TooltipProvider } from "@customreport/ui/components/ui/tooltip";
-import { useQuery } from "@tanstack/react-query";
+} from "@weeklyreport/ui/components/ui/sheet";
+import { TooltipProvider } from "@weeklyreport/ui/components/ui/tooltip";
 import { LoaderCircle, MessageCircle, RefreshCw, Sparkles } from "lucide-react";
 import { useRef, useState } from "react";
 

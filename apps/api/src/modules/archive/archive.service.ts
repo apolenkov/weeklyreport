@@ -1,4 +1,4 @@
-import type { ReportStatus } from "@customreport/shared";
+import type { ReportStatus } from "@weeklyreport/shared";
 import {
   type ArchiveReportDetail,
   archiveReportDetailSchema,
@@ -7,7 +7,7 @@ import {
   type PaginatedResult,
   type PaginationInput,
   type UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import { guardGroupScope } from "../../lib/group-scope.js";
 

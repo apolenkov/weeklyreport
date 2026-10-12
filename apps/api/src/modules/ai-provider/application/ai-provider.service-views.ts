@@ -1,3 +1,4 @@
+import { AiProviderLifecycle, type Prisma } from "@prisma/client";
 import {
   AI_PROVIDER_PROFILE_CAPABILITIES,
   type AiProviderAvailabilityRead,
@@ -11,8 +12,7 @@ import {
   type AiProviderPreparationProgress,
   type AiProviderTestExecutionRead,
   aiProviderTestExecutionReadSchema,
-} from "@customreport/shared";
-import { AiProviderLifecycle, type Prisma } from "@prisma/client";
+} from "@weeklyreport/shared";
 
 import type {
   StoredAiProviderControl,

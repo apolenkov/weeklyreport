@@ -1,5 +1,5 @@
-import { mapPrismaToReportSection } from "@customreport/report-persistence";
-import { publishedReportSnapshotSchema } from "@customreport/shared";
+import { mapPrismaToReportSection } from "@weeklyreport/report-persistence";
+import { publishedReportSnapshotSchema } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { assertAssistantReadiness } from "./seed-assistant-readiness.js";

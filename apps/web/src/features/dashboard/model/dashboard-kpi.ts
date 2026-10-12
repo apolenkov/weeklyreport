@@ -1,5 +1,5 @@
-import type { WeeklyReportReadModel } from "@customreport/shared";
-import { HOURS_PER_DAY, MS_PER_HOUR } from "@customreport/shared";
+import type { WeeklyReportReadModel } from "@weeklyreport/shared";
+import { HOURS_PER_DAY, MS_PER_HOUR } from "@weeklyreport/shared";
 
 import { formatTimestampShort } from "../../../shared/lib/format/format-date";
 import type { BlockedAtRiskItem } from "./dashboard-escalations";

@@ -1,8 +1,8 @@
 import {
-  customreportCrossAuthorContentReadsTotal,
-  customreportReopenRequestsTotal,
-  customreportSectionsSubmittedTotal,
-  customreportSectionSubmissionLatencySeconds,
+  weeklyreportCrossAuthorContentReadsTotal,
+  weeklyreportReopenRequestsTotal,
+  weeklyreportSectionsSubmittedTotal,
+  weeklyreportSectionSubmissionLatencySeconds,
 } from "../../../infrastructure/metrics/metrics.registry.js";
 import type {
   CrossAuthorReadResult,
@@ -12,18 +12,18 @@ import type {
 
 export class ReportSectionsPrometheusTelemetry implements ReportSectionsTelemetry {
   readonly recordCrossAuthorRead = (result: CrossAuthorReadResult): void => {
-    customreportCrossAuthorContentReadsTotal.inc({ result });
+    weeklyreportCrossAuthorContentReadsTotal.inc({ result });
   };
 
   readonly recordReopenRequest = (state: ReopenRequestState): void => {
-    customreportReopenRequestsTotal.inc({ state });
+    weeklyreportReopenRequestsTotal.inc({ state });
   };
 
   readonly recordSectionSubmitted = (late: boolean): void => {
-    customreportSectionsSubmittedTotal.inc({ late: String(late) });
+    weeklyreportSectionsSubmittedTotal.inc({ late: String(late) });
   };
 
   readonly observeSubmissionLatency = (seconds: number): void => {
-    customreportSectionSubmissionLatencySeconds.observe(seconds);
+    weeklyreportSectionSubmissionLatencySeconds.observe(seconds);
   };
 }

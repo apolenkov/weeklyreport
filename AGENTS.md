@@ -135,7 +135,7 @@ commands, and `git diff --check`; validate OpenSpec if its files change. Follow
 `docs/exemplary-code-standard.md#verification`. Run additional coverage, guarded
 API integration and full E2E when the affected contract requires them. Root unit
 tests do not prove database integration. Generate stale Prisma client with
-`pnpm --filter @customreport/api db:generate` before relevant checks.
+`pnpm --filter @weeklyreport/api db:generate` before relevant checks.
 
 ## Browser verification
 

@@ -1,7 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 
-import { sessionRoleSchema } from "@customreport/shared";
 import type { PrismaClient, Role } from "@prisma/client";
+import { sessionRoleSchema } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import {

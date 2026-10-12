@@ -1,4 +1,4 @@
-import type { AppSettings } from "@customreport/shared";
+import type { AppSettings } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
@@ -44,7 +44,7 @@ function periodFixture(
   };
 }
 
-import type { PeriodState } from "@customreport/shared";
+import type { PeriodState } from "@weeklyreport/shared";
 
 import { createNullLogger } from "../../lib/logger";
 

@@ -1,7 +1,7 @@
 "use client";
 
-import type { PeriodComparisonOutput } from "@customreport/shared";
-import { trafficLightToCanonical } from "@customreport/shared";
+import type { PeriodComparisonOutput } from "@weeklyreport/shared";
+import { trafficLightToCanonical } from "@weeklyreport/shared";
 import { ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
 

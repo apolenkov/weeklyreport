@@ -1,4 +1,4 @@
-import { sanitizeClientLogUrl } from "@customreport/shared";
+import { sanitizeClientLogUrl } from "@weeklyreport/shared";
 import type { Request, RequestHandler, Response } from "express";
 import { z } from "zod";
 

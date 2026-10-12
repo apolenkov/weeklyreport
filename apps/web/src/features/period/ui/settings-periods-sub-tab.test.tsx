@@ -2,7 +2,6 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import type { AppSettings } from "@customreport/shared";
 import {
   act,
   fireEvent,
@@ -11,6 +10,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { AppSettings } from "@weeklyreport/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mutate = vi.hoisted(() =>

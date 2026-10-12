@@ -1,5 +1,5 @@
-import { reportSectionFullInclude } from "@customreport/report-persistence";
-import type { TrafficLightStatus } from "@customreport/shared";
+import { reportSectionFullInclude } from "@weeklyreport/report-persistence";
+import type { TrafficLightStatus } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";

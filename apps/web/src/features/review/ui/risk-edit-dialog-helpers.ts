@@ -1,4 +1,4 @@
-import { SAFE_TEXT_MAX_LENGTH } from "@customreport/shared";
+import { SAFE_TEXT_MAX_LENGTH } from "@weeklyreport/shared";
 
 import { getRequiredProseError } from "../../../shared/ui/forms/record-prose-validation";
 import type {

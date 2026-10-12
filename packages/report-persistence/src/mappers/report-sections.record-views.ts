@@ -2,7 +2,7 @@ import {
   type ItemOutcomeEvent,
   itemOutcomeEventSchema,
   itemResolutionSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type {
   PrismaReportSectionWithRelations as SectionRow,

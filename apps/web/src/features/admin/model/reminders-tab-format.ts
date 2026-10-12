@@ -2,7 +2,7 @@ import {
   HOURS_PER_DAY,
   MINUTES_PER_DAY,
   MINUTES_PER_HOUR,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import {
   formatDateWithYear,

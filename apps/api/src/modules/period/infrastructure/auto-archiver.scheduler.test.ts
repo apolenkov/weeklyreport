@@ -1,4 +1,4 @@
-import type { AppSettings } from "@customreport/shared";
+import type { AppSettings } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { createNullAuditLogger } from "../../../test-utils/audit-logger.js";

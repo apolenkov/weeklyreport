@@ -5,8 +5,8 @@ import type {
   SectionReviewView,
   SubmissionDashboardRow,
   WeeklyReportReadModel,
-} from "@customreport/shared";
-import { MS_PER_DAY } from "@customreport/shared";
+} from "@weeklyreport/shared";
+import { MS_PER_DAY } from "@weeklyreport/shared";
 
 import type { LeadStatus } from "../../report-sections";
 import { deriveLeadStatus, trafficToStageStatus } from "../../report-sections";

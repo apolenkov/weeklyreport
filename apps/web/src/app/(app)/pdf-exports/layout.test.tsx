@@ -2,8 +2,8 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { ROLE_HOME_PATH, type UserSession } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
+import { ROLE_HOME_PATH, type UserSession } from "@weeklyreport/shared";
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

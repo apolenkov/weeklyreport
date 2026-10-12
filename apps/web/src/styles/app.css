@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "@customreport/ui/styles/globals.css" layer(base);
+@import "@weeklyreport/ui/styles/globals.css" layer(base);
 /* Landing hero styling — «Weekly Report» wordmark + static column */
 @import "./pulse.css";
 @source "../";

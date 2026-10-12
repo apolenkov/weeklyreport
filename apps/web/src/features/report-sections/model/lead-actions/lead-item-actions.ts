@@ -1,4 +1,4 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 
 import type { DraftPatch } from "../lead-form/draft/lead-form-draft-patch";
 

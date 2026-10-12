@@ -3,7 +3,7 @@
 // Batches browser console/window errors to /api/client-logs.
 // Dev-only by default — no-op unless NEXT_PUBLIC_CLIENT_LOG_FORWARDING is 'true'.
 
-import { sanitizeClientLogUrl } from "@customreport/shared";
+import { sanitizeClientLogUrl } from "@weeklyreport/shared";
 
 import { webEnv } from "../runtime/web-env";
 

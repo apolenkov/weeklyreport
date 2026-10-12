@@ -2,7 +2,6 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import type { ReportSectionReadModel } from "@customreport/shared";
 import { QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
@@ -11,6 +10,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 

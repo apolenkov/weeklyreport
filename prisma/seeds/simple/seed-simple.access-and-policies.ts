@@ -1,4 +1,3 @@
-import { computeReminderFireAt } from "@customreport/shared";
 import {
   type PrismaClient,
   ReminderAudience,
@@ -8,6 +7,7 @@ import {
   Role,
   UserActionStatus,
 } from "@prisma/client";
+import { computeReminderFireAt } from "@weeklyreport/shared";
 
 import {
   ADMIN_ID,

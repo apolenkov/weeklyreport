@@ -1,6 +1,6 @@
 "use client";
 
-import type { RecordCommentView } from "@customreport/shared";
+import type { RecordCommentView } from "@weeklyreport/shared";
 import type { ReactNode } from "react";
 
 // Shared read-only comment stack. `renderAction` injects a per-comment control

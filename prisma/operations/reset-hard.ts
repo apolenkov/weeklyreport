@@ -7,7 +7,7 @@ import { resolve } from "node:path";
 import { config as loadEnv } from "dotenv";
 
 // Load .env from the repo root regardless of cwd. The script may be invoked
-// via `pnpm --filter @customreport/api exec tsx ../../prisma/operations/reset-hard.ts`,
+// via `pnpm --filter @weeklyreport/api exec tsx ../../prisma/operations/reset-hard.ts`,
 // in which case cwd is apps/api (no .env), or directly from the repo root.
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
 loadEnv({ path: resolve(REPO_ROOT, ".env") });
@@ -247,7 +247,7 @@ export async function runResetHard(): Promise<void> {
       "pnpm",
       [
         "--filter",
-        "@customreport/api",
+        "@weeklyreport/api",
         "exec",
         "tsx",
         "../../prisma/seeds/profiles/seed-profile.ts",

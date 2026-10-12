@@ -7,7 +7,7 @@ import {
   appSettingsSchema,
   appSettingsUpdateSchema,
   omitUndefinedProperties,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { AppLogger } from "../../lib/logger";
 import { AdminSelfLockoutError } from "./admin-errors.js";

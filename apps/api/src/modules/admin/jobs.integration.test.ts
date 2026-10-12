@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 
-import { QUEUE_NAMES, type ReminderQueuePayload } from "@customreport/shared";
+import { QUEUE_NAMES, type ReminderQueuePayload } from "@weeklyreport/shared";
 import { type Job, Queue, QueueEvents, Worker } from "bullmq";
 import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 

@@ -1,12 +1,12 @@
 "use client";
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   MAX_FULL_NAME_LENGTH,
   MAX_SHORT_NAME_LENGTH,
   type OrganizationPublic,
   type OrganizationUpdate,
-} from "@customreport/shared";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+} from "@weeklyreport/shared";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 

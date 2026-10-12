@@ -1,5 +1,5 @@
-import type { AdminSnapshot } from "@customreport/shared";
 import { Prisma } from "@prisma/client";
+import type { AdminSnapshot } from "@weeklyreport/shared";
 
 import { lockUser } from "../../../lib/user-activity-assignment.js";
 import { AdminSnapshotConflictError } from "../admin-errors.js";

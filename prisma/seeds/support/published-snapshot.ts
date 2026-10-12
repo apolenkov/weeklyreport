@@ -1,11 +1,11 @@
+import type { Prisma, PrismaClient } from "@prisma/client";
 import {
   buildAssembledReportFromPrismaRow,
   parsePublishedSnapshot,
   reportFullIncludeForSnapshot,
   toPublishedSnapshotJson,
-} from "@customreport/report-persistence";
-import { buildPublishedProjections } from "@customreport/shared";
-import type { Prisma, PrismaClient } from "@prisma/client";
+} from "@weeklyreport/report-persistence";
+import { buildPublishedProjections } from "@weeklyreport/shared";
 
 async function replaceSeedPublishedProjections(
   tx: Prisma.TransactionClient,

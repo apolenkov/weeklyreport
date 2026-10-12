@@ -1,9 +1,9 @@
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type {
   AiFeatureKey,
   AiPromptBundleRead,
   AiPromptContents,
-} from "@customreport/shared";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+} from "@weeklyreport/shared";
 import { type ReactNode, useCallback } from "react";
 import { toast } from "sonner";
 

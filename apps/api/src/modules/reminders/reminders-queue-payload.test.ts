@@ -1,4 +1,4 @@
-import type { AdminReminderExecution } from "@customreport/shared";
+import type { AdminReminderExecution } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import type {

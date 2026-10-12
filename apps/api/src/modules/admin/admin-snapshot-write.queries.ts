@@ -1,5 +1,5 @@
-import { type AdminSnapshot, adminSnapshotSchema } from "@customreport/shared";
 import { Prisma } from "@prisma/client";
+import { type AdminSnapshot, adminSnapshotSchema } from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { type AppLogger, createNullLogger } from "../../lib/logger.js";

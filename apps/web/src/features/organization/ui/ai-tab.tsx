@@ -1,14 +1,14 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import {
   AI_PROMPT_FEATURE_KEYS,
   type AiFeatureKey,
   type AiPromptCatalogRead,
   type AiPromptFeatureRead,
   type AiProviderControlRead,
-} from "@customreport/shared";
-import { Tabs, TabsContent } from "@customreport/ui/components/ui/tabs";
-import { useQuery } from "@tanstack/react-query";
+} from "@weeklyreport/shared";
+import { Tabs, TabsContent } from "@weeklyreport/ui/components/ui/tabs";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 

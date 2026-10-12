@@ -1,13 +1,13 @@
-import type {
-  AiProviderCapabilityTestResult,
-  AiProviderProfile as SharedAiProviderProfile,
-  AiProviderReasoningMode,
-} from "@customreport/shared";
 import {
   AiProviderLifecycle,
   AiProviderProfile,
   type Prisma,
 } from "@prisma/client";
+import type {
+  AiProviderCapabilityTestResult,
+  AiProviderProfile as SharedAiProviderProfile,
+  AiProviderReasoningMode,
+} from "@weeklyreport/shared";
 
 import type { EnvConfig } from "../../../infrastructure/config/env.schema.js";
 import type {

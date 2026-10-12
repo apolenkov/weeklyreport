@@ -1,10 +1,10 @@
 import {
-  customreportAssistantCacheEventsTotal,
-  customreportAssistantCandidateCount,
-  customreportAssistantDurationSeconds,
-  customreportAssistantRepairsTotal,
-  customreportAssistantRequestsTotal,
-  customreportAssistantTokensTotal,
+  weeklyreportAssistantCacheEventsTotal,
+  weeklyreportAssistantCandidateCount,
+  weeklyreportAssistantDurationSeconds,
+  weeklyreportAssistantRepairsTotal,
+  weeklyreportAssistantRequestsTotal,
+  weeklyreportAssistantTokensTotal,
 } from "../../../infrastructure/metrics/report-assistant.metrics.js";
 import type {
   ReportAssistantTelemetry,
@@ -16,19 +16,19 @@ const MILLISECONDS_PER_SECOND = 1000;
 export class ReportAssistantPrometheusTelemetry implements ReportAssistantTelemetry {
   record(event: ReportAssistantTelemetryEvent): void {
     const { trace } = event;
-    customreportAssistantRequestsTotal.inc({
+    weeklyreportAssistantRequestsTotal.inc({
       mode: trace.mode,
       outcome: event.outcome,
     });
-    customreportAssistantDurationSeconds.observe(
+    weeklyreportAssistantDurationSeconds.observe(
       { mode: trace.mode, outcome: event.outcome },
       event.latencyMs / MILLISECONDS_PER_SECOND,
     );
-    customreportAssistantCandidateCount.observe(
+    weeklyreportAssistantCandidateCount.observe(
       { mode: trace.mode, stage: "retrieved" },
       trace.candidateCount,
     );
-    customreportAssistantCandidateCount.observe(
+    weeklyreportAssistantCandidateCount.observe(
       { mode: trace.mode, stage: "evidence" },
       trace.evidenceCount,
     );
@@ -39,19 +39,19 @@ export class ReportAssistantPrometheusTelemetry implements ReportAssistantTeleme
 
   private recordCache(trace: ReportAssistantTelemetryEvent["trace"]): void {
     if (trace.cacheHitCount > 0) {
-      customreportAssistantCacheEventsTotal.inc(
+      weeklyreportAssistantCacheEventsTotal.inc(
         { mode: trace.mode, result: "hit" },
         trace.cacheHitCount,
       );
     }
     if (trace.cacheMissCount > 0) {
-      customreportAssistantCacheEventsTotal.inc(
+      weeklyreportAssistantCacheEventsTotal.inc(
         { mode: trace.mode, result: "miss" },
         trace.cacheMissCount,
       );
     }
     if (trace.readThrough) {
-      customreportAssistantCacheEventsTotal.inc({
+      weeklyreportAssistantCacheEventsTotal.inc({
         mode: trace.mode,
         result: "read_through",
       });
@@ -60,13 +60,13 @@ export class ReportAssistantPrometheusTelemetry implements ReportAssistantTeleme
 
   private recordRepairs(trace: ReportAssistantTelemetryEvent["trace"]): void {
     if (trace.plannerRepairCount > 0) {
-      customreportAssistantRepairsTotal.inc(
+      weeklyreportAssistantRepairsTotal.inc(
         { kind: "planner" },
         trace.plannerRepairCount,
       );
     }
     if (trace.citationRepairCount > 0) {
-      customreportAssistantRepairsTotal.inc(
+      weeklyreportAssistantRepairsTotal.inc(
         { kind: "citation" },
         trace.citationRepairCount,
       );
@@ -75,15 +75,15 @@ export class ReportAssistantPrometheusTelemetry implements ReportAssistantTeleme
 
   private recordUsage(trace: ReportAssistantTelemetryEvent["trace"]): void {
     if (trace.usage === null) return;
-    customreportAssistantTokensTotal.inc(
+    weeklyreportAssistantTokensTotal.inc(
       { kind: "input" },
       trace.usage.promptTokens,
     );
-    customreportAssistantTokensTotal.inc(
+    weeklyreportAssistantTokensTotal.inc(
       { kind: "output" },
       trace.usage.completionTokens,
     );
-    customreportAssistantTokensTotal.inc(
+    weeklyreportAssistantTokensTotal.inc(
       { kind: "total" },
       trace.usage.totalTokens,
     );

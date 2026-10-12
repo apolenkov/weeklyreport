@@ -238,7 +238,7 @@ coverage:
     NODE_OPTIONS: --max-old-space-size=8192
   script:
     - mkdir -p ci-reports
-    - VITEST_JSON_OUTPUT_FILE="$CI_PROJECT_DIR/ci-reports/web-coverage-vitest.json" pnpm --filter @customreport/web test:coverage
+    - VITEST_JSON_OUTPUT_FILE="$CI_PROJECT_DIR/ci-reports/web-coverage-vitest.json" pnpm --filter @weeklyreport/web test:coverage
     - |
       node --input-type=module <<'NODE'
       import { readFileSync, writeFileSync } from "node:fs";
@@ -352,7 +352,7 @@ api-integration:
     - pnpm exec prisma migrate deploy --schema=prisma/schema.prisma
     # Verbose reporter keeps per-test lines in the trace so a serial-suite
     # stall names its test; the JSON reporter still feeds the summary gate.
-    - pnpm --filter @customreport/api test:coverage --reporter=verbose --reporter=json "--outputFile.json=$CI_PROJECT_DIR/ci-reports/api-verification-vitest.json"
+    - pnpm --filter @weeklyreport/api test:coverage --reporter=verbose --reporter=json "--outputFile.json=$CI_PROJECT_DIR/ci-reports/api-verification-vitest.json"
     - |
       node --input-type=module <<'NODE'
       import { readFileSync, writeFileSync } from "node:fs";

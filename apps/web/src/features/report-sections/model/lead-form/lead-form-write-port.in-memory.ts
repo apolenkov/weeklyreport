@@ -5,7 +5,7 @@ import type {
   ResolvePlanInput,
   RestorePlanInput,
   SubmitSectionPayload,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type {
   LeadFormFillFromInput,

@@ -1,7 +1,7 @@
 "use client";
 
-import type { CompiledHistoryResult, Role } from "@customreport/shared";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import type { CompiledHistoryResult, Role } from "@weeklyreport/shared";
 import { useEffect, useMemo, useState } from "react";
 
 import {

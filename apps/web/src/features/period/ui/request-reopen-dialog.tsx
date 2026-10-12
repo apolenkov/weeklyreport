@@ -1,6 +1,6 @@
 "use client";
 
-import { MAX_REOPEN_REASON_LENGTH } from "@customreport/shared";
+import { MAX_REOPEN_REASON_LENGTH } from "@weeklyreport/shared";
 import {
   type ReactNode,
   type RefObject,

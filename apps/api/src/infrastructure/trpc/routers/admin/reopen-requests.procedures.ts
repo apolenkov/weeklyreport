@@ -1,7 +1,7 @@
 import {
   MAX_REOPEN_NOTE_LENGTH,
   reopenRequestListInputSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { z } from "zod";
 
 import type { ReopenRequestAdminService } from "../../../../modules/admin/index.js";

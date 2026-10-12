@@ -2,7 +2,7 @@ import {
   type ReportSectionReadModel,
   sharedPublishedReportSectionReadModelSchema,
   sharedReportSectionReadModelSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { filterSectionToSharedProducts } from "./lead-form-cross-author-scope";

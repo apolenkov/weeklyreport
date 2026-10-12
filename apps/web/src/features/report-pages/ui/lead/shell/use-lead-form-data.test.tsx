@@ -2,9 +2,9 @@
 // Data-loading hook pins cover query enablement, visibility gating, purge, and
 // redirects; end-to-end coverage stays in the LeadForm suites.
 
-import { type UserSession, userSessionSchema } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, renderHook, waitFor } from "@testing-library/react";
+import { type UserSession, userSessionSchema } from "@weeklyreport/shared";
 import { type ReactNode, useLayoutEffect } from "react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

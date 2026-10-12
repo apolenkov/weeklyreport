@@ -1,7 +1,7 @@
 import type {
   ItemWorkflowStatus,
   LeadStatusOverviewOutput,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import type { SetStateAction } from "react";
 
 import type {

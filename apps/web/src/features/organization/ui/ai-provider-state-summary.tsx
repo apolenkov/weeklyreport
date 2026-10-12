@@ -1,7 +1,7 @@
 import type {
   AiProviderAvailability,
   AiProviderConfigurationRead,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { Pencil } from "lucide-react";
 
 import { hasPendingExecution } from "./ai-provider-configuration-fields.types";

@@ -1,4 +1,4 @@
-import { MS_PER_HOUR } from "@customreport/shared";
+import { MS_PER_HOUR } from "@weeklyreport/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../../lib/logger.js";

@@ -1,6 +1,6 @@
-import type { AssembledReport } from "@customreport/shared";
 import { Inject, Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
+import type { AssembledReport } from "@weeklyreport/shared";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { buildTransition } from "../../period/index.js";

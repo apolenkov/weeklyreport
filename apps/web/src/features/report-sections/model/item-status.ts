@@ -3,13 +3,13 @@
 // `blocked` are covering-risk display overlays only — never settable or
 // persistable.
 
-import type { ItemWorkflowStatus } from "@customreport/shared";
+import type { ItemWorkflowStatus } from "@weeklyreport/shared";
 
 import { type AlarmRisk, deriveItemAlarmFromRisks } from "./alarms/item-alarm";
 
 const IN_PROGRESS_STATUS = "in-progress";
 
-export type { ItemWorkflowStatus } from "@customreport/shared";
+export type { ItemWorkflowStatus } from "@weeklyreport/shared";
 export type ItemType = "current" | "next";
 export type ItemProgressStatus =
   "in-progress" | "completed" | "planned" | "paused" | "postponed";

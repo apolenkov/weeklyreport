@@ -1,6 +1,6 @@
 "use client";
 
-import { MAX_WEEK_LABEL_LENGTH } from "@customreport/shared";
+import { MAX_WEEK_LABEL_LENGTH } from "@weeklyreport/shared";
 import type { ReactNode } from "react";
 
 interface CreatePeriodFieldsProps {

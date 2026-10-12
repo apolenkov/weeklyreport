@@ -1,11 +1,11 @@
 import type { BaseAdapter } from "@bull-board/api/baseAdapter";
 import { retryJobHandler } from "@bull-board/api/dist/handlers/retryJob.js";
+import type { INestApplication } from "@nestjs/common";
 import {
   EMAIL_REMINDER_QUEUE_NAME,
   PDF_EXPORT_QUEUE_NAME,
   QUEUE_NAMES,
-} from "@customreport/shared";
-import type { INestApplication } from "@nestjs/common";
+} from "@weeklyreport/shared";
 import type { Queue } from "bullmq";
 import { describe, expect, it, vi } from "vitest";
 

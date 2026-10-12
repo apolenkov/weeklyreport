@@ -18,7 +18,7 @@ import {
   AUTH_COOKIE_NAME,
   publishedReportSnapshotSchema,
   type UserSession,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";

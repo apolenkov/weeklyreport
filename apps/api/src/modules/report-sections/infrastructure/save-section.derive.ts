@@ -1,7 +1,7 @@
 // Row-builders for saveSection's delete-recreate; load-bearing orchestration
 // (FOR UPDATE, version CAS, comment reinsert, conflict/P2002) stays in the caller.
-import type { ReportSectionReadModel } from "@customreport/shared";
 import type { Prisma } from "@prisma/client";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 
 import { ReportSectionDomainError } from "../application/report-sections.service";
 

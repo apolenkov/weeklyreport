@@ -2,7 +2,7 @@ import {
   type AssembledReport,
   assembledReportSchema,
   type ReportSectionReadModel,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { AppLogger } from "../../../lib/logger";
 import { emitPublishSideEffects } from "../../period/index.js";

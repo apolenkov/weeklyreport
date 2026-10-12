@@ -1,9 +1,9 @@
 // Pure derivation tests for `buildAccordionModel`'s `draftCount`.
+import { TRPCClientError } from "@trpc/client";
 import {
   buildEscalationsFromReadSections,
   type WeeklyReportReadModel,
-} from "@customreport/shared";
-import { TRPCClientError } from "@trpc/client";
+} from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {

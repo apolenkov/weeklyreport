@@ -3,7 +3,7 @@ import {
   type FailedJob,
   PDF_EXPORT_QUEUE_NAME,
   type QueueName,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 /** Non-credential identity a pdf-export queue payload claims; the durable export row decides whether it is true. */
 export interface AdminPdfExportIdentity {

@@ -31,4 +31,4 @@ None. This ownership cleanup and corrective copy preserve the existing requireme
 
 ## Impact
 
-Six shared source/test files change. Both schema callers travel with the removed refinement. `INVISIBLE_TEXT_MESSAGE` is available through `@customreport/shared` for the already identified `record-prose-validation.ts` production consumer; that leaf remains separately assigned.
+Six shared source/test files change. Both schema callers travel with the removed refinement. `INVISIBLE_TEXT_MESSAGE` is available through `@weeklyreport/shared` for the already identified `record-prose-validation.ts` production consumer; that leaf remains separately assigned.

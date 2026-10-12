@@ -1,5 +1,5 @@
-import type { ResolvePlanInput } from "@customreport/shared";
 import { Prisma } from "@prisma/client";
+import type { ResolvePlanInput } from "@weeklyreport/shared";
 
 import type { resolveItemTransition } from "../domain/item-outcome-transition.js";
 import type { outcomeCandidate } from "./item-outcome.transaction.js";

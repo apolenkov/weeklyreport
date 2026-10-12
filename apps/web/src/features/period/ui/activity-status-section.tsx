@@ -1,10 +1,10 @@
 "use client";
 
-import type { TrafficLightStatus } from "@customreport/shared";
+import type { TrafficLightStatus } from "@weeklyreport/shared";
 import {
   CANONICAL_STATUS_PRECEDENCE,
   trafficLightToCanonical,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { useState } from "react";
 
 import type { LeadActivityCard } from "../../report-sections";

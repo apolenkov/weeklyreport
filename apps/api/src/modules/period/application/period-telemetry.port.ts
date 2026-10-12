@@ -1,4 +1,4 @@
-import type { PeriodStatus } from "@customreport/shared";
+import type { PeriodStatus } from "@weeklyreport/shared";
 
 export interface PeriodTelemetry {
   readonly recordPublishedReport: () => void;

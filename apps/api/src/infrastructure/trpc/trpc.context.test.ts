@@ -1,6 +1,6 @@
-import { AUTH_COOKIE_NAME, type UserSession } from "@customreport/shared";
 import type { INestApplication } from "@nestjs/common";
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
+import { AUTH_COOKIE_NAME, type UserSession } from "@weeklyreport/shared";
 import type { Request, Response } from "express";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 

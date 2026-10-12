@@ -1,7 +1,7 @@
 import {
   type AssembledReport,
   type CompiledHistoryEntry,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 // Display sentinel when publisher is missing from the read model.
 const UNKNOWN_PUBLISHER_NAME = "Unknown";

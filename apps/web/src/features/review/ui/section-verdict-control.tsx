@@ -1,7 +1,7 @@
 "use client";
 
-import type { ReviewVerdict, SectionReviewView } from "@customreport/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import type { ReviewVerdict, SectionReviewView } from "@weeklyreport/shared";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 

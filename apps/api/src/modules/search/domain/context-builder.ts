@@ -1,4 +1,4 @@
-import type { CanonicalStatus, SourceCitation } from "@customreport/shared";
+import type { CanonicalStatus, SourceCitation } from "@weeklyreport/shared";
 
 import {
   buildGroundingAggregates,

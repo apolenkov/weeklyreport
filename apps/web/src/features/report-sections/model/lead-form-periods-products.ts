@@ -3,8 +3,8 @@ import type {
   ReportSectionReadModel,
   RiskSeverity,
   TrafficLightStatus,
-} from "@customreport/shared";
-import { shortNameFromName, STAGE_NAMES } from "@customreport/shared";
+} from "@weeklyreport/shared";
+import { shortNameFromName, STAGE_NAMES } from "@weeklyreport/shared";
 
 import {
   formatPeriodRangeWithYear,

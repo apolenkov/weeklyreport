@@ -1,9 +1,9 @@
+import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import {
   MAX_ACTIVITY_NAME_LENGTH,
   SAFE_TEXT_MAX_LENGTH,
-} from "@customreport/shared";
-import { fireEvent, render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+} from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { StatusOverviewActivityEditor } from "./status-overview-activity-editor";

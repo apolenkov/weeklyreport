@@ -1,18 +1,18 @@
 "use client";
 
 import {
-  EMAIL_REMINDER_QUEUE_NAME,
-  type FailedJob,
-  QUEUE_NAMES,
-  type QueueName,
-} from "@customreport/shared";
-import {
   type QueryClient,
   useInfiniteQuery,
   useMutation,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import {
+  EMAIL_REMINDER_QUEUE_NAME,
+  type FailedJob,
+  QUEUE_NAMES,
+  type QueueName,
+} from "@weeklyreport/shared";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 

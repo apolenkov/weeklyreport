@@ -1,4 +1,4 @@
-import type { AiProviderControlRead } from "@customreport/shared";
+import type { AiProviderControlRead } from "@weeklyreport/shared";
 
 type RuntimeFailure = NonNullable<AiProviderControlRead["runtimeFailure"]>;
 

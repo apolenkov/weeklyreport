@@ -1,6 +1,6 @@
 "use client";
 
-import { DEFAULT_ORGANIZATION_IDENTITY } from "@customreport/shared";
+import { DEFAULT_ORGANIZATION_IDENTITY } from "@weeklyreport/shared";
 import { useContext } from "react";
 
 import { SessionContext } from "../../../shared/lib/auth/session-provider";

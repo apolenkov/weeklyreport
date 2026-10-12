@@ -2,7 +2,7 @@ import type {
   DbRole,
   ReportSectionReadModel,
   TrafficLightStatus,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import type { SlideGridModel } from "./slide-grid-model";
 

@@ -1,5 +1,5 @@
-import type { ReportSectionReadModel } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { createDemoSection } from "../../../../test-utils/fixtures";

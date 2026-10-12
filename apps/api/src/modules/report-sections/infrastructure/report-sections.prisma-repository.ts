@@ -1,13 +1,13 @@
+import { Inject, Injectable } from "@nestjs/common";
 import {
   mapPrismaToReportSection,
   reportSectionFullInclude,
-} from "@customreport/report-persistence";
+} from "@weeklyreport/report-persistence";
 import {
   type PublishedLineage,
   type ReportSectionReadModel,
   type ReportStatus,
-} from "@customreport/shared";
-import { Inject, Injectable } from "@nestjs/common";
+} from "@weeklyreport/shared";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";

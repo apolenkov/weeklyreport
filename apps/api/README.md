@@ -1,4 +1,4 @@
-# @customreport/api
+# @weeklyreport/api
 
 NestJS 11 backend with tRPC API, Prisma ORM, and JWT/SAML authentication.
 
@@ -53,6 +53,6 @@ Redis, Mailpit and Gotenberg start with `pnpm deps:up`.
 ## Testing
 
 ```bash
-pnpm --filter @customreport/api test
-pnpm --filter @customreport/api test:integration  # requires .env.test and DB/Redis15
+pnpm --filter @weeklyreport/api test
+pnpm --filter @weeklyreport/api test:integration  # requires .env.test and DB/Redis15
 ```

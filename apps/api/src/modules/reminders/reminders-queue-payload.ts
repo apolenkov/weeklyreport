@@ -4,7 +4,7 @@ import {
   reminderEscalationPayloadSchema,
   type ReminderQueuePayload,
   reminderQueuePayloadSchema,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 import { z } from "zod";
 
 import type { JobTraceContext } from "../../lib/job-trace-context.js";

@@ -1,4 +1,4 @@
-import type { PeriodState } from "@customreport/shared";
+import type { PeriodState } from "@weeklyreport/shared";
 
 export interface EnsuredPeriod {
   // True when this call minted the row; false when it found an existing one.

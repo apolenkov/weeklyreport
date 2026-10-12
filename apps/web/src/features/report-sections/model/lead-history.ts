@@ -4,7 +4,7 @@
 import type {
   CompiledHistoryEntry,
   MyHistoryEntry,
-} from "@customreport/shared";
+} from "@weeklyreport/shared";
 
 import {
   formatDateTime,
@@ -14,7 +14,7 @@ import {
 } from "../../../shared/lib/format/format-date";
 
 // History rows use a presentation-only submission state; API payload types stay
-// owned by @customreport/shared.
+// owned by @weeklyreport/shared.
 type HistorySubmissionState = "submitted" | "not-submitted" | "unavailable";
 
 export interface HistoryEntry {

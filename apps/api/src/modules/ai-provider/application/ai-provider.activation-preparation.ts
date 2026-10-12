@@ -1,5 +1,5 @@
-import type { AiProviderControlRead } from "@customreport/shared";
 import { AiProviderLifecycle } from "@prisma/client";
+import type { AiProviderControlRead } from "@weeklyreport/shared";
 
 import type { ResolvedEmbeddingProfile } from "../domain/provider-profile.js";
 import type { StoredAiProviderRevision } from "../infrastructure/ai-provider.repository.js";
