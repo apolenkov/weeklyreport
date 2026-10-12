@@ -1,6 +1,10 @@
 import { MetaRow } from "../../../shared/ui/report-shell/meta-row";
 import type { RiskEntry, StageStatus } from "../../report-sections";
-import { RiskCardActions, RiskCardSummary } from "./risk-card-parts";
+import {
+  RiskCardActions,
+  RiskCardSummary,
+  riskDisplayName,
+} from "./risk-card-parts";
 
 // Keep the card wash softer than its chip while deriving every hue from the
 // canonical alarm tokens.
@@ -113,7 +117,7 @@ function RiskCardHeader({
     <div className="mb-3 flex flex-wrap items-center gap-2">
       <RiskSeverityChip isBlocked={isBlocked} />
       <span className="font-[family-name:var(--font-sans)] text-sm font-semibold break-words">
-        {risk.productName}
+        {riskDisplayName(risk)}
       </span>
       <RiskCardActions
         risk={risk}

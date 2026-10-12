@@ -340,26 +340,28 @@ describe("RisksSection — foreign stage nudge (C5142)", () => {
   });
 });
 
-describe("RisksSection — empty product name labels (C5144)", () => {
+describe("RisksSection — empty product name fallback (C5144)", () => {
   it.each(["", " ".repeat(3)])(
-    "names toggle/edit/delete actions with a fallback for productName %s",
+    "shows the Unknown placeholder in labels, title and delete subtitle for productName %j",
     (productName) => {
-      const { unmount } = render(
-        <RisksSection risks={[{ ...baseRisk, productName }]} />,
-      );
+      render(<RisksSection risks={[{ ...baseRisk, productName }]} />);
 
       expect(
-        screen.getByRole("button", { name: "Edit risk for untitled" }),
+        screen.getByRole("button", { name: "Edit risk for Unknown" }),
       ).toBeInTheDocument();
       expect(
         screen.getByRole("button", {
-          name: "Escalate risk for untitled to blocked",
+          name: "Escalate risk for Unknown to blocked",
         }),
       ).toBeInTheDocument();
+      expect(screen.getByText("Unknown")).toBeInTheDocument();
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Delete risk for Unknown" }),
+      );
       expect(
-        screen.getByRole("button", { name: "Delete risk for untitled" }),
+        within(screen.getByRole("alertdialog")).getByText(/^Unknown · /),
       ).toBeInTheDocument();
-      unmount();
     },
   );
 });
