@@ -32,11 +32,12 @@ export function runMigrateDeploy(
   const childEnvironment = {
     ...process.env,
     ...environment,
-    // These safety inputs must remain explicit even when ambient values exist.
-    DATABASE_URL: environment.DATABASE_URL,
-    PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION:
-      environment.PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION,
   };
+  // These safety inputs must remain explicit even when ambient values exist.
+  if (environment.DATABASE_URL === undefined)
+    delete childEnvironment.DATABASE_URL;
+  if (environment.PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION === undefined)
+    delete childEnvironment.PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION;
   assertE2eRuntimeDestructive("migrate-deploy", childEnvironment);
   const repoRoot = path.resolve(import.meta.dirname, "../..");
   const result = spawn("pnpm", ["exec", "prisma", "migrate", "deploy"], {
