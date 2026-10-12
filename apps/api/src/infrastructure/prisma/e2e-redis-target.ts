@@ -17,12 +17,12 @@ export interface E2eRedisTarget {
   readonly db: string;
 }
 
-const LANE_DATABASE_PATTERN = /^customreport_e2e_lane_([a-l])_test$/u;
+const LANE_DATABASE_PATTERN = /^weeklyreport_e2e_lane_([a-l])_test$/u;
 const LANE_FIRST_REDIS_DB = 1;
 
 /**
  * The only logical Redis DB a disposable database may flush: DB 15 for
- * customreport_e2e, DB 1..12 for lanes a..l. DB 0 (product) and DB 13/14 are
+ * weeklyreport_e2e, DB 1..12 for lanes a..l. DB 0 (product) and DB 13/14 are
  * never reachable; lanes m..o have no Redis DB and are refused.
  */
 export function redisDbForDatabase(database: string): string | undefined {

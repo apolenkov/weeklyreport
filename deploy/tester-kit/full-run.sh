@@ -8,12 +8,12 @@
 # crawler skips as dangerous), the human-like pass, collect api/web/postgres logs, coverage and
 # statistics, build report.md, reset the stand again.
 # Evidence: ~/.local/state/wr-tester/full-run-<time>/ (override with --out).
-# e2e (pnpm test:e2e) is not run: it needs dev-login and dev.runtimeTarget on a source run (customreport_e2e), the stand uses SAML;
+# e2e (pnpm test:e2e) is not run: it needs dev-login and dev.runtimeTarget on a source run (weeklyreport_e2e), the stand uses SAML;
 # the e2e step only writes e2e.txt with this reason, and --no-e2e skips that note. Browser checks on the stand are walk.sh and this script.
 set -euo pipefail
 . "$(dirname "$0")/env.sh"
 
-PG() { kubectl -n "$NS" exec -i postgres-0 -- psql -U customreport -d customreport_e2e -v ON_ERROR_STOP=1 -Atq "$@"; }
+PG() { kubectl -n "$NS" exec -i postgres-0 -- psql -U weeklyreport -d weeklyreport_e2e -v ON_ERROR_STOP=1 -Atq "$@"; }
 
 # Statistics snapshot as one JSON document (statements, tables, indexes).
 SNAPSHOT_SQL="SELECT json_build_object(

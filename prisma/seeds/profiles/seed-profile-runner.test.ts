@@ -12,7 +12,7 @@ beforeEach(() => {
   vi.setSystemTime(new Date("2026-10-11T23:59:59.000Z"));
   vi.stubEnv(
     "DATABASE_URL",
-    "postgresql://synthetic:synthetic@127.0.0.1:5432/customreport_e2e",
+    "postgresql://synthetic:synthetic@127.0.0.1:5432/weeklyreport_e2e",
   );
   vi.stubEnv("NODE_ENV", "test");
   vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");

@@ -109,8 +109,8 @@ variables:
     - su postgres -s /bin/sh -c '/usr/lib/postgresql/18/bin/pg_ctl -D /tmp/pgdata -l /tmp/postgres.log -o "-h 127.0.0.1" -w -t 60 start'
     # prisma migrate reset drops and recreates the database, which needs a
     # superuser role.
-    - createuser -h 127.0.0.1 -U postgres -s customreport
-    - createdb -h 127.0.0.1 -U postgres -O customreport customreport_e2e
+    - createuser -h 127.0.0.1 -U postgres -s weeklyreport
+    - createdb -h 127.0.0.1 -U postgres -O weeklyreport weeklyreport_e2e
   after_script:
     - |
       mkdir -p ci-reports
@@ -150,7 +150,7 @@ quality:
   extends: .workspace-node
   stage: quality
   variables:
-    DATABASE_URL: postgresql://customreport:localdev@127.0.0.1:5432/customreport_generate_only
+    DATABASE_URL: postgresql://weeklyreport:localdev@127.0.0.1:5432/weeklyreport_generate_only
     API_URL: http://127.0.0.1:3002
     NODE_OPTIONS: --max-old-space-size=8192
     HELM_VERSION: "4.3.0"
@@ -233,7 +233,7 @@ coverage:
     - job: quality
       artifacts: false
   variables:
-    DATABASE_URL: postgresql://customreport:localdev@127.0.0.1:5432/customreport_generate_only
+    DATABASE_URL: postgresql://weeklyreport:localdev@127.0.0.1:5432/weeklyreport_generate_only
     API_URL: http://127.0.0.1:3002
     NODE_OPTIONS: --max-old-space-size=8192
   script:
@@ -310,8 +310,8 @@ api-integration:
   variables:
     # MVP single-database policy: one disposable loopback target per job, and
     # both URLs must resolve to the same target before cleanup runs.
-    DATABASE_URL: postgresql://customreport:localdev@127.0.0.1:5432/customreport_e2e
-    E2E_DATABASE_URL: postgresql://customreport:localdev@127.0.0.1:5432/customreport_e2e
+    DATABASE_URL: postgresql://weeklyreport:localdev@127.0.0.1:5432/weeklyreport_e2e
+    E2E_DATABASE_URL: postgresql://weeklyreport:localdev@127.0.0.1:5432/weeklyreport_e2e
     API_HOST: 127.0.0.1
     NODE_ENV: test
     REDIS_HOST: redis
@@ -322,7 +322,7 @@ api-integration:
     REQUIRED_INTEGRATION_DEPS: "true"
     SMTP_HOST: mailpit
     SMTP_PORT: "1025"
-    SMTP_FROM: integration@customreport.local
+    SMTP_FROM: integration@weeklyreport.local
     MAILPIT_API_URL: http://mailpit:8025
   script:
     # Fail fast on unreachable service aliases instead of hanging a test.
@@ -420,7 +420,7 @@ migrate-reset:
     - job: node-toolchain
       artifacts: true
   variables:
-    DATABASE_URL: postgresql://customreport:localdev@127.0.0.1:5432/customreport_e2e
+    DATABASE_URL: postgresql://weeklyreport:localdev@127.0.0.1:5432/weeklyreport_e2e
     NODE_ENV: test
   script:
     - PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION="давай" pnpm exec tsx prisma/operations/migrate-reset.ts

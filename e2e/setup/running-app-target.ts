@@ -24,7 +24,7 @@ function observedTarget(body: unknown): {
 
 /**
  * Prove that the running app uses the selected lane's database and Redis DB
- * (customreport_e2e and DB 15 unless E2E_LANE is set). Runs in
+ * (weeklyreport_e2e and DB 15 unless E2E_LANE is set). Runs in
  * global setup, before any scenario; `/health/ready` only proves connectivity.
  */
 export async function assertRunningAppTarget(

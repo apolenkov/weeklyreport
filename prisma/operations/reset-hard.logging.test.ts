@@ -37,7 +37,7 @@ const COLON_PASSWORD_PREFIX = "hunter2";
 const COLON_PASSWORD_SUFFIX = "extra";
 const COLON_PASSWORD_URL =
   `postgresql://test:${COLON_PASSWORD_PREFIX}:${COLON_PASSWORD_SUFFIX}` +
-  "@127.0.0.1:5432/customreport_e2e";
+  "@127.0.0.1:5432/weeklyreport_e2e";
 
 afterEach(() => {
   vi.restoreAllMocks();

@@ -75,7 +75,7 @@ const USER_ROWS = [
   },
   {
     id: LEAD_MARIA,
-    email: "maria@customreport.local",
+    email: "maria@weeklyreport.local",
     name: "Каштанова Мария Андреевна",
     lastName: "Каштанова",
     firstName: "Мария",
@@ -87,7 +87,7 @@ const USER_ROWS = [
   },
   {
     id: LEAD_IGOR,
-    email: "igor@customreport.local",
+    email: "igor@weeklyreport.local",
     name: "Ветров Игорь Олегович",
     lastName: "Ветров",
     firstName: "Игорь",
@@ -99,7 +99,7 @@ const USER_ROWS = [
   },
   {
     id: LEAD_DMITRY,
-    email: "dmitry@customreport.local",
+    email: "dmitry@weeklyreport.local",
     name: "Соснов Дмитрий Максимович",
     lastName: "Соснов",
     firstName: "Дмитрий",
@@ -113,7 +113,7 @@ const USER_ROWS = [
     // Olga and Sergey belong to Finance, outside the Software Development head's
     // report scope.
     id: LEAD_OLGA,
-    email: "olga@customreport.local",
+    email: "olga@weeklyreport.local",
     name: "Незабудкина Ольга Сергеевна",
     lastName: "Незабудкина",
     firstName: "Ольга",
@@ -125,7 +125,7 @@ const USER_ROWS = [
   },
   {
     id: LEAD_SERGEY,
-    email: "sergey@customreport.local",
+    email: "sergey@weeklyreport.local",
     name: "Тополев Сергей Дмитриевич",
     lastName: "Тополев",
     firstName: "Сергей",
@@ -138,7 +138,7 @@ const USER_ROWS = [
   // Non-technical PM leads in Development group (MOBILE/CLOUD/DEVOPS only)
   {
     id: LEAD_MOBILE_PM,
-    email: "boris@customreport.local",
+    email: "boris@weeklyreport.local",
     name: "Сиренев Борис",
     lastName: "Сиренев",
     firstName: "Борис",
@@ -150,7 +150,7 @@ const USER_ROWS = [
   },
   {
     id: LEAD_CLOUD_PM,
-    email: "viktor@customreport.local",
+    email: "viktor@weeklyreport.local",
     name: "Липов Виктор",
     lastName: "Липов",
     firstName: "Виктор",
@@ -162,7 +162,7 @@ const USER_ROWS = [
   },
   {
     id: LEAD_DEVOPS_PM,
-    email: "galina@customreport.local",
+    email: "galina@weeklyreport.local",
     name: "Малиновая Галина",
     lastName: "Малиновая",
     firstName: "Галина",
@@ -175,7 +175,7 @@ const USER_ROWS = [
   {
     // Activity-only lead: reports a cross-cutting activity, owns no product.
     id: LEAD_ACTIVITY_ONLY,
-    email: "activity-lead@customreport.local",
+    email: "activity-lead@weeklyreport.local",
     name: "Фиалков Роман Аркадьевич",
     lastName: "Фиалков",
     firstName: "Роман",

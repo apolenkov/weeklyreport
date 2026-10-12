@@ -34,8 +34,8 @@ export const LEAD_FORM_FIXTURE = {
   leadName: LEAD_FULL_NAME,
   leadDisplayName: shortNameFromName(LEAD_FULL_NAME),
   headName: "Кедров Антон Сергеевич",
-  leadEmail: "lead1@customreport.local",
-  headEmail: "head@customreport.local",
+  leadEmail: "lead1@weeklyreport.local",
+  headEmail: "head@weeklyreport.local",
   productName: "Маркетинговый портал",
   activityName: "Поддержка и сопровождение",
   currentText:

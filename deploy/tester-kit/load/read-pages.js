@@ -38,8 +38,8 @@ function signIn(user, password) {
 
 export function setup() {
   return {
-    lead: signIn("lead1@customreport.local", __ENV.LEAD_PW),
-    head: signIn("head@customreport.local", __ENV.HEAD_PW),
+    lead: signIn("lead1@weeklyreport.local", __ENV.LEAD_PW),
+    head: signIn("head@weeklyreport.local", __ENV.HEAD_PW),
   };
 }
 

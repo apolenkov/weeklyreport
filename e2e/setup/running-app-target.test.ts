@@ -35,12 +35,12 @@ async function expectRejection(
   );
 }
 
-void test("accepts an app on customreport_e2e and Redis DB 15", async () => {
+void test("accepts an app on weeklyreport_e2e and Redis DB 15", async () => {
   let requested = "";
   await assertRunningAppTarget(SIGNAL, (url) => {
     requested = url;
     return Promise.resolve(
-      trpcResponse({ database: "customreport_e2e", redisDb: 15 }),
+      trpcResponse({ database: "weeklyreport_e2e", redisDb: 15 }),
     );
   });
   assert.strictEqual(requested, RUNTIME_TARGET_URL);
@@ -48,21 +48,21 @@ void test("accepts an app on customreport_e2e and Redis DB 15", async () => {
 
 void test("rejects an app on another database", async () => {
   await expectRejection(
-    trpcResponse({ database: "customreport", redisDb: 15 }),
-    "customreport_e2e",
+    trpcResponse({ database: "weeklyreport", redisDb: 15 }),
+    "weeklyreport_e2e",
   );
 });
 
 void test("rejects an app whose Redis clients use DB 0", async () => {
   await expectRejection(
-    trpcResponse({ database: "customreport_e2e", redisDb: 0 }),
+    trpcResponse({ database: "weeklyreport_e2e", redisDb: 0 }),
     "Redis DB 15",
   );
 });
 
 void test("rejects a malformed probe body", async () => {
   await expectRejection(
-    trpcResponse({ database: "customreport_e2e" }),
+    trpcResponse({ database: "weeklyreport_e2e" }),
     "unexpected body",
   );
 });
@@ -81,19 +81,19 @@ void test("a lane run accepts only its own database and Redis DB", async () => {
   try {
     await assertRunningAppTarget(SIGNAL, () =>
       Promise.resolve(
-        trpcResponse({ database: "customreport_e2e_lane_a_test", redisDb: 1 }),
+        trpcResponse({ database: "weeklyreport_e2e_lane_a_test", redisDb: 1 }),
       ),
     );
     await expectRejection(
-      trpcResponse({ database: "customreport_e2e", redisDb: 15 }),
-      "customreport_e2e_lane_a_test",
+      trpcResponse({ database: "weeklyreport_e2e", redisDb: 15 }),
+      "weeklyreport_e2e_lane_a_test",
     );
     await expectRejection(
-      trpcResponse({ database: "customreport_e2e_lane_b_test", redisDb: 2 }),
-      "customreport_e2e_lane_a_test",
+      trpcResponse({ database: "weeklyreport_e2e_lane_b_test", redisDb: 2 }),
+      "weeklyreport_e2e_lane_a_test",
     );
     await expectRejection(
-      trpcResponse({ database: "customreport_e2e_lane_a_test", redisDb: 2 }),
+      trpcResponse({ database: "weeklyreport_e2e_lane_a_test", redisDb: 2 }),
       "Redis DB 1",
     );
   } finally {

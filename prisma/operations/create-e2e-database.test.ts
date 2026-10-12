@@ -23,7 +23,7 @@ import { createE2eDatabase } from "./create-e2e-database.js";
 
 const environment = {
   E2E_DATABASE_URL:
-    "postgresql://customreport:secret@127.0.0.1:5432/customreport_e2e",
+    "postgresql://weeklyreport:secret@127.0.0.1:5432/weeklyreport_e2e",
   NODE_ENV: "test",
   PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
 } as const;
@@ -41,7 +41,7 @@ describe("create E2E database boundary", () => {
       createE2eDatabase({
         ...environment,
         E2E_DATABASE_URL:
-          "postgresql://customreport:secret@127.0.0.1:5432/customreport_dev",
+          "postgresql://weeklyreport:secret@127.0.0.1:5432/weeklyreport_dev",
       }),
     ).rejects.toThrow(/not one of/u);
     expect(Client).not.toHaveBeenCalled();
@@ -63,12 +63,12 @@ describe("create E2E database boundary", () => {
     await expect(createE2eDatabase(environment)).resolves.toBeUndefined();
     expect(Client).toHaveBeenCalledWith({
       connectionString:
-        "postgresql://customreport:secret@127.0.0.1:5432/postgres",
+        "postgresql://weeklyreport:secret@127.0.0.1:5432/postgres",
     });
     expect(client.connect).toHaveBeenCalledOnce();
     expect(client.query).toHaveBeenCalledWith(
       "SELECT datname FROM pg_database WHERE datname = $1",
-      ["customreport_e2e"],
+      ["weeklyreport_e2e"],
     );
     expect(client.end).toHaveBeenCalledOnce();
   });
@@ -186,7 +186,7 @@ it.each([
 
 it("finalizes an already-existing database without issuing CREATE", async () => {
   client.query.mockResolvedValueOnce({
-    rows: [{ datname: "customreport_e2e" }],
+    rows: [{ datname: "weeklyreport_e2e" }],
   });
   await expect(createE2eDatabase(environment)).resolves.toBeUndefined();
   expect(client.query).toHaveBeenCalledOnce();

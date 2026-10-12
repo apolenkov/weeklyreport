@@ -37,7 +37,7 @@ and ownership declarations.
 
 - **WHEN** the local dependency manifest is read
 - **THEN** every database consumer uses the same fixed local-only credential without interpolating an arbitrary password into a URL
-- **AND** application consumers target exact disposable PostgreSQL `customreport_e2e`
+- **AND** application consumers target exact disposable PostgreSQL `weeklyreport_e2e`
 - **AND** the guarded local bootstrap creates the configured `POSTGRES_DB`
   database when it does not yet exist before migrations run
 

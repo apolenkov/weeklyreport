@@ -65,14 +65,14 @@ REDISPORT_LOCAL=56379
 for port in "$PGPORT_LOCAL" "$REDISPORT_LOCAL"; do
   if lsof -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1; then echo "Port $port is busy." >&2; exit 1; fi
 done
-export DATABASE_URL="postgresql://customreport:${DB_PASSWORD}@127.0.0.1:$PGPORT_LOCAL/customreport_e2e"
+export DATABASE_URL="postgresql://weeklyreport:${DB_PASSWORD}@127.0.0.1:$PGPORT_LOCAL/weeklyreport_e2e"
 export E2E_AI_PROVIDER_API_KEY=""
 export PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай'
 export REDIS_HOST=127.0.0.1 REDIS_PORT=$REDISPORT_LOCAL REDIS_DB=15
 cd "$REPO"
 [ -d node_modules ] || pnpm install --frozen-lockfile
 pnpm --filter @weeklyreport/api db:generate >/dev/null
-echo "Target: postgresql://***@127.0.0.1:$PGPORT_LOCAL/customreport_e2e; Redis DB 15"
+echo "Target: postgresql://***@127.0.0.1:$PGPORT_LOCAL/weeklyreport_e2e; Redis DB 15"
 pnpm exec tsx -e 'import { assertE2eRuntimeDestructive } from "./prisma/guards/_destructive-guard.ts"; assertE2eRuntimeDestructive("tester-reset")'
 # Observability hook (full-run.sh): collect api coverage, logs and database statistics before they are wiped.
 [ -z "${WR_PRE_RESET_HOOK:-}" ] || bash -c "$WR_PRE_RESET_HOOK"
@@ -98,7 +98,7 @@ if [ -n "$CRAWL_STATE" ]; then
 else
   (cd apps/api && pnpm exec tsx ../../prisma/seeds/profiles/seed-profile.ts full)
 fi
-kubectl -n "$NS" exec -i statefulset/postgres -- psql -U customreport -d customreport_e2e -v ON_ERROR_STOP=1 <"$HERE/post-seed.sql"
+kubectl -n "$NS" exec -i statefulset/postgres -- psql -U weeklyreport -d weeklyreport_e2e -v ON_ERROR_STOP=1 <"$HERE/post-seed.sql"
 [ -z "${WR_POST_RESET_HOOK:-}" ] || bash -c "$WR_POST_RESET_HOOK"
 pnpm exec tsx -e 'import { flushRedis } from "./prisma/operations/reset-hard.ts"; void flushRedis()'
 echo "Demo data reset."

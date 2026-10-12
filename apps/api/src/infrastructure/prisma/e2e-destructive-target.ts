@@ -13,8 +13,8 @@
 import { isLoopbackHost, parseLoopbackHost } from "./loopback-host.js";
 
 export const E2E_DESTRUCTIVE_CONSENT = "давай" as const;
-export const E2E_DATABASE_NAME = "customreport_e2e" as const;
-const E2E_RUNTIME_DATABASE_PATTERN = /^customreport_e2e(?:_lane_[a-o]_test)?$/u;
+export const E2E_DATABASE_NAME = "weeklyreport_e2e" as const;
+const E2E_RUNTIME_DATABASE_PATTERN = /^weeklyreport_e2e(?:_lane_[a-o]_test)?$/u;
 
 export interface DestructiveTargetEnv {
   readonly ALLOW_PROD_DESTRUCTIVE?: string;
@@ -226,7 +226,7 @@ const parseDatabaseTarget = (
       scriptName,
       databaseUrl,
       `database name "${database || "<empty>"}" is not one of ` +
-        `"${E2E_DATABASE_NAME}" or customreport_e2e_lane_[a-o]_test.`,
+        `"${E2E_DATABASE_NAME}" or weeklyreport_e2e_lane_[a-o]_test.`,
     );
   }
 

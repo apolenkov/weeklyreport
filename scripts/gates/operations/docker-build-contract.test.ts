@@ -70,7 +70,7 @@ test("the production image receives one release identity", () => {
 
 test("production dependency layers retain a shared pnpm BuildKit cache", () => {
   const cacheMount =
-    "--mount=type=cache,id=customreport-pnpm-store-v11,target=/pnpm/store,sharing=locked";
+    "--mount=type=cache,id=weeklyreport-pnpm-store-v11,target=/pnpm/store,sharing=locked";
   // API installs the full build graph once, the isolated migrator runtime once,
   // and production dependencies once; each uses the same locked store.
   assert.equal(apiDockerfile.split(cacheMount).length - 1, 3);

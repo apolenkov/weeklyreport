@@ -164,11 +164,11 @@ test("the API pools connections while migration and backup use direct postgres s
   assert.equal((podSpecOf(api).initContainers ?? []).length, 1);
   assert.equal(
     environment(migrate).DATABASE_URL,
-    "postgresql://customreport:$(DB_PASSWORD)@postgres:5432/review_database",
+    "postgresql://weeklyreport:$(DB_PASSWORD)@postgres:5432/review_database",
   );
   assert.equal(
     environment(mainContainer(manifests, "Deployment", "api")).DATABASE_URL,
-    "postgresql://customreport:$(DB_PASSWORD)@pgbouncer:5432/review_database?pgbouncer=true&connection_limit=1",
+    "postgresql://weeklyreport:$(DB_PASSWORD)@pgbouncer:5432/review_database?pgbouncer=true&connection_limit=1",
   );
   const pool = environment(mainContainer(manifests, "Deployment", "pgbouncer"));
   for (const [key, expected] of Object.entries({

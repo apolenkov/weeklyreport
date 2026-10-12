@@ -24,7 +24,7 @@ COPY prisma ./prisma
 # is build-time-required even though the browser bundle never executes the API.
 # Keep the pruned workspace root installed as well: TypeScript and Prisma are
 # root build tools used by transitive workspace build/db:generate tasks.
-RUN --mount=type=cache,id=customreport-pnpm-store-v11,target=/pnpm/store,sharing=locked \
+RUN --mount=type=cache,id=weeklyreport-pnpm-store-v11,target=/pnpm/store,sharing=locked \
     pnpm install --frozen-lockfile --store-dir=/pnpm/store --network-concurrency=4
 COPY --from=pruner /app/out/full/ .
 COPY tsconfig.base.json ./tsconfig.base.json

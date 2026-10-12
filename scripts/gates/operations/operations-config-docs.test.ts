@@ -18,7 +18,7 @@ const productionValues = read(
 const dashboardProviders =
   "deploy/helm/weeklyreport/observability/grafana/provisioning/dashboards";
 const operationalDashboardProvider = read(
-  `${dashboardProviders}/customreport.yml`,
+  `${dashboardProviders}/weeklyreport.yml`,
 );
 const productDashboardProvider = read(
   `${dashboardProviders}/product-telemetry.yml`,
@@ -45,7 +45,7 @@ const assertLocalBootstrapContract = (
   quickStart: string,
 ): void => {
   const target =
-    "postgresql://customreport:localdev@localhost:5432/customreport_e2e";
+    "postgresql://weeklyreport:localdev@localhost:5432/weeklyreport_e2e";
   assert.ok(environmentExample.includes(`DATABASE_URL=${target}`));
   assert.ok(environmentExample.includes(`E2E_DATABASE_URL=${target}`));
   assert.equal(
@@ -69,10 +69,10 @@ const assertLocalBootstrapContract = (
   }
   assert.match(
     localDependencies,
-    /name: POSTGRES_DB, value: customreport_e2e/u,
+    /name: POSTGRES_DB, value: weeklyreport_e2e/u,
   );
   assert.match(localDependencies, /name: POSTGRES_PASSWORD, value: localdev/u);
-  assert.ok(localEnvironment.includes("POSTGRES_DB=customreport_e2e"));
+  assert.ok(localEnvironment.includes("POSTGRES_DB=weeklyreport_e2e"));
 };
 
 test("local quick start bootstraps one exact guarded database", () => {
@@ -81,8 +81,8 @@ test("local quick start bootstraps one exact guarded database", () => {
 
 test("local bootstrap contract rejects target and consent drift", () => {
   const wrongTarget = localEnvironment.replaceAll(
-    "/customreport_e2e",
-    "/customreport_dev",
+    "/weeklyreport_e2e",
+    "/weeklyreport_dev",
   );
   const wrongConsent = readme.replace(
     "PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай'",
@@ -236,7 +236,7 @@ test("the enforcing CSP policy reports violations to the required collector", ()
   assert.match(caddyReadme, /external operator-owned collector/u);
   assert.doesNotMatch(
     caddyReadme,
-    /CADDY_CSP_REPORT_URI=https?:\/\/customreport\.example\.com/u,
+    /CADDY_CSP_REPORT_URI=https?:\/\/weeklyreport\.example\.com/u,
   );
 });
 
@@ -248,7 +248,7 @@ test("integration environment documents its guarded target boundary", () => {
   );
   assert.match(
     integrationEnvironment,
-    /MVP single-database policy[\s\S]*customreport_e2e database on loopback/u,
+    /MVP single-database policy[\s\S]*weeklyreport_e2e database on loopback/u,
   );
   assert.doesNotMatch(integrationEnvironment, /^DATABASE_URL=/mu);
 });
@@ -256,15 +256,15 @@ test("integration environment documents its guarded target boundary", () => {
 test("Grafana providers own non-overlapping current dashboard roots", () => {
   assert.match(
     operationalDashboardProvider,
-    /path: \/var\/lib\/grafana\/dashboards\/customreport\/operations/,
+    /path: \/var\/lib\/grafana\/dashboards\/weeklyreport\/operations/,
   );
   assert.match(
     productDashboardProvider,
-    /path: \/var\/lib\/grafana\/dashboards\/customreport\/product/,
+    /path: \/var\/lib\/grafana\/dashboards\/weeklyreport\/product/,
   );
   assert.doesNotMatch(
     operationalDashboardProvider + productDashboardProvider,
-    /path: \/var\/lib\/grafana\/dashboards\/customreport\s*$/m,
+    /path: \/var\/lib\/grafana\/dashboards\/weeklyreport\s*$/m,
   );
 });
 

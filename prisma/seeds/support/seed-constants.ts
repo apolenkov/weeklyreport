@@ -1,4 +1,4 @@
-// Canonical seed constants for CustomReport — the single import surface for the
+// Canonical seed constants for WeeklyReport — the single import surface for the
 // seed scripts, the tRPC dev session context, and deterministic id helpers. The
 // definitions live in the four leaf modules re-exported below.
 

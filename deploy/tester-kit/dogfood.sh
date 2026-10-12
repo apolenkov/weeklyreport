@@ -28,7 +28,7 @@ BASE="http://localhost:$APP_PORT"
 export AGENT_BROWSER_SESSION="${AGENT_BROWSER_SESSION:-$(agent-browser session id --scope worktree --prefix "dogfood-$(date +%s)-$$")}"
 AB() { agent-browser "$@"; }
 
-ROLES="lead:lead1@customreport.local:PW_LEAD1 head:head@customreport.local:PW_HEAD viewer:viewer@customreport.local:PW_VIEWER admin:admin@customreport.local:PW_ADMIN"
+ROLES="lead:lead1@weeklyreport.local:PW_LEAD1 head:head@weeklyreport.local:PW_HEAD viewer:viewer@weeklyreport.local:PW_VIEWER admin:admin@weeklyreport.local:PW_ADMIN"
 PAGES_lead="HOME /reports /reports/trends"
 PAGES_head="/head/dashboard /reports /reports/trends"
 PAGES_viewer="/reports/latest /reports /reports/trends"
@@ -55,7 +55,7 @@ for entry in $ROLES; do
   login "$email" "${!pwkey}" || { sleep 65; login "$email" "${!pwkey}"; }
   home=$(AB eval "location.pathname" | tr -d '"')
   cookie="$dir/.cookie"
-  (umask 077; AB cookies get --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.parse(s).data.cookies.find(c=>c.name==="customreport_session").value))' >"$cookie")
+  (umask 077; AB cookies get --json | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>process.stdout.write(JSON.parse(s).data.cookies.find(c=>c.name==="weeklyreport_session").value))' >"$cookie")
   pages_var="PAGES_$role"
   for page in ${!pages_var}; do
     [ "$page" = HOME ] && page=$home
@@ -80,7 +80,7 @@ for entry in $ROLES; do
       npx -y @jkudish/jev-browser@0.8.3 run \
         "Read this page as a first-time $role user: scroll once to see it all. Do not click, open menus or change anything." \
         "$BASE$page" --no-typing --max-steps 3 --max-seconds 90 \
-        --cookie-file "customreport_session=@$cookie" --screenshot "$dir/$slug.jev.jpg" >"$dir/$slug.jev.json" 2>"$dir/$slug.jev.err" || true
+        --cookie-file "weeklyreport_session=@$cookie" --screenshot "$dir/$slug.jev.jpg" >"$dir/$slug.jev.json" 2>"$dir/$slug.jev.err" || true
       jevnote=$slug.jev.json
     fi
     echo -e "$role\t$page\t$verdict\t$detail\t$jevnote" >>"$OUT/summary.tsv"

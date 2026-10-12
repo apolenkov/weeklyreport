@@ -3,10 +3,10 @@ import test from "node:test";
 
 import { resolveE2eLane } from "./lane.js";
 
-void test("without E2E_LANE the shared customreport_e2e / Redis 15 target is used", () => {
+void test("without E2E_LANE the shared weeklyreport_e2e / Redis 15 target is used", () => {
   for (const env of [{}, { E2E_LANE: "" }]) {
     assert.deepEqual(resolveE2eLane(env), {
-      database: "customreport_e2e",
+      database: "weeklyreport_e2e",
       redisDb: "15",
     });
   }
@@ -16,11 +16,11 @@ void test("lanes a and b get their own database and distinct Redis DBs", () => {
   const a = resolveE2eLane({ E2E_LANE: "a" });
   const b = resolveE2eLane({ E2E_LANE: "b" });
   assert.deepEqual(a, {
-    database: "customreport_e2e_lane_a_test",
+    database: "weeklyreport_e2e_lane_a_test",
     redisDb: "1",
   });
   assert.deepEqual(b, {
-    database: "customreport_e2e_lane_b_test",
+    database: "weeklyreport_e2e_lane_b_test",
     redisDb: "2",
   });
   const shared = resolveE2eLane({});

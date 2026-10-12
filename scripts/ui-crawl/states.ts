@@ -124,7 +124,7 @@ function validateTarget(value: unknown, targetUrl: unknown): void {
   assert.equal(url.port, target.port);
   assert.match(
     String(target.database),
-    /^customreport_e2e(?:_lane_[ab]_test)?$/u,
+    /^weeklyreport_e2e(?:_lane_[ab]_test)?$/u,
   );
   assert(["127.0.0.1", "localhost", "[::1]"].includes(String(target.host)));
 }

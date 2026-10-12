@@ -23,17 +23,17 @@ COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=pruner /app/out/json/ .
 COPY prisma ./prisma
-RUN --mount=type=cache,id=customreport-pnpm-store-v11,target=/pnpm/store,sharing=locked \
+RUN --mount=type=cache,id=weeklyreport-pnpm-store-v11,target=/pnpm/store,sharing=locked \
     pnpm install --frozen-lockfile --store-dir=/pnpm/store --network-concurrency=4
 COPY --from=pruner /app/out/full/ .
 COPY tsconfig.base.json ./tsconfig.base.json
 COPY prisma.config.ts ./prisma.config.ts
-RUN DATABASE_URL=postgresql://customreport:localdev@localhost:5432/customreport ./node_modules/.bin/prisma generate
+RUN DATABASE_URL=postgresql://weeklyreport:localdev@localhost:5432/weeklyreport ./node_modules/.bin/prisma generate
 
 # Stage 4: Migration dependency extraction. None of this stage's source tree
 # is copied into the published migration image.
 FROM installer AS migrator-deps
-RUN --mount=type=cache,id=customreport-pnpm-store-v11,target=/pnpm/store,sharing=locked \
+RUN --mount=type=cache,id=weeklyreport-pnpm-store-v11,target=/pnpm/store,sharing=locked \
     pnpm --filter @weeklyreport/migrator-runtime deploy --prod --legacy --frozen-lockfile /tmp/migrate-deps && \
     rm -rf /tmp/migrate-deps/node_modules/@weeklyreport && \
     find /app/prisma/migrations -type f \
@@ -90,7 +90,7 @@ COPY --from=pruner /app/out/json/ .
 COPY scripts/gates/production-deps-prune.ts ./scripts/gates/production-deps-prune.ts
 COPY scripts/gates/production-deps-prune.fixture.test.ts ./scripts/gates/production-deps-prune.fixture.test.ts
 RUN node --experimental-strip-types --test ./scripts/gates/production-deps-prune.fixture.test.ts
-RUN --mount=type=cache,id=customreport-pnpm-store-v11,target=/pnpm/store,sharing=locked \
+RUN --mount=type=cache,id=weeklyreport-pnpm-store-v11,target=/pnpm/store,sharing=locked \
     pnpm --filter=@weeklyreport/api deploy --prod --legacy --frozen-lockfile --ignore-scripts /tmp/api-deps && \
     node --experimental-strip-types ./scripts/gates/production-deps-prune.ts /tmp/api-deps && \
     test ! -e /tmp/api-deps/node_modules/@weeklyreport/migrator-runtime && \
@@ -125,7 +125,7 @@ RUN test ! -e /app/prisma && test ! -e /app/prisma.config.ts && \
     ! find /app/apps -type d \( -name test-utils -o -name __tests__ -o -name seeds -o -name guards -o -name operations \) -print | grep -q .
 # Verify the two runtime dependency surfaces.
 RUN test ! -e /app/node_modules/.bin/pnpm && test ! -e /app/node_modules/.bin/turbo && \
-    node -e "Promise.all([import('/app/apps/api/dist/packages/shared/src/index.js'), import('/app/apps/api/dist/packages/report-persistence/src/index.js'), import('@prisma/client'), import('@prisma/adapter-pg')]).then(([, , { PrismaClient }, { PrismaPg }]) => { new PrismaClient({ adapter: new PrismaPg({ connectionString: 'postgresql://ci-build-only@localhost:5432/customreport' }) }); console.log('runtime imports passed') })"
+    node -e "Promise.all([import('/app/apps/api/dist/packages/shared/src/index.js'), import('/app/apps/api/dist/packages/report-persistence/src/index.js'), import('@prisma/client'), import('@prisma/adapter-pg')]).then(([, , { PrismaClient }, { PrismaPg }]) => { new PrismaClient({ adapter: new PrismaPg({ connectionString: 'postgresql://ci-build-only@localhost:5432/weeklyreport' }) }); console.log('runtime imports passed') })"
 
 # Create PDF storage directory
 RUN mkdir -p /app/data/pdfs && chown node:node /app/data/pdfs

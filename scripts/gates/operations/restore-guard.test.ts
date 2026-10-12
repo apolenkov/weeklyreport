@@ -51,8 +51,8 @@ function runRestore(overrides: NodeJS.ProcessEnv = {}) {
     PGPORT: "5432",
     PGUSER: "restore-user",
     [passwordVariable]: fixtureSecret,
-    PGDATABASE: "customreport_test",
-    CONFIRM_RESTORE_TARGET: "test|db.example.com|5432|customreport_test",
+    PGDATABASE: "weeklyreport_test",
+    CONFIRM_RESTORE_TARGET: "test|db.example.com|5432|weeklyreport_test",
     PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
     ...overrides,
   };
@@ -72,8 +72,8 @@ function runRestore(overrides: NodeJS.ProcessEnv = {}) {
 
 test("wrong host, port, or database confirmation executes nothing", () => {
   for (const confirmation of [
-    "test|other.internal|5432|customreport_test",
-    "test|db.example.com|6432|customreport_test",
+    "test|other.internal|5432|weeklyreport_test",
+    "test|db.example.com|6432|weeklyreport_test",
     "test|db.example.com|5432|other_test",
   ]) {
     const { calls, result } = runRestore({
@@ -88,7 +88,7 @@ test("invalid host, port, or database executes nothing", () => {
   for (const overrides of [
     { PGHOST: "db.example.com user" },
     { PGPORT: "70000" },
-    { PGDATABASE: "customreport/test" },
+    { PGDATABASE: "weeklyreport/test" },
   ]) {
     const { calls, result } = runRestore(overrides);
     assert.equal(result.status, 2);
@@ -110,7 +110,7 @@ test("undeployed environment labels execute nothing", () => {
   for (const environment of ["development", "uat", "staging"]) {
     const { calls, result } = runRestore({
       RESTORE_ENVIRONMENT: environment,
-      CONFIRM_RESTORE_TARGET: `${environment}|db.example.com|5432|customreport_test`,
+      CONFIRM_RESTORE_TARGET: `${environment}|db.example.com|5432|weeklyreport_test`,
     });
     assert.equal(result.status, 2);
     assert.match(result.stderr, /unknown RESTORE_ENVIRONMENT/);
@@ -132,7 +132,7 @@ test("missing or incorrect per-run consent executes nothing", () => {
 test("production requires the existing destructive consent", () => {
   const { calls, result } = runRestore({
     RESTORE_ENVIRONMENT: "production",
-    CONFIRM_RESTORE_TARGET: "production|db.example.com|5432|customreport_test",
+    CONFIRM_RESTORE_TARGET: "production|db.example.com|5432|weeklyreport_test",
   });
   assert.equal(result.status, 3);
   assert.match(result.stderr, /ALLOW_PROD_DESTRUCTIVE=yes/);
@@ -146,7 +146,7 @@ test("archive validation precedes one non-production restore", () => {
   assert.match(calls[0] ?? "", /^--list /);
   assert.match(calls[1] ?? "", /--host=db\.internal/);
   assert.match(calls[1] ?? "", /--port=5432/);
-  assert.match(calls[1] ?? "", /--dbname=customreport_test/);
+  assert.match(calls[1] ?? "", /--dbname=weeklyreport_test/);
   assert.match(calls[1] ?? "", /--single-transaction/);
   assert.ok(!(result.stdout + result.stderr).includes(fixtureSecret));
 });
@@ -155,8 +155,8 @@ test("fully consented production restore runs once after validation", () => {
   const { calls, result } = runRestore({
     RESTORE_ENVIRONMENT: "Production",
     PGHOST: "db.example.com.",
-    PGDATABASE: "CUSTOMREPORT_TEST",
-    CONFIRM_RESTORE_TARGET: "production|db.example.com|5432|customreport_test",
+    PGDATABASE: "WEEKLYREPORT_TEST",
+    CONFIRM_RESTORE_TARGET: "production|db.example.com|5432|weeklyreport_test",
     ALLOW_PROD_DESTRUCTIVE: "yes",
   });
   assert.equal(result.status, 0);

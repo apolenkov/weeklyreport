@@ -72,8 +72,8 @@ the owner decision. The honest topology is:
   separately verified storage compatibility rule.
   PostgreSQL starts inside the job container (`initdb` + `pg_ctl`)
   bound to `127.0.0.1` — a real in-job process, so the guarded
-  `postgresql://…@127.0.0.1:5432/customreport_e2e` target is truthful. The
-  `customreport` role is a superuser, the
+  `postgresql://…@127.0.0.1:5432/weeklyreport_e2e` target is truthful. The
+  `weeklyreport` role is a superuser, the
   privilege `prisma migrate reset` needs to drop and recreate the database.
 - The image carries no Node, curl, wget, or git, so the `node-toolchain` job
   downloads the Linux x64 tarball named by `NODE_TOOLCHAIN_TARBALL` in the

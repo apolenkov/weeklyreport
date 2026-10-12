@@ -19,7 +19,7 @@ configuration and stay at their explicit operating-system boundary: the dev
 reseed resolver uses `PATH` only to locate an executable. The current
 product-config variables, including
 `SENTRY_DSN`, `CLIENT_LOG_FORWARDING`, `AUTH_DEV_MODE_ALLOW_TEST`,
-`CUSTOMREPORT_REPO_ROOT`, and `DLQ_ALERT_THRESHOLD` MUST each be declared.
+`WEEKLYREPORT_REPO_ROOT`, and `DLQ_ALERT_THRESHOLD` MUST each be declared.
 
 The literal-`process.env.<NAME>` grep is necessary but not sufficient: a value
 read through a factory parameter is invisible to it. The sanctioned factories
@@ -48,7 +48,7 @@ optional-string form (`OTEL_EXPORTER_OTLP_ENDPOINT`);
 `DLQ_ALERT_THRESHOLD` follows the optional-coerced-number form
 with the consumer applying its named `DEFAULT_THRESHOLD` constant;
 `CLIENT_LOG_FORWARDING`, `AUTH_DEV_MODE_ALLOW_TEST`, and
-`CUSTOMREPORT_REPO_ROOT` are optional strings (dev/test-only toggles and
+`WEEKLYREPORT_REPO_ROOT` are optional strings (dev/test-only toggles and
 overrides).
 
 #### Scenario: No default is introduced
@@ -88,7 +88,7 @@ each with a single reachable validated view: `DB_POOL_MAX`,
 `DB_POOL_IDLE_TIMEOUT_MS`, `DB_POOL_CONNECTION_TIMEOUT_MS` (the Prisma pool
 constructor), `CLIENT_LOG_FORWARDING` (the
 `main.ts` local `validateEnv()` result), `DLQ_ALERT_THRESHOLD`
-(`dlq-monitor.service.ts` via injected `ENV_CONFIG`), `CUSTOMREPORT_REPO_ROOT`
+(`dlq-monitor.service.ts` via injected `ENV_CONFIG`), `WEEKLYREPORT_REPO_ROOT`
 (the tRPC router via an `EnvConfig` threaded onto
 `AppRouterDeps`), `LOG_LEVEL` (`prisma.service.ts`, via the `env: EnvConfig`
 already stored on the constructed instance), `PDF_OUTPUT_DIR`

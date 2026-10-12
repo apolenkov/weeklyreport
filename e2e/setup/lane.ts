@@ -5,8 +5,8 @@ import {
 
 // Only the provisioned lanes; a broader guard pattern does not authorize more.
 const LANE_DATABASES = {
-  a: "customreport_e2e_lane_a_test",
-  b: "customreport_e2e_lane_b_test",
+  a: "weeklyreport_e2e_lane_a_test",
+  b: "weeklyreport_e2e_lane_b_test",
 } as const;
 
 export interface E2eLane {
@@ -16,7 +16,7 @@ export interface E2eLane {
 
 /**
  * The disposable database and Redis DB one E2E process drives. `E2E_LANE`
- * unset or empty keeps the shared customreport_e2e / Redis 15 target; `a` or
+ * unset or empty keeps the shared weeklyreport_e2e / Redis 15 target; `a` or
  * `b` selects the provisioned lane with its own Redis DB, so two processes
  * with different lanes share no data.
  */

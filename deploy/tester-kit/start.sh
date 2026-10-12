@@ -90,8 +90,8 @@ pf_start mailpit mailpit "$MAIL_PORT" 8025
 # First start: the schema is migrated by the api pod, demo data and roles are
 # loaded here. A failed count is not an empty table — refuse instead of
 # resetting a stand that is not proven empty.
-if ! user_count=$(kubectl -n "$NS" exec statefulset/postgres -- psql -U customreport \
-  -d customreport_e2e -Atc 'SELECT count(*) FROM "User"'); then
+if ! user_count=$(kubectl -n "$NS" exec statefulset/postgres -- psql -U weeklyreport \
+  -d weeklyreport_e2e -Atc 'SELECT count(*) FROM "User"'); then
   echo "Could not count users (psql error above); refusing to reset." >&2
   exit 1
 fi
@@ -120,9 +120,9 @@ WeeklyReport is ready: /health/ready = 200
   Mailpit    http://localhost:$MAIL_PORT   (all e-mails)
   Keycloak   http://localhost:$KC_PORT   (admin / password in $STATE_DIR/secrets.env)
 Users (password):
-  lead1@customreport.local    $PW_LEAD1   (lead)
-  head@customreport.local     $PW_HEAD   (head)
-  viewer@customreport.local   $PW_VIEWER   (viewer)
-  admin@customreport.local    $PW_ADMIN   (admin)
+  lead1@weeklyreport.local    $PW_LEAD1   (lead)
+  head@weeklyreport.local     $PW_HEAD   (head)
+  viewer@weeklyreport.local   $PW_VIEWER   (viewer)
+  admin@weeklyreport.local    $PW_ADMIN   (admin)
 Reset data: reset.sh | stop: stop.sh
 OUT

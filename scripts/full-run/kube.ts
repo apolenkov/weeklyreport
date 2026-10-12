@@ -13,9 +13,9 @@ export function psql(sql: string): string {
     ["-n", NAMESPACE, "exec", "-i", "postgres-0", "--"].concat([
       "psql",
       "-U",
-      "customreport",
+      "weeklyreport",
       "-d",
-      "customreport_e2e",
+      "weeklyreport_e2e",
       "-At",
       "-q",
     ]),

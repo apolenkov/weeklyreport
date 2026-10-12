@@ -21,7 +21,7 @@ const ORGANIZATION_FULL_NAME = "Example Software Department";
 const STATIC_USER_ROWS = [
   {
     id: HEAD_USER_ID,
-    email: "head@customreport.local",
+    email: "head@weeklyreport.local",
     name: HEAD_NAME,
     lastName: "Кедров",
     firstName: "Антон",
@@ -33,7 +33,7 @@ const STATIC_USER_ROWS = [
   },
   {
     id: VIEWER_USER_ID,
-    email: "viewer@customreport.local",
+    email: "viewer@weeklyreport.local",
     name: "Вязова Дарья Игоревна",
     lastName: "Вязова",
     firstName: "Дарья",
@@ -45,7 +45,7 @@ const STATIC_USER_ROWS = [
   },
   {
     id: ADMIN_USER_ID,
-    email: "admin@customreport.local",
+    email: "admin@weeklyreport.local",
     name: "Берёзов Михаил Владимирович",
     lastName: "Берёзов",
     firstName: "Михаил",
@@ -82,7 +82,7 @@ async function seedGroupAndOrganization(prisma: PrismaClient): Promise<void> {
     data: {
       id: DEFAULT_REPORTING_GROUP_ID,
       name: DEFAULT_REPORTING_GROUP.name,
-      description: "Default reporting group for CustomReport demo users",
+      description: "Default reporting group for WeeklyReport demo users",
     },
   });
   await prisma.organization.upsert({

@@ -29,7 +29,7 @@ describe("seed organization product-group derivation", () => {
 
   it("derives Finance product ownership from the effective reassignment", () => {
     const financeLead = SEED_USERS.find(
-      (user) => user.email === "olga@customreport.local",
+      (user) => user.email === "olga@weeklyreport.local",
     );
     expect(financeLead).toBeDefined();
     if (!financeLead) return;

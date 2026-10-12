@@ -34,19 +34,19 @@ The guard MUST refuse when `DATABASE_URL` is not set, because a script without a
 
 ### Requirement: Disposable targets use one exact allowlist and per-run consent
 
-Destructive development and integration workflows MUST accept only loopback PostgreSQL URLs whose raw database path is exactly `customreport_e2e` or `customreport_e2e_lane_[a-o]_test`, with no query, fragment, encoded alias, or credential disclosure. Each destructive invocation MUST also receive the exact per-run consent value required by repository policy.
+Destructive development and integration workflows MUST accept only loopback PostgreSQL URLs whose raw database path is exactly `weeklyreport_e2e` or `weeklyreport_e2e_lane_[a-o]_test`, with no query, fragment, encoded alias, or credential disclosure. Each destructive invocation MUST also receive the exact per-run consent value required by repository policy.
 
 Consumer surface: `prisma/guards/_destructive-guard.ts` —
 `assertE2eRuntimeDestructive` and `assertE2eRuntimeDestructiveTarget`.
 
 #### Scenario: Exact lane target and consent are present
 
-- **WHEN** a loopback URL names `customreport_e2e_lane_a_test` exactly, `NODE_ENV` is not production, and the exact per-run consent is present
+- **WHEN** a loopback URL names `weeklyreport_e2e_lane_a_test` exactly, `NODE_ENV` is not production, and the exact per-run consent is present
 - **THEN** the common guard may allow the requested disposable operation
 
 #### Scenario: Broad suffix target is supplied
 
-- **WHEN** a URL names `customreport_test`, `customreport_uat`, `customreport_dev`, or any other non-allowlisted target
+- **WHEN** a URL names `weeklyreport_test`, `weeklyreport_uat`, `weeklyreport_dev`, or any other non-allowlisted target
 - **THEN** the common guard refuses even if the host is local
 
 #### Scenario: URL spelling obscures the target
@@ -98,7 +98,7 @@ plus `prisma/guards/_destructive-guard.ts` —
 
 #### Scenario: Consistent naming
 
-- **WHEN** `POSTGRES_DB=customreport_e2e` and the raw `DATABASE_URL` path is exactly `/customreport_e2e`
+- **WHEN** `POSTGRES_DB=weeklyreport_e2e` and the raw `DATABASE_URL` path is exactly `/weeklyreport_e2e`
 - **THEN** the naming-consistency check passes and the remaining guard checks still apply
 
 #### Scenario: Divergent naming

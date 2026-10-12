@@ -6,7 +6,7 @@ import { runMigrateDeploy } from "./migrate-deploy.js";
 
 const environment = {
   DATABASE_URL:
-    "postgresql://customreport:secret@127.0.0.1:5432/customreport_e2e_lane_a_test",
+    "postgresql://weeklyreport:secret@127.0.0.1:5432/weeklyreport_e2e_lane_a_test",
   NODE_ENV: "test",
   PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
 } as const;
@@ -17,8 +17,8 @@ afterEach(() => {
 
 describe("migrate deploy boundary", () => {
   it.each([
-    "postgresql://customreport:secret@127.0.0.1:5432/customreport_dev",
-    "postgresql://customreport:secret@db.example.com:5432/customreport_e2e_lane_a_test",
+    "postgresql://weeklyreport:secret@127.0.0.1:5432/weeklyreport_dev",
+    "postgresql://weeklyreport:secret@db.example.com:5432/weeklyreport_e2e_lane_a_test",
   ])("rejects unsafe targets before spawning Prisma: %s", (databaseUrl) => {
     const spawn = vi.fn(() => ({ status: 0, signal: null }));
     expect(() =>

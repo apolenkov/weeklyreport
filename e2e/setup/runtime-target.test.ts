@@ -10,9 +10,9 @@ function baseEnv(
   return {
     NODE_ENV: "test",
     E2E_DATABASE_URL:
-      "postgresql://e2e_user:e2e_placeholder@127.0.0.1:5432/customreport_e2e",
+      "postgresql://e2e_user:e2e_placeholder@127.0.0.1:5432/weeklyreport_e2e",
     DATABASE_URL:
-      "postgresql://app_user:app_placeholder@127.0.0.1:5432/customreport_e2e",
+      "postgresql://app_user:app_placeholder@127.0.0.1:5432/weeklyreport_e2e",
     PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: E2E_DESTRUCTIVE_CONSENT,
     REDIS_DB: "15",
     REDIS_HOST: "127.0.0.1",
@@ -40,7 +40,7 @@ function expectRejection(env: NodeJS.ProcessEnv, includes: string): void {
   );
 }
 
-void test("accepts loopback customreport_e2e with different credentials", () => {
+void test("accepts loopback weeklyreport_e2e with different credentials", () => {
   const result = validateE2eRuntimeTarget("runtime-target-test", baseEnv());
   assert.strictEqual(result.redisDb, "15");
   assert.strictEqual(result.redisHost, "127.0.0.1");
@@ -49,7 +49,7 @@ void test("accepts loopback customreport_e2e with different credentials", () => 
 });
 
 void test("accepts ::1 loopback", () => {
-  const url = "postgresql://u:p@[::1]:5432/customreport_e2e";
+  const url = "postgresql://u:p@[::1]:5432/weeklyreport_e2e";
   const result = validateE2eRuntimeTarget(
     "runtime-target-test",
     baseEnv({ E2E_DATABASE_URL: url, DATABASE_URL: url }),
@@ -58,7 +58,7 @@ void test("accepts ::1 loopback", () => {
 });
 
 void test("accepts localhost", () => {
-  const url = "postgresql://u:p@localhost:5432/customreport_e2e";
+  const url = "postgresql://u:p@localhost:5432/weeklyreport_e2e";
   const result = validateE2eRuntimeTarget(
     "runtime-target-test",
     baseEnv({ E2E_DATABASE_URL: url, DATABASE_URL: url }),
@@ -68,10 +68,10 @@ void test("accepts localhost", () => {
 
 void test("rejects all authorized lane names", () => {
   for (const lane of "abcdefghijklmno".split("")) {
-    const url = `postgresql://u:p@127.0.0.1:5432/customreport_e2e_lane_${lane}_test`;
+    const url = `postgresql://u:p@127.0.0.1:5432/weeklyreport_e2e_lane_${lane}_test`;
     expectRejection(
       baseEnv({ E2E_DATABASE_URL: url, DATABASE_URL: url }),
-      "customreport_e2e",
+      "weeklyreport_e2e",
     );
   }
 });
@@ -81,7 +81,7 @@ void test("E2E_LANE selects the lane database and its own Redis DB", () => {
     ["a", "1"],
     ["b", "2"],
   ] as const) {
-    const url = `postgresql://u:p@127.0.0.1:5432/customreport_e2e_lane_${lane}_test`;
+    const url = `postgresql://u:p@127.0.0.1:5432/weeklyreport_e2e_lane_${lane}_test`;
     const result = validateE2eRuntimeTarget(
       "runtime-target-test",
       baseEnv({
@@ -96,7 +96,7 @@ void test("E2E_LANE selects the lane database and its own Redis DB", () => {
 });
 
 void test("a lane never accepts another lane's database or Redis DB", () => {
-  const laneB = "postgresql://u:p@127.0.0.1:5432/customreport_e2e_lane_b_test";
+  const laneB = "postgresql://u:p@127.0.0.1:5432/weeklyreport_e2e_lane_b_test";
   expectRejection(
     baseEnv({
       E2E_LANE: "a",
@@ -104,10 +104,10 @@ void test("a lane never accepts another lane's database or Redis DB", () => {
       DATABASE_URL: laneB,
       REDIS_DB: "2",
     }),
-    "customreport_e2e_lane_a_test",
+    "weeklyreport_e2e_lane_a_test",
   );
-  expectRejection(baseEnv({ E2E_LANE: "b" }), "customreport_e2e_lane_b_test");
-  const laneA = "postgresql://u:p@127.0.0.1:5432/customreport_e2e_lane_a_test";
+  expectRejection(baseEnv({ E2E_LANE: "b" }), "weeklyreport_e2e_lane_b_test");
+  const laneA = "postgresql://u:p@127.0.0.1:5432/weeklyreport_e2e_lane_a_test";
   expectRejection(
     baseEnv({
       E2E_LANE: "a",
@@ -120,7 +120,7 @@ void test("a lane never accepts another lane's database or Redis DB", () => {
 });
 
 void test("rejects wrong database name", () => {
-  const url = "postgresql://u:p@127.0.0.1:5432/customreport_test";
+  const url = "postgresql://u:p@127.0.0.1:5432/weeklyreport_test";
   expectRejection(
     baseEnv({ E2E_DATABASE_URL: url, DATABASE_URL: url }),
     "is not one of",
@@ -128,7 +128,7 @@ void test("rejects wrong database name", () => {
 });
 
 void test("rejects normalized database path", () => {
-  const url = "postgresql://u:p@127.0.0.1:5432/other/../customreport_e2e";
+  const url = "postgresql://u:p@127.0.0.1:5432/other/../weeklyreport_e2e";
   expectRejection(
     baseEnv({ E2E_DATABASE_URL: url, DATABASE_URL: url }),
     "exact literal segment without normalization",
@@ -136,7 +136,7 @@ void test("rejects normalized database path", () => {
 });
 
 void test("rejects encoded database path", () => {
-  const url = "postgresql://u:p@127.0.0.1:5432/customreport%5Fe2e";
+  const url = "postgresql://u:p@127.0.0.1:5432/weeklyreport%5Fe2e";
   expectRejection(
     baseEnv({ E2E_DATABASE_URL: url, DATABASE_URL: url }),
     "exact, unencoded path segment",
@@ -145,7 +145,7 @@ void test("rejects encoded database path", () => {
 
 void test("rejects query delimiter", () => {
   const url =
-    "postgresql://u:p@127.0.0.1:5432/customreport_e2e?sslmode=disable";
+    "postgresql://u:p@127.0.0.1:5432/weeklyreport_e2e?sslmode=disable";
   expectRejection(
     baseEnv({ E2E_DATABASE_URL: url, DATABASE_URL: url }),
     "query or fragment delimiters",
@@ -153,7 +153,7 @@ void test("rejects query delimiter", () => {
 });
 
 void test("rejects fragment delimiter", () => {
-  const url = "postgresql://u:p@127.0.0.1:5432/customreport_e2e#anchor";
+  const url = "postgresql://u:p@127.0.0.1:5432/weeklyreport_e2e#anchor";
   expectRejection(
     baseEnv({ E2E_DATABASE_URL: url, DATABASE_URL: url }),
     "query or fragment delimiters",
@@ -161,7 +161,7 @@ void test("rejects fragment delimiter", () => {
 });
 
 void test("rejects remote hosts", () => {
-  const url = "postgresql://u:p@192.168.1.1:5432/customreport_e2e";
+  const url = "postgresql://u:p@192.168.1.1:5432/weeklyreport_e2e";
   expectRejection(
     baseEnv({ E2E_DATABASE_URL: url, DATABASE_URL: url }),
     "is not loopback",
@@ -169,7 +169,7 @@ void test("rejects remote hosts", () => {
 });
 
 void test("rejects unbracketed IPv6 loopback", () => {
-  const url = "postgresql://u:p@::1:5432/customreport_e2e";
+  const url = "postgresql://u:p@::1:5432/weeklyreport_e2e";
   expectRejection(
     baseEnv({ E2E_DATABASE_URL: url, DATABASE_URL: url }),
     "IPv6 hosts must use brackets",
@@ -185,7 +185,7 @@ void test("rejects malformed URL", () => {
 });
 
 void test("rejects wrong protocol", () => {
-  const url = "mysql://u:p@127.0.0.1:5432/customreport_e2e";
+  const url = "mysql://u:p@127.0.0.1:5432/weeklyreport_e2e";
   expectRejection(
     baseEnv({ E2E_DATABASE_URL: url, DATABASE_URL: url }),
     "must use the postgres or postgresql protocol",
@@ -195,7 +195,7 @@ void test("rejects wrong protocol", () => {
 void test("rejects mismatched database", () => {
   expectRejection(
     baseEnv({
-      DATABASE_URL: "postgresql://u:p@127.0.0.1:5432/customreport_e2e_other",
+      DATABASE_URL: "postgresql://u:p@127.0.0.1:5432/weeklyreport_e2e_other",
     }),
     "same database target",
   );
@@ -204,7 +204,7 @@ void test("rejects mismatched database", () => {
 void test("rejects mismatched host", () => {
   expectRejection(
     baseEnv({
-      DATABASE_URL: "postgresql://u:p@127.0.0.2:5432/customreport_e2e",
+      DATABASE_URL: "postgresql://u:p@127.0.0.2:5432/weeklyreport_e2e",
     }),
     "same database target",
   );
@@ -213,7 +213,7 @@ void test("rejects mismatched host", () => {
 void test("rejects mismatched port", () => {
   expectRejection(
     baseEnv({
-      DATABASE_URL: "postgresql://u:p@127.0.0.1:5433/customreport_e2e",
+      DATABASE_URL: "postgresql://u:p@127.0.0.1:5433/weeklyreport_e2e",
     }),
     "same database target",
   );
