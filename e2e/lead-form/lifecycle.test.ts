@@ -695,10 +695,6 @@ void test("pending canonical save locks write actions until connectivity returns
     assertPendingSubmissionActions(pending);
     assert.equal(await reportActionsDisabled(), true);
     await command(["press", "Escape"]);
-    await clickIn(
-      { role: "alertdialog", name: "Discard changes?" },
-      "Keep editing",
-    );
     assert.equal(await inputValue(ACTIVITY_FORM, "Description *"), text);
     assert.equal(
       await postCount("reports.saveDraft"),
