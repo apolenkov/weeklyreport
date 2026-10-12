@@ -14,8 +14,10 @@ Redis DB, from both the environment and the running app. Two runners with
 different lanes share no data, but each lane still allows one process at a
 time and must be claimed first (coordinator-inbox `LANE`), because API
 integration tests and manual checks use the same lane databases. A lane run
-needs its own app: API `PORT` and `API_URL`, web `--port`, `DATABASE_URL`,
-`E2E_DATABASE_URL`, `REDIS_DB` for that lane, and `E2E_BASE_URL` pointing at
+needs its own app on its own ports: API `PORT` and `API_URL`, web `--port`,
+`FRONTEND_URL`, `FRONTEND_URLS`, `APP_BASE_URL` and `PDF_BASE_URL` set to that
+web origin (dev-login redirects to `FRONTEND_URL`), `DATABASE_URL`,
+`E2E_DATABASE_URL` and `REDIS_DB` for the lane, and `E2E_BASE_URL` pointing at
 that web origin. The denominator is the controls a Lead can reach
 through `/lead/report` and `/lead/report/<reportId>`, including Report, Slides
 and their dialogs. Head actions appear only where they complete a Lead
