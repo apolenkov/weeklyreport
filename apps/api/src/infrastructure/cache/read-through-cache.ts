@@ -4,12 +4,18 @@ import { Redis } from "ioredis";
 import type { EnvConfig } from "../config/env.schema";
 import { buildFailOpenRedisConnectionOptions } from "../config/redis-connection";
 import { redisCacheErrorsTotal } from "../metrics/metrics.registry.js";
+import {
+  parseJson,
+  serializeForCache,
+} from "./read-through-cache.serialization.js";
 
 const SCAN_BATCH_SIZE = 100;
 const CACHE_READ_PHASE = "cache.read";
 const CACHE_INVALIDATE_PHASE = "cache.invalidate";
 // One epoch per cache instance: invalidateByPrefix bumps it before its scan, and
 // a compute that started earlier refuses to cache its pre-invalidation value.
+// The Redis epoch fences across connections; an in-process counter also fences this
+// process's computes when the epoch bump itself fails.
 const GENERATION_KEY = "__invalidation_generation";
 
 // Redis outage never breaks the read path: reads fall through to compute;
@@ -37,20 +43,6 @@ export interface ReadThroughCacheOptions {
 
 function describeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-// A cache hit is only trusted when the parsed value passes the optional type
-// predicate. Parsing and validation are separate failure modes: a validator
-// that throws is a validation failure, never a parse failure.
-type ParseOutcome =
-  { readonly ok: true; readonly value: unknown } | { readonly ok: false };
-
-function parseJson(cached: string): ParseOutcome {
-  try {
-    return { ok: true, value: JSON.parse(cached) as unknown };
-  } catch {
-    return { ok: false };
-  }
 }
 
 function parseCachedValue(
@@ -93,24 +85,6 @@ function parseCachedValue(
   return undefined;
 }
 
-type Serialized =
-  { readonly ok: true; readonly value: string } | { readonly ok: false };
-
-// JSON.stringify throws on BigInt, circular structures and a throwing toJSON, and
-// returns undefined for functions and symbols. A cache write must never turn a
-// successful compute into a rejected call, so every one of those outcomes is a
-// plain "not cacheable" here.
-function serializeForCache(value: unknown): Serialized {
-  try {
-    const serialized: unknown = JSON.stringify(value);
-    return typeof serialized === "string"
-      ? { ok: true, value: serialized }
-      : { ok: false };
-  } catch {
-    return { ok: false };
-  }
-}
-
 // The epoch comparison and the write happen in ONE Redis round trip, so an
 // invalidation cannot land between them and be overwritten by a compute that
 // already captured its pre-invalidation epoch. Returns 1 when the value was
@@ -128,6 +102,7 @@ interface CacheRuntime {
   readonly logger: Logger;
   readonly ttlSeconds: number;
   readonly generationKey: string;
+  readonly localInvalidations: () => number;
 }
 
 async function writeIfGenerationMatches(
@@ -192,6 +167,7 @@ async function getOrComputeImpl<T>(
 ): Promise<T> {
   const { redis, logger, generationKey } = runtime;
   const { key, namespaced } = entry;
+  const invalidationsBefore = runtime.localInvalidations();
   const state = await readCacheState(redis, namespaced, generationKey);
   if (state.ok && state.cached !== null) {
     const parsed = parseCachedValue(logger, key, state.cached, validate);
@@ -219,6 +195,12 @@ async function getOrComputeImpl<T>(
     // before the compute so freshness cannot be proven; the caller still gets its
     // value and the cache simply stays unwritten.
     logger.debug(`cache write skipped key=${key}`);
+    return fresh;
+  }
+  if (runtime.localInvalidations() !== invalidationsBefore) {
+    logger.debug(
+      `cache write skipped after in-process invalidation key=${key}`,
+    );
     return fresh;
   }
   try {
@@ -291,7 +273,14 @@ export function createRedisReadThroughCache(
     ...buildFailOpenRedisConnectionOptions(connection),
   });
   const generationKey = `${keyPrefix}${GENERATION_KEY}`;
-  const runtime: CacheRuntime = { redis, logger, ttlSeconds, generationKey };
+  const invalidations = { count: 0 };
+  const runtime: CacheRuntime = {
+    redis,
+    logger,
+    ttlSeconds,
+    generationKey,
+    localInvalidations: () => invalidations.count,
+  };
   // A Redis blip must not crash the process, but it also must not pass
   // unseen: log AND count every connection-level error event.
   redis.on("error", (error: unknown) => {
@@ -318,6 +307,9 @@ export function createRedisReadThroughCache(
     invalidateByPrefix: async (prefix: string): Promise<void> => {
       // The epoch bump precedes the scan: a compute that is already running when
       // the invalidation commits must not cache its pre-commit value afterwards.
+      // Advanced before any Redis call so this process fences its in-flight computes
+      // even when the epoch INCR fails.
+      invalidations.count += 1;
       try {
         await redis.incr(generationKey);
       } catch (error) {
