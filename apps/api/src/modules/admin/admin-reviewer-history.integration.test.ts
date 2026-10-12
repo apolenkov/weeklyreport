@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import type { Prisma, PrismaClient } from "@prisma/client";
 import pg from "pg";
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
@@ -15,7 +17,13 @@ import {
 import { AdminPrismaRepository } from "./admin.prisma-repository.js";
 import { AdminUserConflictError } from "./admin-errors.js";
 
-const HISTORY_KINDS = ["acknowledgement", "verdict", "comment"] as const;
+const HISTORY_KINDS = [
+  "acknowledgement",
+  "verdict",
+  "comment",
+  "reopen-approved",
+  "reopen-rejected",
+] as const;
 type HistoryKind = (typeof HISTORY_KINDS)[number];
 
 const LOCK_POLL_MS = 25;
@@ -151,9 +159,20 @@ describe("admin user deletion retains live reviewer history (integration)", () =
           verdict: "approved",
         },
       });
-    } else {
+    } else if (kind === "comment") {
       await prisma.recordComment.create({
         data: { reviewerId, itemId, text: "Retained review comment" },
+      });
+    } else {
+      await prisma.reopenRequest.create({
+        data: {
+          reportSectionId: data.section.id,
+          requestedById: data.lead.id,
+          status: kind === "reopen-approved" ? "approved" : "rejected",
+          reviewedById: reviewerId,
+          reviewedAt: new Date(),
+          reviewNote: "Retained reopen decision",
+        },
       });
     }
   }
@@ -182,6 +201,20 @@ describe("admin user deletion retains live reviewer history (integration)", () =
         values: [rowId, userId, data.section.id, data.section.version],
       };
     }
+    if (kind === "reopen-approved" || kind === "reopen-rejected") {
+      return {
+        constraint: "ReopenRequest_reviewedById_fkey",
+        text: 'INSERT INTO "ReopenRequest" ("id", "reportSectionId", "requestedById", "status", "reviewedById", "reviewedAt", "reviewNote", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4::"ReopenRequestStatus", $5, now(), $6, now(), now())',
+        values: [
+          rowId,
+          data.section.id,
+          data.lead.id,
+          kind === "reopen-approved" ? "approved" : "rejected",
+          userId,
+          "Retained reopen decision",
+        ],
+      };
+    }
     return {
       constraint: "RecordComment_reviewerId_fkey",
       text: 'INSERT INTO "RecordComment" ("id", "reviewerId", "itemId", "text", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, now(), now())',
@@ -196,13 +229,22 @@ describe("admin user deletion retains live reviewer history (integration)", () =
     if (kind === "verdict") {
       return prisma.sectionReview.findUnique({ where: { id: rowId } });
     }
-    return prisma.recordComment.findUnique({ where: { id: rowId } });
+    if (kind === "comment") {
+      return prisma.recordComment.findUnique({ where: { id: rowId } });
+    }
+    return prisma.reopenRequest.findUnique({ where: { id: rowId } });
   }
 
   function historyCount(kind: HistoryKind): Promise<number> {
     if (kind === "acknowledgement") return prisma.reviewAcknowledgement.count();
     if (kind === "verdict") return prisma.sectionReview.count();
-    return prisma.recordComment.count();
+    if (kind === "comment") return prisma.recordComment.count();
+    return prisma.reopenRequest.count({
+      where: {
+        status: kind === "reopen-approved" ? "approved" : "rejected",
+        reviewedById: { not: null },
+      },
+    });
   }
 
   async function readHistoryAndAnchors() {
@@ -210,6 +252,7 @@ describe("admin user deletion retains live reviewer history (integration)", () =
       acknowledgements,
       verdicts,
       comments,
+      reopenRequests,
       report,
       section,
       item,
@@ -218,6 +261,7 @@ describe("admin user deletion retains live reviewer history (integration)", () =
       prisma.reviewAcknowledgement.findMany({ orderBy: { id: "asc" } }),
       prisma.sectionReview.findMany({ orderBy: { id: "asc" } }),
       prisma.recordComment.findMany({ orderBy: { id: "asc" } }),
+      prisma.reopenRequest.findMany({ orderBy: { id: "asc" } }),
       prisma.report.findUniqueOrThrow({ where: { id: data.report.id } }),
       prisma.reportSection.findUniqueOrThrow({
         where: { id: data.section.id },
@@ -229,6 +273,7 @@ describe("admin user deletion retains live reviewer history (integration)", () =
       acknowledgements,
       verdicts,
       comments,
+      reopenRequests,
       report,
       section,
       item,
@@ -258,6 +303,16 @@ describe("admin user deletion retains live reviewer history (integration)", () =
     subject = await createReviewer("subject");
     unrelated = await createReviewer("unrelated");
     for (const kind of HISTORY_KINDS) await addHistory(kind, unrelated.id);
+    await prisma.reopenRequest.create({
+      data: {
+        reportSectionId: data.section.id,
+        requestedById: data.lead.id,
+        status: "rejected",
+        reviewedById: null,
+        reviewedAt: new Date(),
+        reviewNote: "Legacy decision with an already absent author",
+      },
+    });
   });
 
   afterAll(async () => {
@@ -323,6 +378,61 @@ describe("admin user deletion retains live reviewer history (integration)", () =
       await prisma.user.findUnique({ where: { id: unrelated.id } }),
     ).toEqual(unrelated);
     expect(await readHistoryAndAnchors()).toEqual(before);
+  });
+
+  it("migrates existing reopen decisions without changing live or absent authors and metadata", async () => {
+    await addHistory("reopen-approved", subject.id);
+    await addHistory("reopen-rejected", subject.id);
+    await prisma.reopenRequest.create({
+      data: {
+        reportSectionId: data.section.id,
+        requestedById: data.lead.id,
+        status: "approved",
+        reviewedById: null,
+        reviewedAt: null,
+        reviewNote: null,
+      },
+    });
+    const databaseUrl = requireEnv(process.env, "E2E_DATABASE_URL");
+    assertTestDatabaseUrl(databaseUrl);
+    const client = new pg.Client({ connectionString: databaseUrl });
+    const migration = await readFile(
+      new URL(
+        "../../../../../prisma/migrations/20261013020000_reopen_reviewer_history_delete_restrict/migration.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    try {
+      await client.connect();
+      // Fixtures commit before this connection acquires the DDL table lock.
+      // Both the previous FK and the real, atomic migration stay rollback-only.
+      await client.query("BEGIN");
+      await client.query(`ALTER TABLE "ReopenRequest"
+        DROP CONSTRAINT "ReopenRequest_reviewedById_fkey",
+        ADD CONSTRAINT "ReopenRequest_reviewedById_fkey"
+          FOREIGN KEY ("reviewedById") REFERENCES "User"("id")
+          ON DELETE SET NULL ON UPDATE CASCADE`);
+      const before = await client.query(
+        'SELECT * FROM "ReopenRequest" ORDER BY "id"',
+      );
+      await client.query(migration);
+      const after = await client.query(
+        'SELECT * FROM "ReopenRequest" ORDER BY "id"',
+      );
+      expect(after.rows).toEqual(before.rows);
+      const foreignKey = await client.query<{
+        action: string;
+        validated: boolean;
+      }>(`SELECT confdeltype AS action, convalidated AS validated
+          FROM pg_constraint
+          WHERE conrelid = '"ReopenRequest"'::regclass
+            AND conname = 'ReopenRequest_reviewedById_fkey'`);
+      expect(foreignKey.rows).toEqual([{ action: "r", validated: true }]);
+    } finally {
+      await client.query("ROLLBACK").catch(() => undefined);
+      await client.end();
+    }
   });
 
   it.each(HISTORY_KINDS)(

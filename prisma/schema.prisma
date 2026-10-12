@@ -459,39 +459,39 @@ model PublishedSearchDocument {
 }
 
 model ReportSection {
-  id               String              @id @default(uuid())
-  reportId         String
-  authorId         String
-  status           ReportSectionStatus @default(draft)
-  submittedAt      DateTime?
-  createdAt        DateTime            @default(now())
-  updatedAt        DateTime            @updatedAt
+  id                String              @id @default(uuid())
+  reportId          String
+  authorId          String
+  status            ReportSectionStatus @default(draft)
+  submittedAt       DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
   // Optimistic-concurrency row revision: every section write does a
   // compare-and-set on this column and increments it, so a stale writer's
   // delete-then-recreate cannot silently clobber a newer save (a conflict
   // surfaces as 409). Distinct from the published-snapshot version.
-  version          Int                 @default(1)
-  revokedAt        DateTime?
-  revokedBy        String?
+  version           Int                 @default(1)
+  revokedAt         DateTime?
+  revokedBy         String?
   // Stamped true by submitSection when
   // `now > Report.deadline` (regardless of grace-period). Used by head
   // dashboard + lead form to render a "late" badge.
-  late             Boolean             @default(false)
-  decisions        Decision[]
-  items            Item[]
+  late              Boolean             @default(false)
+  decisions         Decision[]
+  items             Item[]
   itemOutcomeEvents ItemOutcomeEvent[]
-  projectStatuses  ProjectStatus[]
-  reopenRequests   ReopenRequest[]
-  author           User                @relation("ReportSectionAuthor", fields: [authorId], references: [id])
-  report           Report              @relation(fields: [reportId], references: [id], onDelete: Cascade)
-  risks            Risk[]
-  stageStatuses    StageStatus[]
+  projectStatuses   ProjectStatus[]
+  reopenRequests    ReopenRequest[]
+  author            User                @relation("ReportSectionAuthor", fields: [authorId], references: [id])
+  report            Report              @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  risks             Risk[]
+  stageStatuses     StageStatus[]
   // review-acknowledgement: per-section verdicts (one per reviewer).
-  sectionReviews   SectionReview[]
+  sectionReviews    SectionReview[]
   // Per-period weekly statuses for the author's attached Project Activities
   // (stage-less units beside products). Seeded at section provisioning and
   // delete-recreated by saveSection like ProjectStatus.
-  activityStatuses ActivityStatus[]
+  activityStatuses  ActivityStatus[]
 
   @@unique([reportId, authorId])
   @@index([authorId])
@@ -924,7 +924,7 @@ model ReopenRequest {
   updatedAt       DateTime            @updatedAt
   reportSection   ReportSection       @relation(fields: [reportSectionId], references: [id], onDelete: Cascade)
   requestedBy     User                @relation("ReopenRequester", fields: [requestedById], references: [id])
-  reviewedBy      User?               @relation("ReopenReviewer", fields: [reviewedById], references: [id])
+  reviewedBy      User?               @relation("ReopenReviewer", fields: [reviewedById], references: [id], onDelete: Restrict)
   // reopen-request-lifecycle: at most one pending request per section.
   // Enforced by a PARTIAL unique index `ReopenRequest_one_pending_per_section`
   // ON ("reportSectionId") WHERE "status" = 'pending'. Prisma cannot express a
