@@ -34,19 +34,19 @@ describe("AiProviderPrometheusMetrics", () => {
     const output = await metricsRegistry.metrics();
 
     expect(output).toContain(
-      'customreport_ai_provider_state{profile="custom-openai-compatible",state="preparing"} 1',
+      'weeklyreport_ai_provider_state{profile="custom-openai-compatible",state="preparing"} 1',
     );
     expect(output).toContain(
-      'customreport_ai_provider_capability_tests_total{profile="custom-openai-compatible",result="passed"} 1',
+      'weeklyreport_ai_provider_capability_tests_total{profile="custom-openai-compatible",result="passed"} 1',
     );
     expect(output).toContain(
-      'customreport_ai_provider_preparation_completed{profile="custom-openai-compatible"} 8',
+      'weeklyreport_ai_provider_preparation_completed{profile="custom-openai-compatible"} 8',
     );
     expect(output).toContain(
-      'customreport_ai_provider_preparation_total{profile="custom-openai-compatible"} 10',
+      'weeklyreport_ai_provider_preparation_total{profile="custom-openai-compatible"} 10',
     );
     expect(output).toContain(
-      'customreport_ai_provider_activations_total{profile="custom-openai-compatible",result="succeeded"} 1',
+      'weeklyreport_ai_provider_activations_total{profile="custom-openai-compatible",result="succeeded"} 1',
     );
     expect(output).not.toContain("ciphertext");
     expect(output).not.toContain("provider-key");

@@ -7,7 +7,7 @@
 -- Usage after the local dependencies has been hit by E2E / manual smoke for a few
 -- minutes:
 --
---   kubectl -n wr-dev exec statefulset/postgres -- psql -U customreport -c "
+--   kubectl -n wr-dev exec statefulset/postgres -- psql -U weeklyreport -c "
 --     SELECT round(total_exec_time::numeric, 1) AS total_ms,
 --            calls,
 --            round(mean_exec_time::numeric, 2) AS mean_ms,

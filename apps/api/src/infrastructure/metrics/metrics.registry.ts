@@ -158,13 +158,10 @@ export const trpcRequestTotal = new Counter({
   registers: [metricsRegistry],
 });
 
-// Product metrics retain the `customreport_*` prefix to avoid re-baselining
-// existing dashboards and SLO time series.
-
 // Counts report transitions by destination state across manual and automatic
 // publication paths.
 export const weeklyreportReportsSubmittedTotal = new Counter({
-  name: "customreport_reports_submitted_total",
+  name: "weeklyreport_reports_submitted_total",
   help: "Total Report state transitions, labelled by destination state",
   labelNames: ["state"] as const,
   registers: [metricsRegistry],
@@ -173,7 +170,7 @@ export const weeklyreportReportsSubmittedTotal = new Counter({
 // Counts section submissions by the bounded on-time flag stamped at submit
 // time, allowing deadline performance to be aggregated without author labels.
 export const weeklyreportSectionsSubmittedTotal = new Counter({
-  name: "customreport_sections_submitted_total",
+  name: "weeklyreport_sections_submitted_total",
   help: "Total section submissions, labelled by on-time flag",
   labelNames: ["late"] as const,
   registers: [metricsRegistry],
@@ -182,7 +179,7 @@ export const weeklyreportSectionsSubmittedTotal = new Counter({
 // Signed deadline distance distinguishes early from late submissions; buckets
 // cover the useful range for a weekly reporting cadence.
 export const weeklyreportSectionSubmissionLatencySeconds = new Histogram({
-  name: "customreport_section_submission_latency_seconds",
+  name: "weeklyreport_section_submission_latency_seconds",
   help: "Signed seconds (observation time − deadline), sampled after a successful section submission. Negative = early, positive = late.",
   buckets: SUBMISSION_LATENCY_BUCKETS,
   registers: [metricsRegistry],
@@ -191,7 +188,7 @@ export const weeklyreportSectionSubmissionLatencySeconds = new Histogram({
 // Rolling section ratio over four published periods, refreshed lazily by the
 // TelemetryGauges scrape callback.
 export const weeklyreportReportsOnTimeRatio = new Gauge({
-  name: "customreport_reports_on_time_ratio",
+  name: "weeklyreport_reports_on_time_ratio",
   help: "Fraction of submitted sections that were on time over the last 4 published periods",
   registers: [metricsRegistry],
 });
@@ -199,7 +196,7 @@ export const weeklyreportReportsOnTimeRatio = new Gauge({
 // Distinct recent lead authors separates broader engagement from repeated
 // submissions by the same people.
 export const weeklyreportActiveLeadsTotal = new Gauge({
-  name: "customreport_active_leads_total",
+  name: "weeklyreport_active_leads_total",
   help: "Distinct lead authors who submitted in the most recently published period",
   registers: [metricsRegistry],
 });
@@ -207,7 +204,7 @@ export const weeklyreportActiveLeadsTotal = new Gauge({
 // Three-state reopen funnel exposes both request demand and approval policy
 // without user-level cardinality.
 export const weeklyreportReopenRequestsTotal = new Counter({
-  name: "customreport_reopen_requests_total",
+  name: "weeklyreport_reopen_requests_total",
   help: "Reopen-request lifecycle counter (requested / approved / rejected)",
   labelNames: ["state"] as const,
   registers: [metricsRegistry],
@@ -216,7 +213,7 @@ export const weeklyreportReopenRequestsTotal = new Counter({
 // PDF export requests by role support checking whether intended viewers request
 // exports directly or rely on heads to export for them.
 export const weeklyreportPdfExportRequestsTotal = new Counter({
-  name: "customreport_pdf_export_requests_total",
+  name: "weeklyreport_pdf_export_requests_total",
   help: "Total PDF export requests, labelled by requesting role",
   labelNames: ["role"] as const,
   registers: [metricsRegistry],
@@ -225,7 +222,7 @@ export const weeklyreportPdfExportRequestsTotal = new Counter({
 // Period transitions distinguish a stopped publication pipeline from one that
 // is merely progressing slowly.
 export const weeklyreportPeriodStateTransitionsTotal = new Counter({
-  name: "customreport_period_state_transitions_total",
+  name: "weeklyreport_period_state_transitions_total",
   help: "Period state-machine transitions, labelled by from / to states",
   labelNames: ["from", "to"] as const,
   registers: [metricsRegistry],
@@ -234,7 +231,7 @@ export const weeklyreportPeriodStateTransitionsTotal = new Counter({
 // Audits cross-author lead-form reads. The result label distinguishes denied
 // access from an authorized empty response without exposing payload content.
 export const weeklyreportCrossAuthorContentReadsTotal = new Counter({
-  name: "customreport_cross_author_content_reads_total",
+  name: "weeklyreport_cross_author_content_reads_total",
   help: "Full-content cross-author lead-form reads, labelled by authorization result (allowed / denied / empty)",
   labelNames: ["result"] as const,
   registers: [metricsRegistry],
@@ -244,7 +241,7 @@ export const weeklyreportCrossAuthorContentReadsTotal = new Counter({
 // security-relevant: a dropped record must stay visible as a rising series,
 // not only as a per-event log line.
 export const auditPersistFailuresTotal = new Counter({
-  name: "customreport_audit_persist_failures_total",
+  name: "weeklyreport_audit_persist_failures_total",
   help: "Durable user-action-log writes that failed and were dropped",
   labelNames: [] as const,
   registers: [metricsRegistry],
@@ -255,7 +252,7 @@ export const auditPersistFailuresTotal = new Counter({
 // fail-safe, so this counter reports cache degradation and errors only — it
 // does not track successful cache hits.
 export const redisCacheErrorsTotal = new Counter({
-  name: "customreport_redis_cache_errors_total",
+  name: "weeklyreport_redis_cache_errors_total",
   help: "Redis read-through-cache operations that degraded (validation / parse / read / write / scan / delete / connection); not successful cache hits",
   labelNames: ["operation"] as const,
   registers: [metricsRegistry],

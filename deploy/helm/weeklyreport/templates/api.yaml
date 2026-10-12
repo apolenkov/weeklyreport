@@ -82,7 +82,7 @@ spec:
               {{- include "wr.secretRef" (dict "root" . "key" "DB_PASSWORD") | nindent 14 }}
             # Direct to postgres: DDL needs a session, pgbouncer is transaction mode.
             - name: DATABASE_URL
-              value: {{ printf "postgresql://customreport:$(DB_PASSWORD)@postgres:5432/%s" .Values.postgres.db | quote }}
+              value: {{ printf "postgresql://weeklyreport:$(DB_PASSWORD)@postgres:5432/%s" .Values.postgres.db | quote }}
             - name: HOME
               value: /tmp
           resources:
@@ -102,7 +102,7 @@ spec:
             - name: DB_PASSWORD
               {{- include "wr.secretRef" (dict "root" . "key" "DB_PASSWORD") | nindent 14 }}
             - name: DATABASE_URL
-              value: {{ printf "postgresql://customreport:$(DB_PASSWORD)@pgbouncer:5432/%s?pgbouncer=true&connection_limit=1" .Values.postgres.db | quote }}
+              value: {{ printf "postgresql://weeklyreport:$(DB_PASSWORD)@pgbouncer:5432/%s?pgbouncer=true&connection_limit=1" .Values.postgres.db | quote }}
             - { name: REDIS_HOST, value: redis }
             - { name: REDIS_PORT, value: "6379" }
             - name: REDIS_MAXMEMORY_BYTES
@@ -115,7 +115,7 @@ spec:
             - name: PDF_BASE_URL
               value: {{ include "wr.printOrigin" . | quote }}
             - { name: GOTENBERG_URL, value: "http://gotenberg:3000" }
-            - { name: OTEL_SERVICE_NAME, value: customreport-api }
+            - { name: OTEL_SERVICE_NAME, value: weeklyreport-api }
             - name: OTEL_SERVICE_VERSION
               value: {{ .Values.images.tag | quote }}
             - name: AUTH_JWT_SECRET

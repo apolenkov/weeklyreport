@@ -24,7 +24,7 @@ persistence:
   backupSize: 1Gi
 
 postgres:
-  db: customreport_production
+  db: weeklyreport_production
 
 pgbouncer:
   maxClientConn: 100
@@ -60,7 +60,7 @@ api:
     PRODUCT_FEEDBACK_ENABLED: "false"
     SMTP_HOST: mailpit
     SMTP_PORT: "1025"
-    SMTP_FROM: weeklyreport@customreport.local
+    SMTP_FROM: weeklyreport@weeklyreport.local
     KEYCLOAK_SAML_CALLBACK_URL: http://localhost:8080/auth/saml/callback
     KEYCLOAK_SAML_ENTRY_POINT: http://localhost:8081/realms/weeklyreport/protocol/saml
     KEYCLOAK_SAML_ISSUER: weeklyreport

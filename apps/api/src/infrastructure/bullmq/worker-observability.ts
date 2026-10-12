@@ -10,7 +10,7 @@ import { parseTraceParent } from "@opentelemetry/core";
 import type { JobTraceContext } from "../../lib/job-trace-context.js";
 
 const CORRELATION_ID_KEY = "correlationId";
-const WORKER_TRACER_NAME = "customreport-bullmq";
+const WORKER_TRACER_NAME = "weeklyreport-bullmq";
 
 // Trace/correlation threaded into a BullMQ job so the worker re-links to the
 // enqueue trace. Fields omitted (never written as undefined) when no trace is

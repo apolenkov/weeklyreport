@@ -44,15 +44,15 @@ spec:
             - -c
             - log_min_duration_statement=200
           env:
-            - { name: POSTGRES_USER, value: customreport }
+            - { name: POSTGRES_USER, value: weeklyreport }
             - { name: POSTGRES_PASSWORD, value: localdev }
-            - { name: POSTGRES_DB, value: customreport_e2e }
+            - { name: POSTGRES_DB, value: weeklyreport_e2e }
             - { name: PGDATA, value: /var/lib/postgresql/data/pgdata }
           ports:
             - { containerPort: 5432 }
           readinessProbe:
             exec:
-              command: [pg_isready, -U, customreport, -d, postgres]
+              command: [pg_isready, -U, weeklyreport, -d, postgres]
             periodSeconds: 5
           volumeMounts:
             - { name: data, mountPath: /var/lib/postgresql/data }

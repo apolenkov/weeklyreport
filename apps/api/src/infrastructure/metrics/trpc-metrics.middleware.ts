@@ -26,7 +26,7 @@ export interface SpanStarter {
   ): ReturnType<F>;
 }
 
-const DEFAULT_TRACER = trace.getTracer("customreport-api");
+const DEFAULT_TRACER = trace.getTracer("weeklyreport-api");
 
 // The timer starts before next() and ends after it, so nested canonical
 // logging/audit work executed inside next() is included in the measurement.

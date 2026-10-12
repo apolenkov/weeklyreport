@@ -62,8 +62,8 @@
   ],
   "users": [
     {
-      "username": "lead1@customreport.local",
-      "email": "lead1@customreport.local",
+      "username": "lead1@weeklyreport.local",
+      "email": "lead1@weeklyreport.local",
       "emailVerified": true,
       "enabled": true,
       "firstName": "Lead One",
@@ -71,8 +71,8 @@
       "credentials": [{ "type": "password", "value": "${PW_LEAD1}" }]
     },
     {
-      "username": "head@customreport.local",
-      "email": "head@customreport.local",
+      "username": "head@weeklyreport.local",
+      "email": "head@weeklyreport.local",
       "emailVerified": true,
       "enabled": true,
       "firstName": "Department Head",
@@ -80,8 +80,8 @@
       "credentials": [{ "type": "password", "value": "${PW_HEAD}" }]
     },
     {
-      "username": "viewer@customreport.local",
-      "email": "viewer@customreport.local",
+      "username": "viewer@weeklyreport.local",
+      "email": "viewer@weeklyreport.local",
       "emailVerified": true,
       "enabled": true,
       "firstName": "Viewer",
@@ -89,8 +89,8 @@
       "credentials": [{ "type": "password", "value": "${PW_VIEWER}" }]
     },
     {
-      "username": "admin@customreport.local",
-      "email": "admin@customreport.local",
+      "username": "admin@weeklyreport.local",
+      "email": "admin@weeklyreport.local",
       "emailVerified": true,
       "enabled": true,
       "firstName": "Admin",

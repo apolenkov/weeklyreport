@@ -37,7 +37,7 @@ spec:
             - name: postgres
               containerPort: 5432
           env:
-            - { name: DB_USER, value: customreport }
+            - { name: DB_USER, value: weeklyreport }
             - name: DB_PASSWORD
               {{- include "wr.secretRef" (dict "root" . "key" "DB_PASSWORD") | nindent 14 }}
             - { name: DB_HOST, value: postgres }

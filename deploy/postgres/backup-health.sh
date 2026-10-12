@@ -39,7 +39,7 @@ backup_interval_seconds="$(canonical_decimal "$BACKUP_INTERVAL_SECONDS")"
 # lands mid-minute is never judged stale by rounding alone.
 window_minutes=$(((backup_interval_seconds * 2 + 59) / 60))
 
-fresh="$(find "$BACKUP_DIR" -name 'customreport-*.dump' -type f \
+fresh="$(find "$BACKUP_DIR" -name 'weeklyreport-*.dump' -type f \
   -mmin "-${window_minutes}" 2>/dev/null | head -n 1)"
 
 if [ -z "$fresh" ]; then

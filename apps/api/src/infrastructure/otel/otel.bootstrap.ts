@@ -50,7 +50,7 @@ const DEFAULT_TRACES_SAMPLING_RATIO = 1.0;
 
 // env.schema declares OTEL_SERVICE_NAME/_VERSION optional, so the bootstrap
 // supplies the service identity spans are attributed to when they are unset.
-const DEFAULT_SERVICE_NAME = "customreport-api";
+const DEFAULT_SERVICE_NAME = "weeklyreport-api";
 const DEFAULT_SERVICE_VERSION = "dev";
 
 const samplingRatioFor = (rawRatio: string | undefined): number => {

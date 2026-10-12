@@ -292,7 +292,7 @@ class AppLoggerImpl implements AppLogger {
     this.logStream?.write(`${formatted}\n`);
 
     // Forward to OTel log provider (no-op when provider not registered).
-    logs.getLogger("customreport-api").emit({
+    logs.getLogger("weeklyreport-api").emit({
       body: message,
       severityNumber: LEVEL_SEVERITY[level],
       severityText: level,

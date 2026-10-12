@@ -4,7 +4,7 @@ import type { AiPromptMetricsSink } from "../../modules/ai-prompts/index.js";
 import { metricsRegistry } from "./metrics.registry.js";
 
 const aiPromptLifecycleTotal = new Counter({
-  name: "customreport_ai_prompt_lifecycle_total",
+  name: "weeklyreport_ai_prompt_lifecycle_total",
   help: "AI prompt lifecycle operation outcomes",
   labelNames: ["feature", "operation", "outcome"] as const,
   registers: [metricsRegistry],

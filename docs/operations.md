@@ -128,7 +128,7 @@ The `backup` CronJob runs the image-baked `backup-loop.sh` with
 `backup.retentionDays` controls the local history window. Neither value alone
 proves achieved RPO or RTO; those measurements come from a recorded restore
 drill. The CronJob has `concurrencyPolicy: Forbid`, no Job retry, and a bounded
-run time. A completed dump is published as `customreport-<stamp>.dump` only after
+run time. A completed dump is published as `weeklyreport-<stamp>.dump` only after
 `pg_dump` succeeds; failures leave no restorable-looking partial file.
 
 The backup image also contains `restore.sh`. It uses the release's image tag,
@@ -166,7 +166,7 @@ kubectl -n <ns> exec statefulset/postgres -- sha256sum /backups/<dump-file>
 Use the exact filename from the successful Job log. A timeout is not a success;
 inspect Job status, events, and logs before proceeding. Before a schema release,
 preserve the verified dump and checksum in protected recovery storage outside
-CronJob retention. Its ordinary `customreport-*.dump` remains subject to pruning.
+CronJob retention. Its ordinary `weeklyreport-*.dump` remains subject to pruning.
 A readable archive is necessary evidence, but does not prove a successful restore.
 Restore the recorded CronJob suspension state after the backup finishes and its
 archive is secured; if it was previously unsuspended, use
@@ -524,7 +524,7 @@ production Helm chart ships no monitoring stack, and the repository has no local
 one.
 
 Grafana scans two non-overlapping dashboard roots: operational and tRPC
-dashboards appear in `CustomReport`, while product telemetry appears in
+dashboards appear in `WeeklyReport`, while product telemetry appears in
 `Product KPIs`. `observability/alert-rules.yml` and `observability/grafana/**`
 remain operator reference material; verify their labels and receivers against
 the actual cluster before treating them as production monitoring.

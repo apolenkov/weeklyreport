@@ -1,8 +1,8 @@
 {
   "schemaVersion": 39,
-  "title": "CustomReport — tRPC Latency",
+  "title": "WeeklyReport — tRPC Latency",
   "uid": "trpc-latency",
-  "tags": ["customreport", "trpc", "latency"],
+  "tags": ["weeklyreport", "trpc", "latency"],
   "timezone": "browser",
   "refresh": "30s",
   "time": { "from": "now-1h", "to": "now" },
@@ -16,15 +16,15 @@
       "description": "Per-procedure latency quantiles. Each percentile independently selects its current top 5 procedures, so the p50, p95, and p99 cohorts can differ. Use the legend toggle to compare visible procedures side-by-side.",
       "targets": [
         {
-          "expr": "topk(5, histogram_quantile(0.50, sum by (le, procedure) (rate(trpc_request_duration_seconds_bucket{job=\"customreport-api\"}[5m]))))",
+          "expr": "topk(5, histogram_quantile(0.50, sum by (le, procedure) (rate(trpc_request_duration_seconds_bucket{job=\"weeklyreport-api\"}[5m]))))",
           "legendFormat": "p50 {{procedure}}"
         },
         {
-          "expr": "topk(5, histogram_quantile(0.95, sum by (le, procedure) (rate(trpc_request_duration_seconds_bucket{job=\"customreport-api\"}[5m]))))",
+          "expr": "topk(5, histogram_quantile(0.95, sum by (le, procedure) (rate(trpc_request_duration_seconds_bucket{job=\"weeklyreport-api\"}[5m]))))",
           "legendFormat": "p95 {{procedure}}"
         },
         {
-          "expr": "topk(5, histogram_quantile(0.99, sum by (le, procedure) (rate(trpc_request_duration_seconds_bucket{job=\"customreport-api\"}[5m]))))",
+          "expr": "topk(5, histogram_quantile(0.99, sum by (le, procedure) (rate(trpc_request_duration_seconds_bucket{job=\"weeklyreport-api\"}[5m]))))",
           "legendFormat": "p99 {{procedure}}"
         }
       ],
@@ -44,7 +44,7 @@
       "description": "Errors / total over a 5-minute rate window. Green < 1%, yellow 1-5%, red > 5%. Excludes auth.* errors which are normal first-load (no session).",
       "targets": [
         {
-          "expr": "sum(rate(trpc_request_total{job=\"customreport-api\",status=\"error\",procedure!~\"auth\\\\..*\"}[5m])) / clamp_min(sum(rate(trpc_request_total{job=\"customreport-api\",procedure!~\"auth\\\\..*\"}[5m])), 0.001)",
+          "expr": "sum(rate(trpc_request_total{job=\"weeklyreport-api\",status=\"error\",procedure!~\"auth\\\\..*\"}[5m])) / clamp_min(sum(rate(trpc_request_total{job=\"weeklyreport-api\",procedure!~\"auth\\\\..*\"}[5m])), 0.001)",
           "legendFormat": "error rate"
         }
       ],
@@ -71,7 +71,7 @@
       "description": "p95 latency per procedure over the last 5 minutes, ranked top-10. Use for capacity planning and to spot the next optimisation target.",
       "targets": [
         {
-          "expr": "topk(10, histogram_quantile(0.95, sum by (le, procedure) (rate(trpc_request_duration_seconds_bucket{job=\"customreport-api\"}[5m]))))",
+          "expr": "topk(10, histogram_quantile(0.95, sum by (le, procedure) (rate(trpc_request_duration_seconds_bucket{job=\"weeklyreport-api\"}[5m]))))",
           "legendFormat": "{{procedure}}",
           "instant": true
         }
@@ -92,7 +92,7 @@
       "description": "Per-procedure request rate. Pair with the latency panel above — a slow procedure with high volume is the priority fix.",
       "targets": [
         {
-          "expr": "sum by (procedure) (rate(trpc_request_total{job=\"customreport-api\"}[1m]))",
+          "expr": "sum by (procedure) (rate(trpc_request_total{job=\"weeklyreport-api\"}[1m]))",
           "legendFormat": "{{procedure}}"
         }
       ],

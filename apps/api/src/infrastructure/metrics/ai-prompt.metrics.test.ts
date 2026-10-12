@@ -20,7 +20,7 @@ describe("AiPromptPrometheusMetrics", () => {
     const output = await metricsRegistry.metrics();
 
     expect(output).toContain(
-      'customreport_ai_prompt_lifecycle_total{feature="lead-report-assistant",operation="activation",outcome="passed"} 1',
+      'weeklyreport_ai_prompt_lifecycle_total{feature="lead-report-assistant",operation="activation",outcome="passed"} 1',
     );
     expect(output).not.toContain("revision");
     expect(output).not.toContain("hash");

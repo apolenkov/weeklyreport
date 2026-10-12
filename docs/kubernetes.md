@@ -120,7 +120,7 @@ kubectl -n wr-local-prod port-forward svc/keycloak 8081:8080 &   # IdP, browser-
 
 The realm `weeklyreport` has the SAML client `weeklyreport` (signed response and
 assertion, NameID = e-mail, attributes `email` and `displayName`) and the users
-`lead1@`, `head@`, `viewer@`, `admin@customreport.local`; their passwords are in
+`lead1@`, `head@`, `viewer@`, `admin@weeklyreport.local`; their passwords are in
 `$STATE/secrets/secrets.env`. Mailpit receives the api's SMTP on `mailpit:1025`.
 
 **Roles after SAML.** The assertion carries no role: `verifySamlProfile` always
@@ -134,7 +134,7 @@ and a non-viewer needs a reporting group. It is idempotent:
 
 ```sh
 kubectl -n wr-local-prod exec -i statefulset/postgres -- \
-  psql -U customreport -d customreport_production -v ON_ERROR_STOP=1 \
+  psql -U weeklyreport -d weeklyreport_production -v ON_ERROR_STOP=1 \
   < deploy/local-prod/provision-users.sql
 ```
 
@@ -233,7 +233,7 @@ VERIFIED):
   ```sh
   kubectl -n <ns> run migrate-resolve --rm -it --restart=Never \
     --image=<registry>/migrate:<tag> --overrides='{"spec":{"imagePullSecrets":[{"name":"<pull-secret>"}]}}' \
-    --env=DATABASE_URL='postgresql://customreport:<password>@postgres:5432/<db>' \
+    --env=DATABASE_URL='postgresql://weeklyreport:<password>@postgres:5432/<db>' \
     -- ./node_modules/.bin/prisma migrate resolve --rolled-back <migration_name>
   ```
 

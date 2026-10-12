@@ -82,7 +82,7 @@ fi
 # Returns 0 only when a complete dump was published.
 dump_once() {
   stamp="$(date -u +%Y%m%dT%H%M%SZ)"
-  target="${BACKUP_DIR}/customreport-${stamp}.dump"
+  target="${BACKUP_DIR}/weeklyreport-${stamp}.dump"
   partial="${target}.partial"
 
   # -Fc (custom format) so restores can be selective and parallel; the dump
@@ -92,7 +92,7 @@ dump_once() {
     if mv "$partial" "$target"; then
       log "wrote $(basename "$target") ($(wc -c < "$target") bytes)"
 
-      deleted="$(find "$BACKUP_DIR" -name 'customreport-*.dump' -type f \
+      deleted="$(find "$BACKUP_DIR" -name 'weeklyreport-*.dump' -type f \
         -mtime "+${backup_retention_days}" -print -delete | wc -l)"
       if [ "$deleted" -gt 0 ]; then
         log "pruned ${deleted} dump(s) older than ${backup_retention_days} days"

@@ -24,7 +24,7 @@ export const ENV_CONFIG = Symbol("ENV_CONFIG");
       provide: APP_LOGGER,
       useFactory: (env: EnvConfig, cls: ClsService): AppLogger =>
         createAppLogger({
-          service: "customreport-api",
+          service: "weeklyreport-api",
           minLevel: env.LOG_LEVEL,
           logDir: env.LOG_DIR,
           clsService: cls,
