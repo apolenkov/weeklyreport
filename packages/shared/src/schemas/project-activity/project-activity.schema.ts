@@ -9,6 +9,8 @@ import {
 const MAX_JIRA_ACCOUNT_LENGTH = 100;
 const MAX_LINKED_PRODUCTS = 50;
 const MAX_JIRA_ACCOUNTS = 20;
+// Ids are byte-compared TEXT generated lowercase; fold case once at the wire.
+const canonicalUuid = z.uuid().toLowerCase();
 const activityNameSchema = safeText({ max: MAX_ACTIVITY_NAME_LENGTH });
 const jiraAccountSchema = safeText({ max: MAX_JIRA_ACCOUNT_LENGTH });
 
@@ -29,16 +31,14 @@ export const projectActivitySchema = z
 
 const projectActivityCreateObjectSchema = z.object({
   name: activityNameSchema,
-  groupId: z.uuid(),
-  // Reject duplicates at the wire; lowercase for case-sensitive @@unique comparisons.
+  groupId: canonicalUuid,
+  // Reject duplicates at the wire after case folding.
   linkedProductIds: z
-    .array(z.uuid())
+    .array(canonicalUuid)
     .max(MAX_LINKED_PRODUCTS)
-    .refine(
-      (ids) => new Set(ids.map((id) => id.toLowerCase())).size === ids.length,
-      { message: "linkedProductIds must not contain duplicates" },
-    )
-    .transform((ids) => ids.map((id) => id.toLowerCase()))
+    .refine((ids) => new Set(ids).size === ids.length, {
+      message: "linkedProductIds must not contain duplicates",
+    })
     .readonly()
     .default([]),
   jiraAccounts: z
@@ -54,13 +54,13 @@ export const projectActivityCreateSchema =
 
 /** Accepts a reporting-activity update identified by activity id. */
 export const projectActivityUpdateSchema = projectActivityCreateObjectSchema
-  .extend({ id: z.uuid() })
+  .extend({ id: canonicalUuid })
   .readonly();
 
 /** Accepts an archive-state change for one reporting activity. */
 export const projectActivityArchiveSchema = z
   .object({
-    id: z.uuid(),
+    id: canonicalUuid,
     archived: z.boolean(),
   })
   .readonly();
@@ -68,8 +68,8 @@ export const projectActivityArchiveSchema = z
 /** The (activity, lead) attachment edge for attach/detach mutations. */
 export const projectActivityLeadEdgeSchema = z
   .object({
-    activityId: z.uuid(),
-    leadId: z.uuid(),
+    activityId: canonicalUuid,
+    leadId: canonicalUuid,
   })
   .readonly();
 
