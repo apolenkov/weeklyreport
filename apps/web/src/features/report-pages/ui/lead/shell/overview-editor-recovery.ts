@@ -84,6 +84,7 @@ export function buildPriorPlanSeed(
 function authoredFields(item: KanbanItem) {
   return JSON.stringify({
     text: item.text,
+    tag: item.tag ?? "general",
     nextStepText: item.nextStepText ?? null,
     status: item.status,
     parent: item.parent,
@@ -99,51 +100,42 @@ function projectedItems(editor: ReadyEditor, dialog: OverviewItemDialogState) {
     : editor.view.viewModel.ownNextWeekItems;
 }
 
-function submissionSaveWasAcknowledged(
+function findAcknowledgedItem(
   editor: ReadyEditor,
   dialog: OverviewItemDialogState,
-): boolean {
-  const submission = dialog.submission;
-  return Boolean(
-    submission?.saveArmed &&
-    dialog.generation === editor.generation &&
-    editor.draft.version > submission.draftVersionBefore &&
-    editor.draft.autosave.lastSavedAt !== null &&
-    editor.draft.autosave.lastSavedAt !== submission.lastSavedAtBefore,
-  );
-}
-
-function findAcknowledgedCreatedItem(
-  editor: ReadyEditor,
-  dialog: Extract<OverviewItemDialogState, { mode: "create" }>,
 ): KanbanItem | undefined {
   const submission = dialog.submission;
   const receipt = editor.draft.lastSaveReceipt;
   if (
     !submission?.saveArmed ||
-    !receipt ||
+    !receipt?.persistedItems ||
     dialog.generation !== editor.generation ||
+    receipt.scope !== submission.receiptScope ||
+    receipt.scope !== editor.draft.receiptScope ||
+    receipt.attemptToken !== submission.token ||
     receipt.sequence <= submission.saveReceiptSequenceBefore ||
     receipt.generation !== dialog.generation ||
     receipt.reportSectionId !== editor.draft.section.reportSectionId ||
     receipt.version <= submission.draftVersionBefore
-  ) {
+  )
     return undefined;
-  }
   const identity = receipt.itemIdentities.find(
     (candidate) => candidate.clientId === submission.item.id,
   );
   if (!identity?.stableId) return undefined;
-  const persisted = editor.draft.section.items.find(
-    (row) => row.id === identity.serverId,
+  const stableId = identity.stableId;
+  const persisted = receipt.persistedItems.find(
+    (row) =>
+      row.id === identity.serverId &&
+      row.stableId?.localeCompare(stableId) === 0,
   );
-  if (persisted?.stableId?.localeCompare(identity.stableId) !== 0)
-    return undefined;
-  const current = projectedItems(editor, dialog).find(
-    (row) => row.id === identity.serverId,
-  );
-  return current && overviewItemFieldsUnchanged(submission.item, current)
-    ? current
+  if (persisted?.type !== dialog.week) return undefined;
+  const confirmed = mapLeadItems(
+    { ...editor.draft.section, items: receipt.persistedItems },
+    dialog.week,
+  ).find((row) => row.id === identity.serverId);
+  return confirmed && overviewItemFieldsUnchanged(submission.item, confirmed)
+    ? confirmed
     : undefined;
 }
 
@@ -165,7 +157,7 @@ export function overviewSubmittedItemIsCurrent(
     return current ? overviewItemFieldsUnchanged(submitted, current) : false;
   }
   return dialog.mode === "create"
-    ? findAcknowledgedCreatedItem(editor, dialog) !== undefined
+    ? findAcknowledgedItem(editor, dialog) !== undefined
     : false;
 }
 
@@ -173,10 +165,10 @@ export function overviewSubmissionIsAcknowledged(
   editor: ReadyEditor,
   dialog: OverviewItemDialogState,
 ): boolean {
-  return dialog.mode === "create"
-    ? findAcknowledgedCreatedItem(editor, dialog) !== undefined
-    : submissionSaveWasAcknowledged(editor, dialog) &&
-        overviewSubmittedItemIsCurrent(editor, dialog);
+  return (
+    findAcknowledgedItem(editor, dialog) !== undefined &&
+    overviewSubmittedItemIsCurrent(editor, dialog)
+  );
 }
 
 export function overviewItemFieldsUnchanged(
@@ -198,6 +190,26 @@ export function findOverviewDraftItem(
   );
 }
 
+function submissionScopeRecovery(
+  editor: ReadyEditor,
+  dialog: OverviewItemDialogState,
+): string | null {
+  if (dialog.generation !== editor.generation)
+    return "The report draft changed. Your unsaved input is kept below and has not overwritten the new draft.";
+  if (
+    dialog.submission &&
+    dialog.submission.receiptScope !== editor.draft.receiptScope
+  )
+    return "The report activation changed. Your unsaved input is kept below and has not overwritten the new draft.";
+  return null;
+}
+
+function discardedSaveRecovery(dialog: OverviewItemDialogState): string | null {
+  return dialog.submission?.discard?.failed
+    ? "The restoration was not confirmed. Your unsaved input is kept below. Reload the report before trying again."
+    : null;
+}
+
 export function overviewEditorRecoveryReason(
   editor: ReadyEditor | null,
   dialog: OverviewItemDialogState | null,
@@ -206,8 +218,9 @@ export function overviewEditorRecoveryReason(
   if (!dialog) return null;
   if (!editor || editor.view.viewModel.isReadOnly)
     return "The report is not editable right now. Your unsaved input is kept below.";
-  if (dialog.generation !== editor.generation)
-    return "The report draft changed. Your unsaved input is kept below and has not overwritten the new draft.";
+  const scopeRecovery = submissionScopeRecovery(editor, dialog);
+  if (scopeRecovery) return scopeRecovery;
+  if (dialog.submission?.discard) return discardedSaveRecovery(dialog);
   const parent =
     dialog.mode === "create"
       ? { kind: dialog.target.unitKind, id: dialog.target.unitId }

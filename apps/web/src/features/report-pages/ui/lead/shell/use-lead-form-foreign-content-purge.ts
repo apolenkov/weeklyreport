@@ -24,23 +24,42 @@ export function useLeadFormForeignContentPurge({
   const trpc = useTRPC();
   const qc = useQueryClient();
 
-  // `enabled:false` only stops refetching: removing the cached query is what
-  // drops the data so display arrays recompute to own-only. The bare procedure
-  // prefix (no input) also drops the PRIOR report's cache on a report switch.
+  // Mine/unhydrated removes the procedure prefix across reports. Everyone may
+  // retain other report variants only while they belong to this trusted viewer.
   useEffect(() => {
-    if (isEveryone && visibilityHydrated) return;
+    const queryKey = trpc.leadForm.crossAuthorContent.queryKey();
+    if (!isEveryone || !visibilityHydrated || !currentUserId || !sessionRole) {
+      qc.removeQueries({ queryKey });
+      return;
+    }
     qc.removeQueries({
-      queryKey: trpc.leadForm.crossAuthorContent.queryKey(),
+      queryKey,
+      predicate: (query) => {
+        const scope = query.queryKey[1];
+        if (
+          typeof scope !== "object" ||
+          scope === null ||
+          !("clientViewer" in scope)
+        )
+          return true;
+        const viewer = scope.clientViewer;
+        return (
+          typeof viewer !== "object" ||
+          viewer === null ||
+          !("userId" in viewer) ||
+          !("role" in viewer) ||
+          viewer.userId !== currentUserId ||
+          viewer.role !== sessionRole
+        );
+      },
     });
-  }, [isEveryone, visibilityHydrated, targetReportId, qc, trpc]);
-
-  // Identity guard: the `crossAuthorContent` key is scoped by reportId only,
-  // NOT by user, so two identities sharing a browser + QueryClient could read
-  // each other's records. Drop everything on ANY identity change, even though
-  // logout / role switch full-reload into a fresh QueryClient today.
-  useEffect(() => {
-    qc.removeQueries({
-      queryKey: trpc.leadForm.crossAuthorContent.queryKey(),
-    });
-  }, [currentUserId, sessionRole, qc, trpc]);
+  }, [
+    isEveryone,
+    visibilityHydrated,
+    targetReportId,
+    currentUserId,
+    sessionRole,
+    qc,
+    trpc,
+  ]);
 }

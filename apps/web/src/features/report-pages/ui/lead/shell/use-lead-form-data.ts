@@ -118,6 +118,8 @@ export function useLeadFormData({
   });
 
   const foreignContent = useCrossAuthorContent({
+    currentUserId,
+    sessionRole,
     targetReportId: view.targetReportId,
     visibilityHydrated: visibility.visibilityHydrated,
     isEveryone: visibility.isEveryone,

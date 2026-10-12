@@ -155,7 +155,7 @@ visible defect, failed or unknown result is not PASS.
 GitLab is the only remote. Owner decision 2026-10-11: push straight to `main`
 without a merge request and without waiting for CI; local gates and hooks still
 run and are never bypassed. Read CI on `main` after the fact and fix a red run
-with the next commit. Skipped or cancelled CI is not GREEN. Tie local checks, independent review, MR delivery and
+with the next commit. Skipped or cancelled CI is not GREEN. Tie local checks, independent review, direct main push and
 remote CI to their actual SHA and keep those evidence layers distinct. Report
 what changed, what passed, what remains and the next action in Backlog. Stop only
 your processes and remove only delivered task-owned worktrees/resources; retain

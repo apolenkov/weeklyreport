@@ -31,14 +31,18 @@ export function mergeProductDraft(
     const ownedStages = project.ownedStages.map((stage) => {
       const key = `${project.projectId}::${stage.stageName}`;
       if (!nextStageStatusByKey.has(key)) return stage;
-      return { ...stage, status: nextStageStatusByKey.get(key) ?? null };
+      const status = nextStageStatusByKey.get(key) ?? null;
+      if (status === stage.status) return stage;
+      return { ...stage, status };
     });
     return {
       ...project,
       ownedStages,
-      trafficLight: aggregateTrafficLight(
-        ownedStages.map((stage) => stage.status),
-      ),
+      trafficLight: ownedStages.some(
+        (stage, index) => stage !== project.ownedStages[index],
+      )
+        ? aggregateTrafficLight(ownedStages.map((stage) => stage.status))
+        : project.trafficLight,
     };
   });
   return { ...section, projects };

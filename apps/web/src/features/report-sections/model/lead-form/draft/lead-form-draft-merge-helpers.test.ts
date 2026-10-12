@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { mapLeadProducts } from "../../lead-form-periods-products";
+import { sectionToDraftPayload } from "../../lead-section-draft-payload";
 import type {
   DecisionEntry,
   KanbanItem,
@@ -313,5 +315,56 @@ describe("lead form draft merge helpers", () => {
       type: "next",
       workflowStatus: "planned",
     });
+  });
+});
+
+describe("unrelated product status merge", () => {
+  it("preserves an all-null owned-stage fallback while another product changes, but explicit clear remains null", () => {
+    const fixture = makeDraftMergeSection();
+    const first = fixture.projects[0];
+    if (!first) throw new Error("fixture product missing");
+    const secondId = "10000000-0000-4000-8000-000000000001";
+    const section = {
+      ...fixture,
+      risks: [],
+      projects: [
+        {
+          ...first,
+          trafficLight: "yellow" as const,
+          ownedStages: first.ownedStages.map((stage) => ({
+            ...stage,
+            status: null,
+          })),
+        },
+        {
+          ...first,
+          projectId: secondId,
+          projectName: "Second product",
+          trafficLight: "green" as const,
+        },
+      ],
+    };
+    const mapped = mapLeadProducts(section);
+    const changed = mapped.map((product) =>
+      product.id === secondId
+        ? {
+            ...product,
+            stages: product.stages.map((stage) => ({
+              ...stage,
+              status: "empty" as const,
+            })),
+          }
+        : product,
+    );
+    const merged = mergeProductDraft(section, changed);
+    expect(merged.projects[0]?.trafficLight).toBe("yellow");
+    expect(sectionToDraftPayload(merged).projectStatuses).toEqual([
+      { projectId: PROJECT_ID, status: "yellow" },
+      { projectId: secondId, status: undefined },
+    ]);
+    expect(merged.projects[1]?.trafficLight).toBeNull();
+    expect(section.projects[0]?.trafficLight).toBe("yellow");
+    const noOp = mergeProductDraft(section, mapped);
+    expect(noOp.projects[0]?.trafficLight).toBe("yellow");
   });
 });

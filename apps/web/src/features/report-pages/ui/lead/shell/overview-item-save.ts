@@ -196,6 +196,8 @@ function armDraftSave(
     ...dialog,
     submission: {
       attempt: (dialog.submission?.attempt ?? 0) + 1,
+      token: crypto.randomUUID(),
+      receiptScope: editor.draft.receiptScope,
       item,
       restore,
       inputSnapshot: dialog.draftStore.getSnapshot(),

@@ -17,6 +17,54 @@ interface SubmissionContext {
   readonly setDialog: SetDialog;
 }
 
+function driveDiscard(
+  editor: ReadyEditor,
+  dialog: OverviewItemDialogState,
+  setDialog: SetDialog,
+): void {
+  const discard = dialog.submission?.discard;
+  if (!discard || discard.armed || discard.failed) return;
+  setDialog((current) =>
+    current?.submission?.discard?.token === discard.token
+      ? {
+          ...current,
+          submission: {
+            ...current.submission,
+            discard: { ...discard, armed: true },
+          },
+        }
+      : current,
+  );
+  void editor.draft.savePersisted(discard.token).then((result) => {
+    setDialog((current) => {
+      if (
+        current?.submission?.discard?.token !== discard.token ||
+        current.generation !== dialog.generation
+      )
+        return current;
+      return result.status === "accepted"
+        ? null
+        : {
+            ...current,
+            submission: {
+              ...current.submission,
+              discard: { ...discard, armed: true, failed: true },
+            },
+          };
+    });
+  });
+}
+
+function submittedScopeMatches(
+  editor: ReadyEditor,
+  dialog: OverviewItemDialogState,
+): boolean {
+  return (
+    dialog.generation === editor.generation &&
+    dialog.submission?.receiptScope === editor.draft.receiptScope
+  );
+}
+
 // Plain function so the mutable attempt ref can be written outside a hook body.
 export function driveOverviewSubmission({
   editor,
@@ -29,6 +77,11 @@ export function driveOverviewSubmission({
 }): void {
   const submission = dialog?.submission;
   if (!editor || !dialog || !submission) return;
+  if (!submittedScopeMatches(editor, dialog)) return;
+  if (submission.discard) {
+    driveDiscard(editor, dialog, setDialog);
+    return;
+  }
   if (!submission.saveArmed) {
     setDialog((current) =>
       current?.submission?.attempt === submission.attempt
@@ -61,7 +114,8 @@ export function driveOverviewSubmission({
     startedAttempt.current = submission.attempt;
     const attempt = submission.attempt;
     queueMicrotask(() => {
-      if (startedAttempt.current === attempt) void editor.draft.save();
+      if (startedAttempt.current === attempt)
+        void editor.draft.savePersisted(submission.token);
     });
   }
   const acknowledged =
@@ -98,6 +152,23 @@ export function closeOverviewDialog({
     editor && dialog && !recoveryReason
       ? abandonedSaveRestorePatch(editor, dialog)
       : null;
-  if (editor && restore) editor.draft.apply(restore);
+  if (dialog?.submission?.discard) {
+    if (dialog.submission.discard.failed) {
+      editor?.draft.abandonPersisted(dialog.submission.discard.token);
+      setDialog(null);
+    }
+    return;
+  }
+  if (editor && dialog?.submission && restore) {
+    editor.draft.apply(restore);
+    setDialog({
+      ...dialog,
+      submission: {
+        ...dialog.submission,
+        discard: { token: crypto.randomUUID(), armed: false, failed: false },
+      },
+    });
+    return;
+  }
   setDialog(null);
 }

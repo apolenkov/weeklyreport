@@ -3,8 +3,9 @@
 // false→true→false must not re-fire.
 
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
+import type { DecisionEntry } from "../../report-sections";
 import { DecisionsSection } from "./decisions-section";
 
 describe("DecisionsSection — addSignal snapshot regression", () => {
@@ -35,5 +36,58 @@ describe("DecisionsSection — addSignal snapshot regression", () => {
       <DecisionsSection decisions={[]} addSignal={1} readOnly={false} />,
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});
+
+describe("DecisionsSection current delete permission", () => {
+  const decision: DecisionEntry = {
+    id: "10000000-0000-4000-8000-000000000001",
+    productId: "10000000-0000-4000-8000-000000000002",
+    productName: "Synthetic Product",
+    text: "Select the provider",
+    owner: "Synthetic Lead",
+    impact: "Keeps delivery on time",
+    deadline: null,
+    stageNames: ["Development"],
+  };
+  it.each([false, true])(
+    "rechecks readOnly=%s after Delete confirmation opens",
+    (readOnly) => {
+      const onChange = vi.fn();
+      const { rerender } = render(
+        <DecisionsSection
+          decisions={[decision]}
+          onChange={onChange}
+          readOnly={false}
+        />,
+      );
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: "Delete decision for Synthetic Product",
+        }),
+      );
+      rerender(
+        <DecisionsSection
+          decisions={[decision]}
+          onChange={onChange}
+          readOnly={readOnly}
+        />,
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+      if (readOnly) expect(onChange).not.toHaveBeenCalled();
+      else expect(onChange).toHaveBeenCalledExactlyOnceWith([]);
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    },
+  );
+  it("keeps editable Cancel inert", () => {
+    const onChange = vi.fn();
+    render(<DecisionsSection decisions={[decision]} onChange={onChange} />);
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Delete decision for Synthetic Product",
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

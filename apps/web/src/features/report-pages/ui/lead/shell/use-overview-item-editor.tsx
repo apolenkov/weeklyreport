@@ -136,6 +136,7 @@ export function buildOverviewEditorSlot(
         dialog={editing}
         isReadOnly={false}
         saveDisabled={
+          editing.submission?.discard != null ||
           (editing.mode === "edit" && editing.promotion?.pending === true) ||
           (editing.submission !== null &&
             editor.draft.autosave.state !== "error" &&

@@ -15,7 +15,8 @@ import { useLeadFormAddSignals } from "../chrome/use-lead-form-add-signals";
 import { useLeadFormChrome } from "../chrome/use-lead-form-chrome";
 import { useLeadFormWriteActions } from "../chrome/use-lead-form-write-actions";
 
-interface LeadFormEditingData {
+export interface LeadFormEditingData {
+  readonly awaitingRoleRedirect: boolean;
   readonly byPeriodData:
     | { readonly section: ReportSectionReadModel; readonly readOnly: boolean }
     | undefined;
@@ -50,7 +51,9 @@ export function useLeadFormEditing(args: UseLeadFormEditingArgs) {
     generation,
     serverSection: data.byPeriodData?.section,
     sectionIdForActions: data.sectionIdForActions,
-    serverReadOnly: data.byPeriodData ? data.byPeriodData.readOnly : true,
+    serverReadOnly:
+      data.awaitingRoleRedirect ||
+      (data.byPeriodData ? data.byPeriodData.readOnly : true),
     refetchSection: data.refetchSection,
     crossAuthors: data.crossAuthors,
     isEveryone: data.isEveryone,

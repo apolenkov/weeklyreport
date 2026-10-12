@@ -23,6 +23,15 @@ interface OverviewComposerState {
 
 interface OverviewItemSubmission {
   readonly attempt: number;
+  readonly token: string;
+  readonly receiptScope: string;
+  readonly discard?:
+    | {
+        readonly token: string;
+        readonly armed: boolean;
+        readonly failed: boolean;
+      }
+    | undefined;
   readonly item: KanbanItem;
   readonly inputSnapshot: ReturnType<ItemEditDraftStore["getSnapshot"]>;
   readonly lastSavedAtBefore: Date | null;

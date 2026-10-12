@@ -6,6 +6,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import { TRPCClientError } from "@trpc/client";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
@@ -225,3 +226,74 @@ describe.each(["edit", "slides", "overview"] as const)(
     );
   },
 );
+
+describe("missing section supporting recovery", () => {
+  it.each(["active", "history", "both"] as const)(
+    "keeps %s failures retryable alongside a deterministic section 404",
+    async (source) => {
+      const activeRecovery = Promise.withResolvers<unknown>();
+      const historyRecovery = Promise.withResolvers<unknown>();
+      let activeAttempts = 0;
+      let historyAttempts = 0;
+      const missing = new TRPCClientError("No section found for user");
+      Object.defineProperty(missing, "data", {
+        value: { httpStatus: 404, code: "NOT_FOUND" },
+        configurable: true,
+      });
+      const { Wrapper, sectionQuery, activeQuery, historyQuery, section } =
+        buildLeadLoadHarness({
+          activeQueryFn: () =>
+            source === "history"
+              ? Promise.resolve(makeReportSectionFixture())
+              : ++activeAttempts === 1
+                ? Promise.reject(new Error("active unavailable"))
+                : activeRecovery.promise,
+          historyQueryFn: () =>
+            source === "active"
+              ? Promise.resolve({ items: [] })
+              : ++historyAttempts === 1
+                ? Promise.reject(new Error("history unavailable"))
+                : historyRecovery.promise,
+          byPeriodQueryFn: () => Promise.reject(missing),
+        });
+      const { result } = renderHook(
+        () =>
+          useLeadFormData({ reportId: section.reportId, isSlidesMode: false }),
+        { wrapper: Wrapper },
+      );
+      await waitFor(() => expect(sectionQuery).toHaveBeenCalledOnce());
+      await waitFor(
+        () => expect(result.current.readState.status).toBe("error"),
+        { timeout: 1000 },
+      );
+      const retry = () => {
+        const state = result.current.readState;
+        if (state.status !== "error") {
+          throw new Error("Expected retryable supporting error");
+        }
+        return state.retry();
+      };
+      let first: Promise<unknown> | undefined;
+      act(() => {
+        first = retry();
+        expect(retry()).toBe(first);
+      });
+      expect(result.current.readState).toMatchObject({
+        status: "error",
+        isRetrying: true,
+      });
+      expect(sectionQuery).toHaveBeenCalledOnce();
+      await act(async () => {
+        activeRecovery.resolve(makeReportSectionFixture());
+        historyRecovery.resolve({ items: [] });
+        await first;
+      });
+      await waitFor(() =>
+        expect(result.current.readState.status).toBe("unavailable"),
+      );
+      expect(activeQuery).toHaveBeenCalledTimes(source === "history" ? 1 : 2);
+      expect(historyQuery).toHaveBeenCalledTimes(source === "active" ? 1 : 2);
+      expect(sectionQuery).toHaveBeenCalledOnce();
+    },
+  );
+});

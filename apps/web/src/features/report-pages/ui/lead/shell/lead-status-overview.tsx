@@ -171,6 +171,7 @@ export function LeadStatusOverview({
 
   return (
     <LeadStatusOverviewContent
+      key={targetReportId}
       targetReportId={targetReportId}
       output={overviewQ.data}
       editor={editor}

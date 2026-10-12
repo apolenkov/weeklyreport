@@ -18,7 +18,6 @@ export interface LeadFormItemSectionsActions {
   readonly onNextWeekItemsChange: (items: readonly KanbanItem[]) => void;
   readonly onMarkComplete: (itemId: string) => void;
   readonly onMoveToNextWeek: (itemId: string) => void;
-  readonly onContinueToNext: (itemId: string, nextText: string) => void;
   readonly onMoveToCurrentWeek: (itemId: string) => void;
   readonly onPauseItem: (itemId: string, reason: string) => void;
   readonly addCurrentWeekItem: () => void;
