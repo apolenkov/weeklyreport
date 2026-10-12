@@ -197,6 +197,50 @@ describe("createRedisReadThroughCache", () => {
     expect(storeOf().get("p:k")).toBe(JSON.stringify("post"));
   });
 
+  it("does not cache an overtaken compute when the invalidation epoch bump fails", async () => {
+    const cache = createRedisReadThroughCache({
+      connection: CONNECTION,
+      loggerName: "Test",
+      ttlSeconds: 60,
+      keyPrefix: "p:",
+    });
+    storeOf().set("p:k:old", JSON.stringify("old"));
+    const incSpy = vi.spyOn(redisCacheErrorsTotal, "inc");
+    const warnSpy = vi.spyOn(Logger.prototype, "warn");
+    vi.spyOn(redisOf(), "incr").mockRejectedValueOnce(new Error("incr failed"));
+    const release = Promise.withResolvers<void>();
+    const compute = vi.fn(async () => {
+      await release.promise;
+      return "pre-publish";
+    });
+
+    const pending = cache.getOrCompute("k", compute);
+    await vi.waitFor(() => expect(compute).toHaveBeenCalledOnce());
+    await expect(cache.invalidateByPrefix("k")).resolves.toBeUndefined();
+    release.resolve();
+    await expect(pending).resolves.toBe("pre-publish");
+
+    // The stale write is fenced even though the shared epoch never advanced.
+    expect(storeOf().get("p:__invalidation_generation")).toBeUndefined();
+    expect(storeOf().has("p:k")).toBe(false);
+    // The delete, the log and the count still happen after the failed bump.
+    expect(storeOf().has("p:k:old")).toBe(false);
+    expect(incSpy).toHaveBeenCalledWith({ operation: "write" });
+    expect(warnSpy).toHaveBeenCalledWith(
+      "cache invalidation epoch bump failed",
+      expect.objectContaining({
+        phase: "cache.invalidate",
+        prefix: "k",
+        error: "incr failed",
+      }),
+    );
+    // The fence does not stick: the next read caches normally.
+    await expect(
+      cache.getOrCompute("k", () => Promise.resolve("post")),
+    ).resolves.toBe("post");
+    expect(storeOf().get("p:k")).toBe(JSON.stringify("post"));
+  });
+
   it("skips the write for a non-serializable result instead of caching an empty string", async () => {
     const cache = createRedisReadThroughCache({
       connection: CONNECTION,
