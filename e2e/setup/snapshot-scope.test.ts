@@ -60,3 +60,36 @@ void test("missing and ambiguous scopes fail instead of inventing structural ref
   );
   assert.throws(() => scopeSnapshot(example, "article"), /got 2/u);
 });
+
+void test("regexp scopes independently match every name without mutating caller state", () => {
+  const data: BrowserSnapshot = {
+    snapshot:
+      '- button "Inspect" [ref=e1]\n- button "Inspect" [ref=e2]\n- button "Prefix Inspect" [ref=e3]',
+    refs: {
+      e1: { role: "button", name: "Inspect" },
+      e2: { role: "button", name: "Inspect" },
+      e3: { role: "button", name: "Prefix Inspect" },
+    },
+  };
+  for (const flags of ["g", "gu", "y", "u"]) {
+    const name = new RegExp("^Inspect$", flags);
+    name.lastIndex = 3;
+    for (const repeat of [0, 1]) {
+      assert.equal(
+        scopeCount(data, "button", name),
+        2,
+        `${flags} call ${repeat}`,
+      );
+      assert.deepEqual(
+        scopeSnapshots(data, "button", name).map((scope) =>
+          Object.keys(scope.refs),
+        ),
+        [["e1"], ["e2"]],
+      );
+      assert.equal(name.lastIndex, 3);
+    }
+    assert.throws(() => scopeSnapshot(data, "button", name), /got 2/u);
+  }
+  assert.equal(scopeCount(data, "button", /Inspect/g), 3);
+  assert.equal(scopeCount(data, "button", /Inspect/y), 2);
+});

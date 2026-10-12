@@ -2,6 +2,8 @@ import vitest from "@vitest/eslint-plugin";
 import type { Linter } from "eslint";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 
+import { NAMED_TEST_FILES, TEST_SUPPORT_FILES } from "./test-contours.ts";
+
 const unrestrictedTestContourRules: Linter.RulesRecord = {
   "max-lines": "off",
   "max-lines-per-function": "off",
@@ -32,13 +34,7 @@ export const overrideConfig: Linter.Config[] = [
   // Tests keep type-aware safety and correctness checks, but product-only
   // structure/style budgets must not steer test design or product delivery.
   {
-    files: [
-      "**/*.test.ts",
-      "**/*.test.tsx",
-      "**/*.spec.ts",
-      "**/*.spec.tsx",
-      "**/__tests__/**",
-    ],
+    files: [...NAMED_TEST_FILES],
     plugins: { vitest },
     rules: {
       // `expect(mock.method)` is the whole point of a spy assertion, but the
@@ -97,17 +93,7 @@ export const overrideConfig: Linter.Config[] = [
   },
   // Non-test-named support code is part of the same unrestricted contour.
   {
-    files: [
-      "apps/*/src/test-utils/**",
-      "**/__fixtures__/**",
-      "**/fixture/**",
-      "**/fixtures/**",
-      "**/*-harness.{ts,tsx}",
-      "**/*.fixture.{ts,tsx}",
-      "**/*.fixtures.{ts,tsx}",
-      "**/*-fixture.{ts,tsx}",
-      "**/*-test-fixture.{ts,tsx}",
-    ],
+    files: [...TEST_SUPPORT_FILES],
     rules: unrestrictedTestContourRules,
   },
 ];

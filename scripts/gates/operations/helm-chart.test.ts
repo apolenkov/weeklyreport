@@ -519,3 +519,38 @@ test("unsafe database names are refused before any workload is emitted", () => {
     assert.match(result.stderr, /postgres[\s\S]*db/);
   }
 });
+
+test.each(["nonexecutable", "signal", "ordinary failure"] as const)(
+  "helm launch diagnostics: %s",
+  (mode) => {
+    mkdirSync(join(chartDirectory, "../../../output"), { recursive: true });
+    const directory = mkdtempSync(
+      join(chartDirectory, "../../../output/helm-launch-"),
+    );
+    const executable = join(directory, "helm");
+    const previous = process.env.PATH;
+    writeFileSync(
+      executable,
+      mode === "signal"
+        ? "#!/bin/sh\nkill -TERM $$\n"
+        : '#!/bin/sh\nprintf "ordinary helm failure" >&2\nexit 2\n',
+    );
+    chmodSync(executable, mode === "nonexecutable" ? 0o600 : 0o700);
+    process.env.PATH = directory;
+    try {
+      if (mode === "nonexecutable")
+        assert.throws(() => helm(["version"]), { code: "EACCES" });
+      else if (mode === "signal")
+        assert.throws(() => helm(["version"]), /SIGTERM/u);
+      else {
+        const result = helm(["version"]);
+        assert.equal(result.status, 2);
+        assert.equal(result.stderr, "ordinary helm failure");
+        assert.equal(result.stdout, "");
+      }
+    } finally {
+      process.env.PATH = previous;
+      rmSync(directory, { recursive: true, force: true });
+    }
+  },
+);

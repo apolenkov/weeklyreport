@@ -95,6 +95,12 @@ if ! user_count=$(kubectl -n "$NS" exec statefulset/postgres -- psql -U customre
   echo "Could not count users (psql error above); refusing to reset." >&2
   exit 1
 fi
+case "$user_count" in
+  ''|*[!0-9]*)
+    echo "Invalid user count; refusing to reset." >&2
+    exit 1
+    ;;
+esac
 if [ "$user_count" = 0 ]; then
   bash "$HERE/reset.sh" --yes
 fi

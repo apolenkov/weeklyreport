@@ -18,6 +18,8 @@ function matchingSnapshotLines(
   role: string,
   name?: string | RegExp,
 ): SnapshotLine[] {
+  const matcher =
+    name instanceof RegExp ? new RegExp(name.source, name.flags) : null;
   return data.snapshot.split("\n").flatMap((line, index) => {
     const parsed = SNAPSHOT_LINE.exec(line);
     if (parsed?.[2] !== role) return [];
@@ -28,7 +30,10 @@ function matchingSnapshotLines(
       "Invalid snapshot accessible name",
     );
     if (typeof name === "string" && accessibleName !== name) return [];
-    if (name instanceof RegExp && !name.test(accessibleName)) return [];
+    if (matcher) {
+      matcher.lastIndex = 0;
+      if (!matcher.test(accessibleName)) return [];
+    }
     return [{ index, indent: parsed[1]?.length ?? 0 }];
   });
 }

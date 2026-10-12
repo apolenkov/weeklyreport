@@ -106,15 +106,16 @@ The product uses the current light palette only. Deep brand surfaces use the
 
 ### Font stack
 
-The root layout loads all three Google faces through `next/font/google` and
+The root layout loads Fraunces and Onest through `next/font/google` and
 puts their CSS variables on `<html>`:
 
 - **Display**: `Fraunces` through `--font-display`, with `"Times New Roman",
 serif` fallback. The landing `PulseMark` uses this for the WEEKLY/REPORT
   wordmark.
-- **UI sans**: `Lexend`, then `Source Sans 3`, then `ui-sans-serif, system-ui,
+- **UI sans**: `Onest`, then `ui-sans-serif, system-ui,
 sans-serif`, through `--font-sans`.
 - **Mono**: `"Geist Mono", ui-monospace, monospace` through `--font-mono`.
+  Geist Mono is used only when installed locally; the layout does not load it.
 
 `body` uses `font-sans`, antialiasing, and `tracking-[-0.01em]`. The app
 keeps the hierarchy compact rather than exposing a separate display-size scale:

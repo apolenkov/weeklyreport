@@ -146,6 +146,9 @@ function resolveHelm(): string {
 /** Runs helm and returns its exit status and output. */
 export function helm(args: readonly string[]): HelmResult {
   const result = spawnSync(resolveHelm(), [...args], { encoding: "utf8" });
+  if (result.error) throw result.error;
+  if (result.signal)
+    throw new Error(`Helm terminated by signal ${result.signal}`);
   return {
     status: result.status,
     stdout: result.stdout,

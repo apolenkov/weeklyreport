@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
+  chmod,
   lstat,
   mkdir,
   mkdtemp,
+  readdir,
   readFile,
+  readlink,
   rm,
   symlink,
   writeFile,
@@ -142,3 +145,65 @@ void test("prune refuses a non-deploy root before mutating it", async () => {
   assert.equal(await readFile(sentinel, "utf8"), "untouched\n");
   await readFile(join(root, "node_modules", ".modules.yaml"));
 });
+
+void test("discovery failure in a forbidden subtree leaves planned links and package bytes untouched", async () => {
+  const root = await makeDeployRoot();
+  const forbidden = await makePackage(root, "prisma@fixture", "prisma");
+  const firstLink = join(forbidden, "node_modules", "a-removal-candidate");
+  const lateLink = join(forbidden, "node_modules", "z-failing-link");
+  const marker = join(forbidden, "node_modules", "prisma", "marker.txt");
+  await writeFile(marker, "required pre-state bytes\n");
+  await symlink("prisma", firstLink);
+  await symlink("z-failing-link", lateLink);
+  const independent = await makePackage(
+    root,
+    "independent@fixture",
+    "independent",
+  );
+  await symlink(
+    ".pnpm/independent@fixture/node_modules/independent",
+    join(root, "node_modules", "independent"),
+  );
+  const order = await readdir(join(forbidden, "node_modules"));
+  assert.ok(
+    order.indexOf("a-removal-candidate") < order.indexOf("z-failing-link"),
+  );
+  const result = runPrune(root);
+  assert.equal(await readFile(marker, "utf8"), "required pre-state bytes\n");
+  assert.equal(await readlink(firstLink), "prisma");
+  assert.equal(await readlink(lateLink), "z-failing-link");
+  await lstat(independent);
+  assert.notEqual(result.status, 0);
+  assert.match(String(result.stderr), /ELOOP/u);
+});
+
+void test(
+  "an unreadable required subtree aborts before removing package bytes",
+  {
+    skip:
+      process.getuid?.() === 0
+        ? "root cannot establish permission refusal"
+        : false,
+  },
+  async () => {
+    const root = await makeDeployRoot();
+    const forbidden = await makePackage(root, "prisma@fixture", "prisma");
+    const marker = join(forbidden, "node_modules/prisma/marker.txt");
+    await writeFile(marker, "preserve unreadable prestate\n");
+    const unreadable = join(root, "node_modules", "z-unreadable");
+    await mkdir(unreadable);
+    await chmod(unreadable, 0);
+    try {
+      await assert.rejects(readdir(unreadable), { code: "EACCES" });
+      const result = runPrune(root);
+      assert.notEqual(result.status, 0);
+      assert.match(String(result.stderr), /EACCES/u);
+      assert.equal(
+        await readFile(marker, "utf8"),
+        "preserve unreadable prestate\n",
+      );
+    } finally {
+      await chmod(unreadable, 0o700);
+    }
+  },
+);
