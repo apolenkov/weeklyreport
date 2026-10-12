@@ -559,15 +559,22 @@ describe("ProductAccordion — accessible disclosure", () => {
     expect(panel.firstElementChild).toHaveAttribute("aria-hidden", "false");
   });
 
-  it("does not expose a dangling disclosure relationship for an empty report", () => {
-    render(<ProductAccordion report={makeReport()} />);
+  // defaultOpen=true is the targeted-navigation path, where expanded resolves to true for an empty report.
+  it.each([false, true])(
+    "does not expose a dangling disclosure relationship for an empty report (defaultOpen=%s)",
+    (defaultOpen) => {
+      render(
+        <ProductAccordion report={makeReport()} defaultOpen={defaultOpen} />,
+      );
 
-    const toggle = screen.getByRole("button", { name: /Product Alpha/ });
-    expect(toggle).toBeDisabled();
-    expect(toggle).not.toHaveAttribute("id");
-    expect(toggle).not.toHaveAttribute("aria-controls");
-    expect(screen.queryByRole("region")).not.toBeInTheDocument();
-  });
+      const toggle = screen.getByRole("button", { name: /Product Alpha/ });
+      expect(toggle).toBeDisabled();
+      expect(toggle).not.toHaveAttribute("id");
+      expect(toggle).not.toHaveAttribute("aria-controls");
+      expect(toggle).not.toHaveAttribute("aria-expanded");
+      expect(screen.queryByRole("region")).not.toBeInTheDocument();
+    },
+  );
 
   it("disables the card-surface transition when reduced motion is requested", () => {
     const { container } = render(
