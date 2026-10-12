@@ -48,7 +48,7 @@ afterEach(async () => {
 });
 
 describe("assertTestDatabaseUrl", () => {
-  const sharedUrl = "postgresql://u:p@localhost:5432/customreport_e2e";
+  const sharedUrl = "postgresql://u:p@localhost:5432/weeklyreport_e2e";
   const consent = {
     NODE_ENV: "test",
     PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
@@ -58,20 +58,20 @@ describe("assertTestDatabaseUrl", () => {
   it.each([
     [sharedUrl, sharedUrl],
     [
-      "postgresql://integration:secret@localhost:5432/customreport_e2e",
-      "postgres://developer:other@localhost:5432/customreport_e2e",
+      "postgresql://integration:secret@localhost:5432/weeklyreport_e2e",
+      "postgres://developer:other@localhost:5432/weeklyreport_e2e",
     ],
     [
-      "postgres://u:p@127.0.0.1:5432/customreport_e2e",
-      "postgresql://u:p@127.0.0.1:5432/customreport_e2e",
+      "postgres://u:p@127.0.0.1:5432/weeklyreport_e2e",
+      "postgresql://u:p@127.0.0.1:5432/weeklyreport_e2e",
     ],
     [
-      "postgres://u:p@[::1]:5432/customreport_e2e",
-      "postgresql://u:p@[::1]:5432/customreport_e2e",
+      "postgres://u:p@[::1]:5432/weeklyreport_e2e",
+      "postgresql://u:p@[::1]:5432/weeklyreport_e2e",
     ],
     [
-      "postgresql://u:p@localhost:5432/customreport_e2e_lane_a_test",
-      "postgresql://u:p@localhost:5432/customreport_e2e_lane_a_test",
+      "postgresql://u:p@localhost:5432/weeklyreport_e2e_lane_a_test",
+      "postgresql://u:p@localhost:5432/weeklyreport_e2e_lane_a_test",
     ],
   ] as const)(
     "accepts matching host, database, and port despite other URL differences: %s vs %s",
@@ -87,8 +87,8 @@ describe("assertTestDatabaseUrl", () => {
 
   it.each([
     "postgresql://user:pass@db.example.com:5432/arbitrary_test",
-    "postgresql://u:p@localhost:5432/customreport_test",
-    "postgresql://u:p@localhost:5432/customreport_e2e_lane_a_test?schema=public",
+    "postgresql://u:p@localhost:5432/weeklyreport_test",
+    "postgresql://u:p@localhost:5432/weeklyreport_e2e_lane_a_test?schema=public",
   ])(
     "rejects a suffix-based or ambiguous target before allocation: %s",
     (url) => {
@@ -121,16 +121,16 @@ describe("assertTestDatabaseUrl", () => {
 
   it.each([
     [
-      "postgresql://u:p@localhost:5432/customreport_e2e_lane_a_test",
-      "postgresql://u:p@localhost:5432/customreport_e2e",
+      "postgresql://u:p@localhost:5432/weeklyreport_e2e_lane_a_test",
+      "postgresql://u:p@localhost:5432/weeklyreport_e2e",
     ],
     [
-      "postgresql://u:p@localhost:5432/customreport_e2e",
-      "postgresql://u:p@localhost:5432/customreport_e2e_lane_b_test",
+      "postgresql://u:p@localhost:5432/weeklyreport_e2e",
+      "postgresql://u:p@localhost:5432/weeklyreport_e2e_lane_b_test",
     ],
     [
-      "postgresql://u:p@localhost:5433/customreport_e2e",
-      "postgresql://u:p@localhost:5432/customreport_e2e",
+      "postgresql://u:p@localhost:5433/weeklyreport_e2e",
+      "postgresql://u:p@localhost:5432/weeklyreport_e2e",
     ],
   ] as const)(
     "rejects divergent logical targets: %s vs %s",
@@ -146,7 +146,7 @@ describe("assertTestDatabaseUrl", () => {
 
   it.each([
     {
-      developerUrl: "postgresql://u:p@db.example.com:5432/customreport_e2e",
+      developerUrl: "postgresql://u:p@db.example.com:5432/weeklyreport_e2e",
       reason: /not loopback/iu,
     },
     { developerUrl: "not-a-postgres-url", reason: /not a parseable/iu },
@@ -208,7 +208,7 @@ describe("assertTestDatabaseUrl", () => {
   it("rejects a divergent target before allocating a pg pool or running SQL", async () => {
     vi.stubEnv(
       "E2E_DATABASE_URL",
-      "postgresql://u:p@localhost:5432/customreport_e2e_lane_a_test",
+      "postgresql://u:p@localhost:5432/weeklyreport_e2e_lane_a_test",
     );
     vi.stubEnv("DATABASE_URL", sharedUrl);
     vi.stubEnv("NODE_ENV", "test");
@@ -231,11 +231,11 @@ describe("assertTestDatabaseUrl", () => {
     async (e2eHost, developerHost) => {
       vi.stubEnv(
         "E2E_DATABASE_URL",
-        `postgresql://u:p@${e2eHost}:5432/customreport_e2e`,
+        `postgresql://u:p@${e2eHost}:5432/weeklyreport_e2e`,
       );
       vi.stubEnv(
         "DATABASE_URL",
-        `postgresql://u:p@${developerHost}:5432/customreport_e2e`,
+        `postgresql://u:p@${developerHost}:5432/weeklyreport_e2e`,
       );
       vi.stubEnv("NODE_ENV", "test");
       vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
@@ -266,7 +266,7 @@ describe("assertTestDatabaseUrl", () => {
     const client = createTestPrisma();
     vi.stubEnv(
       "E2E_DATABASE_URL",
-      "postgres://other:creds@localhost:5432/customreport_e2e",
+      "postgres://other:creds@localhost:5432/weeklyreport_e2e",
     );
 
     expect(createTestPrisma()).toBe(client);
@@ -276,11 +276,11 @@ describe("assertTestDatabaseUrl", () => {
   it("rejects target drift before reusing a client or truncating", async () => {
     vi.stubEnv(
       "E2E_DATABASE_URL",
-      "postgresql://integration:secret@localhost:5432/customreport_e2e",
+      "postgresql://integration:secret@localhost:5432/weeklyreport_e2e",
     );
     vi.stubEnv(
       "DATABASE_URL",
-      "postgres://developer:other@localhost:5432/customreport_e2e",
+      "postgres://developer:other@localhost:5432/weeklyreport_e2e",
     );
     vi.stubEnv("NODE_ENV", "test");
     vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
@@ -290,11 +290,11 @@ describe("assertTestDatabaseUrl", () => {
     // passes and the memoized-client drift check is what refuses the drift.
     vi.stubEnv(
       "E2E_DATABASE_URL",
-      "postgresql://u:p@localhost:5433/customreport_e2e",
+      "postgresql://u:p@localhost:5433/weeklyreport_e2e",
     );
     vi.stubEnv(
       "DATABASE_URL",
-      "postgresql://u:p@localhost:5433/customreport_e2e",
+      "postgresql://u:p@localhost:5433/weeklyreport_e2e",
     );
 
     expect(() => createTestPrisma()).toThrow(/different E2E database/iu);

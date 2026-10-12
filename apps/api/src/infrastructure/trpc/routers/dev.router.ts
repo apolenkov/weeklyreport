@@ -142,7 +142,7 @@ export function createDevRouter(deps: DevRouterDeps) {
         assertDevMode(deps.env);
         // Run Prisma reset as a child process so "wipe & reseed" is a
         // real clean-slate operation in Docker too.
-        const repoRoot = resolveRepoRoot(deps.env.CUSTOMREPORT_REPO_ROOT);
+        const repoRoot = resolveRepoRoot(deps.env.WEEKLYREPORT_REPO_ROOT);
         // The canonical destructive guard runs immediately before the first
         // child process: it refuses a non-disposable target or a run without the
         // operator's per-run consent. Consent is read from the operator's

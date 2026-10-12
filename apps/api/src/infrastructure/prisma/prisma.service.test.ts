@@ -23,7 +23,7 @@ const openServices: PrismaService[] = [];
 
 function makeService(overrides: Partial<EnvConfig> = {}): PrismaService {
   const env = {
-    DATABASE_URL: "postgresql://user:pass@localhost:5432/customreport_test",
+    DATABASE_URL: "postgresql://user:pass@localhost:5432/weeklyreport_test",
     DB_POOL_MAX: 10,
     DB_POOL_IDLE_TIMEOUT_MS: 10_000,
     DB_POOL_CONNECTION_TIMEOUT_MS: 0,
