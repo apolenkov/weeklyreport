@@ -5,6 +5,7 @@ import { RotateCcw } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { mutationErrorMessage } from "../../../shared/lib/errors/mutation-error-message";
 import {
   invalidateLeadForm,
   invalidateLeadHistory,
@@ -34,7 +35,10 @@ function useRevokeMutation(leadName: string, onMutated: () => void) {
       },
       onError: (err) => {
         toast.error(
-          `Failed to revoke ${leadName}'s submission: ${err.message}`,
+          mutationErrorMessage(
+            err,
+            `Failed to revoke ${leadName}'s submission`,
+          ),
         );
       },
     }),

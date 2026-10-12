@@ -1,6 +1,7 @@
-import type {
-  RiskSeverity,
-  TrafficLightStatus,
+import {
+  type RiskSeverity,
+  type TrafficLightStatus,
+  trafficLightStatusSchema,
 } from "../schemas/primitives/report-primitives.schema.js";
 import { riskCoversStage } from "../schemas/stages/stage-names.js";
 import {
@@ -9,10 +10,15 @@ import {
 } from "../schemas/status/canonical-status.js";
 import { aggregateTrafficLight } from "./traffic-light-aggregation.js";
 
-const asTrafficLight = (
+/** Returns an admitted traffic light or null without coercing unknown values. */
+export function asTrafficLight(
   status: string | null | undefined,
-): TrafficLightStatus | null =>
-  status === "green" || status === "yellow" || status === "red" ? status : null;
+): TrafficLightStatus | null {
+  // The canonical schema owns the admitted vocabulary; anything else,
+  // null/undefined included, reads as "not rated".
+  const parsed = trafficLightStatusSchema.safeParse(status);
+  return parsed.success ? parsed.data : null;
+}
 
 /**
  * Derives a product's effective traffic light from its stored status, owned

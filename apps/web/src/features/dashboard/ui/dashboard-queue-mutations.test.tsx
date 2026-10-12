@@ -13,6 +13,8 @@ const {
   invalidateReview,
   invalidateSubmissionDashboard,
   mutate,
+  toastError,
+  toastSuccess,
 } = vi.hoisted(() => ({
   useMutationMock: vi.fn(),
   invalidateQueries: vi.fn(),
@@ -21,6 +23,8 @@ const {
   invalidateReview: vi.fn(),
   invalidateSubmissionDashboard: vi.fn(),
   mutate: vi.fn(),
+  toastError: vi.fn(),
+  toastSuccess: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-query", () => ({
@@ -28,7 +32,7 @@ vi.mock("@tanstack/react-query", () => ({
   useQueryClient: () => ({ invalidateQueries }),
 }));
 vi.mock("sonner", () => ({
-  toast: { error: vi.fn(), success: vi.fn() },
+  toast: { error: toastError, success: toastSuccess },
 }));
 vi.mock("../../../shared/lib/query/cache-keys", () => ({
   invalidateLeadForm,
@@ -132,7 +136,7 @@ describe("dashboard queue mutation transitions", () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole("button", { name: /send reminder/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Remind Alice Lead" }));
     expect(mutate).toHaveBeenCalledWith({
       reportId: "10000000-0000-4000-8000-000000000001",
       ruleId: RULE_ID,
@@ -208,11 +212,12 @@ describe("dashboard queue mutation transitions", () => {
     );
 
     const button = screen.getByRole("button", {
-      name: "Send reminder to Alice Lead",
+      name: "Remind Alice Lead",
     });
     fireEvent.click(button);
 
     expect(button).toHaveTextContent(label);
+    expect(button).toHaveAccessibleName(`${label} Alice Lead`);
     expect(button).toBeDisabled();
     expect(onMutated).toHaveBeenCalledOnce();
   });
@@ -239,11 +244,12 @@ describe("dashboard queue mutation transitions", () => {
     );
 
     const button = screen.getByRole("button", {
-      name: "Send reminder to Alice Lead",
+      name: "Remind Alice Lead",
     });
     fireEvent.click(button);
 
     expect(button).toHaveTextContent("Retry");
+    expect(button).toHaveAccessibleName("Retry Alice Lead");
     expect(button).toBeEnabled();
     expect(onMutated).not.toHaveBeenCalled();
   });
@@ -272,7 +278,7 @@ describe("dashboard queue mutation transitions", () => {
       />,
     );
     const button = screen.getByRole("button", {
-      name: "Send reminder to Alice Lead",
+      name: "Remind Alice Lead",
     });
     fireEvent.click(button);
     expect(button).toHaveTextContent("Retry");
@@ -338,5 +344,60 @@ describe("dashboard queue mutation transitions", () => {
     expect(invalidateLeadHistory).toHaveBeenCalledTimes(1);
     expect(invalidateSubmissionDashboard).toHaveBeenCalledTimes(1);
     expect(onMutated).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the revoke action copy without transport detail on a network failure", () => {
+    useMutationMock.mockImplementation(
+      (configuration: MockMutationOptions) => ({
+        isPending: false,
+        mutate: (_input: unknown, callOptions?: MutationCallbacks) =>
+          callbacksFor(configuration, callOptions).onError(
+            new Error("Failed to fetch"),
+          ),
+      }),
+    );
+    render(
+      <RevokeLeadButton
+        reportSectionId="30000000-0000-4000-8000-000000000001"
+        leadName="Alice Lead"
+        onMutated={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /revoke alice/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm revoke" }));
+
+    expect(toastError).toHaveBeenCalledWith(
+      "Failed to revoke Alice Lead's submission",
+    );
+    expect(toastError).not.toHaveBeenCalledWith(
+      expect.stringContaining("Failed to fetch"),
+    );
+  });
+
+  it("keeps a curated server message on revoke failure", () => {
+    useMutationMock.mockImplementation(
+      (configuration: MockMutationOptions) => ({
+        isPending: false,
+        mutate: (_input: unknown, callOptions?: MutationCallbacks) =>
+          callbacksFor(configuration, callOptions).onError(
+            new Error("Only submitted sections can be revoked."),
+          ),
+      }),
+    );
+    render(
+      <RevokeLeadButton
+        reportSectionId="30000000-0000-4000-8000-000000000001"
+        leadName="Alice Lead"
+        onMutated={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /revoke alice/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirm revoke" }));
+
+    expect(toastError).toHaveBeenCalledWith(
+      "Only submitted sections can be revoked.",
+    );
   });
 });

@@ -1,5 +1,6 @@
 import {
   aggregateTrafficLight,
+  asTrafficLight as asTraffic,
   canonicalToTrafficLight,
   type RiskSeverity,
   riskSeverityToCanonicalFloor,
@@ -16,13 +17,8 @@ export function aggregateStageTraffic(
   return aggregateTrafficLight(stages.map((stage) => asTraffic(stage.status)));
 }
 
-export function asTraffic(
-  status: string | null | undefined,
-): TrafficLight | null {
-  return status === "green" || status === "yellow" || status === "red"
-    ? status
-    : null;
-}
+// Preserve the existing persistence export while shared owns normalization.
+export { asTrafficLight as asTraffic } from "@customreport/shared";
 
 // An activity has no SDLC stage, so its pill is floored by its own risks only.
 // `alarmFloor` is that record-only floor — the lead picker gates a manual lower

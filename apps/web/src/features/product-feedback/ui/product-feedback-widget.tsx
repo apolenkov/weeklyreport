@@ -13,9 +13,8 @@ import { useEffect, useState } from "react";
 import { useSession } from "../../../shared/lib/auth/session-provider";
 import { getScalarSearchParam } from "../../../shared/lib/navigation/scalar-search-param";
 import { webEnv } from "../../../shared/lib/runtime/web-env";
+import { AGENTATION_ENDPOINT } from "./agentation-delivery-confirmation";
 import { useAgentationDeliveryStatus } from "./use-agentation-delivery-status";
-
-const AGENTATION_ENDPOINT = "/api/v1/agentation";
 
 // The inlined NODE_ENV check makes the bundler drop the import, so the
 // development toolbar never ships in a production build.

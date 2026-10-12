@@ -279,7 +279,10 @@ export {
 } from "./schemas/stages/stage-names.js";
 export * from "./schemas/status/canonical-status.js";
 export * from "./schemas/telemetry/telemetry.js";
-export { deriveEffectiveProductStatus } from "./status/effective-product-status.js";
+export {
+  asTrafficLight,
+  deriveEffectiveProductStatus,
+} from "./status/effective-product-status.js";
 export * from "./status/traffic-light-aggregation.js";
 export { sanitizeClientLogUrl } from "./telemetry/sanitize-client-log-url.js";
 export { createSentryPrivacyOptions } from "./telemetry/sentry-policy.js";

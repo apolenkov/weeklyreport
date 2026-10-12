@@ -12,10 +12,10 @@ import {
 
 type WorkflowKind = "edit" | "reply" | "dismiss" | "delete";
 
-const NEUTRAL_BUTTON =
-  "min-h-11 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
-const DANGER_BUTTON =
-  "min-h-11 rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700";
+const TRIGGER_BUTTON_BASE =
+  "min-h-11 rounded-lg border px-3 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2";
+const NEUTRAL_BUTTON = `${TRIGGER_BUTTON_BASE} border-[var(--color-border)] focus-visible:ring-[var(--color-ring)]`;
+const DANGER_BUTTON = `${TRIGGER_BUTTON_BASE} border-red-200 text-red-700 focus-visible:ring-red-700`;
 
 interface WorkflowProps {
   readonly item: FeedbackCardItem;

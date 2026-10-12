@@ -1,5 +1,17 @@
 import type { Prisma } from "@prisma/client";
 
+// One include policy preserves the three record collections' durable identity
+// order and their existing comment projection.
+const recordWithCommentsInclude = {
+  orderBy: { stableId: "asc" },
+  include: {
+    project: { select: { name: true } },
+    recordComments: {
+      include: { reviewer: { select: { name: true } } },
+    },
+  },
+} as const;
+
 // Single include contract for every report-section read; type is derived from it.
 export const reportSectionFullInclude = {
   author: {
@@ -55,27 +67,9 @@ export const reportSectionFullInclude = {
     },
   },
   // Comments/reviews ride the aggregate; isCurrent derived in mapper.
-  items: {
-    orderBy: { stableId: "asc" },
-    include: {
-      project: { select: { name: true } },
-      recordComments: { include: { reviewer: { select: { name: true } } } },
-    },
-  },
-  risks: {
-    orderBy: { stableId: "asc" },
-    include: {
-      project: { select: { name: true } },
-      recordComments: { include: { reviewer: { select: { name: true } } } },
-    },
-  },
-  decisions: {
-    orderBy: { stableId: "asc" },
-    include: {
-      project: { select: { name: true } },
-      recordComments: { include: { reviewer: { select: { name: true } } } },
-    },
-  },
+  items: recordWithCommentsInclude,
+  risks: recordWithCommentsInclude,
+  decisions: recordWithCommentsInclude,
   sectionReviews: {
     orderBy: [{ createdAt: "asc" }, { reviewerId: "asc" }],
     include: { reviewer: { select: { name: true } } },

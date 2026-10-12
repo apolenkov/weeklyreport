@@ -262,6 +262,9 @@ describe("BlockedAtRiskTable", () => {
     expect(trigger).not.toBeDisabled();
     expect(trigger).toHaveAttribute("aria-expanded", "false");
     const panel = container.querySelector("[style*='grid-template-rows']");
+    const content = panel?.firstElementChild;
+    expect(content).toHaveAttribute("inert");
+    expect(content).toHaveAttribute("aria-hidden", "true");
     expect(panel).toHaveClass("motion-reduce:transition-none");
     expect(panel).toHaveStyle({ gridTemplateRows: "0fr" });
     expect(trigger.querySelector("svg.lucide-chevron-down")).toHaveClass(
@@ -272,10 +275,14 @@ describe("BlockedAtRiskTable", () => {
 
     expect(trigger).toHaveAttribute("aria-expanded", "true");
     expect(panel).toHaveStyle({ gridTemplateRows: "1fr" });
+    expect(content).not.toHaveAttribute("inert");
+    expect(content).toHaveAttribute("aria-hidden", "false");
     expect(screen.getByText("Needs approval")).toBeVisible();
     fireEvent.click(trigger);
     expect(trigger).toHaveAttribute("aria-expanded", "false");
     expect(panel).toHaveStyle({ gridTemplateRows: "0fr" });
+    expect(content).toHaveAttribute("inert");
+    expect(content).toHaveAttribute("aria-hidden", "true");
   });
 });
 
