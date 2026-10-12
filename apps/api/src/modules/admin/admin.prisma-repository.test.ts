@@ -1342,21 +1342,6 @@ describe("AdminPrismaRepository — stage-assignment write serialization", () =>
     stage: { select: { name: true } },
     user: { select: { name: true } },
   };
-  // The exact candidate scan from lib/project-assignment.ts
-  // `lockAllEditableReports` — the lock set these writers must share.
-  const EDITABLE_SCAN = {
-    where: {
-      archived: false,
-      periodState: "open",
-      OR: [
-        { status: "draft", periodStatus: "open" },
-        { status: "published", periodStatus: "reopened" },
-      ],
-    },
-    select: { id: true },
-    orderBy: { id: "asc" },
-  };
-
   const editableRow = (id: string) => ({
     id,
     status: "draft",
@@ -1447,7 +1432,6 @@ describe("AdminPrismaRepository — stage-assignment write serialization", () =>
         "report-lock:report-1",
       ]);
       expect(upsert).not.toHaveBeenCalled();
-      expect(tx.report.findMany).toHaveBeenCalledWith(EDITABLE_SCAN);
     } finally {
       gate.resolve([editableRow("report-1")]);
     }

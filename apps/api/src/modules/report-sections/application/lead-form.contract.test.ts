@@ -23,6 +23,7 @@ import { NOOP_REPORT_SECTIONS_TELEMETRY } from "./report-sections-telemetry.port
 
 describe("LeadFormService — revokeSubmission", () => {
   it("succeeds for a submitted section", async () => {
+    const scope = { author: { reportingGroupId: { in: ["group-a"] } } };
     const repo = createMockRepository({
       getSectionByIdScoped: vi
         .fn()
@@ -33,13 +34,14 @@ describe("LeadFormService — revokeSubmission", () => {
     const result = await service.revokeSubmission(
       SECTION_ID,
       OTHER_USER_ID,
-      {},
+      scope,
     );
 
     expect(result).toEqual({ success: true });
     expect(repo.revokeSectionSubmission).toHaveBeenCalledWith(
       SECTION_ID,
       OTHER_USER_ID,
+      scope,
     );
   });
 
