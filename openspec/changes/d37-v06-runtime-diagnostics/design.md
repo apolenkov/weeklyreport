@@ -6,7 +6,7 @@ See proposal.md for motivation. `wipeAndReseed` currently concatenates child std
 
 ## Decisions
 
-Reseed flow before: child output/error → raw text projection → tRPC response → role-switcher toast. After: child exit/result → fixed success summary or generic INTERNAL_SERVER_ERROR → existing formatter/request id → caller. Discard raw output at this response boundary instead of moving it into an unredacted log. Keep the existing `{ ok, variant, output }` success shape so the public client contract remains stable.
+Reseed flow before: child output/error → raw text projection → tRPC response → role-switcher toast. After: child exit/result → fixed success summary or generic INTERNAL_SERVER_ERROR → existing formatter/request id → caller. Discard raw output at this response boundary; a metadata-only application-log entry (step, variant, error class and safe code, exit code, signal, logger correlation id) records each failed child step. Keep the existing `{ ok, variant, output }` success shape so the public client contract remains stable.
 
 Nest flow before: ExceptionHandler → Error string → AppLogger. After: ExceptionHandler → Error string plus name/stack → AppLogger. Only actual Error instances supply metadata. An explicit caller stack overrides the Error stack; a missing explicit stack does not erase it. Two-argument string context remains unchanged. Causes and extra properties are not traversed.
 
@@ -16,7 +16,7 @@ The canonical protectedProcedure, AUTH_DEV_MODE gate, exact destructive-target g
 
 ## Risks / Trade-offs
 
-- Raw reseed diagnostic text no longer reaches the caller → the response retains safe failure code/message and existing request id; this change introduces no unredacted replacement sink.
+- Raw reseed diagnostic text no longer reaches the caller → the response retains safe failure code/message and existing request id; no unredacted replacement sink is introduced; only exit metadata is logged.
 - Error stacks can contain internal source locations → stacks remain in the existing server AppLogger error sink and are not copied into API responses; no new serializer or sink is introduced.
 - A native seed guard refusal proves a genuine diagnostic producer, not reset/seed completion → tests deliberately reject before any database work and use an in-memory tRPC transport.
 

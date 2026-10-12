@@ -4,6 +4,7 @@
 
 - [x] 1.1 Preserve actual Nest Error name/stack with explicit caller priority and no cause traversal; prove real ExceptionHandler-to-AppLogger RED/GREEN in existing nest-app-logger.adapter.test.ts and maintain the error-trace-correlation delta.
 - [x] 1.2 Return safe reseed status without child output/cause; prove actual seed guard refusal-to-tRPC RED/GREEN and successful stdout omission in existing dev.router.test.ts and maintain the destructive-db-guard delta.
+- [x] 1.3 Log reseed child-step failure metadata without child text (C0476); prove in dev.router.test.ts.
 
 ## 2. Scoped integration and handoff
 

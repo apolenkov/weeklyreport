@@ -25,7 +25,7 @@ vi.mock("node:child_process", () => ({
   }),
 }));
 
-import { createNullLogger } from "../../../lib/logger.js";
+import { type AppLogger, createNullLogger } from "../../../lib/logger.js";
 import { createNullAuditLogger } from "../../../test-utils/audit-logger.js";
 import type { EnvConfig } from "../../config/env.schema";
 import { createDevRouter } from "./dev.router.js";
@@ -44,10 +44,31 @@ const DISPOSABLE_URL =
 const NON_DISPOSABLE_URL =
   "postgresql://weeklyreport:localdev@db.internal:5432/weeklyreport";
 
+interface BoundaryRuntime {
+  prisma?: PrismaClient;
+  redisDb?: number;
+  logger?: AppLogger;
+}
+
+const spyLogger = () => {
+  const methods = {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  };
+  const logger: AppLogger = { ...methods, child: vi.fn() };
+  return {
+    logger,
+    errorCalls: methods.error.mock.calls,
+    allCalls: Object.values(methods).map((method) => method.mock.calls),
+  };
+};
+
 function buildBoundary(
   authDevMode: boolean,
   databaseUrl: string = DISPOSABLE_URL,
-  runtime: { prisma?: PrismaClient; redisDb?: number } = {},
+  runtime: BoundaryRuntime = {},
 ) {
   const env = {
     AUTH_DEV_MODE: authDevMode,
@@ -63,7 +84,7 @@ function buildBoundary(
     context: {
       session,
       correlationId: "d37-v06-synthetic-request",
-      logger: createNullLogger(),
+      logger: runtime.logger ?? createNullLogger(),
       auditLogger: createNullAuditLogger(),
       ip: "test-ip",
       isPdfExport: false,
@@ -75,7 +96,7 @@ function buildBoundary(
 function buildCaller(
   authDevMode: boolean,
   databaseUrl: string = DISPOSABLE_URL,
-  runtime: { prisma?: PrismaClient; redisDb?: number } = {},
+  runtime: BoundaryRuntime = {},
 ) {
   const { router, context } = buildBoundary(authDevMode, databaseUrl, runtime);
   return router.createCaller(context);
@@ -323,5 +344,83 @@ describe("dev reseed diagnostic transport boundary", () => {
     });
     expect(JSON.stringify(body)).not.toContain("internal-reset-marker");
     expect(JSON.stringify(body)).not.toContain("internal-seed-marker");
+  });
+});
+
+describe("dev.wipeAndReseed failure logging", () => {
+  const stepCalls = (errorCalls: readonly (readonly unknown[])[]) =>
+    errorCalls.filter(([message]) => message === "dev reseed step failed");
+
+  it("logs a failed seed step once with exit metadata and no child text", async () => {
+    vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
+    const { logger, errorCalls, allCalls } = spyLogger();
+    execFileMock
+      .mockResolvedValueOnce({ stdout: "ok", stderr: "" })
+      .mockRejectedValueOnce(
+        Object.assign(new Error("seed failed at /abs/secret-marker-path"), {
+          code: 1,
+          signal: null,
+          cmd: "pnpm db:seed:profile minimal",
+          stdout: "stdout-marker",
+          stderr: `${DISPOSABLE_URL} stderr-marker`,
+        }),
+      );
+
+    await expect(
+      buildCaller(true, DISPOSABLE_URL, { logger }).wipeAndReseed({
+        variant: "minimal",
+      }),
+    ).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Reseed failed",
+    });
+
+    const calls = stepCalls(errorCalls);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.[1]).toEqual({
+      step: "seed",
+      variant: "minimal",
+      error: { name: "Error" },
+      exitCode: 1,
+      signal: null,
+    });
+    const logged = JSON.stringify(allCalls);
+    for (const marker of [
+      "localdev",
+      "stderr-marker",
+      "stdout-marker",
+      "secret-marker-path",
+      "db:seed:profile minimal",
+    ])
+      expect(logged).not.toContain(marker);
+  });
+
+  it("logs a timed-out reset once as step reset and never spawns seed", async () => {
+    vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
+    const { logger, errorCalls } = spyLogger();
+    execFileMock.mockRejectedValueOnce(
+      Object.assign(new Error("timeout"), {
+        code: null,
+        signal: "SIGTERM",
+        killed: true,
+      }),
+    );
+
+    await expect(
+      buildCaller(true, DISPOSABLE_URL, { logger }).wipeAndReseed({
+        variant: "minimal",
+      }),
+    ).rejects.toMatchObject({ message: "Reseed failed" });
+
+    const calls = stepCalls(errorCalls);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.[1]).toEqual({
+      step: "reset",
+      variant: "minimal",
+      error: { name: "Error" },
+      exitCode: null,
+      signal: "SIGTERM",
+    });
+    expect(execFileMock).toHaveBeenCalledTimes(1);
   });
 });
