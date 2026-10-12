@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const pgMock = vi.hoisted(() => ({
   Pool: vi.fn<new () => { end: () => Promise<void> }>(),
@@ -17,6 +17,18 @@ vi.mock("@prisma/adapter-pg", () => ({ PrismaPg: prismaMock.PrismaPg }));
 vi.mock("node:child_process", () => ({
   spawnSync: childProcessMock.spawnSync,
 }));
+
+vi.mock("dotenv", () => ({ config: vi.fn() }));
+const socketMock = vi.hoisted(() => ({
+  createConnection: vi.fn(() => {
+    throw new Error("Unexpected socket access in an offline producer check");
+  }),
+}));
+vi.mock("node:net", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:net")>();
+  return { ...actual, default: { ...actual, ...socketMock }, ...socketMock };
+});
+beforeEach(() => vi.clearAllMocks());
 
 // Regression: runResetHard must never print credential material from
 // DATABASE_URL. The colon-containing password below is the fixture that
@@ -91,4 +103,89 @@ describe("runResetHard logging", () => {
       );
     }
   });
+});
+
+function offlineClient(queryRows: { tablename: string }[] = []) {
+  const end = vi.fn().mockResolvedValue(undefined);
+  const disconnect = vi.fn().mockResolvedValue(undefined);
+  const execute = vi
+    .fn<(sql: string) => Promise<number>>()
+    .mockResolvedValue(0);
+  pgMock.Pool.mockImplementation(
+    class {
+      end = end;
+    },
+  );
+  prismaMock.PrismaClient.mockImplementation(
+    class {
+      $disconnect = disconnect;
+      $executeRawUnsafe = execute;
+      $queryRawUnsafe = vi.fn().mockResolvedValue(queryRows);
+    },
+  );
+  vi.stubEnv("DATABASE_URL", COLON_PASSWORD_URL);
+  vi.stubEnv("NODE_ENV", "test");
+  vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
+  vi.spyOn(console, "log").mockImplementation(() => undefined);
+  return { end, disconnect, execute };
+}
+
+it("retains a genuine OS ENOENT through the public hard-reset producer", async () => {
+  const actual =
+    await vi.importActual<typeof import("node:child_process")>(
+      "node:child_process",
+    );
+  const result = actual.spawnSync("/f09-no-such-executable", [], {
+    shell: false,
+    timeout: 1000,
+    stdio: "pipe",
+  });
+  expect(result.status).toBeNull();
+  expect(result.signal).toBeNull();
+  expect(result.error?.message).toContain("ENOENT");
+  const client = offlineClient();
+  childProcessMock.spawnSync.mockReturnValue(result);
+  const { runResetHard } = await import("./reset-hard.js");
+  const previousArgv = process.argv;
+  process.argv = [process.execPath, "synthetic-reset.ts", "minimal"];
+  let failure: unknown;
+  try {
+    await runResetHard();
+  } catch (error) {
+    failure = error;
+  } finally {
+    process.argv = previousArgv;
+  }
+  expect(failure).toBeInstanceOf(Error);
+  if (!(failure instanceof Error)) throw new Error("Expected producer failure");
+  expect(failure.message).toContain("migrate deploy");
+  expect(failure.message).toContain("ENOENT");
+  expect(failure.cause).toBe(result.error);
+  expect(client.end).toHaveBeenCalledOnce();
+  expect(client.disconnect).toHaveBeenCalledOnce();
+  expect(client.execute).not.toHaveBeenCalled();
+  expect(socketMock.createConnection).not.toHaveBeenCalled();
+});
+
+it("emits qualified public table identities and stops before any socket access", async () => {
+  const queryRows = [{ tablename: "Item" }, { tablename: 'strange"table' }];
+  const client = offlineClient(queryRows);
+  const stopBeforeRedis = new Error("Synthetic SQL transport stop");
+  client.execute.mockRejectedValue(stopBeforeRedis);
+  childProcessMock.spawnSync.mockReturnValue({ status: 0, signal: null });
+  const { runResetHard } = await import("./reset-hard.js");
+  const previousArgv = process.argv;
+  process.argv = [process.execPath, "synthetic-reset.ts", "minimal"];
+  try {
+    await expect(runResetHard()).rejects.toBe(stopBeforeRedis);
+  } finally {
+    process.argv = previousArgv;
+  }
+  expect(client.execute).toHaveBeenCalledWith(
+    'TRUNCATE TABLE "public"."Item", "public"."strange""table" RESTART IDENTITY CASCADE;',
+  );
+  expect(socketMock.createConnection).not.toHaveBeenCalled();
+  expect(childProcessMock.spawnSync).toHaveBeenCalledOnce();
+  expect(client.disconnect).toHaveBeenCalledOnce();
+  expect(client.end).toHaveBeenCalledOnce();
 });

@@ -47,8 +47,18 @@ const DATABASE_URL = requireEnv("DATABASE_URL");
 async function main(): Promise<void> {
   assertE2eRuntimeDestructive("seed-simple");
   const pool = new pg.Pool({ connectionString: DATABASE_URL });
-  const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
+  const state: {
+    prisma: PrismaClient | null;
+    primaryFailed: boolean;
+    primary: unknown;
+  } = {
+    prisma: null,
+    primaryFailed: false,
+    primary: undefined,
+  };
   try {
+    const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
+    state.prisma = prisma;
     console.log("[seed-simple] Wiping existing data...");
     await wipeSeedData(prisma);
     await seedReportingGroups(prisma);
@@ -74,10 +84,35 @@ async function main(): Promise<void> {
     await assertSeedCoverage(prisma, "seed-simple", REPORT_ACTIVE);
     assertAssistantReadiness("demo");
     await logSeedSummary(prisma);
-  } finally {
-    await prisma.$disconnect();
-    await pool.end();
+  } catch (error) {
+    state.primaryFailed = true;
+    state.primary = error;
   }
+  const cleanupErrors: unknown[] = [];
+  if (state.prisma) {
+    try {
+      await state.prisma.$disconnect();
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+  }
+  try {
+    await pool.end();
+  } catch (error) {
+    cleanupErrors.push(error);
+  }
+  if (state.primaryFailed) {
+    if (cleanupErrors.length > 0) {
+      throw new AggregateError(
+        [state.primary, ...cleanupErrors],
+        "seed-simple failed during cleanup",
+        { cause: state.primary },
+      );
+    }
+    throw state.primary;
+  }
+  if (cleanupErrors.length > 0)
+    throw new AggregateError(cleanupErrors, "seed-simple cleanup failed");
 }
 
 void main().catch((error: unknown) => {

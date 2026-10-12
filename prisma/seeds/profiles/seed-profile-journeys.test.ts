@@ -30,3 +30,15 @@ it("rejects a submitted minimal section even when an item exists", async () => {
     runProfileJourney(minimalPrisma("submitted"), "minimal"),
   ).rejects.toThrow("Seed journey failed: minimal lead section is draft");
 });
+
+it.each(["minimal", "demo", "full"] as const)(
+  "names the public %s profile when its active report is absent",
+  async (profile) => {
+    const prisma = {
+      report: { findUnique: vi.fn().mockResolvedValue(null) },
+    } as unknown as PrismaClient;
+    await expect(runProfileJourney(prisma, profile)).rejects.toThrow(
+      `Seed journey failed: ${profile} active report is open`,
+    );
+  },
+);

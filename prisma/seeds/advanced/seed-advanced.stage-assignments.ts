@@ -91,7 +91,7 @@ async function upsertAssignment(
     where: {
       stageId_projectId: { stageId: row.stageId, projectId: row.projectId },
     },
-    update: { userId: row.userId },
+    update: {},
     create: row,
   });
 }

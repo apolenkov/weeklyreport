@@ -19,11 +19,7 @@ export function statusOverviewItemParent(
   return null;
 }
 
-export function hasStatusOverviewParent(item: SectionItem): boolean {
-  return statusOverviewItemParent(item) !== null;
-}
-
-export function hasNextCommitment(item: SectionItem): boolean {
+function hasNextCommitment(item: SectionItem): boolean {
   return item.type === "next" || Boolean(item.nextStepText?.trim());
 }
 

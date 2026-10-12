@@ -138,7 +138,7 @@ async function runMinimalJourney(
 async function runDemoJourney(
   prisma: PrismaClient,
   draftLeadId: string = LEAD_1_ID,
-  profileLabel = "minimal",
+  profileLabel = "demo",
 ): Promise<void> {
   await runMinimalJourney(prisma, draftLeadId, profileLabel);
   const scope = SEED_PROFILE_SCOPES.demo;

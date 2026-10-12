@@ -74,9 +74,10 @@ export async function upsertItem(
   prisma: ItemUpsertClient,
   { id, ...fields }: ItemRow,
 ): Promise<void> {
+  const data = { ...fields, pausedReason: fields.pausedReason ?? null };
   await prisma.item.upsert({
     where: { id },
-    update: fields,
-    create: { id, ...fields },
+    update: data,
+    create: { id, ...data },
   });
 }

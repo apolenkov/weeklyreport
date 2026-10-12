@@ -20,6 +20,7 @@ interface LocalBootstrapEnvironment extends DestructiveTargetEnv {
 interface SpawnResult {
   readonly status: number | null;
   readonly signal: NodeJS.Signals | null;
+  readonly error?: Error;
 }
 
 export type LocalBootstrapSpawn = (
@@ -122,16 +123,24 @@ export function runLocalBootstrap(
     },
   ] as const;
   for (const step of steps) {
-    const result = spawn(step.command, step.args, {
-      cwd: REPO_ROOT,
-      env: { ...environment },
-      shell: false,
-      stdio: "inherit",
-    });
-    if (result.status !== 0) {
+    let result: SpawnResult;
+    try {
+      result = spawn(step.command, step.args, {
+        cwd: REPO_ROOT,
+        env: { ...environment },
+        shell: false,
+        stdio: "inherit",
+      });
+    } catch (error) {
+      throw new Error(`[bootstrap-local] ${step.label} could not start`, {
+        cause: error,
+      });
+    }
+    const spawnDetail = result.error ? ` error=${result.error.message}` : "";
+    if (result.error || result.status !== 0) {
       throw new Error(
-        `[bootstrap-local] ${step.label} failed with ` +
-          `exit=${String(result.status)} signal=${String(result.signal)}.`,
+        `[bootstrap-local] ${step.label} failed with exit=${String(result.status)} signal=${String(result.signal)}${spawnDetail}`,
+        { cause: result.error },
       );
     }
   }

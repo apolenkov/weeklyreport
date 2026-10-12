@@ -1,3 +1,5 @@
+import { spawnSync } from "node:child_process";
+
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -106,4 +108,50 @@ describe("local disposable database bootstrap", () => {
     );
     expect(spawn).toHaveBeenCalledTimes(3);
   });
+});
+
+it("reports a genuine OS spawn failure and stops before another action", () => {
+  const result = spawnSync("/f09-no-such-executable", [], {
+    shell: false,
+    timeout: 1000,
+    stdio: "pipe",
+  });
+  expect(result.status).toBeNull();
+  expect(result.signal).toBeNull();
+  expect(result.error?.message).toContain("ENOENT");
+  console.log("Synthetic OS receipt", {
+    status: result.status,
+    signal: result.signal,
+    error: result.error?.message,
+  });
+  const spawn = vi.fn(() => result);
+  let failure: unknown;
+  try {
+    runLocalBootstrap("minimal", environment, spawn);
+  } catch (error) {
+    failure = error;
+  }
+  expect(spawn).toHaveBeenCalledOnce();
+  expect(failure).toBeInstanceOf(Error);
+  if (!(failure instanceof Error)) throw new Error("Expected producer failure");
+  expect(failure.message).toContain("db:generate");
+  expect(failure.message).toContain("ENOENT");
+  expect(failure.cause).toBe(result.error);
+});
+
+it("keeps context and cause when the spawn boundary itself throws", () => {
+  const primary = new Error("Synthetic spawn boundary failure");
+  let failure: unknown;
+  try {
+    runLocalBootstrap("minimal", environment, () => {
+      throw primary;
+    });
+  } catch (error) {
+    failure = error;
+  }
+  expect(failure).toBeInstanceOf(Error);
+  if (!(failure instanceof Error))
+    throw new Error("Expected contextual producer failure");
+  expect(failure.message).toContain("db:generate");
+  expect(failure.cause).toBe(primary);
 });

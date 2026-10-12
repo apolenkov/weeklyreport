@@ -7,10 +7,6 @@ export {
   buildConfirmCarriedItemPatch,
   buildMoveItemPatch,
   continueToNextPatch,
-  markCompletePatch,
-  moveToCurrentWeekPatch,
-  moveToNextWeekPatch,
-  pauseItemPatch,
   promoteContinuationPatch,
 } from "./model/lead-actions/lead-item-actions";
 export { buildSetItemStatusPatch } from "./model/lead-actions/lead-item-status-patch";

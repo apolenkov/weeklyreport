@@ -6,12 +6,15 @@
 
 import {
   draftSaveSchema,
+  itemOutcomeStateSchema,
   reportSectionReadModelSchema,
   validateStageOwnership,
 } from "@customreport/shared";
 import type { Prisma, PrismaClient } from "@prisma/client";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
+import { seedActiveSections as seedSimpleSections } from "../simple/seed-simple.sections.js";
+import { seedStageAssignments as seedSimpleAssignments } from "../simple/seed-simple.stages.js";
 import { LEAD_1_ID, SEED_STAGES } from "../support/seed-constants.js";
 import { seedActiveSections } from "./seed-advanced.active-sections.js";
 import { PRODUCT_MARKETING_PORTAL } from "./seed-advanced.anchors.js";
@@ -73,7 +76,10 @@ function captureDemo() {
     decision: captureUpserts(decisions),
     report: captureUpserts<Prisma.ReportUncheckedCreateInput>([]),
     projectStatus: captureUpserts<Prisma.ProjectStatusUncheckedCreateInput>([]),
-    stageStatus: captureUpserts<Prisma.StageStatusUncheckedCreateInput>([]),
+    stageStatus: {
+      ...captureUpserts<Prisma.StageStatusUncheckedCreateInput>([]),
+      deleteMany: noopMany,
+    },
   } as unknown as PrismaClient;
 
   return {
@@ -118,10 +124,320 @@ const ownedProjects = (
   );
 };
 
+type StoredRow = Record<string, unknown>;
+
+const isRow = (value: unknown): value is StoredRow =>
+  value !== null && typeof value === "object" && !Array.isArray(value);
+
+// Only ordinary delegates and the declared FK ON UPDATE CASCADE are modeled.
+// Ownership and cleanup predicates come exclusively from the real writers.
+function composedStore() {
+  const tables = {
+    reportSection: new Map<string, StoredRow>(),
+    stageAssignment: new Map<string, StoredRow>(),
+    projectStatus: new Map<string, StoredRow>(),
+    stageStatus: new Map<string, StoredRow>(),
+    item: new Map<string, StoredRow>(),
+    risk: new Map<string, StoredRow>(),
+    decision: new Map<string, StoredRow>(),
+  };
+  const stageWrites: StoredRow[] = [];
+  const matches = (row: StoredRow, where: StoredRow): boolean =>
+    Object.entries(where).every(([field, value]) => {
+      if (field === "OR")
+        return (
+          Array.isArray(value) &&
+          value.some((clause: unknown) => isRow(clause) && matches(row, clause))
+        );
+      if (isRow(value) && "not" in value) return row[field] !== value.not;
+      return row[field] === value;
+    });
+  const cascadeSection = (previousId: unknown, nextId: unknown) => {
+    for (const table of [
+      tables.stageStatus,
+      tables.projectStatus,
+      tables.item,
+      tables.risk,
+      tables.decision,
+    ]) {
+      for (const [id, row] of [...table].filter(
+        ([, entry]) => entry.reportSectionId === previousId,
+      )) {
+        table.set(id, { ...row, reportSectionId: nextId });
+      }
+    }
+  };
+  const delegate = (name: keyof typeof tables) => {
+    const rows = tables[name];
+    const put = (row: StoredRow) => {
+      rows.set(String(row.id), row);
+      return row;
+    };
+    return {
+      create: ({ data }: { data: StoredRow }) => Promise.resolve(put(data)),
+      createMany: ({ data }: { data: readonly StoredRow[] }) => {
+        for (const row of data) put(row);
+        return Promise.resolve({ count: data.length });
+      },
+      findUnique: ({ where }: { where: StoredRow }) => {
+        const natural = Object.values(where)[0];
+        const selector = isRow(natural) ? natural : where;
+        return Promise.resolve(
+          [...rows.values()].find((row) => matches(row, selector)) ?? null,
+        );
+      },
+      findMany: () => Promise.resolve([...rows.values()]),
+      upsert: ({
+        where,
+        create,
+        update,
+      }: {
+        where: StoredRow;
+        create: StoredRow;
+        update: StoredRow;
+      }) => {
+        const natural = Object.values(where)[0];
+        const selector = isRow(natural) ? natural : where;
+        const existing = [...rows.values()].find((row) =>
+          matches(row, selector),
+        );
+        const supplied = Object.fromEntries(
+          Object.entries(update).filter(([, value]) => value !== undefined),
+        );
+        const persisted = existing ? { ...existing, ...supplied } : create;
+        if (existing && existing.id !== persisted.id) {
+          rows.delete(String(existing.id));
+          if (name === "reportSection") {
+            cascadeSection(existing.id, persisted.id);
+          }
+        }
+        put(persisted);
+        if (name === "stageStatus") stageWrites.push(persisted);
+        return Promise.resolve(persisted);
+      },
+      update: ({ where, data }: { where: StoredRow; data: StoredRow }) => {
+        const existing = [...rows.values()].find((row) => matches(row, where));
+        return Promise.resolve(existing ? put({ ...existing, ...data }) : null);
+      },
+      updateMany: ({ where, data }: { where: StoredRow; data: StoredRow }) => {
+        const selected = [...rows.values()].filter((row) =>
+          matches(row, where),
+        );
+        for (const row of selected) put({ ...row, ...data });
+        return Promise.resolve({ count: selected.length });
+      },
+      deleteMany: ({ where }: { where: StoredRow }) => {
+        const selected = [...rows.values()].filter((row) =>
+          matches(row, where),
+        );
+        for (const row of selected) rows.delete(String(row.id));
+        return Promise.resolve({ count: selected.length });
+      },
+    };
+  };
+  const prisma = Object.fromEntries(
+    Object.keys(tables).map((name) => [
+      name,
+      delegate(name as keyof typeof tables),
+    ]),
+  ) as unknown as PrismaClient;
+  return { tables, stageWrites, prisma };
+}
+
+const foreignStatuses = (store: ReturnType<typeof composedStore>) =>
+  [...store.tables.stageStatus.values()].filter((status) => {
+    const section = store.tables.reportSection.get(
+      String(status.reportSectionId),
+    );
+    return ![...store.tables.stageAssignment.values()].some(
+      (assignment) =>
+        assignment.projectId === status.projectId &&
+        assignment.stageId === status.stageId &&
+        assignment.userId === section?.authorId,
+    );
+  });
+
 // The composed `full`/`stress` profiles run the simple dataset first over the
 // same product ids. A pair that dataset already owns must keep its owner, and
 // the advanced rows must adapt instead of referencing a stage they lost.
 describe("advanced seed composition", () => {
+  it("keeps real simple-to-advanced statuses owned after section rekey", async () => {
+    const store = composedStore();
+    await seedSimpleAssignments(store.prisma);
+    await seedSimpleSections(store.prisma);
+    const primary = [...store.tables.reportSection.values()].find(
+      (row) => row.authorId === LEAD_1_ID,
+    );
+    const originalSectionId = primary?.id;
+    const originalStatuses = [...store.tables.stageStatus.values()].filter(
+      (row) => row.reportSectionId === originalSectionId,
+    );
+    expect(originalStatuses.length).toBeGreaterThan(0);
+    const { ownership } = await seedStageAssignments(store.prisma);
+    const counts = await seedActiveSections(store.prisma, ownership);
+
+    expect(foreignStatuses(store)).toEqual([]);
+    const restored = [...store.tables.reportSection.values()].find(
+      (row) => row.authorId === LEAD_1_ID,
+    );
+    expect(restored?.id).not.toBe(originalSectionId);
+    for (const original of originalStatuses) {
+      expect(store.tables.stageStatus.get(String(original.id))).toMatchObject({
+        ...original,
+        reportSectionId: restored?.id,
+      });
+    }
+    expect(counts.stageStatuses).toBe(store.stageWrites.length);
+  });
+
+  it("restores only exact unowned generated slots and keeps all other status identities", async () => {
+    const store = composedStore();
+    await seedSimpleAssignments(store.prisma);
+    await seedSimpleSections(store.prisma);
+    const { ownership } = await seedStageAssignments(store.prisma);
+    await seedActiveSections(store.prisma, ownership);
+    const primary = [...store.tables.reportSection.values()].find(
+      (row) => row.authorId === LEAD_1_ID,
+    );
+    const identity = {
+      reportSectionId: primary?.id,
+      projectId: PRODUCT_MARKETING_PORTAL,
+    };
+    const invalid = {
+      ...identity,
+      id: "a0000000-0000-4000-8000-f00100010001",
+      stageId: "a0000000-0000-4000-8000-000000000701",
+      status: "red",
+    };
+    const differentStage = {
+      ...identity,
+      id: "a0000000-0000-4000-8000-f00100010002",
+      stageId: "a0000000-0000-4000-8000-000000000707",
+      status: "green",
+    };
+    const otherSection = {
+      ...identity,
+      id: "a0000000-0000-4000-8000-f00100010003",
+      stageId: "a0000000-0000-4000-8000-000000000703",
+      reportSectionId: "a0000000-0000-4000-8000-00000000eff3",
+      status: "yellow",
+    };
+    for (const row of [invalid, differentStage, otherSection])
+      store.tables.stageStatus.set(row.id, row);
+    const validGenerated = store.tables.stageStatus.get(
+      "a0000000-0000-4000-8000-f00100020001",
+    );
+    const validNongenerated = [...store.tables.stageStatus.values()].find(
+      (row) =>
+        row.reportSectionId === primary?.id &&
+        row.projectId === PRODUCT_MARKETING_PORTAL &&
+        row.stageId === "a0000000-0000-4000-8000-000000000704",
+    );
+    expect(validGenerated).toBeDefined();
+    expect(validNongenerated).toBeDefined();
+    const writesBefore = store.stageWrites.length;
+
+    const counts = await seedActiveSections(store.prisma, ownership);
+
+    expect(store.tables.stageStatus.has(invalid.id)).toBe(false);
+    for (const row of [
+      differentStage,
+      otherSection,
+      validGenerated,
+      validNongenerated,
+    ]) {
+      expect(store.tables.stageStatus.get(String(row?.id))).toEqual(row);
+    }
+    expect(counts.stageStatuses).toBe(store.stageWrites.length - writesBefore);
+    const after = [...store.tables.stageStatus.entries()];
+    expect(await seedActiveSections(store.prisma, ownership)).toEqual(counts);
+    expect([...store.tables.stageStatus.entries()]).toEqual(after);
+  });
+
+  it("rejects missing or unknown effective ownership before status cleanup", async () => {
+    const store = composedStore();
+    const remove = vi.spyOn(store.prisma.stageStatus, "deleteMany");
+    await expect(seedActiveSections(store.prisma, new Map())).rejects.toThrow(
+      "owns no stage",
+    );
+    expect(remove).not.toHaveBeenCalled();
+    await expect(
+      seedActiveSections(
+        store.prisma,
+        new Map([
+          [
+            ownershipKey(LEAD_1_ID, PRODUCT_MARKETING_PORTAL),
+            ["Unknown stage"],
+          ],
+        ]),
+      ),
+    ).rejects.toThrow("unknown owned stages");
+    expect(remove).not.toHaveBeenCalled();
+  });
+
+  it("preserves the first owner inserted between absent read and upsert", async () => {
+    const target = {
+      projectId: PRODUCT_MARKETING_PORTAL,
+      stageId: "a0000000-0000-4000-8000-000000000701",
+    };
+    const foreign = {
+      ...target,
+      id: "a0000000-0000-4000-8000-00000000eff1",
+      userId: "a0000000-0000-4000-8000-0000000000ff",
+    };
+    type Assignment = typeof foreign;
+    const key = (pair: typeof target): string =>
+      `${pair.projectId}|${pair.stageId}`;
+    const records = new Map<string, Assignment>();
+    const inserted = new Set<string>();
+    const prisma = {
+      stageAssignment: {
+        findUnique: ({
+          where,
+        }: {
+          where: { stageId_projectId: typeof target };
+        }) => {
+          const pair = where.stageId_projectId;
+          const found = records.get(key(pair));
+          if (!found && key(pair) === key(target) && !inserted.has(key(pair))) {
+            records.set(key(pair), foreign);
+            inserted.add(key(pair));
+            return Promise.resolve(null);
+          }
+          return Promise.resolve(found ?? null);
+        },
+        upsert: ({
+          where,
+          create,
+          update,
+        }: {
+          where: { stageId_projectId: typeof target };
+          create: Assignment;
+          update: Partial<Assignment>;
+        }) => {
+          const pair = key(where.stageId_projectId);
+          const existing = records.get(pair);
+          const persisted = existing ? { ...existing, ...update } : create;
+          records.set(pair, persisted);
+          return Promise.resolve(persisted);
+        },
+        findMany: () => Promise.resolve([...records.values()]),
+      },
+    } as unknown as PrismaClient;
+
+    const { ownership } = await seedStageAssignments(prisma);
+
+    expect(inserted.size).toBe(1);
+    expect(records.get(key(target))).toEqual(foreign);
+    expect(
+      ownership.get(ownershipKey(foreign.userId, target.projectId)),
+    ).toEqual(["Planning"]);
+    expect(
+      ownership.get(ownershipKey(LEAD_1_ID, target.projectId)),
+    ).not.toContain("Planning");
+    expect(records.size).toBeGreaterThan(1);
+  });
+
   it("never re-points a stage another dataset owns", async () => {
     const foreignLead = "a0000000-0000-4000-8000-0000000000ff";
     const planning = SEED_STAGES.find((stage) => stage.name === "Planning");
@@ -182,7 +498,10 @@ describe("advanced seed composition", () => {
       projectStatus: captureUpserts<Prisma.ProjectStatusUncheckedCreateInput>(
         [],
       ),
-      stageStatus: captureUpserts<Prisma.StageStatusUncheckedCreateInput>([]),
+      stageStatus: {
+        ...captureUpserts<Prisma.StageStatusUncheckedCreateInput>([]),
+        deleteMany: noopMany,
+      },
     } as unknown as PrismaClient;
 
     const { ownership } = await seedStageAssignments(prisma);
@@ -240,7 +559,10 @@ describe("advanced seed composition", () => {
       projectStatus: captureUpserts<Prisma.ProjectStatusUncheckedCreateInput>(
         [],
       ),
-      stageStatus: captureUpserts<Prisma.StageStatusUncheckedCreateInput>([]),
+      stageStatus: {
+        ...captureUpserts<Prisma.StageStatusUncheckedCreateInput>([]),
+        deleteMany: noopMany,
+      },
       item: { ...captureUpserts(items), update: noop, updateMany: noopMany },
     } as unknown as PrismaClient;
     await expect(seedActiveSections(prisma, ownership)).rejects.toThrow(
@@ -338,4 +660,83 @@ describe("advanced authored stage ownership", () => {
       }
     }
   });
+});
+
+it("restores an actually paused stored item through the active-section producer", async () => {
+  const storage = composedStore();
+  const { ownership } = await seedStageAssignments(storage.prisma);
+  await seedActiveSections(storage.prisma, ownership);
+  const item = [...storage.tables.item.values()].find(
+    (entry) =>
+      entry.type === "current" && entry.workflowStatus === "in_progress",
+  );
+  if (!item) throw new Error("Expected current deterministic item");
+  const paused = {
+    ...item,
+    workflowStatus: "paused",
+    pausedReason: "Synthetic admitted pause",
+    nextStepText: null,
+  };
+  expect(
+    itemOutcomeStateSchema.safeParse({
+      type: item.type,
+      workflowStatus: paused.workflowStatus,
+      pausedReason: paused.pausedReason,
+      nextStepText: paused.nextStepText,
+    }).success,
+  ).toBe(true);
+  storage.tables.item.set(String(item.id), paused);
+  await seedActiveSections(storage.prisma, ownership);
+  const restored = storage.tables.item.get(String(item.id));
+  expect(restored).toMatchObject({
+    id: item.id,
+    stableId: item.stableId,
+    workflowStatus: "in_progress",
+    pausedReason: null,
+  });
+  expect(
+    itemOutcomeStateSchema.safeParse({
+      type: restored?.type,
+      workflowStatus: restored?.workflowStatus,
+      pausedReason: restored?.pausedReason,
+      nextStepText: null,
+    }).success,
+  ).toBe(true);
+});
+
+it("keeps Olga's Testing and DevOps evidence without emitting explicit status overrides", async () => {
+  const storage = composedStore();
+  const { ownership } = await seedStageAssignments(storage.prisma);
+  await seedActiveSections(storage.prisma, ownership);
+  await seedRisks(storage.prisma, ownership);
+  const olga = "a0000000-0000-4000-8000-000000000015";
+  const payment = "a0000000-0000-4000-8000-000000000209";
+  const section = [...storage.tables.reportSection.values()].find(
+    (entry) => entry.authorId === olga,
+  );
+  expect(section).toBeDefined();
+  for (const [name, severity] of [
+    ["Testing", "at-risk"],
+    ["DevOps", "blocked"],
+  ]) {
+    const stage = SEED_STAGES.find((entry) => entry.name === name);
+    expect(ownership.get(ownershipKey(olga, payment))).toContain(name);
+    expect(
+      [...storage.tables.stageStatus.values()].filter(
+        (entry) =>
+          entry.reportSectionId === section?.id &&
+          entry.projectId === payment &&
+          entry.stageId === stage?.id,
+      ),
+    ).toEqual([]);
+    expect(
+      [...storage.tables.risk.values()].some(
+        (entry) =>
+          entry.reportSectionId === section?.id &&
+          entry.projectId === payment &&
+          stageNamesOf(entry.stageNames).includes(String(name)) &&
+          entry.severity === severity,
+      ),
+    ).toBe(true);
+  }
 });
