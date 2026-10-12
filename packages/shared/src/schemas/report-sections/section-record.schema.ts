@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import {
-  addItemTypeStatusIssue,
   addNextStepTextIssue,
   addParentStageIssues,
   addParentXorIssue,
@@ -266,7 +265,6 @@ const addParentXorIssues = (
 export const itemWriteSchema = itemInputObjectSchema
   .superRefine((value, ctx) => {
     addParentXorIssues(value, value.projectId, "projectId", ctx);
-    addItemTypeStatusIssue(value.type, value.workflowStatus, ctx);
     addPausedReasonIssues(value, ctx);
     addNextStepTextIssue(value, ctx);
   })

@@ -92,6 +92,14 @@ describe("reportDate via assembledReportSchema", () => {
       periodStart,
     });
     expect(result.success).toBe(success);
+    if (periodStart === "1999-12-31" && !result.success) {
+      expect(result.error.issues).toContainEqual(
+        expect.objectContaining({
+          path: ["periodStart"],
+          message: "Date must be in year 2000 or later",
+        }),
+      );
+    }
   });
 
   it("rejects a published report without publishedAt", () => {

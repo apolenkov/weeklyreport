@@ -9,6 +9,9 @@ const noNullBytes = (val: string) => !val.includes("\u0000");
 /** Maximum length for report prose validated by safeText defaults. */
 export const SAFE_TEXT_MAX_LENGTH = 500;
 
+/** Validation message shared with consumers that classify invisible text. */
+export const INVISIBLE_TEXT_MESSAGE = "Text must contain visible characters";
+
 /** Zod string for user-facing text: rejects null bytes and invisible-only values. */
 export const safeText = (
   opts: { readonly min?: number; readonly max?: number } = {},
@@ -19,7 +22,7 @@ export const safeText = (
     .max(opts.max ?? SAFE_TEXT_MAX_LENGTH)
     .refine(noNullBytes, { message: "Text must not contain null bytes" })
     .refine(noInvisibleOnly, {
-      message: "Text must contain visible characters",
+      message: INVISIBLE_TEXT_MESSAGE,
     });
 
 // Reject pre-2000 dates (prevents pre-epoch/nonsensical report dates).
@@ -28,7 +31,7 @@ const MIN_VALID_YEAR = 2000;
 /** Zod coerced date that accepts year 2000 and later. */
 export const reportDate = () =>
   z.coerce.date().refine((d) => d.getUTCFullYear() >= MIN_VALID_YEAR, {
-    message: "Date must be after year 2000",
+    message: "Date must be in year 2000 or later",
   });
 
 /** Defines the traffic-light values shared by report status surfaces. */
@@ -49,39 +52,6 @@ export const itemWorkflowStatusSchema = z.enum([
 ]);
 /** Progress state stored on a report item. */
 export type ItemWorkflowStatus = z.infer<typeof itemWorkflowStatusSchema>;
-/** Progress states accepted for current-period items. */
-export const CURRENT_ITEM_STATUSES = Object.freeze([
-  "planned",
-  "in_progress",
-  "paused",
-  "postponed",
-  "done",
-] as const);
-/** Progress states accepted for next-period items. */
-export const NEXT_ITEM_STATUSES = Object.freeze([
-  "planned",
-  "in_progress",
-  "paused",
-  "postponed",
-  "done",
-] as const);
-
-/** Adds a Zod issue when a workflow status is illegal for the item type. */
-export function addItemTypeStatusIssue(
-  type: "current" | "next",
-  workflowStatus: string,
-  ctx: z.RefinementCtx,
-): void {
-  const legal: readonly string[] =
-    type === "current" ? CURRENT_ITEM_STATUSES : NEXT_ITEM_STATUSES;
-  if (!legal.includes(workflowStatus)) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["workflowStatus"],
-      message: `A ${type} item allows only: ${legal.join(", ")}.`,
-    });
-  }
-}
 
 /** Adds a Zod issue when a pause reason is missing on a paused item or kept on any other status. */
 export function addPausedReasonIssues(

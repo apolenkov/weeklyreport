@@ -507,11 +507,32 @@ describe("encodeAutosaveComparisonKey", () => {
     );
   });
 
-  it("produces the same key regardless of object insertion order", () => {
-    expect(encodeAutosaveComparisonKey({ beta: 2, alpha: 1 })).toBe(
-      encodeAutosaveComparisonKey({ alpha: 1, beta: 2 }),
-    );
-  });
+  it.each([
+    {
+      label: "ASCII keys",
+      left: { beta: 2, alpha: 1 },
+      right: { alpha: 1, beta: 2 },
+      expected: '{"alpha":1,"beta":2}',
+    },
+    {
+      label: "distinct keys tied by collation",
+      left: { "\u00E9": 1, "e\u0301": 2 },
+      right: { "e\u0301": 2, "\u00E9": 1 },
+      expected: '{"e\u0301":2,"\u00E9":1}',
+    },
+    {
+      label: "existing nonzero collation",
+      left: { B: 2, a: 1 },
+      right: { a: 1, B: 2 },
+      expected: '{"a":1,"B":2}',
+    },
+  ])(
+    "produces the same key regardless of object insertion order: $label",
+    ({ left, right, expected }) => {
+      expect(encodeAutosaveComparisonKey(left)).toBe(expected);
+      expect(encodeAutosaveComparisonKey(right)).toBe(expected);
+    },
+  );
 
   it("produces different keys for payloads that differ only by a Date-typed field", () => {
     const decision = {

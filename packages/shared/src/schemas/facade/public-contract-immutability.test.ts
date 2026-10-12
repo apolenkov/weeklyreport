@@ -6,10 +6,6 @@ import { adminSnapshotSchema } from "../admin/report-admin.schema.js";
 import { ROLE_HOME_PATH, ROLE_LABEL } from "../auth/auth.js";
 import type { PaginatedResult } from "../history/report-history.schema.js";
 import { compiledHistoryEntrySchema } from "../history/report-history.schema.js";
-import {
-  CURRENT_ITEM_STATUSES,
-  NEXT_ITEM_STATUSES,
-} from "../primitives/report-primitives.schema.js";
 import type { ProjectActivityCreateInput } from "../project-activity/project-activity.schema.js";
 import type { WeeklyReportReadModel } from "../report/report.schema.js";
 import type {
@@ -126,8 +122,6 @@ describe("public contract immutability", () => {
     expect(Object.isFrozen(STAGE)).toBe(true);
     expect(Object.isFrozen(STAGE_NAMES)).toBe(true);
     expect(Object.isFrozen(DEFAULT_REPORTING_GROUP)).toBe(true);
-    expect(Object.isFrozen(CURRENT_ITEM_STATUSES)).toBe(true);
-    expect(Object.isFrozen(NEXT_ITEM_STATUSES)).toBe(true);
     expect(Object.isFrozen(ROLE_LABEL)).toBe(true);
     expect(Object.isFrozen(ROLE_HOME_PATH)).toBe(true);
   });

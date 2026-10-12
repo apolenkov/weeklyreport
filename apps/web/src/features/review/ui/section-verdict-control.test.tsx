@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import type { SectionReviewView } from "@customreport/shared";
+import {
+  reviewVerdictInputSchema,
+  type ReviewVerdictResult,
+  reviewVerdictResultSchema,
+  type SectionReviewView,
+} from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -315,5 +320,115 @@ describe("SectionVerdictControl — verdict buttons", () => {
     await waitFor(() => {
       expect(toastSuccess).toHaveBeenCalledWith("Changes requested");
     });
+  });
+
+  it("keeps keyboard activation inside the pending reason dialog and records one verdict", async () => {
+    const user = userEvent.setup();
+    const { captured, onMutated } = renderControl({ canReview: true });
+    const mutationFn = expectDefined(captured["review.verdict"]).mutationFn;
+    const response = Promise.withResolvers<ReviewVerdictResult>();
+    mutationFn.mockReturnValue(response.promise);
+
+    await user.click(screen.getByRole("button", { name: "Request changes" }));
+    const dialog = screen.getByRole("dialog");
+    const field = within(dialog).getByLabelText("Reason for the lead");
+    expect(field).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(
+      within(dialog).getByRole("button", { name: "Request changes" }),
+    ).toHaveFocus();
+    await user.tab();
+    expect(field).toHaveFocus();
+    await user.type(field, "Add the missing risk owner.");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Request changes" }),
+    );
+
+    await waitFor(() => {
+      expect(dialog).toHaveAttribute("aria-busy", "true");
+    });
+    await user.keyboard("{Escape}");
+    expect(dialog).toBeInTheDocument();
+    await user.tab();
+    expect(dialog).toHaveFocus();
+    await user.keyboard("{Enter}");
+    await user.tab({ shift: true });
+    expect(dialog).toHaveFocus();
+    expect(mutationFn).toHaveBeenCalledTimes(1);
+    expect(
+      reviewVerdictInputSchema.parse(mutationFn.mock.calls[0]?.[0]),
+    ).toEqual({
+      reportSectionId: REPORT_SECTION_ID,
+      verdict: "changes_requested",
+      version: VERSION,
+      comment: "Add the missing risk owner.",
+    });
+    expect(toastSuccess).not.toHaveBeenCalled();
+    expect(onMutated).not.toHaveBeenCalled();
+
+    response.resolve(
+      reviewVerdictResultSchema.parse({
+        verdict: "changes_requested",
+        judgedVersion: VERSION,
+        unsubmitted: true,
+      }),
+    );
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    expect(mutationFn).toHaveBeenCalledTimes(1);
+    expect(toastSuccess).toHaveBeenCalledTimes(1);
+    expect(toastError).not.toHaveBeenCalled();
+    expect(onMutated).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a rejected request inline until Cancel, then records a subsequent approval", async () => {
+    const user = userEvent.setup();
+    const { captured, onMutated } = renderControl({ canReview: true });
+    const mutationFn = expectDefined(captured["review.verdict"]).mutationFn;
+    const response = Promise.withResolvers<ReviewVerdictResult>();
+    mutationFn.mockReturnValueOnce(response.promise);
+    mutationFn.mockResolvedValue(
+      reviewVerdictResultSchema.parse({
+        verdict: "approved",
+        judgedVersion: VERSION,
+        unsubmitted: false,
+      }),
+    );
+
+    await requestChanges();
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toHaveAttribute("aria-busy", "true");
+    });
+    response.reject(new Error("Temporary service failure."));
+    const dialog = screen.getByRole("dialog");
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      "Temporary service failure.",
+    );
+    expect(within(dialog).getByLabelText("Reason for the lead")).toHaveValue(
+      "Add the missing risk owner.",
+    );
+    expect(mutationFn).toHaveBeenCalledTimes(1);
+    expect(toastSuccess).not.toHaveBeenCalled();
+    expect(toastError).not.toHaveBeenCalled();
+    expect(onMutated).not.toHaveBeenCalled();
+
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+    await waitFor(() => {
+      expect(toastSuccess).toHaveBeenCalledWith("Section approved");
+    });
+    expect(mutationFn).toHaveBeenCalledTimes(2);
+    expect(
+      reviewVerdictInputSchema.parse(mutationFn.mock.calls[1]?.[0]),
+    ).toEqual({
+      reportSectionId: REPORT_SECTION_ID,
+      verdict: "approved",
+      version: VERSION,
+    });
+    expect(toastSuccess).toHaveBeenCalledTimes(1);
+    expect(toastError).not.toHaveBeenCalled();
+    expect(onMutated).toHaveBeenCalledTimes(1);
   });
 });

@@ -32,8 +32,11 @@ export function encodeAutosaveComparisonKey(value: unknown): string {
     return `[${encodedEntries.join(",")}]`;
   }
   const obj = value as Record<string, unknown>;
-  const keys = Object.keys(obj).toSorted((left, right) =>
-    KEY_COLLATOR.compare(left, right),
+  // Distinct keys can collate equally; break ties without changing other ordering.
+  const keys = Object.keys(obj).toSorted(
+    (left, right) =>
+      KEY_COLLATOR.compare(left, right) ||
+      (left < right ? -1 : left > right ? 1 : 0),
   );
   return `{${keys
     .map(
