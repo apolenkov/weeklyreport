@@ -267,17 +267,18 @@ async function deleteBatch(
 }
 
 async function scanAndDelete(
-  redis: Redis,
-  logger: Logger,
+  runtime: CacheRuntime,
   match: string,
 ): Promise<void> {
+  const { redis, logger, generationKey } = runtime;
   // ioredis owns the SCAN cursor protocol; the stream just hands us batches.
   const batches: AsyncIterable<readonly string[]> = redis.scanStream({
     match,
     count: SCAN_BATCH_SIZE,
   });
   for await (const batch of batches) {
-    await deleteBatch(redis, logger, batch);
+    const dataKeys = batch.filter((key) => key !== generationKey);
+    await deleteBatch(redis, logger, dataKeys);
   }
 }
 
@@ -328,7 +329,7 @@ export function createRedisReadThroughCache(
         redisCacheErrorsTotal.inc({ operation: "write" });
       }
       try {
-        await scanAndDelete(redis, logger, `${keyPrefix}${prefix}*`);
+        await scanAndDelete(runtime, `${keyPrefix}${prefix}*`);
       } catch (error) {
         logger.warn("cache invalidation failed", {
           phase: CACHE_INVALIDATE_PHASE,

@@ -77,6 +77,7 @@ export const reportSectionFullInclude = {
     },
   },
   sectionReviews: {
+    orderBy: [{ createdAt: "asc" }, { reviewerId: "asc" }],
     include: { reviewer: { select: { name: true } } },
   },
   itemOutcomeEvents: {

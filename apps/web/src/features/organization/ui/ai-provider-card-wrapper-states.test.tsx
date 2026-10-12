@@ -1,6 +1,7 @@
 import type {
   AiProviderConfigurationRead,
   AiProviderControlRead,
+  AiProviderDraft,
 } from "@customreport/shared";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -29,6 +30,7 @@ vi.mock("./ai-provider-mutations", () => ({
 }));
 
 import { AiProviderCard } from "./ai-provider-card";
+import { AiProviderForm, toAiProviderForm } from "./ai-provider-form";
 
 interface QueryResult {
   readonly data: AiProviderControlRead | undefined;
@@ -337,5 +339,80 @@ describe("AiProviderCard wrapper states", () => {
     act(() => input.onActivationPendingChange("restore", false));
     rerender(<AiProviderCard />);
     expect(interval()).toBe(false);
+  });
+});
+
+describe("AI provider custom reasoning correction", () => {
+  it("clears the invalid marker after correcting the missing custom reasoning value", () => {
+    const onSave = vi.fn<(draft: AiProviderDraft) => void>();
+    const { container } = render(
+      <AiProviderForm
+        initial={toAiProviderForm(null)}
+        revision={null}
+        revisionId={null}
+        availability="not_configured"
+        profileCapabilities={[
+          { profile: "mistral", roles: ["generation", "embeddings"] },
+        ]}
+        busy={false}
+        savePending={false}
+        testPending={false}
+        activatePending={false}
+        disablePending={false}
+        onSave={onSave}
+        onTest={vi.fn()}
+        onActivate={vi.fn()}
+        onDisable={vi.fn()}
+        onCancelEdit={undefined}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText("Generation reasoning"), {
+      target: { value: "custom" },
+    });
+    const form = container.querySelector("form");
+    if (!form) throw new Error("Provider form is missing");
+    fireEvent.submit(form);
+    const input = screen.getByLabelText("Custom reasoning value");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Enter a custom reasoning value.",
+    );
+    expect(onSave).not.toHaveBeenCalled();
+
+    fireEvent.change(input, { target: { value: " ".repeat(3) } });
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    fireEvent.change(screen.getByLabelText("Planner model"), {
+      target: { value: "synthetic-planner" },
+    });
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Enter a custom reasoning value.",
+    );
+
+    fireEvent.change(screen.getByLabelText("Generation reasoning"), {
+      target: { value: "off" },
+    });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Generation reasoning"), {
+      target: { value: "custom" },
+    });
+    const correctedInput = screen.getByLabelText("Custom reasoning value");
+    expect(correctedInput).not.toHaveAttribute("aria-invalid");
+    fireEvent.submit(form);
+    expect(correctedInput).toHaveAttribute("aria-invalid", "true");
+    expect(onSave).not.toHaveBeenCalled();
+
+    fireEvent.change(correctedInput, { target: { value: "low" } });
+
+    expect(correctedInput).not.toHaveAttribute("aria-invalid");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
+    fireEvent.submit(form);
+    expect(onSave).toHaveBeenCalledOnce();
+    expect(onSave.mock.calls[0]?.[0].generation).toMatchObject({
+      reasoningMode: "custom",
+      reasoningCustomValue: "low",
+      plannerModel: "synthetic-planner",
+    });
   });
 });

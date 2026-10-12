@@ -143,9 +143,8 @@ function pdfExportContext(
   return { ...deps, session, isPdfExport: true, pdfReportId, pdfJobId };
 }
 
-// Only a token that fails PDF verification falls through; a rejected session
-// rebuild (isUserAccessBarred / hydration) is a server fault and must
-// propagate to the 500 path, not degrade an authenticated requester to null.
+// Only a token that fails PDF verification falls through. Technical access or
+// hydration failures propagate; logical denial is a terminal anonymous context.
 function parsePdfExportClaims(
   token: string,
   pdfExportJwtSecret: string | undefined,
@@ -158,7 +157,8 @@ function parsePdfExportClaims(
 }
 
 // Cookie-bearing request: real human session first, then the PDF-export JWT.
-// Null means "this token proves nothing" — caller falls through to dev / anon.
+// Null means no verified identity; valid PDF claims with a denied requester
+// return a terminal anonymous context so development authentication cannot win.
 async function resolveTokenContext(
   token: string,
   deps: RequestScopedDeps,
@@ -188,7 +188,7 @@ async function resolveTokenContext(
   );
   return pdfSession
     ? pdfExportContext(deps, pdfSession, pdfClaims.reportId, pdfClaims.jobId)
-    : null;
+    : humanContext(deps, null);
 }
 
 // Dev fallback only when non-prod AND a dev-auth flag is set.

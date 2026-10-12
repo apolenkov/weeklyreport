@@ -1,4 +1,11 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { weeklyReportReadModelSchema } from "@customreport/shared";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../../../test-utils/expect-defined.js";
@@ -8,7 +15,20 @@ import type {
   WeeklyReportItem,
   WeeklyReportRisk,
 } from "../../../report-sections";
+import {
+  AUTHOR_ID_A,
+  makeWeeklyReportData,
+  PRODUCT_ID_A,
+} from "../weekly/__tests__/weekly-report-page-harness";
+import { WeeklyReportPage } from "../weekly/weekly-report-page";
+import { renderWeeklyReportPage } from "../weekly/weekly-report-page-test-harness";
 import { ProductAccordion } from "./product-accordion";
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => "/head/report",
+}));
 
 function makeReport(
   overrides?: Partial<WeeklyProductReport>,
@@ -715,5 +735,73 @@ describe("ProductAccordion — escalation folds into Risks", () => {
     );
     expect(escalationRow).toBeInTheDocument();
     expect(escalationRow).toHaveTextContent("Blocked · Development · Vasily");
+  });
+});
+
+describe("ProductAccordion public report scope navigation", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("does not replay a product-scope activation in either lead instance", async () => {
+    vi.spyOn(HTMLElement.prototype, "scrollIntoView").mockImplementation(
+      () => undefined,
+    );
+    const base = makeWeeklyReportData("open");
+    const first = expectDefined(base.leadSections[0]);
+    const secondAuthorId = "11111111-1111-4111-8111-bbbbbbbbbbbb";
+    const data = weeklyReportReadModelSchema.parse({
+      ...base,
+      leadSections: [
+        first,
+        {
+          ...first,
+          reportSectionId: "22222222-2222-4222-8222-bbbbbbbbbbbb",
+          authorId: secondAuthorId,
+          authorName: "Bob",
+          items: first.items.map((item) => ({
+            ...item,
+            id: "33333333-3333-4333-8333-bbbbbbbbbbbb",
+            text: "Bob's contribution",
+          })),
+        },
+      ],
+    });
+    const { container, rerender } = renderWeeklyReportPage(data, {
+      scope: "lead",
+    });
+    await screen.findByRole("heading", { name: "Bob" });
+    const leadToggles = () =>
+      [AUTHOR_ID_A, secondAuthorId].map((authorId) => {
+        const root = expectDefined(
+          container.querySelector<HTMLElement>(
+            `#report-lead-${authorId}-product-${PRODUCT_ID_A}`,
+          ),
+        );
+        return within(root).getByRole("button", { name: /Product Alpha/ });
+      });
+    expect(
+      leadToggles().map((toggle) => toggle.getAttribute("aria-expanded")),
+    ).toEqual(["false", "false"]);
+    rerender(<WeeklyReportPage scope="product" />);
+    fireEvent.click(await screen.findByTitle("Open Product Alpha details"));
+    await waitFor(() => {
+      const root = expectDefined(
+        container.querySelector<HTMLElement>(`#report-product-${PRODUCT_ID_A}`),
+      );
+      expect(
+        within(root).getByRole("button", { name: /Product Alpha/ }),
+      ).toHaveAttribute("aria-expanded", "true");
+    });
+
+    // HeadReportShell retains this page while its URL scope changes.
+    rerender(<WeeklyReportPage scope="lead" />);
+    expect(
+      leadToggles().map((toggle) => toggle.getAttribute("aria-expanded")),
+    ).toEqual(["false", "false"]);
+
+    fireEvent.click(expectDefined(leadToggles()[1]));
+    fireEvent.click(screen.getByTitle("Jump to Alice's section"));
+    expect(
+      leadToggles().map((toggle) => toggle.getAttribute("aria-expanded")),
+    ).toEqual(["false", "true"]);
   });
 });

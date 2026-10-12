@@ -29,11 +29,19 @@ export function runMigrateDeploy(
   environment: DestructiveTargetEnv,
   spawn: MigrateDeploySpawn = spawnSync,
 ): void {
-  assertE2eRuntimeDestructive("migrate-deploy", environment);
+  const childEnvironment = {
+    ...process.env,
+    ...environment,
+    // These safety inputs must remain explicit even when ambient values exist.
+    DATABASE_URL: environment.DATABASE_URL,
+    PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION:
+      environment.PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION,
+  };
+  assertE2eRuntimeDestructive("migrate-deploy", childEnvironment);
   const repoRoot = path.resolve(import.meta.dirname, "../..");
   const result = spawn("pnpm", ["exec", "prisma", "migrate", "deploy"], {
     cwd: repoRoot,
-    env: { ...process.env, ...environment },
+    env: childEnvironment,
     shell: false,
     stdio: "inherit",
   });

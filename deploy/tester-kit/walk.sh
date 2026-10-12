@@ -48,11 +48,19 @@ pf_start keycloak keycloak "$KC_PORT" 8080
 cd "$REPO"
 if [ "$FULL" = 0 ]; then
   OUT=${OUT:-$STATE_DIR/crawl-$(date +%Y%m%d-%H%M%S)}
+  crawl_result=0
   node --experimental-strip-types scripts/ui-crawl/crawl.ts --quick --roles "$ROLES" \
     --url "http://localhost:$APP_PORT" --secrets "$STATE_DIR/secrets.env" \
-    --out "$OUT" "${ARGS[@]+"${ARGS[@]}"}"
-  if [ "$RESET" = 1 ]; then bash "$HERE/reset.sh" --yes; fi
-  exit 0
+    --out "$OUT" "${ARGS[@]+"${ARGS[@]}"}" || crawl_result=$?
+  if [ "$RESET" = 1 ]; then
+    reset_result=0
+    bash "$HERE/reset.sh" --yes || reset_result=$?
+    if [ "$reset_result" != 0 ]; then
+      echo "Requested reset failed with exit $reset_result (crawl exit $crawl_result)" >&2
+      [ "$crawl_result" != 0 ] || crawl_result=$reset_result
+    fi
+  fi
+  exit "$crawl_result"
 fi
 
 . "$HERE/guard.sh"

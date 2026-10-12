@@ -6,6 +6,7 @@ import type {
   AiProviderDraft,
   AiProviderProfileCapability,
 } from "@customreport/shared";
+import { aiProviderGenerationDraftSchema } from "@customreport/shared";
 import { useId, useRef, useState } from "react";
 
 import {
@@ -237,11 +238,22 @@ export function AiProviderForm({
             ? props.revision.embeddings.credentialConfigured
             : false
         }
-        onChange={(key, value) =>
+        onChange={(key, value) => {
+          if (key === "generation") {
+            const generation = value as AiProviderFormState["generation"];
+            if (
+              generation.reasoningMode !== "custom" ||
+              aiProviderGenerationDraftSchema.shape.reasoningCustomValue.safeParse(
+                generation.reasoningCustomValue,
+              ).success
+            ) {
+              setReasoningError(null);
+            }
+          }
           setForm((current) =>
             updateFormState(current, key, value, props.profileCapabilities),
-          )
-        }
+          );
+        }}
         reasoningInvalid={visibleReasoningError !== null}
         reasoningErrorId={reasoningErrorId}
         reasoningRef={reasoningRef}

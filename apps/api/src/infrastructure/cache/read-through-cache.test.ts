@@ -536,6 +536,25 @@ describe("createRedisReadThroughCache", () => {
     expect(storeOf().has("cache:telemetry:keep")).toBe(true);
   });
 
+  it.each(["", "__invalidation"])(
+    "preserves the generation fence when invalidating prefix %j",
+    async (prefix) => {
+      const cache = createRedisReadThroughCache({
+        connection: CONNECTION,
+        loggerName: "Test",
+        ttlSeconds: 60,
+        keyPrefix: "p:",
+      });
+      await cache.getOrCompute("__invalidation:data", () =>
+        Promise.resolve("old"),
+      );
+      await cache.invalidateByPrefix(prefix);
+      expect(storeOf().has("p:__invalidation:data")).toBe(false);
+      // Observe the command boundary: metadata is never a DEL target.
+      expect(storeOf().get("p:__invalidation_generation")).toBe("1");
+    },
+  );
+
   it("keeps every operation callable after extraction", async () => {
     const cache = createRedisReadThroughCache({
       connection: CONNECTION,

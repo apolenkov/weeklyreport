@@ -312,6 +312,7 @@ describe("createContextFactory — PDF JWT be-the-requester scope", () => {
   });
 
   it("head requester → session rebuilt AS head (full-report scope), isPdfExport stays true", async () => {
+    vi.stubEnv("AUTH_DEV_MODE", "true");
     const token = jwt.sign(
       {
         reportId: TEST_REPORT_ID,
@@ -344,6 +345,7 @@ describe("createContextFactory — PDF JWT be-the-requester scope", () => {
   });
 
   it("viewer requester → session rebuilt AS viewer WITH hydrated group access (scoped, NOT empty)", async () => {
+    vi.stubEnv("AUTH_DEV_MODE", "true");
     // Viewer export is scoped to granted groups (non-empty), not all-access.
     const token = jwt.sign(
       {
@@ -395,7 +397,60 @@ describe("createContextFactory — PDF JWT be-the-requester scope", () => {
     expect(ctx.pdfReportId).toBeNull();
   });
 
+  it.each(["missing", "inactive", "revoked"] as const)(
+    "denied %s PDF requester cannot obtain the ordinary dev identity",
+    async (denial) => {
+      vi.stubEnv("AUTH_DEV_MODE", "true");
+      const prisma = makeRequesterPrisma(null);
+      if (denial === "inactive") {
+        prisma.user.findUnique.mockResolvedValue({
+          id: HEAD_REQUESTER_ID,
+          email: "head@test.local",
+          name: "Head",
+          role: "head",
+          reportingGroupId: null,
+          isActive: false,
+        });
+      }
+      const harness = makeAppHarness(prisma);
+      if (denial === "revoked") {
+        harness.sessionRevocation.isRevoked.mockResolvedValue(true);
+      }
+      const factory = createContextFactory(harness.app, createNullLogger());
+      const protectedRouter = testTrpcRouter({
+        admin: testTrpcRouter({
+          users: headProcedure.query(() => ({ ok: true })),
+        }),
+      });
+      // The permitted anonymous dev path is a control for the same factory.
+      const ordinaryDev = await factory(makeReq());
+      await expect(
+        protectedRouter.createCaller(ordinaryDev).admin.users(),
+      ).resolves.toEqual({ ok: true });
+      const invalidDev = await factory(makeReq("not-a-real-jwt"));
+      await expect(
+        protectedRouter.createCaller(invalidDev).admin.users(),
+      ).resolves.toEqual({ ok: true });
+      const token = jwt.sign(
+        {
+          reportId: TEST_REPORT_ID,
+          jobId: PDF_JOB_ID,
+          kind: "pdf-export",
+          requestedBy: HEAD_REQUESTER_ID,
+        },
+        PDF_SECRET,
+        { expiresIn: "5m" },
+      );
+      const denied = await factory(makeReq(token));
+      await expect(
+        protectedRouter.createCaller(denied).admin.users(),
+      ).rejects.toMatchObject({ code: "UNAUTHORIZED" });
+      expect(denied.session).toBeNull();
+    },
+  );
+
   it("propagates an auth-dependency read failure instead of degrading to an anonymous session", async () => {
+    vi.stubEnv("AUTH_DEV_MODE", "true");
     const token = jwt.sign(
       {
         reportId: TEST_REPORT_ID,

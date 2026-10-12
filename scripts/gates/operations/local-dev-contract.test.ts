@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { spawnSync } from "node:child_process";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { join, resolve } from "node:path";
 
 import { test } from "vitest";
 import { parseAllDocuments } from "yaml";
@@ -169,3 +176,56 @@ test("feedback dev contour enables role switching and admin inbox", () => {
   assert.match(command, /NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES=admin/u);
   assert.match(command, /turbo run dev/u);
 });
+
+for (const entrypoint of ["up.sh", "down.sh"]) {
+  test(`${entrypoint} admits only the declared OrbStack context and pins every operation`, () => {
+    mkdirSync(resolve("output"), { recursive: true });
+    const fixture = mkdtempSync(resolve("output/d37-v09-local-dev-"));
+    const log = join(fixture, "kubectl.jsonl");
+    const kubectl = join(fixture, "kubectl");
+    writeFileSync(
+      kubectl,
+      String.raw`#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >> "$WR_TEST_KUBECTL_LOG"
+if [ "$*" = 'config current-context' ]; then
+  printf '%s\n' "$WR_TEST_CONTEXT"
+fi
+`,
+      { mode: 0o700 },
+    );
+    const execute = (context: string) =>
+      spawnSync("/bin/bash", [resolve("deploy/local-dev", entrypoint)], {
+        encoding: "utf8",
+        timeout: 2000,
+        env: {
+          ...process.env,
+          PATH: `${fixture}:${process.env.PATH ?? ""}`,
+          KUBECONFIG: "/dev/null",
+          WR_TEST_KUBECTL_LOG: log,
+          WR_TEST_CONTEXT: context,
+        },
+      });
+    try {
+      const denied = execute("shared-staging");
+      assert.notEqual(denied.status, 0, "foreign context must be refused");
+      const deniedCalls = readFileSync(log, "utf8").trim().split("\n");
+      assert.deepEqual(deniedCalls, ["config current-context"]);
+
+      writeFileSync(log, "");
+      const allowed = execute("orbstack");
+      assert.equal(allowed.status, 0, allowed.stderr);
+      const allowedCalls = readFileSync(log, "utf8").trim().split("\n");
+      assert.equal(allowedCalls[0], "config current-context");
+      assert.ok(
+        allowedCalls.length > 1,
+        "control must execute dependency operations",
+      );
+      for (const argv of allowedCalls.slice(1)) {
+        assert.match(argv, /^--context=orbstack /u);
+      }
+    } finally {
+      rmSync(fixture, { recursive: true, force: true });
+    }
+  });
+}
