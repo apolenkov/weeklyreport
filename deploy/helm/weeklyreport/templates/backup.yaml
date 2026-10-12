@@ -55,7 +55,7 @@ spec:
                 # Direct to postgres: pg_dump needs one session for the whole dump.
                 - { name: PGHOST, value: postgres }
                 - { name: PGPORT, value: "5432" }
-                - { name: PGUSER, value: customreport }
+                - { name: PGUSER, value: weeklyreport }
                 - name: PGPASSWORD
                   {{- include "wr.secretRef" (dict "root" . "key" "DB_PASSWORD") | nindent 18 }}
                 - { name: PGDATABASE, value: {{ .Values.postgres.db | quote }} }

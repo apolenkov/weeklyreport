@@ -46,14 +46,14 @@ const CANDIDATE_BUCKETS = [
 ] as const;
 
 export const weeklyreportAssistantRequestsTotal = new Counter({
-  name: "customreport_assistant_requests_total",
+  name: "weeklyreport_assistant_requests_total",
   help: "Total report assistant requests by bounded outcome and mode",
   labelNames: ["mode", "outcome"] as const,
   registers: [metricsRegistry],
 });
 
 export const weeklyreportAssistantDurationSeconds = new Histogram({
-  name: "customreport_assistant_duration_seconds",
+  name: "weeklyreport_assistant_duration_seconds",
   help: "Report assistant request duration in seconds",
   labelNames: ["mode", "outcome"] as const,
   buckets: [...DURATION_BUCKETS],
@@ -61,7 +61,7 @@ export const weeklyreportAssistantDurationSeconds = new Histogram({
 });
 
 export const weeklyreportAssistantCandidateCount = new Histogram({
-  name: "customreport_assistant_candidate_count",
+  name: "weeklyreport_assistant_candidate_count",
   help: "Report assistant candidate counts by bounded processing stage",
   labelNames: ["mode", "stage"] as const,
   buckets: [...CANDIDATE_BUCKETS],
@@ -69,28 +69,28 @@ export const weeklyreportAssistantCandidateCount = new Histogram({
 });
 
 export const weeklyreportAssistantCacheEventsTotal = new Counter({
-  name: "customreport_assistant_cache_events_total",
+  name: "weeklyreport_assistant_cache_events_total",
   help: "Report assistant semantic cache events",
   labelNames: ["mode", "result"] as const,
   registers: [metricsRegistry],
 });
 
 export const weeklyreportAssistantRepairsTotal = new Counter({
-  name: "customreport_assistant_repairs_total",
+  name: "weeklyreport_assistant_repairs_total",
   help: "Report assistant structured-output repairs",
   labelNames: ["kind"] as const,
   registers: [metricsRegistry],
 });
 
 export const weeklyreportAssistantTokensTotal = new Counter({
-  name: "customreport_assistant_tokens_total",
+  name: "weeklyreport_assistant_tokens_total",
   help: "Report assistant token usage by bounded direction",
   labelNames: ["kind"] as const,
   registers: [metricsRegistry],
 });
 
 export const weeklyreportAssistantResourceEventsTotal = new Counter({
-  name: "customreport_assistant_resource_events_total",
+  name: "weeklyreport_assistant_resource_events_total",
   help: "Assistant resource budget and lease events by bounded outcome",
   labelNames: ["outcome", "reason"] as const,
   registers: [metricsRegistry],

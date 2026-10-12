@@ -165,7 +165,7 @@ protection.
 #### Scenario: One-shot backup
 
 - **WHEN** the CronJob (or a manual job from it) runs
-- **THEN** one `customreport-*.dump` is written atomically, older dumps beyond retention are pruned, and the job exits 0
+- **THEN** one `weeklyreport-*.dump` is written atomically, older dumps beyond retention are pruned, and the job exits 0
 - **AND** a failed `pg_dump` exits non-zero and leaves no restorable-looking partial file
 
 #### Scenario: Standalone backup loop remains available

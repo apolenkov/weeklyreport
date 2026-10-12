@@ -1,5 +1,5 @@
 groups:
-  - name: customreport
+  - name: weeklyreport
     rules:
       # Fire when the authoritative DLQ count stays non-zero for 5 minutes.
       - alert: DLQFailuresActive
@@ -13,12 +13,12 @@ groups:
 
       # Fire when the API scrape target disappears.
       - alert: ApiDown
-        expr: up{job="customreport-api"} == 0
+        expr: up{job="weeklyreport-api"} == 0
         for: 1m
         labels:
           severity: critical
         annotations:
-          summary: "CustomReport API is unreachable"
+          summary: "WeeklyReport API is unreachable"
           description: "Prometheus cannot scrape /metrics — API may be down."
 
       # Fire when p95 CLS exceeds the poor threshold of 0.25.

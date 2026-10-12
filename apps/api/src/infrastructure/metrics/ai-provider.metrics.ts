@@ -11,49 +11,49 @@ import { metricsRegistry } from "./metrics.registry.js";
 const MILLISECONDS_PER_SECOND = 1000;
 
 const weeklyreportAiProviderState = new Gauge({
-  name: "customreport_ai_provider_state",
+  name: "weeklyreport_ai_provider_state",
   help: "Current configured AI provider lifecycle state",
   labelNames: ["profile", "state"] as const,
   registers: [metricsRegistry],
 });
 
 const weeklyreportAiProviderCapabilityTestsTotal = new Counter({
-  name: "customreport_ai_provider_capability_tests_total",
+  name: "weeklyreport_ai_provider_capability_tests_total",
   help: "AI provider synthetic capability test outcomes",
   labelNames: ["profile", "result"] as const,
   registers: [metricsRegistry],
 });
 
 const weeklyreportAiProviderPreparationCompleted = new Gauge({
-  name: "customreport_ai_provider_preparation_completed",
+  name: "weeklyreport_ai_provider_preparation_completed",
   help: "Completed semantic preparation entries for the current provider",
   labelNames: ["profile"] as const,
   registers: [metricsRegistry],
 });
 
 const weeklyreportAiProviderPreparationTotal = new Gauge({
-  name: "customreport_ai_provider_preparation_total",
+  name: "weeklyreport_ai_provider_preparation_total",
   help: "Total semantic preparation entries for the current provider",
   labelNames: ["profile"] as const,
   registers: [metricsRegistry],
 });
 
 const weeklyreportAiProviderPreparationFailed = new Gauge({
-  name: "customreport_ai_provider_preparation_failed",
+  name: "weeklyreport_ai_provider_preparation_failed",
   help: "Failed semantic preparation entries for the current provider",
   labelNames: ["profile"] as const,
   registers: [metricsRegistry],
 });
 
 const weeklyreportAiProviderPreparationElapsedSeconds = new Gauge({
-  name: "customreport_ai_provider_preparation_elapsed_seconds",
+  name: "weeklyreport_ai_provider_preparation_elapsed_seconds",
   help: "Elapsed semantic preparation time for the current provider",
   labelNames: ["profile"] as const,
   registers: [metricsRegistry],
 });
 
 const weeklyreportAiProviderActivationsTotal = new Counter({
-  name: "customreport_ai_provider_activations_total",
+  name: "weeklyreport_ai_provider_activations_total",
   help: "AI provider activation outcomes",
   labelNames: ["profile", "result"] as const,
   registers: [metricsRegistry],

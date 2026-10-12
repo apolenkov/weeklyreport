@@ -1,12 +1,12 @@
 apiVersion: 1
 
 providers:
-  - name: CustomReport
+  - name: WeeklyReport
     orgId: 1
-    folder: CustomReport
+    folder: WeeklyReport
     type: file
     disableDeletion: false
     updateIntervalSeconds: 30
     allowUiUpdates: true
     options:
-      path: /var/lib/grafana/dashboards/customreport/operations
+      path: /var/lib/grafana/dashboards/weeklyreport/operations

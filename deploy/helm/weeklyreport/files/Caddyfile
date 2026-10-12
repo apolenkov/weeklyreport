@@ -1,5 +1,5 @@
 ################################################################################
-# CustomReport — production reverse-proxy
+# WeeklyReport — production reverse-proxy
 #
 # Auto-HTTPS via Let's Encrypt when CADDY_SITE_ADDRESS resolves publicly.
 # The Helm chart serves plain HTTP (http://:8080) behind the cluster Ingress.

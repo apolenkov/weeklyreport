@@ -21,7 +21,7 @@ export async function createNestApp(deps: {
   const { env, otelDecision } = deps;
 
   const preBootLogger = createAppLogger({
-    service: "customreport-api",
+    service: "weeklyreport-api",
     minLevel: env.LOG_LEVEL,
     logDir: env.LOG_DIR,
   });

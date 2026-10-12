@@ -1,8 +1,8 @@
 {
   "schemaVersion": 39,
-  "title": "CustomReport — Operations",
-  "uid": "customreport-ops",
-  "tags": ["customreport", "operations"],
+  "title": "WeeklyReport — Operations",
+  "uid": "weeklyreport-ops",
+  "tags": ["weeklyreport", "operations"],
   "timezone": "browser",
   "refresh": "30s",
   "time": { "from": "now-6h", "to": "now" },
@@ -15,7 +15,7 @@
       "datasource": "Prometheus",
       "targets": [
         {
-          "expr": "sum(rate(http_request_duration_seconds_count{job=\"customreport-api\"}[1m])) by (route, status_code)",
+          "expr": "sum(rate(http_request_duration_seconds_count{job=\"weeklyreport-api\"}[1m])) by (route, status_code)",
           "legendFormat": "{{route}} ({{status_code}})"
         }
       ]
@@ -28,7 +28,7 @@
       "datasource": "Prometheus",
       "targets": [
         {
-          "expr": "histogram_quantile(0.95, sum by (le, route) (rate(http_request_duration_seconds_bucket{job=\"customreport-api\"}[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le, route) (rate(http_request_duration_seconds_bucket{job=\"weeklyreport-api\"}[5m])))",
           "legendFormat": "{{route}}"
         }
       ],

@@ -1,12 +1,12 @@
 {
   "schemaVersion": 39,
-  "title": "Product KPIs — PEO CustomReport",
+  "title": "Product KPIs — PEO WeeklyReport",
   "uid": "product-telemetry",
-  "tags": ["customreport", "product", "kpi"],
+  "tags": ["weeklyreport", "product", "kpi"],
   "timezone": "browser",
   "refresh": "60s",
   "time": { "from": "now-30d", "to": "now" },
-  "description": "Leadership-readable KPIs distinct from the engineering telemetry on the tRPC Latency dashboard. Audience: head + admin + viewer. Source code: apps/api/src/infrastructure/metrics/metrics.registry.ts (customreport_* series).",
+  "description": "Leadership-readable KPIs distinct from the engineering telemetry on the tRPC Latency dashboard. Audience: head + admin + viewer. Source code: apps/api/src/infrastructure/metrics/metrics.registry.ts (weeklyreport_* series).",
   "panels": [
     {
       "id": 1,
@@ -17,7 +17,7 @@
       "description": "Volume of report transitions into the `published` state, bucketed by week. Manual + auto publishes aggregated together; combine with `publishedById` data in the app for the manual-vs-auto split.",
       "targets": [
         {
-          "expr": "sum(increase(customreport_reports_submitted_total{job=\"customreport-api\",state=\"published\"}[1w]))",
+          "expr": "sum(increase(weeklyreport_reports_submitted_total{job=\"weeklyreport-api\",state=\"published\"}[1w]))",
           "legendFormat": "published / week"
         }
       ],
@@ -37,7 +37,7 @@
       "description": "Fraction of submitted sections that landed on time (`late=false`) across the four most-recent published periods. Mirrors the `late` badge in the head dashboard. Green ≥ 80%, yellow 60-80%, red < 60%.",
       "targets": [
         {
-          "expr": "customreport_reports_on_time_ratio{job=\"customreport-api\"}",
+          "expr": "weeklyreport_reports_on_time_ratio{job=\"weeklyreport-api\"}",
           "legendFormat": "on-time ratio"
         }
       ],
@@ -64,7 +64,7 @@
       "description": "Distinct lead authors who submitted a section in the most recently published period. Engagement signal; pairs with publish volume to distinguish 'more leads' from 'same leads filing more often'.",
       "targets": [
         {
-          "expr": "customreport_active_leads_total{job=\"customreport-api\"}",
+          "expr": "weeklyreport_active_leads_total{job=\"weeklyreport-api\"}",
           "legendFormat": "active leads"
         }
       ],
@@ -83,7 +83,7 @@
       "description": "Per-section submission rate, split by the on-time flag stamped at submit time. Stacked bars surface the share of late submissions across the rolling window.",
       "targets": [
         {
-          "expr": "sum by (late) (rate(customreport_sections_submitted_total{job=\"customreport-api\"}[7d]))",
+          "expr": "sum by (late) (rate(weeklyreport_sections_submitted_total{job=\"weeklyreport-api\"}[7d]))",
           "legendFormat": "late={{late}}"
         }
       ],
@@ -103,7 +103,7 @@
       "description": "Three-stat funnel: requested / approved / rejected over the last 7 days. Demand (requested) vs head policy stance (approve/reject ratio). A spiking 'requested' with a stable 'approved' is a process signal — leads pushing back on the deadline.",
       "targets": [
         {
-          "expr": "sum by (state) (rate(customreport_reopen_requests_total{job=\"customreport-api\"}[7d]))",
+          "expr": "sum by (state) (rate(weeklyreport_reopen_requests_total{job=\"weeklyreport-api\"}[7d]))",
           "legendFormat": "{{state}}"
         }
       ],
@@ -128,7 +128,7 @@
       "description": "PDF export requests grouped by requesting role over the last 24 hours. Use the role distribution to ask whether intended viewers request exports directly or rely on heads to export for them.",
       "targets": [
         {
-          "expr": "sum by (role) (rate(customreport_pdf_export_requests_total{job=\"customreport-api\"}[1d]))",
+          "expr": "sum by (role) (rate(weeklyreport_pdf_export_requests_total{job=\"weeklyreport-api\"}[1d]))",
           "legendFormat": "{{role}}"
         }
       ],
@@ -145,7 +145,7 @@
       "description": "Heatmap of (observation time − deadline), sampled after a successful section submission. Negative values mean the observation was before the deadline; positive values mean it was after the deadline.",
       "targets": [
         {
-          "expr": "sum by (le) (rate(customreport_section_submission_latency_seconds_bucket{job=\"customreport-api\"}[7d]))",
+          "expr": "sum by (le) (rate(weeklyreport_section_submission_latency_seconds_bucket{job=\"weeklyreport-api\"}[7d]))",
           "format": "heatmap",
           "legendFormat": "{{le}}"
         }

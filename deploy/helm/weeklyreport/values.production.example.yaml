@@ -21,7 +21,7 @@ persistence:
   backupSize: 20Gi
 
 postgres:
-  db: customreport_production
+  db: weeklyreport_production
 
 pgbouncer:
   maxClientConn: 100

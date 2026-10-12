@@ -2,7 +2,7 @@ apiVersion: 1
 
 # Product and business KPI dashboards have a dedicated, non-overlapping path.
 providers:
-  - name: CustomReport-Product-KPIs
+  - name: WeeklyReport-Product-KPIs
     orgId: 1
     folder: Product KPIs
     type: file
@@ -10,4 +10,4 @@ providers:
     updateIntervalSeconds: 30
     allowUiUpdates: true
     options:
-      path: /var/lib/grafana/dashboards/customreport/product
+      path: /var/lib/grafana/dashboards/weeklyreport/product
