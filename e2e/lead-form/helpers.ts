@@ -18,22 +18,57 @@ export interface Scope {
 }
 
 const VISIBILITY_TIMEOUT_MS = 25_000;
+// Bounds one idle wait so a condition that flips without any DOM mutation
+// (layout, scroll) is still re-observed.
+const DOM_CHANGE_WAIT_MS = 2000;
 
+// Page-side change counter. Arming records the count the next snapshot is
+// based on; a navigation drops both globals, which also counts as a change.
+const ARM_DOM_CHANGE_SIGNAL = `(() => {
+  const w = window;
+  w.__e2eMutations ??= (() => {
+    const state = { count: 0 };
+    new MutationObserver(() => { state.count += 1; }).observe(document, { subtree: true, childList: true, attributes: true, characterData: true });
+    return state;
+  })();
+  w.__e2eSeen = w.__e2eMutations.count;
+  return true;
+})()`;
+const DOM_CHANGED = "(window.__e2eMutations?.count ?? -1) !== window.__e2eSeen";
+
+/**
+ * Re-evaluates `condition` on a fresh snapshot only after the DOM changed
+ * since the previous one; the CLI waits for the change instead of repeatedly
+ * building the full accessibility tree. Arming precedes each snapshot, so a
+ * mutation between them is never missed.
+ */
 export async function waitSnapshot(
   condition: (data: BrowserSnapshot) => boolean | Promise<boolean>,
   description: string,
   session?: string,
 ): Promise<BrowserSnapshot> {
   const deadline = performance.now() + VISIBILITY_TIMEOUT_MS;
-  let observed = await snapshot(session);
-  while (!(await condition(observed))) {
-    assert(
-      performance.now() < deadline,
-      `${description}\n${observed.snapshot}`,
-    );
-    observed = await snapshot(session);
+  for (;;) {
+    await command(["eval", ARM_DOM_CHANGE_SIGNAL], session);
+    const observed = await snapshot(session);
+    if (await condition(observed)) return observed;
+    const remaining = deadline - performance.now();
+    assert(remaining > 0, `${description}\n${observed.snapshot}`);
+    // A timed-out or interrupted wait only triggers the next observation;
+    // a dead session fails there.
+    await command(
+      [
+        "wait",
+        "--fn",
+        DOM_CHANGED,
+        "--timeout",
+        String(Math.ceil(Math.min(remaining, DOM_CHANGE_WAIT_MS))),
+      ],
+      session,
+    ).catch((error: unknown) => {
+      if (error instanceof Error && error.name === "AbortError") throw error;
+    });
   }
-  return observed;
 }
 
 export async function waitNotification(
