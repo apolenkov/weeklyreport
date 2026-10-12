@@ -17,6 +17,31 @@ import {
 import { aiProviderCapabilityTestResultSchema } from "./ai-provider-configuration-results.js";
 import { aiProviderTestExecutionReadSchema } from "./ai-provider-test-execution.js";
 
+function validateProgressCounts(
+  value: {
+    readonly completed: number;
+    readonly total: number;
+    readonly failed: number;
+  },
+  ctx: z.RefinementCtx,
+  prefix: readonly string[],
+): void {
+  if (value.completed > value.total) {
+    ctx.addIssue({
+      code: "custom",
+      path: [...prefix, "completed"],
+      message: "Completed progress cannot exceed total progress",
+    });
+  }
+  if (value.failed > value.total) {
+    ctx.addIssue({
+      code: "custom",
+      path: [...prefix, "failed"],
+      message: "Failed progress cannot exceed total progress",
+    });
+  }
+}
+
 const aiProviderGenerationReadSchema = z
   .object({
     profile: aiProviderProfileSchema,
@@ -76,22 +101,9 @@ export const aiProviderConfigurationReadSchema = z
     activatedAt: z.coerce.date().nullable(),
   })
   .strict()
-  .superRefine((value, ctx) => {
-    if (value.progress.completed > value.progress.total) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["progress", "completed"],
-        message: "Completed progress cannot exceed total progress",
-      });
-    }
-    if (value.progress.failed > value.progress.total) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["progress", "failed"],
-        message: "Failed progress cannot exceed total progress",
-      });
-    }
-  });
+  .superRefine((value, ctx) =>
+    validateProgressCounts(value.progress, ctx, ["progress"]),
+  );
 
 /** Public shared schema or contract constant for ai provider preparation progress schema. */
 export const aiProviderPreparationProgressSchema = z
@@ -105,22 +117,7 @@ export const aiProviderPreparationProgressSchema = z
     finishedAt: z.coerce.date().nullable(),
   })
   .strict()
-  .superRefine((value, ctx) => {
-    if (value.completed > value.total) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["completed"],
-        message: "Completed progress cannot exceed total progress",
-      });
-    }
-    if (value.failed > value.total) {
-      ctx.addIssue({
-        code: "custom",
-        path: ["failed"],
-        message: "Failed progress cannot exceed total progress",
-      });
-    }
-  });
+  .superRefine((value, ctx) => validateProgressCounts(value, ctx, []));
 
 /** Public shared schema or contract constant for ai provider availability read schema. */
 export const aiProviderAvailabilityReadSchema = z

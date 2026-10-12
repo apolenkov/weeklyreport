@@ -91,6 +91,35 @@ describe("AI prompt management contracts", () => {
     ).toBe(false);
   });
 
+  it("accepts the complete catalog slots and rejects an unknown slot", () => {
+    const contents = Object.fromEntries(
+      AI_PROMPT_SLOT_KEYS.map((slot) => [slot, "Operator guidance."]),
+    );
+    expect(aiPromptContentsSchema.parse(contents)).toEqual(contents);
+    expect(
+      aiPromptContentsSchema.safeParse({
+        ...contents,
+        "unknown-slot": "Operator guidance.",
+      }).success,
+    ).toBe(false);
+  });
+
+  it.each(AI_PROMPT_SLOT_KEYS)(
+    "rejects a bundle missing locked core slot %s",
+    (slot) => {
+      const bundle = validBundleRead();
+      const lockedCoreSnapshot = Object.fromEntries(
+        Object.entries(bundle.lockedCoreSnapshot).filter(
+          ([key]) => key !== slot,
+        ),
+      );
+      expect(
+        aiPromptBundleReadSchema.safeParse({ ...bundle, lockedCoreSnapshot })
+          .success,
+      ).toBe(false);
+    },
+  );
+
   it("requires every slot and enforces safe text limits", () => {
     expect(
       aiPromptContentsSchema.safeParse({

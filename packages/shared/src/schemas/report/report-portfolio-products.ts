@@ -54,15 +54,12 @@ export function buildPortfolioProductsFromSnapshotSections(
         leadName: occurrence.section.authorName,
         status: effectiveProjectStatus(occurrence),
       }));
-      const statuses = contributions.flatMap(({ status }) =>
-        status === null ? [] : [status],
+      const valuedContributions = contributions.filter(
+        ({ status }) => status !== null,
       );
-      const leadIds = contributions.flatMap(({ leadId, status }) =>
-        status === null ? [] : [leadId],
-      );
-      const leadNames = contributions.flatMap(({ leadName, status }) =>
-        status === null ? [] : [leadName],
-      );
+      const statuses = valuedContributions.map(({ status }) => status);
+      const leadIds = valuedContributions.map(({ leadId }) => leadId);
+      const leadNames = valuedContributions.map(({ leadName }) => leadName);
 
       return [
         {

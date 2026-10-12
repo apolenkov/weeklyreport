@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { adminUserSchema } from "../schemas/admin/report-admin.schema.js";
 import {
   composeName,
   initials,
@@ -41,6 +42,29 @@ describe("composeName", () => {
 });
 
 describe("shortName", () => {
+  it.each([
+    ["Алексей", null, "А."],
+    ["Алексей", "Иванович", "А.И."],
+    ["", "Иванович", "И."],
+    ["", null, ""],
+  ] as const)(
+    "omits the separator for an admitted blank surname with %j and %j",
+    (firstName, middleName, expected) => {
+      const user = adminUserSchema.parse({
+        id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        email: "viewer@example.test",
+        name: "Synthetic display name",
+        lastName: " ".repeat(3),
+        firstName: firstName || " ".repeat(3),
+        middleName,
+        position: null,
+        role: "viewer",
+        isActive: true,
+      });
+      expect(shortName(user)).toBe(expected);
+    },
+  );
+
   it("surname + given/patronymic initials with patronymic", () => {
     expect(
       shortName({

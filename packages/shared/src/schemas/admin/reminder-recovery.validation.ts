@@ -219,11 +219,16 @@ function validatePayloadSchedule(
       );
     }
     const expectedPath = `/lead/report/${execution.reportId}`;
-    if (
-      !new URL(execution.queuePayload.sectionUrl).pathname.endsWith(
-        expectedPath,
-      )
-    ) {
+    const pathname = (() => {
+      try {
+        return new URL(execution.queuePayload.sectionUrl).pathname;
+      } catch {
+        // The payload schema already reports the malformed URL at its own path.
+        return null;
+      }
+    })();
+    if (pathname === null) return;
+    if (!pathname.endsWith(expectedPath)) {
       addIssue(
         context,
         [...path, "queuePayload", "sectionUrl"],

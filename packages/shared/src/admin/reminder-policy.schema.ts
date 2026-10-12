@@ -19,7 +19,7 @@ export const reminderPolicySchema = z
   .object({
     id: z.uuid(),
     kind: reminderPolicyKindSchema,
-    offsetMinutes: z.number().int(),
+    offsetMinutes: z.int32(),
     timezone: resolvableTimeZoneSchema,
     audience: reminderAudienceSchema,
     active: z.boolean(),

@@ -522,6 +522,29 @@ describe("adminSnapshotSchema — deterministic identity and FK closure", () => 
 });
 
 describe("adminSnapshotSchema — reminder execution recovery", () => {
+  it.each([`/lead/report/${REPORT_ID}`, "not a URL"])(
+    "returns URL issues without throwing for recovery sectionUrl %j",
+    (sectionUrl) => {
+      const snapshot = snapshotWithReminderExecution();
+      const result = adminSnapshotSchema.safeParse({
+        ...snapshot,
+        reminderExecutions: [
+          {
+            ...snapshot.reminderExecutions[0],
+            queuePayload: { ...reminderPayload, sectionUrl },
+          },
+        ],
+      });
+      expect(result.success).toBe(false);
+      if (!result.success)
+        expect(result.error.issues).toContainEqual(
+          expect.objectContaining({
+            path: ["reminderExecutions", 0, "queuePayload", "sectionUrl"],
+          }),
+        );
+    },
+  );
+
   it("accepts a lifecycle-complete execution with its exact current payload", () => {
     expect(
       adminSnapshotSchema.safeParse(snapshotWithReminderExecution()).success,

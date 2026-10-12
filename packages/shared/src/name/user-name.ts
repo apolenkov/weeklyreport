@@ -37,7 +37,7 @@ export function shortName(parts: UserNameParts): string {
     .filter((letter) => letter.length > 0)
     .map((letter) => `${letter.toUpperCase()}.`)
     .join("");
-  return initials ? `${surname} ${initials}` : surname;
+  return [surname, initials].filter(Boolean).join(" ");
 }
 
 /**

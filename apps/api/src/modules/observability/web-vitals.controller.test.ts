@@ -70,17 +70,20 @@ describe("WebVitalsController.record", () => {
     expect(await countFor(webVitalLcp, "other")).toBe(0);
   });
 
-  it("rejects a non-finite value with 400 and records nothing", async () => {
-    expect(() =>
-      controller.record({
-        name: "LCP",
-        value: Number.POSITIVE_INFINITY,
-        id: "x",
-      }),
-    ).toThrow(BadRequestException);
+  it.each([Number.POSITIVE_INFINITY, Number.NaN])(
+    "rejects non-finite value %s with 400 and records nothing",
+    async (value) => {
+      expect(() =>
+        controller.record({
+          name: "LCP",
+          value,
+          id: "x",
+        }),
+      ).toThrow(BadRequestException);
 
-    expect(await countFor(webVitalLcp, "other")).toBe(0);
-  });
+      expect(await countFor(webVitalLcp, "other")).toBe(0);
+    },
+  );
 
   it("rejects a negative value with 400 and records nothing", async () => {
     expect(() =>

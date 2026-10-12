@@ -3,12 +3,13 @@ import { z } from "zod";
 import { organizationPublicSchema } from "../organization/organization.js";
 
 const MAX_REPORTING_GROUP_NAME_LENGTH = 200;
+const ROLE_VALUES = ["lead", "head", "admin", "viewer"] as const;
 
 /** Persistence-axis roles accepted by admin writes and SAML registration. */
-export const roleSchema = z.enum(["lead", "head", "admin", "viewer"]);
+export const roleSchema = z.enum(ROLE_VALUES);
 
 /** Session-axis role enum (separate home from DB `roleSchema` / role-type). */
-export const sessionRoleSchema = z.enum(["lead", "head", "admin", "viewer"]);
+export const sessionRoleSchema = z.enum(ROLE_VALUES);
 
 /** Single role→label map for session and DB axes so surfaces cannot drift. */
 export const ROLE_LABEL: Readonly<Record<Role, string>> = Object.freeze({
