@@ -14,7 +14,7 @@ schema-admitted props, each at an already-owned contract boundary:
 - C5142: a foreign (locked) stage-less card on a flagged product showed the
   "Select at least one stage" nudge while offering no edit affordance
   (`LockBadge` only). The nudge implies an action the viewer cannot take.
-- C5144: `productName: ""` is runtime-reachable (`buildActivityRiskEntry`
+- C5144: `productName: ""` was runtime-reachable (`buildActivityRiskEntry`
   with an unresolved activity name) and produced dangling action labels
   ("Edit risk for "), dropping the row identity for non-visual users against
   the `lead-pipeline-card` non-visual naming pattern.
@@ -32,9 +32,10 @@ and the claim stays needs-evidence.
   and the readOnly no-dialog guard are unchanged.
 - `deriveRiskCardState` derives `locked` first and gates `needsStage` on
   `!locked` (was `!readOnly`). Foreign lock disclosure is unchanged.
-- One `riskAriaName` helper (trimmed, neutral `"untitled"` fallback) serves
-  the toggle/edit/delete labels. The fallback word is an author choice the
-  owner may refine; the contract fix is only that the name is never empty.
+- One `riskDisplayName` helper (trimmed, `"Unknown"` fallback, the
+  lead-surface-name-resolution placeholder) serves the toggle/edit/delete
+  labels, the card title and the delete confirmation subtitle, and
+  `buildActivityRiskEntry` now produces `"Unknown"` for an unresolved activity.
 
 ## Capabilities
 

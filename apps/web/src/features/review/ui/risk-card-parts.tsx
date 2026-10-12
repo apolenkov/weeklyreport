@@ -17,11 +17,11 @@ interface ToggleSeverityButtonProps {
   readonly onToggleSeverity: (risk: RiskEntry) => void;
 }
 
-// productName is "" for activity-parented rows with no resolved activity
-// name — never leave screen-reader labels dangling ("Edit risk for ").
-function riskAriaName(risk: RiskEntry): string {
+// productName can be blank for activity-parented rows; the "Unknown" placeholder
+// follows lead-surface-name-resolution and keeps labels from dangling ("Edit risk for ").
+export function riskDisplayName(risk: RiskEntry): string {
   const name = risk.productName.trim();
-  return name === "" ? "untitled" : name;
+  return name === "" ? "Unknown" : name;
 }
 
 // Severity flips both ways from one control; the label states the destination.
@@ -37,8 +37,8 @@ function ToggleSeverityButton({
       onClick={() => onToggleSeverity(risk)}
       aria-label={
         isBlocked
-          ? `Downgrade risk for ${riskAriaName(risk)} to at risk`
-          : `Escalate risk for ${riskAriaName(risk)} to blocked`
+          ? `Downgrade risk for ${riskDisplayName(risk)} to at risk`
+          : `Escalate risk for ${riskDisplayName(risk)} to blocked`
       }
     >
       <ArrowDownUp className="h-4 w-4" aria-hidden="true" />
@@ -85,7 +85,7 @@ export function RiskCardActions({
         type="button"
         className={`${ACTION_BUTTON_CLASS} ${DEFAULT_ACTION_HOVER_CLASS}`}
         onClick={() => onEdit(risk)}
-        aria-label={`Edit risk for ${riskAriaName(risk)}`}
+        aria-label={`Edit risk for ${riskDisplayName(risk)}`}
       >
         <EditIcon />
       </button>
@@ -93,7 +93,7 @@ export function RiskCardActions({
         type="button"
         className={`${ACTION_BUTTON_CLASS} ${DESTRUCTIVE_ACTION_HOVER_CLASS}`}
         onClick={() => onDelete(risk.id)}
-        aria-label={`Delete risk for ${riskAriaName(risk)}`}
+        aria-label={`Delete risk for ${riskDisplayName(risk)}`}
       >
         <DeleteIcon />
       </button>

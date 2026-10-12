@@ -7,6 +7,7 @@ import type {
   RiskEntry,
 } from "../../report-sections";
 import { RiskCard } from "./risk-card";
+import { riskDisplayName } from "./risk-card-parts";
 import { RiskEditDialog } from "./risk-edit-dialog";
 import { deriveRiskDialogSeedProps } from "./risk-edit-dialog-helpers";
 import type { RiskAddPrefill, RiskListEditing } from "./use-risk-list-editing";
@@ -115,7 +116,7 @@ function RisksSectionDialogs({
         preview={pendingDelete?.text || "(no description)"}
         subtitle={
           pendingDelete
-            ? `${pendingDelete.productName} · ${
+            ? `${riskDisplayName(pendingDelete)} · ${
                 pendingDelete.stageNames.join(", ") || "no stage set"
               }`
             : undefined

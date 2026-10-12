@@ -129,7 +129,7 @@ export function buildActivityRiskEntry(args: {
   return {
     id: args.existingId ?? crypto.randomUUID(),
     productId: "",
-    productName: args.activityName ?? "",
+    productName: args.activityName ?? "Unknown",
     activityId: args.activityId,
     activityName: args.activityName,
     stageNames: [],
