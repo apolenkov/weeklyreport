@@ -14,6 +14,7 @@ import type { ItemEditDraftStore } from "./item-edit-draft-store";
 import { choicesForWeek } from "./item-status-choices";
 import { ParentPicker } from "./parent-picker";
 import { StageStep } from "./stage-step";
+import { useFocusCancelWhenLocked } from "./use-focus-cancel-when-locked";
 import { useInlineEditUnloadGuard } from "./use-inline-edit-unload-guard";
 import { useItemEditDialog } from "./use-item-edit-dialog";
 
@@ -161,6 +162,7 @@ function InlineEditActions({
   readonly saveBlocked: boolean;
   readonly onCancel: () => void;
 }) {
+  const cancelRef = useFocusCancelWhenLocked(saveBlocked);
   return (
     <div className="flex flex-wrap gap-2">
       <button
@@ -171,6 +173,7 @@ function InlineEditActions({
         Save update
       </button>
       <button
+        ref={cancelRef}
         type="button"
         onClick={onCancel}
         className="min-h-[var(--touch-target-min)] rounded-[var(--radius-sm)] px-3 text-sm text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"

@@ -166,6 +166,64 @@ describe("ItemInlineEditor", () => {
     expect(text).toHaveValue("Retain this result");
   });
 
+  it("moves focus to Cancel when a save locks the focused control, so Escape still asks to discard", async () => {
+    const user = userEvent.setup();
+    const props = { ...base, onSave: vi.fn() };
+    const { rerender } = render(<ItemInlineEditor {...props} />);
+    await user.type(
+      screen.getByRole("textbox", { name: /Description/ }),
+      "Pending canonical save",
+    );
+    screen.getByRole("button", { name: "Save update" }).focus();
+
+    rerender(<ItemInlineEditor {...props} saveDisabled />);
+
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+    await user.keyboard("{Escape}");
+    expect(
+      screen.getByRole("alertdialog", { name: "Discard changes?" }),
+    ).toBeVisible();
+  });
+
+  it("moves focus to Cancel when a save disables the textarea that held it", async () => {
+    const user = userEvent.setup();
+    const props = { ...base, onSave: vi.fn() };
+    const { rerender } = render(<ItemInlineEditor {...props} />);
+    const text = screen.getByRole("textbox", { name: /Description/ });
+    await user.type(text, "Saved with Ctrl+Enter");
+
+    rerender(<ItemInlineEditor {...props} saveDisabled confirmationOnly />);
+
+    expect(text).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+  });
+
+  it("keeps focus in an enabled field when a save only blocks the Save button", async () => {
+    const user = userEvent.setup();
+    const props = { ...base, onSave: vi.fn() };
+    const { rerender } = render(<ItemInlineEditor {...props} />);
+    const text = screen.getByRole("textbox", { name: /Description/ });
+    await user.type(text, "Still editing");
+
+    rerender(<ItemInlineEditor {...props} saveDisabled />);
+
+    expect(text).toHaveFocus();
+  });
+
+  it("does not pull focus back once the user has left the editor", async () => {
+    const user = userEvent.setup();
+    const props = { ...base, onSave: vi.fn() };
+    const { rerender } = render(<ItemInlineEditor {...props} />);
+    screen.getByRole("button", { name: "Save update" }).focus();
+    await user.click(document.body);
+    expect(document.body).toHaveFocus();
+
+    rerender(<ItemInlineEditor {...props} saveDisabled />);
+
+    expect(screen.getByRole("button", { name: "Cancel" })).not.toHaveFocus();
+    expect(document.body).toHaveFocus();
+  });
+
   it("saves a current commitment without claiming that work started", async () => {
     const user = userEvent.setup();
     const onSave = vi.fn();
