@@ -1,4 +1,4 @@
-// agent-browser 0.38 `press` sends the Windows virtual-key code as
+// agent-browser 0.38–0.39 `press` sends the Windows virtual-key code as
 // nativeVirtualKeyCode. Chrome on macOS reads that field as a native key code
 // (Escape 27 is the Minus key), after which the page receives thousands of
 // phantom keydown events per second until it navigates. The flood saturates
