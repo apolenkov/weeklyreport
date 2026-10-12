@@ -223,7 +223,6 @@ function StatusField({
       <select
         aria-label={`Status for feedback from ${item.authorName}`}
         className="rounded-lg border border-[var(--color-border)] bg-transparent px-2 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
-        disabled={!item.capabilities.triage}
         onChange={(event) =>
           onChangeStatus(item.id, event.target.value as FeedbackStatus)
         }

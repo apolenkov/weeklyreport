@@ -28,8 +28,10 @@ const reportSectionFullIncludeForSnapshot = {
 export const reportFullIncludeForSnapshot = {
   sections: {
     include: reportSectionFullIncludeForSnapshot,
-    // Postgres collation approximates Node/ICU localeCompare("ru"); id
-    // tiebreak stabilizes shared display names. Exact parity not guaranteed.
+    // Postgres collation only approximates Node/ICU localeCompare("ru") —
+    // buildAssembledReportFromPrismaRow re-sorts mapped sections with that
+    // comparator; this stays as a cheap pre-sort, and the id tiebreak keeps
+    // shared display names stable in the sort input.
     orderBy: [{ author: { name: "asc" } }, { id: "asc" }],
   },
   publishedBy: true,
@@ -71,7 +73,14 @@ function freezeSectionOwnership(
 export function buildAssembledReportFromPrismaRow(
   row: SnapshotReportRow,
 ): AssembledReport {
-  const sections = row.sections.map(freezeSectionOwnership);
+  // Same comparator the live preview applies (PublicationService.compareSections):
+  // sorting the mapped sections here makes the frozen order identical to what
+  // the head previewed regardless of the database collation behind orderBy.
+  const sections = row.sections
+    .map(freezeSectionOwnership)
+    .sort((left, right) =>
+      left.authorName.localeCompare(right.authorName, "ru"),
+    );
   // The mapper floors each product's traffic light by the author's covering
   // risks. Deriving totals from those mapped sections keeps product cards and
   // top-line totals consistent within the snapshot.

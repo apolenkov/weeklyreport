@@ -114,7 +114,13 @@ function GroupPanel({
       className="grid transition-[grid-template-rows] duration-300 motion-reduce:transition-none"
       style={{ gridTemplateRows: isExpanded ? "1fr" : "0fr" }}
     >
-      <div className="min-h-0 overflow-hidden">
+      {/* inert + aria-hidden keep the 0fr-collapsed content out of keyboard
+          order and the a11y tree; visual collapse alone leaves rows reachable. */}
+      <div
+        className="min-h-0 overflow-hidden"
+        inert={isExpanded ? undefined : true}
+        aria-hidden={!isExpanded}
+      >
         <div className="space-y-3 px-4 pb-4 pt-4">
           {groups.map((group) => (
             <ProductCard key={group.productId} group={group} />

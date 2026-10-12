@@ -192,8 +192,9 @@ export function RemindLeadButton({
         onClick={send}
         disabled={busy || SETTLED_CONFIRM_STATES.has(confirm)}
         aria-busy={busy}
-        aria-label={`Send reminder to ${leadName}`}
-        title={`Send reminder to ${leadName}`}
+        // WCAG 2.5.3: the accessible name must start with the visible label.
+        aria-label={`${label} ${leadName}`}
+        title={`${label} ${leadName}`}
         data-testid="remind-lead-button"
         className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] px-2 py-1 text-[12px] font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-default disabled:opacity-60 max-md:min-h-[var(--touch-target-min)]"
       >

@@ -1,6 +1,8 @@
 import { agentationSessionResponseSchema } from "@customreport/shared";
 
-const AGENTATION_ENDPOINT = "/api/v1/agentation";
+// Single owner for the Agentation REST base path; the widget's transport and
+// the delivery readback must never diverge on it.
+export const AGENTATION_ENDPOINT = "/api/v1/agentation";
 const FIRST_CONFIRMATION_DELAY_MS = 400;
 const SECOND_CONFIRMATION_DELAY_MS = 800;
 const FINAL_CONFIRMATION_DELAY_MS = 1600;
