@@ -53,7 +53,10 @@ export function initialsFromName(name: string): string {
 }
 
 /**
- * Short "Surname I.O." from a plain surname-first name string.
+ * Short "Surname I.O." from a plain surname-first name string: the surname plus
+ * the initials of at most the first two following tokens, the same "first and
+ * second token" rule as `initialsFromName`. Compound given names are not
+ * recognized in a plain string; structured parts go through `shortName`.
  * Surface usage: see `user-name-display`.
  */
 export function shortNameFromName(name: string): string {
@@ -61,6 +64,7 @@ export function shortNameFromName(name: string): string {
   if (surname === undefined) return "";
   if (rest.length === 0) return surname;
   const initials = rest
+    .slice(0, 2)
     .map((token) => `${firstLetter(token).toUpperCase()}.`)
     .join("");
   return `${surname} ${initials}`;

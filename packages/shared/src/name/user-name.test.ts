@@ -97,8 +97,18 @@ describe("shortName", () => {
 });
 
 describe("shortNameFromName", () => {
-  it("surname + dotted initials of the remaining tokens", () => {
+  it("surname + initials of the first two given tokens", () => {
     expect(shortNameFromName("Иванов Василий Петрович")).toBe("Иванов В.П.");
+  });
+
+  it.each([
+    ["Петров Алексей Иван Дмитрий", "Петров А.И."],
+    ["Петров Алексей Иван Дмитрий Павел", "Петров А.И."],
+    ["Алиев Рашид Гейдар оглы", "Алиев Р.Г."],
+    // Known limit: a plain string cannot tell compound parts apart; parts give "Иванова А.П.".
+    ["Иванова Анна Мария Петровна", "Иванова А.М."],
+  ])("keeps at most two initials for %j", (name, expected) => {
+    expect(shortNameFromName(name)).toBe(expected);
   });
 
   it("surname + given initial when there is no patronymic", () => {
