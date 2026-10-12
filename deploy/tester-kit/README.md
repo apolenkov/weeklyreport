@@ -57,6 +57,7 @@ deploy/tester-kit/start.sh --registry <префикс>   # образы из с�
 
 - `deploy/tester-kit/reset.sh` стирает базу стенда и загружает демо-данные заново (спросит «yes»).
 - `deploy/tester-kit/stop.sh` удаляет стенд вместе с данными. Пароли остаются в `~/.local/state/wr-tester`.
+- После TASK-369 стенд использует роль и базу `weeklyreport`. Старый стенд пересоздайте (`stop.sh` удаляет namespace) либо создайте роль `weeklyreport` на существующей базе вручную (`CREATE ROLE weeklyreport …`).
 
 ## Автопроход интерфейса
 

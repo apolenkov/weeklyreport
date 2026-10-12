@@ -140,7 +140,7 @@ describe("exact E2E/runtime destructive target", () => {
   });
 
   it.each([
-    "postgresql://127.0.0.1/%63ustomreport_e2e",
+    "postgresql://127.0.0.1/%77eeklyreport_e2e",
     "postgresql://127.0.0.1/WeeklyReport_e2e",
     "postgresql://127.0.0.1/weeklyreport_e2e%20",
     " postgresql://127.0.0.1/weeklyreport_e2e",
@@ -151,7 +151,7 @@ describe("exact E2E/runtime destructive target", () => {
     "postgresql://127.0.0.1/weeklyreport_e2e#",
     "postgresql://127.0.0.1/weeklyreport_e2e?#",
     "postgre\nsql://127.0.0.1/weeklyreport_e2e",
-    "postgresql://127.0.0.1/cu\tstomreport_e2e",
+    "postgresql://127.0.0.1/we\teklyreport_e2e",
     "postgresql://127.0.0.1/weeklyreport_e2e/extra",
     "postgresql://127.0.0.1/weeklyreport_e2e%2Fextra",
     "postgresql://127.0.0.1/other/../weeklyreport_e2e",
