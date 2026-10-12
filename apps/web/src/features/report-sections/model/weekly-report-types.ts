@@ -84,6 +84,7 @@ export type ProductAttention =
     };
 
 interface WeeklyProductReportFields {
+  readonly hasOwnRedProductSignal?: boolean;
   id: string;
   authorIds: string[];
   initials: string;

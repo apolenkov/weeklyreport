@@ -129,6 +129,13 @@ export const currentPeriodLifecycleSchema = lifecycleFieldsSchema
     }
     validateDraftMetadata(value, context);
     validatePublishedMetadata(value, context);
+    if (value.autoArchived && !value.archived) {
+      addIssue(
+        context,
+        "autoArchived",
+        "Auto-archived periods must be archived.",
+      );
+    }
     validateReopenedTimestamp(value, context);
   })
   .readonly();

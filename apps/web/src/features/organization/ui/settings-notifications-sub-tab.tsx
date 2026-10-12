@@ -1,6 +1,9 @@
 "use client";
 
-import type { AppSettings } from "@customreport/shared";
+import {
+  type AppSettings,
+  appSettingsUpdateSchema,
+} from "@customreport/shared";
 import { useState } from "react";
 
 import { useServerSeededDraft } from "../../../shared/hooks/drafts/use-server-seeded-draft";
@@ -8,23 +11,6 @@ import {
   CheckIcon,
   useUpdateSettingsMut,
 } from "../../../shared/ui/settings/settings-tab";
-
-// The wire schema accepts null (clear) or a valid email; we keep the input as a
-// string and translate empty → null on save. UI guard: a non-empty string that
-// fails a basic email shape blocks Save with a hint.
-function hasWhitespace(value: string): boolean {
-  return [...value].some((char) => char.trim() === "");
-}
-
-function looksLikeEmail(trimmed: string): boolean {
-  if (trimmed === "") return true;
-  if (hasWhitespace(trimmed)) return false;
-  const atIndex = trimmed.indexOf("@");
-  if (atIndex <= 0 || atIndex !== trimmed.lastIndexOf("@")) return false;
-  const domainPart = trimmed.slice(atIndex + 1);
-  const dotIndex = domainPart.indexOf(".");
-  return dotIndex > 0 && dotIndex < domainPart.length - 1;
-}
 
 function NotificationFromEmailField({
   value,
@@ -126,12 +112,11 @@ export function NotificationsSubTab({
   );
 
   const trimmed = draft.notificationFromEmail?.trim() ?? "";
-  const isValidEmail = looksLikeEmail(trimmed);
+  const payload = { notificationFromEmail: trimmed === "" ? null : trimmed };
+  const isValidEmail = appSettingsUpdateSchema.safeParse(payload).success;
 
   function handleSave() {
-    updateSettingsMut.mutate({
-      notificationFromEmail: trimmed === "" ? null : trimmed,
-    });
+    updateSettingsMut.mutate(payload);
   }
   const isSaving = updateSettingsMut.isPending;
 

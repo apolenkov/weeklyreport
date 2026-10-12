@@ -148,7 +148,7 @@ async function lockProjectOwnershipUsers(
         (id): id is string => id !== undefined,
       ),
     ),
-  ].sort((left, right) => left.localeCompare(right));
+  ].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0));
   for (const userId of userIds) await lockUser(tx, userId);
   return before;
 }

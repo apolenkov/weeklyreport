@@ -49,6 +49,7 @@ export function PrintProductReports({
 }: {
   readonly view: MapWeeklyReportResult;
 }) {
+  if (view.products.length === 0) return null;
   return (
     <>
       <div className="page-break-before" />

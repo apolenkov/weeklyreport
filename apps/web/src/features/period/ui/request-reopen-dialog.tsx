@@ -45,9 +45,11 @@ function RequestReopenDialogContent({
   const dialogSurfaceRef = useRef<HTMLDivElement>(null);
   const reasonRef = useRef<HTMLTextAreaElement>(null);
   const headingId = useId();
-  const isTooLong = Array.from(reason).length > MAX_REOPEN_REASON_LENGTH;
+  const trimmedReason = reason.trim();
+  const characterCount = Array.from(trimmedReason).length;
+  const isTooLong = characterCount > MAX_REOPEN_REASON_LENGTH;
   const { requestClose, discardDialog } = useDiscardGuard(
-    reason.trim().length > 0,
+    trimmedReason.length > 0,
     onCancel,
   );
 
@@ -73,8 +75,7 @@ function RequestReopenDialogContent({
 
   function handleConfirm() {
     if (pending || isTooLong) return;
-    const trimmed = reason.trim();
-    onConfirm(trimmed.length > 0 ? trimmed : undefined);
+    onConfirm(trimmedReason.length > 0 ? trimmedReason : undefined);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -96,6 +97,7 @@ function RequestReopenDialogContent({
         <ReopenDialogHeader headingId={headingId} />
         <ReopenReasonField
           reason={reason}
+          characterCount={characterCount}
           onChange={setReason}
           pending={pending}
           error={error}
@@ -116,12 +118,14 @@ function RequestReopenDialogContent({
 
 function ReopenReasonField({
   reason,
+  characterCount,
   onChange,
   pending,
   error,
   textareaRef,
 }: {
   readonly reason: string;
+  readonly characterCount: number;
   readonly onChange: (reason: string) => void;
   readonly pending: boolean;
   readonly error: string | null | undefined;
@@ -138,6 +142,7 @@ function ReopenReasonField({
           placeholder="e.g. Forgot to add the carry-over from last week…"
           minHeightPx={80}
           characterLimit={MAX_REOPEN_REASON_LENGTH}
+          characterCount={characterCount}
           fill={false}
           focusOnMount
           textareaRef={textareaRef}

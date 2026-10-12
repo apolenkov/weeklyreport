@@ -208,7 +208,7 @@ export function useWeeklyReportPage(
     submissionFilter: preferences.submissionFilter,
   });
 
-  if (weeklyQ.isLoading) return { kind: "loading" };
+  if (weeklyQ.isPending) return { kind: "loading" };
 
   const terminalNotice = resolveTerminalNotice(weeklyQ);
   if (terminalNotice) return { kind: "notice", notice: terminalNotice };

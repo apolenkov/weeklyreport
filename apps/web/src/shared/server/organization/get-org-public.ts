@@ -65,7 +65,7 @@ export async function getOrgPublic(): Promise<OrganizationPublic> {
       method: "GET",
       cache: "force-cache",
       signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
-      next: { tags: ["org-public"], revalidate: ORG_PUBLIC_REVALIDATE_SECONDS },
+      next: { revalidate: ORG_PUBLIC_REVALIDATE_SECONDS },
     });
     if (!response.ok)
       return reportUnresolvedIdentity(

@@ -1,4 +1,8 @@
-import { adminSnapshotReminderExecutionSchema } from "@customreport/shared";
+import {
+  adminSnapshotReminderExecutionSchema,
+  adminSnapshotReminderRuleSchema,
+  adminSnapshotSchema,
+} from "@customreport/shared";
 import { describe, expect, it, vi } from "vitest";
 import { ZodError } from "zod";
 
@@ -930,8 +934,8 @@ describe("saveSnapshot — lifecycle ordering", () => {
       },
       projectActivityLead: { findMany: vi.fn().mockResolvedValue([]) },
       report: {
-        findMany: vi.fn((query?: { where?: { archived?: boolean } }) => {
-          if (query?.where?.archived === false)
+        findMany: vi.fn((query?: { where?: { OR?: unknown } }) => {
+          if (query?.where?.OR !== undefined)
             events.push("project-assignment-reconciliation");
           return [];
         }),
@@ -966,4 +970,223 @@ describe("saveSnapshot — lifecycle ordering", () => {
       "project-assignment-reconciliation",
     ]);
   });
+});
+
+function requiredDateRecoverySnapshot() {
+  const deadline = recoveryExecution.scheduledFor;
+  const policyId = "10000000-0000-4000-8000-000000000099";
+  return {
+    users: [],
+    groups: [],
+    projects: [],
+    periods: [
+      {
+        id: recoveryExecution.reportId,
+        periodStart: new Date("2026-04-06T00:00:00.000Z"),
+        periodEnd: new Date("2026-04-12T23:59:59.000Z"),
+        deadline,
+        weekLabel: null,
+        status: "draft",
+        periodState: "open",
+        periodStatus: "open",
+        archived: false,
+        autoPublished: false,
+        autoArchived: false,
+        publishedAt: null,
+        publishedById: null,
+        reopenedAt: null,
+        publishedSnapshot: null,
+      },
+    ],
+    policies: [
+      {
+        id: policyId,
+        kind: "deadline",
+        offsetMinutes: 0,
+        timezone: "Europe/Moscow",
+        audience: "lead-with-draft",
+        active: true,
+        validFrom: new Date("2026-01-01T00:00:00.000Z"),
+        validUntil: null,
+      },
+    ],
+    reminderRules: [
+      {
+        id: recoveryExecution.ruleId,
+        reportId: recoveryExecution.reportId,
+        policyId,
+        kind: "deadline",
+        fireAt: deadline,
+        deadline,
+        timezone: "Europe/Moscow",
+        status: "active",
+        version: 1,
+      },
+    ],
+    reminderExecutions: [recoveryExecution],
+  };
+}
+
+describe("mandatory recovery dates before restore", () => {
+  it.each(["createdAt", "updatedAt"] as const)(
+    "rejects null %s at the real snapshot boundary before the transaction",
+    async (field) => {
+      const snapshot = requiredDateRecoverySnapshot();
+      expect(adminSnapshotSchema.safeParse(snapshot).success).toBe(true);
+      const invalid = {
+        ...snapshot,
+        reminderExecutions: [{ ...recoveryExecution, [field]: null }],
+      };
+      const result = adminSnapshotSchema.safeParse(invalid);
+      expect(result.success).toBe(false);
+      expect(result.error?.issues).toEqual([
+        expect.objectContaining({ path: ["reminderExecutions", 0, field] }),
+      ]);
+      const transaction = vi
+        .fn()
+        .mockRejectedValue(new Error("transaction entered"));
+      await expect(
+        saveSnapshot(
+          { $transaction: transaction } as unknown as PrismaService,
+          undefined,
+          invalid as never,
+        ),
+      ).rejects.toBeInstanceOf(ZodError);
+      expect(transaction).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["fireAt", "deadline"] as const)(
+    "refuses null required rule %s without relying on cross-reference checks",
+    (field) => {
+      const rule = requiredDateRecoverySnapshot().reminderRules[0];
+      expect(
+        adminSnapshotReminderRuleSchema.safeParse({ ...rule, [field]: null })
+          .success,
+      ).toBe(false);
+    },
+  );
+
+  it.each(["scheduledFor", "createdAt", "updatedAt"] as const)(
+    "refuses null mandatory execution %s without changing nullable sentAt",
+    (field) => {
+      expect(
+        adminSnapshotReminderExecutionSchema.safeParse({
+          ...recoveryExecution,
+          [field]: null,
+        }).success,
+      ).toBe(false);
+    },
+  );
+
+  it("preserves Date and ISO snapshot instants and enters the restore transaction for valid input", async () => {
+    const snapshot = requiredDateRecoverySnapshot();
+    const parsed = adminSnapshotSchema.parse(
+      JSON.parse(JSON.stringify(snapshot)),
+    );
+    expect(parsed.reminderExecutions[0]?.createdAt.getTime()).toBe(
+      executionCreatedAt.getTime(),
+    );
+    expect(parsed.reminderExecutions[0]?.updatedAt.getTime()).toBe(
+      executionUpdatedAt.getTime(),
+    );
+    expect(parsed.reminderExecutions[0]?.sentAt).toBeNull();
+    const transaction = vi
+      .fn()
+      .mockRejectedValue(new Error("transaction entered"));
+    await expect(
+      saveSnapshot(
+        { $transaction: transaction } as unknown as PrismaService,
+        undefined,
+        parsed,
+      ),
+    ).rejects.toThrow("transaction entered");
+    expect(transaction).toHaveBeenCalledOnce();
+  });
+
+  it("does not introduce an epoch minimum and retains invalid/omitted date rejection", () => {
+    expect(
+      adminSnapshotReminderExecutionSchema.safeParse({
+        ...recoveryExecution,
+        createdAt: new Date(0),
+        updatedAt: "1970-01-01T00:00:00.000Z",
+      }).success,
+    ).toBe(true);
+    expect(
+      adminSnapshotReminderExecutionSchema.safeParse({
+        ...recoveryExecution,
+        createdAt: undefined,
+      }).success,
+    ).toBe(false);
+    expect(
+      adminSnapshotReminderExecutionSchema.safeParse({
+        ...recoveryExecution,
+        updatedAt: "invalid",
+      }).success,
+    ).toBe(false);
+  });
+});
+
+it("rejects a contradictory autoArchive recovery flag before its transaction", async () => {
+  const periodStart = new Date("2026-04-06T00:00:00.000Z");
+  const periodEnd = new Date("2026-04-12T23:59:59.000Z");
+  const publishedAt = new Date("2026-04-13T09:00:00.000Z");
+  const period = {
+    id: REPORT_ID,
+    periodStart,
+    periodEnd,
+    deadline: null,
+    weekLabel: null,
+    status: "published",
+    periodState: "published",
+    periodStatus: "published",
+    archived: false,
+    autoPublished: false,
+    autoArchived: false,
+    publishedAt,
+    publishedById: null,
+    reopenedAt: null,
+    publishedSnapshot: {
+      reportId: REPORT_ID,
+      periodStart,
+      periodEnd,
+      deadline: null,
+      status: "published",
+      publishedAt,
+      publishedById: null,
+      publishedByName: null,
+      portfolioOverview: {
+        status: "green",
+        totals: { green: 0, yellow: 0, red: 0 },
+      },
+      sections: [],
+    },
+  };
+  const snapshot = {
+    users: [],
+    groups: [],
+    projects: [],
+    periods: [period],
+    reminderRules: [],
+    reminderExecutions: [],
+    policies: [],
+  };
+  expect(adminSnapshotSchema.safeParse(snapshot).success).toBe(true);
+  const transaction = vi
+    .fn()
+    .mockRejectedValue(new Error("transaction entered"));
+  const invalid = { ...snapshot, periods: [{ ...period, autoArchived: true }] };
+  const parsed = adminSnapshotSchema.safeParse(invalid);
+  expect(parsed.success).toBe(false);
+  expect(parsed.error?.issues).toEqual([
+    expect.objectContaining({ path: ["periods", 0, "autoArchived"] }),
+  ]);
+  await expect(
+    saveSnapshot(
+      { $transaction: transaction } as unknown as PrismaService,
+      undefined,
+      invalid as never,
+    ),
+  ).rejects.toBeInstanceOf(ZodError);
+  expect(transaction).not.toHaveBeenCalled();
 });

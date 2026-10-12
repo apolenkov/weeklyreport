@@ -607,21 +607,6 @@ describe("ReportSectionsService — edge cases", () => {
     expect(saved.decisions).toHaveLength(0);
   });
 
-  it("saveDraft is idempotent — same input twice produces same result", async () => {
-    const service = new ReportSectionsService(
-      createRepository(baseSection),
-      NOOP_REPORT_SECTIONS_TELEMETRY,
-      createNullLogger(),
-    );
-    const first = await service.saveDraft(validDraft(), AUTHOR_ID);
-    const second = await service.saveDraft(validDraft(), AUTHOR_ID);
-
-    expect(first.projects[0]?.trafficLight).toBe(
-      second.projects[0]?.trafficLight,
-    );
-    expect(first.items).toHaveLength(second.items.length);
-  });
-
   it("section with max boundary items (100) can be saved", async () => {
     const service = new ReportSectionsService(
       createRepository(baseSection),

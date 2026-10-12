@@ -1,11 +1,18 @@
+import { weeklyReportReadModelSchema } from "@customreport/shared";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type { WeeklyProductReport } from "../../../features/report-sections";
+import { mapWeeklyReport } from "../../../features/report-sections/model/weekly-report";
+import { makeWeeklyReportFixture } from "../../../test-utils/report-section-fixtures";
 import type { PrintActivityReport } from "./print-activity-projection";
 import { PrintProductSection } from "./print-product-section";
-import { PrintActivityReports } from "./print-report-sections";
+import {
+  PrintActivityReports,
+  PrintProductReports,
+} from "./print-report-sections";
 import { PrintReportStyles } from "./print-report-styles";
+import { PrintReportTemplate } from "./print-report-template";
 
 function boundedValue(start: string, end: string, length: number): string {
   return `${start}${"X".repeat(length - start.length - end.length)}${end}`;
@@ -83,6 +90,82 @@ function makeActivityReport(): PrintActivityReport {
 }
 
 describe("print layout boundaries", () => {
+  it("omits an empty Product section from a schema-admitted published report", () => {
+    const source = weeklyReportReadModelSchema.parse(
+      makeWeeklyReportFixture({
+        periodState: "published",
+        periodStatus: "published",
+      }),
+    );
+    const view = mapWeeklyReport(source);
+    expect(view.products).toEqual([]);
+    const { container } = render(<PrintProductReports view={view} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("retains the Product heading, break and first entity for a nonempty report", () => {
+    const source = weeklyReportReadModelSchema.parse(
+      makeWeeklyReportFixture({
+        periodState: "published",
+        periodStatus: "published",
+        portfolioOverview: [
+          {
+            productId: "10000000-0000-4000-8000-000000000004",
+            productName: "Core product",
+            worstStatus: "green",
+            stageCount: 0,
+            leadNames: [],
+            leadIds: [],
+          },
+        ],
+      }),
+    );
+    const view = mapWeeklyReport(source);
+    expect(view.products).toHaveLength(1);
+    const { container } = render(<PrintProductReports view={view} />);
+    expect(container.querySelectorAll(".page-break-before")).toHaveLength(1);
+    const heading = screen.getByRole("heading", { name: "Product Reports" });
+    expect(heading.nextElementSibling).toContainElement(
+      screen.getByRole("heading", { name: "Core product" }),
+    );
+  });
+
+  it("keeps Activity content in the real template for an activity-only published source", () => {
+    const source = weeklyReportReadModelSchema.parse(
+      makeWeeklyReportFixture({
+        periodState: "published",
+        periodStatus: "published",
+        submissionCount: 1,
+        totalLeads: 1,
+        leadSections: [
+          {
+            status: "submitted",
+            submittedAt: new Date("2026-04-20T12:00:00Z"),
+            activities: [
+              {
+                activityId: "10000000-0000-4000-8000-000000000005",
+                activityName: "Support rotation",
+                status: "green",
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    expect(mapWeeklyReport(source).products).toEqual([]);
+    const { container } = render(<PrintReportTemplate data={source} />);
+    expect(
+      screen.queryByRole("heading", { name: "Product Reports" }),
+    ).not.toBeInTheDocument();
+    expect(container.querySelector(".page-break-before")).toBeNull();
+    expect(
+      screen.getByRole("heading", { name: "Activity Reports" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Support rotation" }),
+    ).toBeInTheDocument();
+  });
+
   it("preserves complete bounded product text and every header field", () => {
     render(<PrintProductSection report={makeProductReport()} />);
 

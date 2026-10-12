@@ -65,7 +65,7 @@ describe("LeadFormPrismaRepository — canonical editable lifecycle lock", () =>
     const { repo, sectionUpdateMany } = repositoryWithGate(publishedReport);
 
     await expect(
-      repo.revokeSectionSubmission(SECTION_ID, USER_ID),
+      repo.revokeSectionSubmission(SECTION_ID, USER_ID, {}),
     ).rejects.toBeInstanceOf(LeadFormConstraintError);
     expect(sectionUpdateMany).not.toHaveBeenCalled();
   });
@@ -84,7 +84,7 @@ describe("LeadFormPrismaRepository — canonical editable lifecycle lock", () =>
     const repo = new LeadFormPrismaRepository(prisma);
 
     await expect(
-      repo.revokeSectionSubmission(SECTION_ID, USER_ID),
+      repo.revokeSectionSubmission(SECTION_ID, USER_ID, {}),
     ).rejects.toBeInstanceOf(LeadFormDomainError);
   });
 

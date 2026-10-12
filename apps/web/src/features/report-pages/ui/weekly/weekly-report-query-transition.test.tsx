@@ -2,8 +2,12 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import {
+  onlineManager,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -17,6 +21,7 @@ import { createMockTRPC } from "../../../../test-utils/mock-trpc";
 import { ViewerReportShell } from "../../../viewer";
 import { HeadReportShell } from "../head/head-report-shell";
 import { makeWeeklyReportData } from "./__tests__/weekly-report-page-harness";
+import { WeeklyReportPage } from "./weekly-report-page";
 import { renderWeeklyReportPage } from "./weekly-report-page-test-harness";
 
 vi.mock("next/navigation", () => ({
@@ -173,4 +178,81 @@ describe("report shell report-key transitions", () => {
       "position-width",
     );
   });
+});
+
+describe("WeeklyReportPage — pending is not terminal emptiness", () => {
+  it.each(["active", "no-period"] as const)(
+    "keeps initial offline pending loading until actual %s response",
+    async (outcome) => {
+      const onlineBefore = onlineManager.isOnline();
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false, gcTime: 0 } },
+      });
+      const query = vi.fn(() =>
+        outcome === "active"
+          ? makeWeeklyReportData("open")
+          : { status: "no-period" },
+      );
+      const { proxy } = createMockTRPC([
+        { path: ["weeklyReport", "get"], queryByInput: query },
+        { path: ["period", "publish"], mutation: true },
+        { path: ["period", "reopen"], mutation: true },
+        { path: ["archive", "archiveReport"], mutation: true },
+        { path: ["archive", "unarchiveReport"], mutation: true },
+        { path: ["review", "acknowledgements"], query: [] },
+      ]);
+      function Providers({ children }: { readonly children: ReactNode }) {
+        return (
+          <QueryClientProvider client={client}>
+            <TRPCProxyContext.Provider value={proxy}>
+              {children}
+            </TRPCProxyContext.Provider>
+          </QueryClientProvider>
+        );
+      }
+      onlineManager.setOnline(false);
+      const rendered = render(<WeeklyReportPage />, { wrapper: Providers });
+      try {
+        await waitFor(() =>
+          expect(client.getQueryCache().getAll()[0]?.state.fetchStatus).toBe(
+            "paused",
+          ),
+        );
+        expect(query).not.toHaveBeenCalled();
+        expect(
+          screen.getByTestId("weekly-report-skeleton"),
+        ).toBeInTheDocument();
+        expect(
+          screen.queryByText("No active reporting period"),
+        ).not.toBeInTheDocument();
+        act(() => {
+          onlineManager.setOnline(true);
+        });
+        await waitFor(() => expect(query).toHaveBeenCalledOnce());
+        if (outcome === "no-period")
+          expect(
+            await screen.findByText("No active reporting period"),
+          ).toBeInTheDocument();
+        else {
+          await waitFor(() =>
+            expect(
+              screen.queryByTestId("weekly-report-skeleton"),
+            ).not.toBeInTheDocument(),
+          );
+          expect(
+            screen.queryByText("No active reporting period"),
+          ).not.toBeInTheDocument();
+          expect(
+            document.getElementById(
+              "report-product-11111111-1111-4111-8111-cccccccccccc",
+            ),
+          ).not.toBeNull();
+        }
+      } finally {
+        rendered.unmount();
+        client.clear();
+        onlineManager.setOnline(onlineBefore);
+      }
+    },
+  );
 });

@@ -1,5 +1,6 @@
 "use client";
 
+import { MAX_REOPEN_NOTE_LENGTH } from "@customreport/shared";
 import type { Ref } from "react";
 
 export type ReopenDecision = "approved" | "rejected";
@@ -15,9 +16,6 @@ export interface ReopenRespondFormProps {
   readonly pendingDecision: ReopenDecision | undefined;
   readonly textareaRef?: Ref<HTMLTextAreaElement> | undefined;
 }
-
-// Matches admin.respondReopenRequest note cap on the API.
-const MAX_REOPEN_NOTE_LENGTH = 500;
 
 function ReopenRespondActions({
   onCancel,

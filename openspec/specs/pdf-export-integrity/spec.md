@@ -638,6 +638,13 @@ its first entity header.
 - **THEN** its records continue across page boundaries without being suppressed
 - **AND** the Product Reports or Activity Reports heading remains with the first entity header instead of occupying an otherwise empty page
 
+#### Scenario: A frozen report has no products
+
+- **GIVEN** a frozen report whose product collection is empty
+- **WHEN** the job-bound print template renders it
+- **THEN** it emits neither a Product Reports heading nor a page break for that absent collection
+- **AND** Activity Reports content and nonempty Product report output remain unchanged
+
 ### Requirement: Job print preserves frozen Activity content
 
 The job-bound print projection MUST render Activity-parented items, risks, and

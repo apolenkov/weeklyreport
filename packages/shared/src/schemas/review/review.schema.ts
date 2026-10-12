@@ -44,12 +44,8 @@ export const reviewAcknowledgeInputSchema = z
   .readonly();
 
 /** Validates acknowledgement-list scope for one report group. */
-export const reviewListAcknowledgementsInputSchema = z
-  .object({
-    reportId: z.uuid(),
-    groupId: z.uuid(),
-  })
-  .readonly();
+export const reviewListAcknowledgementsInputSchema =
+  reviewAcknowledgeInputSchema;
 
 /** Validates a comment anchored to exactly one item, risk, or decision. */
 export const reviewCommentInputSchema = z

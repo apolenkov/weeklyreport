@@ -1,15 +1,16 @@
+const ACTION_ICON_COMMON_PROPS = {
+  viewBox: "0 0 24 24",
+  stroke: "currentColor",
+  fill: "none",
+  strokeWidth: 2,
+  strokeLinecap: "round",
+  strokeLinejoin: "round",
+  "aria-hidden": "true",
+} as const;
+
 export function PlusIcon() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg {...ACTION_ICON_COMMON_PROPS} className="h-4 w-4">
       <line x1="12" y1="5" x2="12" y2="19" />
       <line x1="5" y1="12" x2="19" y2="12" />
     </svg>
@@ -24,16 +25,7 @@ interface ActionIconProps {
 // app; feature slices size them, never re-draw them.
 export function EditIcon({ className = "h-4 w-4" }: ActionIconProps) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className={className}
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg {...ACTION_ICON_COMMON_PROPS} className={className}>
       <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
       <path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
     </svg>
@@ -42,16 +34,7 @@ export function EditIcon({ className = "h-4 w-4" }: ActionIconProps) {
 
 export function DeleteIcon({ className = "h-4 w-4" }: ActionIconProps) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className={className}
-      stroke="currentColor"
-      fill="none"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
+    <svg {...ACTION_ICON_COMMON_PROPS} className={className}>
       <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6" />
     </svg>
   );
@@ -59,18 +42,13 @@ export function DeleteIcon({ className = "h-4 w-4" }: ActionIconProps) {
 
 export function CheckIcon({
   className = "h-4 w-4",
-  strokeWidth = 2,
+  strokeWidth = ACTION_ICON_COMMON_PROPS.strokeWidth,
 }: ActionIconProps & { readonly strokeWidth?: number }) {
   return (
     <svg
-      viewBox="0 0 24 24"
+      {...ACTION_ICON_COMMON_PROPS}
       className={className}
-      stroke="currentColor"
-      fill="none"
       strokeWidth={strokeWidth}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
     >
       <polyline points="20 6 9 17 4 12" />
     </svg>

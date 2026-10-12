@@ -18,9 +18,9 @@ export async function revokeSectionSubmissionTx(
   prisma: PrismaService,
   sectionId: string,
   revokedBy: string,
+  scope: Record<string, unknown>,
 ): Promise<void> {
-  // The caller proves group scope. This transaction locks the parent report;
-  // the submitted-state CAS remains defense-in-depth for section races.
+  // Recheck caller scope in the submitted CAS after the parent lifecycle lock.
   await prisma.$transaction(async (tx) => {
     const gate = await lockCurrentEditableReport(tx, { sectionId });
     if (gate.kind === "inconsistent") {
@@ -37,8 +37,17 @@ export async function revokeSectionSubmissionTx(
     if (gate.kind !== "editable") {
       throw new LeadFormConstraintError(NON_EDITABLE_PERIOD_MESSAGE);
     }
-    const count = await applyRevokeTransition(tx, sectionId, revokedBy);
+    const count = await applyRevokeTransition(tx, sectionId, revokedBy, {
+      scope,
+    });
     if (count === 0) {
+      const available = await tx.reportSection.findFirst({
+        where: { AND: [{ id: sectionId }, scope] },
+        select: { id: true },
+      });
+      if (!available) {
+        throw new LeadFormDomainError("The target section no longer exists.");
+      }
       throw new LeadFormConstraintError(NON_EDITABLE_PERIOD_MESSAGE);
     }
   });

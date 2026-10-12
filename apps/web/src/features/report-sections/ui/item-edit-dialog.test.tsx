@@ -724,3 +724,86 @@ it("validates an unresolved requested parent and recovers through the public pic
     text: "Deliver the pipeline",
   });
 });
+
+describe("ItemEditDialog — reported status-dependent validation", () => {
+  const productId = "11111111-1111-4111-8111-111111111111";
+  const currentProducts: Product[] = [
+    { id: productId, name: "Platform", overallStatus: "on-track", stages: [] },
+  ];
+  it.each([
+    {
+      label: "valid retained next step",
+      plan: "Watch the deployment",
+      description: "Ship this update",
+      remaining: undefined,
+    },
+    {
+      label: "over-limit retained next step",
+      plan: "x".repeat(501),
+      description: "Ship this update",
+      remaining: "Next step must be 500 characters or fewer.",
+    },
+    {
+      label: "unrelated description error",
+      plan: "Watch the deployment",
+      description: "",
+      remaining: undefined,
+    },
+  ])(
+    "refreshes reported validation on Resume: $label",
+    async ({ plan, description, remaining }) => {
+      const user = userEvent.setup();
+      const onSave = vi.fn<(item: KanbanItem) => void>();
+      render(
+        <ItemEditDialog
+          open
+          item={null}
+          products={currentProducts}
+          week="current"
+          currentUserName="Synthetic lead"
+          defaultProductId={productId}
+          stagesForProduct={() => ["Development"]}
+          onSave={onSave}
+          onCancel={vi.fn()}
+        />,
+      );
+      const text = screen.getByLabelText("Description *");
+      if (description) await user.type(text, description);
+      const field = screen.getByRole("textbox", { name: /Next step/ });
+      await user.click(field);
+      await user.paste(plan);
+      await user.click(screen.getByRole("button", { name: /Done/ }));
+      await user.click(screen.getByRole("button", { name: "Save item" }));
+      expect(
+        screen.getByText(
+          "A completed item cannot have a next step. Resume it or clear the plan.",
+        ),
+      ).toBeInTheDocument();
+      expect(onSave).not.toHaveBeenCalled();
+
+      await user.click(screen.getByRole("button", { name: /In Progress/i }));
+      expect(
+        screen.queryByText(
+          "A completed item cannot have a next step. Resume it or clear the plan.",
+        ),
+      ).not.toBeInTheDocument();
+      expect(field).toHaveValue(plan);
+      if (remaining) expect(screen.getByText(remaining)).toBeInTheDocument();
+      else expect(field).toHaveAttribute("aria-invalid", "false");
+      if (!description)
+        expect(screen.getByText("Description is required")).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Save item" }));
+      if (remaining || !description) expect(onSave).not.toHaveBeenCalled();
+      else {
+        expect(onSave).toHaveBeenCalledTimes(1);
+        expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+          text: description,
+          nextStepText: plan,
+          status: "in-progress",
+          productId,
+          stageNames: ["Development"],
+        });
+      }
+    },
+  );
+});

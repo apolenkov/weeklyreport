@@ -9,27 +9,26 @@ import {
 const MAX_JIRA_ACCOUNT_LENGTH = 100;
 const MAX_LINKED_PRODUCTS = 50;
 const MAX_JIRA_ACCOUNTS = 20;
+const activityNameSchema = safeText({ max: MAX_ACTIVITY_NAME_LENGTH });
+const jiraAccountSchema = safeText({ max: MAX_JIRA_ACCOUNT_LENGTH });
 
 /** Describes a stage-less reporting activity and its display-only product links. */
 export const projectActivitySchema = z
   .object({
     id: z.uuid(),
-    name: z.string().min(1).max(MAX_ACTIVITY_NAME_LENGTH),
+    name: activityNameSchema,
     groupId: z.uuid(),
     // M:N label-only product links from linkedProductIds — never feeds product health.
     // Same record the section read model carries, so the two halves can't drift.
     linkedProducts: z.array(linkedProductSchema).readonly().default([]),
-    jiraAccounts: z
-      .array(z.string().min(1).max(MAX_JIRA_ACCOUNT_LENGTH))
-      .readonly()
-      .default([]),
+    jiraAccounts: z.array(jiraAccountSchema).readonly().default([]),
     archived: z.boolean(),
     leadIds: z.array(z.uuid()).readonly().default([]),
   })
   .readonly();
 
 const projectActivityCreateObjectSchema = z.object({
-  name: safeText({ max: MAX_ACTIVITY_NAME_LENGTH }),
+  name: activityNameSchema,
   groupId: z.uuid(),
   // Reject duplicates at the wire; lowercase for case-sensitive @@unique comparisons.
   linkedProductIds: z
@@ -43,7 +42,7 @@ const projectActivityCreateObjectSchema = z.object({
     .readonly()
     .default([]),
   jiraAccounts: z
-    .array(safeText({ max: MAX_JIRA_ACCOUNT_LENGTH }))
+    .array(jiraAccountSchema)
     .max(MAX_JIRA_ACCOUNTS)
     .readonly()
     .default([]),

@@ -31,7 +31,7 @@ export function applyRiskSeverityFloor(
         product.id,
         stage.stageName,
       );
-      const floored = deriveEffectiveStageStatus(stage.status, covering, []);
+      const floored = deriveEffectiveStageStatus(stage.status, covering);
       return floored === stage.status ? stage : { ...stage, status: floored };
     }),
   }));

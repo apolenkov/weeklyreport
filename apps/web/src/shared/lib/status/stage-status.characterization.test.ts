@@ -5,36 +5,13 @@ import { deriveEffectiveStageStatus } from "./stage-status";
 
 type Grid = CanonicalStatus;
 
-const PRECEDENCE: Record<Grid, number> = {
-  empty: 0,
-  "on-track": 1,
-  "at-risk": 2,
-  blocked: 3,
+// Independent expected outputs for the admitted manual-status contract.
+const WITHOUT_RISKS: Readonly<Record<Grid, Grid>> = {
+  empty: "empty",
+  "on-track": "on-track",
+  "at-risk": "on-track",
+  blocked: "on-track",
 };
-
-// Independent restatement of the rule (not a call into the SUT): worst covering
-// severity wins; orphaned manual at-risk/blocked collapses to on-track.
-function expectedStatus(
-  explicit: Grid,
-  risks: readonly { severity: RiskSeverity }[],
-  items: readonly { workflowStatus: string }[],
-): Grid {
-  const candidates: Grid[] = [
-    ...risks.map<Grid>((r) =>
-      r.severity === "blocked" ? "blocked" : "at-risk",
-    ),
-    ...(items.some((i) => i.workflowStatus === "blocked")
-      ? (["blocked"] as const)
-      : []),
-  ];
-  const best = candidates.reduce<Grid>(
-    (worst, candidate) =>
-      PRECEDENCE[candidate] > PRECEDENCE[worst] ? candidate : worst,
-    "empty",
-  );
-  if (best !== "empty") return best;
-  return explicit === "empty" ? "empty" : "on-track";
-}
 
 describe("deriveEffectiveStageStatus — characterization grid", () => {
   const explicitStatuses: readonly Grid[] = [
@@ -46,51 +23,47 @@ describe("deriveEffectiveStageStatus — characterization grid", () => {
   const riskSets: {
     readonly label: string;
     readonly risks: readonly { severity: RiskSeverity }[];
+    readonly expectedRiskStatus: Grid | null;
   }[] = [
-    { label: "no risks", risks: [] },
-    { label: "one at-risk", risks: [{ severity: "at-risk" }] },
-    { label: "one blocked", risks: [{ severity: "blocked" }] },
+    { label: "no risks", risks: [], expectedRiskStatus: null },
+    {
+      label: "one at-risk",
+      risks: [{ severity: "at-risk" }],
+      expectedRiskStatus: "at-risk",
+    },
+    {
+      label: "one blocked",
+      risks: [{ severity: "blocked" }],
+      expectedRiskStatus: "blocked",
+    },
     {
       label: "at-risk + blocked",
       risks: [{ severity: "at-risk" }, { severity: "blocked" }],
+      expectedRiskStatus: "blocked",
     },
   ];
-  const itemSets: {
-    readonly label: string;
-    readonly items: readonly { workflowStatus: string }[];
-  }[] = [
-    { label: "no items", items: [] },
-    { label: "in-progress item", items: [{ workflowStatus: "in_progress" }] },
-    { label: "blocked item", items: [{ workflowStatus: "blocked" }] },
-  ];
-
   const cases = explicitStatuses.flatMap((explicit) =>
-    riskSets.flatMap((riskSet) =>
-      itemSets.map((itemSet) => ({
-        explicit,
-        riskLabel: riskSet.label,
-        risks: riskSet.risks,
-        itemLabel: itemSet.label,
-        items: itemSet.items,
-      })),
-    ),
+    riskSets.map((riskSet) => ({
+      explicit,
+      riskLabel: riskSet.label,
+      risks: riskSet.risks,
+      expected: riskSet.expectedRiskStatus ?? WITHOUT_RISKS[explicit],
+    })),
   );
 
   it.each(cases)(
-    "explicit=$explicit risks=$riskLabel items=$itemLabel",
-    ({ explicit, risks, items }) => {
-      expect(deriveEffectiveStageStatus(explicit, risks, items)).toBe(
-        expectedStatus(explicit, risks, items),
-      );
+    "explicit=$explicit risks=$riskLabel",
+    ({ explicit, risks, expected }) => {
+      expect(deriveEffectiveStageStatus(explicit, risks)).toBe(expected);
     },
   );
 
-  it("collapse-down: manual at-risk/blocked with no backing risk or item collapses to on-track", () => {
-    expect(deriveEffectiveStageStatus("at-risk", [], [])).toBe("on-track");
-    expect(deriveEffectiveStageStatus("blocked", [], [])).toBe("on-track");
+  it("collapse-down: manual at-risk/blocked with no backing risk collapses to on-track", () => {
+    expect(deriveEffectiveStageStatus("at-risk", [])).toBe("on-track");
+    expect(deriveEffectiveStageStatus("blocked", [])).toBe("on-track");
   });
 
   it("collapse-down does not apply to empty (stays empty)", () => {
-    expect(deriveEffectiveStageStatus("empty", [], [])).toBe("empty");
+    expect(deriveEffectiveStageStatus("empty", [])).toBe("empty");
   });
 });

@@ -3,6 +3,7 @@
 import { type PrismaClient, Role } from "@prisma/client";
 
 import { DEFAULT_REPORTING_GROUP } from "../../../packages/shared/src/organization/default-reporting-group.js";
+import { ORGANIZATION_SINGLETON_ID } from "../../../packages/shared/src/schemas/organization/organization.js";
 import {
   ADMIN_USER_ID,
   DEFAULT_REPORTING_GROUP_ID,
@@ -85,13 +86,13 @@ async function seedGroupAndOrganization(prisma: PrismaClient): Promise<void> {
     },
   });
   await prisma.organization.upsert({
-    where: { id: "singleton" },
+    where: { id: ORGANIZATION_SINGLETON_ID },
     update: {
       shortName: ORGANIZATION_SHORT_NAME,
       fullName: ORGANIZATION_FULL_NAME,
     },
     create: {
-      id: "singleton",
+      id: ORGANIZATION_SINGLETON_ID,
       shortName: ORGANIZATION_SHORT_NAME,
       fullName: ORGANIZATION_FULL_NAME,
     },

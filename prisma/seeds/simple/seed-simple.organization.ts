@@ -1,12 +1,13 @@
 import { type PrismaClient, ReminderAudience } from "@prisma/client";
 
 import { DEFAULT_REPORTING_GROUP } from "../../../packages/shared/src/organization/default-reporting-group.js";
+import { ORGANIZATION_SINGLETON_ID } from "../../../packages/shared/src/schemas/organization/organization.js";
 import {
   DEFAULT_REPORTING_GROUP_ID,
   FINANCE_GROUP_ID,
 } from "./seed-simple.ids.js";
 
-// Organization and AppSettings are single-row tables keyed by this literal.
+// AppSettings owns its separate singleton identity.
 const SINGLETON_ID = "singleton";
 
 const ORGANIZATION = {
@@ -53,9 +54,9 @@ export async function seedOrganizationSettings(
 ): Promise<void> {
   console.log("[seed-simple] Creating organization + app settings...");
   await prisma.organization.upsert({
-    where: { id: SINGLETON_ID },
+    where: { id: ORGANIZATION_SINGLETON_ID },
     update: ORGANIZATION,
-    create: { id: SINGLETON_ID, ...ORGANIZATION },
+    create: { id: ORGANIZATION_SINGLETON_ID, ...ORGANIZATION },
   });
   await prisma.appSettings.upsert({
     where: { id: SINGLETON_ID },

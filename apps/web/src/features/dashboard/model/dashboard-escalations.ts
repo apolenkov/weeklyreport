@@ -72,3 +72,16 @@ export function escalationToBlockedItem(
     description: escalation.description,
   };
 }
+
+/** Assigns distinct occurrence keys without merging identical risk rows. */
+export function keyIssues(
+  items: readonly BlockedAtRiskItem[],
+): readonly { readonly key: string; readonly item: BlockedAtRiskItem }[] {
+  const occurrences = new Map<string, number>();
+  return items.map((item) => {
+    const contentKey = `${item.productId}|${item.authorId}|${item.stage}|${item.severity}|${item.description}`;
+    const occurrence = occurrences.get(contentKey) ?? 0;
+    occurrences.set(contentKey, occurrence + 1);
+    return { key: `${contentKey}|${occurrence}`, item };
+  });
+}

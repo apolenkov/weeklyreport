@@ -1,5 +1,6 @@
 import {
   type Organization,
+  ORGANIZATION_SINGLETON_ID,
   organizationSchema,
   type OrganizationUpdate,
 } from "@customreport/shared";
@@ -7,10 +8,6 @@ import { Inject, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { OrganizationRepository } from "./organization.service.js";
-
-// One Organization row per deployment; the fixed id is the schema-level
-// singleton invariant (`organizationSchema.id` is `z.literal("singleton")`).
-const ORGANIZATION_SINGLETON_ID = "singleton";
 
 // The init migration and seed establish this singleton before the API starts.
 // Reads and updates must expose a missing row instead of silently rebuilding it.

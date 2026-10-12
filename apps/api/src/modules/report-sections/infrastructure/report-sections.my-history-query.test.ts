@@ -349,26 +349,29 @@ function pagedPrisma(
   } as never;
 }
 
-it("keeps equal-coordinate live and published rows distinct across pages", async () => {
-  const instant = new Date("2026-05-04T12:00:00.000Z");
-  const periodStart = new Date("2026-05-04T00:00:00.000Z");
-  const id = "a0000000-0000-4000-8000-000000000011";
-  const prisma = pagedPrisma(
-    [liveRow(id, periodStart, instant)],
-    [publishedRow(id, instant.toISOString(), instant.toISOString())],
-  );
-  const first = await queryMyHistoryPage(prisma, authorId, { limit: 1 });
-  const second = await queryMyHistoryPage(prisma, authorId, {
-    limit: 1,
-    cursor: first.nextCursor ?? undefined,
-  });
-  expect(first.items).toHaveLength(1);
-  expect(second.items).toHaveLength(1);
-  expect(first.items[0]?.archived).toBe(true);
-  expect(second.items[0]?.archived).toBe(false);
-  expect(first.items[0]?.sectionId).toBe(second.items[0]?.sectionId);
-  expect(second.nextCursor).toBeNull();
-});
+it.each([4, 5, 6, 7, 8])(
+  "consumes UUID v%s cursors while keeping equal-coordinate live/published rows distinct",
+  async (version) => {
+    const instant = new Date("2026-05-04T12:00:00.000Z");
+    const periodStart = new Date("2026-05-04T00:00:00.000Z");
+    const id = `a0000000-0000-${version}000-8000-000000000011`;
+    const prisma = pagedPrisma(
+      [liveRow(id, periodStart, instant)],
+      [publishedRow(id, instant.toISOString(), instant.toISOString())],
+    );
+    const first = await queryMyHistoryPage(prisma, authorId, { limit: 1 });
+    const second = await queryMyHistoryPage(prisma, authorId, {
+      limit: 1,
+      cursor: first.nextCursor ?? undefined,
+    });
+    expect(first.items).toHaveLength(1);
+    expect(second.items).toHaveLength(1);
+    expect(first.items[0]?.archived).toBe(true);
+    expect(second.items[0]?.archived).toBe(false);
+    expect(first.items[0]?.sectionId).toBe(second.items[0]?.sectionId);
+    expect(second.nextCursor).toBeNull();
+  },
+);
 
 it("orders merged history by period before either source event time", async () => {
   const newerReportId = "a0000000-0000-4000-8000-000000000013";

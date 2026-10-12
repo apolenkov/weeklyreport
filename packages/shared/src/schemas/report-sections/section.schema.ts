@@ -221,6 +221,23 @@ export const publishedReportSectionReadModelSchema =
       risks: z.array(publishedRiskReadModelSchema).readonly(),
       decisions: z.array(publishedDecisionReadModelSchema).readonly(),
     })
+    .superRefine((section, context) => {
+      const firstIndexes = new Map(
+        section.items
+          .map((item, index) => [item.stableId, index] as const)
+          .toReversed(),
+      );
+      section.items.forEach((item, index) => {
+        if (firstIndexes.get(item.stableId) !== index) {
+          context.addIssue({
+            code: "custom",
+            path: ["items", index, "stableId"],
+            message:
+              "Item stableId must be unique within its published section.",
+          });
+        }
+      });
+    })
     .readonly();
 
 const publishedRecordIdentityFields = {

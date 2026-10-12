@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  adminCreatePeriodManualSchema,
   adminUpdatePeriodManualSchema,
   MAX_WEEK_LABEL_LENGTH,
   reportPeriodSchema,
@@ -121,5 +122,56 @@ describe("reportPeriodSchema — nullable deadline", () => {
   it("still rejects an ABSENT deadline (null must be explicit)", () => {
     const { deadline: _dropped, ...withoutDeadline } = validPeriod;
     expect(() => reportPeriodSchema.parse(withoutDeadline)).toThrow();
+  });
+});
+
+describe("manual period input — stored Report date format", () => {
+  it.each([
+    { mode: "create", field: "periodStart" },
+    { mode: "create", field: "periodEnd" },
+    { mode: "create", field: "deadline" },
+    { mode: "update", field: "periodStart" },
+    { mode: "update", field: "periodEnd" },
+    { mode: "update", field: "deadline" },
+  ])("rejects pre-2000 $field in $mode", ({ mode, field }) => {
+    const parsed =
+      mode === "create"
+        ? adminCreatePeriodManualSchema.safeParse({
+            periodStart: "2026-07-06T00:00:00Z",
+            [field]: "1999-12-31T23:59:59.999Z",
+          })
+        : adminUpdatePeriodManualSchema.safeParse({
+            reportId: REPORT_ID,
+            [field]: "1999-12-31T23:59:59.999Z",
+          });
+    expect(parsed.success).toBe(false);
+    if (!parsed.success)
+      expect(parsed.error.issues).toContainEqual(
+        expect.objectContaining({ path: [field] }),
+      );
+  });
+
+  it("accepts the UTC 2000 boundary and preserves omission/null", () => {
+    const boundary = "2000-01-01T00:00:00.000Z";
+    const create = adminCreatePeriodManualSchema.parse({
+      periodStart: boundary,
+      periodEnd: boundary,
+      deadline: boundary,
+    });
+    expect(create.periodStart.toISOString()).toBe(boundary);
+    expect(create.periodEnd?.toISOString()).toBe(boundary);
+    expect(create.deadline?.toISOString()).toBe(boundary);
+    expect(
+      adminCreatePeriodManualSchema.parse({ periodStart: boundary }).periodEnd,
+    ).toBeUndefined();
+    const update = adminUpdatePeriodManualSchema.parse({
+      reportId: REPORT_ID,
+      periodStart: boundary,
+      periodEnd: boundary,
+      deadline: null,
+    });
+    expect(update.periodStart?.toISOString()).toBe(boundary);
+    expect(update.periodEnd?.toISOString()).toBe(boundary);
+    expect(update.deadline).toBeNull();
   });
 });

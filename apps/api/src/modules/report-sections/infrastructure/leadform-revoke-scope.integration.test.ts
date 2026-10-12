@@ -113,7 +113,11 @@ describe("lead-form revoke scope (integration)", () => {
     });
 
     await expect(
-      repo.revokeSectionSubmission(testData.section.id, testData.head.id),
+      repo.revokeSectionSubmission(
+        testData.section.id,
+        testData.head.id,
+        SCOPE_A,
+      ),
     ).rejects.toBeInstanceOf(LeadFormConstraintError);
     await expect(
       prisma.reportSection.findUnique({

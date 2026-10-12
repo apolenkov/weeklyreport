@@ -205,14 +205,19 @@ describe("RecordComments — mutation success", () => {
   });
 
   it.each([
-    ["empty", ""],
-    ["ordinary whitespace", " ".repeat(3)],
-    ["zero-width space", "\u200B"],
-    ["zero-width non-joiner", "\u200C"],
-    ["zero-width joiner", "\u200D"],
-  ])(
-    "retains and locally rejects an invisible-only draft: %s",
-    (_label, draftValue) => {
+    ["empty", "", 0],
+    ["ordinary whitespace", " ".repeat(3), 3],
+    ["zero-width space", "\u200B", 1],
+    ["zero-width non-joiner", "\u200C", 1],
+    ["zero-width joiner", "\u200D", 1],
+    [
+      "unsupported draft within the code-point budget",
+      `${"😀".repeat(1000)}\u0000`,
+      1001,
+    ],
+  ] as const)(
+    "retains and locally rejects an invalid draft: %s",
+    (_label, draftValue, characterCount) => {
       renderComments();
       const draft = screen.getByRole("textbox", {
         name: "Add a review comment",
@@ -225,7 +230,7 @@ describe("RecordComments — mutation success", () => {
       expect(draft).toHaveValue(draftValue);
       expect(draft).toHaveAttribute("aria-invalid", "true");
       expect(draft).toHaveAccessibleDescription(
-        `${draftValue.length} / ${REVIEW_COMMENT_MAX_LENGTH} Comment must contain visible characters.`,
+        `${characterCount} / ${REVIEW_COMMENT_MAX_LENGTH} Comment must contain visible characters.`,
       );
       expect(screen.getByRole("alert")).toHaveTextContent(
         "Comment must contain visible characters.",

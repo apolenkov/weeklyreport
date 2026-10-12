@@ -203,6 +203,43 @@ describe("client-error-reporting", () => {
     );
   });
 
+  it.each([
+    [
+      "Forbidden",
+      "Failed to load report: Forbidden. Reference: req-separator.",
+    ],
+    [
+      "Forbidden.",
+      "Failed to load report: Forbidden. Reference: req-separator.",
+    ],
+    [
+      "Forbidden!",
+      "Failed to load report: Forbidden! Reference: req-separator.",
+    ],
+    ["", "Failed to load report. Reference: req-separator."],
+  ])(
+    "separates the reference after non-internal message %j",
+    (message, expected) => {
+      const error = makeTRPCError(message, {
+        code: "FORBIDDEN",
+        httpStatus: 403,
+        requestId: "req-separator",
+      });
+      expect(formatClientErrorMessage("Failed to load report", error)).toBe(
+        expected,
+      );
+    },
+  );
+
+  it("preserves existing copy when no reference is present", () => {
+    expect(
+      formatClientErrorMessage("Failed to load report", new Error("Forbidden")),
+    ).toBe("Failed to load report: Forbidden");
+    expect(formatClientErrorMessage("Failed to load report", new Error())).toBe(
+      "Failed to load report",
+    );
+  });
+
   it("adds request id details to the forwarded client log context", () => {
     const error = makeTRPCError("Unexpected error", {
       code: "INTERNAL_SERVER_ERROR",

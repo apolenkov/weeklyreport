@@ -1,6 +1,7 @@
 import type { ParentActivityOption } from "../model/record-parent";
 import type { KanbanItem, Product, RiskEntry } from "../model/types";
 import { deriveItemEditFields } from "./item-edit-dialog-derive";
+import { collectItemStatusErrors } from "./item-edit-dialog-helpers";
 import type { ItemEditDraftStore } from "./item-edit-draft-store";
 import { useItemEditFormState } from "./use-item-edit-form-state";
 import { useItemEditSave } from "./use-item-edit-save";
@@ -71,7 +72,23 @@ function buildItemEditHandle(
     },
     statusSlot: derived.statusSlot,
     status: formState.status,
-    onStatusSelect: formState.setStatus,
+    onStatusSelect: (next: typeof formState.status) => {
+      formState.setStatus(next);
+      const errors = collectItemStatusErrors({
+        status: next,
+        trimmedNextStepText: formState.nextStepText.trim(),
+        trimmedPausedReason: formState.pausedReason.trim(),
+      });
+      formState.setErrors((previous) => ({
+        ...previous,
+        ...(previous.nextStepText === undefined
+          ? {}
+          : { nextStepText: errors.nextStepText }),
+        ...(previous.pausedReason === undefined
+          ? {}
+          : { pausedReason: errors.pausedReason }),
+      }));
+    },
     pausedReason: formState.pausedReason,
     pausedReasonError: formState.errors.pausedReason,
     onPausedReasonChange: (next: string) => {

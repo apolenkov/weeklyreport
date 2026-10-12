@@ -76,9 +76,9 @@ export type PeriodListItem = z.infer<typeof periodListItemSchema>;
  */
 export const adminCreatePeriodManualSchema = z
   .object({
-    periodStart: z.coerce.date(),
-    periodEnd: z.coerce.date().optional(),
-    deadline: z.coerce.date().optional(),
+    periodStart: reportDate(),
+    periodEnd: reportDate().optional(),
+    deadline: reportDate().optional(),
     weekLabel: z.string().max(MAX_WEEK_LABEL_LENGTH).optional(),
   })
   .readonly();
@@ -112,10 +112,10 @@ export type AdminCreatePeriodManualResult = z.infer<
 export const adminUpdatePeriodManualSchema = z
   .object({
     reportId: z.uuid(),
-    periodStart: z.coerce.date().optional(),
-    periodEnd: z.coerce.date().optional(),
+    periodStart: reportDate().optional(),
+    periodEnd: reportDate().optional(),
     // A cleared deadline disables deadline-driven automation for the period.
-    deadline: z.coerce.date().nullable().optional(),
+    deadline: reportDate().nullable().optional(),
     weekLabel: z.string().max(MAX_WEEK_LABEL_LENGTH).nullable().optional(),
   })
   .readonly();

@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+/** Canonical identity of the seeded Organization singleton. */
+export const ORGANIZATION_SINGLETON_ID = "singleton";
+
 /** Maximum accepted length of the compact organization brand. */
 export const MAX_SHORT_NAME_LENGTH = 16;
 /** Maximum accepted length of the full organization brand. */
@@ -25,7 +28,7 @@ const orgBrandString = (max: number) =>
  */
 export const organizationSchema = z
   .object({
-    id: z.literal("singleton"),
+    id: z.literal(ORGANIZATION_SINGLETON_ID),
     shortName: orgBrandString(MAX_SHORT_NAME_LENGTH),
     fullName: orgBrandString(MAX_FULL_NAME_LENGTH),
     createdAt: z.coerce.date(),

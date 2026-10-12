@@ -122,6 +122,32 @@ describe("currentPeriodLifecycleSchema", () => {
     ).toBe(false);
   });
 
+  it("rejects autoArchived on a nonarchived publication at the audit flag", () => {
+    const result = currentPeriodLifecycleSchema.safeParse({
+      ...lifecycleForTuple("published", "published", false, "published"),
+      autoArchived: true,
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues).toEqual([
+      expect.objectContaining({ path: ["autoArchived"] }),
+    ]);
+  });
+
+  it("retains an autoarchived publication and rejects autoarchived drafts", () => {
+    expect(
+      currentPeriodLifecycleSchema.safeParse({
+        ...lifecycleForTuple("archived", "published", true, "published"),
+        autoArchived: true,
+      }).success,
+    ).toBe(true);
+    expect(
+      currentPeriodLifecycleSchema.safeParse({
+        ...lifecycleForTuple("archived", "draft", true, "open"),
+        autoArchived: true,
+      }).success,
+    ).toBe(false);
+  });
+
   it("requires reopenedAt for the reopened lifecycle combination", () => {
     expect(
       currentPeriodLifecycleSchema.safeParse({

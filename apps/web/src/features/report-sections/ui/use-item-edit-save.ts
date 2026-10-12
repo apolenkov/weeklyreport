@@ -1,4 +1,3 @@
-import { SAFE_TEXT_MAX_LENGTH } from "@customreport/shared";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 
 import type {
@@ -10,6 +9,7 @@ import {
   buildActivityItemSave,
   buildProductItemSave,
   collectItemErrors,
+  collectItemStatusErrors,
   firstInvalidControl,
   resolveSaveProduct,
 } from "./item-edit-dialog-helpers";
@@ -56,26 +56,11 @@ function collectSaveErrors(
   });
   return {
     ...errors,
-    ...(Array.from(text.trimmedNextStepText).length > SAFE_TEXT_MAX_LENGTH
-      ? {
-          nextStepText: `Next step must be ${SAFE_TEXT_MAX_LENGTH} characters or fewer.`,
-        }
-      : {}),
-    ...(args.status === "completed" && text.trimmedNextStepText.length > 0
-      ? {
-          nextStepText:
-            "A completed item cannot have a next step. Resume it or clear the plan.",
-        }
-      : {}),
-    ...(args.status === "paused" && text.trimmedPausedReason.length === 0
-      ? { pausedReason: "A reason is required to pause an item." }
-      : {}),
-    ...(args.status === "paused" &&
-    Array.from(text.trimmedPausedReason).length > SAFE_TEXT_MAX_LENGTH
-      ? {
-          pausedReason: `Pause reason must be ${SAFE_TEXT_MAX_LENGTH} characters or fewer.`,
-        }
-      : {}),
+    ...collectItemStatusErrors({
+      status: args.status,
+      trimmedNextStepText: text.trimmedNextStepText,
+      trimmedPausedReason: text.trimmedPausedReason,
+    }),
   };
 }
 

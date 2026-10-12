@@ -137,6 +137,10 @@ export function getClientErrorDetails(error: unknown): ClientErrorDetails {
 const INVALID_LINK_MESSAGE =
   "This link is invalid or the report no longer exists.";
 
+function sentence(text: string): string {
+  return /[.!?]$/u.test(text) ? text : `${text}.`;
+}
+
 export function formatClientErrorMessage(
   prefix: string,
   error: unknown,
@@ -156,10 +160,11 @@ export function formatClientErrorMessage(
   }
 
   if (error instanceof Error && error.message) {
-    return `${prefix}: ${error.message}${ref}`;
+    const message = `${prefix}: ${error.message}`;
+    return `${ref ? sentence(message) : message}${ref}`;
   }
 
-  return `${prefix}${ref}`;
+  return `${ref ? sentence(prefix) : prefix}${ref}`;
 }
 
 export function buildClientErrorLogEntry(

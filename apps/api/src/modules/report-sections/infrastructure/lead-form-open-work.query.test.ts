@@ -171,95 +171,103 @@ function client(options: {
 }
 
 describe("queryLeadOpenWorkPage", () => {
-  it("paginates reports across gaps and returns terminal shadow occurrences newest first", async () => {
-    const cancelledResolution = {
-      kind: "wont_do",
-      eventId: "d0000000-0000-4000-8000-000000000013",
-      reason: "No longer needed",
-      actorId: AUTHOR_ID,
-      actorName: "Own Lead",
-      occurredAt: "2026-08-05T12:00:00.000Z",
-      previousState: {
-        type: "current",
-        workflowStatus: "planned",
-        pausedReason: null,
-        nextStepText: null,
-      },
-    };
-    const newer = reportRow(
-      NEWER_REPORT_ID,
-      NEWER_SECTION_ID,
-      "2026-08-17T00:00:00.000Z",
-      [item(NEWER_ITEM_ID, { workflowStatus: "done" })],
-    );
-    const older = reportRow(
-      OLDER_REPORT_ID,
-      OLDER_SECTION_ID,
-      "2026-08-03T00:00:00.000Z",
-      [item(OLDER_ITEM_ID, { resolution: cancelledResolution })],
-    );
-    const { prisma, findMany } = client({
-      firstPage: [newer, older],
-      laterPage: [older],
-    });
-
-    const first = await queryLeadOpenWorkPage(
-      prisma,
-      TARGET_REPORT_ID,
-      AUTHOR_ID,
-      { limit: 1 },
-    );
-    expect(first).toMatchObject({
-      occurrences: [
-        {
-          source: "published",
-          reportId: NEWER_REPORT_ID,
-          reportSectionId: NEWER_SECTION_ID,
-          parent: {
-            kind: "product",
-            id: OWNED_PROJECT,
-            name: "Frozen Platform",
-          },
-          item: {
-            id: NEWER_ITEM_ID,
-            stableId: STABLE_ID,
-            workflowStatus: "done",
-          },
+  it.each([4, 5, 6, 7, 8])(
+    "consumes issued UUID v%s cursors across gaps and terminal shadows",
+    async (version) => {
+      const newerReportId = `20000000-0000-${version}000-8000-000000000002`;
+      const cancelledResolution = {
+        kind: "wont_do",
+        eventId: "d0000000-0000-4000-8000-000000000013",
+        reason: "No longer needed",
+        actorId: AUTHOR_ID,
+        actorName: "Own Lead",
+        occurredAt: "2026-08-05T12:00:00.000Z",
+        previousState: {
+          type: "current",
+          workflowStatus: "planned",
+          pausedReason: null,
+          nextStepText: null,
         },
-      ],
-    });
-    expect(JSON.stringify(first)).not.toContain("Private item");
-    expect(first?.nextCursor).not.toBeNull();
-    expect(findMany.mock.calls[0]?.[0]).toMatchObject({
-      where: {
-        periodStart: { lt: new Date("2026-09-01T00:00:00.000Z") },
-      },
-      orderBy: [{ periodStart: "desc" }, { createdAt: "desc" }, { id: "desc" }],
-      take: 2,
-    });
+      };
+      const newer = reportRow(
+        newerReportId,
+        NEWER_SECTION_ID,
+        "2026-08-17T00:00:00.000Z",
+        [item(NEWER_ITEM_ID, { workflowStatus: "done" })],
+      );
+      const older = reportRow(
+        OLDER_REPORT_ID,
+        OLDER_SECTION_ID,
+        "2026-08-03T00:00:00.000Z",
+        [item(OLDER_ITEM_ID, { resolution: cancelledResolution })],
+      );
+      const { prisma, findMany } = client({
+        firstPage: [newer, older],
+        laterPage: [older],
+      });
 
-    const second = await queryLeadOpenWorkPage(
-      prisma,
-      TARGET_REPORT_ID,
-      AUTHOR_ID,
-      { cursor: first?.nextCursor ?? undefined, limit: 1 },
-    );
-    expect(second).toMatchObject({
-      occurrences: [
-        {
-          reportId: OLDER_REPORT_ID,
-          item: {
-            id: OLDER_ITEM_ID,
-            stableId: STABLE_ID,
-            resolution: { kind: "wont_do" },
+      const first = await queryLeadOpenWorkPage(
+        prisma,
+        TARGET_REPORT_ID,
+        AUTHOR_ID,
+        { limit: 1 },
+      );
+      expect(first).toMatchObject({
+        occurrences: [
+          {
+            source: "published",
+            reportId: newerReportId,
+            reportSectionId: NEWER_SECTION_ID,
+            parent: {
+              kind: "product",
+              id: OWNED_PROJECT,
+              name: "Frozen Platform",
+            },
+            item: {
+              id: NEWER_ITEM_ID,
+              stableId: STABLE_ID,
+              workflowStatus: "done",
+            },
           },
+        ],
+      });
+      expect(JSON.stringify(first)).not.toContain("Private item");
+      expect(first?.nextCursor).not.toBeNull();
+      expect(findMany.mock.calls[0]?.[0]).toMatchObject({
+        where: {
+          periodStart: { lt: new Date("2026-09-01T00:00:00.000Z") },
         },
-      ],
-      nextCursor: null,
-    });
-    expect(findMany.mock.calls[1]?.[0].where?.OR).toHaveLength(3);
-    expect(findMany.mock.calls[1]?.[0].take).toBe(2);
-  });
+        orderBy: [
+          { periodStart: "desc" },
+          { createdAt: "desc" },
+          { id: "desc" },
+        ],
+        take: 2,
+      });
+
+      const second = await queryLeadOpenWorkPage(
+        prisma,
+        TARGET_REPORT_ID,
+        AUTHOR_ID,
+        { cursor: first?.nextCursor ?? undefined, limit: 1 },
+      );
+      expect(second).toMatchObject({
+        occurrences: [
+          {
+            reportId: OLDER_REPORT_ID,
+            item: {
+              id: OLDER_ITEM_ID,
+              stableId: STABLE_ID,
+              resolution: { kind: "wont_do" },
+            },
+          },
+        ],
+        nextCursor: null,
+      });
+      expect(findMany.mock.calls[1]?.[0].where?.OR).toHaveLength(3);
+      expect(findMany.mock.calls[1]?.[0].take).toBe(2);
+    },
+  );
 
   it("reads only the author's submitted section when no snapshot exists", async () => {
     const historical = {

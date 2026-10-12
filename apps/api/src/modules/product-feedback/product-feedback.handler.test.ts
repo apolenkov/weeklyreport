@@ -3,7 +3,10 @@ import type { AddressInfo } from "node:net";
 
 import { AUTH_COOKIE_NAME, type UserSession } from "@customreport/shared";
 import cookieParser from "cookie-parser";
-import express from "express";
+import express, {
+  type Request,
+  type Response as ExpressResponse,
+} from "express";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PRODUCT_FEEDBACK_JSON_LIMIT } from "../../infrastructure/http/ingress-limits";
@@ -444,5 +447,96 @@ describe("authenticated product-feedback ingress", () => {
     } finally {
       server.close();
     }
+  });
+});
+
+describe("isolated authenticated feedback list — no listener", () => {
+  async function listRequest(url: unknown, serverFault = false) {
+    sessions.mockResolvedValue(session("lead"));
+    const repository = new ProductFeedbackMemoryRepository();
+    const list = vi.spyOn(repository, "list");
+    if (serverFault) list.mockRejectedValueOnce(new Error("Repository failed"));
+    const handler = createAuthenticatedFeedbackHandler({
+      prisma: {} as PrismaService,
+      repository,
+      verifySessionToken: () => session("lead"),
+      sessionRevocation: { isRevoked: () => Promise.resolve(false) },
+      frontendOrigin: ORIGIN,
+      logger: createNullLogger(),
+    });
+    const request = {
+      method: "GET",
+      path: "/feedback",
+      query: url === undefined ? {} : { url },
+      cookies: { [AUTH_COOKIE_NAME]: "lead-token" },
+      header: () => undefined,
+      socket: { remoteAddress: "127.0.0.1" },
+    } as unknown as Request;
+    const status = vi.fn();
+    const body = vi.fn();
+    const setHeader = vi.fn();
+    const response = {
+      status,
+      json: body,
+      setHeader,
+    } as unknown as ExpressResponse;
+    status.mockReturnValue(response);
+    body.mockReturnValue(response);
+    const next = vi.fn();
+    await handler.authenticate(request, response, next);
+    expect(next).toHaveBeenCalledOnce();
+    await handler.handle(request, response, next);
+    return { status, body, setHeader, list };
+  }
+  it.each(["http://[", "http://[:::]"])(
+    "rejects malformed query %s before persistence",
+    async (url) => {
+      const result = await listRequest(url);
+      expect(result.status).toHaveBeenCalledWith(400);
+      expect(result.body).toHaveBeenCalledWith({
+        error: "invalid_request",
+        message: "Invalid feedback request.",
+      });
+      expect(result.list).not.toHaveBeenCalled();
+      expect(result.setHeader).toHaveBeenCalledWith(
+        "cache-control",
+        "no-store",
+      );
+    },
+  );
+  it.each([
+    "/reports/r-1?feedback=focus-1",
+    `${ORIGIN}/reports/r-1?feedback=focus-1`,
+  ])("retains valid scoped/focused query %s", async (url) => {
+    const result = await listRequest(url);
+    expect(result.status).toHaveBeenCalledWith(200);
+    expect(result.list).toHaveBeenCalledWith(
+      expect.objectContaining({ role: "lead", userId: "lead-user" }),
+      { limit: 100, url: "/reports/r-1" },
+      "focus-1",
+    );
+    expect(result.body).toHaveBeenCalledWith({ feedback: [], total: 0 });
+    expect(result.setHeader).toHaveBeenCalledWith("cache-control", "no-store");
+  });
+  it.each([undefined, "", ["/reports/r-1"]])(
+    "keeps unfiltered admission for absent/empty/non-string %j",
+    async (url) => {
+      const result = await listRequest(url);
+      expect(result.status).toHaveBeenCalledWith(200);
+      expect(result.list).toHaveBeenCalledWith(
+        expect.objectContaining({ role: "lead", userId: "lead-user" }),
+        { limit: 100 },
+        undefined,
+      );
+    },
+  );
+  it("keeps unexpected repository failures as server errors", async () => {
+    const result = await listRequest("/reports/r-1", true);
+    expect(result.status).toHaveBeenCalledWith(500);
+    expect(result.body).toHaveBeenCalledWith({
+      error: "server_error",
+      message: "Feedback request failed.",
+    });
+    expect(result.setHeader).toHaveBeenCalledWith("cache-control", "no-store");
   });
 });

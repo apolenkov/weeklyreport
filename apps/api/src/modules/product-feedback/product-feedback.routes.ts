@@ -2,7 +2,6 @@ import {
   feedbackStatusSchema,
   MAX_FEEDBACK_DISMISS_REASON_LENGTH,
   MAX_FEEDBACK_MESSAGE_LENGTH,
-  normalizeFeedbackPath,
   type UserSession,
 } from "@customreport/shared";
 import type { Request, Response } from "express";
@@ -16,6 +15,7 @@ import {
 } from "./agentation-inbox.repository.js";
 import { AgentationInboxActions } from "./agentation-inbox-actions.js";
 import { deleteFeedback } from "./product-feedback.delete.js";
+import { requestedFeedbackLocation } from "./product-feedback.list-location.js";
 import {
   feedbackAccessFromSession,
   type ProductFeedbackRepository,
@@ -97,13 +97,10 @@ async function listFeedback(
   const limit = requestedLimit(req.query.limit);
   const requestedUrl =
     typeof req.query.url === "string" ? req.query.url : undefined;
-  const normalizedUrl = requestedUrl
-    ? normalizeFeedbackPath(requestedUrl)
-    : undefined;
-  const search = requestedUrl
-    ? new URL(requestedUrl, deps.frontendOrigin).searchParams
-    : null;
-  const focusId = search?.get("feedback") ?? undefined;
+  const { normalizedUrl, focusId } = requestedFeedbackLocation(
+    requestedUrl,
+    deps.frontendOrigin,
+  );
   const [legacy, agentation] = await Promise.all([
     deps.repository.list(
       access,
