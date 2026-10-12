@@ -40,9 +40,9 @@ const session = {
 };
 
 const DISPOSABLE_URL =
-  "postgresql://customreport:localdev@localhost:5432/customreport_e2e";
+  "postgresql://weeklyreport:localdev@localhost:5432/weeklyreport_e2e";
 const NON_DISPOSABLE_URL =
-  "postgresql://customreport:localdev@db.internal:5432/customreport";
+  "postgresql://weeklyreport:localdev@db.internal:5432/weeklyreport";
 
 function buildBoundary(
   authDevMode: boolean,
@@ -210,12 +210,12 @@ describe("dev.runtimeTarget — observable database and Redis DB", () => {
 
   it("reports the connected database and the configured Redis DB", async () => {
     const caller = buildCaller(true, DISPOSABLE_URL, {
-      prisma: prismaReturning([{ database: "customreport_e2e" }]),
+      prisma: prismaReturning([{ database: "weeklyreport_e2e" }]),
       redisDb: 15,
     });
 
     await expect(caller.runtimeTarget()).resolves.toEqual({
-      database: "customreport_e2e",
+      database: "weeklyreport_e2e",
       redisDb: 15,
     });
   });

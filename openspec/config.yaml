@@ -77,7 +77,7 @@ context: |
     Russian is allowed only as data, seeds, comments, or tests
   - Disposable-database operations use the one exact validator in
     `prisma/guards/_destructive-guard.ts`: loopback only, raw URL path exactly
-    `customreport_e2e` or `customreport_e2e_lane_[a-o]_test`, no query/fragment
+    `weeklyreport_e2e` or `weeklyreport_e2e_lane_[a-o]_test`, no query/fragment
     or encoded aliases, `NODE_ENV != production`, and exact per-run
     `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай'`; no
     `ALLOW_PROD_DESTRUCTIVE` bypass exists for these flows
