@@ -7,6 +7,7 @@ import {
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import {
+  assertThreadHasRoom,
   emit,
   lockVisibleAnnotation,
 } from "./agentation.repository.helpers.js";
@@ -204,6 +205,9 @@ export class AgentationInboxActions {
         if (!dismissed) throw new FeedbackNotFoundError();
         return projectAgentation(dismissed, access);
       }
+      // The claim above holds the row lock; a thread already at the limit (only
+      // reachable through reopen cycles) rolls the claim back instead of growing.
+      await assertThreadHasRoom(tx, id, 0);
       const message = await tx.agentationThreadMessage.create({
         data: {
           id: randomUUID(),

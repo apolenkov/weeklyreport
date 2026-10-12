@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { Prisma, type Prisma as PrismaTypes } from "@prisma/client";
 import {
+  AGENTATION_MAX_ARRAY_LENGTH,
   type AgentationAnnotationCreate,
   type AgentationAnnotationPatch,
   type AgentationAnnotationResponse,
@@ -11,7 +12,10 @@ import {
 
 import type { AgentationRole } from "./agentation.repository.js";
 import { annotationScope } from "./agentation-scope.js";
-import type { FeedbackAccess } from "./product-feedback.repository.js";
+import {
+  type FeedbackAccess,
+  FeedbackLimitError,
+} from "./product-feedback.repository.js";
 
 type Db = Prisma.TransactionClient;
 
@@ -94,6 +98,23 @@ export function deletedAnnotationResponse(
     resolvedBy: "human",
     authorId: access.userId,
   });
+}
+
+/**
+ * Rejects a thread write once the thread holds AGENTATION_MAX_ARRAY_LENGTH
+ * messages minus the `reserved` slots kept for later writes. Callers hold the
+ * annotation or session lock, so concurrent writers cannot both pass.
+ */
+export async function assertThreadHasRoom(
+  db: Db,
+  annotationId: string,
+  reserved: number,
+): Promise<void> {
+  const messages = await db.agentationThreadMessage.count({
+    where: { annotationId },
+  });
+  if (messages >= AGENTATION_MAX_ARRAY_LENGTH - reserved)
+    throw new FeedbackLimitError("Thread message limit reached");
 }
 
 export async function lockVisibleAnnotation(

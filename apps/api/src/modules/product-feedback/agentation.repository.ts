@@ -15,6 +15,7 @@ import {
 import {
   actorId,
   annotationData,
+  assertThreadHasRoom,
   deletedAnnotationResponse,
   emit,
   findAnnotationForSync,
@@ -240,6 +241,8 @@ export class AgentationPrismaRepository extends AgentationReadRepository {
     return this.prisma.$transaction(async (db) => {
       const current = await lockVisibleAnnotation(db, access, id);
       if (!current) return null;
+      // One slot stays reserved for the dismissal reason.
+      await assertThreadHasRoom(db, id, 1);
       const content = typeof input === "string" ? input : input.content;
       const message = await db.agentationThreadMessage.create({
         data: {
