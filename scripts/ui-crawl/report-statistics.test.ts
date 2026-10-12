@@ -10,9 +10,11 @@ function report(
   findings: readonly Finding[] = [],
   key = "/fixture",
   reason: string | null = null,
+  name = "Action",
+  url = "http://127.0.0.1:50123",
 ) {
   const steps: StepRecord[] = values.map((responseMs, index) => ({
-    name: `Action ${index}`,
+    name: `${name} ${index}`,
     tag: "button",
     action: reason === null ? "pressed" : "skipped",
     reason,
@@ -24,7 +26,7 @@ function report(
   }));
   return renderMarkdown(
     {
-      url: "http://127.0.0.1:50123",
+      url,
       wallMs: 0,
       started: "fixture",
       parallel: 1,
@@ -114,4 +116,21 @@ describe("crawler response statistics", () => {
       expect(JSON.stringify(ctx.findings)).toBe(before);
     },
   );
+
+  it("keeps an observed element name and the target inside their report entries", () => {
+    const rendered = report(
+      [null],
+      [],
+      "/fixture",
+      null,
+      "Save\rDraft [x](y)",
+      "http://127.0.0.1:50123 [forged](https://evil.test)",
+    );
+
+    expect(rendered).not.toContain("\r");
+    expect(rendered).toContain(String.raw`Save Draft \[x\]\(y\) 0`);
+    expect(rendered).not.toContain("[x](y)");
+    expect(rendered).toContain(String.raw`\[forged\]\(https://evil\.test\)`);
+    expect(rendered).not.toContain("[forged](");
+  });
 });
