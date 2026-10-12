@@ -1,5 +1,10 @@
 import type { UserSession } from "@customreport/shared";
 
+export interface TelemetryOnTimeWindow {
+  readonly latestPeriodRatio: number | null;
+  readonly ratios: readonly number[];
+}
+
 export interface TelemetryRepository {
   readonly reportsThisPeriodCount: (session: UserSession) => Promise<number>;
   readonly activeLeadsLastPublishedPeriod: (
@@ -13,7 +18,7 @@ export interface TelemetryRepository {
   readonly onTimeRatioPerPeriod: (
     n: number,
     session: UserSession,
-  ) => Promise<readonly number[]>;
+  ) => Promise<TelemetryOnTimeWindow>;
 }
 
 export interface TelemetryCachePort {

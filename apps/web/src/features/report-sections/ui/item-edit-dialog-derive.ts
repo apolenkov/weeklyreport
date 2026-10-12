@@ -97,6 +97,7 @@ function deriveItemStageFields(
     effectiveStageNames,
     isDeadEnd:
       !parent.isActivityParent &&
+      parent.parentId !== undefined &&
       isZeroOwnedStageDeadEnd(availableStages, effectiveStageNames),
     statusSlot: resolveStatusSlot({
       isActivityParent: parent.isActivityParent,

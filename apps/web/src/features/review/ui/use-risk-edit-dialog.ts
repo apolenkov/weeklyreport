@@ -49,6 +49,7 @@ function toParentStageView({
   setParentAndStages,
   setSeverity,
   handleStageChange,
+  setParentError,
   setStageError,
   effectiveStageNames,
   selectedActivity,

@@ -678,3 +678,49 @@ describe("ItemEditDialog — shared next-step and pause boundaries", () => {
     },
   );
 });
+
+it("validates an unresolved requested parent and recovers through the public picker", () => {
+  const onSave = vi.fn();
+  const available: Product[] = [
+    {
+      id: "11111111-1111-4111-8111-111111111111",
+      name: "CRM",
+      overallStatus: "on-track",
+      stages: [],
+    },
+  ];
+  render(
+    <ItemEditDialog
+      open
+      item={null}
+      week="current"
+      products={available}
+      defaultProductId="22222222-2222-4222-8222-222222222222"
+      stagesForProduct={() => ["Development"]}
+      onSave={onSave}
+      onCancel={vi.fn()}
+    />,
+  );
+  fireEvent.change(screen.getByLabelText(/Description \*/i), {
+    target: { value: "Deliver the pipeline" },
+  });
+  const save = screen.getByRole("button", { name: "Save item" });
+  expect(save).toBeEnabled();
+  expect(screen.queryByText(/contact.*admin/i)).toBeNull();
+  fireEvent.click(save);
+  expect(onSave).not.toHaveBeenCalled();
+  const picker = screen.getByLabelText("Product");
+  expect(picker).toHaveAttribute("aria-invalid", "true");
+  expect(picker).toHaveFocus();
+  fireEvent.change(picker, {
+    target: { value: "product:11111111-1111-4111-8111-111111111111" },
+  });
+  expect(picker).toHaveAttribute("aria-invalid", "false");
+  fireEvent.click(save);
+  expect(onSave).toHaveBeenCalledTimes(1);
+  expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+    productId: "11111111-1111-4111-8111-111111111111",
+    stageNames: ["Development"],
+    text: "Deliver the pipeline",
+  });
+});

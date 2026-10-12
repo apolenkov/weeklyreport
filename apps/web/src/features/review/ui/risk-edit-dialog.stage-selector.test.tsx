@@ -486,3 +486,54 @@ describe("RiskEditDialog - SDLC stage selector", () => {
     expect(screen.getByLabelText(/^Product/i)).toBeInTheDocument();
   });
 });
+
+it("validates an unresolved requested parent and recovers through the public picker", () => {
+  const onSave = vi.fn();
+  const available: Product[] = [
+    {
+      id: "11111111-1111-4111-8111-111111111111",
+      name: "CRM",
+      overallStatus: "on-track",
+      stages: [],
+    },
+  ];
+  render(
+    <RiskEditDialog
+      open
+      risk={null}
+      products={available}
+      defaultProductId="22222222-2222-4222-8222-222222222222"
+      stagesForProduct={() => ["Development"]}
+      onSave={onSave}
+      onCancel={vi.fn()}
+    />,
+  );
+  fireEvent.change(screen.getByLabelText(/^Risk \*/i), {
+    target: { value: "Vendor delay" },
+  });
+  fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
+    target: { value: "Delivery slips" },
+  });
+  fireEvent.change(screen.getByLabelText(/^Mitigation \*/i), {
+    target: { value: "Escalate" },
+  });
+  const save = screen.getByRole("button", { name: "Save risk" });
+  expect(save).toBeEnabled();
+  expect(screen.queryByText(/contact.*admin/i)).toBeNull();
+  fireEvent.click(save);
+  expect(onSave).not.toHaveBeenCalled();
+  const picker = screen.getByLabelText("Product");
+  expect(picker).toHaveAttribute("aria-invalid", "true");
+  expect(picker).toHaveFocus();
+  fireEvent.change(picker, {
+    target: { value: "product:11111111-1111-4111-8111-111111111111" },
+  });
+  expect(picker).toHaveAttribute("aria-invalid", "false");
+  fireEvent.click(save);
+  expect(onSave).toHaveBeenCalledTimes(1);
+  expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+    productId: "11111111-1111-4111-8111-111111111111",
+    stageNames: ["Development"],
+    text: "Vendor delay",
+  });
+});

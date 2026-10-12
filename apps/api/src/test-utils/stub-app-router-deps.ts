@@ -1,4 +1,3 @@
-import type { PrismaClient } from "@prisma/client";
 import { vi } from "vitest";
 
 import type { AppRouterDeps } from "../infrastructure/trpc/trpc.router.js";
@@ -7,12 +6,12 @@ import type { AppRouterDeps } from "../infrastructure/trpc/trpc.router.js";
 // stubs. Tests override only the members they exercise; the router never
 // touches the rest at construction time. The `as unknown as` lives here so
 // call sites pass the real deps type instead of erasing it per-test.
-function stub<T>(_value?: T): T {
-  return vi.fn() as unknown as T;
+function stub() {
+  return vi.fn();
 }
 
-// Override values are cast to their service type at the merge point below;
-// keys stay exactly the AppRouterDeps members so a typo still fails.
+// Partial overrides keep dependency keys checked; the intentional service
+// cast stays at the complete dependency-object boundary below.
 export type StubAppRouterDepsOverrides = Partial<{
   [K in keyof AppRouterDeps]: unknown;
 }>;
@@ -21,7 +20,7 @@ export function createStubAppRouterDeps(
   overrides: StubAppRouterDepsOverrides = {},
 ): AppRouterDeps {
   return {
-    prisma: stub<PrismaClient>(),
+    prisma: stub(),
     env: stub(),
     reportSectionsService: stub(),
     reviewService: stub(),
@@ -50,6 +49,8 @@ export function createStubAppRouterDeps(
     actionLogService: stub(),
     telemetryService: stub(),
     sessionRevocationService: stub(),
-    ...(overrides as Partial<AppRouterDeps>),
-  };
+    ...overrides,
+  } satisfies {
+    [K in keyof AppRouterDeps]: unknown;
+  } as unknown as AppRouterDeps;
 }

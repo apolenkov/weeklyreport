@@ -39,8 +39,15 @@ function reportRiskErrors(args: RiskSaveArgs, errors: RiskFieldErrors): void {
     impact: errors.impact,
     mitigation: errors.mitigation,
   });
+  args.parentStage.setParentError(errors.parent);
   args.parentStage.setStageError(errors.stageNames);
   if (args.fields.focusFirstInvalid(errors)) return;
+  if (errors.parent) {
+    args.dialogSurfaceRef.current
+      ?.querySelector<HTMLSelectElement>("#risk-product")
+      ?.focus();
+    return;
+  }
   if (errors.stageNames) {
     args.dialogSurfaceRef.current
       ?.querySelector<HTMLInputElement>("fieldset input")
@@ -70,7 +77,7 @@ function emitRiskSave(args: RiskSaveArgs, prose: TrimmedProse): void {
   }
   const product = resolveSaveProduct(args.products, risk, parentId ?? "");
   if (!product) {
-    reportRiskErrors(args, { text: "No product available" });
+    reportRiskErrors(args, { parent: "No product available" });
     return;
   }
   args.onSave(
@@ -90,6 +97,7 @@ function emitRiskSave(args: RiskSaveArgs, prose: TrimmedProse): void {
 export function saveRisk(args: RiskSaveArgs): void {
   const { fields, parentStage } = args;
   if (parentStage.isDeadEnd) return;
+  const parentMissing = parentStage.parent.kind === "unresolved";
   const errors = collectRiskErrors({
     text: fields.text,
     impact: fields.impact,
@@ -97,6 +105,10 @@ export function saveRisk(args: RiskSaveArgs): void {
     isActivityParent: parentStage.isActivityParent,
     effectiveStageNames: parentStage.effectiveStageNames,
   });
+  if (parentMissing) {
+    errors.parent = "No product available";
+    delete errors.stageNames;
+  }
   if (Object.keys(errors).length > 0) {
     reportRiskErrors(args, errors);
     return;

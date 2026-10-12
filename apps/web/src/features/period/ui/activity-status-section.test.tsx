@@ -177,6 +177,63 @@ describe("ActivityStatusSection", () => {
     ).toBeInTheDocument();
   });
 
+  it("keeps the refusal notice tied to the floor observed at pick time", async () => {
+    const user = userEvent.setup();
+    const floored = makeCard({
+      status: "green",
+      alarmFloor: "red",
+      derivedStatus: "red",
+    });
+    const handlers = {
+      readOnly: false,
+      onStatusChange: vi.fn(),
+      onRaiseRequiresRisk: vi.fn(),
+      onTitleChange: vi.fn(),
+      onDescriptionChange: vi.fn(),
+    };
+    const { rerender } = render(
+      <ActivityStatusSection activities={[floored]} {...handlers} />,
+    );
+
+    const [onTrack] = pillsOf("Jira triage duty");
+    await user.click(expectDefined(onTrack));
+    expect(
+      screen.getByText(/resolve the covering risk\/blocker first/i),
+    ).toBeInTheDocument();
+
+    // A rerender with the same floor keeps the notice.
+    rerender(
+      <ActivityStatusSection activities={[{ ...floored }]} {...handlers} />,
+    );
+    expect(
+      screen.getByText(/resolve the covering risk\/blocker first/i),
+    ).toBeInTheDocument();
+
+    // The covering risk is resolved elsewhere: the floor lifts and the stale
+    // explanation goes with it — no second pick is needed.
+    rerender(
+      <ActivityStatusSection
+        activities={[{ ...floored, alarmFloor: null }]}
+        {...handlers}
+      />,
+    );
+    expect(
+      screen.queryByText(/resolve the covering risk\/blocker first/i),
+    ).toBeNull();
+
+    // A floor returning without a new pick must not resurrect the old refusal.
+    rerender(<ActivityStatusSection activities={[floored]} {...handlers} />);
+    expect(
+      screen.queryByText(/resolve the covering risk\/blocker first/i),
+    ).toBeNull();
+
+    // Only a fresh refused pick raises the notice again.
+    await user.click(expectDefined(pillsOf("Jira triage duty")[0]));
+    expect(
+      screen.getByText(/resolve the covering risk\/blocker first/i),
+    ).toBeInTheDocument();
+  });
+
   it("lets the lead lower a stored raised status when no floor holds it", async () => {
     const onStatusChange = vi.fn();
     const onRaiseRequiresRisk = vi.fn();

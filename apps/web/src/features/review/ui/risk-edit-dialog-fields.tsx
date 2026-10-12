@@ -28,6 +28,7 @@ interface RiskEditDialogFieldsProps {
   readonly mitigationError: string | undefined;
   readonly mitigationRef: RefObject<HTMLTextAreaElement | null>;
   readonly parent: RecordParent;
+  readonly parentError: string | undefined;
   readonly products: readonly Product[];
   readonly activities: readonly ParentActivityOption[];
   readonly onParentChange: (next: RecordParent) => void;
@@ -110,6 +111,7 @@ function RiskProseColumn(props: RiskProseColumnProps) {
 type RiskClassificationPanelProps = Pick<
   RiskEditDialogFieldsProps,
   | "parent"
+  | "parentError"
   | "products"
   | "activities"
   | "onParentChange"
@@ -134,6 +136,7 @@ function RiskClassificationPanel(props: RiskClassificationPanelProps) {
       <ParentPicker
         id="risk-product"
         value={props.parent}
+        error={props.parentError}
         products={props.products}
         activities={props.activities}
         onChange={props.onParentChange}

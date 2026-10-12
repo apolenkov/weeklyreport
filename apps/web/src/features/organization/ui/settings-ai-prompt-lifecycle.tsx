@@ -55,10 +55,8 @@ const canRestoreRevision = (
   !busy &&
   !dirty;
 
-const canDiscardRevision = (
-  selected: AiPromptBundleRead,
-  busy: boolean,
-): boolean => isDisposable(selected) && isCurrentServing(selected) && !busy;
+const canDiscardRevision = (selected: AiPromptBundleRead): boolean =>
+  isDisposable(selected) && isCurrentServing(selected);
 
 function usePromptLifecycleMutations({
   active,
@@ -149,7 +147,7 @@ export function SettingsAiPromptLifecycle({
   const canDraft = canDraftRevision(base, selected, busy);
   const canActivate = canActivateRevision(selected, busy, dirty);
   const canRestore = canRestoreRevision(selected, busy, dirty);
-  const canDiscard = canDiscardRevision(selected, busy);
+  const canDiscard = canDiscardRevision(selected);
 
   return (
     <>

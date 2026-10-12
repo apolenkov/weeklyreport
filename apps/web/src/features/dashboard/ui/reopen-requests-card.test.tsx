@@ -2,7 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
@@ -379,4 +379,35 @@ describe("ReopenRequestsCard", () => {
     });
     expect(toast.success).not.toHaveBeenCalled();
   });
+});
+
+it("preserves response focus when a background refetch fails", async () => {
+  let failRefresh = false;
+  const { queryClient } = renderCard({
+    list: () => {
+      if (failRefresh)
+        return Promise.reject(new Error("background refresh failed"));
+      return {
+        items: [makeRequest("request-1", "Alice Lead")],
+        nextCursor: NEXT_CURSOR,
+      };
+    },
+  });
+  const alice = expectDefined(
+    (await screen.findByText("Alice L.")).closest("li"),
+  );
+  await userEvent.click(within(alice).getByRole("button", { name: "Respond" }));
+  const response = within(alice).getByRole("textbox");
+  await userEvent.type(response, "Unsaved response");
+  expect(response).toHaveFocus();
+  failRefresh = true;
+  await act(async () => {
+    await queryClient.refetchQueries({ type: "active" });
+  });
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "background refresh failed",
+  );
+  expect(screen.getByRole("button", { name: "Retry" })).toBeEnabled();
+  expect(response).toHaveFocus();
+  expect(response).toHaveValue("Unsaved response");
 });

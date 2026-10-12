@@ -119,6 +119,21 @@ describe("useLeadFormRevoke", () => {
     },
   );
 
+  it("names the action for a bare transport failure instead of showing it raw", async () => {
+    const pending = deferred<{ readonly success: true }>();
+    const revoke = vi.fn<LeadFormWritePort["revoke"]>(() => pending.promise);
+    const harness = mountRevoke(revoke);
+
+    act(() => harness.result.current.confirmRevoke());
+    await act(async () => {
+      pending.reject(new Error("Failed to fetch"));
+      await pending.promise.catch(() => undefined);
+    });
+
+    expect(harness.onRevoked).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledExactlyOnceWith("Revoke failed");
+  });
+
   it.each([
     { route: "A to B", completion: "success" },
     { route: "A to B", completion: "error" },

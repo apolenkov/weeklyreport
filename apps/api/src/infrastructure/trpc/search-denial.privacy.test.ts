@@ -78,6 +78,19 @@ describe("search denial privacy", () => {
         .trim()
         .split("\n")
         .map((line) => JSON.parse(line) as Record<string, unknown>);
+      expect(
+        entries.filter(
+          ({ phase, stage, status }) =>
+            phase === "trpc.request" && stage === "end" && status === "error",
+        ),
+      ).toEqual([
+        expect.objectContaining({
+          error: {
+            code: "FORBIDDEN",
+            cause: { name: "SearchAuthorizationError" },
+          },
+        }),
+      ]);
       expect(entries.filter(({ event }) => event === "scope-denied")).toEqual([
         expect.objectContaining({
           event: "scope-denied",

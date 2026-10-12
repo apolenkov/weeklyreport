@@ -79,7 +79,7 @@ export interface LeadFormLoadedViewModel {
   readonly canRequestReopen: boolean;
   readonly hasPendingReopen: boolean;
   readonly hasArchivedPeriods: boolean;
-  // Archived periods exist but the archive toggle keeps them out of the list.
+  // Archive filtering removed at least one period row from the visible list.
   readonly archivedHidden: boolean;
   readonly visiblePeriods: ReportPeriod[];
   readonly isReadOnly: boolean;
@@ -199,7 +199,7 @@ function assembleLoadedViewModel({
     canRequestReopen: data.canRequestReopen,
     hasPendingReopen: data.hasPendingReopen,
     hasArchivedPeriods,
-    archivedHidden: hasArchivedPeriods && !input.showArchivePeriods,
+    archivedHidden: visiblePeriods.length < data.periods.length,
     visiblePeriods,
     isReadOnly: data.readOnly || input.isSubmitted,
   };

@@ -4,6 +4,7 @@ import type {
 } from "@customreport/shared";
 import { Pencil } from "lucide-react";
 
+import { hasPendingExecution } from "./ai-provider-configuration-fields.types";
 import { profileLabel } from "./ai-provider-form";
 
 const lifecycleCopy: Record<
@@ -64,7 +65,9 @@ const providerStateCopy = (
 const activationStepDetail = (
   lifecycle: AiProviderConfigurationRead["lifecycle"] | "none",
   providerAvailable: boolean,
+  executionPending: boolean,
 ): string => {
+  if (executionPending) return "Waiting for capability test";
   if (lifecycle === "validated" || lifecycle === "preparing") {
     return "Available";
   }
@@ -79,7 +82,12 @@ type ProviderLifecycle = AiProviderConfigurationRead["lifecycle"] | "none";
 function SetupWorkflow({
   lifecycle,
   providerAvailable,
-}: Readonly<{ lifecycle: ProviderLifecycle; providerAvailable: boolean }>) {
+  executionPending,
+}: Readonly<{
+  lifecycle: ProviderLifecycle;
+  providerAvailable: boolean;
+  executionPending: boolean;
+}>) {
   return (
     <ol
       className="mt-4 grid gap-2 text-sm sm:grid-cols-3"
@@ -101,7 +109,11 @@ function SetupWorkflow({
         },
         {
           label: "Activate",
-          detail: activationStepDetail(lifecycle, providerAvailable),
+          detail: activationStepDetail(
+            lifecycle,
+            providerAvailable,
+            executionPending,
+          ),
         },
       ].map(({ label, detail }, index) => (
         <li
@@ -200,6 +212,7 @@ export function AiProviderStateSummary({
 }>) {
   const providerAvailable = availability === "available";
   const state = providerStateCopy(lifecycle, providerAvailable);
+  const executionPending = hasPendingExecution(revision);
   const active = lifecycle === "active" && revision;
   return (
     <>
@@ -225,11 +238,15 @@ export function AiProviderStateSummary({
           </span>
         </div>
         <p className="mt-3 text-sm font-medium text-[var(--color-foreground)]">
-          Next: {state.next}
+          Next:{" "}
+          {executionPending
+            ? "Wait for capability test completion."
+            : state.next}
         </p>
         <SetupWorkflow
           lifecycle={lifecycle}
           providerAvailable={providerAvailable}
+          executionPending={executionPending}
         />
       </section>
       {active && (

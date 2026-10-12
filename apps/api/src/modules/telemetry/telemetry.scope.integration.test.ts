@@ -501,9 +501,10 @@ describe("Telemetry group scoping (integration)", () => {
     await expect(
       repository.lateSectionsLastPublishedPeriod(headA),
     ).resolves.toBe(1);
-    await expect(repository.onTimeRatioPerPeriod(1, headA)).resolves.toEqual([
-      0,
-    ]);
+    await expect(repository.onTimeRatioPerPeriod(1, headA)).resolves.toEqual({
+      latestPeriodRatio: 0,
+      ratios: [0],
+    });
 
     await prisma.report.update({
       where: { id: REOPENED_REPORT },
@@ -516,9 +517,10 @@ describe("Telemetry group scoping (integration)", () => {
     await expect(
       repository.lateSectionsLastPublishedPeriod(headA),
     ).resolves.toBe(0);
-    await expect(repository.onTimeRatioPerPeriod(1, headA)).resolves.toEqual([
-      1,
-    ]);
+    await expect(repository.onTimeRatioPerPeriod(1, headA)).resolves.toEqual({
+      latestPeriodRatio: 1,
+      ratios: [1],
+    });
   });
 
   it("keeps settled telemetry stable after live section deletion and user-group drift", async () => {

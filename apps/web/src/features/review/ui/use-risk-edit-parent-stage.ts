@@ -71,6 +71,7 @@ function useRiskEditSeeds(args: UseRiskEditParentStageArgs) {
   const [stageNames, setStageNames] = useState<string[]>(() =>
     computeInitialStageNames(risk, args.initialStageNames),
   );
+  const [parentError, setParentError] = useState<string | undefined>(undefined);
   const [stageError, setStageError] = useState<string | undefined>(undefined);
 
   return {
@@ -80,6 +81,8 @@ function useRiskEditSeeds(args: UseRiskEditParentStageArgs) {
     setParent,
     stageNames,
     setStageNames,
+    parentError,
+    setParentError,
     stageError,
     setStageError,
   };
@@ -140,6 +143,7 @@ function useRiskParentDerivations({
     effectiveStageNames,
     isDeadEnd:
       !isActivityParent &&
+      parentId !== undefined &&
       isZeroOwnedStageDeadEnd(availableStages, effectiveStageNames),
     selectedActivity,
     parentName: resolveRiskParentName({
@@ -173,6 +177,7 @@ export function useRiskEditParentStage(args: UseRiskEditParentStageArgs) {
 
   const setParentAndStages = (nextParent: RecordParent) => {
     state.setParent(nextParent);
+    state.setParentError(undefined);
     // Stage selection and its validation belong to the selected parent.
     state.setStageNames([]);
     state.setStageError(undefined);
@@ -183,6 +188,8 @@ export function useRiskEditParentStage(args: UseRiskEditParentStageArgs) {
     setSeverity: state.setSeverity,
     parent: state.parent,
     stageNames: state.stageNames,
+    parentError: state.parentError,
+    setParentError: state.setParentError,
     stageError: state.stageError,
     setStageError: state.setStageError,
     isActivityParent,

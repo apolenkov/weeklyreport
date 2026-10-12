@@ -132,7 +132,7 @@ export function useRiskListEditing({
       if (risk) dialog.requestDelete(risk);
     },
     confirmDelete: () => {
-      if (!dialog.pendingDelete) return;
+      if (readOnly || !dialog.pendingDelete) return;
       onChange?.(withoutRisk(risks, dialog.pendingDelete.id));
       dialog.clearPendingDelete();
     },

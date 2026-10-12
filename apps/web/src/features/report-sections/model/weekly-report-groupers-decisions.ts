@@ -80,7 +80,9 @@ export function groupDecisionsByProject(
   );
 }
 
-// Priorities from items with priorityRank, grouped by project, rank ASC.
+// Priorities from items with priorityRank, grouped by project. Ranks sort
+// ascending within each source section and section blocks are preserved, so a
+// product shared across sections is not globally re-sorted.
 export function groupPrioritiesByProject(
   sections: readonly ReportSectionReadModel[],
 ): Map<string, WeeklyReportPriority[]> {

@@ -42,7 +42,11 @@ function buildRepo(
     lateSectionsLastPublishedPeriod: () => Promise.resolve(1),
     pendingReopenCount: () => Promise.resolve(0),
     pdfExportsLast7d: () => Promise.resolve(12),
-    onTimeRatioPerPeriod: () => Promise.resolve([0.8, 0.82, 0.85, 0.86]),
+    onTimeRatioPerPeriod: () =>
+      Promise.resolve({
+        latestPeriodRatio: 0.86,
+        ratios: [0.8, 0.82, 0.85, 0.86],
+      }),
     ...overrides,
   };
 }
@@ -66,7 +70,8 @@ describe("TelemetryService", () => {
   it("returns null onTimeRatio when there are no published periods yet", async () => {
     const service = new TelemetryService(
       buildRepo({
-        onTimeRatioPerPeriod: () => Promise.resolve([]),
+        onTimeRatioPerPeriod: () =>
+          Promise.resolve({ latestPeriodRatio: null, ratios: [] }),
       }),
       new NullTelemetryCache(),
     );
@@ -83,7 +88,10 @@ describe("TelemetryService", () => {
       pendingReopenCount: vi.fn(() => Promise.resolve(0)),
       pdfExportsLast7d: vi.fn(() => Promise.resolve(12)),
       onTimeRatioPerPeriod: vi.fn(() =>
-        Promise.resolve([0.8, 0.82, 0.85, 0.86]),
+        Promise.resolve({
+          latestPeriodRatio: 0.86,
+          ratios: [0.8, 0.82, 0.85, 0.86],
+        }),
       ),
     } satisfies TelemetryRepository;
 
@@ -131,8 +139,8 @@ describe("TelemetryService", () => {
     expect(requestedKeys.size).toBe(2);
     expect([...requestedKeys]).toEqual(
       expect.arrayContaining([
-        `summary:v1:${scopeDiscriminator(headA)}`,
-        `summary:v1:${scopeDiscriminator(headB)}`,
+        `summary:v2:${scopeDiscriminator(headA)}`,
+        `summary:v2:${scopeDiscriminator(headB)}`,
       ]),
     );
   });
@@ -140,7 +148,8 @@ describe("TelemetryService", () => {
   it("passes the schema validator — rejects out-of-range repo data", async () => {
     const service = new TelemetryService(
       buildRepo({
-        onTimeRatioPerPeriod: () => Promise.resolve([1.5, 0.5]),
+        onTimeRatioPerPeriod: () =>
+          Promise.resolve({ latestPeriodRatio: 0.5, ratios: [1.5, 0.5] }),
       }),
       new NullTelemetryCache(),
     );

@@ -15,6 +15,11 @@ import type { FeedbackAccess } from "./product-feedback.repository.js";
 
 type Db = Prisma.TransactionClient;
 
+// One ordering contract for every persisted annotation/thread projection.
+export const THREAD_MESSAGES_INCLUDE = {
+  threadMessages: { orderBy: [{ timestamp: "asc" }, { id: "asc" }] },
+} satisfies PrismaTypes.AgentationAnnotationInclude;
+
 export async function findDeletionForSync(
   db: Db,
   access: FeedbackAccess,
@@ -53,7 +58,7 @@ export async function findAnnotationForSync(
       authorUserId: access.userId,
       OR: [{ id }, { clientId: id }],
     },
-    include: { threadMessages: { orderBy: { timestamp: "asc" } } },
+    include: THREAD_MESSAGES_INCLUDE,
   });
 }
 

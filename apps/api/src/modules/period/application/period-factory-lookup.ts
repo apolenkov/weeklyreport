@@ -60,38 +60,31 @@ export interface MostRecentLivePeriod {
   readonly periodEnd: Date;
 }
 
-function toFoundPeriod(row: DraftPeriodRow): EnsuredPeriod {
-  const lifecycle = currentPeriodLifecycleSchema.safeParse(row);
-  if (
-    !lifecycle.success ||
-    (lifecycle.data.periodState !== "scheduled" &&
-      lifecycle.data.periodState !== "open")
-  ) {
-    throw new PeriodLifecycleIntegrityError();
-  }
-  return {
-    created: false,
-    reportId: row.id,
-    periodStart: row.periodStart,
-    periodEnd: row.periodEnd,
-    deadline: row.deadline,
-    periodState: lifecycle.data.periodState,
-  };
-}
-
 function readLivePeriod(rows: readonly DraftPeriodRow[]): EnsuredPeriod | null {
   const liveRows = rows
     .map((row) => {
       const lifecycle = currentPeriodLifecycleSchema.safeParse(row);
       if (!lifecycle.success) throw new PeriodLifecycleIntegrityError();
-      return lifecycle.data.periodState === "scheduled" ||
-        lifecycle.data.periodState === "open"
-        ? row
-        : null;
+      const { status, periodStatus, archived, periodState } = lifecycle.data;
+      if (
+        status !== "draft" ||
+        periodStatus !== "open" ||
+        archived ||
+        (periodState !== "scheduled" && periodState !== "open")
+      )
+        return null;
+      return {
+        created: false as const,
+        reportId: row.id,
+        periodStart: row.periodStart,
+        periodEnd: row.periodEnd,
+        deadline: row.deadline,
+        periodState,
+      };
     })
-    .filter((row): row is DraftPeriodRow => row !== null);
+    .filter((row) => row !== null);
   if (liveRows.length > 1) throw new PeriodLifecycleIntegrityError();
-  return liveRows[0] ? toFoundPeriod(liveRows[0]) : null;
+  return liveRows[0] ?? null;
 }
 
 export async function readBoundaryPeriod(

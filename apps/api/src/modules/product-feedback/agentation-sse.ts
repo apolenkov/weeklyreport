@@ -79,12 +79,18 @@ function expectedDomain(options: AgentationSseOptions): string | undefined {
   return new URL(options.expectedFrontendOrigin).hostname;
 }
 
-function send(res: Response, event: AgentationSseEvent): void {
+function responseOpen(res: Response): boolean {
+  return !res.destroyed && !res.writableEnded;
+}
+
+function send(res: Response, event: AgentationSseEvent): boolean {
+  if (!responseOpen(res)) return false;
   const id = sequence(event.sequence).toString();
   const payload = { ...event, sequence: Number(sequence(event.sequence)) };
   res.write(
     `id: ${id}\nevent: ${event.type}\ndata: ${JSON.stringify(payload)}\n\n`,
   );
+  return true;
 }
 
 function pendingSessionId(
@@ -116,6 +122,7 @@ async function sendInitialSync(
   const pending = await options.source.loadPending(options.scopedSessionId);
   const delivered = pending.slice(0, maxBatchSize);
   for (const payload of delivered) {
+    if (!responseOpen(options.res)) return;
     const sessionId = pendingSessionId(payload, options.scopedSessionId);
     send(options.res, {
       type: "annotation.created",
@@ -125,6 +132,7 @@ async function sendInitialSync(
       payload,
     });
   }
+  if (!responseOpen(options.res)) return;
   options.res.write(
     `event: sync.complete\ndata: ${JSON.stringify({ domain: domain ?? "all", count: delivered.length, timestamp: new Date().toISOString() })}\n\n`,
   );
@@ -167,7 +175,9 @@ async function replayInitialDeletions(
     );
     const last = batch.at(-1);
     if (!last) return;
-    for (const event of batch) send(options.res, event);
+    for (const event of batch) {
+      if (!send(options.res, event)) return;
+    }
     state.after = sequence(last.sequence);
   }
 }
@@ -176,6 +186,7 @@ export async function runAgentationSsePoll(
   options: AgentationSseOptions,
   cursor: bigint,
 ): Promise<bigint> {
+  if (!responseOpen(options.res)) return cursor;
   const batch = (
     await options.source.loadEvents(cursor, options.scopedSessionId)
   )
@@ -193,10 +204,40 @@ export async function runAgentationSsePoll(
   for (const event of batch) {
     const eventSequence = sequence(event.sequence);
     if (eventSequence <= state.next) continue;
-    send(options.res, event);
+    if (!send(options.res, event)) break;
     state.next = eventSequence;
   }
   return state.next;
+}
+
+async function initializeStream(
+  options: AgentationSseOptions,
+  domain: string | undefined,
+  maxBatchSize: number,
+  replayCursor: bigint | undefined,
+): Promise<bigint | undefined> {
+  try {
+    if (!responseOpen(options.res)) return;
+    options.res.write(": connected\n\n");
+    const initialCursor =
+      replayCursor ??
+      (await options.source.loadLatestSequence(options.scopedSessionId));
+    if (!responseOpen(options.res)) return;
+    if (replayCursor === undefined)
+      await replayInitialDeletions(options, initialCursor, maxBatchSize);
+    if (!responseOpen(options.res)) return;
+    if (replayCursor === undefined && !options.scopedSessionId)
+      await sendInitialSync(options, domain, maxBatchSize);
+    return await runAgentationSsePoll(
+      { ...options, maxBatchSize },
+      initialCursor,
+    );
+  } catch (error: unknown) {
+    // Headers already belong to SSE: settle here instead of the JSON handler.
+    if (responseOpen(options.res)) options.res.end();
+    options.onPollError?.(error);
+    return;
+  }
 }
 
 export async function startAgentationSse(
@@ -221,24 +262,14 @@ export async function startAgentationSse(
     connection: "keep-alive",
   });
   options.res.flushHeaders();
-  options.res.write(": connected\n\n");
-  const initialCursor =
-    replayCursor ??
-    (await options.source.loadLatestSequence(options.scopedSessionId));
-  if (replayCursor === undefined)
-    await replayInitialDeletions(options, initialCursor, maxBatchSize);
-  if (replayCursor === undefined && !options.scopedSessionId)
-    await sendInitialSync(options, domain, maxBatchSize);
-  const state = {
-    cursor: await runAgentationSsePoll(
-      { ...options, maxBatchSize },
-      initialCursor,
-    ),
-    polling: false,
-  };
-
-  // The peer may disconnect while the initial database reads are pending.
-  if (options.res.destroyed || options.res.writableEnded) return;
+  const cursor = await initializeStream(
+    options,
+    domain,
+    maxBatchSize,
+    replayCursor,
+  );
+  if (cursor === undefined || !responseOpen(options.res)) return;
+  const state = { cursor, polling: false };
 
   const setIntervalFn =
     options.setIntervalFn ??
@@ -249,7 +280,7 @@ export async function startAgentationSse(
   connections.active += 1;
   if (options.agent) connections.agent += 1;
   const pollTimer = setIntervalFn(() => {
-    if (state.polling || options.res.writableEnded) return;
+    if (state.polling || !responseOpen(options.res)) return;
     state.polling = true;
     void runAgentationSsePoll({ ...options, maxBatchSize }, state.cursor)
       .then((next) => {
@@ -261,7 +292,7 @@ export async function startAgentationSse(
       });
   }, options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS);
   const heartbeatTimer = setIntervalFn(() => {
-    if (!options.res.writableEnded) options.res.write(": ping\n\n");
+    if (responseOpen(options.res)) options.res.write(": ping\n\n");
   }, options.heartbeatIntervalMs ?? DEFAULT_HEARTBEAT_INTERVAL_MS);
   const cleanupState = { completed: false };
   const cleanup = (): void => {

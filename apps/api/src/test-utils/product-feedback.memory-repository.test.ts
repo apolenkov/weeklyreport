@@ -98,9 +98,17 @@ describe("ProductFeedbackMemoryRepository", () => {
   it("persists bounded screenshot and diagnostic context", async () => {
     const repo = new ProductFeedbackMemoryRepository();
     const access = feedbackAccessFromSession(session("lead-a", "lead", "g1"));
-    const feedback = await repo.create(access, capturedInput("captured"));
+    const capture = capturedInput("captured");
+    await repo.create(access, capture);
 
-    expect(feedback).toMatchObject({
+    capture.diagnostics?.console.push({
+      level: "warn",
+      timestamp: "2026-09-03T10:00:01.000Z",
+      message: "Later caller diagnostic",
+    });
+    if (capture.screenshotRegion) capture.screenshotRegion.xPct = 0.9;
+    const stored = await repo.list(access, {});
+    expect(stored.feedbacks[0]).toMatchObject({
       screenshotUrl: "data:image/jpeg;base64,AA==",
       screenshotRegion: { xPct: 0.1, yPct: 0.2, wPct: 0.3, hPct: 0.4 },
       diagnostics: { console: [{ level: "error" }], network: [] },
@@ -163,13 +171,56 @@ describe("ProductFeedbackMemoryRepository", () => {
     await expect(repo.delete(admin, adminTarget.id)).resolves.toBeUndefined();
   });
 
+  it.each(["create", "retry", "list", "focused", "update"] as const)(
+    "isolates values returned by %s from stored feedback",
+    async (boundary) => {
+      const repo = new ProductFeedbackMemoryRepository();
+      const access = feedbackAccessFromSession(session("lead-a", "lead", "g1"));
+      const seed = capturedInput(`detached-${boundary}`);
+      const created = await repo.create(access, seed);
+      const returned =
+        boundary === "retry"
+          ? await repo.create(access, seed)
+          : boundary === "update"
+            ? await repo.update(access, created.id, { status: "in_progress" })
+            : boundary === "list" || boundary === "focused"
+              ? (
+                  await repo.list(
+                    access,
+                    {},
+                    boundary === "focused" ? created.id : undefined,
+                  )
+                ).feedbacks[0]
+              : created;
+      if (!returned) throw new Error("Authorized feedback result missing");
+      returned.diagnostics?.console.splice(0);
+      returned.createdAt.setTime(0);
+      const stored = (await repo.list(access, {})).feedbacks[0];
+      expect(stored?.diagnostics?.console).toHaveLength(1);
+      expect(stored?.createdAt.getTime()).not.toBe(0);
+      expect(stored?.id).toBe(created.id);
+    },
+  );
+
+  it("isolates a mutable resolvedAt input until an explicit update", async () => {
+    const repo = new ProductFeedbackMemoryRepository();
+    const access = feedbackAccessFromSession(session("lead-a", "lead", "g1"));
+    const created = await repo.create(access, input("resolution"));
+    const resolvedAt = new Date("2026-09-03T10:00:00.000Z");
+    await repo.update(access, created.id, { status: "resolved", resolvedAt });
+    resolvedAt.setTime(0);
+    expect((await repo.list(access, {})).feedbacks[0]?.resolvedAt).toEqual(
+      new Date("2026-09-03T10:00:00.000Z"),
+    );
+  });
+
   it("is idempotent only for the same immutable author", async () => {
     const repo = new ProductFeedbackMemoryRepository();
     const leadA = feedbackAccessFromSession(session("lead-a", "lead", "g1"));
     const leadB = feedbackAccessFromSession(session("lead-b", "lead", "g1"));
     const first = await repo.create(leadA, input("retry"));
 
-    await expect(repo.create(leadA, input("retry"))).resolves.toBe(first);
+    await expect(repo.create(leadA, input("retry"))).resolves.toEqual(first);
     await expect(repo.create(leadB, input("retry"))).rejects.toMatchObject({
       code: "STORE_DUPLICATE",
     });

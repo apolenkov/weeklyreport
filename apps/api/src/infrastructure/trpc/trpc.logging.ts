@@ -87,7 +87,6 @@ export async function logInputBreadcrumb(
   type: string,
   getRawInput: () => Promise<unknown>,
 ): Promise<void> {
-  if (path === "auth.login" || path === "auth.refresh") return;
   try {
     const rawInput = await getRawInput();
     if (rawInput === undefined) return;

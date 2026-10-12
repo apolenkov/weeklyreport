@@ -46,12 +46,15 @@ function overflowHandlers({
     move:
       target !== null && secondary.includes("move") ? onMoveItem : undefined,
     // The terminal outcome path stays available for active editable items, but
-    // never on Previous rows or an unconfirmed carry: choosing a status in the
-    // icon menu clears that first.
+    // never on Previous rows, an unconfirmed carry (choosing a status in the
+    // icon menu clears that first), or a derived Next projection — that row is
+    // the same Current record's commitment, and its terminal status belongs to
+    // the Current occurrence.
     status:
       target !== null &&
       item.source !== "previous" &&
       item.needsConfirmation !== true &&
+      target.focusNextStep !== true &&
       item.canResolve
         ? onResolvePlan
         : undefined,

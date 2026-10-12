@@ -226,6 +226,130 @@ describe("StatusOverview", () => {
     expect(onEditItem).not.toHaveBeenCalled();
   });
 
+  it("offers no terminal Update status on a derived Next commitment row", async () => {
+    const user = userEvent.setup();
+    const onResolvePlan = vi.fn();
+    const onMoveItem = vi.fn();
+    const baseUnit = model.units[0];
+    if (!baseUnit) throw new Error("Expected one overview unit");
+    // The derived projection renders the Current record's next-step
+    // commitment: its terminal status belongs to the Current occurrence.
+    const derived = {
+      ...overviewItem(1),
+      key: "next:item-1",
+      source: "next" as const,
+      text: "Ship the follow-up",
+      editTarget: {
+        recordId: "item-1",
+        source: "current" as const,
+        focusNextStep: true,
+      },
+    };
+    render(
+      <StatusOverview
+        model={{
+          ...model,
+          units: [
+            {
+              ...baseUnit,
+              columns: {
+                ...baseUnit.columns,
+                currentWeek: { availability: "available", items: [] },
+                nextWeek: {
+                  availability: "available",
+                  items: [derived],
+                },
+              },
+            },
+          ],
+        }}
+        onResolvePlan={onResolvePlan}
+        onMoveItem={onMoveItem}
+      />,
+    );
+
+    const preview = screen
+      .getByText("Ship the follow-up")
+      .closest<HTMLElement>("[data-overview-item-preview]");
+    if (!preview) throw new Error("Expected the item preview");
+    await user.click(
+      within(preview).getByRole("button", {
+        name: "More actions for Ship the follow-up",
+      }),
+    );
+    expect(
+      screen.queryByRole("menuitem", {
+        name: "Update status: Ship the follow-up",
+      }),
+    ).toBeNull();
+    // The derived commitment keeps its supported move action.
+    expect(
+      screen.getByRole("menuitem", {
+        name: "Move to this week: Ship the follow-up",
+      }),
+    ).toBeVisible();
+    expect(onResolvePlan).not.toHaveBeenCalled();
+  });
+
+  it("keeps the terminal Update status on a genuine Next item", async () => {
+    const user = userEvent.setup();
+    const onResolvePlan = vi.fn();
+    const baseUnit = model.units[0];
+    if (!baseUnit) throw new Error("Expected one overview unit");
+    const genuineNext = {
+      ...overviewItem(1),
+      key: "next:next-item-1",
+      recordId: "next-item-1",
+      stableId: "next-lineage-1",
+      source: "next" as const,
+      text: "Genuine next work",
+      editTarget: {
+        recordId: "next-item-1",
+        source: "next" as const,
+      },
+    };
+    render(
+      <StatusOverview
+        model={{
+          ...model,
+          units: [
+            {
+              ...baseUnit,
+              columns: {
+                ...baseUnit.columns,
+                currentWeek: { availability: "available", items: [] },
+                nextWeek: {
+                  availability: "available",
+                  items: [genuineNext],
+                },
+              },
+            },
+          ],
+        }}
+        onResolvePlan={onResolvePlan}
+      />,
+    );
+
+    const preview = screen
+      .getByText("Genuine next work")
+      .closest<HTMLElement>("[data-overview-item-preview]");
+    if (!preview) throw new Error("Expected the item preview");
+    await user.click(
+      within(preview).getByRole("button", {
+        name: "More actions for Genuine next work",
+      }),
+    );
+    await user.click(
+      screen.getByRole("menuitem", {
+        name: "Update status: Genuine next work",
+      }),
+    );
+    expect(onResolvePlan).toHaveBeenCalledWith(
+      expect.objectContaining({ recordId: "next-item-1" }),
+      "resolve:next:next-lineage-1",
+    );
+  });
+
   it("keeps a locked cancelled carry informational without mutation controls", () => {
     const onConfirmItem = vi.fn();
     const onResolvePlan = vi.fn();

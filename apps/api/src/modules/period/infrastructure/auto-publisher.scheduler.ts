@@ -144,10 +144,10 @@ export class AutoPublisherScheduler {
         return { published: false, reason: "skipped" };
       }
 
-      // Count post-publish so the audit number matches the head dashboard.
-      const missingSectionsCount = await this.prisma.reportSection.count({
-        where: { reportId: periodId, status: "draft" },
-      });
+      // The committed readback supplies the audit count without a fallible post-commit query.
+      const missingSectionsCount = outcome.report.sections.filter(
+        (section) => section.status === "draft",
+      ).length;
 
       this.logger.log(
         `auto-publish period=${periodId} missing=${missingSectionsCount}`,

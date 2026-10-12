@@ -4,6 +4,7 @@ import type { AiProviderControlRead } from "@customreport/shared";
 import { useState } from "react";
 
 import { ConfirmationDialog } from "../../../shared/ui/dialogs/confirmation-dialog";
+import { embeddingDimensionsLabel } from "./ai-provider-configuration-fields.types";
 import { profileLabel } from "./ai-provider-form";
 
 type AiProviderRetainedRevisionsProps = Readonly<{
@@ -36,7 +37,7 @@ function RetainedRevisionRow({
           {profileLabel(revision.generation.profile)}
         </span>{" "}
         · {revision.lifecycle} · {revision.embeddings.model} /{" "}
-        {revision.embeddings.dimensions}
+        {embeddingDimensionsLabel(revision.embeddings.dimensions)}
         {revision.lifecycle === "preparing" && (
           <span data-testid="ai-retained-preparation-progress">
             {" "}

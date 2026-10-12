@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 
 import type { KanbanItem } from "../types";
 import type { UnifiedActivityEntry } from "./unified-activity-entry";
@@ -27,6 +28,26 @@ function replaceWeekItem(
   return weekItems(entries, week).map((item) =>
     item.id === next.id ? next : item,
   );
+}
+
+// Every save remints physical item ids, so a captured entry can outlive its
+// own id while the dialog is open. Re-resolve against the latest entries of
+// the SAME week: exact id first, then exactly one own row sharing the captured
+// stableId. Anything else — missing, moved, foreign, ambiguous, or a
+// still-unreconciled temporary row — is unsafe to write.
+function resolveLiveEntry(
+  captured: UnifiedActivityEntry,
+  entries: readonly UnifiedActivityEntry[],
+): UnifiedActivityEntry | null {
+  const sameWeek = entries.filter(
+    (entry) => entry.week === captured.week && entry.item.foreign !== true,
+  );
+  const exact = sameWeek.find((entry) => entry.item.id === captured.item.id);
+  if (exact) return exact;
+  const stableId = captured.item.stableId;
+  if (stableId == null || stableId === "") return null;
+  const byStable = sameWeek.filter((entry) => entry.item.stableId === stableId);
+  return byStable.length === 1 ? (byStable[0] ?? null) : null;
 }
 
 function removeWeekItem(
@@ -67,20 +88,40 @@ export function useUnifiedActivityEditing({
     setPendingDelete(entry);
   }
 
+  // A commit that cannot find its live row must neither emit an unchanged
+  // write nor close the dialog over the user's unsaved input.
+  function staleTarget() {
+    toast.error("This record changed — reopen it from the current list.");
+  }
+
   function saveEdited(next: KanbanItem) {
     if (readOnly || !editState) return;
+    const live = resolveLiveEntry(editState.entry, entries);
+    if (!live || !onWeekItemsChange || next.id !== editState.entry.item.id) {
+      staleTarget();
+      return;
+    }
     const week = editState.entry.week;
-    onWeekItemsChange?.(week, replaceWeekItem(entries, week, next));
+    onWeekItemsChange(
+      week,
+      replaceWeekItem(entries, week, {
+        ...next,
+        id: live.item.id,
+        stableId: live.item.stableId,
+      }),
+    );
     setEditState(null);
   }
 
   function confirmDelete() {
     if (readOnly || !pendingDelete) return;
+    const live = resolveLiveEntry(pendingDelete, entries);
+    if (!live || !onWeekItemsChange) {
+      staleTarget();
+      return;
+    }
     const week = pendingDelete.week;
-    onWeekItemsChange?.(
-      week,
-      removeWeekItem(entries, week, pendingDelete.item.id),
-    );
+    onWeekItemsChange(week, removeWeekItem(entries, week, live.item.id));
     setPendingDelete(null);
   }
 

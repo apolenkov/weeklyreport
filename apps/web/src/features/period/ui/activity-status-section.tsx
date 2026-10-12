@@ -149,11 +149,21 @@ function ActivityStatusPills({
   ActivityPillsProps,
   "card" | "readOnly" | "onStatusChange" | "onRaiseRequiresRisk"
 >) {
-  const [refused, setRefused] = useState(false);
+  // The refusal notice explains the floor observed at pick time. Keeping the
+  // observed floor beside it lets an observed floor change invalidate the
+  // stored explanation — a stale "resolve the risk" hint must not outlive the
+  // risk it referred to, nor return when a floor reappears without a new pick.
+  const [refusal, setRefusal] = useState<{
+    readonly floor: TrafficLightStatus | null;
+    readonly refused: boolean;
+  }>({ floor: card.alarmFloor, refused: false });
   // The enforceable floor is the RECORD-ONLY alarmFloor (covering risks/blockers),
   // NOT derivedStatus — which folds in the lead's own stored choice and would
   // wrongly lock a status the lead raised themselves.
   const floor = card.alarmFloor;
+  if (refusal.floor !== floor) {
+    setRefusal({ floor, refused: false });
+  }
   const stored: TrafficLightStatus = card.status ?? "green";
   // Display the lead's current pick floored by the alarm, computed client-side so
   // the active pill tracks a local pick immediately (no save+refetch needed).
@@ -162,7 +172,7 @@ function ActivityStatusPills({
 
   function pick(next: TrafficLightStatus) {
     const outcome = resolveStatusPick(next, stored, floor);
-    setRefused(outcome.kind === "refused");
+    setRefusal({ floor, refused: outcome.kind === "refused" });
     if (outcome.kind === "requires-risk") {
       onRaiseRequiresRisk(card.activityId, outcome.severity);
       return;
@@ -187,7 +197,7 @@ function ActivityStatusPills({
           />
         ))}
       </div>
-      {refused && (
+      {refusal.refused && (
         <p
           role="status"
           // w-0 + min-w-full: the message adopts the pill row's width instead

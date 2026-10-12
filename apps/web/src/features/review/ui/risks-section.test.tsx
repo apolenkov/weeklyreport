@@ -1,10 +1,11 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { SdlcTooltipProvider } from "../../../shared/ui/feedback/sdlc-tooltip";
+import { expectDefined } from "../../../test-utils/expect-defined";
 import type { RiskEntry } from "../../report-sections";
 import { RisksSection } from "./risks-section";
 
@@ -361,4 +362,48 @@ describe("RisksSection — empty product name labels (C5144)", () => {
       unmount();
     },
   );
+});
+
+it("rechecks read-only state before confirming a pending local risk deletion", () => {
+  const onChange = vi.fn();
+  const other = { ...baseRisk, id: "risk-2", text: "Second risk" };
+  const risks = [baseRisk, other];
+  const view = (readOnly: boolean) => (
+    <SdlcTooltipProvider>
+      <RisksSection risks={risks} readOnly={readOnly} onChange={onChange} />
+    </SdlcTooltipProvider>
+  );
+  const { rerender } = render(view(false));
+  fireEvent.click(
+    expectDefined(
+      screen.getAllByRole("button", { name: "Delete risk for CRM" })[0],
+    ),
+  );
+  rerender(view(true));
+  fireEvent.click(
+    within(screen.getByRole("alertdialog")).getByRole("button", {
+      name: "Delete",
+    }),
+  );
+  expect(onChange).not.toHaveBeenCalled();
+  expect(screen.getAllByText("Vendor delay")).toHaveLength(2);
+  fireEvent.click(
+    within(screen.getByRole("alertdialog")).getByRole("button", {
+      name: "Cancel",
+    }),
+  );
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(screen.queryByRole("button", { name: /Delete risk for/ })).toBeNull();
+  rerender(view(false));
+  fireEvent.click(
+    expectDefined(
+      screen.getAllByRole("button", { name: "Delete risk for CRM" })[0],
+    ),
+  );
+  fireEvent.click(
+    within(screen.getByRole("alertdialog")).getByRole("button", {
+      name: "Delete",
+    }),
+  );
+  expect(onChange).toHaveBeenCalledExactlyOnceWith([other]);
 });

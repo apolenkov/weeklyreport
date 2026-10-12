@@ -24,12 +24,14 @@ export function LoadMoreRequestsButton({
 }
 
 interface ReopenNextPageIssueProps {
+  readonly focusOnMount: boolean;
   readonly errorMessage: string;
   readonly isRetrying: boolean;
   readonly onRetry: () => void;
 }
 
 export function ReopenNextPageIssue({
+  focusOnMount,
   errorMessage,
   isRetrying,
   onRetry,
@@ -46,7 +48,7 @@ export function ReopenNextPageIssue({
     >
       <span>{errorMessage}</span>
       <button
-        ref={focusRetry}
+        ref={focusOnMount ? focusRetry : undefined}
         type="button"
         disabled={isRetrying}
         onClick={onRetry}

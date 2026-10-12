@@ -17,6 +17,7 @@ import {
   buildLeadFormLoadedViewModel,
   type LeadFormLoadedInput,
 } from "./lead-form-loaded-view-model";
+import { leadPeriodLabel } from "./lead-period-label";
 
 const FOREIGN_AUTHOR_ID = "f0f0f0f0-f0f0-4f0f-8f0f-f0f0f0f0f0f0";
 const NEXT_ITEM_ID = "12121212-1212-4121-8121-121212121212";
@@ -377,6 +378,63 @@ describe("published lineage and period affordances", () => {
     expect(vm.visiblePeriods).toHaveLength(history.length);
   });
 
+  it("reports archivedHidden only when archive filtering removes a period row", () => {
+    const history = [
+      makeHistoryEntry("report-new", "2026-06-15"),
+      makeHistoryEntry("report-mid", "2026-06-08"),
+      makeHistoryEntry("report-old", "2026-06-01", { archived: true }),
+    ];
+    const build = (selectedPeriodId: string, showArchivePeriods: boolean) =>
+      buildLeadFormLoadedViewModel(
+        makeInput({ history, selectedPeriodId, showArchivePeriods }),
+      );
+
+    // Filtering drops the unselected archived row.
+    expect(build("report-new", false).archivedHidden).toBe(true);
+    // The selected archived row is retained: no row is removed.
+    expect(build("report-old", false).archivedHidden).toBe(false);
+    // The archive toggle shows every row.
+    expect(build("report-new", true).archivedHidden).toBe(false);
+  });
+
+  it("reports archivedHidden when a retained selection still hides another archived row", () => {
+    const history = [
+      makeHistoryEntry("report-new", "2026-06-15"),
+      makeHistoryEntry("report-old-1", "2026-06-08", { archived: true }),
+      makeHistoryEntry("report-old-2", "2026-06-01", { archived: true }),
+    ];
+    const vm = buildLeadFormLoadedViewModel(
+      makeInput({ history, selectedPeriodId: "report-old-2" }),
+    );
+
+    expect(vm.visiblePeriods.map((period) => period.id)).toEqual([
+      "report-new",
+      "report-old-2",
+    ]);
+    expect(vm.archivedHidden).toBe(true);
+  });
+
+  it("does not report archivedHidden when every period is archived", () => {
+    const history = [
+      makeHistoryEntry("report-new", "2026-06-15", { archived: true }),
+      makeHistoryEntry("report-old", "2026-06-01", { archived: true }),
+    ];
+    const vm = buildLeadFormLoadedViewModel(makeInput({ history }));
+
+    expect(vm.visiblePeriods).toHaveLength(history.length);
+    expect(vm.archivedHidden).toBe(false);
+  });
+
+  it("does not report archivedHidden when no period is archived", () => {
+    const history = [
+      makeHistoryEntry("report-new", "2026-06-15"),
+      makeHistoryEntry("report-old", "2026-06-01"),
+    ];
+    const vm = buildLeadFormLoadedViewModel(makeInput({ history }));
+
+    expect(vm.archivedHidden).toBe(false);
+  });
+
   it.each([
     ["server read-only", { serverReadOnly: true }],
     ["client submitted state", { isSubmitted: true }],
@@ -570,5 +628,50 @@ describe("unified activity and activity alarm derivations", () => {
     );
     expect(atRisk?.item.status).toBe("at-risk");
     expect(atRisk?.bucket).toBe("in-progress");
+  });
+});
+
+describe("period breadcrumb label", () => {
+  const history = [
+    makeHistoryEntry("report-new", "2026-06-15"),
+    makeHistoryEntry("report-mid", "2026-06-08"),
+    makeHistoryEntry("report-old", "2026-06-01", { archived: true }),
+  ];
+  const build = (selectedPeriodId: string) =>
+    buildLeadFormLoadedViewModel(makeInput({ history, selectedPeriodId }));
+
+  it("labels the addressed visible period", () => {
+    const vm = build("report-mid");
+    expect(leadPeriodLabel(vm, "report-mid")).toBe("Week 24, Jun 8, 2026");
+  });
+
+  it("labels a retained selected archived period exactly", () => {
+    const vm = build("report-old");
+    expect(leadPeriodLabel(vm, "report-old")).toBe("Week 23, Jun 1, 2026");
+  });
+
+  it.each([null, undefined])(
+    "falls back to the newest visible period for an absent address (%s)",
+    (reportId) => {
+      const vm = build("report-new");
+      expect(leadPeriodLabel(vm, reportId)).toBe("Week 25, Jun 15, 2026");
+    },
+  );
+
+  it("returns undefined for a provided id outside the visible periods", () => {
+    // A valid older report can sit outside the bounded history page; its label
+    // must never be borrowed from an unrelated visible period.
+    const vm = build("report-new");
+    expect(leadPeriodLabel(vm, "report-not-in-history")).toBeUndefined();
+  });
+
+  it("treats an empty string as a provided-but-missing id, not an absent address", () => {
+    const vm = build("report-new");
+    expect(leadPeriodLabel(vm, "")).toBeUndefined();
+  });
+
+  it("returns undefined when no period is visible", () => {
+    const vm = buildLeadFormLoadedViewModel(makeInput({ history: [] }));
+    expect(leadPeriodLabel(vm, null)).toBeUndefined();
   });
 });
