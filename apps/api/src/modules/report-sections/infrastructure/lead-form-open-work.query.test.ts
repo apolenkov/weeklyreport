@@ -375,6 +375,28 @@ describe("queryLeadOpenWorkPage", () => {
     expect(findFirst).not.toHaveBeenCalled();
   });
 
+  it("reads a page whose stored historical period is inverted", async () => {
+    const inverted = {
+      ...reportRow(
+        NEWER_REPORT_ID,
+        NEWER_SECTION_ID,
+        "2026-08-17T00:00:00.000Z",
+        [item(NEWER_ITEM_ID)],
+      ),
+      periodEnd: new Date("2026-08-10T00:00:00.000Z"),
+    };
+    const { prisma } = client({ firstPage: [inverted] });
+
+    // Order is enforced on writes (snapshot restore); old stored rows stay readable.
+    const page = await queryLeadOpenWorkPage(
+      prisma,
+      TARGET_REPORT_ID,
+      AUTHOR_ID,
+      { limit: 5 },
+    );
+    expect(page?.occurrences).toHaveLength(1);
+  });
+
   it("fails when the frozen author scope names a different section", async () => {
     const mismatchedScope = {
       ...reportRow(
