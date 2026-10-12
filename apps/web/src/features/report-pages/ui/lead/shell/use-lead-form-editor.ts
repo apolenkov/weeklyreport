@@ -28,12 +28,17 @@ import type { LeadFormWriteActions } from "../chrome/use-lead-form-write-actions
 import type { LeadFormLoadedProps } from "./lead-form-loaded";
 import {
   buildLeadFormLoadedData,
+  type LeadFormLoadingState,
+  type LeadFormViewModelData,
   leadFormViewModelInput,
   loadedContextOf,
   resolveLeadFormLoaded,
 } from "./lead-form-loaded-inputs";
 import { useLeadFormData } from "./use-lead-form-data";
-import { useLeadFormEditing } from "./use-lead-form-editing";
+import {
+  type LeadFormEditingData,
+  useLeadFormEditing,
+} from "./use-lead-form-editing";
 import type { LeadFormRequiredReadState } from "./use-lead-form-required-reads";
 
 export interface LeadFormEditorInput {
@@ -63,7 +68,12 @@ export type LeadFormEditorHandle =
       readonly view: LeadFormLoadedProps;
     };
 
+type PersistedSaveResult =
+  import("../../../../report-sections/model/autosave/autosave-types").PersistedSaveResult;
+
 interface LeadFormEditorDraftHandle extends LeadFormDraftHandle {
+  readonly abandonPersisted: (token: string) => void;
+  readonly savePersisted: (token: string) => Promise<PersistedSaveResult>;
   readonly section: ReportSectionReadModel;
   readonly dirty: boolean;
   readonly version: number;
@@ -126,6 +136,8 @@ function buildEditorDraftHandle(
     submitReadiness: draft.submitReadiness,
     apply: draft.apply,
     save: draft.save,
+    savePersisted: draft.savePersisted,
+    abandonPersisted: draft.abandonPersisted,
     submit: draft.submit,
     routeToBlocker: draft.routeToBlocker,
     quickAdd: draft.quickAdd,
@@ -136,30 +148,49 @@ function buildEditorDraftHandle(
   };
 }
 
-// External Lead Form seam. Draft merge and write actions remain separate
-// internal seams, while callers receive one declared handle.
+// External Lead Form seam. The production pending reader receives the actual
+// section owner; the deterministic port seam retains the same public contract.
+function useEditorData({
+  reportId,
+  redirectToCanonical,
+  mode = "edit",
+}: LeadFormEditorInput) {
+  return useLeadFormData({
+    reportId,
+    redirectToCanonical,
+    isSlidesMode: mode === "slides",
+    canonicalMode: mode === "overview" ? undefined : mode,
+  });
+}
+
 export function useLeadFormEditor(
   input: LeadFormEditorInput,
 ): LeadFormEditorHandle {
-  const writePort = useLeadFormWritePort();
-  return useLeadFormEditorWithPort(input, writePort);
+  const data = useEditorData(input);
+  const writePort = useLeadFormWritePort(data.sectionIdForActions);
+  return useLeadFormEditorWithData(input, writePort, data);
 }
 
 export function useLeadFormEditorWithPort(
-  {
-    reportId: pinnedReportId,
-    redirectToCanonical,
-    mode = "edit",
-  }: LeadFormEditorInput,
+  input: LeadFormEditorInput,
   writePort: LeadFormWritePort,
 ): LeadFormEditorHandle {
+  return useLeadFormEditorWithData(input, writePort, useEditorData(input));
+}
+
+type LeadFormEditorData = LeadFormLoadingState &
+  LeadFormViewModelData &
+  LeadFormEditingData &
+  Parameters<typeof buildLeadFormLoadedData>[0] & {
+    readonly readState: LeadFormRequiredReadState;
+  };
+
+function useLeadFormEditorWithData(
+  { reportId: pinnedReportId, mode = "edit" }: LeadFormEditorInput,
+  writePort: LeadFormWritePort,
+  data: LeadFormEditorData,
+): LeadFormEditorHandle {
   const isSlidesMode = mode === "slides";
-  const data = useLeadFormData({
-    reportId: pinnedReportId,
-    redirectToCanonical,
-    isSlidesMode,
-    canonicalMode: mode === "overview" ? undefined : mode,
-  });
   const generation = data.byPeriodData
     ? leadFormGenerationOf(data.byPeriodData.section)
     : null;

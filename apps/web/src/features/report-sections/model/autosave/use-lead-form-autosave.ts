@@ -96,6 +96,8 @@ export function useLeadFormAutosave(
     currentPayloadMatchesSavedBaseline,
     isInFlight: saveDraft.isPending,
     forceSave: engine.forceSave,
+    savePersisted: engine.savePersisted,
+    abandonPersisted: engine.abandonPersisted,
     primeBaseline: engine.primeBaseline,
     adoptBaseline: engine.adoptBaseline,
   };

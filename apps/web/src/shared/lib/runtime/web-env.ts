@@ -86,7 +86,7 @@ const isTrue = (value: string | undefined): boolean => value === "true";
 
 const isProduction = (): boolean => process.env.NODE_ENV === "production";
 
-// The single client-env read seam. Each getter parses lazily; the two dev
+// The single client-env read seam. Each getter parses lazily; the three dev
 // toggles fold `NODE_ENV !== "production"` so a production build never renders
 // the auth stub or the dev role switcher even if the var is left "true".
 export const webEnv = {

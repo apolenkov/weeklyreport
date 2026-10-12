@@ -1,4 +1,5 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
+import type { Dispatch, SetStateAction } from "react";
 
 import type { LeadFormGeneration } from "../lead-form/lead-form-generation";
 import type { LeadFormWritePort } from "../lead-form/lead-form-write-port";
@@ -10,7 +11,26 @@ export type AutosaveState = "idle" | "pending" | "saving" | "saved" | "error";
 
 // One save attempt: the comparison key it was scheduled under, the content to
 // persist, and the optimistic-lock version plus activation it belongs to.
+export type PersistedSaveResult =
+  | {
+      readonly status: "accepted";
+      readonly token: string;
+      readonly payload: DraftSaveContent;
+      readonly reportSectionId: string;
+      readonly version: number;
+    }
+  | {
+      readonly status: "failed" | "superseded" | "obsolete";
+      readonly token: string;
+    };
+
+export interface PersistedSaveAttempt {
+  readonly token: string;
+  readonly settle: (result: PersistedSaveResult) => void;
+}
+
 export interface AutosaveRequest {
+  readonly persistedAttempt?: PersistedSaveAttempt | undefined;
   readonly key: string;
   readonly payload: DraftSaveContent;
   readonly version: number;
@@ -44,12 +64,17 @@ export interface AutosaveSaveReceipt {
   readonly reportSectionId: string;
   readonly version: number;
   readonly itemIdentities: readonly SavedDraftRecordIdentity[];
+  readonly persistedItems?: ReportSectionReadModel["items"] | undefined;
+  readonly attemptToken?: string | undefined;
 }
 
 // Internal write-coordinator controls. The public Lead Form exposes only the
 // snapshot above; authoritative non-autosave commands use these controls to
 // replace the saved baseline without scheduling a redundant draft save.
 export interface AutosaveController extends AutosaveSnapshot {
+  /** Explicit, guarded write even when the payload equals the saved baseline. */
+  readonly savePersisted: (token: string) => Promise<PersistedSaveResult>;
+  readonly abandonPersisted: (token: string) => void;
   readonly primeBaseline: (savedKey: string) => void;
   readonly adoptBaseline: (savedKey: string, source: "read" | "write") => void;
 }
@@ -72,6 +97,7 @@ export interface UseLeadFormAutosaveArgs {
     section: ReportSectionReadModel,
     payload: DraftSaveContent,
     queuedPayload: DraftSaveContent | null,
+    attemptToken?: string,
   ) => SavedDraftReconciliation;
   // Conflict handler lets the caller refetch and suppress the generic toast.
   readonly onConflict?: () => void;
@@ -84,4 +110,12 @@ export interface UseLeadFormAutosaveArgs {
 interface SavedDraftReconciliation {
   readonly savedKey: string;
   readonly queuedPayload: DraftSaveContent | null;
+}
+
+// Internal engine types; the live object stays private to its owning module.
+export interface AutosaveSinks {
+  readonly setState: Dispatch<SetStateAction<AutosaveState>>;
+  readonly setLastSavedAt: (savedAt: Date | null) => void;
+  readonly setLastSavedKey: (savedKey: string) => void;
+  readonly rearmRetry: () => void;
 }

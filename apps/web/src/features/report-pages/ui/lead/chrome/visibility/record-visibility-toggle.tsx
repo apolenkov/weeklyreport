@@ -17,11 +17,6 @@ const RECORD_VISIBILITY_OPTIONS = [
   readonly Icon: typeof User;
 }[];
 
-// SegmentedToggle's track padding leaves icon-only segments at 40px on mobile;
-// floor both actionable segments at the shared touch target below `md`.
-const MOBILE_TOUCH_SEGMENT_CLASS =
-  "max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)]";
-
 // View-only: changes what the lead sees, never what is submitted/published.
 export function RecordVisibilityToggle({
   value,
@@ -52,7 +47,7 @@ export function RecordVisibilityToggle({
           className={`btn-press ${segmentClassName(value === option.key, {
             iconOnly: true,
             desktopLabels,
-          })} ${MOBILE_TOUCH_SEGMENT_CLASS} disabled:cursor-not-allowed disabled:opacity-50`}
+          })} disabled:cursor-not-allowed disabled:opacity-50`}
         >
           <option.Icon className="h-4 w-4" aria-hidden="true" />
           <span className={labelClassName}>{option.label}</span>

@@ -1,81 +1,33 @@
 import type { ReportSectionReadModel } from "@customreport/shared";
-import type { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
 
 import { isLeadFormWriteConflict } from "../lead-form/lead-form-write-port";
 import { autosaveFailureMessage } from "./autosave-effects";
-import type { AutosaveMutationHandle } from "./autosave-mutation";
+import {
+  type AutosaveMutationHandle,
+  unboundAutosaveMutation,
+} from "./autosave-mutation";
+import {
+  createPersistedIntentOwner,
+  settleDropped,
+} from "./autosave-persisted-intent";
 import type {
   AutosaveRequest,
-  AutosaveState,
+  AutosaveSinks,
   DraftSaveContent,
+  PersistedSaveResult,
   UseLeadFormAutosaveArgs,
 } from "./autosave-types";
 import { encodeDraftSaveComparisonKey } from "./draft-save-comparison-key";
-import {
-  rebaseQueuedRequest,
-  reconcileQueuedRequest,
-} from "./lead-form-draft-reconcile";
 
-// Render-owned state the engine reports into; setters are stable identities.
-interface AutosaveSinks {
-  readonly setState: Dispatch<SetStateAction<AutosaveState>>;
-  readonly setLastSavedAt: (savedAt: Date | null) => void;
-  readonly setLastSavedKey: (savedKey: string) => void;
-  readonly rearmRetry: () => void;
-}
-
-type Callbacks = Pick<
-  UseLeadFormAutosaveArgs,
-  "onConflict" | "onSaved" | "onVersionChange"
->;
-
-// The module's one mutable live-state holder. It never leaves this file:
-// the engine exposes intent operations only, so no other file can repopulate
-// or read render-owned state through a shared mutable bundle.
 interface AutosaveLiveState {
-  // Latest render's callbacks, re-stamped on every commit.
-  callbacks: Callbacks;
-  // Each section activation owns its asynchronous completions, including A→B→A.
+  args: UseLeadFormAutosaveArgs;
+  mutation: AutosaveMutationHandle;
+  persisted: ReturnType<typeof createPersistedIntentOwner>;
   generation: symbol;
-  // Live optimistic-lock version, advanced synchronously on save success
-  // before the queued drain fires — so a drained save rebases onto the bumped
-  // version instead of self-409ing on the writer's own previous save.
   version: number;
   lastSaved: string;
-  // The latest queued request retains its own target, activation and version.
-  queued: AutosaveRequest | null;
-  // Active debounce timer id, so forceSave can cancel it.
   debounceTimer: ReturnType<typeof setTimeout> | null;
-  payload: DraftSaveContent | null;
-  sectionId: string | null;
-  mutate: AutosaveMutationHandle["mutate"];
-  mutateAsync: AutosaveMutationHandle["mutateAsync"];
-  isPending: boolean;
-  enabled: boolean;
-}
-
-function seedLiveState(args: UseLeadFormAutosaveArgs): AutosaveLiveState {
-  // Pre-bind invocation must fail loud: the stamp replaces these handles
-  // before any timer or event fires, so a hit here is a wiring/ordering bug.
-  const unboundMessage =
-    "Autosave mutation invoked before the sync effect bound the live handle";
-  return {
-    generation: Symbol("autosave-generation"),
-    version: args.version,
-    lastSaved: "",
-    queued: null,
-    debounceTimer: null,
-    payload: args.payload,
-    sectionId: args.reportSectionId,
-    mutate: () => {
-      throw new Error(unboundMessage);
-    },
-    mutateAsync: () => Promise.reject(new Error(unboundMessage)),
-    isPending: false,
-    enabled: args.enabled,
-    callbacks: args,
-  };
 }
 
 function saveRequest(
@@ -83,12 +35,8 @@ function saveRequest(
   key: string,
   payload: DraftSaveContent,
 ): AutosaveRequest {
-  return {
-    key,
-    payload,
-    generation: live.generation,
-    version: live.version,
-  };
+  const { generation, version } = live;
+  return { key, payload, generation, version };
 }
 
 function cancelDebounce(live: AutosaveLiveState): void {
@@ -99,16 +47,45 @@ function cancelDebounce(live: AutosaveLiveState): void {
 
 // Drain to the section the queue was built for — the hook survives navigation.
 function drainQueuedSave(live: AutosaveLiveState, sinks: AutosaveSinks): void {
-  const queued = live.queued;
-  live.queued = null;
+  const queued = live.persisted.takeQueued();
   if (queued === null) return;
   const current = queued.generation === live.generation;
-  if (current && (!live.enabled || queued.key === live.lastSaved)) return;
+  if (current && !live.args.enabled) {
+    settleDropped(queued, "obsolete");
+    return;
+  }
+  if (
+    current &&
+    !queued.persistedAttempt &&
+    (live.persisted.blocked() || queued.key === live.lastSaved)
+  )
+    return;
   if (current) sinks.setState("saving");
-  live.mutate({
+  live.mutation.mutate({
     ...queued,
     version: current ? Math.max(live.version, queued.version) : queued.version,
   });
+}
+
+function reconcileCurrentSave(
+  live: AutosaveLiveState,
+  saved: ReportSectionReadModel,
+  request: AutosaveRequest,
+): string {
+  const queued = live.persisted.queuedFor(request.generation);
+  const reconciliation = live.args.onSaved?.(
+    saved,
+    request.payload,
+    queued?.payload ?? null,
+    request.persistedAttempt?.token,
+  );
+  if (reconciliation && queued)
+    live.persisted.rebaseQueued(
+      queued,
+      reconciliation.queuedPayload,
+      saved.version,
+    );
+  return reconciliation?.savedKey ?? request.key;
 }
 
 function saveSucceeded(
@@ -117,47 +94,34 @@ function saveSucceeded(
   saved: ReportSectionReadModel,
   request: AutosaveRequest,
 ): void {
-  const { payload, generation } = request;
+  const { generation } = request;
+  if (!live.persisted.canComplete(request)) {
+    drainQueuedSave(live, sinks);
+    return;
+  }
   if (
     generation !== live.generation ||
-    saved.reportSectionId !== live.sectionId ||
+    saved.reportSectionId !== live.args.reportSectionId ||
     saved.version < live.version
   ) {
-    if (generation !== live.generation) {
-      const reconciled = reconcileQueuedRequest(
-        live.queued,
-        generation,
-        saved,
-        payload,
-      );
-      if (reconciled !== null) live.queued = reconciled;
-    }
+    settleDropped(request, "obsolete");
+    live.persisted.reconcileObsolete(request, saved, live.generation);
     drainQueuedSave(live, sinks);
     return;
   }
   // Bump version before the drain so a queued save rebases instead of
   // self-409ing on the writer's own previous save.
   live.version = saved.version;
-  live.callbacks.onVersionChange(saved.version);
+  live.args.onVersionChange(saved.version);
 
-  const queued = live.queued?.generation === generation ? live.queued : null;
-  const reconciliation = live.callbacks.onSaved?.(
-    saved,
-    payload,
-    queued?.payload ?? null,
-  );
-  if (reconciliation && queued) {
-    live.queued = rebaseQueuedRequest(
-      queued,
-      reconciliation.queuedPayload,
-      saved.version,
-    );
-  }
-  const savedKey = reconciliation?.savedKey ?? request.key;
+  const savedKey = reconcileCurrentSave(live, saved, request);
   live.lastSaved = savedKey;
   sinks.setLastSavedKey(savedKey);
   sinks.setState("saved");
   sinks.setLastSavedAt(new Date());
+  const accepted = live.persisted.accept(request, saved);
+  if (accepted) sinks.rearmRetry();
+  if (accepted === false) sinks.setState("error");
   drainQueuedSave(live, sinks);
 }
 
@@ -165,49 +129,54 @@ function saveFailed(
   live: AutosaveLiveState,
   sinks: AutosaveSinks,
   err: unknown,
-  generation: symbol,
+  request: AutosaveRequest,
 ): void {
-  if (generation !== live.generation) {
-    if (live.queued?.generation === generation) live.queued = null;
+  const { generation } = request;
+  if (!live.persisted.canComplete(request)) {
     drainQueuedSave(live, sinks);
     return;
   }
-  const queuedSectionId = live.queued?.payload.reportSectionId ?? null;
-  live.queued = null;
+  request.persistedAttempt?.settle({
+    status: generation === live.generation ? "failed" : "obsolete",
+    token: request.persistedAttempt.token,
+  });
+  if (generation !== live.generation) {
+    live.persisted.dropGeneration(generation);
+    drainQueuedSave(live, sinks);
+    return;
+  }
+  const queuedSectionId =
+    live.persisted.queued()?.payload.reportSectionId ?? null;
+  live.persisted.replaceQueued(null);
   sinks.setState("error");
   // A 409 hands off to the conflict flow (refetch): retrying the stale
   // version would just 409 again.
-  if (live.callbacks.onConflict && isLeadFormWriteConflict(err)) {
-    live.callbacks.onConflict();
+  if (live.args.onConflict && isLeadFormWriteConflict(err)) {
+    live.args.onConflict();
     return;
   }
   // Re-arm only if the queued edit still targets the form's current section.
-  if (queuedSectionId !== null && queuedSectionId === live.sectionId) {
+  if (
+    queuedSectionId !== null &&
+    queuedSectionId === live.args.reportSectionId &&
+    !live.persisted.blocked()
+  ) {
     sinks.rearmRetry();
   }
   toast.error(autosaveFailureMessage(err));
 }
 
-// Re-syncs every live value from the latest commit.
-function stampLiveState(
+function issueSave(
   live: AutosaveLiveState,
-  args: UseLeadFormAutosaveArgs,
-  mutation: AutosaveMutationHandle,
-): void {
-  if (live.sectionId !== args.reportSectionId) {
-    live.generation = Symbol("autosave-generation");
+  sinks: AutosaveSinks,
+  request: AutosaveRequest,
+): Promise<unknown> {
+  if (live.mutation.isPending) {
+    live.persisted.replaceQueued(request);
+    return Promise.resolve();
   }
-  live.payload = args.payload;
-  live.sectionId = args.reportSectionId;
-  live.enabled = args.enabled;
-  live.mutate = mutation.mutate;
-  live.mutateAsync = mutation.mutateAsync;
-  live.isPending = mutation.isPending;
-  live.callbacks = args;
-  // Re-sync the live version from the prop (e.g. a reseed after fillFrom or
-  // a conflict refetch). A successful save advances it ahead of this in the
-  // same tick; the prop catches up on the next render.
-  live.version = args.version;
+  sinks.setState("saving");
+  return live.mutation.mutateAsync(request);
 }
 
 // When a save is already in flight the payload is stashed for the success
@@ -220,38 +189,40 @@ function fireDebouncedSave(
   payloadKey: string,
   reportSectionId: string,
 ): void {
-  const current = live.payload;
-  if (current === null) return;
-  if (live.isPending) {
-    live.queued = saveRequest(live, payloadKey, current);
+  const current = live.args.payload;
+  if (current === null || !live.args.enabled || live.persisted.blocked())
     return;
-  }
-  sinks.setState("saving");
-  live.mutate(saveRequest(live, payloadKey, { ...current, reportSectionId }));
+  void issueSave(
+    live,
+    sinks,
+    saveRequest(live, payloadKey, { ...current, reportSectionId }),
+  ).catch(() => undefined);
 }
 
 async function forceSaveNow(
   live: AutosaveLiveState,
   sinks: AutosaveSinks,
 ): Promise<void> {
-  const current = live.payload;
+  const current = live.args.payload;
   const currentKey =
     current === null ? "" : encodeDraftSaveComparisonKey(current);
-  const sectionId = live.sectionId;
-  if (!live.enabled || current === null || currentKey === "" || !sectionId) {
+  const sectionId = live.args.reportSectionId;
+  if (
+    live.persisted.blocked() ||
+    !live.args.enabled ||
+    current === null ||
+    !sectionId
+  ) {
     return;
   }
   // Already up-to-date — nothing to save.
   if (currentKey === live.lastSaved) return;
 
   cancelDebounce(live);
-  if (live.isPending) {
-    live.queued = saveRequest(live, currentKey, current);
-    return;
-  }
-  sinks.setState("saving");
   try {
-    await live.mutateAsync(
+    await issueSave(
+      live,
+      sinks,
       saveRequest(live, currentKey, { ...current, reportSectionId: sectionId }),
     );
   } catch {
@@ -260,20 +231,64 @@ async function forceSaveNow(
   }
 }
 
+function savePersistedNow(
+  live: AutosaveLiveState,
+  sinks: AutosaveSinks,
+  token: string,
+): Promise<PersistedSaveResult> {
+  cancelDebounce(live);
+  const payload = live.args.payload;
+  if (
+    !live.args.enabled ||
+    payload?.reportSectionId.localeCompare(live.args.reportSectionId ?? "") !==
+      0
+  )
+    return Promise.resolve({ status: "obsolete", token });
+  const { request, promise } = live.persisted.create(
+    saveRequest(live, encodeDraftSaveComparisonKey(payload), payload),
+    token,
+  );
+  void issueSave(live, sinks, request).catch(() => undefined);
+  return promise;
+}
+
 // The autosave engine: one unit that owns the live holder and exposes only
 // intent operations. Every operation is a stable identity.
 export function createAutosaveEngine(
   args: UseLeadFormAutosaveArgs,
   sinks: AutosaveSinks,
 ) {
-  const live = seedLiveState(args);
+  const live: AutosaveLiveState = {
+    persisted: createPersistedIntentOwner(),
+    generation: Symbol("autosave-generation"),
+    version: args.version,
+    lastSaved: "",
+    debounceTimer: null,
+    args,
+    mutation: unboundAutosaveMutation(),
+  };
   return {
-    stamp: (next: UseLeadFormAutosaveArgs, mutation: AutosaveMutationHandle) =>
-      stampLiveState(live, next, mutation),
+    // Re-sync every live value from the latest committed args.
+    stamp: (
+      next: UseLeadFormAutosaveArgs,
+      mutation: AutosaveMutationHandle,
+    ) => {
+      if (live.args.reportSectionId !== next.reportSectionId) {
+        live.persisted.invalidate();
+        cancelDebounce(live);
+        live.generation = Symbol("autosave-generation");
+      }
+      live.args = next;
+      live.mutation = mutation;
+      // Re-sync the live version from the prop (e.g. a reseed after fillFrom or
+      // a conflict refetch). A successful save advances it ahead of this in the
+      // same tick; the prop catches up on the next render.
+      live.version = next.version;
+    },
     onSaveSuccess: (saved: ReportSectionReadModel, request: AutosaveRequest) =>
       saveSucceeded(live, sinks, saved, request),
-    onSaveError: (err: unknown, generation: symbol) =>
-      saveFailed(live, sinks, err, generation),
+    onSaveError: (err: unknown, request: AutosaveRequest) =>
+      saveFailed(live, sinks, err, request),
     // Announces the pending save and arms the debounce; returns its cleanup.
     armDebounce: (
       payloadKey: string,
@@ -294,22 +309,29 @@ export function createAutosaveEngine(
     // Cancels the pending debounce timer and saves now; an in-flight save
     // makes it queue the current payload for the success drain instead.
     forceSave: () => forceSaveNow(live, sinks),
+    savePersisted: (token: string) => savePersistedNow(live, sinks, token),
+    abandonPersisted: (token: string) => {
+      if (live.persisted.abandon(token)) sinks.rearmRetry();
+    },
     primeBaseline: (savedKey: string) => {
       live.lastSaved = savedKey;
       sinks.setLastSavedKey(savedKey);
     },
     adoptBaseline: (savedKey: string, source: "read" | "write") => {
       cancelDebounce(live);
+      live.persisted.adopt();
       live.lastSaved = savedKey;
-      if (live.queued?.generation === live.generation) live.queued = null;
+      live.persisted.dropGeneration(live.generation);
       sinks.setLastSavedKey(savedKey);
       sinks.setState(source === "write" ? "saved" : "idle");
       sinks.setLastSavedAt(source === "write" ? new Date() : null);
     },
     dispose: () => {
+      live.persisted.invalidate();
+      cancelDebounce(live);
       live.generation = Symbol("unmounted-autosave");
-      live.enabled = false;
-      live.queued = null;
+      live.args = { ...live.args, enabled: false };
+      live.persisted.takeQueued();
     },
   };
 }

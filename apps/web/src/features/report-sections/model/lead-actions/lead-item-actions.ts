@@ -10,7 +10,12 @@ type LeadItem = ReportSectionReadModel["items"][number];
 export function markCompletePatch(): Partial<LeadItem> {
   // A completed item can no longer carry a next-period commitment, so clear it;
   // otherwise the whole draft save is rejected by the write schema.
-  return { workflowStatus: "done", nextStepText: null };
+  return {
+    workflowStatus: "done",
+    nextStepText: null,
+    pausedReason: null,
+    carriedOver: false,
+  };
 }
 
 // Moving is a placement change. Reset the carry marker only when explicitly

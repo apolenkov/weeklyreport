@@ -13,10 +13,7 @@ import type {
   DraftPatch,
   RiskPrefillRequest,
 } from "../../../../report-sections";
-import {
-  continueToNextPatch,
-  promoteContinuationPatch,
-} from "../../../../report-sections";
+import { promoteContinuationPatch } from "../../../../report-sections";
 import type { QuickAddItem } from "../../../../report-sections/client";
 import type { QuickAddKind } from "./quick-add-button";
 import type { LeadFormAddSignals } from "./use-lead-form-add-signals";
@@ -64,10 +61,6 @@ function buildItemPatchActions(draft: LeadFormDraftHandle) {
       draft.apply({ kind: "move-item", itemId, target: "current" }),
     onPauseItem: (itemId: string, reason: string) =>
       draft.apply({ kind: "pause-item", itemId, reason }),
-    // Accepted retain-Current continuation: keeps the row and records the Next
-    // intent. Callers resolve `continuationConflict` before invoking.
-    onContinueToNext: (itemId: string, nextText: string) =>
-      patchItem(itemId, continueToNextPatch(nextText)),
     onPromoteContinuation: (itemId: string, nextText: string) =>
       patchItem(itemId, promoteContinuationPatch(nextText)),
   };

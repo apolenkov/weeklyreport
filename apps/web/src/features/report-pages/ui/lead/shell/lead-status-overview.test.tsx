@@ -8,6 +8,7 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TRPCClientError } from "@trpc/client";
 import type { ReactNode } from "react";
+import { toast } from "sonner";
 import { describe, expect, it, vi } from "vitest";
 
 import { SessionContext } from "../../../../../shared/lib/auth/session-provider";
@@ -46,6 +47,7 @@ function createSectionStore(initial: ReportSectionReadModel) {
 
 function Wrapper({
   children,
+  reportId = REPORT_ID,
   client,
   failOverview,
   resolvePlan,
@@ -61,6 +63,7 @@ function Wrapper({
   predecessorItem,
 }: {
   readonly children: ReactNode;
+  readonly reportId?: string;
   readonly client?: QueryClient;
   readonly failOverview?: () => boolean;
   readonly resolvePlan?: (
@@ -88,7 +91,10 @@ function Wrapper({
     ReportSectionReadModel["items"][number] | undefined;
 }) {
   const section = makeReportSectionFixture({
-    reportId: REPORT_ID,
+    reportId,
+    ...(reportId === REPORT_ID
+      ? {}
+      : { reportSectionId: "a0000000-0000-4000-8000-000000000061" }),
     projects: [
       {
         projectId: PROJECT_ID,
@@ -181,11 +187,11 @@ function Wrapper({
     },
     {
       path: ["leadForm", "statusOverview"],
-      query: () => {
+      queryByInput: () => {
         if (failOverview?.()) throw new Error("Overview refresh failed");
         return {
           current: {
-            reportId: REPORT_ID,
+            reportId,
             periodStart: new Date("2026-08-31T00:00:00.000Z"),
             periodEnd: new Date("2026-09-06T00:00:00.000Z"),
             section: sectionStore.read(),
@@ -225,7 +231,7 @@ function Wrapper({
     },
     {
       path: ["leadForm", "byPeriod"],
-      query: () => ({
+      queryByInput: () => ({
         section: sectionStore.read(),
         readOnly: false,
         canRequestReopen: false,
@@ -824,7 +830,7 @@ describe("LeadForm Overview", () => {
       const text = screen.getByRole("textbox", { name: /Description/ });
       await user.clear(text);
       await user.type(text, "My unsaved result");
-      const queryKey = [["leadForm", "byPeriod"]];
+      const queryKey = [["leadForm", "byPeriod"], { reportId: REPORT_ID }];
       const loaded = client.getQueryData<{ section: ReportSectionReadModel }>(
         queryKey,
       );
@@ -1314,7 +1320,63 @@ describe("LeadForm Overview", () => {
     ).toHaveTextContent("Draft saved");
   });
 
-  it("rolls the board back to the saved item when a failed save is discarded", async () => {
+  it("waits for the exact persisted restoration before closing a failed edit", async () => {
+    const user = userEvent.setup();
+    let acknowledgeRestore: (() => void) | undefined;
+    const restoreAck = new Promise<void>((resolve) => {
+      acknowledgeRestore = resolve;
+    });
+    const saveDraft = vi.fn(
+      async (input: unknown, current: ReportSectionReadModel) => {
+        if (saveDraft.mock.calls.length === 1)
+          throw new Error("failed before commit");
+        await restoreAck;
+        const draft = input as {
+          version: number;
+          items: ReportSectionReadModel["items"];
+        };
+        expect(draft.version).toBe(current.version);
+        return { ...current, version: current.version + 1, items: draft.items };
+      },
+    );
+    render(
+      <Wrapper saveDraft={saveDraft}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Edit item: Current work" }),
+    );
+    const description = screen.getByRole("textbox", { name: /Description/ });
+    await user.clear(description);
+    await user.type(description, "Detached failed text");
+    await user.click(screen.getByRole("button", { name: "Save update" }));
+    await screen.findByText(
+      "Save failed. Your update is still here; try saving again.",
+    );
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Discard" }));
+    await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledTimes(2), {
+      timeout: 1000,
+    });
+    expect(screen.getByLabelText(/Description \*/)).toHaveValue(
+      "Detached failed text",
+    );
+    expect(screen.getByText("Save update").closest("button")).toBeDisabled();
+    await act(async () => {
+      acknowledgeRestore?.();
+      await restoreAck;
+    });
+    await pollUntil(() =>
+      expect(screen.queryByRole("textbox", { name: /Description/ })).toBeNull(),
+    );
+    expect(
+      screen.getByRole("button", { name: "Edit item: Current work" }),
+    ).toBeInTheDocument();
+    expect(saveDraft).toHaveBeenCalledTimes(2);
+  });
+
+  it("retains detached edit recovery when the restorative write also fails", async () => {
     const user = userEvent.setup();
     const saveDraft = vi.fn(() =>
       Promise.reject(new Error("network unavailable")),
@@ -1346,23 +1408,16 @@ describe("LeadForm Overview", () => {
     await user.keyboard("{Escape}");
     await user.click(screen.getByRole("button", { name: "Discard" }));
 
-    expect(
-      await screen.findByRole("button", {
-        name: "Edit item: Current work",
-      }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", {
-        name: "Edit item: Never saved text",
-      }),
-    ).not.toBeInTheDocument();
-    expect(
-      within(screen.getByTestId("status-overview")).getByRole("status"),
-    ).not.toHaveTextContent("Draft save failed");
-    expect(saveDraft).toHaveBeenCalledOnce();
+    const recovery = await screen.findByRole("region", {
+      name: "Unsaved update recovery",
+    });
+    expect(recovery).toHaveTextContent("Never saved text");
+    expect(recovery).toHaveTextContent("restoration was not confirmed");
+    expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+    expect(saveDraft).toHaveBeenCalledTimes(2);
   });
 
-  it("removes a never-saved new item from the board when its failed save is discarded", async () => {
+  it("retains detached create recovery when its restorative write fails", async () => {
     const user = userEvent.setup();
     const saveDraft = vi.fn(() =>
       Promise.reject(new Error("network unavailable")),
@@ -1388,12 +1443,13 @@ describe("LeadForm Overview", () => {
     await user.keyboard("{Escape}");
     await user.click(screen.getByRole("button", { name: "Discard" }));
 
-    await pollUntil(() =>
-      expect(board.queryAllByText("Phantom item")).toHaveLength(0),
-    );
-    expect(
-      screen.getByRole("button", { name: "Edit item: Current work" }),
-    ).toBeInTheDocument();
+    const recovery = await screen.findByRole("region", {
+      name: "Unsaved update recovery",
+    });
+    expect(recovery).toHaveTextContent("Phantom item");
+    expect(recovery).toHaveTextContent("restoration was not confirmed");
+    expect(saveDraft).toHaveBeenCalledTimes(2);
+    expect(board.queryAllByText("Phantom item")).toHaveLength(0);
   });
 
   it("accepts a saved parent change as the new editor baseline", async () => {
@@ -2055,3 +2111,393 @@ describe("LeadForm Overview", () => {
     },
   );
 });
+
+it.each(["pending", "failed"] as const)(
+  "isolates %s plan UI when switching to a warm report and retains A input",
+  async (phase) => {
+    const user = userEvent.setup();
+    const reportB = "a0000000-0000-4000-8000-000000000060";
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const work: LeadOpenWorkHistoryOccurrence = {
+      source: "published",
+      reportId: PREDECESSOR_REPORT_ID,
+      reportSectionId: "a0000000-0000-4000-8000-000000000062",
+      periodStart: new Date("2026-07-06"),
+      periodEnd: new Date("2026-07-12"),
+      parent: { kind: "product", id: PROJECT_ID, name: "Payments" },
+      item: {
+        id: "a0000000-0000-4000-8000-000000000063",
+        stableId: "a0000000-0000-4000-8000-000000000064",
+        projectId: PROJECT_ID,
+        activityId: null,
+        type: "next",
+        text: "Report scoped deferred work",
+        tag: "delivery",
+        workflowStatus: "postponed",
+        carriedOver: false,
+        pausedReason: null,
+        stageNames: ["Development"],
+      },
+    };
+    const warm = render(
+      <Wrapper reportId={reportB} client={client} openWork={[work]}>
+        <LeadForm reportId={reportB} mode="overview" />
+      </Wrapper>,
+    );
+    await screen.findByRole("button", { name: "Add item to Payments" });
+    warm.unmount();
+    const pending = Promise.withResolvers<unknown>();
+    const resolvePlan = vi.fn(() =>
+      phase === "failed"
+        ? Promise.reject(new Error("Report A plan failed"))
+        : pending.promise,
+    );
+    function RenderReport({ reportId }: { reportId: string }) {
+      return (
+        <Wrapper
+          reportId={reportId}
+          client={client}
+          openWork={[work]}
+          resolvePlan={resolvePlan}
+          inputProvider
+        >
+          <LeadForm reportId={reportId} mode="overview" />
+        </Wrapper>
+      );
+    }
+    const rendered = render(<RenderReport reportId={REPORT_ID} />);
+    await user.click(
+      await screen.findByRole("button", {
+        name: /^Replan deferred work: Report scoped deferred work, /,
+      }),
+    );
+    const form = screen.getByRole("form", { name: "Resolve plan" });
+    await user.click(
+      within(form).getByRole("button", { name: "Save outcome" }),
+    );
+    await pollUntil(() => expect(resolvePlan).toHaveBeenCalledOnce());
+    if (phase === "failed") await screen.findByText("Report A plan failed");
+    rendered.rerender(<RenderReport reportId={reportB} />);
+    await screen.findByRole("button", { name: "Add item to Payments" });
+    expect(screen.queryByText("Report A plan failed")).not.toBeInTheDocument();
+    const bAction = screen.getByRole("button", {
+      name: /^Replan deferred work: Report scoped deferred work, /,
+    });
+    expect(
+      within(screen.getByTestId("status-overview")).getByRole("status"),
+    ).not.toHaveTextContent("Saving plan outcome…");
+    if (phase === "pending") {
+      // B has a different physical section; A remains guarded by the adapter.
+      expect(bAction).toBeEnabled();
+      await act(async () => {
+        pending.reject(new Error("Late Report A plan failed"));
+        await pending.promise.catch(() => undefined);
+      });
+    }
+    await vi.waitFor(() => expect(bAction).toBeEnabled(), { timeout: 1000 });
+    expect(
+      screen.queryByText("Late Report A plan failed"),
+    ).not.toBeInTheDocument();
+    await user.click(bAction);
+    expect(
+      screen.getByRole("form", { name: "Resolve plan" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save outcome" })).toBeEnabled();
+    rendered.rerender(<RenderReport reportId={REPORT_ID} />);
+    await screen.findByRole("form", { name: "Resolve plan" });
+    expect(
+      screen.getByRole("form", { name: "Resolve plan" }),
+    ).toHaveTextContent("Report scoped deferred work");
+    rendered.unmount();
+    client.clear();
+  },
+);
+
+it("does not acknowledge a later parent-and-stage edit from an earlier in-flight save receipt", async () => {
+  const user = userEvent.setup();
+  const firstAck = Promise.withResolvers<void>();
+  const secondAck = Promise.withResolvers<void>();
+  let server: ReportSectionReadModel | undefined;
+  const saveDraft = vi.fn(
+    async (input: unknown, current: ReportSectionReadModel) => {
+      server ??= current;
+      const number = saveDraft.mock.calls.length;
+      await (number === 1 ? firstAck.promise : secondAck.promise);
+      const draft = input as {
+        version: number;
+        items: ReportSectionReadModel["items"];
+      };
+      expect(draft.version).toBe(server.version);
+      server = { ...server, version: server.version + 1, items: draft.items };
+      return server;
+    },
+  );
+  render(
+    <Wrapper saveDraft={saveDraft}>
+      <LeadForm reportId={REPORT_ID} mode="overview" />
+    </Wrapper>,
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Edit item: Current work" }),
+  );
+  const first = screen.getByRole("textbox", { name: /Description/ });
+  await user.clear(first);
+  await user.type(first, "Earlier submitted text");
+  await user.click(screen.getByRole("button", { name: "Save update" }));
+  await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
+  await user.click(screen.getByRole("button", { name: "Cancel" }));
+  const discard = screen.queryByRole("button", { name: "Discard" });
+  if (discard) await user.click(discard);
+  await user.click(
+    await screen.findByRole("button", {
+      name: "Edit item: Earlier submitted text",
+    }),
+  );
+  const latest = screen.getByRole("textbox", { name: /Description/ });
+  await user.clear(latest);
+  await user.type(latest, "Latest parent and stage");
+  await user.selectOptions(
+    screen.getByLabelText("Product"),
+    `product:${SECOND_PROJECT_ID}`,
+  );
+  await user.click(screen.getByRole("button", { name: "Save update" }));
+  expect(saveDraft).toHaveBeenCalledOnce();
+  await act(async () => {
+    firstAck.resolve();
+    await firstAck.promise;
+  });
+  await pollUntil(() => expect(saveDraft).toHaveBeenCalledTimes(2));
+  expect(screen.getByRole("textbox", { name: /Description/ })).toHaveValue(
+    "Latest parent and stage",
+  );
+  expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+  expect(server?.items.find((item) => item.type === "current")?.text).toBe(
+    "Earlier submitted text",
+  );
+  await act(async () => {
+    secondAck.resolve();
+    await secondAck.promise;
+  });
+  await pollUntil(() =>
+    expect(screen.queryByRole("textbox", { name: /Description/ })).toBeNull(),
+  );
+  expect(server?.items.find((item) => item.type === "current")).toMatchObject({
+    text: "Latest parent and stage",
+    projectId: SECOND_PROJECT_ID,
+    stageNames: ["Analysis"],
+  });
+  expect(saveDraft).toHaveBeenCalledTimes(2);
+});
+
+it("keeps lost-ACK discard recovery after a real CAS conflict and never compensates at the refetched version", async () => {
+  const user = userEvent.setup();
+  const versions: number[] = [];
+  let server: ReportSectionReadModel | undefined;
+  const saveDraft = vi.fn((input: unknown, current: ReportSectionReadModel) => {
+    server ??= current;
+    const draft = input as {
+      version: number;
+      items: ReportSectionReadModel["items"];
+    };
+    versions.push(draft.version);
+    if (saveDraft.mock.calls.length === 1) {
+      server = { ...server, version: server.version + 1, items: draft.items };
+      return Promise.reject(
+        Object.assign(new Error("ACK lost after commit"), {
+          serverSection: server,
+        }),
+      );
+    }
+    if (draft.version !== server.version) {
+      const conflict = new TRPCClientError("Version conflict");
+      Object.defineProperty(conflict, "data", {
+        value: { code: "CONFLICT", httpStatus: 409 },
+        configurable: true,
+      });
+      return Promise.reject(conflict);
+    }
+    return Promise.reject(new Error("Unexpected automatic compensation"));
+  });
+  render(
+    <Wrapper saveDraft={saveDraft}>
+      <LeadForm reportId={REPORT_ID} mode="overview" />
+    </Wrapper>,
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Edit item: Current work" }),
+  );
+  const description = screen.getByRole("textbox", { name: /Description/ });
+  await user.clear(description);
+  await user.type(description, "Committed but unacknowledged");
+  await user.click(screen.getByRole("button", { name: "Save update" }));
+  await screen.findByText(
+    "Save failed. Your update is still here; try saving again.",
+  );
+  await user.keyboard("{Escape}");
+  await user.click(screen.getByRole("button", { name: "Discard" }));
+  const recovery = await screen.findByRole("region", {
+    name: "Unsaved update recovery",
+  });
+  expect(
+    within(recovery).getByRole("textbox", { name: /Description/ }),
+  ).toHaveValue("Committed but unacknowledged");
+  expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+  expect(server?.items.find((item) => item.type === "current")?.text).toBe(
+    "Committed but unacknowledged",
+  );
+  expect(versions).toEqual([1, 1]);
+  expect(saveDraft).toHaveBeenCalledTimes(2);
+});
+
+it.each(["success", "error"] as const)(
+  "allows a valid B plan while A is pending and isolates A's late %s",
+  async (late) => {
+    const user = userEvent.setup();
+    const reportB = "a0000000-0000-4000-8000-000000000060";
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const work: LeadOpenWorkHistoryOccurrence = {
+      source: "published",
+      reportId: PREDECESSOR_REPORT_ID,
+      reportSectionId: "a0000000-0000-4000-8000-000000000062",
+      periodStart: new Date("2026-07-06"),
+      periodEnd: new Date("2026-07-12"),
+      parent: { kind: "product", id: PROJECT_ID, name: "Payments" },
+      item: {
+        id: "a0000000-0000-4000-8000-000000000063",
+        stableId: "a0000000-0000-4000-8000-000000000064",
+        projectId: PROJECT_ID,
+        activityId: null,
+        type: "next",
+        text: "Report scoped deferred work",
+        tag: "delivery",
+        workflowStatus: "postponed",
+        carriedOver: false,
+        pausedReason: null,
+        stageNames: ["Development"],
+      },
+    };
+
+    const flightA = Promise.withResolvers<unknown>();
+    const flightB = Promise.withResolvers<unknown>();
+    const resolvePlan = vi.fn(
+      (input: unknown, section: ReportSectionReadModel) => {
+        const command = input as {
+          reportSectionId: string;
+          version: number;
+          planText: string;
+        };
+        expect(command.reportSectionId).toBe(section.reportSectionId);
+        expect(command.version).toBe(section.version);
+        return section.reportId === REPORT_ID
+          ? flightA.promise
+          : flightB.promise;
+      },
+    );
+    function RenderReport({ reportId }: { reportId: string }) {
+      return (
+        <Wrapper
+          reportId={reportId}
+          client={client}
+          openWork={[work]}
+          resolvePlan={resolvePlan}
+          inputProvider
+        >
+          <LeadForm reportId={reportId} mode="overview" />
+        </Wrapper>
+      );
+    }
+    const rendered = render(<RenderReport reportId={REPORT_ID} />);
+    await user.click(
+      await screen.findByRole("button", {
+        name: /^Replan deferred work: Report scoped deferred work, /,
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Save outcome" }));
+    await pollUntil(() => expect(resolvePlan).toHaveBeenCalledOnce());
+    rendered.rerender(<RenderReport reportId={reportB} />);
+    const replanB = await screen.findByRole("button", {
+      name: /^Replan deferred work: Report scoped deferred work, /,
+    });
+    await vi.waitFor(() => expect(replanB).toBeEnabled(), { timeout: 1000 });
+    await user.click(replanB);
+    const inputB = screen.getByRole("textbox", {
+      name: "Next-period commitment",
+    });
+    await user.clear(inputB);
+    await user.type(inputB, "Only B's authored commitment");
+    await user.click(screen.getByRole("button", { name: "Save outcome" }));
+    await pollUntil(() => expect(resolvePlan).toHaveBeenCalledTimes(2));
+    const sectionA = resolvePlan.mock.calls.at(0)?.[1];
+    const sectionB = resolvePlan.mock.calls.at(1)?.[1];
+    if (!sectionA || !sectionB)
+      throw new Error("Both scoped commands must have been sent");
+    expect(sectionB.reportId).toBe(reportB);
+    expect(sectionB.reportSectionId).not.toBe(sectionA.reportSectionId);
+    vi.mocked(toast.success).mockClear();
+    await act(async () => {
+      if (late === "error") flightA.reject(new Error("Late A failure"));
+      else
+        flightA.resolve({
+          section: {
+            ...sectionA,
+            version: 2,
+            items: [
+              ...sectionA.items,
+              {
+                ...work.item,
+                id: "a0000000-0000-4000-8000-000000000066",
+                workflowStatus: "planned",
+              },
+            ],
+          },
+          stableId: work.item.stableId,
+          replayed: false,
+        });
+      await flightA.promise.catch(() => undefined);
+    });
+    expect(inputB).toHaveValue("Only B's authored commitment");
+    expect(
+      screen.getByRole("form", { name: "Resolve plan" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Saving/ })).toBeDisabled();
+    expect(screen.queryByText("Late A failure")).not.toBeInTheDocument();
+    expect(toast.success).not.toHaveBeenCalled();
+    await act(async () => {
+      flightB.resolve({
+        section: {
+          ...sectionB,
+          version: 2,
+          items: [
+            ...sectionB.items,
+            {
+              ...work.item,
+              id: "a0000000-0000-4000-8000-000000000065",
+              text: "Only B's authored commitment",
+              workflowStatus: "planned",
+            },
+          ],
+        },
+        stableId: work.item.stableId,
+        replayed: false,
+      });
+      await flightB.promise;
+    });
+    await pollUntil(() =>
+      expect(
+        screen.queryByRole("form", { name: "Resolve plan" }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(toast.success).toHaveBeenCalledOnce();
+    expect(toast.success).toHaveBeenCalledWith("Plan outcome saved");
+    await itemPreview("Only B's authored commitment");
+    expect(
+      screen.getByRole("button", { name: "Add item to Payments" }),
+    ).toBeEnabled();
+    rendered.unmount();
+    client.clear();
+  },
+);

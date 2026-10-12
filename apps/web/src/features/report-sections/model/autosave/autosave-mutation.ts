@@ -11,13 +11,25 @@ export interface AutosaveMutationHandle {
   readonly isPending: boolean;
 }
 
+export function unboundAutosaveMutation(): AutosaveMutationHandle {
+  const message =
+    "Autosave mutation invoked before the sync effect bound the live handle";
+  return {
+    mutate: () => {
+      throw new Error(message);
+    },
+    mutateAsync: () => Promise.reject(new Error(message)),
+    isPending: false,
+  };
+}
+
 export interface SaveDraftMutationDeps {
   readonly writePort: LeadFormWritePort;
   readonly onSuccess: (
     saved: ReportSectionReadModel,
     request: AutosaveRequest,
   ) => void;
-  readonly onError: (error: unknown, generation: symbol) => void;
+  readonly onError: (error: unknown, request: AutosaveRequest) => void;
 }
 
 // Pure mutation transport: the write-port call plus in-flight bookkeeping.
@@ -40,7 +52,7 @@ export function useSaveDraftMutation(
         onSuccess(saved, request);
         return saved;
       } catch (error: unknown) {
-        onError(error, request.generation);
+        onError(error, request);
         throw error;
       } finally {
         setPendingCount((count) => count - 1);

@@ -72,6 +72,10 @@ function useDecisionsEditing({
 
   const confirmDelete = () => {
     if (!pendingDelete) return;
+    if (readOnly) {
+      clearPendingDelete();
+      return;
+    }
     onChange?.(decisions.filter((d) => d.id !== pendingDelete.id));
     clearPendingDelete();
   };

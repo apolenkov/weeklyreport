@@ -6,7 +6,10 @@ import { act, renderHook } from "@testing-library/react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { makeReportSectionFixture } from "../../../../test-utils/report-section-fixtures";
+import { sectionToDraftPayload } from "../lead-section-draft-payload";
 import { encodeAutosaveComparisonKey } from "./autosave-stable-stringify";
+import type { PersistedSaveResult } from "./autosave-types";
 import { encodeDraftSaveComparisonKey } from "./draft-save-comparison-key";
 import { useLeadFormAutosave } from "./use-lead-form-autosave";
 import {
@@ -562,3 +565,341 @@ describe("encodeAutosaveComparisonKey", () => {
     );
   });
 });
+
+function persistedSection(text: string, sectionId = SECTION_ID) {
+  return makeReportSectionFixture({
+    reportSectionId: sectionId,
+    projects: [
+      {
+        projectId: "22222222-2222-4222-8222-222222222222",
+        projectName: "Product",
+        trafficLight: "green",
+        ownedStages: [],
+        stageSet: [],
+      },
+    ],
+    items: [
+      {
+        id: "33333333-3333-4333-8333-333333333333",
+        stableId: "44444444-4444-4444-8444-444444444444",
+        projectId: "22222222-2222-4222-8222-222222222222",
+        activityId: null,
+        type: "current",
+        text,
+        tag: "",
+        nextStepText: null,
+        workflowStatus: "in_progress",
+        carriedOver: false,
+        stageNames: [],
+        priorityRank: null,
+        pausedReason: null,
+      },
+    ],
+  });
+}
+
+function persistedReply(
+  request: DraftSavePayload,
+  current: ReportSectionReadModel,
+) {
+  const item = current.items[0];
+  if (!item) throw new Error("Missing persisted fixture item");
+  return makeReportSectionFixture({
+    ...current,
+    version: request.version + 1,
+    items: request.items.map((row) => ({
+      ...item,
+      ...row,
+      stageNames: row.stageNames ?? item.stageNames,
+      workflowStatus: row.workflowStatus,
+      carriedOver: row.carriedOver ?? false,
+    })),
+  });
+}
+
+describe("persisted autosave intent", () => {
+  it("writes an equal baseline at the current CAS version and accepts only its actual ACK", async () => {
+    let server = persistedSection("baseline");
+    const { wrapper, writePort, calls } = buildHarness({
+      mutationFn: (request) => {
+        expect(request.version).toBe(server.version);
+        server = persistedReply(request, server);
+        return Promise.resolve(server);
+      },
+    });
+    const payload = sectionToDraftPayload(server);
+    const { result } = renderHook(
+      () =>
+        useLeadFormAutosave({
+          writePort,
+          reportSectionId: SECTION_ID,
+          payload,
+          enabled: true,
+          version: server.version,
+          initialSavedKey: encodeDraftSaveComparisonKey(payload),
+          onVersionChange: vi.fn(),
+        }),
+      { wrapper },
+    );
+    let receipt: PersistedSaveResult | undefined;
+    await act(async () => {
+      receipt = await result.current.savePersisted("restore");
+    });
+    expect(receipt).toMatchObject({
+      status: "accepted",
+      token: "restore",
+      version: 2,
+      payload,
+    });
+    expect(calls).toHaveLength(1);
+    await act(async () => {
+      await result.current.forceSave();
+    });
+    expect(calls).toHaveLength(1);
+  });
+
+  it.each([
+    "overwrite",
+    "suppression",
+    "failure-cleanup",
+    "rebase-null",
+    "adopt",
+    "activation",
+    "dispose",
+  ] as const)(
+    "settles a queued persisted attempt exactly once on %s",
+    async (drop) => {
+      const server = persistedSection("baseline");
+      const initial = sectionToDraftPayload(server);
+      const edited = sectionToDraftPayload(persistedSection("in-flight edit"));
+      const flight = Promise.withResolvers<ReportSectionReadModel>();
+      const { wrapper, writePort, calls } = buildHarness({
+        mutationFn: (request) =>
+          calls.length === 1
+            ? flight.promise
+            : Promise.resolve(persistedReply(request, server)),
+      });
+      const { result, rerender, unmount } = renderHook(
+        ({ payload, sectionId, enabled }) =>
+          useLeadFormAutosave({
+            writePort,
+            reportSectionId: sectionId,
+            payload,
+            enabled,
+            version: 1,
+            initialSavedKey: encodeDraftSaveComparisonKey(initial),
+            onVersionChange: vi.fn(),
+            ...(drop === "rebase-null"
+              ? {
+                  onSaved: () => ({
+                    savedKey: encodeDraftSaveComparisonKey(edited),
+                    queuedPayload: null,
+                  }),
+                }
+              : {}),
+          }),
+        {
+          wrapper,
+          initialProps: {
+            payload: edited,
+            sectionId: SECTION_ID,
+            enabled: true,
+          },
+        },
+      );
+      let regular: Promise<void> | undefined;
+      act(() => {
+        regular = result.current.forceSave();
+      });
+      rerender({ payload: initial, sectionId: SECTION_ID, enabled: true });
+      const settle = vi.fn();
+      let pending: Promise<PersistedSaveResult> | undefined;
+      act(() => {
+        pending = result.current.savePersisted("queued").then((outcome) => {
+          settle(outcome);
+          return outcome;
+        });
+      });
+      expect(settle).not.toHaveBeenCalled();
+      if (drop === "overwrite")
+        act(() => {
+          void result.current.savePersisted("replacement");
+        });
+      if (drop === "adopt")
+        act(() =>
+          result.current.adoptBaseline(
+            encodeDraftSaveComparisonKey(initial),
+            "read",
+          ),
+        );
+      if (drop === "activation")
+        rerender({
+          payload: {
+            ...initial,
+            reportSectionId: "99999999-9999-4999-8999-999999999999",
+          },
+          sectionId: "99999999-9999-4999-8999-999999999999",
+          enabled: true,
+        });
+      if (drop === "dispose") unmount();
+      if (drop === "suppression")
+        rerender({ payload: initial, sectionId: SECTION_ID, enabled: false });
+      await act(async () => {
+        if (drop === "failure-cleanup")
+          flight.reject(new Error("failed before commit"));
+        else {
+          const request = calls[0];
+          if (!request) {
+            throw new Error("No in-flight request");
+          }
+          flight.resolve(persistedReply(request, server));
+        }
+        await regular;
+        await pending;
+      });
+      const status = ["suppression", "activation", "dispose"].includes(drop)
+        ? "obsolete"
+        : "superseded";
+      expect(settle).toHaveBeenCalledExactlyOnceWith({
+        status,
+        token: "queued",
+      });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(6000);
+      });
+      expect(settle).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each([
+    "rejection",
+    "wrong-fields",
+    "stale-version",
+    "nonadvancing-version",
+  ] as const)(
+    "retains an unconfirmed %s and requires explicit retry",
+    async (fault) => {
+      let server = persistedSection("baseline");
+      let attempts = 0;
+      const payload = sectionToDraftPayload(persistedSection("intended"));
+      const { wrapper, writePort, calls } = buildHarness({
+        mutationFn: (request) => {
+          attempts++;
+          if (attempts === 1 && fault === "rejection")
+            return Promise.reject(new Error("connection lost"));
+          const response = persistedReply(request, server);
+          if (attempts === 1 && fault === "wrong-fields")
+            return Promise.resolve({ ...response, items: server.items });
+          if (attempts === 1 && fault === "stale-version")
+            return Promise.resolve({ ...response, version: 0 });
+          if (attempts === 1 && fault === "nonadvancing-version")
+            return Promise.resolve({ ...response, version: request.version });
+          server = response;
+          return Promise.resolve(server);
+        },
+      });
+      const { result } = renderHook(
+        () =>
+          useLeadFormAutosave({
+            writePort,
+            payload,
+            reportSectionId: SECTION_ID,
+            enabled: true,
+            version: 1,
+            onVersionChange: vi.fn(),
+          }),
+        { wrapper },
+      );
+      let outcome: PersistedSaveResult | undefined;
+      await act(async () => {
+        outcome = await result.current.savePersisted("first");
+      });
+      expect(outcome?.status).toBe(
+        fault === "stale-version" ? "obsolete" : "failed",
+      );
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(6000);
+      });
+      expect(calls).toHaveLength(1);
+      await act(async () => {
+        outcome = await result.current.savePersisted("retry");
+      });
+      expect(outcome?.status).toBe("accepted");
+      expect(calls).toHaveLength(2);
+    },
+  );
+});
+
+it.each(["adopt", "dispose", "A-B-A"] as const)(
+  "invalidates an in-flight persisted intent exactly once on %s",
+  async (transition) => {
+    const first = persistedSection("captured A");
+    const pendingResponse = Promise.withResolvers<ReportSectionReadModel>();
+    const { wrapper, writePort, calls } = buildHarness({
+      mutationFn: () => pendingResponse.promise,
+    });
+    const onVersionChange = vi.fn();
+    const { result, rerender, unmount } = renderHook(
+      ({ payload, sectionId }) =>
+        useLeadFormAutosave({
+          writePort,
+          payload,
+          reportSectionId: sectionId,
+          enabled: true,
+          version: 1,
+          onVersionChange,
+          initialSavedKey: encodeDraftSaveComparisonKey(payload),
+        }),
+      {
+        wrapper,
+        initialProps: {
+          payload: sectionToDraftPayload(first),
+          sectionId: SECTION_ID,
+        },
+      },
+    );
+    const settled = vi.fn();
+    let forced: Promise<unknown> | undefined;
+    act(() => {
+      forced = result.current.savePersisted("old-activation").then(settled);
+    });
+    if (transition === "dispose") unmount();
+    if (transition === "adopt")
+      act(() =>
+        result.current.adoptBaseline(
+          encodeDraftSaveComparisonKey(sectionToDraftPayload(first)),
+          "read",
+        ),
+      );
+    if (transition === "A-B-A") {
+      const sectionB = "99999999-9999-4999-8999-999999999999";
+      rerender({
+        payload: sectionToDraftPayload(persistedSection("B", sectionB)),
+        sectionId: sectionB,
+      });
+      rerender({
+        payload: sectionToDraftPayload(persistedSection("new A")),
+        sectionId: SECTION_ID,
+      });
+    }
+    await act(async () => {
+      await forced;
+    });
+    expect(settled).toHaveBeenCalledExactlyOnceWith({
+      status: transition === "adopt" ? "superseded" : "obsolete",
+      token: "old-activation",
+    });
+    const request = calls[0];
+    if (!request) throw new Error("Missing captured request");
+    await act(async () => {
+      pendingResponse.resolve(persistedReply(request, first));
+      await pendingResponse.promise;
+    });
+    expect(settled).toHaveBeenCalledTimes(1);
+    expect(onVersionChange).not.toHaveBeenCalled();
+    if (transition !== "dispose") {
+      expect(result.current.lastSavedAt).toBeNull();
+      expect(result.current.currentPayloadMatchesSavedBaseline).toBe(true);
+    }
+  },
+);

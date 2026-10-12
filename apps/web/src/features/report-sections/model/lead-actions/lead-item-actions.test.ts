@@ -5,12 +5,14 @@ import { describe, expect, it } from "vitest";
 import { expectDefined } from "../../../../test-utils/expect-defined";
 import { makeReportSectionFixture } from "../../../../test-utils/report-section-fixtures";
 import { applyDraftPatch } from "../lead-form/draft/lead-form-draft-patch";
+import { sectionToDraftPayload } from "../lead-section-draft-payload";
 import {
   buildConfirmAllCarriedPatch,
   buildConfirmCarriedItemPatch,
   buildMoveItemPatch,
   continuationConflict,
   continueToNextPatch,
+  isUnconfirmedCarried,
   markCompletePatch,
   moveToCurrentWeekPatch,
   moveToNextWeekPatch,
@@ -377,6 +379,8 @@ describe("markCompletePatch", () => {
     expect(markCompletePatch()).toEqual({
       workflowStatus: "done",
       nextStepText: null,
+      pausedReason: null,
+      carriedOver: false,
     });
   });
 });
@@ -449,5 +453,40 @@ describe("continuationConflict", () => {
     expect(continuationConflict({ nextStepText: null }, "New plan")).toBe(
       false,
     );
+  });
+});
+
+describe("explicit section completion", () => {
+  it("confirms carried paused work through the latest draft command without losing identity", () => {
+    const raw = {
+      ...carriedItem(),
+      workflowStatus: "paused" as const,
+      pausedReason: "Waiting for approval",
+      nextStepText: "Old commitment",
+    };
+    const completed = applyDraftPatch(section(raw), {
+      kind: "complete-item",
+      itemId: raw.id ?? "",
+    });
+    const result = expectDefined(completed.items[0]);
+    expect(result).toMatchObject({
+      id: raw.id,
+      stableId: raw.stableId,
+      text: "Carried-in work",
+      priorityRank: 3,
+      workflowStatus: "done",
+      pausedReason: null,
+      carriedOver: false,
+      nextStepText: null,
+      comments: raw.comments,
+    });
+    expect(sectionToDraftPayload(completed).items[0]).toMatchObject({
+      workflowStatus: "done",
+      pausedReason: null,
+      carriedOver: false,
+      nextStepText: null,
+    });
+    expect(isUnconfirmedCarried(result)).toBe(false);
+    expect(raw.carriedOver).toBe(true);
   });
 });

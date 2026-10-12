@@ -18,6 +18,14 @@ export type LeadFormRequiredReadState =
 
 interface RetryAttempt {
   readonly scope: string | null;
+  readonly supporting: boolean;
+}
+
+function missingSectionNeedsRecovery(
+  failedReads: readonly RequiredRead[],
+  attempt: RetryAttempt | null,
+): boolean {
+  return failedReads.length > 0 || attempt?.supporting === true;
 }
 
 export function useLeadFormRequiredReads({
@@ -43,13 +51,13 @@ export function useLeadFormRequiredReads({
     readonly promise: Promise<unknown>;
   } | null>(null);
   const retrying = retryAttempt !== null && retryAttempt.scope === scope;
-  const failedReads = [active, section, history].filter(
-    (query) => query.isError,
-  );
+  const failedReads = (
+    sectionUnavailable ? [active, history] : [active, section, history]
+  ).filter((query) => query.isError);
   const retry = () => {
     if (inFlight.current?.attempt.scope === scope)
       return inFlight.current.promise;
-    const attempt = { scope };
+    const attempt = { scope, supporting: sectionUnavailable };
     setRetryAttempt(attempt);
     const promise = Promise.all(
       failedReads.map((query) => query.refetch({ cancelRefetch: false })),
@@ -62,10 +70,15 @@ export function useLeadFormRequiredReads({
   };
 
   if (!enabled) return { status: "loading" };
-  if (sectionUnavailable) return { status: "unavailable" };
+  if (
+    sectionUnavailable &&
+    !missingSectionNeedsRecovery(failedReads, retrying ? retryAttempt : null)
+  )
+    return { status: "unavailable" };
   if (
     active.isError ||
     retrying ||
+    sectionUnavailable ||
     (activeData !== null && failedReads.length > 0)
   ) {
     return {

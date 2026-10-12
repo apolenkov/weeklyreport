@@ -61,7 +61,10 @@ describe("useLeadFormWritePort", () => {
         }),
     );
     const invalidate = vi.spyOn(queryClient, "invalidateQueries");
-    const { result } = renderHook(useLeadFormWritePort, { wrapper: Wrapper });
+    const { result } = renderHook(
+      () => useLeadFormWritePort(section.reportSectionId),
+      { wrapper: Wrapper },
+    );
 
     let savePromise!: Promise<unknown>;
     act(() => {
@@ -102,7 +105,10 @@ describe("useLeadFormWritePort", () => {
     expectDefined(captured["reports.submit"]).mutationFn.mockRejectedValue(
       conflict,
     );
-    const { result } = renderHook(useLeadFormWritePort, { wrapper: Wrapper });
+    const { result } = renderHook(
+      () => useLeadFormWritePort(section.reportSectionId),
+      { wrapper: Wrapper },
+    );
 
     await expect(
       result.current.submit({
@@ -136,7 +142,10 @@ describe("useLeadFormWritePort", () => {
       captured["leadForm.requestReopen"],
     ).mutationFn.mockResolvedValue({ success: true });
     const invalidate = vi.spyOn(queryClient, "invalidateQueries");
-    const { result } = renderHook(useLeadFormWritePort, { wrapper: Wrapper });
+    const { result } = renderHook(
+      () => useLeadFormWritePort(section.reportSectionId),
+      { wrapper: Wrapper },
+    );
 
     await act(() =>
       result.current.submit({
@@ -215,7 +224,10 @@ describe("useLeadFormWritePort", () => {
       captured["leadForm.restorePlan"],
     ).mutationFn.mockResolvedValue({ ...outcome, replayed: true });
     const invalidate = vi.spyOn(queryClient, "invalidateQueries");
-    const { result } = renderHook(useLeadFormWritePort, { wrapper: Wrapper });
+    const { result } = renderHook(
+      () => useLeadFormWritePort(section.reportSectionId),
+      { wrapper: Wrapper },
+    );
 
     await act(() =>
       result.current.resolvePlan({
@@ -256,10 +268,114 @@ describe("useLeadFormWritePort", () => {
     expectDefined(captured["leadForm.revoke"]).mutationFn.mockRejectedValue(
       new Error("offline"),
     );
-    const { result } = renderHook(useLeadFormWritePort, { wrapper: Wrapper });
+    const { result } = renderHook(
+      () => useLeadFormWritePort(section.reportSectionId),
+      { wrapper: Wrapper },
+    );
 
     await expect(
       result.current.revoke({ reportSectionId: section.reportSectionId }),
     ).rejects.toEqual(new LeadFormWriteError("error", "offline"));
   });
 });
+
+it.each(["A-first", "B-first"] as const)(
+  "tracks every actual section request through finally with %s settlement",
+  async (order) => {
+    const { Wrapper, captured } = buildHarness();
+    const sectionB = "44444444-4444-4444-8444-444444444444";
+    const flightA = Promise.withResolvers<unknown>();
+    const flightB = Promise.withResolvers<unknown>();
+    expectDefined(
+      captured["leadForm.resolvePlan"],
+    ).mutationFn.mockImplementation((input: unknown) => {
+      const request = input as { reportSectionId: string };
+      return request.reportSectionId === section.reportSectionId
+        ? flightA.promise
+        : flightB.promise;
+    });
+    const initialProps: { sectionId: string | null } = {
+      sectionId: section.reportSectionId,
+    };
+    const { result, rerender, unmount } = renderHook(
+      ({ sectionId }) => useLeadFormWritePort(sectionId),
+      {
+        wrapper: Wrapper,
+        initialProps,
+      },
+    );
+    const command = {
+      version: 1,
+      commandId: "55555555-5555-4555-8555-555555555555",
+      source: {
+        kind: "prior" as const,
+        reportId: "66666666-6666-4666-8666-666666666666",
+        recordId: "77777777-7777-4777-8777-777777777777",
+      },
+      outcome: "done" as const,
+      stageNames: [],
+    };
+    let promiseA: Promise<unknown> | undefined;
+    act(() => {
+      promiseA = result.current.resolvePlan({
+        ...command,
+        reportSectionId: section.reportSectionId,
+      });
+    });
+    await waitFor(() => expect(result.current.pending.resolvePlan).toBe(true));
+    rerender({ sectionId: sectionB });
+    expect(result.current.pending.resolvePlan).toBe(false);
+    let promiseB: Promise<unknown> | undefined;
+    act(() => {
+      promiseB = result.current.resolvePlan({
+        ...command,
+        commandId: "88888888-8888-4888-8888-888888888888",
+        reportSectionId: sectionB,
+      });
+    });
+    await waitFor(() => expect(result.current.pending.resolvePlan).toBe(true));
+    rerender({ sectionId: null });
+    expect(result.current.pending.resolvePlan).toBe(true);
+    rerender({ sectionId: section.reportSectionId });
+    expect(result.current.pending.resolvePlan).toBe(true);
+    const resultA = {
+      section: { ...section, version: 2 },
+      stableId: "99999999-9999-4999-8999-999999999999",
+      replayed: false,
+    };
+    const resultB = {
+      ...resultA,
+      section: {
+        ...section,
+        reportSectionId: sectionB,
+        reportId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        version: 2,
+      },
+    };
+    await act(async () => {
+      if (order === "A-first") {
+        flightA.resolve(resultA);
+        await promiseA;
+      } else {
+        flightB.resolve(resultB);
+        await promiseB;
+      }
+    });
+    expect(result.current.pending.resolvePlan).toBe(order === "B-first");
+    rerender({ sectionId: sectionB });
+    expect(result.current.pending.resolvePlan).toBe(order === "A-first");
+    await act(async () => {
+      if (order === "A-first") {
+        flightB.resolve(resultB);
+        await promiseB;
+      } else {
+        flightA.resolve(resultA);
+        await promiseA;
+      }
+    });
+    expect(result.current.pending.resolvePlan).toBe(false);
+    rerender({ sectionId: section.reportSectionId });
+    expect(result.current.pending.resolvePlan).toBe(false);
+    unmount();
+  },
+);

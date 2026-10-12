@@ -50,7 +50,6 @@ const actions: LeadFormItemSectionsActions = {
   onNextWeekItemsChange: vi.fn(),
   onMarkComplete: vi.fn(),
   onMoveToNextWeek: vi.fn(),
-  onContinueToNext: vi.fn(),
   onMoveToCurrentWeek: vi.fn(),
   onPauseItem: vi.fn(),
   addCurrentWeekItem: vi.fn(),

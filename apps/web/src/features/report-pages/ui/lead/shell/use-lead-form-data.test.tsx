@@ -2,17 +2,24 @@
 // Data-loading hook pins cover query enablement, visibility gating, purge, and
 // redirects; end-to-end coverage stays in the LeadForm suites.
 
+import { type UserSession, userSessionSchema } from "@customreport/shared";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, renderHook, waitFor } from "@testing-library/react";
-import type { ReactNode } from "react";
+import { act, render, renderHook, waitFor } from "@testing-library/react";
+import { type ReactNode, useLayoutEffect } from "react";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SessionState } from "../../../../../shared/lib/auth/session-provider";
-import { SessionContext } from "../../../../../shared/lib/auth/session-provider";
+import {
+  SessionContext,
+  SessionProvider,
+  useSession,
+} from "../../../../../shared/lib/auth/session-provider";
 import { logClientError } from "../../../../../shared/lib/errors/client-error-reporting";
 import { TRPCProxyContext } from "../../../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
+import type { CrossAuthorContentRow } from "../../../../report-sections";
+import { buildLeadFormLoadedViewModel } from "../../../../report-sections";
 import { makeLeadFormSectionFixture } from "./lead-form-test-fixtures";
 import { useLeadFormData } from "./use-lead-form-data";
 import type { LeadFormRequiredReadState } from "./use-lead-form-required-reads";
@@ -119,10 +126,15 @@ function buildTRPC(
   },
   failures: { viewSettings?: boolean; crossAuthors?: boolean } = {},
   byPeriodQueryFn?: (input: unknown) => unknown,
+  authQueryFn?: () => UserSession | null,
+  contentQueryFn?: () =>
+    | readonly CrossAuthorContentRow[]
+    | Promise<readonly CrossAuthorContentRow[]>,
 ) {
   const byPeriodSpy = vi.fn();
   const contentSpy = vi.fn();
   const { proxy } = createMockTRPC([
+    { path: ["auth", "me"], query: authQueryFn ?? (() => null) },
     { path: ["leadForm", "assistant"], mutation: true },
     { path: ["leadForm", "resolvePlan"], mutation: true },
     { path: ["leadForm", "restorePlan"], mutation: true },
@@ -159,7 +171,7 @@ function buildTRPC(
       path: ["leadForm", "crossAuthorContent"],
       queryByInput: (input) => {
         contentSpy(input);
-        return [];
+        return contentQueryFn ? contentQueryFn() : [];
       },
     },
   ]);
@@ -595,4 +607,204 @@ describe("useLeadFormData — auxiliary query failure surfacing", () => {
       }),
     );
   });
+});
+
+function trustedViewer(
+  userId: string,
+  role: "lead" | "head" = "lead",
+): UserSession {
+  return userSessionSchema.parse({
+    userId,
+    email: "synthetic@example.test",
+    name: "Synthetic Viewer",
+    lastName: "Viewer",
+    firstName: "Synthetic",
+    middleName: null,
+    role,
+    activeReportId: REPORT_ID,
+    activeReportSectionId: SECTION_ID,
+    reportingGroupName: "Synthetic Group",
+  });
+}
+
+function foreignFixture(text: string): readonly CrossAuthorContentRow[] {
+  const project = { projectId: "80000000-0000-4000-8000-000000000001" };
+  return [
+    {
+      authorId: OTHER_USER_ID,
+      authorName: "Synthetic Coowner",
+      authorRole: "lead",
+      items: [
+        {
+          id: "90000000-0000-4000-8000-000000000001",
+          projectId: project.projectId,
+          type: "current",
+          text,
+          workflowStatus: "in_progress",
+          stageNames: ["Development"],
+        },
+      ],
+      risks: [],
+      decisions: [],
+    },
+  ];
+}
+
+describe("trusted identity loaded foreign projection", () => {
+  it.each(["user", "role"] as const)(
+    "never commits an earlier viewer's rows after a same-report %s change",
+    async (change) => {
+      window.localStorage.setItem(
+        `leadRecordVisibility:${OTHER_USER_ID}:${REPORT_ID}`,
+        "everyone",
+      );
+      let viewer = trustedViewer(USER_ID);
+      const secondResponse =
+        Promise.withResolvers<readonly CrossAuthorContentRow[]>();
+      const section = makeLeadFormSectionFixture({
+        ...makeSection(),
+        projects: [
+          {
+            projectId: "80000000-0000-4000-8000-000000000001",
+            projectName: "Synthetic Product",
+            trafficLight: "green",
+            ownedStages: [],
+            stageSet: [],
+          },
+        ],
+      });
+      const trpc = buildTRPC(
+        undefined,
+        {},
+        () => ({
+          section,
+          readOnly: false,
+          canRequestReopen: false,
+          publishedLineage: { itemStableIds: [], decisionStableIds: [] },
+        }),
+        () => viewer,
+        () =>
+          viewer.userId === USER_ID && viewer.role === "lead"
+            ? foreignFixture("A private row")
+            : secondResponse.promise,
+      );
+      const qc = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      let setVisibility: ((value: "mine" | "everyone") => void) | undefined;
+      const commits: {
+        viewer: string;
+        role: string;
+        rows: string[];
+        hydrated: boolean;
+        everyone: boolean;
+        content: number;
+        target: string | null;
+      }[] = [];
+      function Probe() {
+        const session = useSession();
+        const data = useLeadFormData({ isSlidesMode: false });
+        const section = data.byPeriodData?.section;
+        const projected = section
+          ? buildLeadFormLoadedViewModel({
+              active: section,
+              draftSection: section,
+              serverReadOnly: false,
+              canRequestReopen: false,
+              hasPendingReopen: false,
+              publishedLineage: { itemStableIds: [], decisionStableIds: [] },
+              history: [],
+              crossAuthors: data.crossAuthors,
+              foreignContent: data.foreignContent,
+              isEveryone: data.isEveryone,
+              visibilityHydrated: data.visibilityHydrated,
+              isForeignSlidesDeck: data.isForeignSlidesDeck,
+              isSubmitted: false,
+              selectedPeriodId: REPORT_ID,
+              showArchivePeriods: false,
+            })
+          : null;
+        const rows =
+          projected?.currentWeekItems
+            .filter((item) => item.foreign)
+            .map((item) => item.text) ?? [];
+        useLayoutEffect(() => {
+          setVisibility = data.setRecordVisibility;
+          if (session.user)
+            commits.push({
+              viewer: session.user.id,
+              role: session.user.role,
+              rows,
+              hydrated: data.visibilityHydrated,
+              everyone: data.isEveryone,
+              content: data.foreignContent?.length ?? -1,
+              target: data.targetReportId,
+            });
+        });
+        return null;
+      }
+      const rendered = render(
+        <QueryClientProvider client={qc}>
+          <TRPCProxyContext.Provider value={trpc.proxy}>
+            <SessionProvider>
+              <Probe />
+            </SessionProvider>
+          </TRPCProxyContext.Provider>
+        </QueryClientProvider>,
+      );
+      await waitFor(() =>
+        expect(
+          commits.some(
+            (commit) => commit.viewer === USER_ID && commit.hydrated,
+          ),
+        ).toBe(true),
+      );
+      act(() => setVisibility?.("everyone"));
+      await waitFor(
+        () =>
+          expect(commits).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({ rows: ["A private row"] }),
+            ]),
+          ),
+        { timeout: 1000 },
+      );
+      viewer =
+        change === "user"
+          ? trustedViewer(OTHER_USER_ID)
+          : trustedViewer(USER_ID, "head");
+      await act(async () => {
+        await qc.refetchQueries({ queryKey: [["auth", "me"]] });
+      });
+      await waitFor(() =>
+        expect(
+          commits.some(
+            (commit) =>
+              commit.viewer === viewer.userId && commit.role === viewer.role,
+          ),
+        ).toBe(true),
+      );
+      const nextCommits = commits.filter(
+        (commit) =>
+          commit.viewer === viewer.userId && commit.role === viewer.role,
+      );
+      expect(nextCommits.length).toBeGreaterThan(0);
+      expect(
+        nextCommits.every((commit) => !commit.rows.includes("A private row")),
+      ).toBe(true);
+      secondResponse.resolve(foreignFixture("B authorized row"));
+      if (change === "user")
+        await waitFor(() =>
+          expect(
+            commits.some(
+              (commit) =>
+                commit.viewer === OTHER_USER_ID &&
+                commit.rows.includes("B authorized row"),
+            ),
+          ).toBe(true),
+        );
+      rendered.unmount();
+      qc.clear();
+    },
+  );
 });

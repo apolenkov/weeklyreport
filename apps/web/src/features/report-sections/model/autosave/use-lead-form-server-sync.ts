@@ -85,6 +85,7 @@ function useSaveEchoRecorder(
       savedSection: ReportSectionReadModel,
       persistedPayload: DraftSaveContent,
       queuedPayload: DraftSaveContent | null,
+      attemptToken?: string,
     ) => {
       const savedPayload = sectionToDraftPayload(savedSection);
       const serverDraftKey = encodeDraftSaveComparisonKey(savedPayload);
@@ -95,6 +96,15 @@ function useSaveEchoRecorder(
         generation: leadFormGenerationOf(savedSection),
         reportSectionId: savedSection.reportSectionId,
         version: savedSection.version,
+        attemptToken,
+        persistedItems: Object.freeze(
+          savedSection.items.map((item) =>
+            Object.freeze({
+              ...item,
+              stageNames: Object.freeze([...item.stageNames]),
+            }),
+          ),
+        ),
         itemIdentities: savedRecordIdentityPairs(
           persistedPayload.items,
           savedPayload.items,
@@ -172,7 +182,9 @@ export function useDraftServerSync({
   });
   useServerSectionReseed({
     serverSection,
-    hasLocalEdits: autosave.dirty || localOnlyRows > 0,
+    hasLocalEdits:
+      (payload !== null && !autosave.currentPayloadMatchesSavedBaseline) ||
+      localOnlyRows > 0,
     ledger,
     acceptVersion,
     autosave,

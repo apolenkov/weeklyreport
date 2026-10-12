@@ -1,6 +1,7 @@
 import type { Role } from "@customreport/shared";
 
-// Pure UX predicates only; API middleware and server route gates remain the
+// Role classification shared by client presentation and server route gates.
+// API middleware remains the
 // security boundary, so these helpers do not encode capabilities.
 
 export function isHead(role: Role | null): boolean {
