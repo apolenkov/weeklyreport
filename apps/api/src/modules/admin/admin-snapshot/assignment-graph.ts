@@ -121,7 +121,11 @@ function assertGroupHeads(rows: AssignmentRows): void {
     const head = group.headUserId
       ? rows.users.get(group.headUserId)
       : undefined;
-    if (head && (head.role === "head" || head.role === "admin")) continue;
+    if (
+      head?.role === "admin" ||
+      (head?.role === "head" && head.reportingGroupId === group.id)
+    )
+      continue;
     if (!group.headUserId) continue;
     throw new AdminSnapshotConflictError(
       `Snapshot group ${group.id} has an ineligible final head assignment.`,

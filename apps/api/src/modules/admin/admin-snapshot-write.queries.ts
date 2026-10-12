@@ -62,7 +62,7 @@ async function applyGroupHeads(
   for (const group of [...groups].sort((left, right) =>
     left.id.localeCompare(right.id),
   )) {
-    await lockAndAssertGroupHead(tx, group.headUserId);
+    await lockAndAssertGroupHead(tx, group.headUserId, group.id);
     await tx.reportingGroup.update({
       where: { id: group.id },
       data: { headUserId: group.headUserId ?? null },

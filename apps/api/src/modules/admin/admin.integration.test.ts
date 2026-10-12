@@ -7,10 +7,11 @@ import {
   type ReminderPolicy,
   type ReminderQueuePayload,
 } from "@customreport/shared";
-import { Prisma } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../lib/logger";
+import { AdminUserActivityAssignmentConflictError } from "../../lib/user-activity-assignment.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   createPauseGate,
@@ -990,6 +991,388 @@ describe("AdminPrismaRepository (integration)", () => {
     );
     expect(restored.periodState).toBe("published");
     expect(restored.periodStatus).toBe("published");
+  });
+
+  describe("Head reporting-group consistency", () => {
+    const otherGroupId = "a0000000-0000-4000-a000-000000000080";
+    const otherAdminId = "a0000000-0000-4000-a000-000000000081";
+    const replacementHeadId = "a0000000-0000-4000-a000-000000000082";
+
+    async function headFixture() {
+      await prisma.reportingGroup.create({
+        data: { id: otherGroupId, name: "Other reporting group" },
+      });
+      const snapshot = await repo.getSnapshot();
+      return {
+        head: expectDefined(
+          snapshot.users.find(({ id }) => id === testData.head.id),
+        ),
+        ownGroup: expectDefined(
+          snapshot.groups.find(({ id }) => id === TEST_IDS.group),
+        ),
+        otherGroup: expectDefined(
+          snapshot.groups.find(({ id }) => id === otherGroupId),
+        ),
+      };
+    }
+
+    async function retainAnotherAdmin() {
+      await prisma.user.create({
+        data: {
+          id: otherAdminId,
+          email: "head-policy-admin@test.local",
+          samlId: "head-policy-admin",
+          name: "Policy Admin",
+          firstName: "Policy",
+          lastName: "Admin",
+          role: "admin",
+          reportingGroupId: TEST_IDS.group,
+        },
+      });
+    }
+
+    it("rejects a foreign ordinary Head assignment without changing the group", async () => {
+      const { head, ownGroup, otherGroup } = await headFixture();
+      await expect(
+        repo.saveReportingGroup({
+          ...otherGroup,
+          name: "Must roll back",
+          headUserId: head.id,
+        }),
+      ).rejects.toBeInstanceOf(AdminUserActivityAssignmentConflictError);
+      await expect(
+        prisma.reportingGroup.findUnique({ where: { id: otherGroupId } }),
+      ).resolves.toMatchObject({
+        name: "Other reporting group",
+        headUserId: null,
+      });
+      await repo.saveReportingGroup({ ...ownGroup, headUserId: head.id });
+      await expect(
+        prisma.reportingGroup.findUnique({ where: { id: TEST_IDS.group } }),
+      ).resolves.toMatchObject({ headUserId: head.id });
+    });
+
+    it("rejects an ordinary Head transfer while the old heading remains", async () => {
+      const { head, ownGroup } = await headFixture();
+      await repo.saveReportingGroup({ ...ownGroup, headUserId: head.id });
+      await expect(
+        repo.upsertUser({ ...head, reportingGroupId: otherGroupId }),
+      ).rejects.toBeInstanceOf(AdminUserActivityAssignmentConflictError);
+      await expect(
+        prisma.user.findUnique({ where: { id: head.id } }),
+      ).resolves.toMatchObject({
+        role: "head",
+        reportingGroupId: TEST_IDS.group,
+      });
+      await expect(
+        prisma.reportingGroup.findUnique({ where: { id: TEST_IDS.group } }),
+      ).resolves.toMatchObject({ headUserId: head.id });
+    });
+
+    it("allows Admin cross-group and multiple headings while their membership changes", async () => {
+      const { head, ownGroup, otherGroup } = await headFixture();
+      await repo.upsertUser({ ...head, role: "admin" });
+      await repo.saveReportingGroup({ ...ownGroup, headUserId: head.id });
+      await repo.saveReportingGroup({ ...otherGroup, headUserId: head.id });
+      await repo.upsertUser({
+        ...head,
+        role: "admin",
+        reportingGroupId: otherGroupId,
+      });
+      await expect(
+        prisma.user.findUnique({ where: { id: head.id } }),
+      ).resolves.toMatchObject({
+        role: "admin",
+        reportingGroupId: otherGroupId,
+      });
+      await expect(
+        prisma.reportingGroup.count({ where: { headUserId: head.id } }),
+      ).resolves.toBe(2);
+    });
+
+    it("checks the second retained heading during an ordinary Admin-to-Head transition", async () => {
+      const { head, ownGroup, otherGroup } = await headFixture();
+      await retainAnotherAdmin();
+      await repo.upsertUser({ ...head, role: "admin" });
+      await repo.saveReportingGroup({ ...ownGroup, headUserId: head.id });
+      await repo.saveReportingGroup({ ...otherGroup, headUserId: head.id });
+      await expect(
+        repo.upsertUser({ ...head, role: "head" }),
+      ).rejects.toBeInstanceOf(AdminUserActivityAssignmentConflictError);
+      await expect(
+        prisma.user.findUnique({ where: { id: head.id } }),
+      ).resolves.toMatchObject({
+        role: "admin",
+        reportingGroupId: TEST_IDS.group,
+      });
+      await expect(
+        prisma.reportingGroup.count({ where: { headUserId: head.id } }),
+      ).resolves.toBe(2);
+    });
+
+    it.each(["clear", "reassign"] as const)(
+      "atomically moves a restored Head while the old pointer is %s",
+      async (oldPointer) => {
+        const { head, ownGroup } = await headFixture();
+        await repo.saveReportingGroup({ ...ownGroup, headUserId: head.id });
+        if (oldPointer === "reassign") {
+          await prisma.user.create({
+            data: {
+              id: replacementHeadId,
+              email: "head-policy-replacement@test.local",
+              samlId: "head-policy-replacement",
+              name: "Replacement Head",
+              firstName: "Replacement",
+              lastName: "Head",
+              role: "head",
+              reportingGroupId: TEST_IDS.group,
+            },
+          });
+        }
+        const snapshot = await repo.getSnapshot();
+        await repo.saveSnapshot({
+          ...snapshot,
+          users: snapshot.users.map((user) =>
+            user.id === head.id
+              ? { ...user, reportingGroupId: otherGroupId }
+              : user,
+          ),
+          groups: snapshot.groups.map((group) => ({
+            ...group,
+            headUserId:
+              group.id === TEST_IDS.group
+                ? oldPointer === "clear"
+                  ? null
+                  : replacementHeadId
+                : group.id === otherGroupId
+                  ? head.id
+                  : group.headUserId,
+          })),
+        });
+        await expect(
+          prisma.user.findUnique({ where: { id: head.id } }),
+        ).resolves.toMatchObject({
+          role: "head",
+          reportingGroupId: otherGroupId,
+        });
+        await expect(
+          prisma.reportingGroup.findUnique({ where: { id: TEST_IDS.group } }),
+        ).resolves.toMatchObject({
+          headUserId: oldPointer === "clear" ? null : replacementHeadId,
+        });
+        await expect(
+          prisma.reportingGroup.findUnique({ where: { id: otherGroupId } }),
+        ).resolves.toMatchObject({ headUserId: head.id });
+      },
+    );
+
+    it("rejects a retained foreign live heading omitted from an additive restore before writes", async () => {
+      const { head, ownGroup, otherGroup } = await headFixture();
+      await retainAnotherAdmin();
+      await repo.upsertUser({ ...head, role: "admin" });
+      await repo.saveReportingGroup({ ...ownGroup, headUserId: head.id });
+      await repo.saveReportingGroup({ ...otherGroup, headUserId: head.id });
+      const before = await repo.getSnapshot();
+      await expect(
+        repo.saveSnapshot({
+          ...before,
+          users: before.users.map((user) =>
+            user.id === head.id ? { ...user, role: "head" } : user,
+          ),
+          groups: before.groups
+            .filter(({ id }) => id !== otherGroupId)
+            .map((group) => ({ ...group, name: "Must not write" })),
+        }),
+      ).rejects.toBeInstanceOf(AdminSnapshotConflictError);
+      await expect(repo.getSnapshot()).resolves.toEqual(before);
+    });
+
+    it("preserves inactive matching Head pointers during ordinary assignment and restore", async () => {
+      const { head, ownGroup } = await headFixture();
+      await prisma.user.update({
+        where: { id: head.id },
+        data: { isActive: false },
+      });
+      await repo.saveReportingGroup({ ...ownGroup, headUserId: head.id });
+      const snapshot = await repo.getSnapshot();
+      await repo.saveSnapshot(snapshot);
+      await expect(
+        prisma.user.findUnique({ where: { id: head.id } }),
+      ).resolves.toMatchObject({
+        isActive: false,
+        reportingGroupId: TEST_IDS.group,
+      });
+      await expect(
+        prisma.reportingGroup.findUnique({ where: { id: TEST_IDS.group } }),
+      ).resolves.toMatchObject({ headUserId: head.id });
+    });
+
+    it("restores Admin cross-group and multiple headings", async () => {
+      const { head } = await headFixture();
+      const snapshot = await repo.getSnapshot();
+      await repo.saveSnapshot({
+        ...snapshot,
+        users: snapshot.users.map((user) =>
+          user.id === head.id ? { ...user, role: "admin" } : user,
+        ),
+        groups: snapshot.groups.map((group) => ({
+          ...group,
+          headUserId: head.id,
+        })),
+      });
+      await expect(
+        prisma.reportingGroup.count({ where: { headUserId: head.id } }),
+      ).resolves.toBe(2);
+      await expect(
+        prisma.user.findUnique({ where: { id: head.id } }),
+      ).resolves.toMatchObject({
+        role: "admin",
+        reportingGroupId: TEST_IDS.group,
+      });
+    });
+
+    it.each(["assignment", "transfer"] as const)(
+      "serializes %s first against the other Head membership writer",
+      async (firstWriter) => {
+        const { head, ownGroup } = await headFixture();
+        const gate = createPauseGate();
+        const holderPid = Promise.withResolvers<number>();
+        const waiterPid = Promise.withResolvers<number>();
+
+        function observedClient(
+          pid: ReturnType<typeof Promise.withResolvers<number>>,
+          pauseAfterLock: boolean,
+        ): PrismaClient {
+          const transaction = prisma.$transaction.bind(prisma);
+          return new Proxy(prisma, {
+            get(target, property): unknown {
+              if (property !== "$transaction")
+                return Reflect.get(target, property, target) as unknown;
+              return async <T>(
+                callback: (tx: Prisma.TransactionClient) => Promise<T>,
+                options?: {
+                  isolationLevel?: Prisma.TransactionIsolationLevel;
+                  maxWait?: number;
+                  timeout?: number;
+                },
+              ) =>
+                transaction(
+                  async (tx) => {
+                    const [row] = await tx.$queryRaw<
+                      { pid: number }[]
+                    >`SELECT pg_backend_pid() AS pid`;
+                    pid.resolve(expectDefined(row).pid);
+                    let paused = false;
+                    const observedTx = new Proxy(tx, {
+                      get(txTarget, txProperty): unknown {
+                        if (txProperty !== "$queryRaw")
+                          return Reflect.get(
+                            txTarget,
+                            txProperty,
+                            txTarget,
+                          ) as unknown;
+                        return async (...args: unknown[]) => {
+                          const result: unknown = await Reflect.apply(
+                            txTarget.$queryRaw,
+                            txTarget,
+                            args,
+                          );
+                          if (
+                            pauseAfterLock &&
+                            !paused &&
+                            args.includes(head.id)
+                          ) {
+                            paused = true;
+                            await gate.pause();
+                          }
+                          return result;
+                        };
+                      },
+                    });
+                    return callback(observedTx);
+                  },
+                  { ...options, timeout: 10_000 },
+                );
+            },
+          });
+        }
+
+        const firstRepo = new AdminPrismaRepository(
+          observedClient(holderPid, true) as never,
+        );
+        const secondRepo = new AdminPrismaRepository(
+          observedClient(waiterPid, false) as never,
+        );
+        const assign = async (writer: AdminPrismaRepository) => {
+          await writer.saveReportingGroup({ ...ownGroup, headUserId: head.id });
+        };
+        const transfer = async (writer: AdminPrismaRepository) => {
+          await writer.upsertUser({ ...head, reportingGroupId: otherGroupId });
+        };
+        const first =
+          firstWriter === "assignment"
+            ? assign(firstRepo)
+            : transfer(firstRepo);
+        const firstOutcome = first.then(
+          () => ({ error: null }),
+          (error: unknown) => ({ error }),
+        );
+        let second: Promise<void> | undefined;
+        let blockedByHolder = false;
+        try {
+          await Promise.race([
+            gate.paused,
+            firstOutcome.then(({ error }) => {
+              if (error !== null) throw error;
+              throw new Error(
+                "First writer finished before its User lock was observed.",
+              );
+            }),
+          ]);
+          second =
+            firstWriter === "assignment"
+              ? transfer(secondRepo)
+              : assign(secondRepo);
+          const secondOutcome = second.then(
+            () => ({ error: null }),
+            (error: unknown) => ({ error }),
+          );
+          const holder = await holderPid.promise;
+          const waiter = await waiterPid.promise;
+          expect(holder).not.toBe(waiter);
+          await vi.waitFor(
+            async () => {
+              const [row] = await prisma.$queryRaw<{ blocked: boolean }[]>`
+              SELECT ${holder}::int = ANY(pg_blocking_pids(${waiter}::int)) AS blocked
+            `;
+              expect(expectDefined(row).blocked).toBe(true);
+              blockedByHolder = true;
+            },
+            { timeout: 2000, interval: 10 },
+          );
+          gate.release();
+          expect((await firstOutcome).error).toBeNull();
+          expect((await secondOutcome).error).toBeInstanceOf(
+            AdminUserActivityAssignmentConflictError,
+          );
+        } finally {
+          gate.release();
+          await Promise.allSettled([first, ...(second ? [second] : [])]);
+        }
+        expect(blockedByHolder).toBe(true);
+        await expect(
+          prisma.user.findUnique({ where: { id: head.id } }),
+        ).resolves.toMatchObject({
+          reportingGroupId:
+            firstWriter === "assignment" ? TEST_IDS.group : otherGroupId,
+        });
+        await expect(
+          prisma.reportingGroup.findUnique({ where: { id: TEST_IDS.group } }),
+        ).resolves.toMatchObject({
+          headUserId: firstWriter === "assignment" ? head.id : null,
+        });
+      },
+    );
   });
 
   // headUserId is applied in a second pass after users exist (groups upsert first).

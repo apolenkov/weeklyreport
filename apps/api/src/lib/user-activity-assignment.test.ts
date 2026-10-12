@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   AdminGroupProductConflictError,
   AdminUserActivityAssignmentConflictError,
+  lockAndAssertGroupHead,
   lockAndValidateProjectOwnership,
   lockUser,
   lockUserAndAssertActivityAssignments,
@@ -160,6 +161,87 @@ describe("user assignment integrity", () => {
     ).resolves.toBe(true);
     expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
   });
+});
+
+describe("Head reporting-group membership", () => {
+  it.each([
+    { role: "head", reportingGroupId: GROUP_A, conflict: false },
+    { role: "head", reportingGroupId: GROUP_B, conflict: true },
+    { role: "head", reportingGroupId: null, conflict: true },
+    { role: "admin", reportingGroupId: GROUP_B, conflict: false },
+  ])(
+    "checks a $role with group $reportingGroupId against the assigned group",
+    async ({ role, reportingGroupId, conflict }) => {
+      const tx = {
+        $queryRaw: vi.fn().mockResolvedValue([{ id: USER_ID }]),
+        user: {
+          findUnique: vi.fn().mockResolvedValue({
+            role,
+            reportingGroupId,
+            isActive: false,
+          }),
+        },
+      } as unknown as Prisma.TransactionClient;
+      const assignment = lockAndAssertGroupHead(tx, USER_ID, GROUP_A);
+      if (conflict) {
+        await expect(assignment).rejects.toBeInstanceOf(
+          AdminUserActivityAssignmentConflictError,
+        );
+      } else {
+        await expect(assignment).resolves.toBeUndefined();
+      }
+    },
+  );
+
+  it.each([
+    {
+      role: "head",
+      reportingGroupId: GROUP_A,
+      headed: [GROUP_A],
+      conflict: false,
+    },
+    {
+      role: "head",
+      reportingGroupId: GROUP_B,
+      headed: [GROUP_A],
+      conflict: true,
+    },
+    { role: "head", reportingGroupId: null, headed: [GROUP_A], conflict: true },
+    {
+      role: "head",
+      reportingGroupId: GROUP_A,
+      headed: [GROUP_A, GROUP_B],
+      conflict: true,
+    },
+    {
+      role: "admin",
+      reportingGroupId: GROUP_B,
+      headed: [GROUP_A, GROUP_B],
+      conflict: false,
+    },
+    { role: "head", reportingGroupId: GROUP_B, headed: [], conflict: false },
+  ])(
+    "checks every retained heading for desired $role/$reportingGroupId with $headed",
+    async ({ role, reportingGroupId, headed, conflict }) => {
+      const tx = fakeTx(
+        [],
+        [],
+        headed.map((id) => ({ id })),
+      );
+      const transfer = lockUserAndAssertActivityAssignments(tx, {
+        userId: USER_ID,
+        role,
+        reportingGroupId,
+      });
+      if (conflict) {
+        await expect(transfer).rejects.toBeInstanceOf(
+          AdminUserActivityAssignmentConflictError,
+        );
+      } else {
+        await expect(transfer).resolves.toBe(true);
+      }
+    },
+  );
 });
 
 describe("project desired-lead activity admission", () => {

@@ -70,14 +70,14 @@ export async function lockUserAndAssertActivityAssignments(
     select: { id: true },
     orderBy: { id: "asc" },
   });
-  const headedGroup = headedGroups[0];
-  if (
-    headedGroup !== undefined &&
-    input.role !== "head" &&
-    input.role !== "admin"
-  ) {
+  const incompatibleHeading = headedGroups.find(
+    (group) =>
+      input.role !== "admin" &&
+      (input.role !== "head" || group.id !== input.reportingGroupId),
+  );
+  if (incompatibleHeading) {
     throw new AdminUserActivityAssignmentConflictError(
-      `User ${input.userId} heads reporting group ${headedGroup.id}; assign the head or admin role before changing it.`,
+      `User ${input.userId} heads reporting group ${incompatibleHeading.id}; reassign it before changing to an incompatible role or reporting group.`,
     );
   }
   return true;
@@ -107,6 +107,7 @@ export async function lockUser(
 export async function lockAndAssertGroupHead(
   tx: Prisma.TransactionClient,
   headUserId: string | null | undefined,
+  groupId: string,
 ): Promise<void> {
   if (!headUserId) return;
   const exists = await lockUser(tx, headUserId);
@@ -117,11 +118,16 @@ export async function lockAndAssertGroupHead(
   }
   const user = await tx.user.findUnique({
     where: { id: headUserId },
-    select: { role: true },
+    select: { role: true, reportingGroupId: true },
   });
   if (user?.role !== "head" && user?.role !== "admin") {
     throw new AdminUserActivityAssignmentConflictError(
       `User ${headUserId} must have the head or admin role to head a reporting group.`,
+    );
+  }
+  if (user.role === "head" && user.reportingGroupId !== groupId) {
+    throw new AdminUserActivityAssignmentConflictError(
+      `Head user ${headUserId} must belong to reporting group ${groupId}.`,
     );
   }
 }
