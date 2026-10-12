@@ -138,6 +138,19 @@ test("a failed first-start User probe refuses instead of resetting", () => {
   assert.match(result.stderr, /psql: connection refused|refus/i);
 });
 
+test.each(["", "invalid", "-1", "0\n7"])(
+  "a successful malformed User count %j refuses before reset",
+  (count) => {
+    const { calls, result } = runStart(
+      { PROBE_BEHAVIOR: 'printf "%s" "$PROBE_COUNT"', PROBE_COUNT: count },
+      ["--tag", "fixture-tag"],
+    );
+    assert.notEqual(result.status, 0);
+    assert.doesNotMatch(calls, /reset\.sh/);
+    assert.doesNotMatch(result.stdout, /Ready/);
+  },
+);
+
 test("an empty User table runs the guarded reset once", () => {
   const { calls, result } = runStart(
     { PROBE_BEHAVIOR: String.raw`printf '0\n'` },

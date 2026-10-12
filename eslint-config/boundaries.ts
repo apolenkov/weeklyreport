@@ -104,6 +104,19 @@ export const boundaryConfig: Linter.Config[] = [
   {
     files: ["apps/web/**/*.{ts,tsx}"],
     rules: {
+      "weeklyreport/web-api-runtime": [
+        "error",
+        {
+          zones: [
+            {
+              target: "apps/web",
+              from: "apps/api",
+              message:
+                "apps/web must not import apps/api at runtime; only erased type declarations are allowed (module-import-boundaries).",
+            },
+          ],
+        },
+      ],
       "@typescript-eslint/no-restricted-imports": [
         "error",
         {

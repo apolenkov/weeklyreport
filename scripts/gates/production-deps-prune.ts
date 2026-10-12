@@ -1,4 +1,3 @@
-import type { Dirent } from "node:fs";
 import { lstat, readdir, readFile, realpath, rm } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 
@@ -52,12 +51,7 @@ const explicitlyForbiddenEntries = new Set(
 
 async function walkSymlinks(directory: string): Promise<string[]> {
   const found: string[] = [];
-  let children: Dirent[];
-  try {
-    children = await readdir(directory, { withFileTypes: true });
-  } catch {
-    return found;
-  }
+  const children = await readdir(directory, { withFileTypes: true });
   for (const child of children) {
     const path = join(directory, child.name);
     if (child.isSymbolicLink()) {
@@ -78,12 +72,8 @@ function virtualStoreEntryFor(target: string): string | undefined {
 const packageEntryForLink = async (
   link: string,
 ): Promise<string | undefined> => {
-  try {
-    const target = await realpath(link);
-    return virtualStoreEntryFor(target);
-  } catch {
-    return undefined;
-  }
+  const target = await realpath(link);
+  return virtualStoreEntryFor(target);
 };
 
 const packageDirectories = new Map(
@@ -137,8 +127,12 @@ for (const link of await walkSymlinks(join(root, "node_modules"))) {
   const entry = await packageEntryForLink(link);
   if (entry && forbiddenEntries.has(entry)) {
     forbiddenLinks.push(link);
-    await rm(link);
   }
+}
+
+// Discovery must finish before any planned link or package is removed.
+for (const link of forbiddenLinks) {
+  await rm(link);
 }
 
 for (const entry of forbiddenEntries) {

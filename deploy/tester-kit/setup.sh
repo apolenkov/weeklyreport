@@ -41,6 +41,9 @@ fi
 set -a
 source ./secrets.env
 set +a
+for required_secret in DB_PASSWORD AUTH_JWT_SECRET PDF_EXPORT_JWT_SECRET AI_PROVIDER_CONFIG_ENCRYPTION_KEY KC_ADMIN_PASSWORD PW_LEAD1 PW_HEAD PW_VIEWER PW_ADMIN; do
+  [ -n "${!required_secret:-}" ] || { echo "Missing required secret: $required_secret" >&2; exit 1; }
+done
 export APP_ORIGIN KC_ORIGIN
 
 # Generate IDP cert for Kubernetes Secret

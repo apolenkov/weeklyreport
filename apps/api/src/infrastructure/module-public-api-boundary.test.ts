@@ -258,6 +258,60 @@ beforeAll(async () => {
         source: `import "${boundaryCase.facade}";\n`,
       },
     ]),
+    ...(
+      [
+        ["relative-value", 'import "../../../../../api/src/app.module.js";\n'],
+        [
+          "relative-type",
+          'import type { AppRouter } from "../../../../../api/src/infrastructure/trpc/trpc.router.js";\nexport type Probe = AppRouter;\n',
+        ],
+        [
+          "inline-type",
+          'import { type AppRouter } from "../../../../../api/src/infrastructure/trpc/trpc.router.js";\nexport type Probe = AppRouter;\n',
+        ],
+        [
+          "mixed-value",
+          'import { createAppRouter, type AppRouter } from "../../../../../api/src/infrastructure/trpc/trpc.router.js";\nexport type Probe = AppRouter;\nexport { createAppRouter };\n',
+        ],
+        [
+          "export-type",
+          'export type { AppRouter } from "../../../../../api/src/infrastructure/trpc/trpc.router.js";\n',
+        ],
+        [
+          "export-value",
+          'export { createAppRouter } from "../../../../../api/src/infrastructure/trpc/trpc.router.js";\n',
+        ],
+        [
+          "package-type",
+          'import type { AppRouter } from "@customreport/api";\nexport type Probe = AppRouter;\n',
+        ],
+        [
+          "source-disable",
+          '/* eslint-disable weeklyreport/web-api-runtime */\nimport "../../../../../api/src/app.module.js";\n',
+        ],
+        ["package-value", 'import "@customreport/api";\n'],
+        [
+          "dynamic-value",
+          'void import("../../../../../api/src/app.module.js");\n',
+        ],
+        ["require-value", 'require("../../../../../api/src/app.module.js");\n'],
+        [
+          "inline-export-type",
+          'export { type AppRouter } from "../../../../../api/src/infrastructure/trpc/trpc.router.js";\n',
+        ],
+        ["web-local", 'import "../../../app/api/revalidate-org/route.js";\n'],
+      ] as const
+    ).map(([key, source]) => ({
+      key: `web-api:${key}`,
+      path: probePath(
+        resolve(
+          REPOSITORY_ROOT,
+          "apps/web/src/shared/lib/trpc/trpc-context.tsx",
+        ),
+        `web-api-${key}`,
+      ),
+      source,
+    })),
     ...DOMAIN_BOUNDARY_CASES.flatMap((boundaryCase) => [
       {
         key: `${boundaryCase.name}:forbidden`,
@@ -490,4 +544,51 @@ describe("API module public boundary", () => {
     },
     ESLINT_RUN_BUDGET_MS,
   );
+});
+
+describe("web runtime API boundary", () => {
+  it("rejects resolved runtime API edges and preserves type-only/local boundaries", () => {
+    for (const key of [
+      "relative-value",
+      "mixed-value",
+      "export-value",
+      "dynamic-value",
+      "require-value",
+    ]) {
+      expect(
+        messagesFor(`web-api:${key}`).some(
+          (message) => message.ruleId === "weeklyreport/web-api-runtime",
+        ),
+      ).toBe(true);
+    }
+    expect(
+      messagesFor("web-api:package-value").some(
+        (message) =>
+          message.ruleId === "@typescript-eslint/no-restricted-imports",
+      ),
+    ).toBe(true);
+    expect(
+      messagesFor("web-api:source-disable").some(
+        (message) =>
+          message.ruleId ===
+          "@eslint-community/eslint-comments/no-restricted-disable",
+      ),
+    ).toBe(true);
+    for (const key of [
+      "relative-type",
+      "package-type",
+      "inline-type",
+      "export-type",
+      "inline-export-type",
+      "web-local",
+    ]) {
+      expect(
+        messagesFor(`web-api:${key}`).filter(
+          (message) =>
+            message.ruleId === "weeklyreport/web-api-runtime" ||
+            message.ruleId === "@typescript-eslint/no-restricted-imports",
+        ),
+      ).toEqual([]);
+    }
+  });
 });

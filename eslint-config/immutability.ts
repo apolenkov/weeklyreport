@@ -2,22 +2,10 @@ import eslintComments from "@eslint-community/eslint-plugin-eslint-comments";
 import type { ESLint, Linter } from "eslint";
 import functional from "eslint-plugin-functional";
 
+import { TEST_CONTOUR_IGNORES } from "./test-contours.ts";
+
 const eslintCommentsPlugin = eslintComments as unknown as ESLint.Plugin;
 const functionalPlugin = functional as unknown as ESLint.Plugin;
-const TEST_CONTOUR_IGNORES = [
-  "**/*.test.{ts,tsx}",
-  "**/*.spec.{ts,tsx}",
-  "**/__tests__/**",
-  "**/test-utils/**",
-  "**/__fixtures__/**",
-  "**/fixture/**",
-  "**/fixtures/**",
-  "**/*-harness.{ts,tsx}",
-  "**/*.fixture.{ts,tsx}",
-  "**/*.fixtures.{ts,tsx}",
-  "**/*-fixture.{ts,tsx}",
-  "**/*-test-fixture.{ts,tsx}",
-] as const;
 
 export const immutabilityConfig: Linter.Config[] = [
   // ── Immutability regime: `let` ban for production source. ──
@@ -52,12 +40,7 @@ export const immutabilityConfig: Linter.Config[] = [
   // config REPLACES rule options, so the `let` ban above is repeated verbatim.
   {
     files: ["apps/web/src/features/report-pages/ui/**/*.{ts,tsx}"],
-    ignores: [
-      "**/*.test.{ts,tsx}",
-      "**/*.spec.{ts,tsx}",
-      "**/__tests__/**",
-      "apps/*/src/test-utils/**",
-    ],
+    ignores: [...TEST_CONTOUR_IGNORES],
     rules: {
       "no-restricted-syntax": [
         "error",
@@ -143,6 +126,7 @@ export const immutabilityConfig: Linter.Config[] = [
       "@eslint-community/eslint-comments/no-restricted-disable": [
         "error",
         "import-x/no-restricted-paths",
+        "weeklyreport/web-api-runtime",
         "@typescript-eslint/no-restricted-imports",
       ],
     },

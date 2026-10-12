@@ -73,3 +73,117 @@ fi
     }
   },
 );
+
+test.each([
+  [23, 0],
+  [23, 9],
+  [0, 9],
+  [0, 0],
+] as const)(
+  "stop attempts every forward cleanup after deletion %s with cleanup result %s",
+  (deleteExit, cleanupExit) => {
+    mkdirSync(resolve("output"), { recursive: true });
+    const fixture = mkdtempSync(resolve("output/d37-f07-stop-"));
+    const log = join(fixture, "cleanup.log");
+    writeFileSync(
+      join(fixture, "kubectl"),
+      `#!/bin/sh
+case "$*" in
+  'config current-context') echo orbstack ;;
+  *'delete namespace'*) exit ${deleteExit} ;;
+esac
+`,
+      { mode: 0o700 },
+    );
+    writeFileSync(
+      join(fixture, "rm"),
+      String.raw`#!/bin/sh
+printf '%s\n' "$*" >> "$WR_CLEANUP_LOG"
+exit ${cleanupExit}
+`,
+      { mode: 0o700 },
+    );
+    for (const name of ["app", "keycloak", "mailpit"])
+      writeFileSync(join(fixture, `pf-${name}.pid`), "\n");
+    try {
+      const result = spawnSync(
+        "/bin/bash",
+        [resolve("deploy/tester-kit/stop.sh"), "--yes"],
+        {
+          encoding: "utf8",
+          timeout: 2000,
+          env: {
+            ...process.env,
+            PATH: `${fixture}:${process.env.PATH ?? ""}`,
+            STATE_DIR: fixture,
+            NS: "wr-tester",
+            KUBECONFIG: "/dev/null",
+            WR_CLEANUP_LOG: log,
+          },
+        },
+      );
+      assert.equal(result.status, deleteExit || cleanupExit, result.stderr);
+      const calls = readFileSync(log, "utf8").trim().split("\n");
+      assert.deepEqual(
+        calls,
+        ["app", "keycloak", "mailpit"].map((name) => {
+          const pidfile = join(fixture, `pf-${name}.pid`);
+          return `-f ${pidfile}`;
+        }),
+      );
+      if (cleanupExit)
+        for (const name of ["app", "keycloak", "mailpit"])
+          assert.match(
+            result.stderr,
+            new RegExp(`Could not stop ${name}`, "u"),
+          );
+      if (deleteExit || cleanupExit)
+        assert.doesNotMatch(result.stdout, /Stopped/);
+    } finally {
+      rmSync(fixture, { recursive: true, force: true });
+    }
+  },
+);
+
+test("cancelled stop preserves namespace and all forward records", () => {
+  mkdirSync(resolve("output"), { recursive: true });
+  const fixture = mkdtempSync(resolve("output/d37-f07-cancel-"));
+  const log = join(fixture, "kubectl.log");
+  writeFileSync(
+    join(fixture, "kubectl"),
+    String.raw`#!/bin/sh
+printf '%s\n' "$*" >> "$WR_CANCEL_LOG"
+[ "$*" != 'config current-context' ] || echo orbstack
+`,
+    { mode: 0o700 },
+  );
+  const names = ["app", "keycloak", "mailpit"];
+  for (const name of names)
+    writeFileSync(join(fixture, `pf-${name}.pid`), "\n");
+  try {
+    const result = spawnSync(
+      "/bin/bash",
+      [resolve("deploy/tester-kit/stop.sh")],
+      {
+        input: "no\n",
+        encoding: "utf8",
+        timeout: 2000,
+        env: {
+          ...process.env,
+          PATH: `${fixture}:${process.env.PATH ?? ""}`,
+          STATE_DIR: fixture,
+          NS: "wr-tester",
+          KUBECONFIG: "/dev/null",
+          WR_CANCEL_LOG: log,
+        },
+      },
+    );
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /Cancelled/u);
+    assert.doesNotMatch(readFileSync(log, "utf8"), /delete/u);
+    for (const name of names)
+      assert.equal(readFileSync(join(fixture, `pf-${name}.pid`), "utf8"), "\n");
+  } finally {
+    rmSync(fixture, { recursive: true, force: true });
+  }
+});

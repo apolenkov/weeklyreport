@@ -26,6 +26,9 @@ PW_ADMIN=Wr-admin-$(rnd 4)
 ENV
 fi
 set -a; . ./secrets.env; set +a
+for required_secret in DB_PASSWORD AUTH_JWT_SECRET PDF_EXPORT_JWT_SECRET AI_PROVIDER_CONFIG_ENCRYPTION_KEY KC_ADMIN_PASSWORD PW_LEAD1 PW_HEAD PW_VIEWER PW_ADMIN; do
+  [ -n "${!required_secret:-}" ] || { echo "Missing required secret: $required_secret" >&2; exit 1; }
+done
 export APP_ORIGIN
 export IDP_CERT_B64=$(openssl x509 -in idp.crt -outform der | base64 | tr -d '\n')
 export IDP_KEY_B64=$(openssl pkcs8 -topk8 -nocrypt -in idp.key -outform der | base64 | tr -d '\n')

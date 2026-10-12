@@ -9,6 +9,7 @@ import unusedImports from "eslint-plugin-unused-imports";
 import tseslint from "typescript-eslint";
 
 import { maxParamsRule } from "./max-params.ts";
+import { webApiRuntimeRule } from "./web-api-runtime.ts";
 
 const reactHooksPlugin = reactHooks as unknown as ESLint.Plugin;
 
@@ -47,7 +48,12 @@ export const coreConfig: Linter.Config[] = [
       "simple-import-sort": simpleImportSort,
       unicorn,
       "unused-imports": unusedImports,
-      weeklyreport: { rules: { "max-params": maxParamsRule } },
+      weeklyreport: {
+        rules: {
+          "max-params": maxParamsRule,
+          "web-api-runtime": webApiRuntimeRule,
+        },
+      },
     },
     languageOptions: {
       parser: tseslint.parser,

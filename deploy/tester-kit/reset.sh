@@ -38,8 +38,10 @@ cleanup() {
   [ -z "$PF" ] || kill "$PF" 2>/dev/null || true
   [ -z "$REDIS_PF" ] || kill "$REDIS_PF" 2>/dev/null || true
   if [ "$STOPPED" = 1 ]; then
-    kubectl -n "$NS" scale deploy/api --replicas=1 >/dev/null || result=1
-    kubectl -n "$NS" rollout status deploy/api --timeout=300s || result=1
+    kubectl -n "$NS" scale deploy/api --replicas="$ORIGINAL_REPLICAS" >/dev/null || result=1
+    if [ "$ORIGINAL_REPLICAS" != 0 ]; then
+      kubectl -n "$NS" rollout status deploy/api --timeout=300s || result=1
+    fi
   fi
   tester_unlock || result=1
   exit "$result"
@@ -49,6 +51,15 @@ trap 'exit 130' INT
 trap 'exit 143' TERM
 
 set -a; . "$STATE_DIR/secrets.env"; set +a
+[ -n "${DB_PASSWORD:-}" ] || { echo "Missing required secret: DB_PASSWORD" >&2; exit 1; }
+if ! ORIGINAL_REPLICAS=$(kubectl -n "$NS" get deploy/api -o jsonpath='{.spec.replicas}'); then
+  echo "Could not read API replica count; refusing reset." >&2
+  exit 1
+fi
+case "$ORIGINAL_REPLICAS" in ''|*[!0-9]*) echo "Invalid API replica count; refusing reset." >&2; exit 1 ;; esac
+PG_PF_LOG="$STATE_DIR/pf-reset-postgres.log"
+REDIS_PF_LOG="$STATE_DIR/pf-reset-redis.log"
+(umask 077; : >"$PG_PF_LOG"; : >"$REDIS_PF_LOG"; chmod 600 "$PG_PF_LOG" "$REDIS_PF_LOG")
 PGPORT_LOCAL=55432
 REDISPORT_LOCAL=56379
 for port in "$PGPORT_LOCAL" "$REDISPORT_LOCAL"; do
@@ -65,16 +76,21 @@ echo "Target: postgresql://***@127.0.0.1:$PGPORT_LOCAL/customreport_e2e; Redis D
 pnpm exec tsx -e 'import { assertE2eRuntimeDestructive } from "./prisma/guards/_destructive-guard.ts"; assertE2eRuntimeDestructive("tester-reset")'
 # Observability hook (full-run.sh): collect api coverage, logs and database statistics before they are wiped.
 [ -z "${WR_PRE_RESET_HOOK:-}" ] || bash -c "$WR_PRE_RESET_HOOK"
-kubectl -n "$NS" scale deploy/api --replicas=0 >/dev/null
 STOPPED=1
+kubectl -n "$NS" scale deploy/api --replicas=0 >/dev/null
 kubectl -n "$NS" wait --for=delete pod -l app.kubernetes.io/component=api --timeout=120s
-kubectl -n "$NS" port-forward --address 127.0.0.1 svc/postgres "$PGPORT_LOCAL:5432" >/dev/null 2>&1 &
+kubectl -n "$NS" port-forward --address 127.0.0.1 svc/postgres "$PGPORT_LOCAL:5432" >"$PG_PF_LOG" 2>&1 &
 PF=$!
-kubectl -n "$NS" port-forward --address 127.0.0.1 svc/redis "$REDISPORT_LOCAL:6379" >/dev/null 2>&1 &
+kubectl -n "$NS" port-forward --address 127.0.0.1 svc/redis "$REDISPORT_LOCAL:6379" >"$REDIS_PF_LOG" 2>&1 &
 REDIS_PF=$!
 for port in "$PGPORT_LOCAL" "$REDISPORT_LOCAL"; do
   for _ in $(seq 1 30); do lsof -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1 && break; sleep 1; done
-  lsof -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1 || { echo "Port-forward did not start: $port" >&2; exit 1; }
+  lsof -iTCP:"$port" -sTCP:LISTEN >/dev/null 2>&1 || { if [ "$port" = "$PGPORT_LOCAL" ]; then
+      echo "postgres port-forward did not start: $port; see $PG_PF_LOG" >&2
+    else
+      echo "redis port-forward did not start: $port; see $REDIS_PF_LOG" >&2
+    fi
+    exit 1; }
 done
 pnpm exec tsx prisma/operations/migrate-reset.ts
 if [ -n "$CRAWL_STATE" ]; then

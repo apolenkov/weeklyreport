@@ -231,8 +231,18 @@ const turboPins = (): readonly Declaration[] => [
   })),
 ];
 
+// Inspect literal executable positions without evaluating shell input.
 const usesAmbientTsc = (command: string): boolean =>
-  /(^|[\s;&|])tsc(?=\s|$)/u.test(command);
+  command.split(/[;&|]/u).some((part) => {
+    const executable =
+      /^\s*(?:pnpm\s+(?:exec|dlx)\s+)?("[^"]+"|'[^']+'|[^\s]+)/u.exec(
+        part,
+      )?.[1];
+    return (
+      executable !== undefined &&
+      /(?:^|\/)tsc$/u.test(executable.replaceAll(/^["']|["']$/gu, ""))
+    );
+  });
 
 const pinnedTypescriptCliOk = (): boolean => {
   const ambientCommands = TYPESCRIPT_SCRIPT_MANIFESTS.flatMap((file) => {
