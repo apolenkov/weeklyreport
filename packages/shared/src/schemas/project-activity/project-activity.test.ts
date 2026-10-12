@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  projectActivityArchiveSchema,
   projectActivityCreateSchema,
   projectActivityLeadEdgeSchema,
   projectActivitySchema,
@@ -176,6 +177,54 @@ describe("projectActivitySchema", () => {
       linkedProductIds: [OTHER_PRODUCT_ID.toUpperCase()],
     });
     expect(parsed.linkedProductIds).toEqual([OTHER_PRODUCT_ID]);
+  });
+
+  // Letter-bearing ids: toUpperCase() must change them or the cases pass vacuously.
+  describe("canonical lowercase write ids", () => {
+    const LETTER_GROUP_ID = "aaaaaaaa-1111-4111-8111-1111111111aa";
+    const LETTER_ACTIVITY_ID = "bbbbbbbb-3333-4333-8333-3333333333bb";
+    const LETTER_LEAD_ID = "cccccccc-5555-4555-8555-5555555555cc";
+
+    it("lowercases the group id on create and update", () => {
+      expect(
+        projectActivityCreateSchema.parse({
+          name: "Ops",
+          groupId: LETTER_GROUP_ID.toUpperCase(),
+        }).groupId,
+      ).toBe(LETTER_GROUP_ID);
+      expect(
+        projectActivityUpdateSchema.parse({
+          id: LETTER_ACTIVITY_ID,
+          name: "Ops",
+          groupId: LETTER_GROUP_ID.toUpperCase(),
+        }).groupId,
+      ).toBe(LETTER_GROUP_ID);
+    });
+
+    it("lowercases the activity id on update and archive", () => {
+      expect(
+        projectActivityUpdateSchema.parse({
+          id: LETTER_ACTIVITY_ID.toUpperCase(),
+          name: "Ops",
+          groupId: GROUP_ID,
+        }).id,
+      ).toBe(LETTER_ACTIVITY_ID);
+      expect(
+        projectActivityArchiveSchema.parse({
+          id: LETTER_ACTIVITY_ID.toUpperCase(),
+          archived: true,
+        }).id,
+      ).toBe(LETTER_ACTIVITY_ID);
+    });
+
+    it("lowercases both ids of a lead edge", () => {
+      expect(
+        projectActivityLeadEdgeSchema.parse({
+          activityId: LETTER_ACTIVITY_ID.toUpperCase(),
+          leadId: LETTER_LEAD_ID.toUpperCase(),
+        }),
+      ).toEqual({ activityId: LETTER_ACTIVITY_ID, leadId: LETTER_LEAD_ID });
+    });
   });
 
   it("defaults linkedProductIds to an empty array when absent", () => {
