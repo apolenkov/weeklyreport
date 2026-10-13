@@ -28,15 +28,15 @@ export function ErrorRecoveryContent({
         <AlertTitle>Something went wrong</AlertTitle>
         <AlertDescription>
           An unexpected error interrupted this page. Try again to continue.
+          <Button
+            type="button"
+            variant="outline"
+            onClick={reset}
+            className="mt-3"
+          >
+            Try again
+          </Button>
         </AlertDescription>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={reset}
-          className="mt-3"
-        >
-          Try again
-        </Button>
       </Alert>
     </div>
   );
