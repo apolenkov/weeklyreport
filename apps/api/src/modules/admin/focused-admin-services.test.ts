@@ -16,14 +16,6 @@ import { ProjectAdminService } from "./project-admin.service.js";
 import { ReminderAdminService as ProductionReminderAdminService } from "./reminder-admin.service.js";
 import { SnapshotAdminService as ProductionSnapshotAdminService } from "./snapshot-admin.service.js";
 
-class ReminderAdminService extends ProductionReminderAdminService {
-  constructor(
-    repository: ConstructorParameters<typeof ProductionReminderAdminService>[0],
-  ) {
-    super(repository, createNullLogger());
-  }
-}
-
 class SnapshotAdminService extends ProductionSnapshotAdminService {
   constructor(
     repository: ConstructorParameters<typeof ProductionSnapshotAdminService>[0],
@@ -74,29 +66,6 @@ describe("ReminderAdminService — success logging", () => {
 });
 
 describe("focused admin services", () => {
-  it("checks reminder-policy existence without listing policies", async () => {
-    const policyId = "77777777-7777-4777-8777-777777777777";
-    const repository = createRepository({
-      ...initialSnapshot,
-      policies: [
-        {
-          id: policyId,
-          kind: "deadline",
-          offsetMinutes: -1440,
-          timezone: "Europe/Moscow",
-          audience: "lead-with-draft",
-          active: true,
-          validFrom: new Date("2026-01-01T00:00:00.000Z"),
-          validUntil: null,
-        },
-      ],
-    });
-    const service = new ReminderAdminService(repository);
-
-    await expect(service.policyExists(policyId)).resolves.toBe(true);
-    expect(repository.listReminderPolicies).not.toHaveBeenCalled();
-  });
-
   it("adds and removes users", async () => {
     const service = new SnapshotAdminService(createRepository(initialSnapshot));
 

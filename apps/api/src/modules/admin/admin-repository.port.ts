@@ -49,7 +49,10 @@ export interface AdminRepository {
   deleteStageAssignment(id: string): Promise<void>;
   listStageAssignments(projectId: string): Promise<StageAssignment[]>;
   listReminderPolicies(): Promise<ReminderPolicy[]>;
-  saveReminderPolicy(policy: ReminderPolicy): Promise<ReminderPolicy>;
+  saveReminderPolicy(policy: ReminderPolicy): Promise<{
+    policy: ReminderPolicy;
+    created: boolean;
+  }>;
   deleteReminderPolicy(policyId: string): Promise<void>;
   listPeriodsByState(filter: {
     states: readonly PeriodState[];
