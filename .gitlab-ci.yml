@@ -71,8 +71,8 @@ variables:
     - when: on_success
   before_script:
     # Node 26 no longer bundles Corepack; install only the pinned pnpm CLI here.
-    - npm install --global pnpm@12.11.2
-    - test "$(pnpm --version)" = "12.11.2"
+    - npm install --global pnpm@12.13.0
+    - test "$(pnpm --version)" = "12.13.0"
     - pnpm install --frozen-lockfile
     - pnpm exec prisma generate
 
@@ -97,8 +97,8 @@ variables:
     - tar -xzf "$NODE_TOOLCHAIN_ARTIFACT" -C /
     - ldconfig
     - test "$(node --version)" = "v26.11.1"
-    - npm install --global pnpm@12.11.2
-    - test "$(pnpm --version)" = "12.11.2"
+    - npm install --global pnpm@12.13.0
+    - test "$(pnpm --version)" = "12.13.0"
     - pnpm install --frozen-lockfile
     - pnpm exec prisma generate
     # The postgres daemon must run as the postgres user; initdb refuses root.
@@ -192,8 +192,8 @@ dependency-scan:
         - pnpm-workspace.yaml
     - when: never
   before_script:
-    - npm install --global pnpm@12.11.2
-    - test "$(pnpm --version)" = "12.11.2"
+    - npm install --global pnpm@12.13.0
+    - test "$(pnpm --version)" = "12.13.0"
     - pnpm install --frozen-lockfile
   script:
     - pnpm audit --prod
@@ -211,7 +211,7 @@ dependency-scan-dev:
 renovate:
   stage: dependency-scan
   image:
-    name: renovate/renovate:44.148.4@sha256:2c7b118cb2d1b7137e63322efc0e1d3d96d5f6937ec1c35c3cd9b7de73a8ed29
+    name: renovate/renovate:44.155.2@sha256:93e8dc64410276bb44854b4f6fce2306f8fe24c87301d558a920381130b30851
     entrypoint: [""]
   timeout: 30m
   needs: []
@@ -305,7 +305,7 @@ api-integration:
   services:
     - name: redis:8.10.2-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0
       alias: redis
-    - name: axllent/mailpit:v1.31.4@sha256:b68349e3a014b90c5610bfb26b2ae36f3892d7b8cf25ee140c6c71c98d2fcf48
+    - name: axllent/mailpit:v1.31.5@sha256:94f6b70c1436defae6799d9ac7ff0eeff9540465b842026d5cdb018f1c0234ea
       alias: mailpit
   variables:
     # MVP single-database policy: one disposable loopback target per job, and
