@@ -201,6 +201,7 @@ Authority model:
 - [pdf-renderer-service](./pdf-renderer-service/spec.md) — Bounds the internal Gotenberg renderer: HTTP contract, readiness gating, credential transport, egress to the print origin, and deployment posture.
 - [env-schema-coverage](./env-schema-coverage/spec.md) — Declares every consumed environment variable, removes silent defaults, and fails boot when mandatory production config is missing.
 - [operations-local-readiness](./operations-local-readiness/spec.md) — Keeps repository-owned operations instructions executable and fails closed without external production read-back.
+- [local-stand-provisioning](./local-stand-provisioning/spec.md) — Provisions the local stand atomically and preserves relationships during sequential replay.
 - [redis-connection-config](./redis-connection-config/spec.md) — Routes all Redis consumers through one validated, fail-loud host and port builder.
 - [sdlc-release-readiness](./sdlc-release-readiness/spec.md) — Separates evidence classes and keeps the first production point blocked until every external release, deployment, operation, and recovery control is proven.
 - [web-api-url-config](./web-api-url-config/spec.md) — Resolves the web API base URL and tRPC response decoding through explicit fail-loud seams.
