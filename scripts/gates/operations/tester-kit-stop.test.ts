@@ -66,7 +66,7 @@ fi
       assert.deepEqual(calls, [
         "config current-context",
         `--context=${context} get namespace ${namespace}`,
-        `--context=${context} delete namespace ${namespace} --wait=true`,
+        `--context=${context} delete namespace ${namespace} --wait=true --timeout=120s`,
       ]);
     } finally {
       rmSync(fixture, { recursive: true, force: true });
@@ -75,6 +75,8 @@ fi
 );
 
 test.each([
+  [1, 0],
+  [1, 9],
   [23, 0],
   [23, 9],
   [0, 9],
@@ -85,12 +87,16 @@ test.each([
     mkdirSync(resolve("output"), { recursive: true });
     const fixture = mkdtempSync(resolve("output/d37-f07-stop-"));
     const log = join(fixture, "cleanup.log");
+    const deleteLog = join(fixture, "delete.log");
     writeFileSync(
       join(fixture, "kubectl"),
-      `#!/bin/sh
+      String.raw`#!/bin/sh
 case "$*" in
   'config current-context') echo orbstack ;;
-  *'delete namespace'*) exit ${deleteExit} ;;
+  *'delete namespace'*)
+    printf '%s\n' "$*" >> "$WR_DELETE_LOG"
+    ${deleteExit === 1 ? 'echo "error: timed out waiting for namespace deletion" >&2' : ":"}
+    exit ${deleteExit} ;;
 esac
 `,
       { mode: 0o700 },
@@ -119,10 +125,16 @@ exit ${cleanupExit}
             NS: "wr-tester",
             KUBECONFIG: "/dev/null",
             WR_CLEANUP_LOG: log,
+            WR_DELETE_LOG: deleteLog,
           },
         },
       );
       assert.equal(result.status, deleteExit || cleanupExit, result.stderr);
+      assert.match(
+        readFileSync(deleteLog, "utf8"),
+        / --timeout=[1-9]\d*[smh](?:\s|$)/u,
+      );
+      if (deleteExit === 1) assert.match(result.stderr, /timed out/u);
       const calls = readFileSync(log, "utf8").trim().split("\n");
       assert.deepEqual(
         calls,

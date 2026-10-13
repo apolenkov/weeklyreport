@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import type { Role } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import type { AppLogger } from "../../../lib/logger.js";
@@ -6,9 +7,16 @@ import { createNullLogger } from "../../../lib/logger.js";
 import {
   LeadFormAccessError,
   LeadFormDomainError,
-  type LeadFormService,
+  LeadFormService,
 } from "../../../modules/report-sections/index.js";
 import { createNullAuditLogger } from "../../../test-utils/audit-logger.js";
+import {
+  createMockRepository,
+  draftSection,
+  OTHER_USER_ID,
+  SOURCE_SECTION_ID,
+} from "../../../test-utils/lead-form-write-fixture.js";
+import { NOOP_REPORT_SECTIONS_TELEMETRY } from "../../../test-utils/report-section-write-fixture.js";
 import { createStubAppRouterDeps } from "../../../test-utils/stub-app-router-deps.js";
 import { createLeadFormRouter } from "./lead-form.router.js";
 
@@ -213,5 +221,157 @@ describe("leadForm.byPeriod refusal severity", () => {
       expect.objectContaining({ procedure: "leadForm.byPeriod" }),
     );
     expect(logger.warn).not.toHaveBeenCalled();
+  });
+});
+
+const fillInput = {
+  targetSectionId: SECTION_ID,
+  sourceSectionId: SOURCE_SECTION_ID,
+  version: 1,
+};
+
+function fillCaller(
+  role: Role | null,
+  userId = USER_ID,
+  foreignSource = false,
+) {
+  let target = {
+    ...structuredClone(draftSection),
+    reportSectionId: SECTION_ID,
+  };
+  const source = {
+    ...structuredClone(draftSection),
+    reportSectionId: SOURCE_SECTION_ID,
+    authorId: foreignSource ? OTHER_USER_ID : USER_ID,
+    items: draftSection.items.map((item) => ({
+      ...item,
+      text: "Copied source content",
+    })),
+  };
+  const repository = createMockRepository({
+    getSectionById: (id) => {
+      if (id === SECTION_ID) return Promise.resolve(structuredClone(target));
+      return Promise.resolve(
+        id === SOURCE_SECTION_ID ? structuredClone(source) : null,
+      );
+    },
+    fillFromSection: () => {
+      target = {
+        ...target,
+        items: structuredClone(source.items),
+        version: target.version + 1,
+      };
+      return Promise.resolve(source.items.length);
+    },
+  });
+  const leadFormService = new LeadFormService(
+    repository,
+    NOOP_REPORT_SECTIONS_TELEMETRY,
+  );
+  const auditLogger = {
+    ...createNullAuditLogger(),
+    roleDenied: vi.fn(),
+    mutation: vi.fn(),
+  };
+  const caller = createLeadFormRouter(
+    createStubAppRouterDeps({ leadFormService }),
+  ).createCaller({
+    session:
+      role === null
+        ? null
+        : {
+            userId,
+            role,
+            email: "synthetic@task503.invalid",
+            name: "Synthetic actor",
+            activeReportId: REPORT_ID,
+            activeReportSectionId: SECTION_ID,
+          },
+    logger: createNullLogger(),
+    auditLogger,
+    ip: "test-ip",
+    isPdfExport: false,
+    pdfReportId: null,
+  });
+  return { caller, repository, auditLogger };
+}
+
+describe("leadForm.fillFrom content role and ownership", () => {
+  it("denies a retained Viewer author without copying content and emits both audit events", async () => {
+    const { caller, repository, auditLogger } = fillCaller("viewer");
+    const before = await repository.getSectionById(SECTION_ID);
+
+    await expect(caller.fillFrom(fillInput)).rejects.toMatchObject({
+      code: "FORBIDDEN",
+    });
+
+    expect(await repository.getSectionById(SECTION_ID)).toEqual(before);
+    expect(auditLogger.roleDenied).toHaveBeenCalledExactlyOnceWith({
+      userId: USER_ID,
+      role: "viewer",
+      attemptedRole: ["lead", "head", "admin"],
+      ip: "test-ip",
+    });
+    expect(auditLogger.mutation).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({
+        procedure: "fillFrom",
+        userId: USER_ID,
+        role: "viewer",
+        status: "fail",
+        reason: "FORBIDDEN",
+      }),
+    );
+  });
+
+  it.each(["lead", "head", "admin"] as const)(
+    "allows %s to copy between their own sections",
+    async (role) => {
+      const { caller, repository, auditLogger } = fillCaller(role);
+      const result = await caller.fillFrom(fillInput);
+
+      expect(result).toMatchObject({ success: true, copiedItems: 1 });
+      const saved = await repository.getSectionById(SECTION_ID);
+      expect(saved).toMatchObject({ authorId: USER_ID, version: 2 });
+      expect(saved?.items[0]?.text).toBe("Copied source content");
+      expect(result.section).toEqual(saved);
+      expect(auditLogger.roleDenied).not.toHaveBeenCalled();
+      expect(auditLogger.mutation).toHaveBeenCalledWith(
+        expect.objectContaining({ status: "success", role }),
+      );
+    },
+  );
+
+  describe.each(["lead", "head", "admin"] as const)("%s ownership", (role) => {
+    it.each(["target", "source"] as const)(
+      "rejects a foreign %s without copying content",
+      async (foreign) => {
+        const { caller, repository, auditLogger } = fillCaller(
+          role,
+          foreign === "target" ? OTHER_USER_ID : USER_ID,
+          foreign === "source",
+        );
+        const before = await repository.getSectionById(SECTION_ID);
+
+        await expect(caller.fillFrom(fillInput)).rejects.toMatchObject({
+          code: "FORBIDDEN",
+          message:
+            foreign === "target"
+              ? "Can only fill your own section."
+              : "Can only fill from your own section.",
+        });
+        expect(await repository.getSectionById(SECTION_ID)).toEqual(before);
+        expect(auditLogger.roleDenied).not.toHaveBeenCalled();
+      },
+    );
+  });
+
+  it("retains unauthenticated rejection without copying content", async () => {
+    const { caller, repository } = fillCaller(null);
+    const before = await repository.getSectionById(SECTION_ID);
+
+    await expect(caller.fillFrom(fillInput)).rejects.toMatchObject({
+      code: "UNAUTHORIZED",
+    });
+    expect(await repository.getSectionById(SECTION_ID)).toEqual(before);
   });
 });

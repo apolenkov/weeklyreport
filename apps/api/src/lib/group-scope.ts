@@ -32,12 +32,12 @@ export function groupScopeFilter(
   }
 }
 
-// Fail loud on missing session (undefined). Defined admin (empty filter =
+// Fail loud on missing session. Defined admin (empty filter =
 // full access) is correct and does not throw.
 export function guardGroupScope(
-  session: Pick<UserSession, "role"> | undefined,
+  session: Pick<UserSession, "role"> | null | undefined,
 ): void {
-  if (session === undefined) {
+  if (session === undefined || session === null) {
     throw new Error(
       "[BUG] Repository query called without a scope session — group isolation not enforced.",
     );

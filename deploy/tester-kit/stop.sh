@@ -12,7 +12,7 @@ if tester_kubectl get namespace "$NS" >/dev/null 2>&1; then
     read -r -p "Delete namespace $NS with all data? (yes/no): " ans
     [ "$ans" = yes ] || { echo Cancelled; exit 0; }
   fi
-  tester_kubectl delete namespace "$NS" --wait=true || result=$?
+  tester_kubectl delete namespace "$NS" --wait=true --timeout=120s || result=$?
 fi
 for n in app keycloak mailpit; do
   if pf_stop "$n"; then

@@ -157,6 +157,7 @@ function streamArtifact(
   }
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader("Content-Disposition", "attachment");
+  res.setHeader("Cache-Control", "private, no-store");
   stream.pipe(res);
 }
 

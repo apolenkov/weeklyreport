@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import {
   itemOutcomeResultSchema,
   leadOpenWorkHistoryInputSchema,
@@ -10,7 +11,9 @@ import {
   reportAssistantRequestSchema,
   resolvePlanInputSchema,
   restorePlanInputSchema,
+  type Role,
 } from "@weeklyreport/shared";
+import { assertRole } from "@weeklyreport/shared/trpc";
 import { z } from "zod";
 
 import { groupScopeFilter } from "../../../lib/group-scope.js";
@@ -183,14 +186,28 @@ function fillFromProcedure(deps: LeadFormRouterDeps) {
     )
     .use(captureMutationAuditInputMiddleware)
     .mutation(({ input, ctx }) =>
-      withDomainErrorMapping(() =>
-        deps.leadFormService.fillFrom(
+      withDomainErrorMapping(() => {
+        const allowed = ["lead", "head", "admin"] satisfies Role[];
+        try {
+          assertRole(ctx.session, allowed);
+        } catch (error) {
+          if (error instanceof TRPCError && error.code === "FORBIDDEN") {
+            ctx.auditLogger.roleDenied({
+              userId: ctx.session.userId,
+              role: ctx.session.role,
+              attemptedRole: allowed,
+              ip: ctx.ip,
+            });
+          }
+          throw error;
+        }
+        return deps.leadFormService.fillFrom(
           input.targetSectionId,
           input.sourceSectionId,
           ctx.session.userId,
           input.version,
-        ),
-      ),
+        );
+      }),
     );
 }
 

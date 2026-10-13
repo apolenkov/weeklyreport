@@ -33,12 +33,24 @@ function sleep(ms: number): void {
 
 function entries(file: string): readonly (readonly [number, number])[] {
   try {
-    return readFileSync(file, "utf8")
+    const content = readFileSync(file, "utf8");
+    if (content === "") return [];
+    return content
+      .replace(/\n$/u, "")
       .split("\n")
-      .map((line) => line.split(" ").map(Number))
-      .flatMap(([at, n]) =>
-        at !== undefined && n !== undefined ? [[at, n] as const] : [],
-      );
+      .map((line) => {
+        const [at, n] = line.split(" ").map(Number);
+        if (
+          !/^\d+ -?\d+$/u.test(line) ||
+          at === undefined ||
+          n === undefined ||
+          !Number.isSafeInteger(at) ||
+          at < 0 ||
+          !Number.isSafeInteger(n)
+        )
+          throw new Error(`Invalid rate ledger: ${file}`);
+        return [at, n] as const;
+      });
   } catch (error) {
     if (
       !(error instanceof Error) ||
