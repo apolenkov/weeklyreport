@@ -1,6 +1,6 @@
 import { onlineManager, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { createTRPCClient } from "@trpc/client";
+import { createTRPCClient, TRPCClientError } from "@trpc/client";
 import { observable } from "@trpc/server/observable";
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import type { AppRouter } from "@weeklyreport/api/infrastructure/trpc/trpc.router";
@@ -42,7 +42,11 @@ describe("active report canonical entry", () => {
             ({ op }) =>
               observable((observer) => {
                 if (op.path !== "weeklyReport.get") {
-                  observer.error(new Error(`Unexpected request: ${op.path}`));
+                  observer.error(
+                    TRPCClientError.from<AppRouter>(
+                      new Error(`Unexpected request: ${op.path}`),
+                    ),
+                  );
                   return;
                 }
                 const input = op.input as { reportId?: string };
