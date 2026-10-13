@@ -119,7 +119,11 @@ function createRepository(
       return Promise.resolve(null);
     },
     getCompiledHistory() {
-      return Promise.resolve({ reports: [], archiveCount: 0 });
+      return Promise.resolve({
+        reports: [],
+        archiveCount: 0,
+        truncated: false,
+      });
     },
     getVisibleReportId() {
       return Promise.resolve(null);

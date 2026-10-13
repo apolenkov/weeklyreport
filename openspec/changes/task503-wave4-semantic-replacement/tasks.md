@@ -9,6 +9,6 @@
 
 ## 2. Verification and delivery
 
-- [ ] 2.1 Run `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`,
+- [x] 2.1 Run `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`,
       `pnpm build`, and `pnpm spec:check`; commit with ordinary hooks and give
       the exact SHA and native receipts to the independent reviewer.

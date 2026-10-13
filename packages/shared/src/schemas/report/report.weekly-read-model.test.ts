@@ -30,10 +30,20 @@ const validWeeklyReport = () => ({
 });
 
 describe("compiledHistoryResultSchema", () => {
+  it("rejects a missing truncation flag instead of silently promising completeness", () => {
+    expect(
+      compiledHistoryResultSchema.safeParse({ entries: [], archiveCount: 0 })
+        .success,
+    ).toBe(false);
+  });
+
   it("requires a non-negative archive count", () => {
     expect(
-      compiledHistoryResultSchema.parse({ entries: [], archiveCount: 4 })
-        .archiveCount,
+      compiledHistoryResultSchema.parse({
+        entries: [],
+        archiveCount: 4,
+        truncated: false,
+      }).archiveCount,
     ).toBe(4);
   });
 });

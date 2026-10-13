@@ -73,6 +73,7 @@ function useHeadPeriodData(reportId: string, includeArchive: boolean) {
     periods,
     displayed: displayedQ.data,
     historyError: historyQ.isError,
+    historyTruncated: historyQ.data?.truncated === true,
     isLoading: historyQ.isLoading || displayedQ.isLoading || activeQ.isLoading,
   };
 }
@@ -163,10 +164,8 @@ export function HeadReportShell({
     fullscreenToggleRef,
     mode === "slides",
   );
-  const { periods, displayed, historyError, isLoading } = useHeadPeriodData(
-    reportId,
-    urlState.includeArchive,
-  );
+  const { periods, displayed, historyError, historyTruncated, isLoading } =
+    useHeadPeriodData(reportId, urlState.includeArchive);
 
   const exportPdf = renderExportPdf(displayed);
   const contextControls = (
@@ -176,6 +175,7 @@ export function HeadReportShell({
       mode={mode}
       urlState={urlState}
       historyError={historyError}
+      historyTruncated={historyTruncated}
       historyLoading={isLoading}
       fullscreenControl={
         mode === "slides" ? (
