@@ -10,7 +10,13 @@ STATE_DIR=${STATE_DIR:?set STATE_DIR to a directory outside Git}
 HERE=$(cd "$(dirname "$0")" && pwd)
 mkdir -p "$STATE_DIR"; chmod 700 "$STATE_DIR"; cd "$STATE_DIR"
 rnd() { openssl rand -hex "$1"; }
-[ -f idp.key ] || openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -subj /CN=weeklyreport -keyout idp.key -out idp.crt 2>/dev/null
+if [ ! -e idp.key ] && [ ! -e idp.crt ]; then
+  openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -subj /CN=weeklyreport -keyout idp.key -out idp.crt
+fi
+[ -f idp.key ] && [ -f idp.crt ] || { echo "Incomplete IdP identity: restore both idp.key and idp.crt before retrying." >&2; exit 1; }
+IDP_CERT_PUBLIC_KEY=$(openssl x509 -in idp.crt -pubkey -noout) || { echo "Invalid idp.crt: restore a valid matching IdP pair before retrying." >&2; exit 1; }
+IDP_KEY_PUBLIC_KEY=$(openssl pkey -in idp.key -pubout) || { echo "Invalid idp.key: restore a valid matching IdP pair before retrying." >&2; exit 1; }
+[ "$IDP_CERT_PUBLIC_KEY" = "$IDP_KEY_PUBLIC_KEY" ] || { echo "Mismatched idp.crt and idp.key: restore a matching IdP pair before retrying." >&2; exit 1; }
 if [ ! -f secrets.env ]; then
   umask 077
   cat > secrets.env <<ENV
@@ -30,8 +36,9 @@ for required_secret in DB_PASSWORD AUTH_JWT_SECRET PDF_EXPORT_JWT_SECRET AI_PROV
   [ -n "${!required_secret:-}" ] || { echo "Missing required secret: $required_secret" >&2; exit 1; }
 done
 export APP_ORIGIN
-export IDP_CERT_B64=$(openssl x509 -in idp.crt -outform der | base64 | tr -d '\n')
-export IDP_KEY_B64=$(openssl pkcs8 -topk8 -nocrypt -in idp.key -outform der | base64 | tr -d '\n')
+IDP_CERT_B64=$(openssl x509 -in idp.crt -outform der | base64 | tr -d '\n')
+IDP_KEY_B64=$(openssl pkcs8 -topk8 -nocrypt -in idp.key -outform der | base64 | tr -d '\n')
+export IDP_CERT_B64 IDP_KEY_B64
 envsubst < "$HERE/realm.template.json" > realm.json
 printf '%s' "$IDP_CERT_B64" > idp-cert.b64   # value for api.env.KEYCLOAK_SAML_CERT
 
