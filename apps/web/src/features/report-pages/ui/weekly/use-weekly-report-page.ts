@@ -66,9 +66,11 @@ function useWeeklyReportQuery(
   focusedAuthorId: string | null,
 ) {
   const trpc = useTRPC();
-  const weeklyQ = useQuery(
-    trpc.weeklyReport.get.queryOptions(reportId ? { reportId } : {}),
-  );
+  const weeklyQ = useQuery({
+    ...trpc.weeklyReport.get.queryOptions(reportId ? { reportId } : {}),
+    // The active-period alias can change while its cached report remains fresh.
+    ...(reportId ? {} : { staleTime: 0 }),
+  });
   useQueryErrorHandler(weeklyQ, {
     event: "weeklyReport.get.load_failed",
     component: "WeeklyReportPage",
@@ -195,7 +197,12 @@ export function useWeeklyReportPage(
     enabled: redirectToCanonical,
     reportId,
     resolvedReportId:
-      weeklyQ.data?.status === "active" ? weeklyQ.data.reportId : null,
+      weeklyQ.isFetchedAfterMount &&
+      weeklyQ.isSuccess &&
+      !weeklyQ.isFetching &&
+      weeklyQ.data.status === "active"
+        ? weeklyQ.data.reportId
+        : null,
     focusedAuthorId,
     canonicalBasePath,
   });
