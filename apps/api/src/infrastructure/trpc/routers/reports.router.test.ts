@@ -1,4 +1,4 @@
-import type { Role } from "@weeklyreport/shared";
+import type { Role, SubmitSectionPayload } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../../lib/logger.js";
@@ -19,7 +19,7 @@ import { createReportsRouter } from "./reports.router.js";
 const FOREIGN_USER_ID = "99999999-9999-4999-8999-999999999999";
 const contentActions = ["saveDraft", "submit"] as const;
 
-function contentInput() {
+function contentInput(): SubmitSectionPayload {
   return {
     ...validDraft({
       items: baseSection.items.map((item) => ({
@@ -28,6 +28,8 @@ function contentInput() {
       })),
     }),
     confirmed: true,
+    projectStatuses: [{ projectId: PROJECT_ID_1, status: "green" }],
+    activityStatuses: [],
     stageStatuses: [
       {
         projectId: PROJECT_ID_1,
