@@ -38,7 +38,7 @@ export const sonarjsConfig: Linter.Config = {
     // Complexity stays bounded for all production code.
     "sonarjs/cognitive-complexity": ["error", COGNITIVE_COMPLEXITY_MAX],
     "sonarjs/no-nested-functions": "error",
-    // Test fixtures contain synthetic IPs and secrets; the test-file override
+    // Named test files contain synthetic IPs and secrets; the test-file override
     // scopes those values away from this production rule.
     "sonarjs/no-hardcoded-ip": "error",
     "sonarjs/hardcoded-secret-signatures": "error",
@@ -61,14 +61,14 @@ export const sonarjsConfig: Linter.Config = {
     "sonarjs/no-async-constructor": "error",
     "sonarjs/function-return-type": "error",
     "sonarjs/void-use": "error",
-    // Test fixtures use deliberate duplication and undefined-input boundaries;
+    // Named test files use deliberate duplication and undefined-input boundaries;
     // production code remains subject to these rules.
     "sonarjs/no-identical-functions": "error", // test: idiomatic render-wrapper duplication
-    "sonarjs/no-undefined-argument": "error", // test fixtures exercise intentional undefined-input boundaries
+    "sonarjs/no-undefined-argument": "error", // named test files exercise intentional undefined-input boundaries
     "sonarjs/different-types-comparison": "error",
     // no-duplicate-string: the recommended preset ships this OFF; enabled
     // here so a string literal repeated 3+ times must be lifted to a shared
-    // named constant. Test fixtures use their own scoped configuration.
+    // named constant. Named test files use their own scoped configuration.
     "sonarjs/no-duplicate-string": "error",
   },
 };

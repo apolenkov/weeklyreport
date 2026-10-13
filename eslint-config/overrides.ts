@@ -91,7 +91,7 @@ export const overrideConfig: Linter.Config[] = [
       "sonarjs/no-duplicate-string": "off",
     },
   },
-  // Non-test-named support code is part of the same unrestricted contour.
+  // Support code shares the complexity exemptions; named-test rule exemptions stay above.
   {
     files: [...TEST_SUPPORT_FILES],
     rules: unrestrictedTestContourRules,

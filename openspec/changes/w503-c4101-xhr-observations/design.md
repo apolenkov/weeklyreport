@@ -27,6 +27,6 @@ The report lifecycle tuple, canonical authorization chains and destructive datab
 
 Native open can terminate an active fetch without loadend. Explicitly retiring the previous record handles that path, while native DONE handles completion, explicit abort and errors. Tests cover sequential reuse, explicit abort, active replacement, throwing open, ordinary onload reuse and OPENED-handler send/nested open. No synthetic events or manual abort simulate active replacement.
 
-Observers cannot run ahead of a foreign capture listener registered earlier on the same object. That interleave is outside this change's supported boundary and has no admitted current caller; its risk is not accepted by these tests. WeakMap storage follows native object lifetime and does not keep requests alive.
+Observers cannot run ahead of a foreign capture listener registered earlier on the same object. Synchronous XHR does not dispatch loadstart and is outside this observation contract: its completion has no active record and does not produce a network row. Neither boundary has an admitted current product caller; expand coverage only after a concrete caller and bounded native control are established. Their risk is not accepted by these tests. WeakMap storage follows native object lifetime and does not keep requests alive.
 
 independent reviewer supplied advisory diagnosis for this bounded design. That advice is not independent acceptance of the frozen implementation.
