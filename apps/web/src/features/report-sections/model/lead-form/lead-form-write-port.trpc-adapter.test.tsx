@@ -1,6 +1,14 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  type QueryKey,
+  QueryObserver,
+} from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { TRPCClientError } from "@trpc/client";
+import { createTRPCClient, TRPCClientError } from "@trpc/client";
+import { observable } from "@trpc/server/observable";
+import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
+import type { AppRouter } from "@weeklyreport/api/infrastructure/trpc/trpc.router";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -8,7 +16,10 @@ import { TRPCProxyContext } from "../../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../../test-utils/expect-defined";
 import { createMockTRPC } from "../../../../test-utils/mock-trpc";
 import { makeReportSectionFixture } from "../../../../test-utils/report-section-fixtures";
-import { LeadFormWriteError } from "./lead-form-write-port";
+import {
+  LeadFormWriteError,
+  type LeadFormWritePort,
+} from "./lead-form-write-port";
 import { useLeadFormWritePort } from "./lead-form-write-port.trpc-adapter";
 
 const section = makeReportSectionFixture({
@@ -31,6 +42,7 @@ function buildHarness() {
     { path: ["reports", "getActive"] },
     { path: ["reports", "myHistory"] },
     { path: ["leadForm", "byPeriod"] },
+    { path: ["leadForm", "statusOverview"] },
     { path: ["review", "dashboard"] },
     { path: ["archive", "list"] },
     { path: ["weeklyReport", "get"] },
@@ -210,57 +222,195 @@ describe("useLeadFormWritePort", () => {
     });
   });
 
-  it("keeps outcome transport and lead-form invalidation in one seam", async () => {
-    const { Wrapper, captured, queryClient } = buildHarness();
-    const outcome = {
-      section: { ...section, version: 2 },
-      stableId: "55555555-5555-4555-8555-555555555555",
-      replayed: false,
-    };
-    expectDefined(
-      captured["leadForm.resolvePlan"],
-    ).mutationFn.mockResolvedValue(outcome);
-    expectDefined(
-      captured["leadForm.restorePlan"],
-    ).mutationFn.mockResolvedValue({ ...outcome, replayed: true });
-    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
-    const { result } = renderHook(
-      () => useLeadFormWritePort(section.reportSectionId),
-      { wrapper: Wrapper },
+  describe.each([
+    {
+      command: "resolvePlan",
+      write: (port: LeadFormWritePort) =>
+        port.resolvePlan({
+          reportSectionId: section.reportSectionId,
+          version: 1,
+          commandId: "66666666-6666-4666-8666-666666666666",
+          source: {
+            kind: "current",
+            recordId: "77777777-7777-4777-8777-777777777777",
+          },
+          outcome: "done",
+          stageNames: [],
+        }),
+    },
+    {
+      command: "restorePlan",
+      write: (port: LeadFormWritePort) =>
+        port.restorePlan({
+          reportSectionId: section.reportSectionId,
+          version: 1,
+          commandId: "88888888-8888-4888-8888-888888888888",
+          recordId: "99999999-9999-4999-8999-999999999999",
+        }),
+    },
+    {
+      command: "promotePlan",
+      write: (port: LeadFormWritePort) =>
+        port.promotePlan({
+          reportSectionId: section.reportSectionId,
+          version: 1,
+          commandId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          recordId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          target: "current",
+        }),
+    },
+  ])("$command status projection", ({ command, write }) => {
+    it.each(["success", "rejection"] as const)(
+      "refreshes a warm active Overview only after success: %s",
+      async (settlement) => {
+        const queryClient = new QueryClient({
+          defaultOptions: {
+            queries: { retry: false },
+            mutations: { retry: false },
+          },
+        });
+        let savedSection = section;
+        let overviewReads = 0;
+        const client = createTRPCClient<AppRouter>({
+          links: [
+            () =>
+              ({ op }) =>
+                observable((observer) => {
+                  if (op.path === "leadForm.statusOverview") {
+                    expect(op.input).toEqual({ reportId: section.reportId });
+                    overviewReads++;
+                    observer.next({
+                      result: {
+                        data: {
+                          current: {
+                            reportId: section.reportId,
+                            periodStart: new Date("2026-10-12T00:00:00Z"),
+                            periodEnd: new Date("2026-10-18T00:00:00Z"),
+                            section: savedSection,
+                          },
+                          predecessor: {
+                            availability: "unavailable",
+                            reason: "no_predecessor",
+                          },
+                        },
+                      },
+                    });
+                  } else {
+                    expect(op.path).toBe(`leadForm.${command}`);
+                    expect(op.input).toMatchObject({
+                      reportSectionId: section.reportSectionId,
+                    });
+                    if (settlement === "rejection") {
+                      observer.error(
+                        TRPCClientError.from(new Error("offline")),
+                      );
+                      return;
+                    }
+                    savedSection = { ...section, version: 2 };
+                    observer.next({
+                      result: {
+                        data: {
+                          section: savedSection,
+                          stableId: "55555555-5555-4555-8555-555555555555",
+                          replayed: false,
+                        },
+                      },
+                    });
+                  }
+                  observer.complete();
+                }),
+          ],
+        });
+        const trpc = createTRPCOptionsProxy<AppRouter>({ client, queryClient });
+        const options = {
+          ...trpc.leadForm.statusOverview.queryOptions({
+            reportId: section.reportId,
+          }),
+          staleTime: 30_000,
+        };
+        await queryClient.query(options);
+        const overview = new QueryObserver(queryClient, options);
+        const unsubscribe = overview.subscribe(() => undefined);
+        const leadFormKeys: QueryKey[] = [
+          trpc.reports.getActive.queryKey(),
+          trpc.leadForm.byPeriod.queryKey({ reportId: section.reportId }),
+        ];
+        const unrelatedKeys: QueryKey[] = [
+          trpc.review.dashboard.queryKey(),
+          trpc.leadForm.openWork.infiniteQueryKey({
+            reportId: section.reportId,
+            limit: 25,
+          }),
+        ];
+        for (const key of [...leadFormKeys, ...unrelatedKeys])
+          queryClient.setQueryData(key, "warm");
+        function Wrapper({ children }: { readonly children: ReactNode }) {
+          return (
+            <QueryClientProvider client={queryClient}>
+              <TRPCProxyContext.Provider value={trpc}>
+                {children}
+              </TRPCProxyContext.Provider>
+            </QueryClientProvider>
+          );
+        }
+        const { result, unmount } = renderHook(
+          () => useLeadFormWritePort(section.reportSectionId),
+          { wrapper: Wrapper },
+        );
+        try {
+          expect(overview.getCurrentResult().isStale).toBe(false);
+          expect(overviewReads).toBe(1);
+          expect(
+            overview.getCurrentResult().data?.current.section.version,
+          ).toBe(1);
+          await act(async () => {
+            if (settlement === "success") {
+              await expect(write(result.current)).resolves.toMatchObject({
+                section: { version: 2 },
+              });
+            } else {
+              await expect(write(result.current)).rejects.toEqual(
+                new LeadFormWriteError("error", "offline"),
+              );
+            }
+          });
+          if (settlement === "success") {
+            await waitFor(
+              () =>
+                expect(
+                  queryClient.getQueryData(options.queryKey)?.current.section
+                    .version,
+                ).toBe(2),
+              { timeout: 500 },
+            );
+            expect(
+              overview.getCurrentResult().data?.current.section.version,
+            ).toBe(2);
+            expect(overviewReads).toBe(2);
+          } else {
+            expect(
+              overview.getCurrentResult().data?.current.section.version,
+            ).toBe(1);
+            expect(overview.getCurrentResult().isStale).toBe(false);
+            expect(overviewReads).toBe(1);
+          }
+          expect(
+            leadFormKeys.map(
+              (key) => queryClient.getQueryState(key)?.isInvalidated,
+            ),
+          ).toEqual([settlement === "success", settlement === "success"]);
+          expect(
+            unrelatedKeys.map(
+              (key) => queryClient.getQueryState(key)?.isInvalidated,
+            ),
+          ).toEqual([false, false]);
+        } finally {
+          unmount();
+          unsubscribe();
+          queryClient.clear();
+        }
+      },
     );
-
-    await act(() =>
-      result.current.resolvePlan({
-        reportSectionId: section.reportSectionId,
-        version: 1,
-        commandId: "66666666-6666-4666-8666-666666666666",
-        source: {
-          kind: "prior",
-          reportId: section.reportId,
-          recordId: "77777777-7777-4777-8777-777777777777",
-        },
-        outcome: "done",
-        stageNames: [],
-      }),
-    );
-    expect(invalidate).toHaveBeenCalledTimes(2);
-    expect(invalidate).toHaveBeenCalledWith({
-      queryKey: [["leadForm", "byPeriod"]],
-    });
-
-    invalidate.mockClear();
-    await act(() =>
-      result.current.restorePlan({
-        reportSectionId: section.reportSectionId,
-        version: 2,
-        commandId: "88888888-8888-4888-8888-888888888888",
-        recordId: "99999999-9999-4999-8999-999999999999",
-      }),
-    );
-    expect(invalidate).toHaveBeenCalledTimes(2);
-    expect(invalidate).toHaveBeenCalledWith({
-      queryKey: [["reports", "getActive"]],
-    });
   });
 
   it("normalizes generic transport failures at the seam", async () => {
