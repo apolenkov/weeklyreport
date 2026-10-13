@@ -25,7 +25,7 @@ export type PreparationResult = Readonly<{
 
 const PREPARATION_OWNER_CONFLICT = "AI provider preparation lost its owner";
 
-export const preparationAlreadyCompleted = (
+const preparationAlreadyCompleted = (
   revision: StoredAiProviderRevision,
 ): boolean =>
   revision.lifecycle === AiProviderLifecycle.preparing &&
