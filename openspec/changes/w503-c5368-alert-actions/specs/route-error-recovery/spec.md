@@ -9,7 +9,7 @@ The session-load, route/global, and query error recovery surfaces MUST keep the 
 - **WHEN** an authenticated session read fails and the session-load recovery surface appears
 - **THEN** the complete “Try again” text fits inside the visible button at 1280 px and 375 px viewport widths
 - **AND** keyboard activation starts the existing retry
-- **AND** retrying retains its existing disabled state and progress label
+- **AND** if the recovery action remains visible during retry, it retains its existing disabled state and progress label
 - **AND** a successful retry restores the session surface
 
 #### Scenario: Rendering recovery exposes reset
