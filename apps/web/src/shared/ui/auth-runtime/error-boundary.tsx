@@ -49,15 +49,15 @@ export class QueryErrorBoundary extends Component<Props, State> {
               <AlertTitle>We hit an error.</AlertTitle>
               <AlertDescription>
                 An unexpected error interrupted this page. Your data is safe.
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={this.reset}
+                  className="mt-3"
+                >
+                  Try again
+                </Button>
               </AlertDescription>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={this.reset}
-                className="mt-3"
-              >
-                Try again
-              </Button>
             </Alert>
           </div>
         ),
