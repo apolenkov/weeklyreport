@@ -108,16 +108,16 @@ function SessionLoadError({
         <AlertTitle>Could not verify your session.</AlertTitle>
         <AlertDescription>
           WeeklyReport could not load your account. Your data is safe.
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-3"
+            disabled={isRetrying}
+            onClick={onRetry}
+          >
+            {isRetrying ? "Retrying…" : "Try again"}
+          </Button>
         </AlertDescription>
-        <Button
-          type="button"
-          variant="outline"
-          className="mt-3"
-          disabled={isRetrying}
-          onClick={onRetry}
-        >
-          {isRetrying ? "Retrying…" : "Try again"}
-        </Button>
       </Alert>
     </main>
   );
