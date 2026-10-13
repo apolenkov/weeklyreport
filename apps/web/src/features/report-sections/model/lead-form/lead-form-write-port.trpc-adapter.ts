@@ -11,6 +11,7 @@ import {
   invalidateDashboard,
   invalidateLeadForm,
   invalidateLeadHistory,
+  invalidateLeadPlanOutcome,
 } from "../../../../shared/lib/query/cache-keys";
 import { isConflictError } from "../../../../shared/lib/trpc/trpc";
 import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
@@ -126,17 +127,17 @@ export function useLeadFormWritePort(
   );
   const resolvePlan = useWrite(
     resolvePlanMutation,
-    invalidateForm,
+    invalidateLeadPlanOutcome,
     reportSectionOf,
   );
   const restorePlan = useWrite(
     restorePlanMutation,
-    invalidateForm,
+    invalidateLeadPlanOutcome,
     reportSectionOf,
   );
   const promotePlan = useWrite(
     promotePlanMutation,
-    invalidateForm,
+    invalidateLeadPlanOutcome,
     reportSectionOf,
   );
   const fillFrom = useWrite(fillFromMutation, invalidateForm, fillTargetOf);

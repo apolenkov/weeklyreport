@@ -13,7 +13,9 @@ import {
   vi,
 } from "vitest";
 
+import { baselineReportAssistantPrompts } from "../../ai-prompts/application/ai-feature-prompt-catalog.js";
 import type { ReportOccurrence } from "../domain/report-retrieval.types.js";
+import { OpenAiCompatiblePlannerAdapter } from "../infrastructure/openai-compatible.adapters.js";
 import type { OpenAiCompatibleFetch } from "../infrastructure/openai-compatible.transport.js";
 import { OpenAiCompatibleTransport } from "../infrastructure/openai-compatible.transport.js";
 import type { AiRuntimeResolverPort } from "./ai-runtime.resolver.js";
@@ -21,9 +23,9 @@ import type {
   CitationRepairInput,
   GroundedAnswer,
   GroundedAnswerInput,
-  PlannerRepairInput,
   ReportAssistantAnswerPort,
   ReportAssistantPlannerPort,
+  ReportAssistantPlannerRepairPort,
   ReportAssistantResourceGuardPort,
 } from "./report-assistant.ports.js";
 import {
@@ -175,8 +177,9 @@ const source = {
 
 type Harness = Readonly<{
   service: ReportAssistantService;
+  repository: ReportSearchRepository;
   planner: Mock<ReportAssistantPlannerPort["plan"]>;
-  plannerRepair: Mock<(input: PlannerRepairInput) => Promise<unknown>>;
+  plannerRepair: Mock<ReportAssistantPlannerRepairPort["repairPlan"]>;
   answerer: Mock<ReportAssistantAnswerPort["answer"]>;
   answerRepair: Mock<(input: CitationRepairInput) => Promise<GroundedAnswer>>;
   resolveActive: Mock;
@@ -211,7 +214,7 @@ const createHarness = (
   const planner = vi.fn<ReportAssistantPlannerPort["plan"]>(() =>
     Promise.resolve(plan),
   );
-  const plannerRepair = vi.fn<(input: PlannerRepairInput) => Promise<unknown>>(
+  const plannerRepair = vi.fn<ReportAssistantPlannerRepairPort["repairPlan"]>(
     () => Promise.resolve(options.repairedPlan),
   );
   const answerer = vi.fn<ReportAssistantAnswerPort["answer"]>(
@@ -321,6 +324,7 @@ const createHarness = (
       },
       options.resourceGuard ?? permissiveResourceGuard,
     ),
+    repository,
     planner,
     plannerRepair,
     answerer,
@@ -821,6 +825,132 @@ describe("ReportAssistantService", () => {
       kind: "invalid_plan",
     });
     expect(failed.plannerRepair).toHaveBeenCalledOnce();
+  });
+
+  it("returns resource_limited when a malformed plan repair finishes after lease loss", async () => {
+    const leaseController = new AbortController();
+    const release = vi.fn().mockResolvedValue(undefined);
+    const repairStarted = Promise.withResolvers<void>();
+    const repairResult = Promise.withResolvers<unknown>();
+    const guard: ReportAssistantResourceGuardPort = {
+      acquire: vi.fn().mockResolvedValue({
+        kind: "granted",
+        lease: { signal: leaseController.signal, release },
+      }),
+    };
+    const harness = createHarness(
+      { unexpected: true },
+      { repairedPlan: { unexpected: true }, resourceGuard: guard },
+    );
+    harness.plannerRepair.mockImplementation(() => {
+      repairStarted.resolve();
+      return repairResult.promise;
+    });
+
+    const pending = harness.service.answer(request, ACTOR_ID);
+    await repairStarted.promise;
+    expect(release).not.toHaveBeenCalled();
+    leaseController.abort(new Error("lease lost"));
+    repairResult.resolve({ unexpected: true });
+
+    await expect(pending).resolves.toEqual({
+      kind: "resource_limited",
+      retryAfterSeconds: 1,
+    });
+    expect(harness.repository.getSourceGeneration).not.toHaveBeenCalled();
+    expect(harness.repository.listSources).not.toHaveBeenCalled();
+    expect(harness.repository.loadOccurrences).not.toHaveBeenCalled();
+    expect(harness.planner).toHaveBeenCalledOnce();
+    expect(harness.plannerRepair).toHaveBeenCalledOnce();
+    expect(harness.answerer).not.toHaveBeenCalled();
+    expect(harness.answerRepair).not.toHaveBeenCalled();
+    expect(release).toHaveBeenCalledOnce();
+  });
+
+  it("returns provider_unavailable when a malformed plan repair finishes after the request deadline", async () => {
+    vi.useFakeTimers();
+    const leaseSignal = activeLeaseSignal();
+    const release = vi.fn().mockResolvedValue(undefined);
+    const fetchStarted = Promise.withResolvers<
+      AbortSignal | null | undefined
+    >();
+    const fetchResult = Promise.withResolvers<Response>();
+    const fetcher = vi.fn<OpenAiCompatibleFetch>((_input, init) => {
+      fetchStarted.resolve(init?.signal);
+      return fetchResult.promise;
+    });
+    const plannerAdapter = new OpenAiCompatiblePlannerAdapter(
+      new OpenAiCompatibleTransport({
+        baseUrl: "https://provider.example/v1",
+        credential: "secret",
+        timeoutMs: 60_000,
+        fetcher,
+      }),
+      {
+        model: "planner",
+        maxTokens: 100,
+        prompts: baselineReportAssistantPrompts(),
+      },
+    );
+    const adapterRepair = vi.spyOn(plannerAdapter, "repairPlan");
+    const guard: ReportAssistantResourceGuardPort = {
+      acquire: vi.fn().mockResolvedValue({
+        kind: "granted",
+        lease: { signal: leaseSignal, release },
+      }),
+    };
+    const harness = createHarness(
+      { unexpected: true },
+      { repairedPlan: { unexpected: true }, resourceGuard: guard },
+    );
+    harness.plannerRepair.mockImplementation((input, signal) =>
+      plannerAdapter.repairPlan(input, signal),
+    );
+
+    const pending = harness.service.answer(request, ACTOR_ID);
+    const fetchSignal = await fetchStarted.promise;
+    expect(fetchSignal?.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(REPORT_ASSISTANT_REQUEST_DEADLINE_MS);
+    expect(fetchSignal?.aborted).toBe(true);
+    expect(leaseSignal.aborted).toBe(false);
+    expect(release).not.toHaveBeenCalled();
+    fetchResult.resolve(
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                tool_calls: [
+                  {
+                    function: {
+                      name: "search_report_entries",
+                      arguments: JSON.stringify({ unexpected: true }),
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+          usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+
+    await expect(adapterRepair.mock.results[0]?.value).resolves.toEqual({
+      unexpected: true,
+    });
+    await expect(pending).resolves.toEqual({ kind: "provider_unavailable" });
+    expect(adapterRepair).toHaveBeenCalledOnce();
+    expect(fetcher).toHaveBeenCalledOnce();
+    expect(harness.repository.getSourceGeneration).not.toHaveBeenCalled();
+    expect(harness.repository.listSources).not.toHaveBeenCalled();
+    expect(harness.repository.loadOccurrences).not.toHaveBeenCalled();
+    expect(harness.planner).toHaveBeenCalledOnce();
+    expect(harness.plannerRepair).toHaveBeenCalledOnce();
+    expect(harness.answerer).not.toHaveBeenCalled();
+    expect(harness.answerRepair).not.toHaveBeenCalled();
+    expect(release).toHaveBeenCalledOnce();
   });
 
   it("repairs an invalid citation once before returning the grounded answer", async () => {
