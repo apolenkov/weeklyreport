@@ -1,11 +1,11 @@
-# Local Stand Provisioning Spec Delta
+# local-stand-provisioning Specification
 
 ## Purpose
 
 Define all-or-nothing application of the local stand's reporting group,
 user role assignments, and group head pointer through the operator SQL workflow.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Local stand provisioning is atomic
 
