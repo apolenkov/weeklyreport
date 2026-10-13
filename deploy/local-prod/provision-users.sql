@@ -6,6 +6,9 @@
 -- Idempotent; run after the first successful `helm install` (schema exists):
 --   kubectl -n wr-local-prod exec -i statefulset/postgres -- \
 --     psql -U weeklyreport -d weeklyreport_production -v ON_ERROR_STOP=1 < provision-users.sql
+
+BEGIN;
+
 INSERT INTO "ReportingGroup" (id, name, "updatedAt")
 SELECT '00000000-0000-4000-8000-0000000000a1', 'Local stand', now()
 WHERE NOT EXISTS (SELECT 1 FROM "ReportingGroup" WHERE id = '00000000-0000-4000-8000-0000000000a1');
@@ -21,3 +24,5 @@ ON CONFLICT (email) DO UPDATE
 
 UPDATE "ReportingGroup" SET "headUserId" = '00000000-0000-4000-8000-0000000000b2'
 WHERE id = '00000000-0000-4000-8000-0000000000a1' AND "headUserId" IS NULL;
+
+COMMIT;
