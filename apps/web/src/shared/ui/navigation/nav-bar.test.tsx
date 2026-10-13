@@ -6,11 +6,14 @@ import {
   screen,
   within,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { Role } from "@weeklyreport/shared";
 import * as React from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SessionState } from "../../lib/auth/session-provider";
+import { makeTRPCProxy } from "../../lib/trpc/trpc";
+import { TRPCProxyContext } from "../../lib/trpc/trpc-context";
 
 const navigationMock = vi.hoisted(() => ({
   pathname: "/lead/report",
@@ -103,8 +106,44 @@ function expectInactiveLink(container: HTMLElement, href: string): void {
 
 describe("NavBar — role-aware visibility", () => {
   beforeEach(() => {
+    vi.stubEnv("NEXT_PUBLIC_DEV_ROLE_SWITCHER", "false");
     useSessionMock.mockReset();
     setRoute("/lead/report");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("opens the enabled development role menu with its runtime providers", async () => {
+    vi.stubEnv("NEXT_PUBLIC_DEV_ROLE_SWITCHER", "true");
+    setRole("lead");
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    const trpc = makeTRPCProxy(queryClient);
+    queryClient.setQueryData(trpc.dev.listUsers.queryKey(), [
+      {
+        id: "00000000-0000-4000-8000-000000000001",
+        name: "Development Head",
+        email: "head@test.local",
+        role: "head",
+      },
+    ]);
+    testingRender(
+      <QueryClientProvider client={queryClient}>
+        <TRPCProxyContext.Provider value={trpc}>
+          <NavBar />
+        </TRPCProxyContext.Provider>
+      </QueryClientProvider>,
+    );
+
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: "Switch development role" }));
+
+    expect(screen.getByRole("menu")).toBeVisible();
+    expect(screen.getByText("Development Head")).toBeVisible();
   });
 
   it.each([
