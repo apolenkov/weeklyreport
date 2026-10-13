@@ -20,7 +20,7 @@ function renderEditor(
 ) {
   const onChange = overrides.onChange ?? vi.fn();
   const onClose = overrides.onClose ?? vi.fn();
-  render(
+  const rendered = render(
     <StatusOverviewActivityEditor
       activityId={ACTIVITY_ID}
       values={{
@@ -32,7 +32,7 @@ function renderEditor(
       onClose={onClose}
     />,
   );
-  return { onChange, onClose };
+  return { onChange, onClose, rerender: rendered.rerender };
 }
 
 describe("StatusOverviewActivityEditor", () => {
@@ -77,7 +77,7 @@ describe("StatusOverviewActivityEditor", () => {
   });
 
   it("saves trimmed values and normalizes blanks to null", async () => {
-    const { onChange } = renderEditor();
+    const { onChange, onClose, rerender } = renderEditor();
     const user = userEvent.setup();
 
     await user.type(
@@ -89,6 +89,33 @@ describe("StatusOverviewActivityEditor", () => {
     expect(onChange).toHaveBeenCalledWith(ACTIVITY_ID, {
       titleOverride: "Weekly duty",
       description: null,
+    });
+    rerender(
+      <StatusOverviewActivityEditor
+        activityId={ACTIVITY_ID}
+        values={{
+          titleOverride: "Weekly duty",
+          description: null,
+          catalogueName: "Catalogue duty",
+        }}
+        onChange={onChange}
+        onClose={onClose}
+      />,
+    );
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Save weekly fields" }),
+    ).toBeDisabled();
+    await user.type(
+      screen.getByTestId(`activity-description-${ACTIVITY_ID}`),
+      "Next description",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Save weekly fields" }),
+    );
+    expect(onChange).toHaveBeenLastCalledWith(ACTIVITY_ID, {
+      titleOverride: "Weekly duty",
+      description: "Next description",
     });
   });
 
@@ -176,6 +203,7 @@ describe("StatusOverviewActivityEditor", () => {
     expect(
       screen.getByTestId(`activity-fields-save-${ACTIVITY_ID}`),
     ).toBeDisabled();
+    expect(screen.queryByRole("alert")).toBeNull();
 
     await user.clear(title);
     await user.type(title, "Edited weekly title");
@@ -187,51 +215,144 @@ describe("StatusOverviewActivityEditor", () => {
     });
   });
 
-  it("keeps pending input when server values rerender", async () => {
-    const onChange = vi.fn();
-    const user = userEvent.setup();
-    const { rerender } = render(
-      <StatusOverviewActivityEditor
-        activityId={ACTIVITY_ID}
-        values={{
-          titleOverride: null,
-          description: null,
-          catalogueName: "Catalogue duty",
-        }}
-        onChange={onChange}
-        onClose={vi.fn()}
-      />,
-    );
+  it.each(["titleOverride", "description"] as const)(
+    "blocks submit and Reset after an authoritative %s change without losing pending input",
+    async (changedField) => {
+      const onChange = vi.fn();
+      const onClose = vi.fn();
+      const onPendingChange = vi.fn();
+      const user = userEvent.setup();
+      const { rerender } = render(
+        <StatusOverviewActivityEditor
+          activityId={ACTIVITY_ID}
+          values={{
+            titleOverride: "Original title",
+            description: "Original description",
+            catalogueName: "Catalogue duty",
+          }}
+          onChange={onChange}
+          onClose={onClose}
+          onPendingChange={onPendingChange}
+        />,
+      );
 
-    await user.type(
-      screen.getByTestId(`activity-title-${ACTIVITY_ID}`),
-      "Pending title",
-    );
-    await user.type(
-      screen.getByTestId(`activity-description-${ACTIVITY_ID}`),
-      "Pending description",
-    );
+      const title = screen.getByTestId(`activity-title-${ACTIVITY_ID}`);
+      await user.clear(title);
+      await user.type(title, "  Pending title  ");
 
-    rerender(
-      <StatusOverviewActivityEditor
-        activityId={ACTIVITY_ID}
-        values={{
-          titleOverride: "Older server title",
-          description: "Older server description",
-          catalogueName: "Catalogue duty",
-        }}
-        onChange={onChange}
-        onClose={vi.fn()}
-      />,
-    );
+      rerender(
+        <StatusOverviewActivityEditor
+          activityId={ACTIVITY_ID}
+          values={{
+            titleOverride: "Original title",
+            description: "Original description",
+            [changedField]: "Newer server value",
+            catalogueName: "Catalogue duty",
+          }}
+          onChange={onChange}
+          onClose={onClose}
+          onPendingChange={onPendingChange}
+        />,
+      );
 
-    expect(screen.getByTestId(`activity-title-${ACTIVITY_ID}`)).toHaveValue(
-      "Pending title",
-    );
-    expect(
-      screen.getByTestId(`activity-description-${ACTIVITY_ID}`),
-    ).toHaveValue("Pending description");
-  });
+      const form = screen.getByRole("form");
+      expect(title).toHaveFocus();
+      fireEvent.submit(form);
+      expect(onChange).not.toHaveBeenCalled();
+      expect(onClose).not.toHaveBeenCalled();
+      expect(title).toHaveValue("  Pending title  ");
+      expect(
+        screen.getByTestId(`activity-description-${ACTIVITY_ID}`),
+      ).toHaveValue("Original description");
+      expect(onPendingChange).toHaveBeenLastCalledWith(ACTIVITY_ID, true);
+      expect(screen.getByRole("alert")).toHaveTextContent(/changed|stale/i);
+      expect(screen.getByRole("alert")).toHaveTextContent(/cancel.*reopen/i);
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        /cancel.*discard.*local changes/i,
+      );
+      expect(screen.getByRole("alert")).toHaveTextContent(/reopen.*latest/i);
+      expect(
+        screen.getByRole("button", { name: "Save weekly fields" }),
+      ).toBeDisabled();
+
+      await user.click(
+        screen.getByRole("button", { name: "Reset to catalogue name" }),
+      );
+      expect(title).toHaveValue("");
+      expect(screen.getByRole("alert")).toBeVisible();
+      expect(
+        screen.getByRole("button", { name: "Save weekly fields" }),
+      ).toBeDisabled();
+      fireEvent.submit(form);
+      expect(onChange).not.toHaveBeenCalled();
+      expect(onPendingChange).toHaveBeenLastCalledWith(ACTIVITY_ID, true);
+    },
+  );
+
+  it.each([
+    {
+      name: "catalogue-only rename",
+      titleOverride: "Original title",
+      description: "Original description",
+    },
+    {
+      name: "trim-equivalent fields",
+      titleOverride: " Original title ",
+      description: " Original description ",
+    },
+    {
+      name: "blank-equivalent fields",
+      titleOverride: "  ",
+      description: "\t ",
+    },
+  ])(
+    "allows a pending save after $name",
+    async ({ name, titleOverride, description }) => {
+      const onChange = vi.fn();
+      const onClose = vi.fn();
+      const blank = name === "blank-equivalent fields";
+      const user = userEvent.setup();
+      const { rerender } = render(
+        <StatusOverviewActivityEditor
+          activityId={ACTIVITY_ID}
+          values={{
+            titleOverride: blank ? null : "Original title",
+            description: blank ? null : "Original description",
+            catalogueName: "Catalogue duty",
+          }}
+          onChange={onChange}
+          onClose={onClose}
+        />,
+      );
+      const title = screen.getByTestId(`activity-title-${ACTIVITY_ID}`);
+      await user.clear(title);
+      await user.type(title, "  Pending title  ");
+      rerender(
+        <StatusOverviewActivityEditor
+          activityId={ACTIVITY_ID}
+          values={{
+            titleOverride,
+            description,
+            catalogueName: "Renamed catalogue duty",
+          }}
+          onChange={onChange}
+          onClose={onClose}
+        />,
+      );
+      expect(title).toHaveValue("  Pending title  ");
+      expect(screen.queryByRole("alert")).toBeNull();
+      expect(
+        screen.getByRole("button", { name: "Save weekly fields" }),
+      ).toBeEnabled();
+      await user.click(
+        screen.getByRole("button", { name: "Save weekly fields" }),
+      );
+      expect(onChange).toHaveBeenCalledExactlyOnceWith(ACTIVITY_ID, {
+        titleOverride: "Pending title",
+        description: blank ? null : "Original description",
+      });
+    },
+  );
 
   it("accepts a 200-character title and a 500-character description", async () => {
     const { onChange } = renderEditor();

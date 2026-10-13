@@ -78,24 +78,25 @@ export function useActivityFieldsDraft(
   const [title, setTitle] = useState(values.titleOverride ?? "");
   const [description, setDescription] = useState(values.description ?? "");
   const [dirty, setDirty] = useState(false);
-  const authoritativeValues = useRef({
-    titleOverride: values.titleOverride,
-    description: values.description,
+  const [authoritativeValues, setAuthoritativeValues] = useState({
+    titleOverride: normalize(values.titleOverride ?? ""),
+    description: normalize(values.description ?? ""),
   });
+  const authoritativeTitle = normalize(values.titleOverride ?? "");
+  const authoritativeDescription = normalize(values.description ?? "");
+  const changed =
+    authoritativeValues.titleOverride !== authoritativeTitle ||
+    authoritativeValues.description !== authoritativeDescription;
   useInlineEditUnloadGuard(dirty);
-  useEffect(() => {
-    const changed =
-      authoritativeValues.current.titleOverride !== values.titleOverride ||
-      authoritativeValues.current.description !== values.description;
-    authoritativeValues.current = {
-      titleOverride: values.titleOverride,
-      description: values.description,
-    };
-    if (!dirty && changed) {
-      setTitle(values.titleOverride ?? "");
-      setDescription(values.description ?? "");
-    }
-  }, [dirty, values.description, values.titleOverride]);
+  // A pending edit belongs to its original pair, even after a server reseed.
+  if (!dirty && changed) {
+    setAuthoritativeValues({
+      titleOverride: authoritativeTitle,
+      description: authoritativeDescription,
+    });
+    setTitle(values.titleOverride ?? "");
+    setDescription(values.description ?? "");
+  }
   useEffect(
     () => () => onPendingChange?.(activityId, false),
     [activityId, onPendingChange],
@@ -121,6 +122,7 @@ export function useActivityFieldsDraft(
     title,
     description,
     dirty,
+    stale: dirty && changed,
     editTitle: (next: string) => {
       setTitle(next);
       setDraftDirty(true);
