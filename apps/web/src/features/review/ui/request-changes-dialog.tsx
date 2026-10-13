@@ -8,6 +8,7 @@ import {
 import { useId, useRef, useState } from "react";
 
 import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
+import { mutationErrorMessage } from "../../../shared/lib/errors/mutation-error-message";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { DialogSurface } from "../../../shared/ui/dialogs/dialog-surface";
 
@@ -150,11 +151,7 @@ export function RequestChangesDialog({
         onClose();
       },
       onError: (err) => {
-        setError(
-          err instanceof Error && err.message
-            ? err.message
-            : "Failed to request changes.",
-        );
+        setError(mutationErrorMessage(err, "Failed to request changes."));
       },
     }),
   );

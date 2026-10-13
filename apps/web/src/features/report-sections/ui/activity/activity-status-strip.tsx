@@ -27,7 +27,7 @@ interface ActivityCardModel {
   readonly key: string;
   readonly activityName: string;
   readonly authorName: string;
-  readonly tone: ActivityTone;
+  readonly tone: ActivityTone | null;
   readonly note: string | null;
   readonly linkedProducts: readonly string[];
   readonly currentItems: readonly string[];
@@ -64,9 +64,36 @@ function buildActivityCards(
   sections: readonly ActivitySectionSlice[],
 ): ActivityCardModel[] {
   return sections
-    .flatMap((section) =>
-      section.activities.map((activity) => toActivityCard(section, activity)),
-    )
+    .flatMap((section) => {
+      const cards = section.activities.map((activity) =>
+        toActivityCard(section, activity),
+      );
+      const activityIds = new Set(section.activities.map((a) => a.activityId));
+      const unavailable = (activityId: string | null | undefined): boolean =>
+        activityId != null && !activityIds.has(activityId);
+      const items = section.items.filter((i) => unavailable(i.activityId));
+      const risks = section.risks.filter((r) => unavailable(r.activityId));
+      const decisions = section.decisions.filter((d) =>
+        unavailable(d.activityId),
+      );
+      if (items.length > 0 || risks.length > 0 || decisions.length > 0) {
+        cards.push({
+          key: `unavailable::${section.authorId}`,
+          activityName: "Activity details unavailable",
+          authorName: section.authorName,
+          tone: null,
+          note: "These saved records no longer have activity details in this section.",
+          linkedProducts: [],
+          currentItems: items
+            .filter((i) => i.type === "current")
+            .map((i) => i.text),
+          nextItems: items.filter((i) => i.type === "next").map((i) => i.text),
+          risks: risks.map((r) => r.risk),
+          decisions: decisions.map((d) => d.text),
+        });
+      }
+      return cards;
+    })
     .sort(
       (a, b) =>
         a.activityName.localeCompare(b.activityName, "ru") ||
@@ -91,7 +118,7 @@ function RecordList({
         {rows.map((text, idx) => (
           <li
             key={`${label}-${String(idx)}`}
-            className="text-sm text-[var(--color-foreground)]"
+            className="text-sm text-[var(--color-foreground)] [overflow-wrap:anywhere]"
           >
             {text}
           </li>
@@ -105,23 +132,37 @@ function ActivityBodyCard({ card }: { readonly card: ActivityCardModel }) {
   const linkedNames = card.linkedProducts.join(", ");
   return (
     <li className="rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-card)]/70 p-3">
-      <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-2">
-        <span
-          aria-hidden="true"
-          className={[
-            "mt-[0.45rem] h-2 w-2 shrink-0 self-start rounded-full",
-            statusDotClassName(card.tone),
-          ].join(" ")}
-        />
+      <div
+        className={
+          card.tone === null
+            ? "min-w-0"
+            : "grid grid-cols-[auto_minmax(0,1fr)] gap-x-2"
+        }
+      >
+        {card.tone !== null ? (
+          <span
+            aria-hidden="true"
+            className={[
+              "mt-[0.45rem] h-2 w-2 shrink-0 self-start rounded-full",
+              statusDotClassName(card.tone),
+            ].join(" ")}
+          />
+        ) : null}
         <div className="min-w-0">
           <span className="font-medium text-[var(--color-foreground)]">
             {card.activityName}
           </span>
           <p className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-[var(--color-muted-foreground)]">
-            <span className="font-semibold">
-              {statusLabel(card.tone, "screen")}
+            {card.tone !== null ? (
+              <span className="font-semibold">
+                {statusLabel(card.tone, "screen")}
+              </span>
+            ) : null}
+            <span className="[overflow-wrap:anywhere]">
+              {card.tone === null
+                ? card.authorName
+                : shortNameFromName(card.authorName)}
             </span>
-            <span>{shortNameFromName(card.authorName)}</span>
           </p>
           {linkedNames ? (
             <p className="text-xs text-[var(--color-muted-foreground)]">

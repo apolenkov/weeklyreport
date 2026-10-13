@@ -18,6 +18,9 @@ export type {
   StatusOverviewActivityFieldsValue,
 } from "./status-overview-activity-fields";
 
+const STALE_FIELDS_MESSAGE =
+  "Weekly fields changed while you were editing. Copy any text you need. Cancel discards your local changes; then reopen to load the latest values.";
+
 // Weekly title/description editor for one activity unit in the Overview row
 // composer. Keeps local input while a save is pending and never renames the
 // catalogue entry: blank resets the field to null (catalogue fallback).
@@ -47,30 +50,34 @@ export function StatusOverviewActivityEditor({
     draft.description,
   );
 
-  const save = (): void => {
-    if (invalid) return;
-    onChange(activityId, {
-      titleOverride: normalize(draft.title),
-      description: normalize(draft.description),
-    });
-    draft.markClean();
-    onClose();
-  };
-
   return (
     <form
       ref={formRef}
       tabIndex={-1}
-      className="min-w-0 border-t border-[var(--color-border-subtle)] focus:outline-none bg-[color-mix(in_srgb,var(--color-card)_88%,transparent)] px-4 py-3"
+      className="min-w-0 border-t border-[var(--color-border-subtle)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] bg-[color-mix(in_srgb,var(--color-card)_88%,transparent)] px-4 py-3"
       aria-label={`Weekly fields for ${values.catalogueName}`}
       onSubmit={(event) => {
         event.preventDefault();
-        save();
+        if (invalid || draft.stale) return;
+        onChange(activityId, {
+          titleOverride: normalize(draft.title),
+          description: normalize(draft.description),
+        });
+        draft.markClean();
+        onClose();
       }}
     >
       <p className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
         Weekly fields
       </p>
+      {draft.stale ? (
+        <p
+          role="alert"
+          className="mt-2 text-sm text-[var(--color-destructive)]"
+        >
+          {STALE_FIELDS_MESSAGE}
+        </p>
+      ) : null}
       <div className="mt-2 grid gap-2 md:grid-cols-2">
         <ActivityTitleField
           activityId={activityId}
@@ -89,7 +96,7 @@ export function StatusOverviewActivityEditor({
       <ActivityFieldActions
         activityId={activityId}
         dirty={draft.dirty}
-        invalid={invalid}
+        invalid={invalid || draft.stale}
         onCancel={() => {
           draft.cancel();
           onClose();
