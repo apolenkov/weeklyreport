@@ -17,6 +17,7 @@ import {
   vi,
 } from "vitest";
 
+import type { JobEnqueuer } from "../../infrastructure/bullmq/job-enqueuer.js";
 import type { EnvConfig } from "../../infrastructure/config/env.schema.js";
 import { weeklyreportPdfExportRequestsTotal } from "../../infrastructure/metrics/metrics.registry.js";
 import { type AppLogger, createNullLogger } from "../../lib/logger.js";
@@ -40,6 +41,7 @@ import {
 } from "./pdf-export.ports.js";
 import { PdfExportService } from "./pdf-export.service";
 import { verifyPdfExportToken as verifyPdfExportTokenImpl } from "./pdf-export.token";
+import { PdfExportBullmqEnqueuer } from "./pdf-export-bullmq-enqueuer.adapter.js";
 import { PdfExportInfrastructureTelemetry } from "./pdf-export-telemetry.adapter.js";
 
 const reportId = "22222222-2222-4222-8222-222222222222";
@@ -483,29 +485,86 @@ describe("PdfExportService", () => {
     >();
   });
 
-  it("marks the queued row failed when enqueue throws (never a queued row without a job)", async () => {
-    // A Redis command already issued with unknown outcome cannot be
-    // cancelled when the row lock releases: a lost ack may still have added
-    // the job. Failing the generation-1 row keeps the breakage visible, and
-    // the worker's pending+generation gate contains a late-executing job.
-    const capture: { lastCreatedJobId?: string } = {};
-    const repository = createRepository(publishedReport, capture);
-    const queue = {
-      enqueue: vi.fn().mockRejectedValue(new Error("Redis down")),
-    };
-    const service = createPdfExportService(repository, undefined, queue);
+  it.each([false, true])(
+    "preserves the initial enqueue error when compensation fails=%s",
+    async (compensationFails) => {
+      const capture: { lastCreatedJobId?: string } = {};
+      const repository = createRepository(publishedReport, capture);
+      const dispatchError = new Error(
+        "Redis connection closed during queue add",
+      );
+      const compensationError = new Error(
+        "PostgreSQL connection terminated during failure write",
+      );
+      const logger = { ...createNullLogger(), error: vi.fn() };
+      const add = vi.fn<JobEnqueuer["add"]>(async (name, data, options) => {
+        const jobId = expectDefined(capture.lastCreatedJobId);
+        const pending = await repository.getExportJob(jobId);
+        expect(pending).toMatchObject({
+          jobId,
+          reportId,
+          status: "queued",
+          generation: 1,
+          requestedBy: requesterSession.userId,
+        });
+        expect(name).toBe("generate");
+        expect(data).toMatchObject({
+          jobId,
+          reportId,
+          generation: 1,
+          requestedBy: requesterSession.userId,
+        });
+        expect(options).toMatchObject({ jobId: `${jobId}-g1` });
+        throw dispatchError;
+      });
+      if (compensationFails) {
+        vi.spyOn(repository, "markExportFailed").mockImplementation(
+          async (jobId, generation, message) => {
+            expect(await repository.getExportJob(jobId)).toMatchObject({
+              jobId,
+              status: "queued",
+              generation,
+              requestedBy: requesterSession.userId,
+            });
+            expect(generation).toBe(1);
+            expect(message).toBe(dispatchError.message);
+            throw compensationError;
+          },
+        );
+      }
+      const service = createPdfExportService(
+        repository,
+        logger,
+        new PdfExportBullmqEnqueuer({ add }),
+      );
 
-    await expect(
-      service.requestPdfExport(reportId, requesterSession),
-    ).rejects.toThrow("Redis down");
+      await expect(
+        service.requestPdfExport(reportId, requesterSession),
+      ).rejects.toBe(dispatchError);
 
-    const jobId = expectDefined(capture.lastCreatedJobId);
-    const job = await service.getPdfExportStatus(
-      jobId,
-      requesterSession.userId,
-    );
-    expect(job.status).toBe("failed");
-  });
+      const jobId = expectDefined(capture.lastCreatedJobId);
+      expect(
+        await service.getPdfExportStatus(jobId, requesterSession.userId),
+      ).toMatchObject({
+        jobId,
+        generation: 1,
+        status: compensationFails ? "queued" : "failed",
+      });
+      expect(logger.error).toHaveBeenCalledWith("PDF export job failed", {
+        jobId,
+        generation: 1,
+        error: dispatchError.message,
+      });
+      if (compensationFails) {
+        expect(logger.error).toHaveBeenCalledWith(
+          "PDF export failure compensation failed",
+          { jobId, reportId, generation: 1, error: compensationError.message },
+        );
+      } else {
+        expect(logger.error).toHaveBeenCalledTimes(1);
+      }
+    },
+  );
 
   // Role-labelled counter. Three labels exercised (head | viewer | system)
   // confirm the optional `requestedByRole` is threaded through and the

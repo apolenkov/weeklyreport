@@ -10,6 +10,7 @@ import { ENV_CONFIG } from "../../infrastructure/config/config.module.js";
 import type { EnvConfig } from "../../infrastructure/config/env.schema.js";
 import { APP_LOGGER } from "../../lib/audit-logger.js";
 import { requireEnv } from "../../lib/env.js";
+import { errorMessage } from "../../lib/error-message.js";
 import { type AppLogger } from "../../lib/logger";
 import { buildPublishedReadModelFromSnapshot } from "../weekly-report/index.js";
 import { PdfExportDomainError } from "./pdf-export.job-state.js";
@@ -157,16 +158,25 @@ export class PdfExportService {
         return job;
       }
     } catch (error) {
-      // A row must never stay "queued" with no job behind it: mark it failed
-      // so status/reaper surfaces the breakage, then propagate the enqueue
-      // error to the caller. A Redis command already issued with unknown
-      // outcome cannot be cancelled on lock release; the worker's
+      // Try to mark this generation failed so status/reaper surfaces the
+      // breakage. Persistence can fail; keep the dispatch error primary.
+      // A Redis command already issued with unknown outcome cannot be
+      // cancelled on lock release; the worker's
       // pending+generation fence contains a job that executes late.
-      await this.markExportFailed(
-        job.jobId,
-        job.generation,
-        error instanceof Error ? error.message : String(error),
-      );
+      try {
+        await this.markExportFailed(
+          job.jobId,
+          job.generation,
+          error instanceof Error ? error.message : String(error),
+        );
+      } catch (compensationError) {
+        this.logger.error("PDF export failure compensation failed", {
+          jobId: job.jobId,
+          reportId,
+          generation: job.generation,
+          error: errorMessage(compensationError),
+        });
+      }
       throw error;
     }
     this.logger.info("enqueued pdf-export job", {
