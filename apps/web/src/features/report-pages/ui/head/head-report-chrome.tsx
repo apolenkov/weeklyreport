@@ -1,5 +1,6 @@
 "use client";
 
+import { COMPILED_HISTORY_LIMIT } from "@weeklyreport/shared";
 import { Skeleton } from "@weeklyreport/ui/components/ui/skeleton";
 import { type ReactNode, useCallback, useContext } from "react";
 
@@ -77,6 +78,7 @@ export function HeadContextControls({
   urlState,
   historyError,
   historyLoading,
+  historyTruncated,
   fullscreenControl,
 }: {
   readonly periods: readonly ReportPeriod[];
@@ -85,6 +87,7 @@ export function HeadContextControls({
   readonly urlState: ReportShellUrlState;
   readonly historyError: boolean;
   readonly historyLoading: boolean;
+  readonly historyTruncated: boolean;
   readonly fullscreenControl?: ReactNode;
 }) {
   const { buildQuery, includeArchive, setIncludeArchive } = urlState;
@@ -110,6 +113,14 @@ export function HeadContextControls({
         ) : periods.length > 0 ? (
           <PeriodNavigator periods={periods} urlBuilder={urlBuilder} />
         ) : null}
+        {historyTruncated && (
+          <span
+            role="status"
+            className="min-w-0 text-xs text-[var(--color-muted-foreground)]"
+          >
+            Showing the latest {COMPILED_HISTORY_LIMIT} periods.
+          </span>
+        )}
         <span className="shrink-0">
           <ArchiveToggle
             checked={includeArchive}

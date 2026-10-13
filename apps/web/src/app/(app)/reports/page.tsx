@@ -18,6 +18,7 @@ export default function ReportsPage() {
   const {
     entries,
     archiveCount,
+    truncated,
     isLoading,
     failure,
     includeArchive,
@@ -51,6 +52,7 @@ export default function ReportsPage() {
 
           <HistoryPanel
             entries={entries}
+            truncated={truncated}
             includeArchive={includeArchive}
             isLoading={isSessionLoading || isLoading}
             failure={failure}

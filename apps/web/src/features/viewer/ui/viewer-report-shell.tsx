@@ -253,6 +253,7 @@ export function ViewerReportShell({
         periods={periods}
         urlState={urlState}
         historyError={historyQ.isError}
+        historyTruncated={historyQ.data?.truncated === true}
         historyLoading={historyQ.isLoading}
       />
     ),

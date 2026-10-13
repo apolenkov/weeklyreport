@@ -1,5 +1,6 @@
 "use client";
 
+import { COMPILED_HISTORY_LIMIT } from "@weeklyreport/shared";
 import { useState } from "react";
 
 import type { HistoryEntry } from "../../report-sections";
@@ -17,6 +18,7 @@ interface HistoryPanelProps {
   readonly failure: HistoryView["failure"];
   readonly summaryTitle: string;
   readonly isLead: boolean;
+  readonly truncated: boolean;
 }
 
 function HistoryEmptyState({
@@ -64,6 +66,7 @@ export function HistoryPanel({
   failure,
   summaryTitle,
   isLead,
+  truncated,
 }: HistoryPanelProps) {
   // "Show all" is paired with its archive scope. Switching scope collapses the
   // list; switching back restores that scope's expansion without a reset effect.
@@ -75,9 +78,7 @@ export function HistoryPanel({
     : entries.slice(0, HISTORY_INITIAL_VISIBLE);
   const hasMore = entries.length > HISTORY_INITIAL_VISIBLE && !showAll;
 
-  if (isLoading) {
-    return <LeadHistorySkeleton />;
-  }
+  if (isLoading) return <LeadHistorySkeleton />;
 
   const errorNotice = failure && (
     <div
@@ -104,6 +105,14 @@ export function HistoryPanel({
   return (
     <div className="space-y-4">
       {errorNotice}
+      {truncated && (
+        <p
+          role="status"
+          className="min-w-0 text-sm text-[var(--color-muted-foreground)]"
+        >
+          Showing the latest {COMPILED_HISTORY_LIMIT} periods.
+        </p>
+      )}
       <div
         data-testid="history-panel-grid"
         className="grid items-stretch gap-6 lg:grid-cols-[minmax(0,1fr)_280px]"

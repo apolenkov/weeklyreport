@@ -18,6 +18,7 @@ export function ViewerShellControls({
   urlState,
   historyError,
   historyLoading,
+  historyTruncated,
 }: {
   readonly reportId: string;
   readonly mode: "form" | "slides";
@@ -25,6 +26,7 @@ export function ViewerShellControls({
   readonly urlState: ReportShellUrlState;
   readonly historyError: boolean;
   readonly historyLoading: boolean;
+  readonly historyTruncated: boolean;
 }) {
   const { buildQuery, includeArchive, setIncludeArchive, scope, setScope } =
     urlState;
@@ -49,6 +51,7 @@ export function ViewerShellControls({
       mode={mode}
       historyError={historyError}
       historyLoading={historyLoading}
+      historyTruncated={historyTruncated}
     />
   );
 }

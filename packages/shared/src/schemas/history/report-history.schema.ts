@@ -10,6 +10,9 @@ import { assembledReportSchema } from "../report/report.schema.js";
 
 const MAX_PAGE_SIZE = 100;
 
+/** Maximum number of periods returned by compiled history. */
+export const COMPILED_HISTORY_LIMIT = 100;
+
 /** Carry-over execution states exposed by history APIs. */
 export const carryOverStatusSchema = z.enum(["completed"]);
 
@@ -107,6 +110,7 @@ export const compiledHistoryResultSchema = z
   .object({
     entries: z.array(compiledHistoryEntrySchema).readonly(),
     archiveCount: z.number().int().min(0),
+    truncated: z.boolean(),
   })
   .readonly();
 
