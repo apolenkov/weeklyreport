@@ -176,18 +176,18 @@ export class JobsService {
       const executionId = reference.reminderExecutionId;
       const exists = await this.options.reminderExecutionExists(executionId);
       if (!exists) {
-        await job.remove();
-        const reason = `Reminder execution ${executionId} no longer exists.`;
-        this.logger.info("admin.jobs.retry — stale job removed", {
+        const outcome = await job.removeIfTerminal("failed");
+        this.logger.info("admin.jobs.retry — stale job cleanup", {
           phase: ADMIN_JOBS_RETRY_PHASE,
           queue: input.queue,
           jobId: input.jobId,
           executionId,
+          outcome,
         });
         return {
           retried: false,
-          removed: true,
-          reason,
+          removed: outcome === "removed",
+          reason: `Reminder execution ${executionId} no longer exists.`,
           jobId: input.jobId,
         };
       }
@@ -323,7 +323,7 @@ export class JobsService {
       const superseded = await this.queue(PDF_EXPORT_QUEUE_NAME).getJob(
         queueJobId,
       );
-      await superseded?.remove();
+      await superseded?.removeIfTerminal("failed-or-completed");
     } catch (error) {
       this.logger.warn("admin.jobs.retry — superseded entry not removed", {
         phase: ADMIN_JOBS_RETRY_PHASE,
@@ -352,12 +352,13 @@ export class JobsService {
       });
       return { removed: false, jobId: input.jobId };
     }
-    await job.remove();
-    this.logger.info("admin.jobs.remove — job removed", {
+    const outcome = await job.removeIfTerminal("failed");
+    this.logger.info("admin.jobs.remove — conditional removal", {
       phase: "admin.jobs.remove",
       queue: input.queue,
       jobId: input.jobId,
+      outcome,
     });
-    return { removed: true, jobId: input.jobId };
+    return { removed: outcome === "removed", jobId: input.jobId };
   }
 }

@@ -1,7 +1,8 @@
-import { QUEUE_NAMES } from "@weeklyreport/shared";
+import { QUEUE_NAMES, type QueueName } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { createAdminJobHandle } from "./admin-jobs-queue.adapter";
+import type { ObservedTerminalJob } from "./terminal-job-removal.js";
 
 function failedJobRecord() {
   return {
@@ -14,8 +15,18 @@ function failedJobRecord() {
     data: { executionId: "execution-1" },
     getState: vi.fn<() => Promise<"failed">>().mockResolvedValue("failed"),
     retry: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
-    remove: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+    removeIfTerminal: vi
+      .fn<ObservedTerminalJob["removeIfTerminal"]>()
+      .mockResolvedValue("removed"),
   };
+}
+
+function makeHandle(
+  queue: QueueName,
+  record: Parameters<typeof createAdminJobHandle>[1] &
+    Pick<ObservedTerminalJob, "removeIfTerminal">,
+) {
+  return createAdminJobHandle(queue, record, record.removeIfTerminal);
 }
 
 function pdfJobRecord(
@@ -38,7 +49,7 @@ function pdfJobRecord(
 describe("createAdminJobHandle", () => {
   it("validates one complete failed-job DTO at the BullMQ boundary", async () => {
     const record = failedJobRecord();
-    const handle = createAdminJobHandle("email-reminder", record);
+    const handle = makeHandle("email-reminder", record);
 
     expect(handle.failedJob).toEqual({
       id: "job-1",
@@ -52,13 +63,13 @@ describe("createAdminJobHandle", () => {
       queue: "email-reminder",
       reminderExecutionId: "execution-1",
     });
-    const { getState, retry, remove } = handle;
+    const { getState, retry, removeIfTerminal } = handle;
     await expect(getState()).resolves.toBe("failed");
     await expect(retry()).resolves.toBeUndefined();
-    await expect(remove()).resolves.toBeUndefined();
+    await expect(removeIfTerminal("failed")).resolves.toBe("removed");
     expect(record.getState).toHaveBeenCalledOnce();
     expect(record.retry).toHaveBeenCalledOnce();
-    expect(record.remove).toHaveBeenCalledOnce();
+    expect(record.removeIfTerminal).toHaveBeenCalledOnce();
   });
 
   it("exposes the pdf-export payload identity and live state on the handle", async () => {
@@ -71,7 +82,7 @@ describe("createAdminJobHandle", () => {
       },
       "job-1-g2",
     );
-    const handle = createAdminJobHandle("pdf-export", record);
+    const handle = makeHandle("pdf-export", record);
 
     expect(handle.domainReference).toEqual({
       queue: "pdf-export",
@@ -134,7 +145,7 @@ describe("createAdminJobHandle", () => {
     ["non-object payload", "not-an-object"],
     ["null payload", null],
   ] as const)("fails closed on %s pdf-export identity", (_label, data) => {
-    const handle = createAdminJobHandle("pdf-export", pdfJobRecord(data));
+    const handle = makeHandle("pdf-export", pdfJobRecord(data));
 
     expect(handle.domainReference).toEqual({
       queue: "pdf-export",
@@ -153,7 +164,7 @@ describe("createAdminJobHandle", () => {
   ] as const)(
     "fails closed when the retained queue id %s does not match the payload generation %s",
     (id, generation) => {
-      const handle = createAdminJobHandle(
+      const handle = makeHandle(
         "pdf-export",
         pdfJobRecord(
           {
@@ -179,13 +190,13 @@ describe("createAdminJobHandle", () => {
       const record = failedJobRecord();
       expect(Reflect.deleteProperty(record, field)).toBe(true);
 
-      expect(() => createAdminJobHandle("email-reminder", record)).toThrow();
+      expect(() => makeHandle("email-reminder", record)).toThrow();
     },
   );
 
   it("rejects an empty failed reason at the queue boundary", () => {
     expect(() =>
-      createAdminJobHandle("email-reminder", {
+      makeHandle("email-reminder", {
         ...failedJobRecord(),
         failedReason: "",
       }),
@@ -193,7 +204,7 @@ describe("createAdminJobHandle", () => {
   });
 
   it("does not expose the processor payload through failed-job metadata", () => {
-    const handle = createAdminJobHandle("email-reminder", {
+    const handle = makeHandle("email-reminder", {
       ...failedJobRecord(),
       data: {
         executionId: "execution-1",
@@ -208,7 +219,7 @@ describe("createAdminJobHandle", () => {
   it.each(QUEUE_NAMES)(
     "tags the handle with its canonical %s queue domain",
     (queue) => {
-      const handle = createAdminJobHandle(queue, failedJobRecord());
+      const handle = makeHandle(queue, failedJobRecord());
 
       expect(handle.domainReference.queue).toBe(queue);
       if (queue === "email-reminder") {

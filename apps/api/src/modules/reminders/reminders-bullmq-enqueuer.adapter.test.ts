@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { JobEnqueuer } from "../../infrastructure/bullmq/job-enqueuer.js";
+import type { TerminalJobRemoval } from "../../infrastructure/bullmq/terminal-job-removal.js";
 import { RemindersBullmqEnqueuer } from "./reminders-bullmq-enqueuer.adapter.js";
 import type { ReminderQueueJobData } from "./reminders-queue-payload.js";
 
@@ -25,7 +26,11 @@ describe("RemindersBullmqEnqueuer", () => {
     const queue = {
       add: vi.fn().mockResolvedValue({ id: queueData.executionId }),
     } satisfies JobEnqueuer;
-    const enqueuer = new RemindersBullmqEnqueuer(queue);
+    const enqueuer = new RemindersBullmqEnqueuer(queue, {
+      getJob: vi
+        .fn<TerminalJobRemoval["getJob"]>()
+        .mockResolvedValue(undefined),
+    });
 
     await enqueuer.enqueue(queueData.executionId, queueData, {
       traceparent: "trace",
@@ -48,14 +53,14 @@ describe("RemindersBullmqEnqueuer", () => {
   });
 
   it("replaces a terminal job before enqueueing a recovery attempt", async () => {
-    const remove = vi.fn().mockResolvedValue(undefined);
+    const removeIfTerminal = vi.fn().mockResolvedValue("removed");
     const getState = vi.fn().mockResolvedValue("failed");
-    const getJob = vi.fn().mockResolvedValue({ getState, remove });
+    const getJob = vi.fn().mockResolvedValue({ getState, removeIfTerminal });
     const queue = {
       add: vi.fn().mockResolvedValue({ id: queueData.executionId }),
       getJob,
     } satisfies JobEnqueuer;
-    const enqueuer = new RemindersBullmqEnqueuer(queue);
+    const enqueuer = new RemindersBullmqEnqueuer(queue, { getJob });
 
     await enqueuer.enqueue(
       queueData.executionId,
@@ -66,7 +71,7 @@ describe("RemindersBullmqEnqueuer", () => {
 
     expect(getJob).toHaveBeenCalledWith(queueData.executionId);
     expect(getState).toHaveBeenCalledOnce();
-    expect(remove).toHaveBeenCalledOnce();
+    expect(removeIfTerminal).toHaveBeenCalledWith("failed-or-completed");
     expect(queue.add).toHaveBeenCalledOnce();
   });
 
@@ -75,10 +80,12 @@ describe("RemindersBullmqEnqueuer", () => {
       add: vi.fn(),
       getJob: vi.fn().mockResolvedValue({
         getState: vi.fn().mockResolvedValue("active"),
-        remove: vi.fn(),
+        removeIfTerminal: vi.fn(),
       }),
     } satisfies JobEnqueuer;
-    const enqueuer = new RemindersBullmqEnqueuer(queue);
+    const enqueuer = new RemindersBullmqEnqueuer(queue, {
+      getJob: queue.getJob,
+    });
 
     await expect(
       enqueuer.enqueue(

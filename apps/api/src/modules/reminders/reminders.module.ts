@@ -5,6 +5,7 @@ import type { Queue } from "bullmq";
 import { ClsService } from "nestjs-cls";
 
 import { BullMQModule } from "../../infrastructure/bullmq/bullmq.module";
+import { BullmqTerminalJobRemoval } from "../../infrastructure/bullmq/terminal-job-removal.js";
 import { ConfigModule } from "../../infrastructure/config/config.module.js";
 import { OrganizationModule } from "../organization/index.js";
 import { PolicyApplicatorService } from "./policy-applicator.service.js";
@@ -25,7 +26,8 @@ import { RemindersInfrastructureTelemetry } from "./reminders-telemetry.adapter.
     RemindersPrismaRepository,
     {
       provide: REMINDERS_ENQUEUER,
-      useFactory: (queue: Queue) => new RemindersBullmqEnqueuer(queue),
+      useFactory: (queue: Queue) =>
+        new RemindersBullmqEnqueuer(queue, new BullmqTerminalJobRemoval(queue)),
       inject: [getQueueToken(EMAIL_REMINDER_QUEUE_NAME)],
     },
     {
