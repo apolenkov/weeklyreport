@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { Inject, Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { AI_PROMPT_HISTORY_LIMIT } from "@weeklyreport/shared";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
@@ -43,22 +44,27 @@ export class AiPromptRepository {
   async getControl(
     featureKey: string,
   ): Promise<StoredAiFeaturePromptControl | null> {
-    const control = await this.prisma.aiFeaturePromptControl.findUnique({
-      where: { featureKey },
-      include: { activeRevision: { select: revisionSelect } },
-    });
-    if (!control) return null;
-    const history = await this.prisma.aiPromptBundleRevision.findMany({
-      where: { featureKey },
-      select: revisionSelect,
-      orderBy: { revision: "desc" },
-      take: AI_PROMPT_HISTORY_LIMIT,
-    });
-    return {
-      ...toControl(control),
-      latestRevision: history[0] ? toRevision(history[0]) : null,
-      history: history.map(toRevision),
-    };
+    return this.prisma.$transaction(
+      async (transaction) => {
+        const control = await transaction.aiFeaturePromptControl.findUnique({
+          where: { featureKey },
+          include: { activeRevision: { select: revisionSelect } },
+        });
+        if (!control) return null;
+        const history = await transaction.aiPromptBundleRevision.findMany({
+          where: { featureKey },
+          select: revisionSelect,
+          orderBy: { revision: "desc" },
+          take: AI_PROMPT_HISTORY_LIMIT,
+        });
+        return {
+          ...toControl(control),
+          latestRevision: history[0] ? toRevision(history[0]) : null,
+          history: history.map(toRevision),
+        };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
   }
 
   async getRevision(
