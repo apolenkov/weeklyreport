@@ -4,7 +4,7 @@
 
 The tester-kit crawler's press evidence MUST report each completed XMLHttpRequest once with that request's current method and URL, including when the page reuses the same native request object. Reusing a request MUST NOT accumulate lifecycle listeners or leave completed requests counted as in flight.
 
-This observation contract covers native requests with string methods and URLs, including ordinary event handlers that reuse or send the object. It does not guarantee ordering before a capture listener registered earlier on the same object.
+This observation contract covers asynchronous native requests with string methods and URLs, including ordinary event handlers that reuse or send the object. It does not cover synchronous XHR or guarantee ordering before a capture listener registered earlier on the same object.
 
 #### Scenario: Two requests reuse one native object
 
