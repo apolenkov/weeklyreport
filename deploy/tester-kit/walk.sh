@@ -32,6 +32,7 @@ while [ $# -gt 0 ]; do
     --quick) shift ;;
     --states) STATES=${2:?--states needs a value}; shift 2 ;;
     --out) OUT=${2:?--out needs a value}; shift 2 ;;
+    --out=*) OUT=${1#--out=}; : "${OUT:?--out needs a value}"; shift ;;
     --roles) ROLES=${2:?--roles needs a value}; shift 2 ;;
     *) ARGS+=("$1"); shift ;;
   esac
