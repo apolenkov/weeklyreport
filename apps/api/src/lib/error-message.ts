@@ -5,6 +5,10 @@ export const UNKNOWN_ERROR_MESSAGE = "Unknown error";
 // Normalization keeps terminal rows valid even when an adapter throws
 // `new Error("")` or a whitespace-only message.
 export const errorMessage = (error: unknown): string => {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.trim() || UNKNOWN_ERROR_MESSAGE;
+  try {
+    const message = error instanceof Error ? error.message : String(error);
+    return message.trim() || UNKNOWN_ERROR_MESSAGE;
+  } catch {
+    return UNKNOWN_ERROR_MESSAGE;
+  }
 };
