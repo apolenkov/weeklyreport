@@ -452,7 +452,9 @@ describe("AdminPrismaRepository (integration)", () => {
                 testData.head.id,
                 lifecycleExpected,
               )
-            : periodRepository.reopenPeriod(reportId, lifecycleExpected);
+            : periodRepository.reopenPeriod(reportId, lifecycleExpected, {
+                enforceSingleReopen: false,
+              });
       }
       restoreGate.release();
       await expect(restore).resolves.toBeUndefined();
