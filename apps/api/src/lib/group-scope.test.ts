@@ -168,16 +168,15 @@ describe("groupScopeFilter", () => {
 });
 
 describe("guardGroupScope", () => {
-  it("does not throw when session is defined", () => {
-    expect(() => guardGroupScope(session("head"))).not.toThrow();
-  });
+  it.each(["head", "lead", "viewer", "admin"] as const)(
+    "does not throw for a defined %s session",
+    (role) => {
+      expect(() => guardGroupScope(session(role))).not.toThrow();
+    },
+  );
 
-  it("does not throw for admin session", () => {
-    expect(() => guardGroupScope(session("admin"))).not.toThrow();
-  });
-
-  it("throws when session is undefined", () => {
-    expect(() => guardGroupScope(undefined)).toThrow(
+  it.each([undefined, null])("throws when session is %s", (missing) => {
+    expect(() => guardGroupScope(missing)).toThrow(
       "[BUG] Repository query called without a scope session",
     );
   });

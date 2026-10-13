@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -72,6 +73,51 @@ describe("request ledger", () => {
     expect(total(file)).toBe(5);
     settleRate("t", at, 3, 1);
     expect(total(file)).toBe(3);
+    pace("t", 2);
+    expect(total(file)).toBe(5);
+  });
+
+  it.each([
+    ["non-finite timestamp", "NaN 5\n"],
+    ["infinite timestamp", "Infinity 0\n"],
+    ["non-finite count", "NOW NaN\n"],
+    ["infinite expired count", "0 Infinity\n"],
+    ["extra field", "NOW 4 extra\n"],
+    ["missing field", "NOW\n"],
+    ["empty count", "NOW \n"],
+    ["negative timestamp", "-1 5\n"],
+    ["fractional count", "NOW 0.5\n"],
+    ["interior blank row", "NOW 4\n\nNOW -1\n"],
+  ])("rejects %s without reserving or changing history", (_label, row) => {
+    const output = join(import.meta.dirname, "../../output/crawl-rate-tests");
+    mkdirSync(output, { recursive: true });
+    const dir = mkdtempSync(join(output, "corruption-"));
+    const file = join(dir, "ledger.log");
+    const history = row.replaceAll("NOW", String(Date.now()));
+    writeFileSync(file, history);
+    configureRate("corrupt-history", file, 5);
+    try {
+      expect(() => pace("corrupt-history", 1)).toThrow(/Invalid rate ledger/u);
+      expect(readFileSync(file, "utf8")).toBe(history);
+      expect(existsSync(`${file}.lock`)).toBe(false);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("initializes an empty ledger", () => {
+    const output = join(import.meta.dirname, "../../output/crawl-rate-tests");
+    mkdirSync(output, { recursive: true });
+    const dir = mkdtempSync(join(output, "empty-"));
+    const file = join(dir, "ledger.log");
+    writeFileSync(file, "");
+    configureRate("empty-history", file, 5);
+    try {
+      const at = pace("empty-history", 1);
+      expect(readFileSync(file, "utf8")).toBe(`${at} 1\n`);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

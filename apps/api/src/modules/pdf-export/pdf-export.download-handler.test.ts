@@ -298,6 +298,7 @@ describe("handlePdfDownload", () => {
     expect(res.statusCode).toBe(200);
     expect(res.headers["Content-Type"]).toBe("application/pdf");
     expect(res.headers["Content-Disposition"]).toBe("attachment");
+    expect(res.headers["Cache-Control"]).toBe("private, no-store");
     expect(res.body).toBe("PDF-BYTES");
   });
 
