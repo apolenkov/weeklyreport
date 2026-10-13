@@ -193,6 +193,9 @@ describe("submit versus manual deadline update (PostgreSQL interleaving)", () =>
     order: "admin-first" | "submit-first",
     deadline: Date | null,
   ) {
+    const expectedEnvelope = await prisma.report.findUniqueOrThrow({
+      where: { id: testData.report.id },
+    });
     const gate = createPauseGate();
     const holder: { pid?: number } = {};
     const waiter: { pid?: number } = {};
@@ -215,6 +218,7 @@ describe("submit versus manual deadline update (PostgreSQL interleaving)", () =>
       admin.updatePeriodManual({
         reportId: testData.report.id,
         expectedPeriodState: "open",
+        expectedEnvelope,
         data: { deadline },
       });
     const submit = () => service.submitSection(payload, testData.lead.id);
