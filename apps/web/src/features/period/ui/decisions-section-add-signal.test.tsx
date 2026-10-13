@@ -105,8 +105,7 @@ describe("DecisionsSection current delete permission", () => {
       );
       fireEvent.click(
         within(screen.getByRole("alertdialog")).getByRole("button", {
-          name: "Delete",
-          exact: true,
+          name: /^Delete$/,
         }),
       );
       if (publishedLocked) expect(onChange).not.toHaveBeenCalled();
