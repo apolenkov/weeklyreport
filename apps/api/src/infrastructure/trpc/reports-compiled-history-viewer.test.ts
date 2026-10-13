@@ -39,7 +39,7 @@ function buildCaller(
 describe("reports.compiledHistory — router delegation", () => {
   it("forwards the session and resolved includeArchive to the service", async () => {
     const compiledHistory = vi.fn(() =>
-      Promise.resolve({ entries: [], archiveCount: 0 }),
+      Promise.resolve({ entries: [], archiveCount: 0, truncated: false }),
     );
     const caller = buildCaller(compiledHistory, viewerSession);
 
@@ -47,13 +47,13 @@ describe("reports.compiledHistory — router delegation", () => {
       includeArchive: true,
     });
 
-    expect(result).toEqual({ entries: [], archiveCount: 0 });
+    expect(result).toEqual({ entries: [], archiveCount: 0, truncated: false });
     expect(compiledHistory).toHaveBeenCalledWith(viewerSession, true);
   });
 
   it("defaults includeArchive to false when the input is omitted", async () => {
     const compiledHistory = vi.fn(() =>
-      Promise.resolve({ entries: [], archiveCount: 0 }),
+      Promise.resolve({ entries: [], archiveCount: 0, truncated: false }),
     );
     const caller = buildCaller(compiledHistory, viewerSession);
 

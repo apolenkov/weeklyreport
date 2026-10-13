@@ -160,6 +160,31 @@ afterEach(() => {
 });
 
 describe("ViewerReportShell — read-only toolbar parity", () => {
+  it.each([true, false])(
+    "discloses the server history window when truncated=%s",
+    (truncated) => {
+      const original = vi.mocked(useQuery).getMockImplementation();
+      if (!original) throw new Error("Query mock implementation is missing");
+      vi.mocked(useQuery).mockImplementation((options) =>
+        options.queryKey[0] === "reports.compiledHistory"
+          ? makeQueryState({
+              data: { entries: [], archiveCount: 101, truncated },
+            })
+          : original(options),
+      );
+      render(<ViewerReportShell reportId={REPORT_ID} mode="form" />);
+      if (truncated) {
+        expect(screen.getByRole("status")).toHaveTextContent(
+          "Showing the latest 100 periods.",
+        );
+      } else {
+        expect(
+          screen.queryByText("Showing the latest 100 periods."),
+        ).not.toBeInTheDocument();
+      }
+    },
+  );
+
   it("surfaces a history-query failure instead of silently truncating period navigation", () => {
     const resultsByQuery = new Map<unknown, ReturnType<typeof useQuery>>([
       [

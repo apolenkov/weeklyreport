@@ -20,6 +20,7 @@ export interface HistoryView {
   readonly isLead: boolean;
   readonly entries: readonly HistoryEntry[];
   readonly archiveCount: number;
+  readonly truncated: boolean;
   readonly isLoading: boolean;
   readonly failure: {
     readonly isRetrying: boolean;
@@ -130,6 +131,7 @@ export function useHistoryData(role: Role | null): HistoryView {
     archiveCount: isLead
       ? allEntries.filter((entry) => entry.archived).length
       : (compiledData?.archiveCount ?? 0),
+    truncated: compiledData?.truncated === true,
     failure,
     isLoading: isLead
       ? historyQ.isLoading

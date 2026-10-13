@@ -27,6 +27,7 @@ describe("HistoryPanel desktop empty composition", () => {
         includeArchive={false}
         isLoading={false}
         failure={null}
+        truncated={false}
         summaryTitle="History Summary"
         isLead={false}
       />,
@@ -51,4 +52,32 @@ describe("HistoryPanel desktop empty composition", () => {
     expect(screen.getByTestId("history-summary")).toBeInTheDocument();
     expect(screen.getByText("No current history yet.")).toBeInTheDocument();
   });
+});
+
+describe("HistoryPanel compiled-history window", () => {
+  it.each([true, false])(
+    "discloses the latest-period window only when truncated=%s",
+    (truncated) => {
+      render(
+        <HistoryPanel
+          entries={[]}
+          includeArchive
+          isLoading={false}
+          failure={null}
+          summaryTitle="Portfolio History Summary"
+          isLead={false}
+          truncated={truncated}
+        />,
+      );
+      if (truncated) {
+        expect(screen.getByRole("status")).toHaveTextContent(
+          "Showing the latest 100 periods.",
+        );
+      } else {
+        expect(
+          screen.queryByText("Showing the latest 100 periods."),
+        ).not.toBeInTheDocument();
+      }
+    },
+  );
 });
