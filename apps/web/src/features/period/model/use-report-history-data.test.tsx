@@ -74,6 +74,7 @@ function compiledResult() {
       },
     ],
     archiveCount: 0,
+    truncated: false,
   });
 }
 
@@ -147,6 +148,36 @@ function renderHistory(
 }
 
 describe("ReportsPage history recovery", () => {
+  it("does not disclose a disabled compiled cache window in Lead personal history", async () => {
+    const { client, requests } = renderHistory("lead", () =>
+      Promise.resolve(response({ items: [historyEntry(1)], nextCursor: null })),
+    );
+    await screen.findByTestId("history-panel-list");
+    const compiledKey = makeTRPCProxy(client).reports.compiledHistory.queryKey({
+      includeArchive: false,
+    });
+    const cachedCompiled = {
+      ...compiledResult(),
+      archiveCount: 101,
+      truncated: true,
+    };
+
+    await act(() =>
+      Promise.resolve(client.setQueryData(compiledKey, cachedCompiled)),
+    );
+
+    expect(client.getQueryData(compiledKey)).toEqual(cachedCompiled);
+    expect(
+      screen.queryByText("Showing the latest 100 periods."),
+    ).not.toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("history-panel-list")).getAllByRole("link"),
+    ).toHaveLength(1);
+    expect(requests.map((request) => request.procedure)).toEqual([
+      "reports.myHistory",
+    ]);
+  });
+
   it.each(["lead", "head", "viewer"] as const)(
     "recovers a failed initial %s history without claiming an empty result",
     async (role) => {

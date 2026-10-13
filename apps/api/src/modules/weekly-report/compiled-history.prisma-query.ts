@@ -1,5 +1,8 @@
 import type { Prisma } from "@prisma/client";
-import type { PeriodStatus } from "@weeklyreport/shared";
+import {
+  COMPILED_HISTORY_LIMIT,
+  type PeriodStatus,
+} from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import {
@@ -9,9 +12,6 @@ import {
 } from "../report-sections/index.js";
 import type { CompiledHistoryReportRow } from "./compiled-history.js";
 import type { WeeklyReportScopeSession } from "./weekly-report.service.js";
-
-// Cap history list size; archive count is separate so the UI can still offer expand.
-const COMPILED_HISTORY_PAGE_SIZE = 100;
 
 // Viewer-only: reopened periods (status published, periodStatus reopened)
 // would appear as broken History links; head/lead must still see them.
@@ -78,6 +78,7 @@ export async function queryCompiledHistory(
 ): Promise<{
   reports: readonly CompiledHistoryReportRow[];
   archiveCount: number;
+  truncated: boolean;
 }> {
   const [reportCandidates, archiveCount] = await Promise.all([
     prisma.report.findMany({
@@ -87,7 +88,7 @@ export async function queryCompiledHistory(
         { publishedAt: "desc" },
         { id: "desc" },
       ],
-      take: COMPILED_HISTORY_PAGE_SIZE,
+      take: COMPILED_HISTORY_LIMIT + 1,
       select: {
         id: true,
         archived: true,
@@ -100,9 +101,13 @@ export async function queryCompiledHistory(
     }),
   ]);
 
-  const reports = reportCandidates.map((report) =>
-    toScopedHistoryRow(report, session),
-  );
+  const reports = reportCandidates
+    .slice(0, COMPILED_HISTORY_LIMIT)
+    .map((report) => toScopedHistoryRow(report, session));
 
-  return { reports, archiveCount };
+  return {
+    reports,
+    archiveCount,
+    truncated: reportCandidates.length > COMPILED_HISTORY_LIMIT,
+  };
 }

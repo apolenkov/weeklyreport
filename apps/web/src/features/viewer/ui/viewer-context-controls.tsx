@@ -1,3 +1,5 @@
+import { COMPILED_HISTORY_LIMIT } from "@weeklyreport/shared";
+
 import { ArchiveToggle } from "../../../shared/ui/report-shell/archive-toggle";
 import { ScopeToggle } from "../../../shared/ui/report-shell/scope-toggle";
 import type { ReportShellScopeValue } from "../../../shared/ui/report-shell/use-report-shell-url-state";
@@ -18,6 +20,7 @@ interface ViewerContextControlsProps {
   readonly mode: "form" | "slides";
   readonly historyError: boolean;
   readonly historyLoading: boolean;
+  readonly historyTruncated: boolean;
 }
 
 // Shared by both viewer render paths (page and slides).
@@ -34,6 +37,7 @@ export function ViewerContextControls({
   mode,
   historyError,
   historyLoading,
+  historyTruncated,
 }: ViewerContextControlsProps) {
   return (
     <>
@@ -54,6 +58,14 @@ export function ViewerContextControls({
           urlBuilder={urlBuilder}
         />
       ) : null}
+      {historyTruncated && (
+        <span
+          role="status"
+          className="min-w-0 text-xs text-[var(--color-muted-foreground)]"
+        >
+          Showing the latest {COMPILED_HISTORY_LIMIT} periods.
+        </span>
+      )}
       <ArchiveToggle checked={includeArchive} onChange={setIncludeArchive} />
       <div className="grow" aria-hidden="true" />
       <ScopeToggle

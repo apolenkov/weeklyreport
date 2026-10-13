@@ -94,13 +94,15 @@ export class SemanticIndexBullmqEnqueuer implements SemanticIndexEnqueuer {
     // BullMQ silently ignores an add whose jobId already exists, so a terminal
     // (failed/completed) job would permanently block re-indexing this content.
     // Remove the terminal job first, mirroring the reminders replacement path.
-    if (this.queue.getJob) {
-      const existing = await this.queue.getJob(jobId);
-      if (existing) {
-        const state = await existing.getState();
-        if (state === "failed" || state === "completed") {
-          await existing.remove();
-        }
+    const existing = await this.queue.getJob?.(jobId);
+    const state = await existing?.getState();
+    if (existing && (state === "failed" || state === "completed")) {
+      try {
+        await existing.remove();
+      } catch (error) {
+        // Another enqueue may have replaced this id before a worker locks it.
+        if ((await existing.getState()) === "active") return;
+        throw error;
       }
     }
     await this.queue.add(SEMANTIC_INDEX_JOB_NAME, data, {

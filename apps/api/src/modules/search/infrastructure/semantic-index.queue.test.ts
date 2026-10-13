@@ -151,6 +151,44 @@ describe("semantic index queue", () => {
     );
   });
 
+  it("reuses a same-identity replacement already processing when removal collides", async () => {
+    const queue = {
+      add: vi.fn().mockResolvedValue(undefined),
+      getJob: vi.fn().mockResolvedValue({
+        getState: vi
+          .fn()
+          .mockResolvedValueOnce("completed")
+          .mockResolvedValueOnce("active"),
+        remove: vi.fn().mockRejectedValue(new Error("replacement is locked")),
+      }),
+    };
+
+    await expect(
+      new SemanticIndexBullmqEnqueuer(queue).enqueue(locator, runtimeContext),
+    ).resolves.toBeUndefined();
+  });
+
+  it.each(["completed", "failed", "unknown", "waiting"])(
+    "preserves removal failure when the current job is %s",
+    async (state) => {
+      const failure = new Error("remove failed");
+      const queue = {
+        add: vi.fn().mockResolvedValue(undefined),
+        getJob: vi.fn().mockResolvedValue({
+          getState: vi
+            .fn()
+            .mockResolvedValueOnce("completed")
+            .mockResolvedValueOnce(state),
+          remove: vi.fn().mockRejectedValue(failure),
+        }),
+      };
+
+      await expect(
+        new SemanticIndexBullmqEnqueuer(queue).enqueue(locator, runtimeContext),
+      ).rejects.toBe(failure);
+    },
+  );
+
   it("rejects enqueueing a job without a scope identity", async () => {
     const enqueuer = new SemanticIndexBullmqEnqueuer({
       add: vi.fn(),

@@ -66,6 +66,7 @@ export interface WeeklyReportRepository {
   ): Promise<{
     readonly reports: readonly CompiledHistoryReportRow[];
     readonly archiveCount: number;
+    readonly truncated: boolean;
   }>;
   // Confirms or rejects this exact id only — it must NOT fall back to
   // searching older editable periods.
@@ -143,13 +144,12 @@ export class WeeklyReportService {
     session: WeeklyReportScopeSession,
     includeArchive: boolean,
   ): Promise<CompiledHistoryResult> {
-    const { reports, archiveCount } = await this.repository.getCompiledHistory(
-      session,
-      includeArchive,
-    );
+    const { reports, archiveCount, truncated } =
+      await this.repository.getCompiledHistory(session, includeArchive);
     return compiledHistoryResultSchema.parse({
       entries: buildCompiledHistoryEntries(reports),
       archiveCount,
+      truncated,
     });
   }
 

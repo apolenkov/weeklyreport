@@ -170,6 +170,7 @@ export {
   assembledReportSchema,
   carryOverExecutionSchema,
   carryOverRecordSchema,
+  COMPILED_HISTORY_LIMIT,
   compiledHistoryInputSchema,
   compiledHistoryResultSchema,
   currentPeriodLifecycleSchema,

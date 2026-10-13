@@ -161,7 +161,7 @@ function createRepository(
     ),
     getLatestPublishedNonArchivedId: vi.fn(() => Promise.resolve(null)),
     getCompiledHistory: vi.fn(() =>
-      Promise.resolve({ reports: [], archiveCount: 0 }),
+      Promise.resolve({ reports: [], archiveCount: 0, truncated: false }),
     ),
     getVisibleReportId: vi.fn(() => Promise.resolve(currentEditableId)),
     getLatestPublishedVisibleId: vi.fn(() =>
@@ -204,7 +204,7 @@ describe("compiled history immutable snapshots", () => {
         count,
       },
     } as never;
-    return { prisma, findMany, count };
+    return { prisma, findMany, count, report };
   }
 
   it("reads a closed publication without intersecting mutable live section ids", async () => {
@@ -220,8 +220,71 @@ describe("compiled history immutable snapshots", () => {
       historySectionId,
     );
     expect(fixture.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ take: 100 }),
+      expect.objectContaining({ take: 101 }),
     );
+  });
+
+  it.each([100, 101])(
+    "returns the latest 100 rows with explicit truncation for %i candidates",
+    async (size) => {
+      const fixture = queryFixture("published");
+      fixture.findMany.mockResolvedValue(
+        Array.from({ length: size }, () => fixture.report),
+      );
+      fixture.count.mockResolvedValue(101);
+
+      const result = await queryCompiledHistory(
+        fixture.prisma,
+        session("admin"),
+        true,
+      );
+
+      expect(result.reports).toHaveLength(100);
+      expect(result).toMatchObject({
+        archiveCount: 101,
+        truncated: size > 100,
+      });
+    },
+  );
+
+  it("does not parse the hidden probe row snapshot", async () => {
+    const fixture = queryFixture("published");
+    fixture.findMany.mockResolvedValue([
+      ...Array.from({ length: 100 }, () => fixture.report),
+      { ...fixture.report, publishedSnapshot: null },
+    ]);
+
+    const result = await queryCompiledHistory(
+      fixture.prisma,
+      session("admin"),
+      true,
+    );
+    expect(result.reports).toHaveLength(100);
+    expect(result.truncated).toBe(true);
+  });
+
+  it("does not infer truncation from archive count when archives are excluded", async () => {
+    const fixture = queryFixture("published");
+    fixture.findMany.mockResolvedValue([]);
+    fixture.count.mockResolvedValue(101);
+
+    const result = await queryCompiledHistory(
+      fixture.prisma,
+      session("viewer"),
+      false,
+    );
+
+    expect(result).toEqual({
+      reports: [],
+      archiveCount: 101,
+      truncated: false,
+    });
+    const query = fixture.findMany.mock.calls[0]?.[0] as
+      Prisma.ReportFindManyArgs | undefined;
+    expect(query?.where).toMatchObject({
+      archived: false,
+      periodStatus: "published",
+    });
   });
 
   it("ignores a new live section while the report is reopened", async () => {
@@ -274,7 +337,7 @@ describe("compiled history immutable snapshots", () => {
         { publishedAt: "desc" },
         { id: "desc" },
       ],
-      take: 100,
+      take: 101,
       select: {
         id: true,
         archived: true,
@@ -296,6 +359,24 @@ describe("compiled history immutable snapshots", () => {
 });
 
 describe("WeeklyReportService", () => {
+  it("preserves the compiled-history truncation flag across the DTO boundary", async () => {
+    const repository = createRepository(new Map());
+    vi.spyOn(repository, "getCompiledHistory").mockResolvedValue({
+      reports: [],
+      archiveCount: 101,
+      truncated: true,
+    });
+    const service = new WeeklyReportService(repository, createNullLogger());
+
+    await expect(
+      service.compiledHistory(session("admin"), true),
+    ).resolves.toEqual({
+      entries: [],
+      archiveCount: 101,
+      truncated: true,
+    });
+  });
+
   it("forwards the authenticated session to an explicit read", async () => {
     const report = makeWeeklyReport();
     const repository = createRepository(new Map([[reportId, report]]));

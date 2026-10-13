@@ -91,6 +91,7 @@ interface QueryOptions {
 interface CompiledHistoryData {
   readonly entries: CompiledHistoryEntry[];
   readonly archiveCount: number;
+  readonly truncated: boolean;
 }
 
 let pendingCompiledArchive: boolean | null = null;
@@ -230,6 +231,7 @@ function mockQueries() {
           ? [currentCompiled, archivedCompiled]
           : [currentCompiled],
         archiveCount: 1,
+        truncated: false,
       };
       if (pendingCompiledArchive === includeArchive) {
         const placeholder = query.placeholderData?.(previousCompiledData);
