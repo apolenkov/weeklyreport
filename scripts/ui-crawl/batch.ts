@@ -78,10 +78,36 @@ const HOOKS = `(() => {
     } finally { S.inflight--; touchNet(); }
   };
   const open = XMLHttpRequest.prototype.open;
+  const requests = new WeakMap();
   XMLHttpRequest.prototype.open = function (method, url, ...rest) {
-    this.addEventListener('loadstart', () => { S.inflight++; touchNet(); });
-    this.addEventListener('loadend', () => { S.inflight--; touchNet(); failed(this.status, method, url); });
-    return open.call(this, method, url, ...rest);
+    const previous = requests.get(this);
+    if (!requests.has(this)) {
+      // shortcut: earlier capture listeners can precede these observers; revisit if a caller uses them.
+      this.addEventListener('loadstart', () => {
+        const request = requests.get(this);
+        if (!request || request.active) return;
+        request.active = true;
+        S.inflight++; touchNet();
+      }, true);
+      this.addEventListener('readystatechange', () => {
+        const request = requests.get(this);
+        if (this.readyState !== XMLHttpRequest.DONE || !request?.active) return;
+        request.active = false; S.inflight--; touchNet();
+        failed(this.status, request.method, request.url);
+      }, true);
+    }
+    // Native open dispatches OPENED synchronously; its handlers may open or send another request.
+    const candidate = {method, url, active: false}; requests.set(this, candidate);
+    try {
+      const result = open.call(this, method, url, ...rest);
+      if (previous?.active) {
+        previous.active = false; S.inflight--; touchNet();
+      }
+      return result;
+    } catch (error) {
+      if (requests.get(this) === candidate) requests.set(this, previous ?? null);
+      throw error;
+    }
   };
   new MutationObserver(touch).observe(document, {subtree: true, childList: true, attributes: true, characterData: true});
   new PerformanceObserver((l) => { touchNet(); for (const e of l.getEntries()) if (e.name.includes('/trpc/')) S.req++; }).observe({type: 'resource', buffered: true});

@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { pressBatch } from "./batch.ts";
+import { pressBatch, quietState } from "./batch.ts";
 import { browserFixture } from "./browser.fixture.ts";
 import { PAGE_PROBE, type PageProbe, SIGNATURE_ONLY } from "./probe.ts";
 
@@ -31,6 +31,128 @@ describe.runIf(process.env.CRAWL_BROWSER_TESTS === "1")(
     afterAll(async () => {
       await fixture.close();
     }, 30_000);
+    it.each([false, true])(
+      "reports each reused XHR request once (first aborted=%s)",
+      (abortFirst) => {
+        quietState(fixture.browser);
+        const observed = fixture.browser.evaluate(`(async () => {
+          const xhr = new XMLHttpRequest();
+          let initialError = null;
+          try {xhr.open('INVALID METHOD', '/invalid');}
+          catch (cause) {initialError = cause.name;}
+          for (const url of ['/first', '/second']) {
+            xhr.open('GET', url);
+            const finished = new Promise((resolve, reject) => {
+              const deadline = setTimeout(() => reject(new Error('XHR fixture timed out')), 3000);
+              xhr.addEventListener('loadend', () => {clearTimeout(deadline); resolve();}, {once: true});
+            });
+            xhr.send();
+            if (${abortFirst} && url === '/first') xhr.abort();
+            await finished;
+          }
+          return {initialError, inflight: window.__crawl2.inflight, logs: window.__crawl2.logs.filter((log) => log.kind === 'network')};
+        })()`) as {
+          initialError: string | null;
+          inflight: number;
+          logs: { detail: string }[];
+        };
+        expect(observed.initialError).toBe("SyntaxError");
+        expect(observed.logs.map((log) => log.detail)).toEqual([
+          `${abortFirst ? 0 : 200} GET /first`,
+          "200 GET /second",
+        ]);
+        expect(observed.inflight).toBe(0);
+      },
+      30_000,
+    );
+    it.each([
+      { method: "GET", afterOpen: 0, url: "/second", error: null },
+      {
+        method: "INVALID METHOD",
+        afterOpen: 1,
+        url: "/first",
+        error: "SyntaxError",
+      },
+    ])(
+      "preserves request accounting when active open uses $method",
+      ({ method, afterOpen, url, error }) => {
+        quietState(fixture.browser);
+        const observed = fixture.browser.evaluate(`(async () => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('GET', '/first');
+          const finished = new Promise((resolve, reject) => {
+            const deadline = setTimeout(() => reject(new Error('XHR fixture timed out')), 3000);
+            xhr.addEventListener('loadend', () => {clearTimeout(deadline); resolve();}, {once: true});
+          });
+          xhr.send();
+          const before = window.__crawl2.inflight;
+          let error = null;
+          try {xhr.open(${JSON.stringify(method)}, '/second');}
+          catch (cause) {error = cause.name;}
+          const afterOpen = window.__crawl2.inflight;
+          if (error === null) xhr.send();
+          await finished;
+          return {before, afterOpen, afterDone: window.__crawl2.inflight, error,
+            logs: window.__crawl2.logs.filter((log) => log.kind === 'network').map((log) => log.detail)};
+        })()`);
+        expect(observed).toEqual({
+          before: 1,
+          afterOpen,
+          afterDone: 0,
+          error,
+          logs: [`200 GET ${url}`],
+        });
+      },
+      30_000,
+    );
+    it("attributes requests before an onload handler reuses the XHR", () => {
+      quietState(fixture.browser);
+      const observed = fixture.browser.evaluate(`(async () => {
+        const xhr = new XMLHttpRequest();
+        await new Promise((resolve, reject) => {
+          const deadline = setTimeout(() => reject(new Error('XHR fixture timed out')), 3000);
+          xhr.onload = () => {
+            if (xhr.responseURL.endsWith('/first')) {xhr.open('GET', '/second'); xhr.send();}
+            else {clearTimeout(deadline); resolve();}
+          };
+          xhr.open('GET', '/first'); xhr.send();
+        });
+        return {inflight: window.__crawl2.inflight, logs: window.__crawl2.logs.filter((log) => log.kind === 'network').map((log) => log.detail)};
+      })()`);
+      expect(observed).toEqual({
+        inflight: 0,
+        logs: ["200 GET /first", "200 GET /second"],
+      });
+    }, 30_000);
+    it.each([false, true])(
+      "observes requests sent by an OPENED handler (nested open=%s)",
+      (nested) => {
+        quietState(fixture.browser);
+        const observed = fixture.browser.evaluate(`(async () => {
+          const xhr = new XMLHttpRequest();
+          let opened = 0;
+          const finished = new Promise((resolve, reject) => {
+            const deadline = setTimeout(() => reject(new Error('XHR fixture timed out')), 3000);
+            xhr.onloadend = () => {clearTimeout(deadline); resolve();};
+          });
+          xhr.onreadystatechange = () => {
+            if (xhr.readyState !== XMLHttpRequest.OPENED) return;
+            if (${nested} && opened++ === 0) xhr.open('GET', '/second');
+            xhr.send();
+          };
+          xhr.open('GET', '/first');
+          const afterOpen = window.__crawl2.inflight;
+          await finished;
+          return {afterOpen, afterDone: window.__crawl2.inflight, logs: window.__crawl2.logs.filter((log) => log.kind === 'network').map((log) => log.detail)};
+        })()`);
+        expect(observed).toEqual({
+          afterOpen: 1,
+          afterDone: 0,
+          logs: [`200 GET /${nested ? "second" : "first"}`],
+        });
+      },
+      30_000,
+    );
     it.each(["text", "area", "choice"])(
       "fingerprints changed live %s values",
       (id) => {
