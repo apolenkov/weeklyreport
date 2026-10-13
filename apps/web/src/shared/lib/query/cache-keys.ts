@@ -27,6 +27,14 @@ export function invalidateLeadForm(qc: QueryClient, trpc: TRPCProxy): void {
   invalidate(qc, trpc.leadForm.byPeriod.pathFilter());
 }
 
+export function invalidateLeadPlanOutcome(
+  qc: QueryClient,
+  trpc: TRPCProxy,
+): void {
+  invalidateLeadForm(qc, trpc);
+  invalidate(qc, trpc.leadForm.statusOverview.pathFilter());
+}
+
 export function invalidateAdmin(qc: QueryClient, trpc: TRPCProxy): void {
   invalidate(qc, trpc.admin.snapshot.pathFilter());
   invalidate(qc, trpc.admin.getSettings.pathFilter());

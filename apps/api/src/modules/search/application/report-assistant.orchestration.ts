@@ -53,12 +53,9 @@ export const planWithOneRepair = async (
       code,
     })),
   };
-  return {
-    parsed: searchPlanSchema.safeParse(
-      await planner.repairPlan(repairInput, signal),
-    ),
-    repaired: true,
-  };
+  const repairedPlan = await planner.repairPlan(repairInput, signal);
+  signal?.throwIfAborted();
+  return { parsed: searchPlanSchema.safeParse(repairedPlan), repaired: true };
 };
 
 type SemanticCache = Readonly<{
