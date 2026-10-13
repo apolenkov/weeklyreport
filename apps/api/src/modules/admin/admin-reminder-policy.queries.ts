@@ -10,7 +10,13 @@ import {
   reconcileLockedPolicyForReport,
 } from "../reminders/index.js";
 import { audienceFromPrisma, audienceToPrisma } from "./admin-enum-mappers";
-import { AdminReminderPolicyNotFoundError } from "./admin-shared.js";
+import {
+  AdminReminderPolicyConflictError,
+  AdminReminderPolicyNotFoundError,
+  type AdminRepository,
+} from "./admin-shared.js";
+
+const POLICY_SAVE_LOCK_ATTEMPTS = 3;
 
 export async function listReminderPolicies(
   prisma: PrismaService,
@@ -34,22 +40,11 @@ export async function listReminderPolicies(
   );
 }
 
-export async function reminderPolicyExists(
-  prisma: PrismaService,
-  policyId: string,
-): Promise<boolean> {
-  const row = await prisma.reminderPolicy.findUnique({
-    where: { id: policyId },
-    select: { id: true },
-  });
-  return row !== null;
-}
-
 export async function saveReminderPolicy(
   prisma: PrismaService,
   policy: ReminderPolicy,
   now: Date = new Date(),
-): Promise<ReminderPolicy> {
+): ReturnType<AdminRepository["saveReminderPolicy"]> {
   const parsed = reminderPolicySchema.parse(policy);
   const data = {
     kind: parsed.kind,
@@ -60,14 +55,38 @@ export async function saveReminderPolicy(
     validFrom: parsed.validFrom,
     validUntil: parsed.validUntil,
   };
-  const row = await prisma.$transaction(async (tx) => {
-    await tx.reminderPolicy.upsert({
-      where: { id: parsed.id },
-      create: { id: parsed.id, ...data },
-      update: data,
-    });
-    const saved = await lockReminderPolicy(tx, parsed.id);
-    if (!saved) throw new Error(`Reminder policy ${parsed.id} disappeared.`);
+  const { row, created } = await prisma.$transaction(async (tx) => {
+    const saveLockedPolicy = async (
+      attemptsRemaining: number,
+    ): Promise<{
+      row: NonNullable<Awaited<ReturnType<typeof lockReminderPolicy>>>;
+      created: boolean;
+    }> => {
+      const inserted = await tx.reminderPolicy.createMany({
+        data: { id: parsed.id, ...data },
+        skipDuplicates: true,
+      });
+      const locked = await lockReminderPolicy(tx, parsed.id);
+      // Read Committed can skip a conflicting row deleted before the lock.
+      if (!locked) {
+        if (attemptsRemaining > 1)
+          return saveLockedPolicy(attemptsRemaining - 1);
+        throw new AdminReminderPolicyConflictError(
+          "Reminder policy changed concurrently. Retry saving it.",
+        );
+      }
+      const created = inserted.count === 1;
+      const row = created
+        ? locked
+        : await tx.reminderPolicy.update({
+            where: { id: parsed.id },
+            data,
+          });
+      return { row, created };
+    };
+    const { row: saved, created } = await saveLockedPolicy(
+      POLICY_SAVE_LOCK_ATTEMPTS,
+    );
 
     // Shared lock order is policy, live reports in id order, then rules.
     // Policy and every current-period rule commit together. Historical rule
@@ -82,9 +101,9 @@ export async function saveReminderPolicy(
     for (const report of reports) {
       await reconcileLockedPolicyForReport(tx, saved, report, now);
     }
-    return saved;
+    return { row: saved, created };
   });
-  return reminderPolicySchema.parse({
+  const savedPolicy = reminderPolicySchema.parse({
     id: row.id,
     kind: row.kind,
     offsetMinutes: row.offsetMinutes,
@@ -94,6 +113,7 @@ export async function saveReminderPolicy(
     validFrom: row.validFrom,
     validUntil: row.validUntil,
   });
+  return { policy: savedPolicy, created };
 }
 
 export async function deleteReminderPolicy(

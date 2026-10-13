@@ -11,6 +11,7 @@ import {
   AdminPeriodOverlapError,
   AdminPeriodStaleStateError,
   AdminProjectNotFoundError,
+  AdminReminderPolicyConflictError,
   AdminReminderPolicyNotFoundError,
   AdminReopenRequestAlreadyProcessedError,
   AdminReopenRequestNotFoundError,
@@ -674,6 +675,11 @@ describe("mapDomainError — exhaustive domain-error → code coverage", () => {
       name: "AdminReminderPolicyNotFoundError",
       make: () => new AdminReminderPolicyNotFoundError("m"),
       code: "NOT_FOUND",
+    },
+    {
+      name: "AdminReminderPolicyConflictError",
+      make: () => new AdminReminderPolicyConflictError("m"),
+      code: "CONFLICT",
     },
   ] as const;
 

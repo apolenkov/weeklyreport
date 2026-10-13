@@ -139,6 +139,13 @@ export class AdminReminderPolicyNotFoundError extends Error {
   }
 }
 
+export class AdminReminderPolicyConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "AdminReminderPolicyConflictError";
+  }
+}
+
 // Archiving the last active reporting group → CONFLICT.
 export class AdminLastActiveGroupError extends Error {
   constructor(message: string) {
