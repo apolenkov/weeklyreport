@@ -117,14 +117,45 @@ async function createArchivedSource(prisma: PrismaClient): Promise<void> {
 export async function applyArchivedFillFixture(): Promise<void> {
   const target = validateE2eRuntimeTarget(SCRIPT_NAME);
   const pool = new pg.Pool({ connectionString: target.e2eDatabaseUrl });
-  const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
+  let prisma: PrismaClient | undefined;
+  let primaryFailed = false;
+  let primary: unknown;
   try {
+    prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
     validateE2eRuntimeTarget(SCRIPT_NAME);
     await createArchivedSource(prisma);
     validateE2eRuntimeTarget(SCRIPT_NAME);
     await finalizePublishedSnapshots(prisma);
-  } finally {
-    await prisma.$disconnect();
-    await pool.end();
+  } catch (error) {
+    primaryFailed = true;
+    primary = error;
   }
+  const cleanupErrors: unknown[] = [];
+  if (prisma) {
+    try {
+      await prisma.$disconnect();
+    } catch (error) {
+      cleanupErrors.push(error);
+    }
+  }
+  try {
+    await pool.end();
+  } catch (error) {
+    cleanupErrors.push(error);
+  }
+  if (primaryFailed) {
+    if (cleanupErrors.length > 0) {
+      throw new AggregateError(
+        [primary, ...cleanupErrors],
+        "Archived Fill fixture failed during cleanup",
+        { cause: primary },
+      );
+    }
+    throw primary;
+  }
+  if (cleanupErrors.length > 0)
+    throw new AggregateError(
+      cleanupErrors,
+      "Archived Fill fixture cleanup failed",
+    );
 }
