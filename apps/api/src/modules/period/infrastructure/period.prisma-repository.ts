@@ -5,6 +5,7 @@ import {
 } from "@weeklyreport/shared";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
+import { lockStatusGraph } from "../../../lib/status-graph-lock.js";
 import { AdminPeriodOverlapError } from "../../admin/index.js";
 import {
   lockAllReminderPolicies,
@@ -164,11 +165,24 @@ export class PeriodPrismaRepository implements PeriodRepository {
   async reopenPeriod(
     reportId: string,
     expected: PeriodLifecycleExpectation,
+    { enforceSingleReopen }: { readonly enforceSingleReopen: boolean },
   ): Promise<void> {
     const reopenedAt = new Date();
     try {
       await this.prisma.$transaction(async (tx) => {
+        await lockStatusGraph(tx);
         const policies = await lockAllReminderPolicies(tx);
+        if (enforceSingleReopen) {
+          const reopened = await tx.report.findFirst({
+            where: { periodStatus: "reopened", archived: false },
+            select: { id: true },
+          });
+          if (reopened) {
+            throw new PeriodScopeError(
+              "Another period is already reopened. Publish it before reopening another.",
+            );
+          }
+        }
         // Full expected lifecycle + boundaries close reopen races against any
         // competing lifecycle or reporting-window change.
         const outcome = await reopenCompareAndSet(

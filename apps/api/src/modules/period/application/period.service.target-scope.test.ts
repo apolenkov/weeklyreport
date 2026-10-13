@@ -224,6 +224,7 @@ describe("PeriodService — reopen target scope", () => {
       expect.objectContaining({
         periodStatus: "published",
       }),
+      { enforceSingleReopen: true },
     );
   });
 
@@ -272,6 +273,7 @@ describe("PeriodService — reopen target scope", () => {
       expect.objectContaining({
         periodStatus: "published",
       }),
+      { enforceSingleReopen: false },
     );
   });
 
@@ -341,6 +343,7 @@ describe("PeriodService — reopen target scope", () => {
       expect.objectContaining({
         periodStatus: "published",
       }),
+      { enforceSingleReopen: true },
     );
 
     // The archived newest is itself rejected by the archived guard.
@@ -423,6 +426,7 @@ describe("PeriodService — reopen → republish & single-active-reopen guard", 
       expect.objectContaining({
         periodStatus: "published",
       }),
+      { enforceSingleReopen: true },
     );
 
     await expect(service.publishPeriod(reportId, headSession)).resolves.toEqual(
@@ -485,6 +489,7 @@ describe("PeriodService — reopen → republish & single-active-reopen guard", 
       expect.objectContaining({
         periodStatus: "published",
       }),
+      { enforceSingleReopen: false },
     );
   });
 });
