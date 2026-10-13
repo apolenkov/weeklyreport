@@ -1,13 +1,18 @@
 import type { ClsService } from "nestjs-cls";
 import { describe, expect, it, vi } from "vitest";
 
+import type { TerminalJobRemoval } from "../../infrastructure/bullmq/terminal-job-removal.js";
 import { RemindersBullmqEnqueuer } from "./reminders-bullmq-enqueuer.adapter.js";
 import { RemindersInfrastructureTelemetry } from "./reminders-telemetry.adapter.js";
 
 describe("reminders infrastructure adapters", () => {
   it("preserves the queue payload, trace context, retry options, and job id", async () => {
     const queue = { add: vi.fn().mockResolvedValue({ id: "execution-1" }) };
-    const enqueuer = new RemindersBullmqEnqueuer(queue);
+    const enqueuer = new RemindersBullmqEnqueuer(queue, {
+      getJob: vi
+        .fn<TerminalJobRemoval["getJob"]>()
+        .mockResolvedValue(undefined),
+    });
     const { enqueue } = enqueuer;
 
     await enqueue(
@@ -52,13 +57,15 @@ describe("reminders infrastructure adapters", () => {
   });
 
   it("replaces a retained terminal job during reaper recovery", async () => {
-    const remove = vi.fn().mockResolvedValue(undefined);
+    const removeIfTerminal = vi.fn().mockResolvedValue("removed");
     const getState = vi.fn().mockResolvedValue("failed");
     const queue = {
-      getJob: vi.fn().mockResolvedValue({ getState, remove }),
+      getJob: vi.fn().mockResolvedValue({ getState, removeIfTerminal }),
       add: vi.fn().mockResolvedValue({ id: "execution-1" }),
     };
-    const enqueuer = new RemindersBullmqEnqueuer(queue);
+    const enqueuer = new RemindersBullmqEnqueuer(queue, {
+      getJob: queue.getJob,
+    });
 
     await enqueuer.enqueue(
       "execution-1",
@@ -79,20 +86,22 @@ describe("reminders infrastructure adapters", () => {
     );
 
     expect(getState).toHaveBeenCalledOnce();
-    expect(remove).toHaveBeenCalledOnce();
+    expect(removeIfTerminal).toHaveBeenCalledWith("failed-or-completed");
     expect(queue.add).toHaveBeenCalledOnce();
   });
 
   it("does not remove an active job during recovery", async () => {
-    const remove = vi.fn();
+    const removeIfTerminal = vi.fn();
     const queue = {
       getJob: vi.fn().mockResolvedValue({
         getState: vi.fn().mockResolvedValue("active"),
-        remove,
+        removeIfTerminal,
       }),
       add: vi.fn(),
     };
-    const enqueuer = new RemindersBullmqEnqueuer(queue);
+    const enqueuer = new RemindersBullmqEnqueuer(queue, {
+      getJob: queue.getJob,
+    });
 
     await expect(
       enqueuer.enqueue(
@@ -113,7 +122,7 @@ describe("reminders infrastructure adapters", () => {
         { replaceTerminal: true },
       ),
     ).rejects.toThrow("non-terminal reminder job");
-    expect(remove).not.toHaveBeenCalled();
+    expect(removeIfTerminal).not.toHaveBeenCalled();
     expect(queue.add).not.toHaveBeenCalled();
   });
 

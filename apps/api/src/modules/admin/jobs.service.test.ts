@@ -20,7 +20,9 @@ import { JobsService } from "./jobs.service";
 interface FakeJob extends AdminJobHandle {
   readonly getState: ReturnType<typeof vi.fn<() => Promise<string>>>;
   readonly retry: ReturnType<typeof vi.fn<() => Promise<void>>>;
-  readonly remove: ReturnType<typeof vi.fn<() => Promise<void>>>;
+  readonly removeIfTerminal: ReturnType<
+    typeof vi.fn<AdminJobHandle["removeIfTerminal"]>
+  >;
 }
 
 type RetryPdfExportGeneration = (input: {
@@ -72,7 +74,9 @@ function makeJob(
           : { queue },
     getState: vi.fn<() => Promise<string>>().mockResolvedValue(state),
     retry: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
-    remove: vi.fn<() => Promise<void>>().mockResolvedValue(undefined),
+    removeIfTerminal: vi
+      .fn<AdminJobHandle["removeIfTerminal"]>()
+      .mockResolvedValue("removed"),
   };
 }
 
@@ -251,37 +255,42 @@ describe("JobsService — DLQ admin surface", () => {
     expect(result).toEqual({ retried: true, jobId: "job-99" });
   });
 
-  it("retryFailed: removes stale reminder jobs whose execution row no longer exists", async () => {
-    const job = makeJob({
-      id: "job-stale",
-      reminderExecutionId: "missing-execution",
-    });
-    const retryPdfExportGeneration = vi.fn<RetryPdfExportGeneration>();
-    const service = new JobsService(
-      makeRegistry(makeQueue({ failed: [job] })),
-      {
-        reminderExecutionExists: vi.fn().mockResolvedValue(false),
-        retryPdfExportGeneration,
-        listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
-      },
-      createNullLogger(),
-    );
+  it.each(["removed", "missing", "state-changed", "identity-changed"] as const)(
+    "retryFailed: maps stale-reminder cleanup outcome %s truthfully",
+    async (outcome) => {
+      const job = makeJob({
+        id: "job-stale",
+        reminderExecutionId: "missing-execution",
+      });
+      const retryPdfExportGeneration = vi.fn<RetryPdfExportGeneration>();
+      job.removeIfTerminal.mockResolvedValue(outcome);
+      const service = new JobsService(
+        makeRegistry(makeQueue({ failed: [job] })),
+        {
+          reminderExecutionExists: vi.fn().mockResolvedValue(false),
+          retryPdfExportGeneration,
+          listPdfRecoveryJobs: vi.fn().mockResolvedValue([]),
+        },
+        createNullLogger(),
+      );
 
-    const result = await service.retryFailed({
-      queue: "email-reminder",
-      jobId: "job-stale",
-    });
+      const result = await service.retryFailed({
+        queue: "email-reminder",
+        jobId: "job-stale",
+      });
 
-    expect(job.retry).not.toHaveBeenCalled();
-    expect(job.remove).toHaveBeenCalledTimes(1);
-    expect(retryPdfExportGeneration).not.toHaveBeenCalled();
-    expect(result).toEqual({
-      retried: false,
-      removed: true,
-      reason: "Reminder execution missing-execution no longer exists.",
-      jobId: "job-stale",
-    });
-  });
+      expect(job.retry).not.toHaveBeenCalled();
+      expect(job.removeIfTerminal).toHaveBeenCalledOnce();
+      expect(job.removeIfTerminal).toHaveBeenCalledWith("failed");
+      expect(retryPdfExportGeneration).not.toHaveBeenCalled();
+      expect(result).toEqual({
+        retried: false,
+        removed: outcome === "removed",
+        reason: "Reminder execution missing-execution no longer exists.",
+        jobId: "job-stale",
+      });
+    },
+  );
 
   it("retryFailed: retries a live execution job without treating its old body as authoritative", async () => {
     const job = makeJob({
@@ -306,7 +315,7 @@ describe("JobsService — DLQ admin surface", () => {
       jobId: "job-live",
     });
 
-    expect(job.remove).not.toHaveBeenCalled();
+    expect(job.removeIfTerminal).not.toHaveBeenCalled();
     expect(reviveFailedReminderExecution).toHaveBeenCalledWith(
       "existing-execution",
     );
@@ -352,7 +361,7 @@ describe("JobsService — DLQ admin surface", () => {
 
       expect(reminderExecutionExists).not.toHaveBeenCalled();
       expect(retryPdfExportGeneration).not.toHaveBeenCalled();
-      expect(job.remove).not.toHaveBeenCalled();
+      expect(job.removeIfTerminal).not.toHaveBeenCalled();
       expect(job.retry).toHaveBeenCalledTimes(1);
       expect(result).toEqual({ retried: true, jobId: job.failedJob.id });
     },
@@ -388,7 +397,7 @@ describe("JobsService — DLQ admin surface", () => {
     );
 
     expect(reminderExecutionExists).not.toHaveBeenCalled();
-    expect(job.remove).not.toHaveBeenCalled();
+    expect(job.removeIfTerminal).not.toHaveBeenCalled();
     expect(job.retry).not.toHaveBeenCalled();
   });
 
@@ -445,7 +454,7 @@ describe("JobsService — DLQ admin surface", () => {
       expect(reminderExecutionExists).not.toHaveBeenCalled();
       expect(reviveFailedReminderExecution).not.toHaveBeenCalled();
       expect(job.retry).not.toHaveBeenCalled();
-      expect(job.remove).not.toHaveBeenCalled();
+      expect(job.removeIfTerminal).not.toHaveBeenCalled();
       expect(retryPdfExportGeneration).not.toHaveBeenCalled();
     },
   );
@@ -479,7 +488,7 @@ describe("JobsService — DLQ admin surface", () => {
     });
     expect(job.getState).toHaveBeenCalled();
     expect(reminderExecutionExists).not.toHaveBeenCalled();
-    expect(job.remove).not.toHaveBeenCalled();
+    expect(job.removeIfTerminal).not.toHaveBeenCalled();
     expect(job.retry).not.toHaveBeenCalled();
   });
 
@@ -516,7 +525,7 @@ describe("JobsService — DLQ admin surface", () => {
       expect(reminderExecutionExists).not.toHaveBeenCalled();
       expect(retryPdfExportGeneration).not.toHaveBeenCalled();
       expect(job.retry).not.toHaveBeenCalled();
-      expect(job.remove).not.toHaveBeenCalled();
+      expect(job.removeIfTerminal).not.toHaveBeenCalled();
     },
   );
 
@@ -552,7 +561,7 @@ describe("JobsService — DLQ admin surface", () => {
     expect(job.getState).not.toHaveBeenCalled();
     expect(reminderExecutionExists).not.toHaveBeenCalled();
     expect(job.retry).not.toHaveBeenCalled();
-    expect(job.remove).not.toHaveBeenCalled();
+    expect(job.removeIfTerminal).not.toHaveBeenCalled();
   });
 
   it.each(["active", "completed", "waiting"] as const)(
@@ -576,27 +585,35 @@ describe("JobsService — DLQ admin surface", () => {
 
       expect(result).toEqual({ removed: false, jobId: job.failedJob.id });
       expect(job.getState).toHaveBeenCalled();
-      expect(job.remove).not.toHaveBeenCalled();
+      expect(job.removeIfTerminal).not.toHaveBeenCalled();
     },
   );
 
-  it("removeFailed: removes a job that is still failed", async () => {
-    const job = makeJob({ id: "remove-failed" });
-    const service = new JobsService(
-      makeRegistry(makeQueue({ failed: [job] })),
-      defaultOptions,
-      createNullLogger(),
-    );
+  it.each(["removed", "missing", "state-changed", "identity-changed"] as const)(
+    "removeFailed: maps conditional outcome %s truthfully",
+    async (outcome) => {
+      const job = makeJob({ id: "remove-failed" });
+      job.removeIfTerminal.mockResolvedValue(outcome);
+      const service = new JobsService(
+        makeRegistry(makeQueue({ failed: [job] })),
+        defaultOptions,
+        createNullLogger(),
+      );
 
-    const result = await service.removeFailed({
-      queue: "email-reminder",
-      jobId: "remove-failed",
-    });
+      const result = await service.removeFailed({
+        queue: "email-reminder",
+        jobId: "remove-failed",
+      });
 
-    expect(result).toEqual({ removed: true, jobId: "remove-failed" });
-    expect(job.getState).toHaveBeenCalled();
-    expect(job.remove).toHaveBeenCalledTimes(1);
-  });
+      expect(result).toEqual({
+        removed: outcome === "removed",
+        jobId: "remove-failed",
+      });
+      expect(job.getState).toHaveBeenCalled();
+      expect(job.removeIfTerminal).toHaveBeenCalledOnce();
+      expect(job.removeIfTerminal).toHaveBeenCalledWith("failed");
+    },
+  );
 
   it("removeFailed: returns removed=false when the job no longer exists", async () => {
     const service = new JobsService(
@@ -635,7 +652,7 @@ describe("JobsService — DLQ admin surface", () => {
     );
 
     expect(job.getState).not.toHaveBeenCalled();
-    expect(job.remove).not.toHaveBeenCalled();
+    expect(job.removeIfTerminal).not.toHaveBeenCalled();
   });
 
   it("countFailed: sums exact counts and keeps the per-queue split", async () => {
@@ -737,7 +754,7 @@ describe("JobsService — pdf-export generation retry", () => {
     expect(job.retry).not.toHaveBeenCalled();
     // The retried entry is superseded by the fresh generation job, so it
     // leaves the failed list instead of keeping the DLQ badge lit.
-    expect(job.remove).toHaveBeenCalledTimes(1);
+    expect(job.removeIfTerminal).toHaveBeenCalledTimes(1);
   });
 
   it("reports the idempotent already-advanced outcome as retried", async () => {
@@ -769,7 +786,7 @@ describe("JobsService — pdf-export generation retry", () => {
       expectedGeneration: 1,
     });
     expect(job.retry).not.toHaveBeenCalled();
-    expect(job.remove).toHaveBeenCalledTimes(1);
+    expect(job.removeIfTerminal).toHaveBeenCalledTimes(1);
   });
 
   it("a retained g1 queue entry cannot advance a row already failed at g2", async () => {
@@ -799,7 +816,7 @@ describe("JobsService — pdf-export generation retry", () => {
       jobId: "pdf-job-1",
       expectedGeneration: 1,
     });
-    expect(job.remove).not.toHaveBeenCalled();
+    expect(job.removeIfTerminal).not.toHaveBeenCalled();
     expect(result).toEqual({
       retried: false,
       jobId: "pdf-job-1-g1",
@@ -808,7 +825,7 @@ describe("JobsService — pdf-export generation retry", () => {
     });
     expect(job.getState).not.toHaveBeenCalled();
     expect(job.retry).not.toHaveBeenCalled();
-    expect(job.remove).not.toHaveBeenCalled();
+    expect(job.removeIfTerminal).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -870,7 +887,7 @@ describe("JobsService — pdf-export generation retry", () => {
       expect(retryPdfExportGeneration).not.toHaveBeenCalled();
       expect(job.getState).not.toHaveBeenCalled();
       expect(job.retry).not.toHaveBeenCalled();
-      expect(job.remove).not.toHaveBeenCalled();
+      expect(job.removeIfTerminal).not.toHaveBeenCalled();
     },
   );
 
@@ -1069,7 +1086,7 @@ describe("JobsService — pdf recovery surface", () => {
         jobId: RECOVERY_ROW.jobId,
         outcome,
       });
-      expect(superseded.remove).toHaveBeenCalledTimes(1);
+      expect(superseded.removeIfTerminal).toHaveBeenCalledTimes(1);
     },
   );
 
@@ -1095,7 +1112,7 @@ describe("JobsService — pdf recovery surface", () => {
       outcome: "ineligible",
     });
     expect(pdfQueue.getJob).not.toHaveBeenCalled();
-    expect(superseded.remove).not.toHaveBeenCalled();
+    expect(superseded.removeIfTerminal).not.toHaveBeenCalled();
   });
 
   it.each(["remove", "lookup"] as const)(
@@ -1103,7 +1120,9 @@ describe("JobsService — pdf recovery surface", () => {
     async (failure) => {
       const superseded = supersededEntry();
       if (failure === "remove") {
-        superseded.remove.mockRejectedValue(new Error("job lock lost"));
+        superseded.removeIfTerminal.mockRejectedValue(
+          new Error("job lock lost"),
+        );
       }
       const { service, pdfQueue } = recoveryQueueService("retried", superseded);
       if (failure === "lookup") {

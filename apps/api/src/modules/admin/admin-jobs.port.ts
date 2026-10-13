@@ -5,6 +5,8 @@ import {
   type QueueName,
 } from "@weeklyreport/shared";
 
+import type { ObservedTerminalJob } from "../../infrastructure/bullmq/terminal-job-removal.js";
+
 /** Non-credential identity a pdf-export queue payload claims; the durable export row decides whether it is true. */
 export interface AdminPdfExportIdentity {
   readonly jobId: string;
@@ -41,9 +43,8 @@ export interface AdminJobHandle {
   // Requeues a failed job. Not idempotent: when two callers race, the loser
   // throws instead of returning a no-op.
   readonly retry: () => Promise<void>;
-  // Deletes the job in any state. Throws only while a worker holds the job's
-  // lock; a job that has already disappeared does not throw.
-  readonly remove: () => Promise<void>;
+  // The branch's terminal-only guard replaces main's unconditional remove.
+  readonly removeIfTerminal: ObservedTerminalJob["removeIfTerminal"];
 }
 
 export interface AdminJobsQueue {

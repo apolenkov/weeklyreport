@@ -11,6 +11,10 @@ import type {
   AdminJobsQueue,
   AdminPdfExportIdentity,
 } from "../../modules/admin/index.js";
+import {
+  BullmqTerminalJobRemoval,
+  type ObservedTerminalJob,
+} from "./terminal-job-removal.js";
 
 type AdminQueueJob = Pick<
   Job,
@@ -22,7 +26,6 @@ type AdminQueueJob = Pick<
   | "timestamp"
   | "data"
   | "retry"
-  | "remove"
   | "getState"
 >;
 
@@ -91,6 +94,7 @@ function getPdfExportIdentity(
 export function createAdminJobHandle(
   queue: QueueName,
   job: AdminQueueJob,
+  removeIfTerminal: ObservedTerminalJob["removeIfTerminal"],
 ): AdminJobHandle {
   return {
     failedJob: failedJobSchema.parse({
@@ -115,22 +119,30 @@ export function createAdminJobHandle(
           : { queue },
     getState: () => job.getState(),
     retry: () => job.retry(),
-    remove: () => job.remove(),
+    removeIfTerminal,
   };
 }
 
 export class AdminBullmqJobsQueue implements AdminJobsQueue {
+  private readonly terminalJobs: BullmqTerminalJobRemoval;
+
   constructor(
     private readonly name: QueueName,
     private readonly queue: Queue,
-  ) {}
+  ) {
+    this.terminalJobs = new BullmqTerminalJobRemoval(queue);
+  }
 
   readonly getFailed = async (
     start: number,
     end: number,
   ): Promise<readonly AdminJobHandle[]> => {
     return (await this.queue.getFailed(start, end)).map((job) =>
-      createAdminJobHandle(this.name, job),
+      createAdminJobHandle(
+        this.name,
+        job,
+        this.terminalJobs.capture(job).removeIfTerminal,
+      ),
     );
   };
 
@@ -138,6 +150,12 @@ export class AdminBullmqJobsQueue implements AdminJobsQueue {
 
   readonly getJob = async (id: string): Promise<AdminJobHandle | undefined> => {
     const job = await this.queue.getJob(id);
-    return job ? createAdminJobHandle(this.name, job) : undefined;
+    return job
+      ? createAdminJobHandle(
+          this.name,
+          job,
+          this.terminalJobs.capture(job).removeIfTerminal,
+        )
+      : undefined;
   };
 }
