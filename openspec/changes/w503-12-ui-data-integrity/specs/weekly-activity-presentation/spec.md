@@ -30,3 +30,10 @@ The Lead weekly activity editor SHALL retain its original saved title and descri
 
 - **WHEN** newer saved fields arrive before local edits begin
 - **THEN** the editor displays the new values as its saved base
+
+#### Scenario: Stale warning is announced and describes Save
+
+- **WHEN** authoritative weekly fields change while local input remains dirty
+- **THEN** the stale warning is mounted as a separate alert in the editor caption slot
+- **AND** the disabled Save control describes that alert through aria-describedby
+- **AND** existing input, focus and Cancel/reopen recovery remain available
