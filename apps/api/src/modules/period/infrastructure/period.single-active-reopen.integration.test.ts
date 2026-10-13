@@ -49,6 +49,8 @@ describe("PeriodService single-active-reopen guard (integration)", () => {
   const PUBLISHED_A = "f0000000-0000-4000-a000-0000000000b1";
   const PUBLISHED_B = "f0000000-0000-4000-a000-0000000000b2";
   const REOPENED = "f0000000-0000-4000-a000-0000000000b3";
+  const GROUP = "f0000000-0000-4000-a000-0000000000b4";
+  const LEAD = "00000000-0000-4000-8000-0000000000c2";
 
   const headSession: UserSession = {
     userId: "00000000-0000-4000-8000-0000000000c1",
@@ -102,6 +104,11 @@ describe("PeriodService single-active-reopen guard (integration)", () => {
   }
 
   async function createSubmittedSection(reportId: string) {
+    await prisma.reportingGroup.upsert({
+      where: { id: GROUP },
+      update: {},
+      create: { id: GROUP, name: "Single Reopen Group" },
+    });
     await prisma.user.upsert({
       where: { id: headSession.userId },
       update: {},
@@ -113,16 +120,46 @@ describe("PeriodService single-active-reopen guard (integration)", () => {
         firstName: "Department",
         role: "head",
         samlId: "single-active-reopen-head",
+        reportingGroupId: GROUP,
+      },
+    });
+    await prisma.user.upsert({
+      where: { id: LEAD },
+      update: {},
+      create: {
+        id: LEAD,
+        email: "single-active-reopen-lead@test.local",
+        name: "Department Lead",
+        lastName: "Lead",
+        firstName: "Department",
+        role: "lead",
+        samlId: "single-active-reopen-lead",
+        reportingGroupId: GROUP,
       },
     });
     return prisma.reportSection.create({
       data: {
         reportId,
-        authorId: headSession.userId,
+        authorId: LEAD,
         status: "submitted",
         submittedAt: new Date("2026-05-18T12:00:00.000Z"),
       },
     });
+  }
+
+  async function createOpenReport(id: string, periodStart: string) {
+    await prisma.report.create({
+      data: {
+        id,
+        periodStart: new Date(periodStart),
+        periodEnd: new Date(periodStart),
+        deadline: new Date(periodStart),
+        status: "draft",
+        periodState: "open",
+        periodStatus: "open",
+      },
+    });
+    await createSubmittedSection(id);
   }
 
   async function readPeriodState(reportId: string) {
@@ -216,7 +253,7 @@ describe("PeriodService single-active-reopen guard (integration)", () => {
     await createReport(PUBLISHED_A, "published", "2026-05-18T00:00:00.000Z");
     const section = await createSubmittedSection(PUBLISHED_A);
     await prisma.reopenRequest.create({
-      data: { reportSectionId: section.id, requestedById: headSession.userId },
+      data: { reportSectionId: section.id, requestedById: LEAD },
     });
     await prisma.reminderPolicy.deleteMany();
     expect(await prisma.reminderPolicy.count()).toBe(0);
@@ -338,7 +375,7 @@ describe("PeriodService single-active-reopen guard (integration)", () => {
     expect(await prisma.reminderPolicy.count()).toBe(0);
     const section = await createSubmittedSection(PUBLISHED_A);
     await prisma.reopenRequest.create({
-      data: { reportSectionId: section.id, requestedById: headSession.userId },
+      data: { reportSectionId: section.id, requestedById: LEAD },
     });
     const before = await readPeriodState(PUBLISHED_A);
     const pausedHead = pauseReopenAfterGates();
@@ -371,22 +408,16 @@ describe("PeriodService single-active-reopen guard (integration)", () => {
   });
 
   it("allows only one Head reopen when a newer publication admits a second target with no reminder policies", async () => {
-    await createReport(PUBLISHED_A, "published", "2026-05-18T00:00:00.000Z");
-    await createSubmittedSection(PUBLISHED_A);
-    await prisma.report.create({
-      data: {
-        id: PUBLISHED_B,
-        periodStart: new Date("2026-05-25T00:00:00.000Z"),
-        periodEnd: new Date("2026-05-25T00:00:00.000Z"),
-        deadline: new Date("2026-05-25T00:00:00.000Z"),
-        status: "draft",
-        periodState: "open",
-        periodStatus: "open",
-      },
-    });
-    await createSubmittedSection(PUBLISHED_B);
     await prisma.reminderPolicy.deleteMany();
     expect(await prisma.reminderPolicy.count()).toBe(0);
+    await createOpenReport(PUBLISHED_A, "2026-05-18T00:00:00.000Z");
+    await expect(
+      service.publishPeriod(PUBLISHED_A, headSession),
+    ).resolves.toEqual({
+      success: true,
+      reportId: PUBLISHED_A,
+    });
+    await createOpenReport(PUBLISHED_B, "2026-05-25T00:00:00.000Z");
     const first = pauseReopenAfterGates();
     const second = pauseReopenAfterGates();
     const firstOutcome = first.service
