@@ -30,10 +30,10 @@ const current = {
   periodEnd: new Date("2026-08-30T23:59:59.999Z"),
 };
 
-function publishedProject() {
+function publishedProject(stageName = "Development", stageId = STAGE_ID) {
   const stage = {
-    stageId: STAGE_ID,
-    stageName: "Development",
+    stageId,
+    stageName,
     sortOrder: 1,
     status: "green" as const,
   };
@@ -226,6 +226,14 @@ describe("getStatusOverviewPeriodsRead", () => {
       pausedItem: true,
       sharedProject: true,
     });
+    const viewerProject = publishedProject(
+      "Review",
+      "88888888-8888-4888-8888-888888888882",
+    );
+    const foreignProject = publishedProject();
+    const stageSet = [...viewerProject.stageSet, ...foreignProject.stageSet];
+    publishedViewer.projects = [{ ...viewerProject, stageSet }];
+    publishedForeign.projects = [{ ...foreignProject, stageSet }];
     const { prisma } = reader({
       previous: predecessor({
         publishedSnapshot: snapshot([publishedViewer, publishedForeign]),
