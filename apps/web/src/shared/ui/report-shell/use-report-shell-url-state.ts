@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { copyReportSearchParams } from "../../lib/navigation/report-search-params";
 import { getScalarSearchParam } from "../../lib/navigation/scalar-search-param";
@@ -45,6 +45,12 @@ function usePendingNavigation(
   router: ReturnType<typeof useRouter>,
 ) {
   const pendingNavigationRef = useRef<PendingNavigation | null>(null);
+  const [pendingNavigation, setPendingNavigation] =
+    useState<PendingNavigation | null>(null);
+  const publishPending = useCallback((pending: PendingNavigation | null) => {
+    pendingNavigationRef.current = pending;
+    setPendingNavigation(pending);
+  }, []);
   useEffect(() => {
     const pending = pendingNavigationRef.current;
     if (!pending) return;
@@ -53,32 +59,42 @@ function usePendingNavigation(
       (observedQuery !== pending.observedQuery &&
         observedQuery !== pending.inFlightQuery)
     ) {
-      pendingNavigationRef.current = null;
+      publishPending(null);
     } else if (observedQuery === pending.inFlightQuery) {
       if (observedQuery === pending.desiredQuery) {
-        pendingNavigationRef.current = null;
+        publishPending(null);
       } else {
         // Advance before navigating so repeated effects cannot replay an acknowledgement.
-        pendingNavigationRef.current = {
+        publishPending({
           ...pending,
           observedQuery,
           inFlightQuery: pending.desiredQuery,
-        };
+        });
         const suffix = pending.desiredQuery ? `?${pending.desiredQuery}` : "";
         router.replace(`${pathname}${suffix}`, { scroll: false });
       }
     }
-  }, [pathname, observedQuery, router]);
+  }, [pathname, observedQuery, router, publishPending]);
 
   useEffect(() => {
     // Back may land on the in-flight URL; it must still supersede queued selections.
     const cancelPending = () => {
-      pendingNavigationRef.current = null;
+      publishPending(null);
     };
     window.addEventListener("popstate", cancelPending);
     return () => window.removeEventListener("popstate", cancelPending);
-  }, []);
-  return pendingNavigationRef;
+  }, [publishPending]);
+  const controlQuery =
+    pendingNavigation?.pathname === pathname &&
+    (observedQuery === pendingNavigation.observedQuery ||
+      observedQuery === pendingNavigation.inFlightQuery)
+      ? pendingNavigation.desiredQuery
+      : observedQuery;
+  return {
+    pendingNavigationRef,
+    publishPending,
+    controlParams: new URLSearchParams(controlQuery),
+  };
 }
 
 // Shared head/viewer report-shell URL state. stripParams is wiped on every
@@ -93,11 +109,8 @@ export function useReportShellUrlState({
   const router = useRouter();
   const searchParams = useSearchParams();
   const observedQuery = searchParams.toString();
-  const pendingNavigationRef = usePendingNavigation(
-    pathname,
-    observedQuery,
-    router,
-  );
+  const { pendingNavigationRef, publishPending, controlParams } =
+    usePendingNavigation(pathname, observedQuery, router);
 
   const buildQuery = useCallback(
     (overrides: Record<string, string | null>) => {
@@ -120,7 +133,7 @@ export function useReportShellUrlState({
           stripParams,
           overrides,
         );
-        pendingNavigationRef.current = { ...pending, desiredQuery };
+        publishPending({ ...pending, desiredQuery });
         return;
       }
 
@@ -129,7 +142,7 @@ export function useReportShellUrlState({
         stripParams,
         overrides,
       );
-      pendingNavigationRef.current =
+      publishPending(
         desiredQuery === observedQuery
           ? null
           : {
@@ -137,7 +150,8 @@ export function useReportShellUrlState({
               observedQuery,
               inFlightQuery: desiredQuery,
               desiredQuery,
-            };
+            },
+      );
       if (desiredQuery !== observedQuery) {
         const suffix = desiredQuery ? `?${desiredQuery}` : "";
         router.replace(`${pathname}${suffix}`, { scroll: false });
@@ -150,17 +164,20 @@ export function useReportShellUrlState({
       stripParams,
       router,
       pendingNavigationRef,
+      publishPending,
     ],
   );
 
-  const includeArchive = getScalarSearchParam(searchParams, "archive") === "1";
+  const includeArchive = getScalarSearchParam(controlParams, "archive") === "1";
   const setIncludeArchive = useCallback(
     (value: boolean) => updateQuery({ archive: value ? "1" : null }),
     [updateQuery],
   );
 
   const scope: ReportShellScopeValue =
-    getScalarSearchParam(searchParams, "scope") === "lead" ? "lead" : "product";
+    getScalarSearchParam(controlParams, "scope") === "lead"
+      ? "lead"
+      : "product";
   const setScope = useCallback(
     (value: ReportShellScopeValue) =>
       updateQuery({ scope: value === "lead" ? "lead" : null }),
