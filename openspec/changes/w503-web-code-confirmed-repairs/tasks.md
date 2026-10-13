@@ -10,7 +10,7 @@
 
 ## 3. Composed shell URL intent
 
-- [x] 3.1 Record owner-hook RED for overlapping independent controls, repair serialized intent, and verify multiple updates, intermediate acknowledgement, external navigation, popstate, marker policy and StrictMode controls GREEN.
+- [x] 3.1 Record actual ArchiveToggle plus ScopeToggle DOM RED for Archive → scope → Archive before URL acknowledgement, publish latest intent to rendered controls, and verify composed final URL, intermediate acknowledgement, external navigation, popstate, marker policy and StrictMode controls GREEN.
 
 ## 4. Integration and delivery
 
