@@ -12,7 +12,8 @@ Preserve existing saved content and prevent overwriting newer weekly fields thro
 
 1. Build the unavailable-details group from unmatched activity-backed records per section author, reusing existing record presentation. An unavailable status is explicitly absent, never a normal traffic-light value. Rejecting detach or synthesizing catalogue metadata would change the API or misrepresent saved data.
 2. Compare normalized title/description pairs against the saved base retained while dirty. A difference blocks both the button and submit handler and preserves pending text. Catalogue names are excluded. Cancel deliberately discards pending text; reopening adopts current saved values. A new version owner or merge flow is unnecessary for the approved behavior.
-3. Use the existing mutation error helper in RequestChangesDialog. Validate the public transport consumer with invisible-only input; preserve meaningful domain errors. Other raw-message sites require independent producer evidence and remain tracked.
+3. The stale warning replaces the editor caption instead of adding a desktop row. Its line height matches the caption, preserving the existing content clearance; the unrelated fixed completion panel overlap stays in a separate follow-up.
+4. Use the existing mutation error helper in RequestChangesDialog. Validate the public transport consumer with invisible-only input; preserve meaningful domain errors. Other raw-message sites require independent producer evidence and remain tracked.
 
 ## Data flow
 

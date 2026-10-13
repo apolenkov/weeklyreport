@@ -67,17 +67,16 @@ export function StatusOverviewActivityEditor({
         onClose();
       }}
     >
-      <p className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-        Weekly fields
+      <p
+        role={draft.stale ? "alert" : undefined}
+        className={
+          draft.stale
+            ? "text-sm leading-4 text-[var(--color-destructive)]"
+            : "text-xs font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]"
+        }
+      >
+        {draft.stale ? STALE_FIELDS_MESSAGE : "Weekly fields"}
       </p>
-      {draft.stale ? (
-        <p
-          role="alert"
-          className="mt-2 text-sm text-[var(--color-destructive)]"
-        >
-          {STALE_FIELDS_MESSAGE}
-        </p>
-      ) : null}
       <div className="mt-2 grid gap-2 md:grid-cols-2">
         <ActivityTitleField
           activityId={activityId}
