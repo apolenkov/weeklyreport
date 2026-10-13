@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { DEFAULT_ORGANIZATION_IDENTITY } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
@@ -53,13 +54,18 @@ describe("OrganizationPrismaRepository.updateOrganization", () => {
       fullName: input.fullName,
     };
     const update = vi.fn().mockResolvedValue(updatedRow);
+    const queryRaw = vi.fn().mockResolvedValue([existingRow]);
+    const tx = { $queryRaw: queryRaw, organization: { update } };
     const prisma = {
-      organization: { update },
+      $transaction: (
+        callback: (tx: Prisma.TransactionClient) => Promise<unknown>,
+      ) => callback(tx as unknown as Prisma.TransactionClient),
     } as unknown as PrismaService;
 
     const repo = new OrganizationPrismaRepository(prisma);
-    const org = await repo.updateOrganization(input);
+    const { previous, next: org } = await repo.updateOrganization(input);
 
+    expect(previous).toEqual(existingRow);
     expect(org.shortName).toBe(input.shortName);
     expect(org.fullName).toBe(input.fullName);
     expect(update).toHaveBeenCalledOnce();
@@ -70,5 +76,26 @@ describe("OrganizationPrismaRepository.updateOrganization", () => {
         fullName: input.fullName,
       },
     });
+  });
+
+  it("fails without writing when the singleton is absent", async () => {
+    const update = vi.fn();
+    const tx = {
+      $queryRaw: vi.fn().mockResolvedValue([]),
+      organization: { update },
+    };
+    const prisma = {
+      $transaction: (
+        callback: (tx: Prisma.TransactionClient) => Promise<unknown>,
+      ) => callback(tx as unknown as Prisma.TransactionClient),
+    } as unknown as PrismaService;
+
+    await expect(
+      new OrganizationPrismaRepository(prisma).updateOrganization({
+        shortName: "NEW",
+        fullName: "New Organization",
+      }),
+    ).rejects.toThrow(/singleton row 'singleton' is missing/);
+    expect(update).not.toHaveBeenCalled();
   });
 });

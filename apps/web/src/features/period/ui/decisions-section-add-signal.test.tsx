@@ -2,7 +2,7 @@
 // skips signals already consumed via lastHandledSignal, so
 // false→true→false must not re-fire.
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { DecisionEntry } from "../../report-sections";
@@ -77,6 +77,41 @@ describe("DecisionsSection current delete permission", () => {
       if (readOnly) expect(onChange).not.toHaveBeenCalled();
       else expect(onChange).toHaveBeenCalledExactlyOnceWith([]);
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    },
+  );
+  it.each([false, true])(
+    "rechecks publishedLocked=%s after Delete confirmation opens",
+    (publishedLocked) => {
+      const onChange = vi.fn();
+      const { rerender } = render(
+        <DecisionsSection
+          decisions={[decision]}
+          onChange={onChange}
+          publishedLockedIds={new Set<string>()}
+        />,
+      );
+      fireEvent.click(
+        screen.getByRole("button", {
+          name: "Delete decision for Synthetic Product",
+        }),
+      );
+      expect(screen.getByRole("alertdialog")).toHaveTextContent(decision.text);
+      rerender(
+        <DecisionsSection
+          decisions={[decision]}
+          onChange={onChange}
+          publishedLockedIds={new Set(publishedLocked ? [decision.id] : [])}
+        />,
+      );
+      fireEvent.click(
+        within(screen.getByRole("alertdialog")).getByRole("button", {
+          name: "Delete",
+          exact: true,
+        }),
+      );
+      if (publishedLocked) expect(onChange).not.toHaveBeenCalled();
+      else expect(onChange).toHaveBeenCalledExactlyOnceWith([]);
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
     },
   );
   it("keeps editable Cancel inert", () => {

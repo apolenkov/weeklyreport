@@ -158,7 +158,10 @@ function frozenCrossAuthorSnapshot() {
         status: "green",
       },
     ],
-    stageSet: [{ stageId: BUILD_STAGE_ID, stageName: "Build", sortOrder: 0 }],
+    stageSet: [
+      { stageId: BUILD_STAGE_ID, stageName: "Build", sortOrder: 0 },
+      { stageId: TEST_STAGE_ID, stageName: "Test", sortOrder: 1 },
+    ],
     ownerGroupId: GROUP_ID,
   };
   return {
@@ -167,7 +170,19 @@ function frozenCrossAuthorSnapshot() {
       ...section,
       projects:
         section.authorId === USER_ID
-          ? [sharedProject]
+          ? [
+              {
+                ...sharedProject,
+                ownedStages: [
+                  {
+                    stageId: TEST_STAGE_ID,
+                    stageName: "Test",
+                    sortOrder: 1,
+                    status: "green",
+                  },
+                ],
+              },
+            ]
           : [
               sharedProject,
               {

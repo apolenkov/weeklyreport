@@ -92,6 +92,11 @@ describe("PublicationModule wiring", () => {
     const invalidateAll = vi.fn(() => Promise.resolve());
     const mockCache = { invalidateAll };
     const repository: PublicationRepository = {
+      getAssembledPreview: () => {
+        throw new Error(
+          "Unexpected preview read in an internal publication test",
+        );
+      },
       getAssembledReport: () => Promise.resolve(structuredClone(draftReport)),
       saveAutoPublishedReport: (nextReport) =>
         Promise.resolve({

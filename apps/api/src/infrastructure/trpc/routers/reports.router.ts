@@ -1,12 +1,16 @@
+import { TRPCError } from "@trpc/server";
 import {
   compiledHistoryInputSchema,
   draftSaveSchema,
   paginationInputSchema,
   submitSectionSchema,
+  type UserSession,
 } from "@weeklyreport/shared";
+import { assertRole } from "@weeklyreport/shared/trpc";
 
 import type { ReportSectionsService } from "../../../modules/report-sections/index.js";
 import type { WeeklyReportService } from "../../../modules/weekly-report/index.js";
+import type { TrpcContext } from "../trpc.context.js";
 import { mapDomainError } from "../trpc.error-mapper.js";
 import {
   anyRoleProcedure,
@@ -18,6 +22,29 @@ import {
 export interface ReportsRouterDeps {
   readonly reportSectionsService: ReportSectionsService;
   readonly weeklyReportService: WeeklyReportService;
+}
+
+// Viewer may retain authorship after demotion; content writes still require
+// a writer role (openspec/specs/report-section-write-gates).
+function assertContentWriter(
+  ctx: Pick<TrpcContext, "auditLogger" | "ip"> & {
+    readonly session: UserSession;
+  },
+): void {
+  const allowed = ["lead", "head", "admin"] satisfies UserSession["role"][];
+  try {
+    assertRole(ctx.session, allowed);
+  } catch (error) {
+    if (error instanceof TRPCError && error.code === "FORBIDDEN") {
+      ctx.auditLogger.roleDenied({
+        userId: ctx.session.userId,
+        role: ctx.session.role,
+        attemptedRole: allowed,
+        ip: ctx.ip,
+      });
+    }
+    throw error;
+  }
 }
 
 function createSectionProcedures(deps: ReportsRouterDeps) {
@@ -68,6 +95,7 @@ function createSectionProcedures(deps: ReportsRouterDeps) {
       .use(captureMutationAuditInputMiddleware)
       .mutation(async ({ input, ctx }) => {
         try {
+          assertContentWriter(ctx);
           return await deps.reportSectionsService.saveDraft(
             input,
             ctx.session.userId,
@@ -82,6 +110,7 @@ function createSectionProcedures(deps: ReportsRouterDeps) {
       .use(captureMutationAuditInputMiddleware)
       .mutation(async ({ input, ctx }) => {
         try {
+          assertContentWriter(ctx);
           return await deps.reportSectionsService.submitSection(
             input,
             ctx.session.userId,

@@ -128,7 +128,7 @@ The `backup` CronJob runs the image-baked `backup-loop.sh` with
 `backup.retentionDays` controls the local history window. Neither value alone
 proves achieved RPO or RTO; those measurements come from a recorded restore
 drill. The CronJob has `concurrencyPolicy: Forbid`, no Job retry, and a bounded
-run time. A completed dump is published as `weeklyreport-<stamp>.dump` only after
+run time. A completed dump is published as `weeklyreport-<stamp>-<unique>.dump` only after
 `pg_dump` succeeds; failures leave no restorable-looking partial file.
 
 The backup image also contains `restore.sh`. It uses the release's image tag,

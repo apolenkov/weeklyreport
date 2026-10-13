@@ -47,14 +47,14 @@ function createOrganizationProcedures(deps: AdminSettingsDeps) {
     getOrganization: adminProcedure.query(() =>
       withDomainErrorMapping(() => deps.organizationService.getOrganization()),
     ),
-    // Read before-state in the same call so audit has previous and new identity.
+    // Audit uses the identities captured by the atomic repository write.
     updateOrganization: adminProcedure
       .input(organizationUpdateSchema)
       .use(captureMutationAuditInputMiddleware)
       .mutation(async ({ ctx, input }) => {
         try {
-          const previous = await deps.organizationService.getOrganization();
-          const next = await deps.organizationService.updateOrganization(input);
+          const { previous, next } =
+            await deps.organizationService.updateOrganization(input);
           clearOrgCache();
           ctx.auditLogger.organizationUpdate({
             userId: ctx.session.userId,

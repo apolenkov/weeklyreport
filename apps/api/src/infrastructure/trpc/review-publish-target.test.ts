@@ -16,12 +16,15 @@ function buildHeadCaller() {
   const getCurrentEditableId = vi.fn(() =>
     Promise.resolve(DB_RESOLVED_REPORT_ID),
   );
-  const getAssembledReport = vi.fn(() => Promise.resolve({ assembled: true }));
+  const getAssembledPreview = vi.fn(() => Promise.resolve({ assembled: true }));
   const getSubmissionDashboard = vi.fn(() => Promise.resolve([]));
 
   const deps = createStubAppRouterDeps({
     weeklyReportService: { getCurrentEditableId },
-    publicationService: { getAssembledReport },
+    publicationService: {
+      getAssembledPreview,
+      getAssembledReport: () => Promise.resolve({ assembled: true }),
+    },
     reviewService: { getSubmissionDashboard },
   });
 
@@ -47,7 +50,7 @@ function buildHeadCaller() {
   return {
     caller,
     getCurrentEditableId,
-    getAssembledReport,
+    getAssembledPreview,
     getSubmissionDashboard,
     session,
   };
@@ -55,12 +58,18 @@ function buildHeadCaller() {
 
 describe("review.* resolve the publish target from the DB, not the stale JWT", () => {
   it("review.assembledReport reads the DB-resolved period, not session.activeReportId", async () => {
-    const { caller, getAssembledReport } = buildHeadCaller();
+    const { caller, getAssembledPreview, session } = buildHeadCaller();
 
     await caller.review.assembledReport();
 
-    expect(getAssembledReport).toHaveBeenCalledWith(DB_RESOLVED_REPORT_ID);
-    expect(getAssembledReport).not.toHaveBeenCalledWith(STALE_ACTIVE_REPORT_ID);
+    expect(getAssembledPreview).toHaveBeenCalledWith(
+      DB_RESOLVED_REPORT_ID,
+      session,
+    );
+    expect(getAssembledPreview).not.toHaveBeenCalledWith(
+      STALE_ACTIVE_REPORT_ID,
+      expect.anything(),
+    );
   });
 
   it("review.dashboard scopes to the DB-resolved period, not session.activeReportId", async () => {

@@ -109,6 +109,170 @@ describe("AI provider control-plane database states", () => {
     await disconnectTestPrisma();
   });
 
+  it("claims at most one preparation from the same revision snapshot", async () => {
+    const candidate = await revision(
+      "a0000000-0000-4000-8000-000000000034",
+      AiProviderLifecycle.validated,
+    );
+    if (!candidate.preparationStartedAt)
+      throw new Error("Preparation fixture is missing its start timestamp");
+    const progress = {
+      completed: 0,
+      total: 0,
+      failed: 0,
+      elapsedMs: 0,
+      startedAt: new Date(candidate.preparationStartedAt.getTime() + 1),
+      finishedAt: null,
+      lifecycle: AiProviderLifecycle.preparing,
+      expectedRevision: {
+        updatedAt: candidate.updatedAt,
+        lifecycle: candidate.lifecycle,
+        preparationStartedAt: candidate.preparationStartedAt,
+        preparationFinishedAt: candidate.preparationFinishedAt,
+      },
+    };
+    const claims = await Promise.all([
+      repository.updateProgress(candidate.id, progress),
+      repository.updateProgress(candidate.id, progress),
+    ]);
+    expect(claims.filter((claim) => claim !== null)).toHaveLength(1);
+    expect(await repository.getRevision(candidate.id)).toMatchObject({
+      lifecycle: "preparing",
+      preparationStartedAt: progress.startedAt,
+    });
+  });
+
+  it.each(["progress", "complete", "fail"] as const)(
+    "rejects an old owner's %s callback after a new preparation claim",
+    async (callback) => {
+      const candidate = await revision(
+        "a0000000-0000-4000-8000-000000000035",
+        AiProviderLifecycle.preparing,
+      );
+      const oldStartedAt = candidate.preparationStartedAt;
+      if (!oldStartedAt)
+        throw new Error("Preparation fixture is missing its start timestamp");
+      await repository.updateProgress(candidate.id, {
+        completed: 0,
+        total: 0,
+        failed: 0,
+        elapsedMs: 0,
+        startedAt: new Date(oldStartedAt.getTime() + 1),
+        finishedAt: null,
+        lifecycle: AiProviderLifecycle.preparing,
+        expectedRevision: {
+          updatedAt: candidate.updatedAt,
+          lifecycle: candidate.lifecycle,
+          preparationStartedAt: oldStartedAt,
+          preparationFinishedAt: candidate.preparationFinishedAt,
+        },
+      });
+      const owner = await repository.getRevision(candidate.id);
+      expect(owner?.preparationStartedAt).not.toEqual(oldStartedAt);
+      await expect(
+        repository.updateProgress(candidate.id, {
+          completed: 1,
+          total: 1,
+          failed: callback === "fail" ? 1 : 0,
+          elapsedMs: 1,
+          startedAt: oldStartedAt,
+          finishedAt: callback === "progress" ? null : new Date(),
+          ...(callback === "complete"
+            ? {}
+            : {
+                lifecycle:
+                  callback === "fail"
+                    ? AiProviderLifecycle.failed
+                    : AiProviderLifecycle.preparing,
+              }),
+        }),
+      ).resolves.toBeNull();
+      expect(await repository.getRevision(candidate.id)).toEqual(owner);
+    },
+  );
+
+  it("does not reset an active winner with a stale preparation snapshot", async () => {
+    const winner = await revision(
+      "a0000000-0000-4000-8000-000000000031",
+      AiProviderLifecycle.active,
+      { completed: 1, total: 1 },
+    );
+    await createControl(winner.id, true);
+    const before = await repository.getRevision(winner.id);
+    await expect(
+      repository.updateProgress(winner.id, {
+        completed: 0,
+        total: 0,
+        failed: 0,
+        elapsedMs: 0,
+        startedAt: new Date("2026-08-11T02:00:00.000Z"),
+        finishedAt: null,
+        lifecycle: AiProviderLifecycle.preparing,
+        expectedRevision: {
+          updatedAt: winner.updatedAt,
+          lifecycle: AiProviderLifecycle.validated,
+          preparationStartedAt: winner.preparationStartedAt,
+          preparationFinishedAt: winner.preparationFinishedAt,
+        },
+      }),
+    ).resolves.toBeNull();
+    expect(await repository.getRevision(winner.id)).toEqual(before);
+    expect(await repository.getControl()).toMatchObject({
+      enabled: true,
+      activeConfigurationId: winner.id,
+      activeConfiguration: {
+        lifecycle: "active",
+        preparationCompleted: 1,
+        preparationTotal: 1,
+      },
+    });
+  });
+
+  it("keeps a superseded revision superseded when an active retest returns late", async () => {
+    const a = await revision(
+      "a0000000-0000-4000-8000-000000000032",
+      AiProviderLifecycle.superseded,
+      { completed: 1, total: 1 },
+    );
+    const b = await revision(
+      "a0000000-0000-4000-8000-000000000033",
+      AiProviderLifecycle.active,
+      { completed: 1, total: 1 },
+    );
+    await createControl(b.id, true);
+    const execution = await repository.createOrReuseProviderExecution(a.id, {
+      testSuiteVersion: AI_PROVIDER_TEST_SUITE_VERSION,
+    });
+    expect(await repository.startExecution(execution.id, 1)).toBe(true);
+    await repository.setClaimedTestResult({
+      id: a.id,
+      executionId: execution.id,
+      executionAttempt: 1,
+      result: passingTestResult,
+      status: "passed",
+      embeddingDimensions: 3,
+      testedAt: new Date("2026-08-11T02:00:00.000Z"),
+      currentLifecycle: AiProviderLifecycle.active,
+      compositeTestIdentity: a.compositeTestIdentity,
+      outcome: "passed",
+      failureCode: null,
+      checks: [],
+    });
+    expect(await repository.getRevision(a.id)).toMatchObject({
+      lifecycle: "superseded",
+      testResult: passingTestResult,
+    });
+    expect(await repository.getControl()).toMatchObject({
+      activeConfigurationId: b.id,
+      activeConfiguration: { lifecycle: "active" },
+    });
+    expect(
+      await prisma.aiProviderConfiguration.count({
+        where: { lifecycle: AiProviderLifecycle.active },
+      }),
+    ).toBe(1);
+  });
+
   it("discards a failed attempt while preserving active and rollback revisions", async () => {
     const active = await revision(
       "a0000000-0000-4000-8000-000000000006",
@@ -599,6 +763,12 @@ describe("AI provider control-plane database states", () => {
       finishedAt: new Date("2026-08-11T01:00:01.000Z"),
       sourceFingerprint: "prepared",
       sourceGeneration: preparedGeneration,
+      expectedRevision: {
+        updatedAt: candidate.updatedAt,
+        lifecycle: candidate.lifecycle,
+        preparationStartedAt: candidate.preparationStartedAt,
+        preparationFinishedAt: candidate.preparationFinishedAt,
+      },
     });
     const execution = await repository.createOrReuseProviderExecution(
       candidate.id,

@@ -53,6 +53,7 @@ function useDecisionsEditing({
   onChange,
   defaultProductName,
   addSignal = 0,
+  publishedLockedIds,
 }: DecisionsSectionProps) {
   const {
     dialogState,
@@ -66,13 +67,13 @@ function useDecisionsEditing({
 
   const requestDeleteById = (id: string) => {
     const decision = decisions.find((d) => d.id === id);
-    if (!decision) return;
+    if (!decision || publishedLockedIds?.has(id)) return;
     requestDelete(decision);
   };
 
   const confirmDelete = () => {
     if (!pendingDelete) return;
-    if (readOnly) {
+    if (readOnly || publishedLockedIds?.has(pendingDelete.id)) {
       clearPendingDelete();
       return;
     }

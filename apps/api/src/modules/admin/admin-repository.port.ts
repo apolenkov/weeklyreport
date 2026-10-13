@@ -23,6 +23,7 @@ import type {
   StageAssignmentCountRow,
   StageRow,
 } from "./admin-shared-types.js";
+import type { PeriodEnvelope } from "./period-admin.envelope.js";
 
 export interface AdminRepository {
   getSnapshot(): Promise<AdminSnapshot>;
@@ -108,6 +109,8 @@ export interface AdminRepository {
     // Expected state for envelope edits; the repository re-checks it while
     // holding the report row lock so publish/archive races fail closed.
     expectedPeriodState: PeriodState;
+    // Changed-field audit before-values; range edits also depend on both bounds.
+    expectedEnvelope: PeriodEnvelope;
     data: {
       periodStart?: Date;
       periodEnd?: Date;

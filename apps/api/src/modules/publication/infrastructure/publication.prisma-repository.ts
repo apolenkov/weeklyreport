@@ -1,8 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
-import type { AssembledReport } from "@weeklyreport/shared";
+import type { AssembledReport, UserSession } from "@weeklyreport/shared";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
+import { groupScopeFilter, guardGroupScope } from "../../../lib/group-scope.js";
 import { buildTransition } from "../../period/index.js";
 import {
   lockAllReminderPolicies,
@@ -22,6 +23,25 @@ import type {
 @Injectable()
 export class PublicationPrismaRepository implements PublicationRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+
+  async getAssembledPreview(
+    activeReportId: string,
+    session: UserSession,
+  ): Promise<AssembledReport | null> {
+    guardGroupScope(session);
+    const row = await this.prisma.report.findUnique({
+      where: { id: activeReportId },
+      include: {
+        ...reportFullIncludeForSnapshot,
+        sections: {
+          ...reportFullIncludeForSnapshot.sections,
+          where: groupScopeFilter(session, "reportSection"),
+        },
+      },
+    });
+
+    return row ? buildAssembledReportFromPrismaRow(row) : null;
+  }
 
   async getAssembledReport(
     activeReportId: string,

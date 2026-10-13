@@ -11,6 +11,7 @@
 # (a Kubernetes CronJob owns the schedule, so no interval is needed). Any other
 # value than true or false is rejected.
 set -u
+umask 077
 
 : "${PGHOST:?PGHOST is required}"
 : "${PGUSER:?PGUSER is required}"
@@ -82,14 +83,18 @@ fi
 # Returns 0 only when a complete dump was published.
 dump_once() {
   stamp="$(date -u +%Y%m%dT%H%M%SZ)"
-  target="${BACKUP_DIR}/weeklyreport-${stamp}.dump"
-  partial="${target}.partial"
+  if ! partial="$(mktemp "${BACKUP_DIR}/weeklyreport-${stamp}.partial.XXXXXX")"; then
+    log "FAILED — temporary dump file could not be reserved${retry_note}"
+    return 1
+  fi
+  target="${BACKUP_DIR}/weeklyreport-${stamp}-${partial##*.}.dump"
 
   # -Fc (custom format) so restores can be selective and parallel; the dump
-  # lands under .partial and is renamed only on success, so a crashed or
+  # lands in its own private partial and is renamed only on success, so a crashed or
   # truncated run can never be mistaken for a restorable backup.
   if pg_dump --format=custom --compress=6 --file="$partial" 2>&1; then
-    if mv "$partial" "$target"; then
+    # mv -n can return success after skipping an existing destination.
+    if mv -n "$partial" "$target" && [ ! -e "$partial" ]; then
       log "wrote $(basename "$target") ($(wc -c < "$target") bytes)"
 
       deleted="$(find "$BACKUP_DIR" -name 'weeklyreport-*.dump' -type f \

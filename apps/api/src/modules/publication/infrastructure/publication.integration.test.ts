@@ -1,3 +1,4 @@
+import type { UserSession } from "@weeklyreport/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
@@ -34,6 +35,130 @@ describe("PublicationPrismaRepository (integration)", () => {
   afterAll(async () => {
     await cleanDatabase();
     await disconnectTestPrisma();
+  });
+
+  it("scopes preview sections and portfolio while internal publication retains every group", async () => {
+    const groupB = await prisma.reportingGroup.create({
+      data: { name: "Group B" },
+    });
+    const leadB = await prisma.user.create({
+      data: {
+        email: "preview-b@test.local",
+        name: "Lead B",
+        lastName: "Lead",
+        firstName: "B",
+        role: "lead",
+        samlId: "preview-lead-b",
+        reportingGroupId: groupB.id,
+      },
+    });
+    const sectionB = await prisma.reportSection.create({
+      data: { reportId: testData.report.id, authorId: leadB.id },
+    });
+    const projectB = await prisma.project.create({
+      data: { name: "Product B", leadId: leadB.id },
+    });
+    await prisma.groupProduct.create({
+      data: { groupId: groupB.id, productId: projectB.id },
+    });
+    const stage = await prisma.stage.create({
+      data: { name: "Development", sortOrder: 3 },
+    });
+    const sharedStageB = await prisma.stage.create({
+      data: { name: "Support", sortOrder: 4 },
+    });
+    await prisma.stageAssignment.createMany({
+      data: [
+        {
+          userId: testData.lead.id,
+          projectId: testData.project.id,
+          stageId: stage.id,
+        },
+        { userId: leadB.id, projectId: projectB.id, stageId: stage.id },
+        // Shared product is green for A, red for B; only visible contributions count.
+        {
+          userId: leadB.id,
+          projectId: testData.project.id,
+          stageId: sharedStageB.id,
+        },
+      ],
+    });
+    await prisma.projectStatus.createMany({
+      data: [
+        {
+          reportSectionId: testData.section.id,
+          projectId: testData.project.id,
+          status: "green",
+        },
+        {
+          reportSectionId: sectionB.id,
+          projectId: projectB.id,
+          status: "yellow",
+        },
+        {
+          reportSectionId: sectionB.id,
+          projectId: testData.project.id,
+          status: "red",
+        },
+      ],
+    });
+    const headSession: UserSession = {
+      userId: testData.head.id,
+      email: testData.head.email,
+      name: testData.head.name,
+      role: "head",
+      reportingGroupId: expectDefined(testData.head.reportingGroupId),
+    };
+
+    const preview = await service.getAssembledPreview(
+      testData.report.id,
+      headSession,
+    );
+    expect(
+      preview.sections.map(({ reportSectionId }) => reportSectionId),
+    ).toEqual([testData.section.id]);
+    expect(preview.portfolioOverview).toEqual({
+      status: "green",
+      totals: { green: 1, yellow: 0, red: 0 },
+    });
+
+    const groupless = await service.getAssembledPreview(testData.report.id, {
+      ...headSession,
+      reportingGroupId: undefined,
+    });
+    expect(groupless.sections).toEqual([]);
+    expect(groupless.portfolioOverview).toEqual({
+      status: "green",
+      totals: { green: 0, yellow: 0, red: 0 },
+    });
+
+    const full = await service.getAssembledReport(testData.report.id);
+    expect(
+      full.sections.map(({ reportSectionId }) => reportSectionId).sort(),
+    ).toEqual([testData.section.id, sectionB.id].sort());
+    expect(full.portfolioOverview).toEqual({
+      status: "red",
+      totals: { green: 0, yellow: 1, red: 1 },
+    });
+    expect(
+      await service.getAssembledPreview(testData.report.id, {
+        ...headSession,
+        role: "admin",
+        reportingGroupId: undefined,
+      }),
+    ).toEqual(full);
+
+    const outcome = await service.publishAuto(
+      testData.report.id,
+      new Date("2026-04-12T10:00:00.000Z"),
+    );
+    expect(outcome).toMatchObject({
+      published: true,
+      report: {
+        sections: full.sections,
+        portfolioOverview: full.portfolioOverview,
+      },
+    });
   });
 
   it("getAssembledReport returns full report with all sections", async () => {

@@ -155,6 +155,7 @@ const buildHarness = () => {
               input.where.id === candidate.id ? candidate : active,
             ),
         ),
+      findUniqueOrThrow: vi.fn().mockResolvedValue(candidate),
       update: revisionUpdate,
       updateMany: revisionUpdateMany,
       deleteMany: configurationDeleteMany,
@@ -170,7 +171,22 @@ const buildHarness = () => {
     semanticSourceState: {
       upsert: vi.fn().mockResolvedValue({ generation: 0n }),
     },
-    $queryRaw: vi.fn().mockResolvedValue([{ generation: 0n }]),
+    $queryRaw: vi
+      .fn()
+      .mockImplementation((strings: TemplateStringsArray, id: string) =>
+        Promise.resolve(
+          strings.join("").includes('SELECT "lifecycle"')
+            ? [
+                {
+                  lifecycle:
+                    id === candidate.id
+                      ? candidate.lifecycle
+                      : active.lifecycle,
+                },
+              ]
+            : [{ generation: 0n }],
+        ),
+      ),
   };
   const transactionRunner = vi.fn(
     (callback: (value: typeof transaction) => unknown) =>

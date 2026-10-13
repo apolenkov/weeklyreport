@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
+import { AdminPeriodStaleStateError } from "../admin-shared.js";
 import { updatePeriodManual } from "./manual-update.js";
 
 function sqlText(query: unknown): string {
@@ -18,6 +19,64 @@ function sqlText(query: unknown): string {
 }
 
 describe("updatePeriodManual reminder reconciliation", () => {
+  it("rejects a stale deadline before writing the report or reconciling reminders", async () => {
+    const expectedEnvelope = {
+      periodStart: new Date("2026-08-31T00:00:00.000Z"),
+      periodEnd: new Date("2026-09-06T23:59:59.999Z"),
+      deadline: new Date("2026-09-02T18:00:00.000Z"),
+      weekLabel: null,
+    };
+    const report = {
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      findUniqueOrThrow: vi.fn().mockResolvedValue({
+        id: "report-1",
+        ...expectedEnvelope,
+      }),
+    };
+    const tx = {
+      $executeRaw: vi.fn().mockResolvedValue(0),
+      $queryRaw: vi.fn((query: unknown) =>
+        Promise.resolve(
+          sqlText(query).includes('FROM "ReminderPolicy"')
+            ? []
+            : [
+                {
+                  ...expectedEnvelope,
+                  deadline: new Date("2026-09-03T18:00:00.000Z"),
+                  status: "draft",
+                  periodState: "open",
+                  periodStatus: "open",
+                  archived: false,
+                  autoPublished: false,
+                  autoArchived: false,
+                  publishedAt: null,
+                  publishedById: null,
+                  reopenedAt: null,
+                },
+              ],
+        ),
+      ),
+      report,
+      reminderRule: { findFirst: vi.fn() },
+    };
+    const prisma = {
+      $transaction: vi.fn((callback: (client: typeof tx) => Promise<unknown>) =>
+        callback(tx),
+      ),
+    } as unknown as PrismaService;
+
+    await expect(
+      updatePeriodManual(prisma, {
+        reportId: "report-1",
+        expectedPeriodState: "open",
+        expectedEnvelope,
+        data: { deadline: new Date("2026-09-04T18:00:00.000Z") },
+      }),
+    ).rejects.toBeInstanceOf(AdminPeriodStaleStateError);
+    expect(report.updateMany).not.toHaveBeenCalled();
+    expect(tx.reminderRule.findFirst).not.toHaveBeenCalled();
+  });
+
   it("locks policies before the Report and versions an executed schedule atomically", async () => {
     const reportId = "f0000000-0000-4000-a000-0000000000d1";
     const oldDeadline = new Date("2026-09-02T18:00:00.000Z");
@@ -33,6 +92,12 @@ describe("updatePeriodManual reminder reconciliation", () => {
       publishedAt: null,
       publishedById: null,
       reopenedAt: null,
+    };
+    const expectedEnvelope = {
+      periodStart: new Date("2026-08-31T00:00:00.000Z"),
+      periodEnd: new Date("2026-09-06T23:59:59.999Z"),
+      deadline: oldDeadline,
+      weekLabel: "Aug 31–Sep 6, 2026",
     };
     const policy = {
       id: "policy-1",
@@ -52,7 +117,7 @@ describe("updatePeriodManual reminder reconciliation", () => {
       sql.push(statement);
       return statement.includes('FROM "ReminderPolicy"')
         ? [policy]
-        : [lifecycle];
+        : [{ ...lifecycle, ...expectedEnvelope }];
     });
     const reminderRule = {
       findFirst: vi.fn().mockResolvedValue({
@@ -96,6 +161,7 @@ describe("updatePeriodManual reminder reconciliation", () => {
         {
           reportId,
           expectedPeriodState: "open",
+          expectedEnvelope,
           data: { deadline: newDeadline },
         },
         now,

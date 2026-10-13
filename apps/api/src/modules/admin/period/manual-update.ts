@@ -13,12 +13,20 @@ import {
   lockAllReminderPolicies,
   reconcileLockedPolicyForReport,
 } from "../../reminders/index.js";
+import type { AdminRepository } from "../admin-repository.port.js";
 import {
   AdminAccessError,
   AdminPeriodNotFoundError,
   AdminPeriodStaleStateError,
 } from "../admin-shared.js";
+import {
+  computePeriodPatch,
+  type PeriodEnvelope,
+} from "../period-admin.envelope.js";
 import { periodOverlapGuarded } from "./overlap.js";
+
+const STALE_PERIOD_MESSAGE =
+  "The period changed while it was being edited. Reload and try again.";
 
 interface ManualUpdateData {
   periodStart?: Date;
@@ -42,11 +50,11 @@ interface LockedLifecycle {
 async function lockLifecycle(
   tx: Prisma.TransactionClient,
   reportId: string,
-): Promise<LockedLifecycle> {
-  const rows = await tx.$queryRaw<LockedLifecycle[]>`
+): Promise<{ lifecycle: LockedLifecycle; envelope: PeriodEnvelope }> {
+  const rows = await tx.$queryRaw<(LockedLifecycle & PeriodEnvelope)[]>`
     SELECT "status", "periodState", "periodStatus", "archived",
       "autoPublished", "autoArchived", "publishedAt", "publishedById",
-      "reopenedAt"
+      "reopenedAt", "periodStart", "periodEnd", "deadline", "weekLabel"
     FROM "Report" WHERE "id" = ${reportId} FOR UPDATE`;
   const row = rows[0];
   if (row === undefined) {
@@ -54,7 +62,27 @@ async function lockLifecycle(
   }
   const lifecycle = currentPeriodLifecycleSchema.safeParse(row);
   if (!lifecycle.success) throw new PeriodLifecycleIntegrityError();
-  return lifecycle.data;
+  return { lifecycle: lifecycle.data, envelope: row };
+}
+
+function assertExpectedEnvelope(
+  current: PeriodEnvelope,
+  expected: PeriodEnvelope,
+  data: ManualUpdateData,
+): void {
+  const { data: concurrentChanges } = computePeriodPatch(expected, current);
+  // A range precheck used both bounds, even when only one was requested.
+  const rangeEdit =
+    data.periodStart !== undefined || data.periodEnd !== undefined;
+  if (
+    (rangeEdit &&
+      (concurrentChanges.periodStart !== undefined ||
+        concurrentChanges.periodEnd !== undefined)) ||
+    (data.deadline !== undefined && concurrentChanges.deadline !== undefined) ||
+    (data.weekLabel !== undefined && concurrentChanges.weekLabel !== undefined)
+  ) {
+    throw new AdminPeriodStaleStateError(STALE_PERIOD_MESSAGE);
+  }
 }
 
 function hasEnvelopeEdit(data: ManualUpdateData): boolean {
@@ -72,9 +100,7 @@ function assertUpdateAllowed(
 ): void {
   if (!hasEnvelopeEdit(data)) return;
   if (lifecycle.periodState !== expectedPeriodState) {
-    throw new AdminPeriodStaleStateError(
-      "The period changed while it was being edited. Reload and try again.",
-    );
+    throw new AdminPeriodStaleStateError(STALE_PERIOD_MESSAGE);
   }
   if (
     lifecycle.periodState === "published" ||
@@ -97,9 +123,7 @@ async function writeManualUpdate(
     data,
   });
   if (count !== 1) {
-    throw new AdminPeriodStaleStateError(
-      "The period changed while it was being edited. Reload and try again.",
-    );
+    throw new AdminPeriodStaleStateError(STALE_PERIOD_MESSAGE);
   }
   return tx.report.findUniqueOrThrow({
     where: { id: reportId },
@@ -122,11 +146,7 @@ async function writeManualUpdate(
 // semantics are exactly right. `periodState` is never touched here.
 export async function updatePeriodManual(
   prisma: PrismaService,
-  input: {
-    reportId: string;
-    expectedPeriodState: PeriodState;
-    data: ManualUpdateData;
-  },
+  input: Parameters<AdminRepository["updatePeriodManual"]>[0],
   now: Date = new Date(),
 ) {
   return periodOverlapGuarded(() =>
@@ -140,8 +160,9 @@ export async function updatePeriodManual(
         input.data.deadline === undefined
           ? []
           : await lockAllReminderPolicies(tx);
-      const lifecycle = await lockLifecycle(tx, input.reportId);
+      const { lifecycle, envelope } = await lockLifecycle(tx, input.reportId);
       assertUpdateAllowed(lifecycle, input.expectedPeriodState, input.data);
+      assertExpectedEnvelope(envelope, input.expectedEnvelope, input.data);
       const updated = await writeManualUpdate(
         tx,
         input.reportId,

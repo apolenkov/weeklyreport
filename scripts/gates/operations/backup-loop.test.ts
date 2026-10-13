@@ -7,6 +7,8 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -65,29 +67,32 @@ const runBackup = (
   for (const [name, body] of Object.entries(commandStubs.additional ?? {})) {
     writeCommandStub(bin, probeLog, name, body);
   }
-  const result = spawnSync("/bin/sh", [backupScript], {
-    env: {
-      ...process.env,
-      PATH: `${bin}:${path}`,
-      PGHOST: "postgres",
-      PGUSER: "backup",
-      PGPASSWORD: fixtureCredential,
-      PGDATABASE: "weeklyreport",
-      BACKUP_DIR: join(directory, "backups"),
-      BACKUP_INTERVAL_SECONDS: "3600",
-      BACKUP_RETENTION_DAYS: "14",
-      ...overrides,
-    },
-    encoding: "utf8",
-    timeout: commandStubs.timeoutMs ?? 500,
-  });
+  const runAgain = (extraEnv: NodeJS.ProcessEnv = {}) =>
+    spawnSync("/bin/sh", [backupScript], {
+      env: {
+        ...process.env,
+        PATH: `${bin}:${path}`,
+        PGHOST: "postgres",
+        PGUSER: "backup",
+        PGPASSWORD: fixtureCredential,
+        PGDATABASE: "weeklyreport",
+        BACKUP_DIR: join(directory, "backups"),
+        BACKUP_INTERVAL_SECONDS: "3600",
+        BACKUP_RETENTION_DAYS: "14",
+        ...overrides,
+        ...extraEnv,
+      },
+      encoding: "utf8",
+      timeout: commandStubs.timeoutMs ?? 500,
+    });
+  const result = runAgain();
   let calls = "";
   try {
     calls = readFileSync(probeLog, "utf8");
   } catch {
     // Validation should fail before any external command is called.
   }
-  return { calls, directory, result };
+  return { calls, directory, result, runAgain };
 };
 
 const runBackupHealth = (interval: string) => {
@@ -190,6 +195,165 @@ done
 exit ${String(exitCode)}`;
 
 const oneShot = { BACKUP_RUN_ONCE: "true", BACKUP_INTERVAL_SECONDS: undefined };
+
+const finiteDump = `for argument in "$@"; do
+  case "$argument" in
+    --file=*) output_file="$(printf '%s' "$argument" | sed 's/^--file=//')" ;;
+  esac
+done
+printf '%s' "$BACKUP_PAYLOAD" > "$output_file"`;
+
+test("same-second one-shot dumps preserve both complete payloads", () => {
+  const { directory, result, runAgain } = runBackup(
+    { ...oneShot, BACKUP_PAYLOAD: "first-finite-fixture" },
+    {
+      pgDump: finiteDump,
+      additional: { date: String.raw`printf '%s\n' '20261013T100000Z'` },
+      timeoutMs: 10_000,
+    },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  const next = runAgain({ BACKUP_PAYLOAD: "second-finite-fixture" });
+  assert.equal(next.status, 0, next.stderr);
+  const backups = join(directory, "backups");
+  const files = readdirSync(backups);
+  assert.equal(
+    files.length,
+    2,
+    "same-second run replaced the first complete dump",
+  );
+  assert.ok(files.every((file) => /^weeklyreport-.*\.dump$/.test(file)));
+  assert.deepEqual(
+    files.map((file) => readFileSync(join(backups, file), "utf8")).sort(),
+    ["first-finite-fixture", "second-finite-fixture"],
+  );
+});
+
+test("new backup directories and completed dumps exclude group and other access", () => {
+  const { directory, result } = runBackup(
+    { ...oneShot, BACKUP_PAYLOAD: "finite-fixture" },
+    {
+      pgDump: `${finiteDump}\nls -ld "$output_file"`,
+      timeoutMs: 10_000,
+    },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  const backups = join(directory, "backups");
+  assert.equal(statSync(backups).mode & 0o777, 0o700);
+  const [dump] = readdirSync(backups);
+  assert.ok(dump);
+  assert.equal(statSync(join(backups, dump)).mode & 0o777, 0o600);
+  assert.match(result.stdout, /^-rw-------/m);
+});
+
+test("private dumps preserve an existing mounted directory mode", () => {
+  const mounted = mkdtempSync(join(tmpdir(), "backup-mounted-"));
+  fixtureRoots.add(mounted);
+  chmodSync(mounted, 0o775);
+  const { result } = runBackup(
+    { ...oneShot, BACKUP_DIR: mounted, BACKUP_PAYLOAD: "finite-fixture" },
+    {
+      pgDump: `${finiteDump}\nls -ld "$output_file"`,
+      timeoutMs: 10_000,
+    },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(statSync(mounted).mode & 0o777, 0o775);
+  const [dump] = readdirSync(mounted);
+  assert.ok(dump);
+  assert.equal(statSync(join(mounted, dump)).mode & 0o777, 0o600);
+  assert.match(result.stdout, /^-rw-------/m);
+});
+
+test("temporary-file failure calls neither pg_dump nor retention", () => {
+  const { calls, directory, result } = runBackup(oneShot, {
+    pgDump: finiteDump,
+    additional: { mktemp: "exit 1", find: "exit 99" },
+    timeoutMs: 10_000,
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stdout, /temporary dump file could not be reserved/);
+  assert.doesNotMatch(result.stdout, /wrote|pruned/);
+  assert.doesNotMatch(calls, /pg_dump|find|sleep/);
+  assert.deepEqual(readdirSync(join(directory, "backups")), []);
+});
+
+test("unique published names remain subject to retention and health freshness", () => {
+  const { directory, result, runAgain } = runBackup(
+    { ...oneShot, BACKUP_PAYLOAD: "finite-fixture" },
+    {
+      pgDump: finiteDump,
+      timeoutMs: 10_000,
+    },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  const backups = join(directory, "backups");
+  const oldDump = join(backups, "weeklyreport-old.dump");
+  const otherFile = join(backups, "other-product.dump");
+  const partial = join(backups, "weeklyreport-old.partial.fixture");
+  const old = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  for (const file of [oldDump, otherFile, partial]) {
+    writeFileSync(file, "old-finite-fixture");
+    utimesSync(file, old, old);
+  }
+  assert.equal(runAgain().status, 0);
+  assert.ok(!readdirSync(backups).includes("weeklyreport-old.dump"));
+  assert.equal(readFileSync(otherFile, "utf8"), "old-finite-fixture");
+  assert.equal(readFileSync(partial, "utf8"), "old-finite-fixture");
+  const health = () =>
+    spawnSync("/bin/sh", [backupHealthScript], {
+      env: {
+        ...process.env,
+        BACKUP_DIR: backups,
+        BACKUP_INTERVAL_SECONDS: "3600",
+      },
+      encoding: "utf8",
+      timeout: 10_000,
+    });
+  assert.equal(
+    health().status,
+    0,
+    "health did not recognize a unique published dump",
+  );
+  for (const file of readdirSync(backups).filter(
+    (file) => file.startsWith("weeklyreport-") && file.endsWith(".dump"),
+  )) {
+    utimesSync(join(backups, file), old, old);
+  }
+  utimesSync(partial, new Date(), new Date());
+  assert.equal(health().status, 1, "a partial file hid stale complete dumps");
+});
+
+test("a skipped non-clobber publish fails and preserves an existing dump", () => {
+  const { calls, directory, result } = runBackup(
+    { ...oneShot, BACKUP_PAYLOAD: "new-finite-fixture" },
+    {
+      pgDump: finiteDump,
+      additional: {
+        mv: `for target in "$@"; do :; done
+printf '%s' 'existing-finite-fixture' > "$target"
+/bin/mv "$@"`,
+        find: "exit 99",
+      },
+      timeoutMs: 10_000,
+    },
+  );
+  assert.notEqual(
+    result.status,
+    0,
+    "mv -n's silent skip was counted as a successful publication",
+  );
+  assert.match(result.stdout, /completed dump could not be published/);
+  assert.doesNotMatch(result.stdout, /wrote|pruned/);
+  assert.doesNotMatch(calls, /find/);
+  const backups = join(directory, "backups");
+  const files = readdirSync(backups);
+  assert.equal(files.length, 1, "failed publication left a partial file");
+  assert.equal(
+    readFileSync(join(backups, files[0] ?? ""), "utf8"),
+    "existing-finite-fixture",
+  );
+});
 
 test("one-shot mode writes one dump, needs no interval, and never sleeps", () => {
   const { calls, directory, result } = runBackup(oneShot, {

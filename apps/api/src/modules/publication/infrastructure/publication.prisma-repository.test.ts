@@ -61,6 +61,20 @@ function makeRepo(
   );
 }
 
+describe("PublicationPrismaRepository.getAssembledPreview", () => {
+  it("rejects a preview without a session before querying the report", async () => {
+    const findUnique = vi.fn();
+    const repo = new PublicationPrismaRepository(
+      asAny({ report: { findUnique } }),
+    );
+
+    await expect(
+      repo.getAssembledPreview("rep-1", asAny(undefined)),
+    ).rejects.toThrow("without a scope session");
+    expect(findUnique).not.toHaveBeenCalled();
+  });
+});
+
 describe("PublicationPrismaRepository.saveAutoPublishedReport", () => {
   beforeEach(() => {
     vi.clearAllMocks();

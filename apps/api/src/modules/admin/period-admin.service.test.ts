@@ -184,6 +184,7 @@ describe("PeriodAdminService — updatePeriodManual published guard", () => {
     expect(repo.updatePeriodManual).toHaveBeenCalledWith({
       reportId: REPORT_ID,
       expectedPeriodState: "open",
+      expectedEnvelope: seedRow("open"),
       data: { deadline: null },
     });
   });
