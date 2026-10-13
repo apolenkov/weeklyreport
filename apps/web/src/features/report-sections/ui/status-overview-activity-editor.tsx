@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 
 import {
   ActivityDescriptionField,
@@ -20,6 +20,15 @@ export type {
 
 const STALE_FIELDS_MESSAGE =
   "Weekly fields changed while you were editing. Copy any text you need. Cancel discards your local changes; then reopen to load the latest values.";
+// Distinct keys mount a fresh alert when server values become stale.
+const WEEKLY_FIELDS_CAPTION = (
+  <p
+    key="weekly-fields-caption"
+    className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]"
+  >
+    Weekly fields
+  </p>
+);
 
 // Weekly title/description editor for one activity unit in the Overview row
 // composer. Keeps local input while a save is pending and never renames the
@@ -43,12 +52,10 @@ export function StatusOverviewActivityEditor({
   readonly onClose: () => void;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const warningId = useId();
   useEffect(() => formRef.current?.focus(), []);
   const draft = useActivityFieldsDraft(activityId, values, onPendingChange);
-  const { titleError, descriptionError, invalid } = activityFieldErrors(
-    draft.title,
-    draft.description,
-  );
+  const errors = activityFieldErrors(draft.title, draft.description);
 
   return (
     <form
@@ -58,7 +65,7 @@ export function StatusOverviewActivityEditor({
       aria-label={`Weekly fields for ${values.catalogueName}`}
       onSubmit={(event) => {
         event.preventDefault();
-        if (invalid || draft.stale) return;
+        if (errors.invalid || draft.stale) return;
         onChange(activityId, {
           titleOverride: normalize(draft.title),
           description: normalize(draft.description),
@@ -67,35 +74,38 @@ export function StatusOverviewActivityEditor({
         onClose();
       }}
     >
-      <p
-        role={draft.stale ? "alert" : undefined}
-        className={
-          draft.stale
-            ? "text-sm leading-4 text-[var(--color-destructive)]"
-            : "text-xs font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]"
-        }
-      >
-        {draft.stale ? STALE_FIELDS_MESSAGE : "Weekly fields"}
-      </p>
+      {draft.stale ? (
+        <p
+          key="stale-fields-warning"
+          id={warningId}
+          role="alert"
+          className="text-sm leading-4 text-[var(--color-destructive)]"
+        >
+          {STALE_FIELDS_MESSAGE}
+        </p>
+      ) : (
+        WEEKLY_FIELDS_CAPTION
+      )}
       <div className="mt-2 grid gap-2 md:grid-cols-2">
         <ActivityTitleField
           activityId={activityId}
           value={draft.title}
           placeholder={values.catalogueName}
-          error={titleError}
+          error={errors.titleError}
           onChange={draft.editTitle}
         />
         <ActivityDescriptionField
           activityId={activityId}
           value={draft.description}
-          error={descriptionError}
+          error={errors.descriptionError}
           onChange={draft.editDescription}
         />
       </div>
       <ActivityFieldActions
         activityId={activityId}
         dirty={draft.dirty}
-        invalid={invalid || draft.stale}
+        invalid={errors.invalid || draft.stale}
+        descriptionId={draft.stale ? warningId : undefined}
         onCancel={() => {
           draft.cancel();
           onClose();

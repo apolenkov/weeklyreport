@@ -79,7 +79,7 @@ function renderRejectedRequest(reason: string, domainMessage?: string) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Request changes rejection through the public tRPC client", () => {
-  it("retains invisible-only input and replaces serialized server validation issues", async () => {
+  it("blocks invisible-only input before transport and retains it for correction", async () => {
     const reason = "\u200B\u200C\u200D";
     const { fetcher, onClose, parsed } = renderRejectedRequest(reason);
     expect(parsed.success).toBe(false);
@@ -89,11 +89,11 @@ describe("Request changes rejection through the public tRPC client", () => {
       screen.getByRole("button", { name: "Request changes" }),
     );
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Failed to request changes.",
+      "Enter a reason for the lead.",
     );
     expect(screen.getByRole("alert").textContent).not.toContain('"code"');
     expect(field).toHaveValue(reason);
-    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(fetcher).not.toHaveBeenCalled();
     expect(onClose).not.toHaveBeenCalled();
   });
 

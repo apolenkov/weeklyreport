@@ -239,6 +239,7 @@ describe("StatusOverviewActivityEditor", () => {
       const title = screen.getByTestId(`activity-title-${ACTIVITY_ID}`);
       await user.clear(title);
       await user.type(title, "  Pending title  ");
+      const caption = screen.getByText("Weekly fields");
 
       rerender(
         <StatusOverviewActivityEditor
@@ -256,6 +257,11 @@ describe("StatusOverviewActivityEditor", () => {
       );
 
       const form = screen.getByRole("form");
+      const alert = screen.getByRole("alert");
+      const save = screen.getByRole("button", { name: "Save weekly fields" });
+      expect.soft(alert).not.toBe(caption);
+      expect.soft(alert.id).not.toBe("");
+      expect.soft(save).toHaveAttribute("aria-describedby", alert.id);
       expect(title).toHaveFocus();
       fireEvent.submit(form);
       expect(onChange).not.toHaveBeenCalled();

@@ -3,6 +3,7 @@
 import { useMutation } from "@tanstack/react-query";
 import {
   REVIEW_COMMENT_MAX_LENGTH,
+  reviewVerdictInputSchema,
   type ReviewVerdictResult,
 } from "@weeklyreport/shared";
 import { useId, useRef, useState } from "react";
@@ -167,18 +168,18 @@ export function RequestChangesDialog({
 
   const submit = () => {
     if (isPending) return;
-    const comment = reason.trim();
-    if (comment === "") {
+    const command = reviewVerdictInputSchema.safeParse({
+      reportSectionId,
+      verdict: "changes_requested",
+      version,
+      comment: reason.trim(),
+    });
+    if (!command.success) {
       setError(EMPTY_REASON_ERROR);
       return;
     }
     setError(null);
-    mutation.mutate({
-      reportSectionId,
-      verdict: "changes_requested",
-      version,
-      comment,
-    });
+    mutation.mutate(command.data);
   };
 
   return (

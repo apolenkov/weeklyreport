@@ -217,12 +217,14 @@ export function ActivityFieldActions({
   activityId,
   dirty,
   invalid,
+  descriptionId,
   onCancel,
   onReset,
 }: {
   readonly activityId: string;
   readonly dirty: boolean;
   readonly invalid: boolean;
+  readonly descriptionId?: string | undefined;
   readonly onCancel: () => void;
   readonly onReset: () => void;
 }) {
@@ -231,6 +233,7 @@ export function ActivityFieldActions({
       <button
         type="submit"
         disabled={!dirty || invalid}
+        aria-describedby={descriptionId}
         data-testid={`activity-fields-save-${activityId}`}
         className="inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-sm)] px-2 text-xs font-semibold text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] disabled:opacity-50"
       >
