@@ -351,11 +351,13 @@ artifact, and queue entry.
 ### Перед деплоем OCR-правок 287
 
 Run these on the real target database (read-only queries, the owner runs them)
-before applying `20261007003500_user_email_case_insensitive`,
+before applying any of these migrations:
+`20261007003500_user_email_case_insensitive`,
 `20261007120000_semantic_embedding_nonzero_vector`,
-`20261012110000_report_autoarchive_flag_check` and
-`20261012163000_reviewer_history_delete_restrict`, and before deploying the
-API that enforces the key format. Take the pre-deploy dump first
+`20261012110000_report_autoarchive_flag_check`,
+`20261012163000_reviewer_history_delete_restrict` or
+`20261013020000_reopen_reviewer_history_delete_restrict`. Also run them before
+deploying the API that enforces the key format. Take the pre-deploy dump first
 ([Manual and pre-deploy backup](#manual-and-pre-deploy-backup)).
 
 1. **Email duplicates.** The first migration fails loudly on any case-only
@@ -389,9 +391,13 @@ API that enforces the key format. Take the pre-deploy dump first
 
 4. **Reviewer history.** The fourth migration replaces the three reviewer-user
    foreign keys with `ON DELETE RESTRICT` in one transaction, without deleting
-   data. A user with any live acknowledgement, verdict or comment must be
-   deactivated instead of deleted. Existing validated foreign keys already
-   prevent orphaned references; no data cleanup is required before replacement.
+   data. The fifth migration sets `ReopenRequest.reviewedById` to
+   `ON DELETE RESTRICT ON UPDATE CASCADE`, preserving the live reviewer as the
+   author of the decision. Existing `NULL` authors on legacy requests remain
+   unchanged. A user with any live acknowledgement, verdict, comment or reopen
+   decision must be deactivated instead of deleted. Existing validated foreign
+   keys already prevent orphaned references; no cleanup or backfill is required
+   before either replacement.
 
 5. **Rollback of the first three schema changes.** Undo each applied migration separately,
    only when its schema change must be undone. Deleted cache rows are not
@@ -405,10 +411,10 @@ API that enforces the key format. Take the pre-deploy dump first
 
    Prisma migration history still lists the applied migrations after this;
    reconcile it only through the explicitly authorized recovery path, otherwise
-   fix forward with a new migration. Do not restore reviewer-user cascades:
-   that would permit deletion of retained history and violate the owner policy.
-   Recover the fourth migration by fixing forward; any reversal requires a new
-   owner decision.
+   fix forward with a new migration. Do not undo the fourth or fifth reviewer
+   migration or restore reviewer-user delete cascades: that would permit
+   deletion of retained history and violate the owner policy. Recover either
+   migration by fixing forward; any reversal requires a new owner decision.
 
 6. **Key format, without printing the value.** For every environment, the
    `AI_PROVIDER_CONFIG_ENCRYPTION_KEY` must be 64 hex characters or canonical

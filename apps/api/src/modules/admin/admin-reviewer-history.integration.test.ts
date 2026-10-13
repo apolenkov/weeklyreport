@@ -423,12 +423,16 @@ describe("admin user deletion retains live reviewer history (integration)", () =
       expect(after.rows).toEqual(before.rows);
       const foreignKey = await client.query<{
         action: string;
+        update_action: string;
         validated: boolean;
-      }>(`SELECT confdeltype AS action, convalidated AS validated
+      }>(`SELECT confdeltype AS action, confupdtype AS update_action,
+                 convalidated AS validated
           FROM pg_constraint
           WHERE conrelid = '"ReopenRequest"'::regclass
             AND conname = 'ReopenRequest_reviewedById_fkey'`);
-      expect(foreignKey.rows).toEqual([{ action: "r", validated: true }]);
+      expect(foreignKey.rows).toEqual([
+        { action: "r", update_action: "c", validated: true },
+      ]);
     } finally {
       await client.query("ROLLBACK").catch(() => undefined);
       await client.end();
