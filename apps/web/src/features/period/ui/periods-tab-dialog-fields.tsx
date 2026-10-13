@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 interface CreatePeriodFieldsProps {
   readonly envelopeFrozen: boolean;
   readonly periodStart: string;
+  readonly periodStartError: string | null;
   readonly onPeriodStartChange: (value: string) => void;
   readonly periodEnd: string;
   readonly onPeriodEndChange: (value: string) => void;
@@ -75,10 +76,11 @@ function FieldError({
 function PeriodStartField({
   envelopeFrozen,
   periodStart,
+  periodStartError,
   onPeriodStartChange,
 }: Pick<
   CreatePeriodFieldsProps,
-  "envelopeFrozen" | "periodStart" | "onPeriodStartChange"
+  "envelopeFrozen" | "periodStart" | "periodStartError" | "onPeriodStartChange"
 >) {
   return (
     <div>
@@ -95,10 +97,24 @@ function PeriodStartField({
         value={periodStart}
         onChange={(e) => onPeriodStartChange(e.target.value)}
         required
-        aria-describedby={envelopeFrozen ? FROZEN_ENVELOPE_ID : undefined}
+        aria-invalid={periodStartError !== null}
+        aria-describedby={
+          envelopeFrozen
+            ? FROZEN_ENVELOPE_ID
+            : periodStartError
+              ? "period-start-error"
+              : undefined
+        }
         data-testid="periods-create-start"
-        className={FIELD_CLASS}
+        className={periodStartError ? INVALID_FIELD_CLASS : FIELD_CLASS}
       />
+      {periodStartError && (
+        <FieldError
+          id="period-start-error"
+          testId="periods-start-error"
+          message={periodStartError}
+        />
+      )}
     </div>
   );
 }

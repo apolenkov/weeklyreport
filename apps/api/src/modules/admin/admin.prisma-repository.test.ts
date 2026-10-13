@@ -140,6 +140,10 @@ describe("AdminPrismaRepository period writers — overlap translation", () => {
                 publishedAt: null,
                 publishedById: null,
                 reopenedAt: null,
+                periodStart: INPUT.periodStart,
+                periodEnd: INPUT.periodEnd,
+                deadline: INPUT.deadline,
+                weekLabel: null,
               },
             ]),
           ),
@@ -196,6 +200,7 @@ describe("AdminPrismaRepository period writers — overlap translation", () => {
       repo.updatePeriodManual({
         reportId: "report-1",
         expectedPeriodState: "open",
+        expectedEnvelope: INPUT,
         data: { periodStart: INPUT.periodStart, periodEnd: INPUT.periodEnd },
       }),
     ).rejects.toBeInstanceOf(AdminPeriodOverlapError);

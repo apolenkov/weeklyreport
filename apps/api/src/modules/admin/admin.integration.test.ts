@@ -279,6 +279,97 @@ describe("AdminPrismaRepository (integration)", () => {
     },
   );
 
+  it.each([
+    [
+      "deadline",
+      { deadline: new Date("2026-04-13") },
+      { deadline: new Date("2026-04-12") },
+    ],
+    [
+      "weekLabel",
+      { weekLabel: "Stale label" },
+      { weekLabel: "Committed label" },
+    ],
+    [
+      "companion range boundary",
+      { periodStart: new Date("2026-04-09") },
+      { periodEnd: new Date("2026-04-08") },
+    ],
+  ] as const)(
+    "rejects a stale manual %s edit without overwriting the winner",
+    async (_label, stalePatch, winningPatch) => {
+      const gate = createPauseGate();
+      const service = new PeriodAdminService(
+        new AdminPrismaRepository(
+          pauseBeforeTransaction(prisma, gate.pause) as never,
+        ),
+        createNullLogger(),
+      );
+      const update = service.updatePeriodManual({
+        reportId: testData.report.id,
+        ...stalePatch,
+      });
+      await gate.paused;
+      try {
+        await new PeriodAdminService(
+          repo,
+          createNullLogger(),
+        ).updatePeriodManual({
+          reportId: testData.report.id,
+          ...winningPatch,
+        });
+      } finally {
+        gate.release();
+      }
+      await expect(update).rejects.toBeInstanceOf(AdminPeriodStaleStateError);
+      await expect(
+        repo.readPeriodById(testData.report.id),
+      ).resolves.toMatchObject({
+        periodStart: testData.report.periodStart,
+        periodEnd: testData.report.periodEnd,
+        deadline: testData.report.deadline,
+        weekLabel: testData.report.weekLabel,
+        ...winningPatch,
+      });
+    },
+  );
+
+  it("preserves independent manual deadline and label edits with an accurate audit diff", async () => {
+    const gate = createPauseGate();
+    const service = new PeriodAdminService(
+      new AdminPrismaRepository(
+        pauseBeforeTransaction(prisma, gate.pause) as never,
+      ),
+      createNullLogger(),
+    );
+    const deadline = new Date("2026-04-12");
+    const update = service.updatePeriodManual({
+      reportId: testData.report.id,
+      deadline,
+    });
+    await gate.paused;
+    try {
+      await new PeriodAdminService(repo, createNullLogger()).updatePeriodManual(
+        {
+          reportId: testData.report.id,
+          weekLabel: "Independent label",
+        },
+      );
+    } finally {
+      gate.release();
+    }
+    await expect(update).resolves.toMatchObject({
+      result: { deadline, weekLabel: "Independent label" },
+      diff: { deadline: { from: testData.report.deadline, to: deadline } },
+    });
+    await expect(
+      repo.readPeriodById(testData.report.id),
+    ).resolves.toMatchObject({
+      deadline,
+      weekLabel: "Independent label",
+    });
+  });
+
   it("allows a weekLabel-only edit after publication", async () => {
     await prisma.report.update({
       where: { id: testData.report.id },
@@ -297,6 +388,7 @@ describe("AdminPrismaRepository (integration)", () => {
       repo.updatePeriodManual({
         reportId: testData.report.id,
         expectedPeriodState: "published",
+        expectedEnvelope: testData.report,
         data: { weekLabel: "Published label" },
       }),
     ).resolves.toMatchObject({

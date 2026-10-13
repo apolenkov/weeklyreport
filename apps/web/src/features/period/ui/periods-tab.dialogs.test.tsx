@@ -268,6 +268,54 @@ describe.each([
     });
   });
 
+  it.each([
+    {
+      field: "periods-create-start",
+      error: "periods-start-error",
+      message: "Enter a valid period start.",
+    },
+    {
+      field: "periods-create-end",
+      error: "periods-end-error",
+      message: "Enter a valid period end.",
+    },
+  ])("blocks an unparseable $field until corrected", async (field) => {
+    const user = userEvent.setup();
+    const { captured } = renderTab();
+    const mutation = expectDefined(captured[scenario.mutation]);
+    await user.click(await screen.findByTestId(scenario.triggerTestId));
+    fireEvent.change(screen.getByTestId("periods-create-start"), {
+      target: { value: "2026-05-12" },
+    });
+    fireEvent.change(screen.getByTestId("periods-create-end"), {
+      target: { value: "2026-05-12" },
+    });
+    await user.clear(screen.getByTestId("periods-create-deadline"));
+    const input = screen.getByTestId(field.field);
+    const submit = screen.getByTestId("periods-create-submit");
+
+    fireEvent.change(input, { target: { value: "999999-12-31" } });
+    expect(input).toHaveValue("999999-12-31");
+    expect(submit).toBeDisabled();
+    expect(screen.getByTestId(field.error)).toHaveTextContent(field.message);
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(input).toHaveAccessibleDescription(field.message);
+    await user.click(submit);
+    expect(mutation.mutationFn).not.toHaveBeenCalled();
+
+    fireEvent.change(input, { target: { value: "2026-05-12" } });
+    expect(screen.queryByTestId(field.error)).not.toBeInTheDocument();
+    expect(input).toHaveAttribute("aria-invalid", "false");
+    expect(submit).toBeEnabled();
+    await user.click(submit);
+    await waitFor(() => expect(mutation.mutationFn).toHaveBeenCalledOnce());
+    expect(mutation.mutationFn.mock.calls[0]?.[0]).toMatchObject({
+      periodStart: new Date("2026-05-12T00:00:00.000Z"),
+      periodEnd: new Date("2026-05-12T23:59:59.999Z"),
+      ...(scenario.mode === "edit" ? { deadline: null } : {}),
+    });
+  });
+
   it.each(["success", "failure"] as const)(
     "locks the submitted draft until %s settles",
     async (outcome) => {

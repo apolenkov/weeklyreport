@@ -88,6 +88,11 @@ function createRepository(
   let currentReport = report ? structuredClone(report) : null;
 
   return {
+    getAssembledPreview: () => {
+      throw new Error(
+        "Unexpected preview read in an internal publication test",
+      );
+    },
     getAssembledReport(activeReportId: string) {
       if (activeReportId !== currentReport?.reportId) {
         return Promise.resolve(null);
@@ -435,6 +440,11 @@ describe("PublicationService", () => {
       const repository: PublicationRepository = {
         getAssembledReport: () =>
           Promise.resolve(structuredClone(assembledReport)),
+        getAssembledPreview: () => {
+          throw new Error(
+            "Unexpected preview read in an internal publication test",
+          );
+        },
         saveAutoPublishedReport,
       };
       const service = new PublicationService(

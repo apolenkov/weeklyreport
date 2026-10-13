@@ -3,8 +3,13 @@ import type { AiProviderControlRead } from "@weeklyreport/shared";
 
 import type { ResolvedEmbeddingProfile } from "../domain/provider-profile.js";
 import type { StoredAiProviderRevision } from "../infrastructure/ai-provider.repository.js";
+import {
+  failActivation,
+  type RequestedActivation,
+} from "./ai-provider.activation-guards.js";
 import { AiProviderReadService } from "./ai-provider.read-service.js";
 import {
+  AiProviderConflictError,
   type AiProviderServiceDependencies,
   now,
 } from "./ai-provider.service-support.js";
@@ -17,6 +22,8 @@ export type PreparationResult = Readonly<{
   sourceFingerprint?: string;
   sourceGeneration?: bigint;
 }>;
+
+const PREPARATION_OWNER_CONFLICT = "AI provider preparation lost its owner";
 
 export const preparationAlreadyCompleted = (
   revision: StoredAiProviderRevision,
@@ -36,13 +43,42 @@ export class AiProviderActivationPreparation {
     private readonly reader: AiProviderReadService,
   ) {}
 
+  async isFresh(revision: StoredAiProviderRevision): Promise<boolean> {
+    if (!preparationAlreadyCompleted(revision)) return false;
+    const preparation = this.dependencies.preparation;
+    if (!preparation?.currentSourceFingerprint) return true;
+    const current = await preparation.currentSourceFingerprint(revision);
+    return current === revision.preparationSourceFingerprint;
+  }
+
+  rethrowConflict(
+    error: unknown,
+    profile: ResolvedEmbeddingProfile["profile"],
+    requested: RequestedActivation,
+  ): never {
+    if (error instanceof AiProviderConflictError) {
+      return failActivation(this.dependencies, profile, error.message, {
+        requested,
+        errorClass: AiProviderConflictError,
+      });
+    }
+    throw error;
+  }
+
   async start(
-    revisionId: string,
+    revision: StoredAiProviderRevision,
     profile: ResolvedEmbeddingProfile,
   ): Promise<StoredAiProviderRevision> {
-    const startedAt = now();
+    // Existing timestamps also identify preparation ownership. Advance it even
+    // when retries share a millisecond or a frozen clock.
+    const startedAt = new Date(
+      Math.max(
+        now().getTime(),
+        (revision.preparationStartedAt?.getTime() ?? -1) + 1,
+      ),
+    );
     const preparing = await this.dependencies.repository.updateProgress(
-      revisionId,
+      revision.id,
       {
         completed: 0,
         total: 0,
@@ -51,8 +87,18 @@ export class AiProviderActivationPreparation {
         startedAt,
         finishedAt: null,
         lifecycle: AiProviderLifecycle.preparing,
+        expectedRevision: {
+          updatedAt: revision.updatedAt,
+          lifecycle: revision.lifecycle,
+          preparationStartedAt: revision.preparationStartedAt,
+          preparationFinishedAt: revision.preparationFinishedAt,
+        },
       },
     );
+    if (!preparing)
+      throw new AiProviderConflictError(
+        "AI provider preparation lost a lifecycle race",
+      );
     this.record(profile.profile, preparing);
     return preparing;
   }
@@ -72,6 +118,7 @@ export class AiProviderActivationPreparation {
         lifecycle: AiProviderLifecycle.preparing,
       },
     );
+    if (!updated) throw new AiProviderConflictError(PREPARATION_OWNER_CONFLICT);
     this.record(profile.profile, updated);
   }
 
@@ -83,8 +130,17 @@ export class AiProviderActivationPreparation {
   ): Promise<void> {
     const completed = await this.dependencies.repository.updateProgress(
       revisionId,
-      { ...result, startedAt, finishedAt: now() },
+      {
+        ...result,
+        elapsedMs: Math.max(0, result.elapsedMs),
+        startedAt,
+        finishedAt: new Date(
+          Math.max(now().getTime(), startedAt?.getTime() ?? 0),
+        ),
+      },
     );
+    if (!completed)
+      throw new AiProviderConflictError(PREPARATION_OWNER_CONFLICT);
     this.record(profile.profile, completed);
   }
 
@@ -99,11 +155,13 @@ export class AiProviderActivationPreparation {
       revisionId,
       {
         ...result,
+        elapsedMs: Math.max(0, result.elapsedMs),
         startedAt,
-        finishedAt: now(),
+        finishedAt: new Date(Math.max(now().getTime(), startedAt.getTime())),
         lifecycle: AiProviderLifecycle.failed,
       },
     );
+    if (!failed) throw new AiProviderConflictError(PREPARATION_OWNER_CONFLICT);
     this.record(profile.profile, failed);
     this.dependencies.audit.record({
       event: "ai_provider.activation_failed",

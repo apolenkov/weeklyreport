@@ -8,6 +8,11 @@ import {
 
 import type { AppLogger } from "../../lib/logger.js";
 
+export interface OrganizationTransition {
+  readonly previous: Organization;
+  readonly next: Organization;
+}
+
 export interface OrganizationRepository {
   // The canonical init migration and seed establish the singleton. A missing
   // row is an invariant failure and must be surfaced, never created on read.
@@ -15,7 +20,7 @@ export interface OrganizationRepository {
   // Implementations MUST keep id='singleton' — no new id is accepted on the wire.
   readonly updateOrganization: (
     input: OrganizationUpdate,
-  ) => Promise<Organization>;
+  ) => Promise<OrganizationTransition>;
 }
 
 // Singleton Organization identity; audit on write lives in the router
@@ -38,12 +43,16 @@ export class OrganizationService {
     });
   }
 
-  async updateOrganization(input: OrganizationUpdate): Promise<Organization> {
-    const next = await this.repository.updateOrganization(input);
+  async updateOrganization(
+    input: OrganizationUpdate,
+  ): Promise<OrganizationTransition> {
+    const result = await this.repository.updateOrganization(input);
+    const previous = organizationSchema.parse(result.previous);
+    const next = organizationSchema.parse(result.next);
     this.logger.info("updated organization", {
       shortName: next.shortName,
       fullName: next.fullName,
     });
-    return organizationSchema.parse(next);
+    return { previous, next };
   }
 }

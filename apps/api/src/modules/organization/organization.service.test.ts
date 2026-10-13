@@ -21,10 +21,13 @@ function makeRepo(): OrganizationRepository {
     getOrganization: vi.fn(() => Promise.resolve(baseRow)),
     updateOrganization: vi.fn((input: OrganizationUpdate) =>
       Promise.resolve({
-        ...baseRow,
-        shortName: input.shortName,
-        fullName: input.fullName,
-        updatedAt: new Date("2026-05-11T00:00:00Z"),
+        previous: baseRow,
+        next: {
+          ...baseRow,
+          shortName: input.shortName,
+          fullName: input.fullName,
+          updatedAt: new Date("2026-05-11T00:00:00Z"),
+        },
       }),
     ),
   };
@@ -52,12 +55,15 @@ describe("OrganizationService", () => {
   it("updateOrganization persists new values", async () => {
     const repo = makeRepo();
     const svc = new OrganizationService(repo, logger);
-    const next = await svc.updateOrganization({
+    const { previous, next } = await svc.updateOrganization({
       shortName: "PLAT",
       fullName: "Platform Engineering",
     });
     expect(next.shortName).toBe("PLAT");
     expect(next.fullName).toBe("Platform Engineering");
+    expect(previous.shortName).toBe("Demo");
+    expect(previous.fullName).toBe("Example Software Department");
+    expect(repo.getOrganization).not.toHaveBeenCalled();
     expect(repo.updateOrganization).toHaveBeenCalledWith({
       shortName: "PLAT",
       fullName: "Platform Engineering",
@@ -71,11 +77,14 @@ describe("OrganizationService", () => {
     // active gate even if the repo somehow returns dirty data.
     (repo.updateOrganization as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
       {
-        id: "singleton",
-        shortName: "A".repeat(17),
-        fullName: "OK",
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        previous: await repo.getOrganization(),
+        next: {
+          id: "singleton",
+          shortName: "A".repeat(17),
+          fullName: "OK",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
       },
     );
     const svc = new OrganizationService(repo, logger);

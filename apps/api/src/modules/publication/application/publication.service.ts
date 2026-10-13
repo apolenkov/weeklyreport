@@ -2,8 +2,10 @@ import {
   type AssembledReport,
   assembledReportSchema,
   type ReportSectionReadModel,
+  type UserSession,
 } from "@weeklyreport/shared";
 
+import { guardGroupScope } from "../../../lib/group-scope.js";
 import type { AppLogger } from "../../../lib/logger";
 import { emitPublishSideEffects } from "../../period/index.js";
 import {
@@ -33,6 +35,11 @@ export type AutoPublishResult =
   | { readonly published: false };
 
 export interface PublicationRepository {
+  getAssembledPreview(
+    activeReportId: string,
+    session: UserSession,
+  ): Promise<AssembledReport | null>;
+  // Internal publication read: intentionally retains every group's sections.
   getAssembledReport(activeReportId: string): Promise<AssembledReport | null>;
   // Compare-and-set: writes only while the row is still in the coherent
   // editable lifecycle and its deadline matches the overdue scheduler scan.
@@ -79,6 +86,23 @@ export class PublicationService {
     private readonly invalidateAnalyticsCache: () => Promise<void>,
     private readonly telemetry: PublicationTelemetry = NOOP_PUBLICATION_TELEMETRY,
   ) {}
+
+  async getAssembledPreview(
+    activeReportId: string,
+    session: UserSession,
+  ): Promise<AssembledReport> {
+    guardGroupScope(session);
+    const report = await this.repository.getAssembledPreview(
+      activeReportId,
+      session,
+    );
+    if (!report) {
+      throw new PublicationNotFoundError(
+        `Report ${activeReportId} was not found.`,
+      );
+    }
+    return assembledReportSchema.parse(report);
+  }
 
   async getAssembledReport(activeReportId: string): Promise<AssembledReport> {
     const report = await this.repository.getAssembledReport(activeReportId);

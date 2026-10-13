@@ -13,7 +13,6 @@ import {
 } from "./ai-provider.activation-guards.js";
 import {
   AiProviderActivationPreparation,
-  preparationAlreadyCompleted,
   type PreparationResult,
 } from "./ai-provider.activation-preparation.js";
 import { AiProviderReadService } from "./ai-provider.read-service.js";
@@ -91,10 +90,16 @@ export class AiProviderActivationService {
         { requested },
       );
     const preparationFailure = await this.prepareIfChanged(
-      changed && !(await this.preparationIsFresh(revision)),
+      changed && !(await this.preparationState.isFresh(revision)),
       requested,
-      embeddingScope,
       previous,
+      revision,
+    ).catch((error: unknown) =>
+      this.preparationState.rethrowConflict(
+        error,
+        generationProfile,
+        requested,
+      ),
     );
     if (preparationFailure) return preparationFailure;
     const readyRevision = changed
@@ -213,29 +218,17 @@ export class AiProviderActivationService {
     return this.reader.read();
   }
 
-  // Completed preparation is reusable only while its source fingerprint still
-  // matches the current sources; a stale fingerprint must re-prepare so retries
-  // are not permanently stuck on "activation must be retried".
-  private async preparationIsFresh(
-    revision: Awaited<ReturnType<typeof requireRevision>>,
-  ): Promise<boolean> {
-    if (!preparationAlreadyCompleted(revision)) return false;
-    const preparation = this.dependencies.preparation;
-    if (!preparation?.currentSourceFingerprint) return true;
-    const current = await preparation.currentSourceFingerprint(revision);
-    return current === revision.preparationSourceFingerprint;
-  }
-
   private async prepareIfChanged(
     changed: boolean,
     requested: RequestedActivation,
-    embeddingScope: ReturnType<typeof resolveProfileFromRevision>,
     previous: Awaited<ReturnType<typeof requireRevision>> | null,
+    revision: Awaited<ReturnType<typeof requireRevision>>,
   ): Promise<AiProviderControlRead | null> {
     if (!changed || !this.dependencies.preparation) return null;
+    const embeddingScope = resolveProfileFromRevision(revision);
     const { revisionId, actorId } = requested;
     const preparing = await this.preparationState.start(
-      revisionId,
+      revision,
       embeddingScope,
     );
     const state: { progress: PreparationResult | null } = { progress: null };
@@ -268,7 +261,8 @@ export class AiProviderActivationService {
         preparing.preparationStartedAt,
       );
       return null;
-    } catch {
+    } catch (error) {
+      if (error instanceof AiProviderConflictError) throw error;
       const observed = state.progress;
       return this.preparationState.fail(revisionId, actorId, embeddingScope, {
         result: {

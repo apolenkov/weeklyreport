@@ -16,6 +16,8 @@ import type {
 } from "../infrastructure/ai-provider.repository.js";
 import { AI_PROVIDER_TEST_SUITE_VERSION } from "../infrastructure/ai-provider-test.queue.js";
 import { AesGcmCredentialCodec } from "../infrastructure/credential-codec.js";
+import { AiProviderActivationPreparation } from "./ai-provider.activation-preparation.js";
+import { AiProviderReadService } from "./ai-provider.read-service.js";
 import type { AiProviderCapabilityTester } from "./ai-provider.service.js";
 import {
   AiProviderConfigurationError,
@@ -23,6 +25,10 @@ import {
   AiProviderConflictError,
   AiProviderNotFoundError,
 } from "./ai-provider.service.js";
+import {
+  NOOP_METRICS,
+  resolveProfileFromRevision,
+} from "./ai-provider.service-support.js";
 import type { AiProviderPreparationCoordinator } from "./ai-provider.service-types.js";
 
 const KEY = "a".repeat(64);
@@ -147,12 +153,7 @@ interface RepositoryHarness {
     (input: NewAiProviderRevision) => Promise<StoredAiProviderRevision>
   >;
   setTestResult: Mock<AiProviderConfigurationRepository["setTestResult"]>;
-  updateProgress: Mock<
-    (
-      id: string,
-      progress: Readonly<Record<string, unknown>>,
-    ) => Promise<StoredAiProviderRevision>
-  >;
+  updateProgress: Mock<AiProviderConfigurationRepository["updateProgress"]>;
   activateRevision: Mock<
     (
       id: string,
@@ -190,12 +191,7 @@ const repositoryFor = (values: {
         }),
       ),
     updateProgress: vi
-      .fn<
-        (
-          id: string,
-          progress: Readonly<Record<string, unknown>>,
-        ) => Promise<StoredAiProviderRevision>
-      >()
+      .fn<AiProviderConfigurationRepository["updateProgress"]>()
       .mockResolvedValue(draft),
     activateRevision: vi
       .fn<
@@ -616,6 +612,96 @@ describe("AiProviderConfigurationService", () => {
     expect(recorded?.generationCompatibilityIdentity).toBeTypeOf("string");
     expect(recorded?.embeddingScopeIdentity).toBeTypeOf("string");
     expect(recorded?.compositeTestIdentity).toBeTypeOf("string");
+  });
+
+  it("rejects a lost preparation claim without calling inference or activation", async () => {
+    const candidate = revision(revisionId, {
+      lifecycle: AiProviderLifecycle.validated,
+    });
+    const repository = repositoryFor({ draft: candidate });
+    repository.updateProgress.mockResolvedValue(null);
+    const prepare = vi.fn<AiProviderPreparationCoordinator["prepare"]>();
+    const service = new AiProviderConfigurationService(
+      repository as unknown as AiProviderConfigurationRepository,
+      codec,
+      env,
+      tester,
+      { prepare },
+    );
+    await expect(
+      service.activate(revisionId, "admin-1"),
+    ).rejects.toBeInstanceOf(AiProviderConflictError);
+    expect(prepare).not.toHaveBeenCalled();
+    expect(repository.activateRevision).not.toHaveBeenCalled();
+  });
+
+  it("keeps preparation owners distinct when retries share a frozen clock", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+    try {
+      const candidate = revision(revisionId, {
+        lifecycle: AiProviderLifecycle.validated,
+        preparationStartedAt: now,
+      });
+      const repository = repositoryFor({ draft: candidate });
+      repository.updateProgress.mockImplementation((_id, progress) =>
+        Promise.resolve(
+          revision(revisionId, {
+            lifecycle: AiProviderLifecycle.preparing,
+            preparationStartedAt: progress.startedAt,
+          }),
+        ),
+      );
+      const dependencies = {
+        repository: repository as unknown as AiProviderConfigurationRepository,
+        codec,
+        env,
+        metrics: NOOP_METRICS,
+        audit: { record: () => undefined },
+      };
+      const state = new AiProviderActivationPreparation(
+        dependencies,
+        new AiProviderReadService(dependencies),
+      );
+      const first = await state.start(
+        candidate,
+        resolveProfileFromRevision(candidate),
+      );
+      const second = await state.start(
+        first,
+        resolveProfileFromRevision(first),
+      );
+      expect(first.preparationStartedAt?.getTime()).toBe(now.getTime() + 1);
+      expect(second.preparationStartedAt?.getTime()).toBe(now.getTime() + 2);
+      await state.complete(
+        revisionId,
+        resolveProfileFromRevision(second),
+        {
+          completed: 1,
+          total: 1,
+          failed: 0,
+          elapsedMs: -1,
+        },
+        second.preparationStartedAt,
+      );
+      const complete = repository.updateProgress.mock.lastCall?.[1];
+      expect(complete?.finishedAt?.getTime()).toBe(now.getTime() + 2);
+      expect(complete?.elapsedMs).toBe(0);
+      await state.fail(
+        revisionId,
+        "admin-1",
+        resolveProfileFromRevision(second),
+        {
+          result: { completed: 0, total: 1, failed: 1, elapsedMs: -1 },
+          startedAt: second.preparationStartedAt ?? now,
+        },
+      );
+      const failed = repository.updateProgress.mock.lastCall?.[1];
+      expect(failed?.finishedAt?.getTime()).toBe(now.getTime() + 2);
+      expect(failed?.elapsedMs).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("rejects embedding-scope activation when preparation is unavailable", async () => {

@@ -38,11 +38,32 @@ export function parsePublishedSnapshot(
   return publishedReportSnapshotSchema.parse(value);
 }
 
+function validateSectionStageOwners(
+  section: PublishedReportSnapshot["sections"][number],
+  stageOwners: Map<string, string>,
+  reportId: string | undefined,
+): void {
+  for (const project of section.projects) {
+    for (const stage of project.ownedStages) {
+      const key = JSON.stringify([project.projectId, stage.stageName]);
+      const owner = stageOwners.get(key);
+      if (owner !== undefined && owner !== section.authorId) {
+        throw publishedSnapshotFailure(
+          reportId,
+          `project ${project.projectId} stage ${stage.stageName} has conflicting authors.`,
+        );
+      }
+      stageOwners.set(key, section.authorId);
+    }
+  }
+}
+
 function validateSnapshotSections(
   snapshot: PublishedReportSnapshot,
   reportId: string | undefined,
 ): void {
   const sectionIds = new Set<string>();
+  const stageOwners = new Map<string, string>();
   for (const section of snapshot.sections) {
     if (section.reportId !== snapshot.reportId) {
       throw publishedSnapshotFailure(
@@ -57,6 +78,7 @@ function validateSnapshotSections(
       );
     }
     sectionIds.add(section.reportSectionId);
+    validateSectionStageOwners(section, stageOwners, reportId);
   }
 }
 

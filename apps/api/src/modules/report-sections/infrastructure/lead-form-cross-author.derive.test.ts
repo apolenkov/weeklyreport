@@ -1,6 +1,7 @@
 // Characterization pins for the cross-author derive helpers behind
 // getCrossAuthors / getCrossAuthorContent: grouping, display forms, risk-derived
 // stage precedence, shared-product scoping, and severity narrowing.
+import { requirePublishedSnapshot } from "@weeklyreport/report-persistence";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
@@ -42,8 +43,15 @@ function frozenCrossAuthorSnapshot() {
         projectId,
         projectName: "Frozen product",
         trafficLight: null,
-        ownedStages: [{ stageId: STAGE_DEV, stageName: "Dev", sortOrder: 1 }],
-        stageSet: [{ stageId: STAGE_DEV, stageName: "Dev", sortOrder: 1 }],
+        ownedStages: [
+          authorId === AUTHOR_A
+            ? { stageId: STAGE_TEST, stageName: "Test", sortOrder: 2 }
+            : { stageId: STAGE_DEV, stageName: "Dev", sortOrder: 1 },
+        ],
+        stageSet: [
+          { stageId: STAGE_DEV, stageName: "Dev", sortOrder: 1 },
+          { stageId: STAGE_TEST, stageName: "Test", sortOrder: 2 },
+        ],
         ownerGroupId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
       },
     ],
@@ -56,13 +64,13 @@ function frozenCrossAuthorSnapshot() {
     groupId: "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
     groupName: "Frozen group",
   });
-  return {
+  return requirePublishedSnapshot({
     reportId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-    periodStart: new Date("2026-05-04"),
-    periodEnd: new Date("2026-05-10"),
+    periodStart: "2026-05-04T00:00:00.000Z",
+    periodEnd: "2026-05-10T00:00:00.000Z",
     deadline: null,
     status: "published" as const,
-    publishedAt: new Date("2026-05-10"),
+    publishedAt: "2026-05-10T00:00:00.000Z",
     publishedById: null,
     publishedByName: null,
     portfolioOverview: {
@@ -70,9 +78,7 @@ function frozenCrossAuthorSnapshot() {
       totals: { green: 0, yellow: 0, red: 0 },
     },
     sections: [section(AUTHOR_A, PROJECT_1), section(AUTHOR_B, PROJECT_1)],
-  } as unknown as ReturnType<
-    typeof import("@weeklyreport/report-persistence").requirePublishedSnapshot
-  >;
+  });
 }
 
 describe("fetchForeignContentSections", () => {

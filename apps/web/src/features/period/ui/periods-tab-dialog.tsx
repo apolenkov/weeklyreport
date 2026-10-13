@@ -139,6 +139,12 @@ function computePeriodEndError(
 ): string | null {
   if (isEdit && periodEnd === "") return PERIOD_END_REQUIRED_ERROR;
   if (
+    periodEnd &&
+    Number.isNaN(new Date(`${periodEnd}T23:59:59.999Z`).getTime())
+  ) {
+    return "Enter a valid period end.";
+  }
+  if (
     periodStart &&
     periodEnd &&
     new Date(`${periodEnd}T23:59:59.999Z`) <
@@ -157,11 +163,17 @@ function derivePeriodDialogValidation(
   isEdit: boolean,
   isPending: boolean,
 ): {
+  readonly periodStartError: string | null;
   readonly deadlineError: string | null;
   readonly deadlineClearHint: string | null;
   readonly periodEndError: string | null;
   readonly canSubmit: boolean;
 } {
+  const periodStartError =
+    values.periodStart !== "" &&
+    Number.isNaN(new Date(`${values.periodStart}T00:00:00.000Z`).getTime())
+      ? "Enter a valid period start."
+      : null;
   const deadlineError = computeDeadlineError({
     deadline: values.deadline,
     periodStart: values.periodStart,
@@ -170,6 +182,7 @@ function derivePeriodDialogValidation(
   const periodEndError = computePeriodEndError(values, isEdit);
 
   return {
+    periodStartError,
     deadlineError,
     deadlineClearHint:
       isEdit && values.deadline === "" ? DEADLINE_CLEARED_HINT : null,
@@ -177,6 +190,7 @@ function derivePeriodDialogValidation(
     canSubmit:
       values.periodStart !== "" &&
       !isPending &&
+      !periodStartError &&
       !deadlineError &&
       !periodEndError,
   };
@@ -242,6 +256,7 @@ export function CreatePeriodDialog({
         <CreatePeriodFields
           envelopeFrozen={envelopeFrozen}
           periodStart={values.periodStart}
+          periodStartError={validation.periodStartError}
           onPeriodStartChange={setters.setPeriodStart}
           periodEnd={values.periodEnd}
           onPeriodEndChange={setters.setPeriodEnd}

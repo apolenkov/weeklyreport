@@ -57,6 +57,12 @@ export type AiProviderPreparationUpdate = Readonly<{
   sourceFingerprint?: string | null;
   sourceGeneration?: bigint | null;
   lifecycle?: AiProviderLifecycle;
+  expectedRevision?: Readonly<{
+    updatedAt: Date;
+    lifecycle: AiProviderLifecycle;
+    preparationStartedAt: Date | null;
+    preparationFinishedAt: Date | null;
+  }>;
 }>;
 
 export type SetTestResultInput = Readonly<{
@@ -152,8 +158,10 @@ export const createDraftRecord = (
   });
 
 const testedLifecycle = (input: SetTestResultInput): AiProviderLifecycle =>
-  input.currentLifecycle === AiProviderLifecycle.active
-    ? AiProviderLifecycle.active
+  input.currentLifecycle === AiProviderLifecycle.active ||
+  input.currentLifecycle === AiProviderLifecycle.superseded ||
+  input.currentLifecycle === AiProviderLifecycle.preparing
+    ? input.currentLifecycle
     : input.status === "passed"
       ? AiProviderLifecycle.validated
       : input.status === "failed"
@@ -178,18 +186,34 @@ const testEvidenceData = (
 export const setTestResultRecord = (
   prisma: PrismaService,
   input: SetTestResultInput,
+) =>
+  prisma.$transaction((transaction) => persistTestResult(transaction, input));
+
+const persistTestResult = async (
+  transaction: Prisma.TransactionClient,
+  original: SetTestResultInput,
 ) => {
+  // Activation and completion serialize on the same row; a provider call's
+  // lifecycle snapshot cannot resurrect a superseded revision.
+  const rows = await transaction.$queryRaw<
+    readonly { lifecycle: AiProviderLifecycle }[]
+  >`SELECT "lifecycle" FROM "AiProviderConfiguration" WHERE "id" = ${original.id} FOR UPDATE`;
+  const current = rows[0];
+  if (!current) throw new Error("AI provider configuration was not found");
+  const input = { ...original, currentLifecycle: current.lifecycle };
   const providerEvidencePassed = input.embeddingDimensions !== null;
-  const preserveActiveEvidence =
-    input.currentLifecycle === AiProviderLifecycle.active &&
+  const preserveScopeEvidence =
+    (input.currentLifecycle === AiProviderLifecycle.active ||
+      input.currentLifecycle === AiProviderLifecycle.superseded ||
+      input.currentLifecycle === AiProviderLifecycle.preparing) &&
     !providerEvidencePassed;
-  return prisma.aiProviderConfiguration.update({
+  return transaction.aiProviderConfiguration.update({
     where: { id: input.id },
     data: {
       lifecycle: testedLifecycle(input),
       testResult: input.result,
       testedAt: input.testedAt,
-      ...(preserveActiveEvidence ? {} : testEvidenceData(input)),
+      ...(preserveScopeEvidence ? {} : testEvidenceData(input)),
     },
     select: aiProviderRevisionSelect,
   });
@@ -201,10 +225,6 @@ export const setClaimedTestResultRecord = (
 ) => {
   const compositeTestIdentity = input.compositeTestIdentity;
   if (!compositeTestIdentity) return Promise.resolve(null);
-  const providerEvidencePassed = input.embeddingDimensions !== null;
-  const preserveActiveEvidence =
-    input.currentLifecycle === AiProviderLifecycle.active &&
-    !providerEvidencePassed;
   return prisma.$transaction(async (transaction) => {
     const execution = await transaction.aiProviderTestExecution.findFirst({
       where: {
@@ -236,16 +256,7 @@ export const setClaimedTestResultRecord = (
     });
     if (claimed.count !== 1) return null;
 
-    return transaction.aiProviderConfiguration.update({
-      where: { id: input.id },
-      data: {
-        lifecycle: testedLifecycle(input),
-        testResult: input.result,
-        testedAt: input.testedAt,
-        ...(preserveActiveEvidence ? {} : testEvidenceData(input)),
-      },
-      select: aiProviderRevisionSelect,
-    });
+    return persistTestResult(transaction, input);
   });
 };
 
@@ -254,18 +265,39 @@ export const updateProgressRecord = (
   id: string,
   progress: AiProviderPreparationUpdate,
 ) =>
-  prisma.aiProviderConfiguration.update({
-    where: { id },
-    data: {
-      preparationCompleted: progress.completed,
-      preparationTotal: progress.total,
-      preparationFailed: progress.failed,
-      preparationElapsedMs: progress.elapsedMs,
-      preparationStartedAt: progress.startedAt,
-      preparationFinishedAt: progress.finishedAt,
-      preparationSourceFingerprint: progress.sourceFingerprint ?? null,
-      preparationSourceGeneration: progress.sourceGeneration ?? null,
-      ...(progress.lifecycle ? { lifecycle: progress.lifecycle } : {}),
-    },
-    select: aiProviderRevisionSelect,
+  prisma.$transaction(async (transaction) => {
+    const updated = await transaction.aiProviderConfiguration.updateMany({
+      where: {
+        id,
+        ...(progress.expectedRevision
+          ? {
+              ...progress.expectedRevision,
+              lifecycle: {
+                equals: progress.expectedRevision.lifecycle,
+                not: AiProviderLifecycle.active,
+              },
+            }
+          : {
+              lifecycle: AiProviderLifecycle.preparing,
+              preparationStartedAt: progress.startedAt,
+              preparationFinishedAt: null,
+            }),
+      },
+      data: {
+        preparationCompleted: progress.completed,
+        preparationTotal: progress.total,
+        preparationFailed: progress.failed,
+        preparationElapsedMs: progress.elapsedMs,
+        preparationStartedAt: progress.startedAt,
+        preparationFinishedAt: progress.finishedAt,
+        preparationSourceFingerprint: progress.sourceFingerprint ?? null,
+        preparationSourceGeneration: progress.sourceGeneration ?? null,
+        ...(progress.lifecycle ? { lifecycle: progress.lifecycle } : {}),
+      },
+    });
+    if (updated.count !== 1) return null;
+    return transaction.aiProviderConfiguration.findUniqueOrThrow({
+      where: { id },
+      select: aiProviderRevisionSelect,
+    });
   });

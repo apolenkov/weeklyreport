@@ -211,8 +211,9 @@ export class AiProviderConfigurationRepository {
   async updateProgress(
     id: string,
     progress: AiProviderPreparationUpdate,
-  ): Promise<StoredAiProviderRevision> {
-    return toRevision(await updateProgressRecord(this.prisma, id, progress));
+  ): Promise<StoredAiProviderRevision | null> {
+    const updated = await updateProgressRecord(this.prisma, id, progress);
+    return updated ? toRevision(updated) : null;
   }
 
   async activateRevision(

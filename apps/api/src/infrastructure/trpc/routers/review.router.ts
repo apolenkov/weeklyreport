@@ -117,7 +117,10 @@ export function createReviewRouter(deps: ReviewRouterDeps) {
           });
         }
 
-        return deps.publicationService.getAssembledReport(reportId);
+        return deps.publicationService.getAssembledPreview(
+          reportId,
+          ctx.session,
+        );
       }),
     ),
 
