@@ -331,6 +331,7 @@ describe("EmailReminderProcessor.processJob", () => {
   it.each([
     ["empty", new Error("")],
     ["whitespace-only", new Error(" \t ")],
+    ["unstringifiable", Object.create(null) as object],
   ] as const)(
     "uses a deterministic non-empty failure for a %s terminal SMTP error",
     async (_label, smtpError) => {
@@ -360,28 +361,34 @@ describe("EmailReminderProcessor.processJob", () => {
   // A non-terminal failure must release the claim (not mark failed) so the next
   // BullMQ attempt can re-claim. In processJob's catch the counter is
   // pre-increment; any value below `attempts` is non-terminal.
-  it("releases the claim (not markReminderFailed) when a non-final attempt's dispatch fails", async () => {
-    const mockReminders = createMockRemindersService();
-    const mockEmail = createMockEmailService();
-    mockEmail.sendMailMultipart.mockRejectedValue(
-      new Error("SMTP connection refused"),
-    );
+  it.each([
+    ["SMTP", new Error("SMTP connection refused")],
+    ["unstringifiable", Object.create(null) as object],
+  ])(
+    "releases the claim when a non-final attempt has a %s dispatch failure",
+    async (_label, smtpError) => {
+      const mockReminders = createMockRemindersService();
+      const mockEmail = createMockEmailService();
+      mockEmail.sendMailMultipart.mockRejectedValue(smtpError);
 
-    const processor = new EmailReminderProcessor(
-      mockReminders as never,
-      mockEmail,
-      STUB_ENV,
-      createMockSnapshotAdminService() as never,
-    );
-    const job = createMockJob(defaultJobData, 1, 3);
+      const processor = new EmailReminderProcessor(
+        mockReminders as never,
+        mockEmail,
+        STUB_ENV,
+        createMockSnapshotAdminService() as never,
+      );
+      const job = createMockJob(defaultJobData, 1, 3);
 
-    await expect(
-      (processor as unknown as ProcessorTestSeam).processJob(job),
-    ).rejects.toThrow("SMTP connection refused");
+      await expect(
+        (processor as unknown as ProcessorTestSeam).processJob(job),
+      ).rejects.toBe(smtpError);
 
-    expect(mockReminders.releaseExecutionClaim).toHaveBeenCalledWith("exec-1");
-    expect(mockReminders.markReminderFailed).not.toHaveBeenCalled();
-  });
+      expect(mockReminders.releaseExecutionClaim).toHaveBeenCalledWith(
+        "exec-1",
+      );
+      expect(mockReminders.markReminderFailed).not.toHaveBeenCalled();
+    },
+  );
 
   // If dispatch succeeds but the follow-up markReminderSent write throws
   // (e.g. a transient DB error), the email was already delivered: the row
