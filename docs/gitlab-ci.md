@@ -1,8 +1,8 @@
 # GitLab CI
 
 `.gitlab-ci.yml` is the repository CI. It runs the repository lint/test gates, coverage jobs, the
-disposable-database integration and reset lanes, and the scheduled/manual
-dependency audit. Per the owner decision of 2026-09-28 it carries tests
+disposable-database integration and reset lanes, the blocking dependency audit, secret scan,
+mutation pilot and production build. Per the owner decision of 2026-09-28 it carries tests
 and linters; since the owner decision of 2026-10-01 it also has one gated image
 build (`build-images`, rootless BuildKit) and an optional manual deploy job.
 TASK-522 adds three blocking routes: `secret-scan`, a single `dependency-scan`
@@ -109,7 +109,7 @@ Monday 06:00 UTC; create that schedule after the main cutover. `dependency-scan`
 runs in every pipeline and blocks on `pnpm audit --prod` and
 `pnpm audit --audit-level high` (production and development dependencies,
 tooling included); an unreachable audit endpoint fails it too. The one reviewed
-exception is `auditConfig.ignoreGhsas` in `pnpm-workspace.yaml` (braces,
+exception is `audit.ignore` in `pnpm-workspace.yaml` (braces,
 GHSA-vfj7-8cjw-p6xm: no patched release, development tooling only). The
 `renovate` job above is the dependency-update route; the audit does not replace it.
 `secret-scan` runs `scripts/gates/secret-scan.sh`: a checksum-verified Gitleaks

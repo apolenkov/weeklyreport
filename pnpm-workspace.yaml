@@ -215,6 +215,6 @@ minimumReleaseAgeExclude:
 # in stylelint, openspec and the Next ESLint plugin). Reachable only from
 # repository-owned glob patterns in local/CI tooling, never from production
 # dependencies (pnpm audit --prod passes). Remove when braces publishes a fix.
-auditConfig:
-  ignoreGhsas:
+audit:
+  ignore:
     - GHSA-vfj7-8cjw-p6xm

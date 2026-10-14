@@ -194,11 +194,13 @@ mutation-period:
   script:
     - pnpm --filter @weeklyreport/api test:mutation
 
-# Production build route: the explicit build environment mirrors the web image
-# build, `pnpm build` runs the production-dist gates inside the API and shared
-# builds, and the manifest binds the built output to this source SHA. It is
-# not a browser or release acceptance: release E2E stays a separate explicit
-# gate (docs/gitlab-ci.md).
+# Production build route: `pnpm build` runs the production-dist gates inside the
+# API and shared builds under an explicit build environment. The values are
+# fixed non-secret toggles (feature flags off, auth stub off, version = SHA);
+# they check that the production build compiles and passes its gates, not that
+# it reproduces the deployed web image, whose NEXT_PUBLIC_* come from the
+# WR_* variables of `build-images`. The manifest binds the output to this SHA.
+# Release browser E2E stays a separate explicit gate (docs/gitlab-ci.md).
 production-build:
   extends: .workspace-node
   stage: build
@@ -217,6 +219,7 @@ production-build:
     NEXT_PUBLIC_WEB_VITALS: "false"
     NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED: "false"
     NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES: admin
+    NEXT_TELEMETRY_DISABLED: "1"
   script:
     - pnpm build
     - mkdir -p ci-reports
@@ -231,11 +234,13 @@ production-build:
 # One blocking audit for production and development dependencies (tooling
 # included) on every MR, branch and scheduled pipeline. High/critical advisories
 # and an unreachable audit endpoint both fail the job; the single reviewed
-# exception lives in pnpm-workspace.yaml `auditConfig`.
+# exception lives in pnpm-workspace.yaml `audit.ignore`.
 dependency-scan:
   extends: .node-image
   stage: dependency-scan
   timeout: 10m
+  # Independent of lint/test/build: an earlier red job must not skip the audit.
+  needs: []
   rules:
     - when: on_success
   before_script:
@@ -253,6 +258,8 @@ secret-scan:
   extends: .node-image
   stage: dependency-scan
   timeout: 20m
+  # Independent of lint/test/build: an earlier red job must not skip the scan.
+  needs: []
   variables:
     GIT_DEPTH: "0"
     GITLEAKS_VERSION: "8.30.1"
