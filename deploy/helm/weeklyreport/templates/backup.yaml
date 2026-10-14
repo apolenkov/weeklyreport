@@ -35,7 +35,8 @@ spec:
           labels:
             {{- include "wr.labels" (dict "root" . "component" "backup") | nindent 12 }}
         spec:
-          {{- include "wr.podCommon" (dict "root" . "user" .Values.backup.runAsUser "fsGroup" .Values.backup.runAsUser) | nindent 10 }}
+          # Dumps are mode 0600 and postgres mounts the volume: same identity.
+          {{- include "wr.podCommon" (dict "root" . "user" .Values.postgres.runAsUser "fsGroup" .Values.postgres.runAsUser) | nindent 10 }}
           # pgbackups is ReadWriteOnce and mounted by postgres too: on a
           # multi-node cluster only the postgres node can attach it.
           affinity:

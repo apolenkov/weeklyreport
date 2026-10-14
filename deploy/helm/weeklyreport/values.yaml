@@ -85,8 +85,6 @@ edge:
     annotations: {}
 
 backup:
-  # Same UID as postgres: dumps are mode 0600 and postgres mounts the volume.
-  runAsUser: 999
   startingDeadlineSeconds: 3600
   # Upper bound on one dump: a stuck Job must die before it starves later
   # runs under concurrencyPolicy=Forbid.

@@ -466,17 +466,19 @@ test("the backup pod shares the postgres node and the job is bounded in time", (
 });
 
 test("the backup writer runs as the postgres UID so postgres can read its 0600 dumps", () => {
-  const { manifests } = renderExample();
-  const identity = (kind: string, name: string) => {
-    const { runAsUser, fsGroup } = podSpecOf(
-      findManifest(manifests, kind, name),
-    ).securityContext;
-    return { runAsUser, fsGroup };
-  };
-  assert.deepEqual(
-    identity("CronJob", "backup"),
-    identity("StatefulSet", "postgres"),
-  );
+  for (const extra of [[], ["--set", "postgres.runAsUser=1234"]]) {
+    const { manifests } = renderExample(extra);
+    const identity = (kind: string, name: string) => {
+      const { runAsUser, fsGroup } = podSpecOf(
+        findManifest(manifests, kind, name),
+      ).securityContext;
+      return { runAsUser, fsGroup };
+    };
+    assert.deepEqual(
+      identity("CronJob", "backup"),
+      identity("StatefulSet", "postgres"),
+    );
+  }
 });
 
 test("the migrate command checks the password before any database work", () => {

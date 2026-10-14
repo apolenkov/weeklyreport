@@ -506,10 +506,6 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "runAsUser": {
-          "type": "integer",
-          "minimum": 1
-        },
         "resources": {
           "type": "object"
         },
