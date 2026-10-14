@@ -37,6 +37,14 @@ test("mutant workers run only the pure unit suite", () => {
   assert.doesNotMatch(config, /globalSetup|\.integration\./u);
 });
 
+test("the pilot suite is flat so Stryker can select tests by name", () => {
+  // Stryker 10 joins suite names with a space; Vitest 5 matches `a > b`.
+  const suite = read(
+    "apps/api/src/modules/period/domain/period-transition.test.ts",
+  );
+  assert.doesNotMatch(suite, /\bdescribe\(/u);
+});
+
 test("CI runs the pilot as a blocking job", () => {
   const start = gitlab.indexOf("\nmutation-period:\n");
   assert.ok(start !== -1, "mutation-period job must exist");
