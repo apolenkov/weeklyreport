@@ -72,6 +72,7 @@ export interface PeriodRepository {
   reopenPeriod(
     reportId: string,
     expected: PeriodLifecycleExpectation,
+    policy: { readonly enforceSingleReopen: boolean },
   ): Promise<void>;
   // Active editable id (publish target) + latest non-archived published id
   // (reopen target), delegated to the weekly-report resolvers so the head's
@@ -300,7 +301,9 @@ export class PeriodService {
       }
     }
 
-    await this.repository.reopenPeriod(reportId, report);
+    await this.repository.reopenPeriod(reportId, report, {
+      enforceSingleReopen: session.role !== "admin",
+    });
     await this.invalidateAnalyticsCache();
 
     return { success: true, reportId };
