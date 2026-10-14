@@ -158,10 +158,55 @@ kubectl -n <ns> get jobs
 kubectl -n <ns> create job --from=cronjob/backup backup-<run-id>
 kubectl -n <ns> wait --for=condition=complete job/backup-<run-id> --timeout=30m
 kubectl -n <ns> logs job/backup-<run-id>
-kubectl -n <ns> exec statefulset/postgres -- ls -lh /backups
-kubectl -n <ns> exec statefulset/postgres -- pg_restore --list /backups/<dump-file>
-kubectl -n <ns> exec statefulset/postgres -- sha256sum /backups/<dump-file>
 ```
+
+Inspect the archive through a separate Job copied from the installed backup
+CronJob. The backup producer runs as UID70, while PostgreSQL runs as UID999;
+its read-only PVC mount does not make a mode-0600 dump readable by UID999.
+
+```sh
+kubectl -n <ns> create job --from=cronjob/backup backup-inspect-<run-id> \
+  --dry-run=client -o yaml > <protected-state-dir>/backup-inspect.yaml
+```
+
+Keep the inherited image, UID70, fsGroup, Secret references, resource limits,
+node affinity, and Job deadline. Make the `/backups` mount read-only and replace
+only the backup container's command and arguments with:
+
+```yaml
+command:
+  - /bin/sh
+  - -ec
+  - |
+    id
+    test "$(id -u)" = 70
+    case "$1" in /backups/weeklyreport-*.dump) ;; *) exit 2 ;; esac
+    test -x /backups
+    test -f "$1"
+    test -r "$1"
+    stat -c 'mode=%a uid=%u gid=%g bytes=%s' "$1"
+    pg_restore --version
+    pg_restore --list "$1"
+    sha256sum "$1"
+  - archive-inspection
+args:
+  - /backups/<exact-successful-dump-file>
+```
+
+Choose the exact dump from the successful backup log, verify the context,
+namespace, image, and PVC, then run the reviewed inspection Job:
+
+```sh
+kubectl -n <ns> apply -f <protected-state-dir>/backup-inspect.yaml
+kubectl -n <ns> wait --for=condition=complete job/backup-inspect-<run-id> --timeout=<approved-inspection-timeout>
+kubectl -n <ns> logs job/backup-inspect-<run-id>
+kubectl -n <ns> get pods -l job-name=backup-inspect-<run-id> -o jsonpath='{range .items[*].status.containerStatuses[*]}{.imageID}{"\n"}{end}'
+```
+
+Record the actual UID and groups, image ID, exit status, size, and checksum.
+Do not change ownership or permissions to make the inspection pass. Inspection
+runs no backup loop, retention pruning, or restore; list/hash success proves
+archive readability only.
 
 Use the exact filename from the successful Job log. A timeout is not a success;
 inspect Job status, events, and logs before proceeding. Before a schema release,
