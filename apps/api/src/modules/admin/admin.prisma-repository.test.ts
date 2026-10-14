@@ -695,19 +695,6 @@ describe("AdminPrismaRepository — deactivate/activate, stages", () => {
     });
   });
 
-  it("reminderPolicyExists performs a targeted id lookup", async () => {
-    const findUnique = vi.fn(() => Promise.resolve({ id: "policy-1" }));
-    const repo = new AdminPrismaRepository({
-      reminderPolicy: { findUnique },
-    } as unknown as PrismaService);
-
-    await expect(repo.reminderPolicyExists("policy-1")).resolves.toBe(true);
-    expect(findUnique).toHaveBeenCalledWith({
-      where: { id: "policy-1" },
-      select: { id: true },
-    });
-  });
-
   it("deleteReminderPolicy relies on one cascading policy delete", async () => {
     const policyDelete = vi.fn(() => Promise.resolve({ id: "policy-1" }));
     const ruleDeleteMany = vi.fn();

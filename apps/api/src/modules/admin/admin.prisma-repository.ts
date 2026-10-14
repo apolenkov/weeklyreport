@@ -98,10 +98,9 @@ export class AdminPrismaRepository implements AdminRepository {
     return policyQueries.listReminderPolicies(this.prisma);
   }
 
-  readonly reminderPolicyExists = (policyId: string): Promise<boolean> =>
-    policyQueries.reminderPolicyExists(this.prisma, policyId);
-
-  saveReminderPolicy(policy: ReminderPolicy): Promise<ReminderPolicy> {
+  saveReminderPolicy(
+    policy: ReminderPolicy,
+  ): ReturnType<AdminRepository["saveReminderPolicy"]> {
     return policyQueries.saveReminderPolicy(this.prisma, policy);
   }
 

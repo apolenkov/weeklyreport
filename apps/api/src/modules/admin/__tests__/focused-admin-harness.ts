@@ -113,9 +113,7 @@ export const defaultSettings: AppSettings = {
 export function createRepository(
   snapshot: AdminSnapshot,
   settings: AppSettings = defaultSettings,
-): AdminRepository & {
-  reminderPolicyExists(policyId: string): Promise<boolean>;
-} {
+): AdminRepository {
   let currentSnapshot = structuredClone(snapshot);
   let currentSettings = structuredClone(settings);
   const assignments = new Map<string, StageAssignment>();
@@ -248,11 +246,6 @@ export function createRepository(
         ),
       };
       return Promise.resolve();
-    },
-    reminderPolicyExists(policyId) {
-      return Promise.resolve(
-        currentSnapshot.policies.some((policy) => policy.id === policyId),
-      );
     },
   };
 }

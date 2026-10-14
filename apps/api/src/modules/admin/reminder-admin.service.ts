@@ -6,13 +6,9 @@ import {
 import type { AppLogger } from "../../lib/logger";
 import type { AdminRepository } from "./admin-shared";
 
-interface ReminderAdminRepository extends AdminRepository {
-  readonly reminderPolicyExists: (policyId: string) => Promise<boolean>;
-}
-
 export class ReminderAdminService {
   constructor(
-    private readonly repository: ReminderAdminRepository,
+    private readonly repository: AdminRepository,
     private readonly logger: AppLogger,
   ) {}
 
@@ -21,18 +17,14 @@ export class ReminderAdminService {
     return rows.map((row) => reminderPolicySchema.parse(row));
   }
 
-  // create vs update for admin.policy.save audit / SIEM split.
-  async policyExists(policyId: string): Promise<boolean> {
-    return this.repository.reminderPolicyExists(policyId);
-  }
-
-  async savePolicy(policy: ReminderPolicy): Promise<ReminderPolicy> {
+  async savePolicy(
+    policy: ReminderPolicy,
+  ): ReturnType<AdminRepository["saveReminderPolicy"]> {
     const parsed = reminderPolicySchema.parse(policy);
-    const savedPolicy = reminderPolicySchema.parse(
-      await this.repository.saveReminderPolicy(parsed),
-    );
+    const saved = await this.repository.saveReminderPolicy(parsed);
+    const savedPolicy = reminderPolicySchema.parse(saved.policy);
     this.logger.info("upserted reminder policy", { policyId: parsed.id });
-    return savedPolicy;
+    return { policy: savedPolicy, created: saved.created };
   }
 
   // Hard-delete; no soft-delete fallback.

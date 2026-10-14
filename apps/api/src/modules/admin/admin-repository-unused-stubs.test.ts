@@ -32,7 +32,10 @@ describe("unusedAdminRepositoryStubs", () => {
     const stubs = unusedAdminRepositoryStubs();
     const policy = { id: ID } as ReminderPolicy;
 
-    await expect(stubs.saveReminderPolicy(policy)).resolves.toBe(policy);
+    await expect(stubs.saveReminderPolicy(policy)).resolves.toEqual({
+      policy,
+      created: true,
+    });
     await expect(stubs.deleteReminderPolicy(ID)).resolves.toBeUndefined();
     await expect(stubs.archivePeriod(ID)).resolves.toBeUndefined();
     await expect(stubs.unarchivePeriod(ID, new Date(0))).resolves.toEqual({
