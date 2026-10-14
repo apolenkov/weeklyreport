@@ -104,7 +104,9 @@ describe("PeriodPrismaRepository reopen atomicity (integration)", () => {
   }
 
   it("reopens a published period once and resets its submitted sections", async () => {
-    await repository.reopenPeriod(REPORT, await expected(REPORT));
+    await repository.reopenPeriod(REPORT, await expected(REPORT), {
+      enforceSingleReopen: true,
+    });
 
     const { row, sections } = await loadRow();
     expect(row.periodStatus).toBe("reopened");
@@ -126,7 +128,9 @@ describe("PeriodPrismaRepository reopen atomicity (integration)", () => {
       },
     });
 
-    await repository.reopenPeriod(REPORT, await expected(REPORT));
+    await repository.reopenPeriod(REPORT, await expected(REPORT), {
+      enforceSingleReopen: true,
+    });
 
     const closed = await prisma.reopenRequest.findUniqueOrThrow({
       where: { id: request.id },
@@ -151,9 +155,9 @@ describe("PeriodPrismaRepository reopen atomicity (integration)", () => {
       data: { reportSectionId: section.id, requestedById: USER },
     });
 
-    await expect(repository.reopenPeriod(REPORT, stale)).rejects.toBeInstanceOf(
-      Error,
-    );
+    await expect(
+      repository.reopenPeriod(REPORT, stale, { enforceSingleReopen: true }),
+    ).rejects.toBeInstanceOf(Error);
 
     const untouched = await prisma.reopenRequest.findUniqueOrThrow({
       where: { id: request.id },
@@ -204,7 +208,9 @@ describe("PeriodPrismaRepository reopen atomicity (integration)", () => {
     await archivePeriod(prisma as unknown as PrismaService, REPORT);
 
     await expect(
-      repository.reopenPeriod(REPORT, beforeArchive),
+      repository.reopenPeriod(REPORT, beforeArchive, {
+        enforceSingleReopen: true,
+      }),
     ).rejects.toBeInstanceOf(PeriodScopeError);
 
     const { row, sections } = await loadRow();
@@ -224,7 +230,9 @@ describe("PeriodPrismaRepository reopen atomicity (integration)", () => {
     });
 
     await expect(
-      repository.reopenPeriod(REPORT, beforeBoundaryMutation),
+      repository.reopenPeriod(REPORT, beforeBoundaryMutation, {
+        enforceSingleReopen: true,
+      }),
     ).rejects.toBeInstanceOf(PeriodStaleStateError);
 
     const { row, sections } = await loadRow();
@@ -238,7 +246,9 @@ describe("PeriodPrismaRepository reopen atomicity (integration)", () => {
     // Reopen first (flips periodStatus→reopened), then archive: the archive
     // CAS's `periodStatus: { not: "reopened" }` clause drops to zero rows, so
     // it fails closed rather than stranding reset sections behind an archived row.
-    await repository.reopenPeriod(REPORT, await expected(REPORT));
+    await repository.reopenPeriod(REPORT, await expected(REPORT), {
+      enforceSingleReopen: true,
+    });
 
     await expect(
       archivePeriod(prisma as unknown as PrismaService, REPORT),
@@ -254,7 +264,7 @@ describe("PeriodPrismaRepository reopen atomicity (integration)", () => {
   it("commits exactly one writer under a concurrent reopen and archive", async () => {
     const state = await expected(REPORT);
     const [reopenResult, archiveResult] = await Promise.allSettled([
-      repository.reopenPeriod(REPORT, state),
+      repository.reopenPeriod(REPORT, state, { enforceSingleReopen: true }),
       archivePeriod(prisma as unknown as PrismaService, REPORT),
     ]);
 

@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import { AdminPeriodOverlapError } from "../../admin/index.js";
 import { WeeklyReportPrismaRepository } from "../../weekly-report/weekly-report.prisma-repository.js";
+import { PeriodScopeError } from "../application/period.service.js";
 import type { PeriodLifecycleExpectation } from "../domain/period-lifecycle-expectation.js";
 import { PeriodPrismaRepository } from "./period.prisma-repository.js";
 
@@ -166,6 +167,52 @@ describe("PeriodPrismaRepository.reopenPeriod — overlap translation", () => {
     reopenedAt: null,
   });
 
+  it.each([
+    { role: "Head", enforceSingleReopen: true, rejects: true },
+    { role: "Admin", enforceSingleReopen: false, rejects: false },
+  ])(
+    "$role handles a reopened period committed after the service gates",
+    async ({ enforceSingleReopen, rejects }) => {
+      const tx = {
+        $executeRaw: vi.fn().mockResolvedValue(1),
+        $queryRaw: vi.fn().mockResolvedValue([]),
+        report: {
+          findFirst: vi.fn().mockResolvedValue({ id: "other-reopened" }),
+          updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+          findUnique: vi.fn(),
+        },
+        reportSection: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+        reopenRequest: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+      };
+      const prisma = {
+        $transaction: vi.fn(
+          (operation: (client: typeof tx) => Promise<unknown>) => operation(tx),
+        ),
+      } as unknown as PrismaService;
+      const repository = new PeriodPrismaRepository(
+        prisma,
+        new WeeklyReportPrismaRepository(prisma),
+      );
+      const reopen = repository.reopenPeriod(
+        "report-1",
+        publishedExpectation(),
+        { enforceSingleReopen },
+      );
+
+      if (rejects) {
+        await expect(reopen).rejects.toBeInstanceOf(PeriodScopeError);
+        expect(tx.report.updateMany).not.toHaveBeenCalled();
+        expect(tx.reportSection.updateMany).not.toHaveBeenCalled();
+        expect(tx.reopenRequest.updateMany).not.toHaveBeenCalled();
+      } else {
+        await expect(reopen).resolves.toBeUndefined();
+        expect(tx.report.updateMany).toHaveBeenCalledOnce();
+        expect(tx.reportSection.updateMany).toHaveBeenCalledOnce();
+        expect(tx.reopenRequest.updateMany).toHaveBeenCalledOnce();
+      }
+    },
+  );
+
   function periodOverlapP2039(): Prisma.PrismaClientKnownRequestError {
     return new Prisma.PrismaClientKnownRequestError(
       'Database error. Code: `23P01`. Message: `conflicting key value violates exclusion constraint "Report_no_live_period_overlap"`',
@@ -196,7 +243,9 @@ describe("PeriodPrismaRepository.reopenPeriod — overlap translation", () => {
     );
 
     await expect(
-      repo.reopenPeriod("report-1", publishedExpectation()),
+      repo.reopenPeriod("report-1", publishedExpectation(), {
+        enforceSingleReopen: true,
+      }),
     ).rejects.toBeInstanceOf(AdminPeriodOverlapError);
   });
 
@@ -222,6 +271,7 @@ describe("PeriodPrismaRepository.reopenPeriod — overlap translation", () => {
       create: vi.fn().mockResolvedValue({ id: "rule-v1" }),
     };
     const tx = {
+      $executeRaw: vi.fn().mockResolvedValue(1),
       $queryRaw: vi
         .fn()
         .mockResolvedValueOnce([policy])
@@ -236,6 +286,7 @@ describe("PeriodPrismaRepository.reopenPeriod — overlap translation", () => {
           },
         ]),
       report: {
+        findFirst: vi.fn().mockResolvedValue(null),
         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         findUnique: vi.fn(),
       },
@@ -260,7 +311,9 @@ describe("PeriodPrismaRepository.reopenPeriod — overlap translation", () => {
     vi.setSystemTime(new Date("2026-09-01T00:00:00.000Z"));
 
     await expect(
-      repo.reopenPeriod(reportId, publishedExpectation()),
+      repo.reopenPeriod(reportId, publishedExpectation(), {
+        enforceSingleReopen: true,
+      }),
     ).resolves.toBeUndefined();
 
     expect(tx.reopenRequest.updateMany.mock.calls[0]?.[0]).toMatchObject({
@@ -288,7 +341,9 @@ describe("PeriodPrismaRepository.reopenPeriod — overlap translation", () => {
     );
 
     await expect(
-      repo.reopenPeriod("report-1", publishedExpectation()),
+      repo.reopenPeriod("report-1", publishedExpectation(), {
+        enforceSingleReopen: true,
+      }),
     ).rejects.toThrow("deadlock detected");
   });
 });

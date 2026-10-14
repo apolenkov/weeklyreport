@@ -421,6 +421,7 @@ describe("PeriodService — reopenPeriod (unit)", () => {
       expect.objectContaining({
         periodStatus: "published",
       }),
+      { enforceSingleReopen: true },
     );
   });
 

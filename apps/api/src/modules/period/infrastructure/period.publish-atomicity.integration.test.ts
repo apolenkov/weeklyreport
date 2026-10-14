@@ -228,7 +228,9 @@ describe("PeriodPrismaRepository publish atomicity (integration)", () => {
       }),
     ]);
 
-    await repository.reopenPeriod(REPORT, await expected(REPORT));
+    await repository.reopenPeriod(REPORT, await expected(REPORT), {
+      enforceSingleReopen: true,
+    });
     await prisma.item.update({
       where: { id: item.id },
       data: { text: "projection second publication" },
