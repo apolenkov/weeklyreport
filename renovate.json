@@ -48,6 +48,12 @@
       "matchPackageNames": ["brace-expansion"],
       "allowedVersions": "<2",
       "matchCurrentVersion": "<2"
+    },
+    {
+      "description": "TASK-503/513 compatibility: Sentry 11.7.0 stalls Next 16.4 webpack standalone final tracing. Oct14 campaign bisect (actual control Oct15 00:18 MSK) changes only Sentry to11.6.0 and passes build in67.48s. Evidence: ~/work/handoffs/task-503/main-integration/resume-20261014/sentry-bisect/CONTROL-PASS-READBACK.json. Recheck later releases.",
+      "matchPackageNames": ["@sentry/*"],
+      "matchNewValue": "11.7.0",
+      "enabled": false
     }
   ]
 }
