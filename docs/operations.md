@@ -161,15 +161,18 @@ kubectl -n <ns> logs job/backup-<run-id>
 ```
 
 Inspect the archive through a separate Job copied from the installed backup
-CronJob. The backup producer runs as UID70, while PostgreSQL runs as UID999;
-its read-only PVC mount does not make a mode-0600 dump readable by UID999.
+CronJob. The backup producer and PostgreSQL both run as UID999 (chart values
+`backup.runAsUser` and `postgres.runAsUser`), so PostgreSQL can read the
+mode-0600 dumps through its read-only PVC mount. Dumps written before this
+alignment belong to UID70 and stay unreadable to UID999 until retention prunes
+them.
 
 ```sh
 kubectl -n <ns> create job --from=cronjob/backup backup-inspect-<run-id> \
   --dry-run=client -o yaml > <protected-state-dir>/backup-inspect.yaml
 ```
 
-Keep the inherited image, UID70, fsGroup, Secret references, resource limits,
+Keep the inherited image, UID999, fsGroup, Secret references, resource limits,
 node affinity, and Job deadline. Make the `/backups` mount read-only and replace
 only the backup container's command and arguments with:
 
@@ -179,7 +182,7 @@ command:
   - -ec
   - |
     id
-    test "$(id -u)" = 70
+    test "$(id -u)" = 999
     case "$1" in /backups/weeklyreport-*.dump) ;; *) exit 2 ;; esac
     test -x /backups
     test -f "$1"
