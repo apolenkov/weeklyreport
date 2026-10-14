@@ -161,18 +161,21 @@ kubectl -n <ns> logs job/backup-<run-id>
 ```
 
 Inspect the archive through a separate Job copied from the installed backup
-CronJob. The backup producer and PostgreSQL both run as UID999 (chart values
-`backup.runAsUser` and `postgres.runAsUser`), so PostgreSQL can read the
-mode-0600 dumps through its read-only PVC mount. Dumps written before this
-alignment belong to UID70 and stay unreadable to UID999 until retention prunes
-them.
+CronJob. The backup producer takes its UID and fsGroup from `postgres.runAsUser`
+(999 by default), so PostgreSQL can read the mode-0600 dumps through its
+read-only PVC mount. Dumps written before this alignment belong to UID 70. If
+the storage class applies fsGroup, kubelet regroups them to 999 and they stay
+readable; otherwise UID 999 cannot read them until retention prunes them. For
+such a dump only, run the inspection or restore Job with `runAsUser: 70` and
+`fsGroup: 70` and test `id -u` against 70 instead of 999; never change file
+ownership or modes.
 
 ```sh
 kubectl -n <ns> create job --from=cronjob/backup backup-inspect-<run-id> \
   --dry-run=client -o yaml > <protected-state-dir>/backup-inspect.yaml
 ```
 
-Keep the inherited image, UID999, fsGroup, Secret references, resource limits,
+Keep the inherited image, UID, fsGroup, Secret references, resource limits,
 node affinity, and Job deadline. Make the `/backups` mount read-only and replace
 only the backup container's command and arguments with:
 

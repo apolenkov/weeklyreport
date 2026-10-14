@@ -169,6 +169,11 @@ chart MUST NOT emit or prune dumps under another product prefix.
 - **THEN** one `weeklyreport-*.dump` is written atomically, older dumps beyond retention are pruned, and the job exits 0
 - **AND** a failed `pg_dump` exits non-zero and leaves no restorable-looking partial file
 
+#### Scenario: Backup writer matches the postgres identity
+
+- **WHEN** the chart is rendered with any `postgres.runAsUser`
+- **THEN** the backup CronJob pod uses the same `runAsUser` and `fsGroup` as the postgres pod, so postgres can read the mode-0600 dumps
+
 #### Scenario: Standalone backup loop remains available
 
 - **WHEN** `backup-loop.sh` runs without the one-shot variable
