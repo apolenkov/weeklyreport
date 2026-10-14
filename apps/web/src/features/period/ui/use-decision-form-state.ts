@@ -84,6 +84,7 @@ export function decisionFieldsView(
     onParentChange: (next) => {
       state.setParent(next);
       state.setStageNames([]);
+      clearError("stageNames");
     },
     stageNames: state.stageNames,
     onStageChange: (next) => {

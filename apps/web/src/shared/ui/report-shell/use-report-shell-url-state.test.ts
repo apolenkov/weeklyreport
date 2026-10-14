@@ -1,8 +1,20 @@
 // @vitest-environment jsdom
 
-import { act, renderHook } from "@testing-library/react";
-import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
+import { act, render, renderHook, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { createElement, type PropsWithChildren, StrictMode } from "react";
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  expectTypeOf,
+  it,
+  vi,
+} from "vitest";
 
+import { ArchiveToggle } from "./archive-toggle";
+import { ScopeToggle } from "./scope-toggle";
 import {
   type ReportShellScopeValue,
   useReportShellUrlState,
@@ -20,6 +32,10 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => navigation.searchParams(),
 }));
 
+beforeEach(() => {
+  navigation.pathname = "/reports/report-1";
+});
+
 afterEach(() => {
   navigation.replace.mockReset();
   navigation.searchParams.mockReturnValue(new URLSearchParams());
@@ -36,7 +52,7 @@ describe("useReportShellUrlState", () => {
         "source=status&recovery=1&archive=1&scope=lead&mode=slides&tag=a&tag=b",
       );
       navigation.searchParams.mockReturnValue(original);
-      const { result } = renderHook(() =>
+      const { result, rerender } = renderHook(() =>
         useReportShellUrlState({ stripParams }),
       );
       const expectMarkersAndTags = (url: string) => {
@@ -77,11 +93,14 @@ describe("useReportShellUrlState", () => {
       expect(scopeCall?.[1]).toEqual({ scroll: false });
 
       act(() => result.current.setIncludeArchive(false));
+      expect(navigation.replace).toHaveBeenCalledTimes(1);
+      navigation.searchParams.mockReturnValue(scope);
+      rerender();
       const archiveCall = navigation.replace.mock.lastCall;
       expect(archiveCall).toBeDefined();
       const archive = expectMarkersAndTags(String(archiveCall?.[0]));
       expect(archive.has("archive")).toBe(false);
-      expect(archive.get("scope")).toBe("lead");
+      expect(archive.has("scope")).toBe(false);
       expect(archiveCall?.[1]).toEqual({ scroll: false });
       expect(original.get("source")).toBe("status");
       expect(original.get("recovery")).toBe("1");
@@ -111,7 +130,7 @@ describe("useReportShellUrlState", () => {
     navigation.searchParams.mockReturnValue(
       new URLSearchParams("archive=1&scope=product"),
     );
-    const { result } = renderHook(() =>
+    const { result, rerender } = renderHook(() =>
       useReportShellUrlState({ stripParams: [] }),
     );
 
@@ -120,6 +139,11 @@ describe("useReportShellUrlState", () => {
       "/reports/report-1?archive=1&scope=lead",
       { scroll: false },
     );
+
+    navigation.searchParams.mockReturnValue(
+      new URLSearchParams("archive=1&scope=lead"),
+    );
+    rerender();
 
     act(() => result.current.setScope("product"));
     expect(navigation.replace).toHaveBeenLastCalledWith(
@@ -141,6 +165,158 @@ describe("useReportShellUrlState", () => {
     act(() => result.current.setScope("lead"));
     expect(navigation.replace).toHaveBeenLastCalledWith(
       "/reports/report-1?tag=a&tag=b&scope=lead",
+      { scroll: false },
+    );
+  });
+
+  it("actual repeated Archive clicks preserve the latest selections through URL acknowledgements", async () => {
+    navigation.searchParams.mockReturnValue(new URLSearchParams("tag=a&tag=b"));
+    function Controls() {
+      const state = useReportShellUrlState({ stripParams: [] });
+      return createElement(
+        "div",
+        null,
+        createElement(ArchiveToggle, {
+          checked: state.includeArchive,
+          onChange: state.setIncludeArchive,
+        }),
+        createElement(ScopeToggle<ReportShellScopeValue>, {
+          value: state.scope,
+          onChange: state.setScope,
+          allowedScopes: ["product", "lead"],
+        }),
+        createElement(
+          "a",
+          { href: state.buildQuery({ mode: "slides" }) },
+          "Slides",
+        ),
+      );
+    }
+    const user = userEvent.setup();
+    const { rerender } = render(createElement(Controls));
+    const archive = screen.getByRole("switch");
+    const leads = screen.getByRole("radio", { name: "Leads" });
+
+    await user.click(archive);
+    await user.click(leads);
+    await user.click(archive);
+    expect(archive).toHaveAttribute("aria-checked", "false");
+    expect(leads).toHaveAttribute("aria-checked", "true");
+    expect(navigation.replace).toHaveBeenCalledTimes(1);
+    expect(navigation.replace).toHaveBeenLastCalledWith(
+      "/reports/report-1?tag=a&tag=b&archive=1",
+      { scroll: false },
+    );
+    // Link construction continues to describe the committed URL.
+    expect(screen.getByRole("link", { name: "Slides" })).toHaveAttribute(
+      "href",
+      "?tag=a&tag=b&mode=slides",
+    );
+
+    navigation.searchParams.mockReturnValue(
+      new URLSearchParams("tag=a&tag=b&archive=1"),
+    );
+    rerender(createElement(Controls));
+    expect(navigation.replace).toHaveBeenLastCalledWith(
+      "/reports/report-1?tag=a&tag=b&scope=lead",
+      { scroll: false },
+    );
+    expect(archive).toHaveAttribute("aria-checked", "false");
+    expect(leads).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("link", { name: "Slides" })).toHaveAttribute(
+      "href",
+      "?tag=a&tag=b&archive=1&mode=slides",
+    );
+    expect(navigation.replace).toHaveBeenCalledTimes(2);
+    await user.click(screen.getByRole("radio", { name: "Product" }));
+    expect(leads).toHaveAttribute("aria-checked", "false");
+    navigation.searchParams.mockReturnValue(
+      new URLSearchParams("tag=a&tag=b&scope=lead"),
+    );
+    rerender(createElement(Controls));
+    expect(navigation.replace).toHaveBeenCalledTimes(3);
+    expect(navigation.replace).toHaveBeenLastCalledWith(
+      "/reports/report-1?tag=a&tag=b",
+      { scroll: false },
+    );
+    expect(archive).toHaveAttribute("aria-checked", "false");
+    expect(leads).toHaveAttribute("aria-checked", "false");
+    navigation.searchParams.mockReturnValue(new URLSearchParams("tag=a&tag=b"));
+    rerender(createElement(Controls));
+    expect(navigation.replace).toHaveBeenCalledTimes(3);
+    expect(archive).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByRole("radio", { name: "Product" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+  });
+
+  it.each(["query", "path", "popstate"])(
+    "external %s navigation supersedes queued selections",
+    (change) => {
+      const { result, rerender } = renderHook(() =>
+        useReportShellUrlState({ stripParams: [] }),
+      );
+      act(() => {
+        result.current.setIncludeArchive(true);
+        result.current.setScope("lead");
+      });
+      expect(navigation.replace).toHaveBeenCalledTimes(1);
+      expect(result.current.includeArchive).toBe(true);
+      expect(result.current.scope).toBe("lead");
+
+      if (change === "popstate") {
+        // Back can land on the first replacement's URL; it is not an acknowledgement.
+        act(() => {
+          window.dispatchEvent(new PopStateEvent("popstate"));
+        });
+        expect(result.current.includeArchive).toBe(false);
+        expect(result.current.scope).toBe("product");
+        navigation.searchParams.mockReturnValue(
+          new URLSearchParams("archive=1"),
+        );
+      } else if (change === "path") {
+        navigation.pathname = "/reports/report-2";
+      } else {
+        navigation.searchParams.mockReturnValue(
+          new URLSearchParams("tag=external"),
+        );
+      }
+      rerender();
+      expect(navigation.replace).toHaveBeenCalledTimes(1);
+      expect(result.current.includeArchive).toBe(change === "popstate");
+      expect(result.current.scope).toBe("product");
+
+      act(() => result.current.setScope("lead"));
+      expect(navigation.replace).toHaveBeenLastCalledWith(
+        change === "popstate"
+          ? "/reports/report-1?archive=1&scope=lead"
+          : change === "path"
+            ? "/reports/report-2?scope=lead"
+            : "/reports/report-1?tag=external&scope=lead",
+        { scroll: false },
+      );
+    },
+  );
+
+  it("acknowledges a queued selection only once in StrictMode", () => {
+    const { result, rerender } = renderHook(
+      () => useReportShellUrlState({ stripParams: [] }),
+      {
+        wrapper: ({ children }: PropsWithChildren) =>
+          createElement(StrictMode, null, children),
+      },
+    );
+    act(() => {
+      result.current.setIncludeArchive(true);
+      result.current.setScope("lead");
+    });
+    navigation.searchParams.mockReturnValue(new URLSearchParams("archive=1"));
+    rerender();
+    rerender();
+    expect(navigation.replace).toHaveBeenCalledTimes(2);
+    expect(navigation.replace).toHaveBeenLastCalledWith(
+      "/reports/report-1?archive=1&scope=lead",
       { scroll: false },
     );
   });
