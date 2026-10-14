@@ -21,6 +21,8 @@ test("the pilot is serial, per-test, Vitest-only and breaks below 70", () => {
   assert.equal(stryker.testRunner, "vitest");
   assert.equal(stryker.coverageAnalysis, "perTest");
   assert.equal(stryker.concurrency, 1);
+  // The configs reach `../../`, which a sandbox copy of apps/api would not carry.
+  assert.equal(stryker.inPlace, true);
   const thresholds = stryker.thresholds as { break: number };
   assert.ok(thresholds.break >= 70, "break must be at least 70");
   assert.deepEqual(stryker.vitest, { configFile: "vitest.mutation.config.ts" });

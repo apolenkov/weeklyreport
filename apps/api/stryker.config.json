@@ -4,6 +4,7 @@
   "plugins": ["@stryker-mutator/vitest-runner"],
   "vitest": { "configFile": "vitest.mutation.config.ts" },
   "mutate": ["src/modules/period/domain/period-transition.ts"],
+  "inPlace": true,
   "coverageAnalysis": "perTest",
   "concurrency": 1,
   "thresholds": { "high": 90, "low": 80, "break": 70 },

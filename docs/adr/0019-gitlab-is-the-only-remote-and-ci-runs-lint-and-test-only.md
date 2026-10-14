@@ -1,8 +1,8 @@
 # GitLab is the only remote and CI runs lint and test lanes only
 
-**Status:** accepted
+**Status:** superseded
 **Date:** 2026-09-28
-**Superseded-by:** None
+**Superseded-by:** [ADR 0022](0022-ci-runs-security-mutation-and-production-build-routes.md) (CI scope only; GitLab stays the only remote)
 
 ## Context
 

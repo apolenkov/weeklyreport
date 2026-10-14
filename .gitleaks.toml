@@ -13,7 +13,9 @@ paths = ['''^apps/api/src/modules/auth/__fixtures__/saml/sp\-key\.pem$''']
 
 [[allowlists]]
 description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"
+condition = "AND"
 paths = ['''^apps/api/src/modules/auth/auth\.controller\.cookie\.test\.ts$''']
+regexes = ['''^phase\-01\-secret\-padded\-to\-min\-32\-chars$''']
 
 [[allowlists]]
 description = "Synthetic SAML test key fixture (not a deployed credential)"
@@ -21,15 +23,21 @@ paths = ['''^apps/api/src/modules/auth/__fixtures__/saml/idp\-key\.pem$''']
 
 [[allowlists]]
 description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"
+condition = "AND"
 paths = ['''^apps/api/src/modules/search/application/clarification\-token\.test\.ts$''']
+regexes = ['''^clarification\-test\-secret\-with\-at\-least\-32\-chars$''']
 
 [[allowlists]]
 description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"
+condition = "AND"
 paths = ['''^deploy/helm/weeklyreport/values\-local\-prod\.example\.yaml$''']
+regexes = ['''^REPLACE_WITH_IDP_CERT_B64$''']
 
 [[allowlists]]
 description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"
+condition = "AND"
 paths = ['''^deploy/tester\-kit/values\-tester\.yaml$''']
+regexes = ['''^REPLACE_WITH_IDP_CERT_B64$''']
 
 [[allowlists]]
 description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"

@@ -341,6 +341,7 @@ test("production-build is a blocking route with explicit build env bound to the 
 
 test("dependency-scan blocks on prod and dev audits in every pipeline", () => {
   const job = jobBlock("dependency-scan");
+  assert.match(job, /^ {2}needs: \[\]$/mu);
   assert.match(job, /rules:\n {4}- when: on_success\n/u);
   assert.doesNotMatch(job, /allow_failure|\|\||when: never|changes:/u);
   assert.match(job, /^ {4}- pnpm audit --prod$/mu);
@@ -351,6 +352,7 @@ test("dependency-scan blocks on prod and dev audits in every pipeline", () => {
 
 test("secret-scan is blocking, unshallowed and checksum-verified", () => {
   const job = jobBlock("secret-scan");
+  assert.match(job, /^ {2}needs: \[\]$/mu);
   assert.doesNotMatch(job, /allow_failure|when: manual|when: never/u);
   assert.match(job, /GIT_DEPTH: "0"/u);
   assert.match(job, /GITLEAKS_SHA256: [0-9a-f]{64}/u);
