@@ -651,6 +651,71 @@ describe("DecisionEditDialog — stage-ownership scoping", () => {
 describe("DecisionEditDialog — activity parenting", () => {
   const activities = [{ id: "act1", name: "Jira triage duty" }];
 
+  it("clears stale stage validation when switching through an activity to a single-stage product", () => {
+    const onSave = vi.fn();
+    render(
+      <DecisionEditDialog
+        open
+        decision={null}
+        defaultOwner="Test Lead"
+        stagesForProduct={(id) =>
+          id === "p1" ? ["Planning", "Development"] : ["Analysis"]
+        }
+        products={[
+          ...products,
+          ...products.map((product) => ({ ...product, id: "p2", name: "ERP" })),
+        ]}
+        activities={activities}
+        defaultProductId="p1"
+        onSave={onSave}
+        onCancel={() => undefined}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText(/^Decision \*/i), {
+      target: { value: "Approve the plan" },
+    });
+    fireEvent.change(screen.getByLabelText(/^Impact \*/i), {
+      target: { value: "Unblocks rollout" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save decision" }));
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(screen.getByRole("group", { name: "SDLC Stages" })).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(screen.getByText("Select at least one stage.")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Parent"), {
+      target: { value: "activity:act1" },
+    });
+    expect(
+      screen.queryByRole("group", { name: "SDLC Stages" }),
+    ).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText("Parent"), {
+      target: { value: "product:p2" },
+    });
+
+    expect(
+      screen.getByText("Applied automatically").parentElement,
+    ).toHaveTextContent("Analysis");
+    expect(screen.getByRole("group", { name: "SDLC Stages" })).toHaveAttribute(
+      "aria-invalid",
+      "false",
+    );
+    expect(
+      screen.queryByText("Select at least one stage."),
+    ).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Save decision" }));
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      productId: "p2",
+      stageNames: ["Analysis"],
+    });
+  });
+
   it("hides the stage step and saves an activity-parented decision with no stage", () => {
     const onSave = vi.fn();
     render(
