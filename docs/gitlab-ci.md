@@ -5,8 +5,8 @@ disposable-database integration and reset lanes, the blocking dependency audit, 
 mutation pilot and production build. Per the owner decision of 2026-09-28 it carries tests
 and linters; since the owner decision of 2026-10-01 it also has one gated image
 build (`build-images`, rootless BuildKit) and an optional manual deploy job.
-TASK-522 adds three blocking routes: `secret-scan`, a single `dependency-scan`
-and `production-build`. There is
+TASK-522 adds four blocking routes: `secret-scan`, a single `dependency-scan`,
+`mutation-period` and `production-build`. There is
 no Docker-in-Docker and no operational smoke. PDF export, release browser
 E2E, and the read-back of a deployment remain
 required evidence, collected outside CI as separate checks and never reported
@@ -15,19 +15,20 @@ is a lint/test lane, not a full acceptance gate; `production-build` proves only
 that the production build and its dist gates pass on the pipeline's SHA. The GitLab instance
 is 15.10, so `.gitlab-ci.yml` uses no keyword introduced after 15.10.
 
-| GitLab job        | Execution                                                             |
-| ----------------- | --------------------------------------------------------------------- |
-| node-toolchain    | Pinned Node container on the shared Docker runner                     |
-| quality           | Pinned Node container on the shared Docker runner                     |
-| coverage          | Pinned Node container on the shared Docker runner                     |
-| api-integration   | Pinned pgvector/PG18 Trixie job container on the shared Docker runner |
-| migrate-reset     | Pinned pgvector/PG18 Trixie job container on the shared Docker runner |
-| production-build  | Every pipeline; explicit build env, dist gates, SHA-bound manifest    |
-| dependency-scan   | Every pipeline (MR, branch, schedule); blocking prod + dev audit      |
-| secret-scan       | Every pipeline; Gitleaks tree + full history, synthetic controls      |
-| renovate          | Schedule, web, or API pipeline with `RENOVATE_TOKEN` set; no `needs`  |
-| build-images      | Rootless BuildKit; default branch and tags, manual on MRs             |
-| deploy-production | Manual, default branch, only when `KUBECONFIG` is set                 |
+| GitLab job        | Execution                                                                                  |
+| ----------------- | ------------------------------------------------------------------------------------------ |
+| node-toolchain    | Pinned Node container on the shared Docker runner                                          |
+| quality           | Pinned Node container on the shared Docker runner                                          |
+| coverage          | Pinned Node container on the shared Docker runner                                          |
+| api-integration   | Pinned pgvector/PG18 Trixie job container on the shared Docker runner                      |
+| migrate-reset     | Pinned pgvector/PG18 Trixie job container on the shared Docker runner                      |
+| production-build  | MR and branch pipelines (not schedule); explicit build env, dist gates, SHA-bound manifest |
+| mutation-period   | MR and branch pipelines (not schedule); Stryker+Vitest period pilot, break 70              |
+| dependency-scan   | Every pipeline (MR, branch, schedule); blocking prod + dev audit                           |
+| secret-scan       | Every pipeline; Gitleaks tree + full history, synthetic controls                           |
+| renovate          | Schedule, web, or API pipeline with `RENOVATE_TOKEN` set; no `needs`                       |
+| build-images      | Rootless BuildKit; default branch and tags, manual on MRs                                  |
+| deploy-production | Manual, default branch, only when `KUBECONFIG` is set                                      |
 
 ## Renovate
 
