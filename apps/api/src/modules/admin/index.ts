@@ -16,6 +16,7 @@ export {
   AdminPeriodOverlapError,
   AdminPeriodStaleStateError,
   AdminProjectNotFoundError,
+  AdminReminderPolicyConflictError,
   AdminReminderPolicyNotFoundError,
   AdminReopenRequestAlreadyProcessedError,
   AdminReopenRequestNotFoundError,

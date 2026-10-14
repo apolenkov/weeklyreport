@@ -21,24 +21,23 @@ function buildListPolicies(deps: AdminReminderPoliciesDeps) {
   );
 }
 
-// Existence check before upsert so audit action is create vs update.
 function buildSavePolicy(deps: AdminReminderPoliciesDeps) {
   return adminProcedure
     .input(reminderPolicySchema)
     .use(captureMutationAuditInputMiddleware)
     .mutation(async ({ ctx, input }) => {
       try {
-        const existed = await deps.reminderAdminService.policyExists(input.id);
-        const saved = await deps.reminderAdminService.savePolicy(input);
+        const { policy, created } =
+          await deps.reminderAdminService.savePolicy(input);
         ctx.auditLogger.policySave({
           userId: ctx.session.userId,
           role: ctx.session.role,
           ip: ctx.ip,
-          policyId: saved.id,
-          kind: saved.kind,
-          action: existed ? "update" : "create",
+          policyId: policy.id,
+          kind: policy.kind,
+          action: created ? "create" : "update",
         });
-        return saved;
+        return policy;
       } catch (error) {
         throw mapDomainError(error);
       }

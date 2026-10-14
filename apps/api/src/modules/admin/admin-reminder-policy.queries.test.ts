@@ -57,7 +57,10 @@ function makeTransaction(input?: {
   });
   const tx = {
     $queryRaw,
-    reminderPolicy: { upsert: vi.fn().mockResolvedValue(saved) },
+    reminderPolicy: {
+      createMany: vi.fn().mockResolvedValue({ count: 1 }),
+      update: vi.fn().mockResolvedValue(saved),
+    },
     reminderRule: {
       findFirst: vi.fn().mockResolvedValue(input?.currentRule ?? null),
       updateMany: vi.fn().mockResolvedValue({ count: 2 }),
@@ -74,14 +77,13 @@ function makeTransaction(input?: {
 }
 
 describe("saveReminderPolicy transaction", () => {
-  it("commits policy deactivation and pauses all live rule versions atomically", async () => {
+  it("maps the saved policy and requests deactivation of active rule versions", async () => {
     const { prisma, tx } = makeTransaction();
 
-    await expect(saveReminderPolicy(asNever(prisma), policy)).resolves.toEqual(
+    await expect(saveReminderPolicy(asNever(prisma), policy)).resolves.toEqual({
       policy,
-    );
-
-    expect(tx.reminderPolicy.upsert).toHaveBeenCalledOnce();
+      created: true,
+    });
     expect(tx.reminderRule.updateMany).toHaveBeenCalledWith({
       where: { policyId: policy.id, status: "active" },
       data: { status: "paused" },
@@ -124,7 +126,7 @@ describe("saveReminderPolicy transaction", () => {
     });
   });
 
-  it("rejects the whole save when the derived-status cascade fails", async () => {
+  it("propagates a derived-status cascade failure", async () => {
     const { prisma, tx } = makeTransaction();
     tx.reminderRule.updateMany.mockRejectedValue(new Error("cascade failed"));
 

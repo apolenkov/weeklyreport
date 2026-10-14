@@ -52,7 +52,6 @@ const PORT_INTERFACES = {
   ],
   "src/modules/review/application/review.service.ts": ["ReviewRepository"],
   "src/modules/search/application/search.service.ts": ["SearchRepository"],
-  "src/modules/admin/reminder-admin.service.ts": ["ReminderAdminRepository"],
 } as const;
 
 const ADAPTER_CLASSES = {
@@ -102,10 +101,6 @@ const TARGETED_CLASSES = {
   "src/modules/admin/action-log.prisma-repository.ts": {
     className: "ActionLogPrismaRepository",
     operations: ["listActionLog"],
-  },
-  "src/modules/admin/admin.prisma-repository.ts": {
-    className: "AdminPrismaRepository",
-    operations: ["reminderPolicyExists"],
   },
   "src/modules/archive/archive.prisma-repository.ts": {
     className: "ArchivePrismaRepository",

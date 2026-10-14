@@ -10,6 +10,7 @@ import {
   AdminPeriodOverlapError,
   AdminPeriodStaleStateError,
   AdminProjectNotFoundError,
+  AdminReminderPolicyConflictError,
   AdminReminderPolicyNotFoundError,
   AdminReopenRequestAlreadyProcessedError,
   AdminReopenRequestNotFoundError,
@@ -163,6 +164,7 @@ export const DOMAIN_ERROR_CODES: readonly (readonly [
   // A stale admin recovery snapshot conflicts with newer durable delivery
   // state; the operator must refresh instead of overwriting it.
   [AdminSnapshotConflictError, "CONFLICT"],
+  [AdminReminderPolicyConflictError, "CONFLICT"],
   // Scope/archived denial → FORBIDDEN; missing report → NOT_FOUND. Two
   // classes because they map to different codes.
   [PeriodScopeError, "FORBIDDEN"],

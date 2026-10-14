@@ -64,7 +64,9 @@ export function unusedAdminRepositoryStubs(): AdminRepositoryUnusedStubs {
     listStageAssignmentCounts: vi.fn().mockResolvedValue([]),
     listStages: vi.fn().mockResolvedValue([]),
     readPeriodById: vi.fn().mockResolvedValue(null),
-    saveReminderPolicy: vi.fn((policy) => Promise.resolve(policy)),
+    saveReminderPolicy: vi.fn<AdminRepository["saveReminderPolicy"]>((policy) =>
+      Promise.resolve({ policy, created: true }),
+    ),
     unarchivePeriod: vi.fn().mockResolvedValue({ nextPeriodState: "open" }),
     updatePeriodManual: vi.fn().mockResolvedValue({
       id: STUB_ID,
