@@ -13,7 +13,7 @@
   "dependencies": {
     "@weeklyreport/shared": "workspace:*",
     "@weeklyreport/ui": "workspace:*",
-    "@sentry/nextjs": "^11.7.0",
+    "@sentry/nextjs": "11.6.0",
     "@tanstack/react-query": "^5.104.2",
     "@trpc/client": "^11.19.0",
     "@trpc/server": "catalog:",
