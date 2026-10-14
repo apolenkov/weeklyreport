@@ -11,7 +11,7 @@ const read = (path: string): string => readFileSync(resolve(path), "utf8");
 
 const REVIEWED_EXTERNAL_IMAGES = new Set([
   "alpine/helm:4.3.0@sha256:a6cf54599ccb99d90cf0712b30f03fdb3cab062e6b94e0418cc4db7e8a1464b2",
-  "axllent/mailpit:v1.31.4@sha256:b68349e3a014b90c5610bfb26b2ae36f3892d7b8cf25ee140c6c71c98d2fcf48",
+  "axllent/mailpit:v1.31.5@sha256:94f6b70c1436defae6799d9ac7ff0eeff9540465b842026d5cdb018f1c0234ea",
   "caddy:2.11.7-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f",
   "edoburu/pgbouncer:v1.26.0-p0@sha256:b17551c776ef7e5769ef80b956d20f85e2fd25dd8912d31d58f782aad495b711",
   "gotenberg/gotenberg:8.37.0-chromium@sha256:0d28ae9a96441588ef739623726bd500ad0720b77266c6f1351a13e333fbd61c",
@@ -22,7 +22,7 @@ const REVIEWED_EXTERNAL_IMAGES = new Set([
   "pgvector/pgvector:0.8.7-pg18-trixie@sha256:9d9c930220cb9bf2f956d10a8f909cf9973d9672ca0278aef2c1e6facccad2e0",
   "postgres:16.15-alpine@sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea",
   "redis:8.10.2-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0",
-  "renovate/renovate:44.148.4@sha256:2c7b118cb2d1b7137e63322efc0e1d3d96d5f6937ec1c35c3cd9b7de73a8ed29",
+  "renovate/renovate:44.155.2@sha256:93e8dc64410276bb44854b4f6fce2306f8fe24c87301d558a920381130b30851",
 ]);
 
 function assertReviewedExternalImage(path: string, image: string): void {
