@@ -539,7 +539,7 @@ integration suites once, serially, against disposable Postgres/Redis/Mailpit
 (in-job loopback Postgres; Redis and Mailpit as service aliases) and enforces the API coverage thresholds.
 The `coverage` lane enforces Web coverage without starting a second dependency
 stack; the `quality` lane runs lint, typecheck, and unit tests, and
-`migrate-reset` covers migration drift. The complete workspace build, the
+`migrate-reset` covers migration drift. The `production-build` lane checks the complete workspace build on the pipeline SHA; the
 PDF export, browser acceptance, and the read-back of a deployment are not CI
 evidence and stay required evidence collected outside CI; a successful
 `build-images` run produces images, not that evidence. Local

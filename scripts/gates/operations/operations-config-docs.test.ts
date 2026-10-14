@@ -308,48 +308,54 @@ test("operations documentation inventories integration and coverage lanes", () =
   );
 });
 
-test("the GitLab quality lane carries no product build", () => {
-  // Per the owner decision the product build is documented as required
-  // evidence outside CI instead.
-  const gitlabQuality = gitlabContent.slice(
-    gitlabContent.indexOf("\nquality:"),
-    gitlabContent.indexOf("\ndependency-scan:"),
-  );
-  assert.doesNotMatch(gitlabQuality, /pnpm build/u);
-  assert.match(gitlabCiDoc, /product build[\s\S]*outside CI/u);
+const jobBlock = (name: string): string => {
+  const start = gitlabContent.indexOf(`\n${name}:\n`);
+  assert.ok(start !== -1, `${name} job must exist`);
+  return gitlabContent.slice(start + 1).split(/\n(?=\S)/u)[0] ?? "";
+};
+
+test("the GitLab quality lane stays build-free and the build has its own job", () => {
+  assert.doesNotMatch(jobBlock("quality"), /pnpm build/u);
+  assert.match(gitlabCiDoc, /`production-build`/u);
 });
 
-test("dependency-scan also runs on merge requests that change dependency manifests", () => {
-  const start = gitlabContent.indexOf("\ndependency-scan:");
-  const next = gitlabContent.slice(start + 1).search(/\n[a-z.][\w.-]*:\n/u);
-  const end = next === -1 ? gitlabContent.length : start + 1 + next;
-  const job = gitlabContent.slice(start, end);
-  const mrRule = /merge_request_event"'\s+changes:\n((?:\s+- .+\n)+)/u.exec(
-    job,
-  )?.[1];
-  assert.ok(mrRule, "dependency-scan must run on merge requests with changes");
-  const scan = mrRule;
-  for (const manifest of [
-    "pnpm-lock.yaml",
-    "package.json",
-    "pnpm-workspace.yaml",
+test("production-build is a blocking route with explicit build env bound to the SHA", () => {
+  const job = jobBlock("production-build");
+  assert.doesNotMatch(job, /allow_failure|when: manual|when: never/u);
+  assert.match(job, /^ {4}- pnpm build$/mu);
+  for (const name of [
+    "API_URL",
+    "NEXT_PUBLIC_AUTH_STUB",
+    "NEXT_PUBLIC_DEV_ROLE_SWITCHER",
+    String.raw`NEXT_PUBLIC_APP_VERSION: \$CI_COMMIT_SHA`,
+    "NEXT_PUBLIC_CLIENT_LOG_FORWARDING",
+    "NEXT_PUBLIC_WEB_VITALS",
+    "NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED",
+    "NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES",
   ]) {
-    assert.ok(
-      scan.includes(`- ${manifest}`),
-      `${manifest} must trigger the scan`,
-    );
+    assert.match(job, new RegExp(`^ {4}${name}`, "mu"), `${name} must be set`);
   }
-  // Production advisories block; development-tool advisories only report.
+  assert.match(job, /commit=%s.*\$CI_COMMIT_SHA/su);
+  assert.match(job, /production-build-\$CI_COMMIT_SHA\.manifest/u);
+});
+
+test("dependency-scan blocks on prod and dev audits in every pipeline", () => {
+  const job = jobBlock("dependency-scan");
+  assert.match(job, /rules:\n {4}- when: on_success\n/u);
+  assert.doesNotMatch(job, /allow_failure|\|\||when: never|changes:/u);
   assert.match(job, /^ {4}- pnpm audit --prod$/mu);
-  assert.doesNotMatch(job, /pnpm audit --dev/u);
-  // The dev audit is its own job: a failure warns but is never hidden by `||`.
-  const devStart = gitlabContent.indexOf("\ndependency-scan-dev:");
-  assert.ok(devStart > start, "dependency-scan-dev job must exist");
-  const devJob = gitlabContent.slice(devStart + 1).split(/\n(?=\S)/u)[0] ?? "";
-  assert.match(devJob, /extends: dependency-scan\b/u);
-  assert.match(devJob, /allow_failure: true/u);
-  assert.match(devJob, /^ {4}- pnpm audit --dev --audit-level high$/mu);
-  assert.doesNotMatch(devJob, /\|\|/u);
+  assert.match(job, /^ {4}- pnpm audit --audit-level high$/mu);
+  assert.doesNotMatch(gitlabContent, /\ndependency-scan-dev:/u);
+  assert.match(gitlabContent, /\nrenovate:\n/u);
+});
+
+test("secret-scan is blocking, unshallowed and checksum-verified", () => {
+  const job = jobBlock("secret-scan");
+  assert.doesNotMatch(job, /allow_failure|when: manual|when: never/u);
+  assert.match(job, /GIT_DEPTH: "0"/u);
+  assert.match(job, /GITLEAKS_SHA256: [0-9a-f]{64}/u);
+  assert.match(job, /sha256sum -c -/u);
+  assert.match(job, /^ {4}- scripts\/gates\/secret-scan\.sh$/mu);
 });
 
 test("Vitest CI output has one labelled summary contract", () => {

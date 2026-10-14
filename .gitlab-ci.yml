@@ -13,8 +13,9 @@ workflow:
 
 # Owner decisions 2026-09-28 and 2026-10-01: GitLab CI carries lint/test lanes,
 # one rootless-BuildKit image build, and an optional manual deploy — no
-# Docker-in-Docker and no operational smoke. Production builds, PDF, and
-# browser acceptance stay outside CI as separate required evidence.
+# Docker-in-Docker and no operational smoke. TASK-522 adds the blocking
+# production-build, secret-scan, dependency-scan and mutation-period routes;
+# PDF and release browser E2E stay outside CI as separate explicit acceptance.
 # The disposable-database guard accepts only exact loopback targets, while
 # GitLab services are reachable through DNS aliases, never through the job's
 # loopback. PostgreSQL therefore runs inside each database job container on
@@ -23,6 +24,7 @@ workflow:
 stages:
   - toolchain
   - quality
+  - build
   - dependency-scan
   - coverage
   - api-integration
@@ -176,35 +178,93 @@ quality:
     - pnpm typecheck
     - pnpm test
 
+# Blocking mutation pilot for the pure period lifecycle transition owner
+# (TASK-522 WR4): serial perTest Stryker over one Vitest unit suite, break at
+# 70. Mutant workers touch no PostgreSQL, Redis or browser; the full inventory
+# and break 80 are a separate expansion.
+mutation-period:
+  extends: .workspace-node
+  stage: quality
+  needs:
+    - job: quality
+      artifacts: false
+  variables:
+    DATABASE_URL: postgresql://weeklyreport:localdev@127.0.0.1:5432/weeklyreport_generate_only
+    NODE_OPTIONS: --max-old-space-size=8192
+  script:
+    - pnpm --filter @weeklyreport/api test:mutation
+
+# Production build route: the explicit build environment mirrors the web image
+# build, `pnpm build` runs the production-dist gates inside the API and shared
+# builds, and the manifest binds the built output to this source SHA. It is
+# not a browser or release acceptance: release E2E stays a separate explicit
+# gate (docs/gitlab-ci.md).
+production-build:
+  extends: .workspace-node
+  stage: build
+  needs:
+    - job: quality
+      artifacts: false
+  variables:
+    DATABASE_URL: postgresql://weeklyreport:localdev@127.0.0.1:5432/weeklyreport_generate_only
+    NODE_OPTIONS: --max-old-space-size=8192
+    API_URL: http://api:3001
+    NEXT_PUBLIC_AUTH_STUB: "false"
+    NEXT_PUBLIC_DEV_ROLE_SWITCHER: "false"
+    NEXT_PUBLIC_SENTRY_DSN: ""
+    NEXT_PUBLIC_APP_VERSION: $CI_COMMIT_SHA
+    NEXT_PUBLIC_CLIENT_LOG_FORWARDING: "false"
+    NEXT_PUBLIC_WEB_VITALS: "false"
+    NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED: "false"
+    NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES: admin
+  script:
+    - pnpm build
+    - mkdir -p ci-reports
+    - |
+      {
+        printf 'commit=%s\n' "$CI_COMMIT_SHA"
+        find apps/api/dist packages/shared/dist apps/web/.next/standalone -type f -print0 \
+          | sort -z | xargs -0 sha256sum
+      } > "ci-reports/production-build-$CI_COMMIT_SHA.manifest"
+      test "$(wc -l < "ci-reports/production-build-$CI_COMMIT_SHA.manifest")" -gt 1
+
+# One blocking audit for production and development dependencies (tooling
+# included) on every MR, branch and scheduled pipeline. High/critical advisories
+# and an unreachable audit endpoint both fail the job; the single reviewed
+# exception lives in pnpm-workspace.yaml `auditConfig`.
 dependency-scan:
   extends: .node-image
   stage: dependency-scan
   timeout: 10m
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "schedule" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
-    - if: '$CI_PIPELINE_SOURCE == "web"'
-      when: always
-    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      changes:
-        - pnpm-lock.yaml
-        - package.json
-        - "**/package.json"
-        - pnpm-workspace.yaml
-    - when: never
+    - when: on_success
   before_script:
     - npm install --global pnpm@12.13.0
     - test "$(pnpm --version)" = "12.13.0"
     - pnpm install --frozen-lockfile
   script:
     - pnpm audit --prod
+    - pnpm audit --audit-level high
 
-# Dev tooling ships nowhere, so its advisories warn (pipeline status "passed
-# with warnings") instead of failing the lane; rules are inherited.
-dependency-scan-dev:
-  extends: dependency-scan
-  allow_failure: true
+# Blocking secret scan of the tree and the full Git history. The release binary
+# is verified by checksum; findings are redacted and the script proves with
+# synthetic controls that a HEAD secret and a history-only secret both fail.
+secret-scan:
+  extends: .node-image
+  stage: dependency-scan
+  timeout: 20m
+  variables:
+    GIT_DEPTH: "0"
+    GITLEAKS_VERSION: "8.30.1"
+    GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+  rules:
+    - when: on_success
   script:
-    - pnpm audit --dev --audit-level high
+    - curl -fsSLO "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+    - echo "$GITLEAKS_SHA256  gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" | sha256sum -c -
+    - tar -xzf "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" -C /usr/local/bin gitleaks
+    - rm "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+    - scripts/gates/secret-scan.sh
 
 # Weekly dependency MRs. The token is a masked CI/CD variable, never in Git;
 # without it the job is not created. The image runs without Docker-in-Docker.

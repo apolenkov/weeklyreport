@@ -1,0 +1,86 @@
+title = "WeeklyReport secret scan"
+
+[extend]
+useDefault = true
+
+# Reviewed 2026-10-15 (TASK-522 WR1). Every entry is a synthetic or non-secret
+# value; a new finding anywhere else fails the blocking CI job. HEAD entries are
+# path-scoped; history-only entries are scoped to path AND the reviewed commit.
+
+[[allowlists]]
+description = "Synthetic SAML test key fixture (not a deployed credential)"
+paths = ['''^apps/api/src/modules/auth/__fixtures__/saml/sp\-key\.pem$''']
+
+[[allowlists]]
+description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"
+paths = ['''^apps/api/src/modules/auth/auth\.controller\.cookie\.test\.ts$''']
+
+[[allowlists]]
+description = "Synthetic SAML test key fixture (not a deployed credential)"
+paths = ['''^apps/api/src/modules/auth/__fixtures__/saml/idp\-key\.pem$''']
+
+[[allowlists]]
+description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"
+paths = ['''^apps/api/src/modules/search/application/clarification\-token\.test\.ts$''']
+
+[[allowlists]]
+description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"
+paths = ['''^deploy/helm/weeklyreport/values\-local\-prod\.example\.yaml$''']
+
+[[allowlists]]
+description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"
+paths = ['''^deploy/tester\-kit/values\-tester\.yaml$''']
+
+[[allowlists]]
+description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"
+condition = "AND"
+commits = ["0edb8383bf3a90c73854c4c60f7de56b7beb5048"]
+paths = ['''^e2e/runtime\-sweep/preflight/launch/preflight\-shard\-child\-environment\.ts$''']
+
+[[allowlists]]
+description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"
+condition = "AND"
+commits = ["826ffa1677dd967b39250fd392bcbac005175216"]
+paths = ['''^e2e/runtime\-sweep/preflight/shards/journal/preflight\-shard\-journal\-contract\.test\.ts$''']
+
+[[allowlists]]
+description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"
+condition = "AND"
+commits = ["dbeed10731e4c058b0559c55945bb5990d187338"]
+paths = ['''^e2e/runtime\-sweep/preflight/observability/environment\-observer\-bugsink\-sdk\.test\.ts$''']
+
+[[allowlists]]
+description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"
+condition = "AND"
+commits = ["26f021e7ecfc798ab81393639f8873e9672f7a5f"]
+paths = ['''^apps/api/src/modules/telegram/activation\.integration\.test\.ts$''']
+
+[[allowlists]]
+description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"
+condition = "AND"
+commits = ["107e257774e48c71291a867cf69a520bb111e703"]
+paths = ['''^apps/api/src/modules/auth/auth\.e2e\.spec\.ts$''']
+
+[[allowlists]]
+description = "Deleted planning/issue-export file: documented default dev credentials or issue keys, not secrets"
+condition = "AND"
+commits = ["3e455b62b5ec712caf0f1794b828c8292f636758"]
+paths = ['''^\.planning/plans/tingly\-wandering\-brooks\.md$''']
+
+[[allowlists]]
+description = "Deleted planning/issue-export file: documented default dev credentials or issue keys, not secrets"
+condition = "AND"
+commits = ["9d9e59fe89bf69a32886b730e0d94d178cf267d6"]
+paths = ['''^\.jira$''']
+
+[[allowlists]]
+description = "Deleted planning/issue-export file: documented default dev credentials or issue keys, not secrets"
+condition = "AND"
+commits = ["2626c5488e1da2421933238a187849cb5ac8ac40"]
+paths = ['''^\.planning/phases/47\-developer\-experience/47\-03\-SUMMARY\.md$''']
+
+[[allowlists]]
+description = "Historical dev-only perf trace carrying an expired local-dev HS256 session token; file no longer in HEAD"
+condition = "AND"
+commits = ["c05332b982434f67f1203d60b3f2b383004d2abc"]
+paths = ['''^\.planning/quick/uat\-feedback\-2026\-05\-11/perf\-head\-dashboard\.json$''']
