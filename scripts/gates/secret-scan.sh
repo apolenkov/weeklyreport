@@ -19,7 +19,7 @@ if [ "$(git -C "$ROOT" rev-parse --is-shallow-repository)" != false ]; then
 fi
 
 # Relative target: allowlist paths are repository-relative, absolute ones never match.
-scan_tree() { (cd "$1" && "$BIN" dir --no-banner --redact --exit-code 1 --config .gitleaks.toml .); }
+scan_tree() { (cd "$1" && "$BIN" dir --no-banner -v --redact --exit-code 1 --config .gitleaks.toml .); }
 # Only the commits reachable from the given ref, not other branches left in a reused clone.
 scan_history() { "$BIN" git --no-banner -v --redact --exit-code 1 --config "$1/.gitleaks.toml" --log-opts="$2" "$1"; }
 

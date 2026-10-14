@@ -42,7 +42,7 @@ test("the pilot suite is flat so Stryker can select tests by name", () => {
   const suite = read(
     "apps/api/src/modules/period/domain/period-transition.test.ts",
   );
-  assert.doesNotMatch(suite, /\bdescribe\(/u);
+  assert.doesNotMatch(suite, /\b(?:describe|suite)(?:\.\w+)*\(/u);
 });
 
 test("CI runs the pilot as a blocking job", () => {

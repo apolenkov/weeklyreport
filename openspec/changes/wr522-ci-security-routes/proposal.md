@@ -43,4 +43,6 @@ None.
 
 - Branch protection and the direct-to-`main` policy do not change (TASK-522 WR2).
 - PDF export, release browser E2E and deployment read-back stay outside CI.
-- Full mutation inventory and break 80 are a separate expansion.
+- Full mutation inventory and break 80 are a separate expansion; it needs an
+  upstream fix for the Stryker 10 / Vitest 5 test-name filter or
+  `coverageAnalysis: "all"`, because nested `describe` suites are not selected.

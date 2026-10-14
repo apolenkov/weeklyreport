@@ -5,6 +5,8 @@ import { buildTransition } from "./period-transition.js";
 // Tests are flat (no describe): Stryker 10 builds its test-name filter by
 // joining suite names with a space, while Vitest 5 matches `a > b`, so a nested
 // title would never be selected and every mutant would survive.
+// TODO(TASK-522): upstream stryker-js fix, or coverageAnalysis "all", before
+// the mutation inventory expands to suites that use describe.
 // Asserts the exact object each transition produces (toEqual) so a gained
 // or dropped governed field fails the suite. See openspec/specs/period-dual-state.
 
