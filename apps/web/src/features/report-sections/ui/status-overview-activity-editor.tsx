@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 
 import {
   ActivityDescriptionField,
@@ -17,6 +17,18 @@ export type {
   StatusOverviewActivityFieldsChange,
   StatusOverviewActivityFieldsValue,
 } from "./status-overview-activity-fields";
+
+const STALE_FIELDS_MESSAGE =
+  "Weekly fields changed while you were editing. Copy any text you need. Cancel discards your local changes; then reopen to load the latest values.";
+// Distinct keys mount a fresh alert when server values become stale.
+const WEEKLY_FIELDS_CAPTION = (
+  <p
+    key="weekly-fields-caption"
+    className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]"
+  >
+    Weekly fields
+  </p>
+);
 
 // Weekly title/description editor for one activity unit in the Overview row
 // composer. Keeps local input while a save is pending and never renames the
@@ -40,56 +52,60 @@ export function StatusOverviewActivityEditor({
   readonly onClose: () => void;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const warningId = useId();
   useEffect(() => formRef.current?.focus(), []);
   const draft = useActivityFieldsDraft(activityId, values, onPendingChange);
-  const { titleError, descriptionError, invalid } = activityFieldErrors(
-    draft.title,
-    draft.description,
-  );
-
-  const save = (): void => {
-    if (invalid) return;
-    onChange(activityId, {
-      titleOverride: normalize(draft.title),
-      description: normalize(draft.description),
-    });
-    draft.markClean();
-    onClose();
-  };
+  const errors = activityFieldErrors(draft.title, draft.description);
 
   return (
     <form
       ref={formRef}
       tabIndex={-1}
-      className="min-w-0 border-t border-[var(--color-border-subtle)] focus:outline-none bg-[color-mix(in_srgb,var(--color-card)_88%,transparent)] px-4 py-3"
+      className="min-w-0 border-t border-[var(--color-border-subtle)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] bg-[color-mix(in_srgb,var(--color-card)_88%,transparent)] px-4 py-3"
       aria-label={`Weekly fields for ${values.catalogueName}`}
       onSubmit={(event) => {
         event.preventDefault();
-        save();
+        if (errors.invalid || draft.stale) return;
+        onChange(activityId, {
+          titleOverride: normalize(draft.title),
+          description: normalize(draft.description),
+        });
+        draft.markClean();
+        onClose();
       }}
     >
-      <p className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--color-muted-foreground)]">
-        Weekly fields
-      </p>
+      {draft.stale ? (
+        <p
+          key="stale-fields-warning"
+          id={warningId}
+          role="alert"
+          className="text-sm leading-4 text-[var(--color-destructive)]"
+        >
+          {STALE_FIELDS_MESSAGE}
+        </p>
+      ) : (
+        WEEKLY_FIELDS_CAPTION
+      )}
       <div className="mt-2 grid gap-2 md:grid-cols-2">
         <ActivityTitleField
           activityId={activityId}
           value={draft.title}
           placeholder={values.catalogueName}
-          error={titleError}
+          error={errors.titleError}
           onChange={draft.editTitle}
         />
         <ActivityDescriptionField
           activityId={activityId}
           value={draft.description}
-          error={descriptionError}
+          error={errors.descriptionError}
           onChange={draft.editDescription}
         />
       </div>
       <ActivityFieldActions
         activityId={activityId}
         dirty={draft.dirty}
-        invalid={invalid}
+        invalid={errors.invalid || draft.stale}
+        descriptionId={draft.stale ? warningId : undefined}
         onCancel={() => {
           draft.cancel();
           onClose();

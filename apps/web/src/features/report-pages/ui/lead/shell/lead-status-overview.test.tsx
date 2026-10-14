@@ -1042,6 +1042,126 @@ describe("LeadForm Overview", () => {
     ).toBeVisible();
   });
 
+  it("never sends stale weekly fields after a versioned refresh and saves the latest pair after Cancel/reopen", async () => {
+    const user = userEvent.setup();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const saveDraft = vi.fn(
+      (input: unknown, current: ReportSectionReadModel) => {
+        const draft = input as {
+          version: number;
+          activityStatuses: readonly {
+            activityId: string;
+            titleOverride: string | null;
+            note: string | null;
+          }[];
+        };
+        return Promise.resolve({
+          ...current,
+          version: draft.version + 1,
+          activities: current.activities.map((activity) => ({
+            ...activity,
+            ...draft.activityStatuses.find(
+              (row) => row.activityId === activity.activityId,
+            ),
+          })),
+        });
+      },
+    );
+    render(
+      <Wrapper client={client} withActivity saveDraft={saveDraft}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+    await user.click(
+      await screen.findByTestId(`activity-fields-edit-${ACTIVITY_ID}`),
+    );
+    const title = screen.getByTestId(`activity-title-${ACTIVITY_ID}`);
+    await user.type(title, "  My pending title  ");
+    const queryKey = [["leadForm", "byPeriod"], { reportId: REPORT_ID }];
+    const loaded = client.getQueryData<{ section: ReportSectionReadModel }>(
+      queryKey,
+    );
+    if (!loaded) throw new Error("Expected a loaded section");
+    expect(loaded.section.version).toBe(1);
+    act(() => {
+      client.setQueryData(queryKey, {
+        ...loaded,
+        section: {
+          ...loaded.section,
+          version: 2,
+          activities: loaded.section.activities.map((activity) => ({
+            ...activity,
+            note: "Description saved in another tab",
+          })),
+        },
+      });
+    });
+    expect(
+      await screen.findByText("Description saved in another tab"),
+    ).toBeVisible();
+    const form = screen.getByRole("form", {
+      name: "Weekly fields for Operational duty",
+    });
+    fireEvent.submit(form);
+    // Wait beyond the canonical debounce so a stale patch cannot hide in its queue.
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 5500));
+    });
+    expect(saveDraft.mock.calls).toEqual([]);
+    expect(title).toHaveValue("  My pending title  ");
+    expect(within(form).getByLabelText("Description")).toHaveValue(
+      "Keep this description",
+    );
+    expect(within(form).getByRole("alert")).toHaveTextContent(/changed|stale/i);
+    expect(
+      within(form).getByRole("button", { name: "Save weekly fields" }),
+    ).toBeDisabled();
+    expect(
+      within(screen.getByTestId("status-overview")).getByRole("status"),
+    ).toHaveTextContent("Unsaved update");
+    expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+
+    await user.click(within(form).getByRole("button", { name: "Cancel" }));
+    const editButton = screen.getByTestId(
+      `activity-fields-edit-${ACTIVITY_ID}`,
+    );
+    expect(editButton).toHaveFocus();
+    expect(
+      screen.queryByRole("form", {
+        name: "Weekly fields for Operational duty",
+      }),
+    ).toBeNull();
+    await user.click(editButton);
+    expect(screen.getByTestId(`activity-title-${ACTIVITY_ID}`)).toHaveValue("");
+    expect(
+      screen.getByTestId(`activity-description-${ACTIVITY_ID}`),
+    ).toHaveValue("Description saved in another tab");
+    expect(within(screen.getByRole("form")).queryByRole("alert")).toBeNull();
+    await user.type(
+      screen.getByTestId(`activity-title-${ACTIVITY_ID}`),
+      "Fresh title",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Save weekly fields" }),
+    );
+    await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledOnce(), {
+      timeout: 10_000,
+    });
+    expect(saveDraft.mock.calls[0]?.[0]).toMatchObject({
+      reportSectionId: "10000000-0000-4000-8000-000000000002",
+      version: 2,
+      activityStatuses: [
+        {
+          activityId: ACTIVITY_ID,
+          titleOverride: "Fresh title",
+          note: "Description saved in another tab",
+        },
+      ],
+    });
+  }, 20_000);
+
   it("guards unsaved Activity weekly fields until they are cancelled", async () => {
     const user = userEvent.setup();
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
