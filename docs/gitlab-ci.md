@@ -4,25 +4,30 @@
 disposable-database integration and reset lanes, and the scheduled/manual
 dependency audit. Per the owner decision of 2026-09-28 it carries tests
 and linters; since the owner decision of 2026-10-01 it also has one gated image
-build (`build-images`, rootless BuildKit) and an optional manual deploy job. There is
-no Docker-in-Docker and no operational smoke. The product build (`pnpm build`),
-PDF export, browser acceptance, and the read-back of a deployment remain
-required evidence, collected outside CI as separate checks — the `quality` job
-is therefore a lint/test lane, not a full acceptance gate. The GitLab instance
+build (`build-images`, rootless BuildKit) and an optional manual deploy job.
+TASK-522 adds three blocking routes: `secret-scan`, a single `dependency-scan`
+and `production-build`. There is
+no Docker-in-Docker and no operational smoke. PDF export, release browser
+E2E, and the read-back of a deployment remain
+required evidence, collected outside CI as separate checks and never reported
+as skipped-but-passing — the `quality` job
+is a lint/test lane, not a full acceptance gate; `production-build` proves only
+that the production build and its dist gates pass on the pipeline's SHA. The GitLab instance
 is 15.10, so `.gitlab-ci.yml` uses no keyword introduced after 15.10.
 
-| GitLab job          | Execution                                                             |
-| ------------------- | --------------------------------------------------------------------- |
-| node-toolchain      | Pinned Node container on the shared Docker runner                     |
-| quality             | Pinned Node container on the shared Docker runner                     |
-| coverage            | Pinned Node container on the shared Docker runner                     |
-| api-integration     | Pinned pgvector/PG18 Trixie job container on the shared Docker runner |
-| migrate-reset       | Pinned pgvector/PG18 Trixie job container on the shared Docker runner |
-| dependency-scan     | Schedule, manual, or MR changing lockfile/manifests                   |
-| dependency-scan-dev | Same rules as dependency-scan; `allow_failure: true`                  |
-| renovate            | Schedule, web, or API pipeline with `RENOVATE_TOKEN` set; no `needs`  |
-| build-images        | Rootless BuildKit; default branch and tags, manual on MRs             |
-| deploy-production   | Manual, default branch, only when `KUBECONFIG` is set                 |
+| GitLab job        | Execution                                                             |
+| ----------------- | --------------------------------------------------------------------- |
+| node-toolchain    | Pinned Node container on the shared Docker runner                     |
+| quality           | Pinned Node container on the shared Docker runner                     |
+| coverage          | Pinned Node container on the shared Docker runner                     |
+| api-integration   | Pinned pgvector/PG18 Trixie job container on the shared Docker runner |
+| migrate-reset     | Pinned pgvector/PG18 Trixie job container on the shared Docker runner |
+| production-build  | Every pipeline; explicit build env, dist gates, SHA-bound manifest    |
+| dependency-scan   | Every pipeline (MR, branch, schedule); blocking prod + dev audit      |
+| secret-scan       | Every pipeline; Gitleaks tree + full history, synthetic controls      |
+| renovate          | Schedule, web, or API pipeline with `RENOVATE_TOKEN` set; no `needs`  |
+| build-images      | Rootless BuildKit; default branch and tags, manual on MRs             |
+| deploy-production | Manual, default branch, only when `KUBECONFIG` is set                 |
 
 ## Renovate
 
@@ -100,15 +105,17 @@ of the integration suite's data.
 ## Schedule and manual pipeline
 
 The weekly dependency scan uses a GitLab schedule for the default branch at
-Monday 06:00 UTC; create that schedule after the main cutover. A manually
-started pipeline (`CI_PIPELINE_SOURCE=web`) runs the full lane set plus the
-dependency audit. A merge request that changes `pnpm-lock.yaml`, a
-`package.json`, or `pnpm-workspace.yaml` also runs the audit. `dependency-scan` blocks on `pnpm audit --prod`; the separate
-`dependency-scan-dev` job runs `pnpm audit --dev --audit-level high` with
-`allow_failure: true`, so development-tool advisories show as a pipeline
-warning instead of being hidden. No dependency-update bot is configured, because it would need
-an owner-provisioned token on the private GitLab (see `docs/sdlc.md`); the
-audit job does not replace one. Runner assignment is a
+Monday 06:00 UTC; create that schedule after the main cutover. `dependency-scan`
+runs in every pipeline and blocks on `pnpm audit --prod` and
+`pnpm audit --audit-level high` (production and development dependencies,
+tooling included); an unreachable audit endpoint fails it too. The one reviewed
+exception is `auditConfig.ignoreGhsas` in `pnpm-workspace.yaml` (braces,
+GHSA-vfj7-8cjw-p6xm: no patched release, development tooling only). The
+`renovate` job above is the dependency-update route; the audit does not replace it.
+`secret-scan` runs `scripts/gates/secret-scan.sh`: a checksum-verified Gitleaks
+binary scans the tree and the full unshallowed history with redaction, after
+synthetic controls prove a HEAD secret and a history-only secret both fail.
+Reviewed synthetic allowlists belong in `.gitleaks.toml`. Runner assignment is a
 GitLab setting, not declared in `.gitlab-ci.yml`.
 
 ## Contract-test coverage
@@ -121,7 +128,7 @@ assert `.gitlab-ci.yml` directly: reviewed external images are collected from `.
 services (adding the pinned Node image to `REVIEWED_EXTERNAL_IMAGES`), a
 negative lock forbids Docker build/Compose smoke lanes, the single combined
 API coverage contour and fail-closed `ci-reports` summary contract are
-asserted, and the `quality` job is pinned as build-free with the product
-build documented as outside-CI evidence. The Helm CLI version and download
+asserted, and the `quality` job is pinned as build-free; the product
+build has its own `production-build` job. The Helm CLI version and download
 checksum have one declaration site in `.gitlab-ci.yml`; production chart
 validation needs no Docker daemon or Compose CLI.
