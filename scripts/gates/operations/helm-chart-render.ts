@@ -94,6 +94,7 @@ export interface PodSpec {
   readonly securityContext: {
     readonly runAsNonRoot?: boolean;
     readonly runAsUser?: number;
+    readonly fsGroup?: number;
     readonly seccompProfile?: { readonly type: string };
   };
 }
