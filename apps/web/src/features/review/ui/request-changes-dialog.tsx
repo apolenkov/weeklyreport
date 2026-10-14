@@ -3,11 +3,13 @@
 import { useMutation } from "@tanstack/react-query";
 import {
   REVIEW_COMMENT_MAX_LENGTH,
+  reviewVerdictInputSchema,
   type ReviewVerdictResult,
 } from "@weeklyreport/shared";
 import { useId, useRef, useState } from "react";
 
 import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
+import { mutationErrorMessage } from "../../../shared/lib/errors/mutation-error-message";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { DialogSurface } from "../../../shared/ui/dialogs/dialog-surface";
 
@@ -150,11 +152,7 @@ export function RequestChangesDialog({
         onClose();
       },
       onError: (err) => {
-        setError(
-          err instanceof Error && err.message
-            ? err.message
-            : "Failed to request changes.",
-        );
+        setError(mutationErrorMessage(err, "Failed to request changes."));
       },
     }),
   );
@@ -170,18 +168,18 @@ export function RequestChangesDialog({
 
   const submit = () => {
     if (isPending) return;
-    const comment = reason.trim();
-    if (comment === "") {
+    const command = reviewVerdictInputSchema.safeParse({
+      reportSectionId,
+      verdict: "changes_requested",
+      version,
+      comment: reason.trim(),
+    });
+    if (!command.success) {
       setError(EMPTY_REASON_ERROR);
       return;
     }
     setError(null);
-    mutation.mutate({
-      reportSectionId,
-      verdict: "changes_requested",
-      version,
-      comment,
-    });
+    mutation.mutate(command.data);
   };
 
   return (

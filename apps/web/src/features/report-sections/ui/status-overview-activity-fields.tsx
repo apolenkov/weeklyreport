@@ -78,24 +78,25 @@ export function useActivityFieldsDraft(
   const [title, setTitle] = useState(values.titleOverride ?? "");
   const [description, setDescription] = useState(values.description ?? "");
   const [dirty, setDirty] = useState(false);
-  const authoritativeValues = useRef({
-    titleOverride: values.titleOverride,
-    description: values.description,
+  const [authoritativeValues, setAuthoritativeValues] = useState({
+    titleOverride: normalize(values.titleOverride ?? ""),
+    description: normalize(values.description ?? ""),
   });
+  const authoritativeTitle = normalize(values.titleOverride ?? "");
+  const authoritativeDescription = normalize(values.description ?? "");
+  const changed =
+    authoritativeValues.titleOverride !== authoritativeTitle ||
+    authoritativeValues.description !== authoritativeDescription;
   useInlineEditUnloadGuard(dirty);
-  useEffect(() => {
-    const changed =
-      authoritativeValues.current.titleOverride !== values.titleOverride ||
-      authoritativeValues.current.description !== values.description;
-    authoritativeValues.current = {
-      titleOverride: values.titleOverride,
-      description: values.description,
-    };
-    if (!dirty && changed) {
-      setTitle(values.titleOverride ?? "");
-      setDescription(values.description ?? "");
-    }
-  }, [dirty, values.description, values.titleOverride]);
+  // A pending edit belongs to its original pair, even after a server reseed.
+  if (!dirty && changed) {
+    setAuthoritativeValues({
+      titleOverride: authoritativeTitle,
+      description: authoritativeDescription,
+    });
+    setTitle(values.titleOverride ?? "");
+    setDescription(values.description ?? "");
+  }
   useEffect(
     () => () => onPendingChange?.(activityId, false),
     [activityId, onPendingChange],
@@ -121,6 +122,7 @@ export function useActivityFieldsDraft(
     title,
     description,
     dirty,
+    stale: dirty && changed,
     editTitle: (next: string) => {
       setTitle(next);
       setDraftDirty(true);
@@ -215,12 +217,14 @@ export function ActivityFieldActions({
   activityId,
   dirty,
   invalid,
+  descriptionId,
   onCancel,
   onReset,
 }: {
   readonly activityId: string;
   readonly dirty: boolean;
   readonly invalid: boolean;
+  readonly descriptionId?: string | undefined;
   readonly onCancel: () => void;
   readonly onReset: () => void;
 }) {
@@ -229,6 +233,7 @@ export function ActivityFieldActions({
       <button
         type="submit"
         disabled={!dirty || invalid}
+        aria-describedby={descriptionId}
         data-testid={`activity-fields-save-${activityId}`}
         className="inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-sm)] px-2 text-xs font-semibold text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] disabled:opacity-50"
       >
