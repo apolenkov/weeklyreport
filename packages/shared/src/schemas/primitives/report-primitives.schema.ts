@@ -155,12 +155,6 @@ const stageNameElement = z
     message: "Stage must contain visible characters",
   });
 
-/** Current read models always expose structured stage names; activity rows use []. */
-export const currentStageNamesField = z
-  .array(stageNameElement)
-  .max(MAX_SELECTED_STAGES)
-  .readonly();
-
 // The conditional rule (at least one stage for a product parent and none for
 // an activity parent) is enforced by addParentStageIssues below because it
 // depends on the parent kind.

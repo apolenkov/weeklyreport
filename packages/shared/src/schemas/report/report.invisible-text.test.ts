@@ -2,10 +2,7 @@ import { randomUUID } from "node:crypto";
 
 import { describe, expect, it } from "vitest";
 
-import {
-  currentStageNamesField,
-  writeStageNamesField,
-} from "../primitives/report-primitives.schema.js";
+import { writeStageNamesField } from "../primitives/report-primitives.schema.js";
 import { decisionInputSchema, riskInputSchema, safeText } from "../report.js";
 
 const uuid = () => randomUUID();
@@ -84,21 +81,15 @@ describe("safeText visible-content validation", () => {
 });
 
 describe("stage-name visible-content validation", () => {
-  it.each([
-    ["current read", currentStageNamesField],
-    ["write", writeStageNamesField],
-  ] as const)(
-    "guards %s stage names without changing visible text",
-    (_label, schema) => {
-      expect(
-        schema.safeParse([
-          " \u2060\u00AD\u034F\u180E\u2061\u2062\u2063\u2064\t",
-        ]).success,
-      ).toBe(false);
-      const names = [" Разработка\u2060 ", "👩\u200D💻", "e\u0301"];
-      expect(schema.parse(names)).toEqual(names);
-    },
-  );
+  it("guards write stage names without changing visible text", () => {
+    expect(
+      writeStageNamesField.safeParse([
+        " \u2060\u00AD\u034F\u180E\u2061\u2062\u2063\u2064\t",
+      ]).success,
+    ).toBe(false);
+    const names = [" Разработка\u2060 ", "👩\u200D💻", "e\u0301"];
+    expect(writeStageNamesField.parse(names)).toEqual(names);
+  });
 });
 
 describe("record invisible-content validation", () => {
