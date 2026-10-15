@@ -8,8 +8,9 @@ stage names, review comments and verdict reasons, item-outcome and resolution
 fields, and activity catalogue names, Jira accounts and weekly title overrides without re-applying the visible-content or length rules of the author
 write schemas,
 and MUST return it exactly as stored, without trimming, normalizing or
-replacing it. Server copies of persisted rows (publication snapshots, carry-over
-and section merge) MUST follow the same read rule. Author write schemas MUST
+replacing it. Server copies of persisted rows (publication snapshots, carry-over,
+section merge and the item an outcome command moves) MUST follow the same read
+rule. Author write schemas MUST
 keep rejecting such text in every field and stage name they validate.
 
 #### Scenario: A stored row that the current write rule rejects is read

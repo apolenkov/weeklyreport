@@ -24,7 +24,9 @@ Backlog: TASK-503.108 (follows TASK-503.104; TASK-503.107 stays separate).
 - Author write schemas keep every current rule; nothing on the write side is
   relaxed.
 - Server copies of persisted rows (publication snapshot, carry-over merge,
-  section merge stamping the stored author name) use the read rule.
+  section merge stamping the stored author name, the item moved by an outcome
+  command) use the read rule; the command's own text, stage names and reason
+  stay under the write rule.
 - Regressions cover each read model and the merge, weekly (published and live),
   carry-over and PDF render consumers with a stored value the write rule
   rejects, plus a check that every write field still rejects it.
