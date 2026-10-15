@@ -32,6 +32,7 @@ tester_lock
 PF=""
 REDIS_PF=""
 STOPPED=0
+BACKUPS_SUSPENDED=0
 cleanup() {
   local result=$?
   trap - EXIT
@@ -42,6 +43,9 @@ cleanup() {
     if [ "$ORIGINAL_REPLICAS" != 0 ]; then
       kubectl -n "$NS" rollout status deploy/api --timeout=300s || result=1
     fi
+  fi
+  if [ "$BACKUPS_SUSPENDED" = 1 ] && [ "$ORIGINAL_BACKUP_SUSPEND" != true ]; then
+    kubectl -n "$NS" patch cronjob/backup --type=merge -p '{"spec":{"suspend":false}}' >/dev/null || result=1
   fi
   tester_unlock || result=1
   exit "$result"
@@ -57,6 +61,22 @@ if ! ORIGINAL_REPLICAS=$(kubectl -n "$NS" get deploy/api -o jsonpath='{.spec.rep
   exit 1
 fi
 case "$ORIGINAL_REPLICAS" in ''|*[!0-9]*) echo "Invalid API replica count; refusing reset." >&2; exit 1 ;; esac
+# The tester backup CronJob dumps weeklyreport_e2e; keep it off the database while it is reset.
+if ! ORIGINAL_BACKUP_SUSPEND=$(kubectl -n "$NS" get cronjob/backup -o jsonpath='{.spec.suspend}'); then
+  echo "Could not read backup CronJob suspension; refusing reset." >&2
+  exit 1
+fi
+case "$ORIGINAL_BACKUP_SUSPEND" in true|false|'') ;; *) echo "Invalid backup CronJob suspension; refusing reset." >&2; exit 1 ;; esac
+BACKUPS_SUSPENDED=1
+kubectl -n "$NS" patch cronjob/backup --type=merge -p '{"spec":{"suspend":true}}' >/dev/null
+# Suspension does not stop a running backup Job; wait up to 10 minutes for it to finish.
+for _ in $(seq 1 120); do
+  ACTIVE_BACKUPS=$(kubectl -n "$NS" get pods -l app.kubernetes.io/component=backup \
+    --field-selector=status.phase!=Succeeded,status.phase!=Failed -o name)
+  [ -n "$ACTIVE_BACKUPS" ] || break
+  sleep 5
+done
+[ -z "$ACTIVE_BACKUPS" ] || { echo "A backup is still running; refusing reset: $ACTIVE_BACKUPS" >&2; exit 1; }
 PG_PF_LOG="$STATE_DIR/pf-reset-postgres.log"
 REDIS_PF_LOG="$STATE_DIR/pf-reset-redis.log"
 (umask 077; : >"$PG_PF_LOG"; : >"$REDIS_PF_LOG"; chmod 600 "$PG_PF_LOG" "$REDIS_PF_LOG")
