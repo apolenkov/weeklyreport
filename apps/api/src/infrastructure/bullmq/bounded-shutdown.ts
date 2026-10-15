@@ -19,11 +19,10 @@ async function raceWithDeadline<T>(
 }
 
 /**
- * Gives BullMQ a short window to finish its normal close handshake, then uses
- * its documented force/disconnect operation. A stuck Redis handshake must not
- * hold the process past the container stop grace period; force-closing leaves
- * active jobs for BullMQ's normal stalled-job recovery instead of deleting
- * them.
+ * Gives BullMQ a short window to finish its normal close handshake, then calls
+ * the caller's fallback. A stuck Redis handshake must not hold the process past
+ * the container stop grace period; unfinished jobs are left to BullMQ's
+ * stalled-job recovery instead of being deleted.
  */
 export async function closeBullMqResource(
   label: string,
@@ -32,11 +31,16 @@ export async function closeBullMqResource(
   onLateError?: (error: unknown) => void,
 ): Promise<void> {
   const graceful = close();
-  // A timed-out close can reject after forceClose has completed. Observe that
-  // late rejection so shutdown never creates an unhandled rejection.
-  void graceful.catch((error: unknown) => {
+  // Observe every close rejection so a timed-out close never becomes an
+  // unhandled rejection. A fallback may return the same pending promise, so
+  // each error is reported once.
+  const reported = new Set<unknown>();
+  const report = (error: unknown): void => {
+    if (reported.has(error)) return;
+    reported.add(error);
     onLateError?.(error);
-  });
+  };
+  void graceful.catch(report);
   try {
     await raceWithDeadline(
       graceful,
@@ -47,9 +51,7 @@ export async function closeBullMqResource(
     );
   } catch (error: unknown) {
     const forced = Promise.resolve().then(forceClose);
-    void forced.catch((lateError: unknown) => {
-      onLateError?.(lateError);
-    });
+    void forced.catch(report);
     try {
       await raceWithDeadline(
         forced,

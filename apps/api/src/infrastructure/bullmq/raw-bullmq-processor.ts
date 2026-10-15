@@ -3,6 +3,7 @@ import * as Sentry from "@sentry/nestjs";
 import { type Job, Worker, type WorkerOptions } from "bullmq";
 import type { ClsService } from "nestjs-cls";
 
+import { errorMessage } from "../../lib/error-message.js";
 import type { AppLogger } from "../../lib/logger.js";
 import type { EnvConfig } from "../config/env.schema";
 import { closeBullMqResource } from "./bounded-shutdown.js";
@@ -27,14 +28,21 @@ class WorkerLifecycle<TData> {
     this.worker = worker;
   };
 
-  readonly close = async (): Promise<void> => {
+  readonly close = async (
+    onCloseError: (error: unknown) => void,
+  ): Promise<void> => {
     const worker = this.worker;
     this.worker = null;
     if (!worker) return;
+    // BullMQ close(true) returns the already-pending close() promise, so the
+    // fallback cannot interrupt an in-flight job: it runs until it finishes or
+    // the process exits, then stalled-job recovery takes it over. A job longer
+    // than both deadlines makes this close reject.
     await closeBullMqResource(
       "worker",
       () => worker.close(),
       () => worker.close(true),
+      onCloseError,
     );
   };
 }
@@ -120,6 +128,11 @@ export abstract class RawBullMqProcessor<TData extends JobTraceContext>
   readonly onModuleDestroy = async (): Promise<void> => {
     this.registration?.markStopped();
     this.registration = null;
-    await this.lifecycle.close();
+    await this.lifecycle.close((error) => {
+      this.logger.error("BullMQ worker close failed", {
+        queueName: this.queueName,
+        error: errorMessage(error),
+      });
+    });
   };
 }

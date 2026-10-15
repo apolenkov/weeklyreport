@@ -12,6 +12,7 @@ import type { Job, Processor } from "bullmq";
 import type { ClsService } from "nestjs-cls";
 import {
   afterAll,
+  afterEach,
   beforeAll,
   beforeEach,
   describe,
@@ -158,6 +159,10 @@ describe("RawBullMqProcessor", () => {
     workerState.worker = undefined;
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("captures a processing error before the worker trace context closes", async () => {
     const processor = new FailingProcessor({} as never, {} as never, null);
     processor.onModuleInit();
@@ -291,5 +296,38 @@ describe("RawBullMqProcessor", () => {
     expect(registry.requiredWorkers().workers["pdf-export"]).toBe("stopped");
     workerState.worker?.emit("ready");
     expect(registry.requiredWorkers().workers["pdf-export"]).toBe("stopped");
+  });
+
+  it("logs a worker close rejection that settles after the graceful deadline", async () => {
+    vi.useFakeTimers();
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    const logger = createAppLogger({ minLevel: "debug" });
+    const processor = new FailingProcessor({} as never, logger, null);
+    processor.onModuleInit();
+    const worker = workerState.worker;
+    if (!worker) throw new Error("worker was not constructed");
+    // BullMQ: close(true) after close() returns the pending close promise.
+    const pendingClose = new Promise<void>((_resolve, reject) => {
+      setTimeout(() => reject(new Error("close handshake failed")), 600);
+    });
+    worker.close = () => pendingClose;
+
+    const destroyed = processor.onModuleDestroy();
+    const settled = expect(destroyed).rejects.toThrow(
+      "BullMQ worker force close failed",
+    );
+    await vi.advanceTimersByTimeAsync(1000);
+    await settled;
+
+    const closeEntries = stderr.mock.calls
+      .map(([line]) => JSON.parse(String(line)) as Record<string, unknown>)
+      .filter((entry) => entry.message === "BullMQ worker close failed");
+    expect(closeEntries).toHaveLength(1);
+    expect(closeEntries[0]).toMatchObject({
+      level: "error",
+      queueName: "pdf-export",
+      error: "close handshake failed",
+    });
+    stderr.mockRestore();
   });
 });
