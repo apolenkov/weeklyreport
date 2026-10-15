@@ -63,9 +63,9 @@ needs the variables `HELM_VALUES_FILE` (file), `HELM_NAMESPACE` and
 `HELM_KUBE_CONTEXT`; it fails before any Helm call if one is missing. It looks the
 release up in that context and namespace: only Helm's own release-not-found error
 from `helm history` counts as no release → `helm install --wait=watcher`; a
-`deployed` release → `helm upgrade --wait=watcher` (never `--install`). A discovery
-error, unreadable release records, an inconsistent answer or a release in another
-state stops the job. There is no automatic rollback: a failed
+`deployed` release → `helm upgrade --wait=watcher` (never `--install`). A history
+error, a successful history with no readable revision, an inconsistent answer or a
+release in another state stops the job. There is no automatic rollback: a failed
 install keeps the release and its volume claims, and an upgrade is fixed forward
 because CI cannot prove schema compatibility. See `docs/kubernetes.md`.
 

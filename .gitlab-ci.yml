@@ -582,8 +582,8 @@ build-images:
 # file (HELM_VALUES_FILE, file-type), HELM_NAMESPACE and HELM_KUBE_CONTEXT come
 # from CI variables; no cluster credential lives in the repository. A missing
 # release is installed (only when Helm itself reports release-not-found) and an
-# existing deployed one is upgraded; discovery errors, unreadable release
-# records and any other state stop the job before a mutation. Neither
+# existing deployed one is upgraded; a history error, a history with no
+# readable revision and any other state stop the job before a mutation. Neither
 # command rolls back: install rollback is an uninstall that would take the
 # pdfdata/pgbackups claims with it, and CI cannot prove an upgrade is
 # schema-compatible, so a failed release stays for diagnosis or a forward fix.
