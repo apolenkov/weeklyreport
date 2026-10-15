@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { recordCommentViewSchema } from "../review/review.schema.js";
+import {
+  recordCommentViewSchema,
+  reviewCommentInputSchema,
+} from "../review/review.schema.js";
 import {
   itemOutcomeEventSchema,
   itemResolutionSchema,
+  resolvePlanInputSchema,
 } from "./item-outcome.schema.js";
 import {
   publishedDecisionReadModelSchema,
@@ -168,4 +172,24 @@ describe("stored text read compatibility", () => {
       }
     },
   );
+
+  it("keeps rejecting that text in review comments and outcome reasons", () => {
+    const comment = { itemId: ID, text: "Visible" };
+    expect(reviewCommentInputSchema.safeParse(comment).success).toBe(true);
+    expect(
+      reviewCommentInputSchema.safeParse({ ...comment, text: LEGACY }).success,
+    ).toBe(false);
+    const wontDo = {
+      reportSectionId: ID,
+      version: 1,
+      commandId: EVENT_ID,
+      source: { kind: "current", recordId: STABLE_ID },
+      outcome: "wont_do",
+      reason: "Visible",
+    };
+    expect(resolvePlanInputSchema.safeParse(wontDo).success).toBe(true);
+    expect(
+      resolvePlanInputSchema.safeParse({ ...wontDo, reason: LEGACY }).success,
+    ).toBe(false);
+  });
 });
