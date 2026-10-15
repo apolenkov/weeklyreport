@@ -72,6 +72,18 @@ log() {
 
 mkdir -p "$BACKUP_DIR"
 
+# One writer per backup directory for the whole process: the CronJob, a manual
+# Job and the standalone loop share this volume, and Forbid serializes only the
+# first. The kernel drops the lock when the shell and every child holding fd 9
+# have exited, so no stale-lock cleanup exists; pg_dump inherits fd 9 on purpose
+# and keeps its partial protected until it exits. The lock file is never removed.
+writer_lock="${BACKUP_DIR}/.backup-writer.lock"
+exec 9>>"$writer_lock"
+if ! flock -n 9; then
+  log "FAILED — another backup writer holds ${writer_lock} (or flock failed above); not waiting"
+  exit 75
+fi
+
 if [ "$run_once" = true ]; then
   retry_note=""
   log "started: one run, keeping ${backup_retention_days} days, into ${BACKUP_DIR}"
@@ -123,5 +135,6 @@ fi
 
 while true; do
   dump_once
-  sleep "$backup_interval_seconds"
+  # sleep must not inherit the lock: an orphaned sleep would hold it a whole interval.
+  sleep "$backup_interval_seconds" 9>&-
 done
