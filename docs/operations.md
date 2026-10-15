@@ -79,11 +79,11 @@ PgBouncer. `pdfdata` holds exported files separately from the database.
 5. Verify the release before serving users:
 
    ```sh
-   helm -n <ns> status weeklyreport
-   kubectl -n <ns> get pods,pvc,jobs,cronjobs
-   kubectl -n <ns> logs deployment/api -c migrate
-   kubectl -n <ns> rollout status deployment/api --timeout=5m
-   kubectl -n <ns> rollout status deployment/web --timeout=5m
+   helm --kube-context <approved-context> -n <ns> status weeklyreport
+   kubectl --context <approved-context> -n <ns> get pods,pvc,jobs,cronjobs
+   kubectl --context <approved-context> -n <ns> logs deployment/api -c migrate
+   kubectl --context <approved-context> -n <ns> rollout status deployment/api --timeout=5m
+   kubectl --context <approved-context> -n <ns> rollout status deployment/web --timeout=5m
    curl -fsS https://<host>/health/ready
    curl -fsS https://<host>/health/pdf-renderer
    ```
