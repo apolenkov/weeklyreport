@@ -34,6 +34,9 @@ describe("searchPublishedDocuments", () => {
         expect(sql).toContain('document."searchTsv" @@ plainto_tsquery');
         expect(sql).toContain('document."groupId" IN');
         expect(sql).toContain("LIMIT ?");
+        expect(sql).toMatch(
+          /ORDER BY "rank" DESC, document\."createdAt" DESC,\s+document\."recordId" ASC, document\."reportId" ASC,\s+document\."recordType" ASC\s+LIMIT/,
+        );
         expect(sql).not.toContain("publishedSnapshot");
         expect(sql).not.toContain("jsonb_to_recordset");
         expect(sql).not.toContain('JOIN "ReportSection"');
