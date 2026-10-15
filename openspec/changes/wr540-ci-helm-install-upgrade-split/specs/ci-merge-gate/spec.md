@@ -8,11 +8,15 @@ defined only when a file-type `KUBECONFIG` variable is set, and MUST need the
 fail before any cluster mutation unless the values file, the namespace and the
 Kubernetes context (`HELM_KUBE_CONTEXT`) are supplied by CI variables, and it MUST
 pass the context and namespace to every Helm call. It MUST discover the release
-`weeklyreport` in that context and namespace: an absent release is installed with
-`helm install --wait=watcher`; a release in the `deployed` state is upgraded with
-`helm upgrade --wait=watcher` and without `--install`. A discovery error, an
-inconsistent or unexpected discovery answer, or any other release state MUST stop
-the job without installing or upgrading. The job MUST NOT use `--atomic` or
+`weeklyreport` in that context and namespace. Absence MUST be confirmed by Helm's
+own release-not-found error from the release history (an empty release list is
+not enough, because the list omits records in an unknown state and records Helm
+cannot decode); only then is the release installed with
+`helm install --wait=watcher`. A release whose history is readable and which is in
+the `deployed` state is upgraded with `helm upgrade --wait=watcher` and without
+`--install`. A discovery error (access, network, Helm), unreadable release records,
+an inconsistent or unexpected answer, or any other release state MUST stop the job
+without installing or upgrading. The job MUST NOT use `--atomic` or
 `--rollback-on-failure`, MUST NOT uninstall or delete a release, and MUST NOT
 create the namespace. The repository MUST NOT contain cluster credentials, and
 MUST NOT assume Argo CD.
@@ -40,5 +44,10 @@ MUST NOT assume Argo CD.
 
 #### Scenario: Discovery cannot be trusted
 
-- **WHEN** release discovery fails, answers inconsistently, or shows a release that is not `deployed`
+- **WHEN** release discovery fails, answers inconsistently, shows a release that is not `deployed`, or the release history cannot be read although release records exist
 - **THEN** the job stops without installing or upgrading
+
+#### Scenario: Only release-not-found proves absence
+
+- **WHEN** the history lookup fails with anything other than Helm's release-not-found error, or succeeds without a revision
+- **THEN** the job does not treat an empty release list as an absent release
