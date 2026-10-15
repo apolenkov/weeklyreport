@@ -442,6 +442,30 @@ describe("ReportSectionsService — stage-ownership guard", () => {
     },
   );
 
+  it("rejects an owned stored stage only because of the stage the payload adds", async () => {
+    const [stored] = crossRowSection.risks;
+    if (stored === undefined) throw new Error("Expected a stored risk");
+    const ownedRow = {
+      ...stored,
+      projectId: PROJECT_P,
+      stageNames: ["Testing"],
+    };
+    const section: ReportSectionReadModel = {
+      ...crossRowSection,
+      risks: [ownedRow],
+    };
+
+    await expect(
+      saveCrossRisk(section, {
+        ...ownedRow,
+        stageNames: ["Testing", "DevOps"],
+      }),
+    ).rejects.toMatchObject({
+      code: "STAGE_NOT_OWNED",
+      message: expect.stringContaining('"DevOps"') as unknown,
+    });
+  });
+
   it("rejects a smuggle that reuses a stableId but swaps in an unowned stage", async () => {
     const service = new ReportSectionsService(
       createRepository(crossRowSection),
