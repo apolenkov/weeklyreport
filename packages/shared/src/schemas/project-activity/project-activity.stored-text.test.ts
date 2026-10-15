@@ -43,6 +43,10 @@ describe("activity reads of stored text the write rule now rejects", () => {
     };
 
     expect(sectionActivitySchema.parse(stored)).toMatchObject(stored);
+    expect(
+      sectionActivitySchema.parse({ ...stored, titleOverride: "" })
+        .titleOverride,
+    ).toBe("");
   });
 
   it.each([
