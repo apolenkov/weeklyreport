@@ -1,6 +1,12 @@
 import { MS_PER_SECOND, P95 } from "./constants.ts";
 import { matrix, pageCoverage, pivot } from "./coverage.ts";
-import type { Finding, PageRecord, RoleResult, RunRecord } from "./types.ts";
+import type {
+  Finding,
+  MissingOutput,
+  PageRecord,
+  RoleResult,
+  RunRecord,
+} from "./types.ts";
 
 const SEVERITY_ORDER = { high: 0, medium: 1, low: 2 } as const;
 type Metadata = Readonly<{
@@ -10,6 +16,7 @@ type Metadata = Readonly<{
   parallel: number;
   mode?: string;
   state?: string;
+  missing?: readonly MissingOutput[];
 }>;
 type TableCell = string | number;
 
@@ -217,6 +224,18 @@ function skippedControls(runs: readonly RunRecord[]): readonly string[] {
   ).map(([reason, count]) => `- ${markdownText(reason)}: ${count}`);
 }
 
+function missingLines(missing: readonly MissingOutput[]): string[] {
+  if (missing.length === 0) return [];
+  return [
+    `**Incomplete report: ${missing.length} expected output(s) missing.**`,
+    "",
+    ...missing.map(
+      (entry) => `- ${markdownText(entry.role)}: ${markdownText(entry.reason)}`,
+    ),
+    "",
+  ];
+}
+
 export function renderMarkdown(
   meta: Metadata,
   results: readonly RoleResult[],
@@ -226,6 +245,7 @@ export function renderMarkdown(
   return [
     "# UI crawl report",
     "",
+    ...missingLines(meta.missing ?? []),
     `Target ${markdownText(meta.url)}, started ${meta.started}. Wall time for all roles (parallel ${meta.parallel}): **${seconds(meta.wallMs)}**.`,
     `Mode: ${meta.mode ?? "quick"}; prepared state: ${meta.state ?? "observed"}. Pressed means attempted with an observed result, not a product acceptance PASS.`,
     `Sequential sum of role times: ${seconds(results.reduce((sum, result) => sum + result.ms, 0))}.`,

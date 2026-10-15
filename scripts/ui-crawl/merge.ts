@@ -3,13 +3,14 @@ import { join } from "node:path";
 
 import { matrix } from "./coverage.ts";
 import { renderMarkdown } from "./report.ts";
-import type { RoleResult } from "./types.ts";
+import type { MissingOutput, RoleResult } from "./types.ts";
 
 type Part = Readonly<{
   url: string;
   started: string;
   wallMs: number;
   results: readonly RoleResult[];
+  missing?: readonly MissingOutput[];
 }>;
 
 function prefixed(result: RoleResult, prefix: string): RoleResult {
@@ -57,23 +58,50 @@ function passDirs(root: string): readonly string[] {
       .toSorted((a, b) => a.localeCompare(b));
   return directories("")
     .filter((dir) => dir.startsWith("state-"))
-    .flatMap(directories)
-    .filter((dir) => existsSync(join(root, dir, REPORT)));
+    .flatMap(directories);
 }
 
-function parts(root: string): readonly (readonly [string, Part])[] {
-  return passDirs(root).map(
-    (dir) =>
-      [
-        dir,
-        JSON.parse(readFileSync(join(root, dir, REPORT), "utf8")) as Part,
-      ] as const,
-  );
+// A pass report that cannot be used becomes a missing entry; the raw file is left as found.
+function readPart(
+  root: string,
+  dir: string,
+): Readonly<{ part: Part | null; reason: string }> {
+  const file = join(root, dir, REPORT);
+  if (!existsSync(file)) return { part: null, reason: "no report.json" };
+  try {
+    const part = JSON.parse(readFileSync(file, "utf8")) as Part;
+    return Array.isArray(part.results)
+      ? { part, reason: "" }
+      : { part: null, reason: "not a crawl report" };
+  } catch {
+    return { part: null, reason: "invalid report.json" };
+  }
+}
+
+function parts(root: string): Readonly<{
+  all: readonly (readonly [string, Part])[];
+  missing: readonly MissingOutput[];
+}> {
+  const all: (readonly [string, Part])[] = [];
+  const missing: MissingOutput[] = [];
+  for (const dir of passDirs(root)) {
+    const { part, reason } = readPart(root, dir);
+    if (part === null) {
+      missing.push({ role: dir, reason });
+      continue;
+    }
+    all.push([dir, part]);
+    for (const entry of part.missing ?? [])
+      missing.push({ role: `${dir}/${entry.role}`, reason: entry.reason });
+  }
+  return { all, missing };
 }
 
 /** Joins the per-state, per-pass crawl reports of a full walk into one report with the element x state matrix. */
-export function mergeReports(root: string): number {
-  const all = parts(root);
+export function mergeReports(
+  root: string,
+): Readonly<{ passes: number; missing: readonly MissingOutput[] }> {
+  const { all, missing } = parts(root);
   const results = all.flatMap(([dir, part]) =>
     part.results.map((result) => prefixed(result, dir)),
   );
@@ -86,19 +114,25 @@ export function mergeReports(root: string): number {
     parallel: 1,
     mode: "full",
     state: all.length > 0 ? "all prepared states" : "none",
+    missing,
   };
   writeFileSync(
     join(root, REPORT),
     JSON.stringify({ ...meta, results, matrix: matrix(results) }, null, 2),
   );
   writeFileSync(join(root, "report.md"), renderMarkdown(meta, results));
-  return all.length;
+  return { passes: all.length, missing };
 }
 
 if (import.meta.main) {
   const root = process.argv[2];
   if (!root) throw new Error("Usage: merge.ts <full-walk-output-dir>");
-  console.log(
-    `Merged ${mergeReports(root)} crawl pass(es) into ${root}/report.md`,
-  );
+  const { passes, missing } = mergeReports(root);
+  console.log(`Merged ${passes} crawl pass(es) into ${root}/report.md`);
+  if (missing.length > 0) {
+    console.error(
+      `Incomplete full walk: ${missing.length} expected output(s) missing; see report`,
+    );
+    process.exitCode = 1;
+  }
 }

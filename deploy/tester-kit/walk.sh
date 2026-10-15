@@ -113,6 +113,6 @@ for state in "${STATE_LIST[@]}"; do
   SYNTH_ROLES=$(echo ",$ROLES," | tr ',' '\n' | { grep -xE 'lead|head' || true; } | paste -sd, -)
   [ -z "$SYNTH_ROLES" ] || crawl "$state" synthetic "$manifest" --synthetic --roles "$SYNTH_ROLES" --widths 1280
 done
-node --experimental-strip-types scripts/ui-crawl/merge.ts "$OUT"
+node --experimental-strip-types scripts/ui-crawl/merge.ts "$OUT" || FAILED=1
 echo "Full walk report: $OUT/report.md"
 exit "$FAILED"

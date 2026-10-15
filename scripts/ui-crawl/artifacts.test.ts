@@ -445,7 +445,7 @@ describe("crawler screenshot evidence", () => {
         ],
       }),
     );
-    expect(mergeReports(dir)).toBe(1);
+    expect(mergeReports(dir)).toEqual({ passes: 1, missing: [] });
     const merged = JSON.parse(
       readFileSync(join(dir, "report.json"), "utf8"),
     ) as { results: { runs: { pages: { shot: string | null }[] }[] }[] };
