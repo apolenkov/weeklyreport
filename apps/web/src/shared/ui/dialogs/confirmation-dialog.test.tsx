@@ -298,6 +298,47 @@ describe("ConfirmationDialog", () => {
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
+  it("keeps focus inside the dialog when the focused action becomes disabled", async () => {
+    const user = userEvent.setup();
+    const props = {
+      open: true,
+      onClose: vi.fn(),
+      onConfirm: vi.fn(),
+      title: "Fill from Week 41?",
+      description: "Replace the draft?",
+      confirmLabel: "Replace & fill",
+    };
+    const { rerender } = render(<ConfirmationDialog {...props} />);
+    await user.click(screen.getByRole("button", { name: "Replace & fill" }));
+
+    rerender(<ConfirmationDialog {...props} isPending />);
+
+    const dialog = screen.getByRole("alertdialog");
+    expect(dialog).toHaveFocus();
+    await user.tab();
+    expect(dialog).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(dialog).toHaveFocus();
+  });
+
+  it("leaves focus on an enabled control inside the dialog while pending", () => {
+    const props = {
+      open: true,
+      onClose: vi.fn(),
+      onConfirm: vi.fn(),
+      title: "Delete period?",
+      description: "Are you sure?",
+      children: <input aria-label="Reason" />,
+    };
+    const { rerender } = render(<ConfirmationDialog {...props} />);
+    const reason = screen.getByRole("textbox", { name: "Reason" });
+    reason.focus();
+
+    rerender(<ConfirmationDialog {...props} isPending />);
+
+    expect(reason).toHaveFocus();
+  });
+
   it("shows the pending label instead of the confirm label while pending", () => {
     render(
       <ConfirmationDialog

@@ -567,13 +567,37 @@ void test("Fill from previous handles cancel and persists canonical replacement"
   await findRole("button", "Cancel", "click");
 });
 
-void test("Fill from pending replacement blocks dismissal and duplicate writes", async () => {
+void test("Fill from pending replacement blocks dismissal and duplicate writes", async (context) => {
   await openLeadReport();
   await saveDraft();
   await clearRequests();
   const confirmation = await openFillConfirmation();
-  await setOffline(true);
+  async function observeFocus(phase: string): Promise<void> {
+    const data = await command([
+      "eval",
+      `(() => {
+        const active = document.activeElement;
+        const dialog = document.querySelector('[role="alertdialog"]');
+        return {
+          insideDialog: dialog !== null && dialog.contains(active),
+          visible: active instanceof HTMLElement && active.checkVisibility(),
+          tag: active?.tagName,
+          name: active?.getAttribute('aria-label') ?? active?.textContent?.trim().slice(0, 160),
+          disabled: active?.matches(':disabled'),
+        };
+      })()`,
+    ]);
+    context.diagnostic(`${phase}: ${JSON.stringify(data.result)}`);
+    if (["Tab", "Shift+Tab", "Escape"].includes(phase)) {
+      const focus = record(data.result);
+      assert.equal(focus.insideDialog, true, `${phase}: focus left the modal`);
+      assert.equal(focus.visible, true, `${phase}: focused element hidden`);
+    }
+  }
+  await assertFocused("Cancel");
+  await observeFocus("before replacement");
   try {
+    await setOffline(true);
     await clickScoped(confirmation, "button", "Replace & fill");
     await waitButton("Replace & fill", { busy: true });
     for (const name of ["Cancel", "Replace & fill"]) {
@@ -582,7 +606,11 @@ void test("Fill from pending replacement blocks dismissal and duplicate writes",
     }
     const confirm = await scopedRef(confirmation, "button", "Replace & fill");
     assert.equal(await getAttr(confirm, "aria-busy"), "true");
-    await command(["press", "Escape"]);
+    await observeFocus("pending before keyboard");
+    for (const key of ["Tab", "Shift+Tab", "Escape"]) {
+      await command(["press", key]);
+      await observeFocus(key);
+    }
     assert.equal(
       scopeCount(await snapshot(), "alertdialog", confirmation.name),
       1,
@@ -593,6 +621,10 @@ void test("Fill from pending replacement blocks dismissal and duplicate writes",
     await setOffline(false);
   }
   await waitNotification("Form filled from selected period");
+  await waitClosed(confirmation);
+  // Focus must return to the trigger; a failure here is a product finding, not flake.
+  await assertFocused("Fill from most recent submitted period");
+  await observeFocus("settled");
   const calls = (await requests()).filter(
     (request) =>
       request.method === "POST" &&
