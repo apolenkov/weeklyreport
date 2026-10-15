@@ -65,7 +65,9 @@ export const pageProbeScript = (
     const labels = el.labels ? [...el.labels].map((l) => l.textContent).join(' ') : '';
     return String([by, el.getAttribute('aria-label'), labels, el.getAttribute('title'), el.textContent, el.getAttribute('placeholder')].find((c) => c && String(c).trim()) || '').replace(/\s+/g, ' ').trim();
   };
-  const role = (el) => el.getAttribute('role') || ({A: 'link', BUTTON: 'button', SELECT: 'combobox', TEXTAREA: 'textbox', SUMMARY: 'button'})[el.tagName] || (el.tagName === 'INPUT' ? (el.type === 'checkbox' || el.type === 'radio' ? el.type : 'textbox') : null);
+  // html-aria implicit input roles; el.type already maps an unknown type to text, and date-like types have no role.
+  const INPUT_ROLES = {button: 'button', submit: 'button', reset: 'button', image: 'button', number: 'spinbutton', range: 'slider', checkbox: 'checkbox', radio: 'radio', text: 'textbox', email: 'textbox', tel: 'textbox', url: 'textbox', search: 'textbox', password: 'textbox'};
+  const role = (el) => el.getAttribute('role') || ({A: 'link', BUTTON: 'button', SELECT: 'combobox', TEXTAREA: 'textbox', SUMMARY: 'button'})[el.tagName] || (el.tagName === 'INPUT' ? INPUT_ROLES[el.type] ?? null : null);
   const intentional = (el) => [el, ...el.querySelectorAll('*')].some((n) => { const s = getComputedStyle(n); return s.textOverflow === 'ellipsis' || (s.webkitLineClamp && s.webkitLineClamp !== 'none'); });
   const sel = 'button, a[href], input:not([type=hidden]), select, textarea, summary, [role=button], [role=link], [role=tab], [role=switch], [role=checkbox], [role=radio], [role=menuitem], [role=combobox]';
   const all = [...document.querySelectorAll(sel)].filter((el) => !el.closest('[inert], [aria-hidden=true]') && visible(el) && el.getBoundingClientRect().width > 2);

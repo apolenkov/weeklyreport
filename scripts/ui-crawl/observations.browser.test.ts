@@ -2,6 +2,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { pressBatch, quietState } from "./batch.ts";
 import { browserFixture } from "./browser.fixture.ts";
+import { fullControlReason } from "./full-plan.ts";
+import { readFullProbe } from "./full-probe.ts";
 import { PAGE_PROBE, type PageProbe, SIGNATURE_ONLY } from "./probe.ts";
 
 const html = `<!doctype html><html><body style="margin:0">
@@ -18,6 +20,8 @@ const html = `<!doctype html><html><body style="margin:0">
 <button id="ellipsis" style="position:absolute;left:100px;top:550px;width:80px;height:35px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">A long content string intentionally truncated</button>
 <button id="heavy" onclick="const end=performance.now()+250;while(performance.now()<end){}">Heavy work</button><button id="fast">Fast work</button>
 <button id="fetchfail" onclick="window.__fetchCaught=null;fetch('http://127.0.0.1:1/?token=secret').then(r=>r.text()).catch(e=>{window.__fetchCaught=e.name})">Refused request</button>
+<input type="number" aria-label="Count" value="2"><input type="range" aria-label="Level"><input type="submit" aria-label="Go"><input type="date" aria-label="Day">
+<input type="nonsense" aria-label="Odd"><input role="" aria-label="Blank role"><input type="radio" name="pick" aria-label="Pick">
 </body></html>`;
 
 describe.runIf(process.env.CRAWL_BROWSER_TESTS === "1")(
@@ -174,6 +178,45 @@ describe.runIf(process.env.CRAWL_BROWSER_TESTS === "1")(
         "document.getElementById('check').checked=true;true",
       );
       expect(fixture.browser.evaluate(SIGNATURE_ONLY)).not.toBe(before);
+    });
+    it("reports implicit input roles while the full walk still guards every input", () => {
+      const probe = readFullProbe(fixture.browser);
+      const byName = (name: string) => {
+        const found = probe.controls.find((c) => c.name === name);
+        if (!found) throw new Error(`Missing fixture control ${name}`);
+        return found;
+      };
+      expect(
+        Object.fromEntries(
+          [
+            "Count",
+            "Level",
+            "Go",
+            "Day",
+            "Odd",
+            "Blank role",
+            "Text",
+            "Pick",
+            "Check",
+          ].map((name) => [name, byName(name).role]),
+        ),
+      ).toEqual({
+        Count: "spinbutton",
+        Level: "slider",
+        Go: "button",
+        Day: null,
+        Odd: "textbox",
+        "Blank role": "textbox",
+        Text: "textbox",
+        Pick: "radio",
+        Check: "checkbox",
+      });
+      for (const name of ["Count", "Level", "Go", "Day", "Odd", "Text", "Area"])
+        expect(fullControlReason(byName(name))).toBe(
+          "input: requires a named scenario",
+        );
+      for (const name of ["Pick", "Check", "Fast work"])
+        expect(fullControlReason(byName(name))).toBeNull();
     });
     it("keeps offscreen controls without attributing viewport edge obstruction", () => {
       const probe = fixture.browser.evaluate(PAGE_PROBE) as PageProbe;
