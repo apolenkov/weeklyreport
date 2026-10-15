@@ -407,7 +407,7 @@ describe("PeriodService single-active-reopen guard (integration)", () => {
     expect(reopened).toEqual([{ id: PUBLISHED_B }]);
   });
 
-  it("allows only one Head reopen when a newer publication admits a second target with no reminder policies", async () => {
+  it("reopens only the newer target when a newer publication lands after an older Head reopen passed its gates, with no reminder policies", async () => {
     await prisma.reminderPolicy.deleteMany();
     expect(await prisma.reminderPolicy.count()).toBe(0);
     await createOpenReport(PUBLISHED_A, "2026-05-18T00:00:00.000Z");
@@ -455,16 +455,15 @@ describe("PeriodService single-active-reopen guard (integration)", () => {
       await Promise.all([firstOutcome, secondOutcome]);
     }
 
-    const outcomes = [await firstOutcome, await secondOutcome];
-    expect(outcomes.filter((outcome) => outcome === null)).toHaveLength(1);
-    expect(
-      outcomes.filter((outcome) => outcome instanceof PeriodScopeError),
-    ).toHaveLength(1);
+    // A is no longer the latest published once B publishes, so it must lose
+    // whichever transaction takes the status-graph lock first.
+    expect(await firstOutcome).toBeInstanceOf(PeriodScopeError);
+    expect(await secondOutcome).toBeNull();
     const reopened = await prisma.report.findMany({
       where: { periodStatus: "reopened", archived: false },
       select: { id: true },
     });
-    expect(reopened).toHaveLength(1);
+    expect(reopened).toEqual([{ id: PUBLISHED_B }]);
     for (const reportId of [PUBLISHED_A, PUBLISHED_B]) {
       const after = await readPeriodState(reportId);
       if (reportId === reopened[0]?.id) {
@@ -476,6 +475,96 @@ describe("PeriodService single-active-reopen guard (integration)", () => {
         expect(after).toEqual(before.get(reportId));
       }
     }
+  });
+
+  it("rejects an older Head reopen when a Head publication is still committing as the reopen starts, with no reminder policies", async () => {
+    await prisma.reminderPolicy.deleteMany();
+    expect(await prisma.reminderPolicy.count()).toBe(0);
+    await createOpenReport(PUBLISHED_A, "2026-05-18T00:00:00.000Z");
+    await service.publishPeriod(PUBLISHED_A, headSession);
+    await createOpenReport(PUBLISHED_B, "2026-05-25T00:00:00.000Z");
+    const before = await readPeriodState(PUBLISHED_A);
+    const reopen = pauseReopenAfterGates();
+    const publishWritten = Promise.withResolvers<void>();
+    const commitPublish = Promise.withResolvers<void>();
+    const transaction = prisma.$transaction.bind(prisma);
+    // Holds the publication open after all of its writes, just before commit.
+    const pausingPrisma = new Proxy(prisma, {
+      get(target, property): unknown {
+        if (property !== "$transaction")
+          return Reflect.get(target, property, target) as unknown;
+        return (
+          operation: (tx: Prisma.TransactionClient) => Promise<unknown>,
+        ) =>
+          transaction(async (tx) => {
+            const result = await operation(tx);
+            publishWritten.resolve();
+            await commitPublish.promise;
+            return result;
+          });
+      },
+    }) as unknown as PrismaService;
+    const publishingService = new PeriodService(
+      new PeriodPrismaRepository(
+        pausingPrisma,
+        new WeeklyReportPrismaRepository(prisma as unknown as PrismaService),
+      ),
+      { invalidateAll: noopInvalidate },
+      { getSettings: noGatingReopenPolicy },
+      NOOP_PERIOD_TELEMETRY,
+      createNullLogger(),
+    );
+    const reopenState = { finished: false };
+    const reopenOutcome = reopen.service
+      .reopenPeriod(PUBLISHED_A, headSession)
+      .then(
+        () => {
+          reopenState.finished = true;
+          return null;
+        },
+        (error: unknown) => {
+          reopenState.finished = true;
+          return error;
+        },
+      );
+    let publishOutcome: Promise<unknown> | undefined;
+    try {
+      // A is still the latest published when the reopen passes its gates.
+      await reopen.ready;
+      publishOutcome = publishingService.publishPeriod(
+        PUBLISHED_B,
+        headSession,
+      );
+      await publishWritten.promise;
+      reopen.resume();
+      // Unserialized, the reopen commits now; serialized, it waits on the lane.
+      const deadline = Date.now() + ADVISORY_WAIT_TIMEOUT_MS;
+      while (Date.now() < deadline && !reopenState.finished) {
+        const rows = await prisma.$queryRaw<{ waiting: boolean }[]>`
+          SELECT EXISTS (
+            SELECT 1 FROM pg_locks WHERE locktype = 'advisory' AND NOT granted
+          ) AS waiting
+        `;
+        if (expectDefined(rows[0]).waiting) break;
+        await new Promise((resolve) =>
+          setTimeout(resolve, ADVISORY_POLL_INTERVAL_MS),
+        );
+      }
+    } finally {
+      reopen.resume();
+      commitPublish.resolve();
+      await Promise.allSettled([reopenOutcome, publishOutcome]);
+    }
+
+    await expect(publishOutcome).resolves.toEqual({
+      success: true,
+      reportId: PUBLISHED_B,
+    });
+    expect(await reopenOutcome).toBeInstanceOf(PeriodScopeError);
+    expect(
+      await prisma.report.count({ where: { periodStatus: "reopened" } }),
+    ).toBe(0);
+    expect(await readPeriodState(PUBLISHED_A)).toEqual(before);
   });
 
   it("lets an admin reopen a second period while one is reopened (recovery path)", async () => {
