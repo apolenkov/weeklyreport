@@ -12,9 +12,13 @@ branch). Production roll-out will go through this job.
 ## What changes
 
 - The job discovers the release in the exact configured Kubernetes context and
-  namespace: absent → `helm install --wait=watcher`; deployed → `helm upgrade
---wait=watcher` (no `--install`); discovery failure, an inconsistent answer or
-  any other release state → stop before a mutation.
+  namespace. Absence is proven only by Helm's release-not-found error from
+  `helm history` (the storage driver returns it when no release record exists);
+  `helm list` alone is not trusted, because it omits unknown-state records and
+  skips records it cannot decode. Absent → `helm install --wait=watcher`;
+  readable and deployed → `helm upgrade --wait=watcher` (no `--install`);
+  discovery failure, unreadable records, an inconsistent answer or any other
+  release state → stop before a mutation.
 - No automatic rollback or uninstall in CI: install keeps a failed release and its
   resources; an upgrade is forward-fix because CI cannot prove schema and data
   compatibility. `helm rollback` stays a manual runbook step.

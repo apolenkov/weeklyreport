@@ -51,11 +51,31 @@ const SHA = "0123456789abcdef";
 const SHARED = `--kube-context ${CONTEXT} --namespace ${NAMESPACE}`;
 const CHART_ARGS = `deploy/helm/weeklyreport ${SHARED} -f VALUES --set images.tag=${SHA} --wait=watcher --timeout 10m`;
 
-// Records every call. `list` answers from STUB_KNOWN (all states) or
-// STUB_DEPLOYED (--deployed); any subcommand a deploy must never run exits 99.
+// Records every call. `history` answers from STUB_HISTORY (absent by default:
+// Helm's release-not-found error; present, unreadable, denied, similar), `list`
+// from STUB_KNOWN (all states) or STUB_DEPLOYED (--deployed); any subcommand a
+// deploy must never run exits 99.
 const HELM_STUB = String.raw`#!/bin/sh
 printf '%s\n' "$*" >> "$STUB_CALLS"
 case "$1" in
+  history)
+    case "$STUB_HISTORY" in
+      present) printf '%s\n' '[{"revision":1,"status":"deployed"}]' ;;
+      unreadable) printf '%s\n' '[]' ;;
+      denied)
+        echo 'Error: query: failed to query with labels: secrets is forbidden' >&2
+        exit 1
+        ;;
+      similar)
+        echo 'Error: release: not found in a different place' >&2
+        exit 1
+        ;;
+      *)
+        echo 'Error: release: not found' >&2
+        exit 1
+        ;;
+    esac
+    ;;
   list)
     if [ -n "$STUB_LIST_FAIL" ]; then
       echo "Error: Kubernetes cluster unreachable" >&2
@@ -127,6 +147,7 @@ test("an absent release is installed and waited on without any rollback", () => 
   const { result, calls, values } = runDeploy();
   assert.equal(result.status, 0, result.stderr);
   assert.deepEqual(calls, [
+    `history weeklyreport ${SHARED} -o json`,
     `list ${SHARED} --filter ^weeklyreport$ -q`,
     `list ${SHARED} --filter ^weeklyreport$ --deployed -q`,
     `install weeklyreport ${CHART_ARGS.replace("VALUES", values)}`,
@@ -144,6 +165,7 @@ test("an absent release is installed and waited on without any rollback", () => 
 
 test("a deployed release is upgraded, never installed, and keeps waiting", () => {
   const { result, mutations, values } = runDeploy({
+    STUB_HISTORY: "present",
     STUB_KNOWN: "weeklyreport",
     STUB_DEPLOYED: "weeklyreport",
   });
@@ -158,12 +180,18 @@ test("a deployed release is upgraded, never installed, and keeps waiting", () =>
 test("a discovery error is never read as an absent release", () => {
   const { result, calls, mutations } = runDeploy({ STUB_LIST_FAIL: "1" });
   assert.notEqual(result.status, 0);
-  assert.equal(calls.length, 1);
+  assert.deepEqual(
+    calls.map((call) => call.split(" ")[0]),
+    ["history", "list"],
+  );
   assert.deepEqual(mutations, []);
 });
 
 test("a release in any state but deployed is left untouched", () => {
-  const { result, mutations } = runDeploy({ STUB_KNOWN: "weeklyreport" });
+  const { result, mutations } = runDeploy({
+    STUB_HISTORY: "present",
+    STUB_KNOWN: "weeklyreport",
+  });
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /refusing to mutate/);
   assert.deepEqual(mutations, []);
@@ -171,6 +199,8 @@ test("a release in any state but deployed is left untouched", () => {
 
 test("inconsistent or unexpected discovery answers fail closed", () => {
   for (const answers of [
+    { STUB_HISTORY: "present" },
+    { STUB_HISTORY: "present", STUB_KNOWN: "weeklyreport" },
     { STUB_DEPLOYED: "weeklyreport" },
     {
       STUB_KNOWN: "weeklyreport\nweeklyreport-old",
@@ -184,18 +214,42 @@ test("inconsistent or unexpected discovery answers fail closed", () => {
   }
 });
 
+test("an empty list over unreadable release records is not an absent release", () => {
+  // Helm's list omits unknown-state records and skips ones it cannot decode, so
+  // known="" and deployed="" can hide an existing release.
+  const { result, mutations } = runDeploy({ STUB_HISTORY: "unreadable" });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /history=unknown/);
+  assert.deepEqual(mutations, []);
+});
+
+test("only Helm's exact release-not-found error confirms absence", () => {
+  for (const history of ["denied", "similar"]) {
+    const { result, mutations } = runDeploy({ STUB_HISTORY: history });
+    assert.notEqual(result.status, 0, history);
+    assert.deepEqual(mutations, [], history);
+  }
+});
+
+test("a history failure explains itself without exposing the values file", () => {
+  const { result } = runDeploy({ STUB_HISTORY: "denied" });
+  assert.match(result.stderr, /forbidden/);
+  assert.doesNotMatch(result.stdout + result.stderr, new RegExp(VALUES_SECRET));
+});
+
 test("a failed first install leaves the release for diagnosis", () => {
   const { result, calls } = runDeploy({ STUB_INSTALL_FAIL: "1" });
   assert.notEqual(result.status, 0);
   // Only discovery and the install itself: no uninstall, rollback or delete.
   assert.deepEqual(
     calls.map((call) => call.split(" ")[0]),
-    ["list", "list", "install"],
+    ["history", "list", "list", "install"],
   );
 });
 
 test("a failed upgrade is not rolled back automatically", () => {
   const { result, calls } = runDeploy({
+    STUB_HISTORY: "present",
     STUB_KNOWN: "weeklyreport",
     STUB_DEPLOYED: "weeklyreport",
     STUB_UPGRADE_FAIL: "1",
@@ -203,7 +257,7 @@ test("a failed upgrade is not rolled back automatically", () => {
   assert.notEqual(result.status, 0);
   assert.deepEqual(
     calls.map((call) => call.split(" ")[0]),
-    ["list", "list", "upgrade"],
+    ["history", "list", "list", "upgrade"],
   );
 });
 

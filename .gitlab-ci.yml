@@ -581,8 +581,9 @@ build-images:
 # Defined only when DevOps supplies a file-type KUBECONFIG variable. The values
 # file (HELM_VALUES_FILE, file-type), HELM_NAMESPACE and HELM_KUBE_CONTEXT come
 # from CI variables; no cluster credential lives in the repository. A missing
-# release is installed and an existing deployed one is upgraded; discovery
-# errors and any other release state stop the job before a mutation. Neither
+# release is installed (only when Helm itself reports release-not-found) and an
+# existing deployed one is upgraded; discovery errors, unreadable release
+# records and any other state stop the job before a mutation. Neither
 # command rolls back: install rollback is an uninstall that would take the
 # pdfdata/pgbackups claims with it, and CI cannot prove an upgrade is
 # schema-compatible, so a failed release stays for diagnosis or a forward fix.
@@ -608,13 +609,32 @@ deploy-production:
     - |
       set -eu
       set -- --kube-context "$HELM_KUBE_CONTEXT" --namespace "$HELM_NAMESPACE"
+      stderr_file="$(mktemp)"
+      trap 'rm -f "$stderr_file"' EXIT
+      # Absence is confirmed only by Helm's own release-not-found error, which
+      # the storage driver returns when no release record exists at all.
+      # `list` omits records in an unknown state and skips ones it cannot
+      # decode, so an empty list alone never authorizes an install.
+      status=0
+      history="$(helm history weeklyreport "$@" -o json 2>"$stderr_file")" || status=$?
+      case "$status:$history" in
+        0:*'"revision"'*) state=existing ;;
+        *)
+          if [ "$status" -ne 0 ] && [ "$(cat "$stderr_file")" = "Error: release: not found" ]; then
+            state=absent
+          else
+            state=unknown
+          fi
+          ;;
+      esac
       known="$(helm list "$@" --filter '^weeklyreport$' -q)"
       deployed="$(helm list "$@" --filter '^weeklyreport$' --deployed -q)"
-      if [ -z "$known" ] && [ -z "$deployed" ]; then
+      if [ "$state" = absent ] && [ -z "$known" ] && [ -z "$deployed" ]; then
         helm install weeklyreport deploy/helm/weeklyreport "$@" -f "$HELM_VALUES_FILE" --set "images.tag=$CI_COMMIT_SHA" --wait=watcher --timeout 10m
-      elif [ "$known" = weeklyreport ] && [ "$deployed" = weeklyreport ]; then
+      elif [ "$state" = existing ] && [ "$known" = weeklyreport ] && [ "$deployed" = weeklyreport ]; then
         helm upgrade weeklyreport deploy/helm/weeklyreport "$@" -f "$HELM_VALUES_FILE" --set "images.tag=$CI_COMMIT_SHA" --wait=watcher --timeout 10m
       else
-        echo "release weeklyreport is not in a single deployed or absent state (known='$known' deployed='$deployed'); refusing to mutate" >&2
+        echo "release weeklyreport is not confirmed as absent or deployed (history=$state known='$known' deployed='$deployed'); refusing to mutate" >&2
+        cat "$stderr_file" >&2
         exit 1
       fi
