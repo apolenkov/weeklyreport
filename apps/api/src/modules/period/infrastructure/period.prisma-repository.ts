@@ -19,6 +19,7 @@ import {
 } from "../../report-sections/index.js";
 import { freezePublishedSnapshot } from "../../search/index.js";
 import {
+  queryLatestPublishedNonArchivedId,
   WEEKLY_REPORT_LIFECYCLE,
   type WeeklyReportLifecyclePort,
 } from "../../weekly-report/index.js";
@@ -106,6 +107,10 @@ export class PeriodPrismaRepository implements PeriodRepository {
   ): Promise<PublishPeriodOutcome> {
     return this.prisma.$transaction(async (tx) => {
       const publishAt = new Date();
+      // Same lane as reopenPeriod: with no reminder policies to lock, a Head
+      // reopen could otherwise read the latest published period before this
+      // publication commits and reopen a period it has just made historical.
+      await lockStatusGraph(tx);
       await lockAllReminderPolicies(tx);
       // The publishedSnapshot check requires the guarded write itself to carry
       // the prospective published metadata. Build that provisional snapshot
@@ -180,6 +185,13 @@ export class PeriodPrismaRepository implements PeriodRepository {
           if (reopened) {
             throw new PeriodScopeError(
               "Another period is already reopened. Publish it before reopening another.",
+            );
+          }
+          // A newer publication committed after the service gate makes this
+          // target historical; a Head may reopen only the latest published.
+          if ((await queryLatestPublishedNonArchivedId(tx)) !== reportId) {
+            throw new PeriodScopeError(
+              "Only the active period can be published or reopened.",
             );
           }
         }

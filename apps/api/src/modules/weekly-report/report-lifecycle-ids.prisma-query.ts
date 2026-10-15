@@ -1,3 +1,5 @@
+import type { Prisma } from "@prisma/client";
+
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import { currentEditableReportWhere } from "../../lib/report-lifecycle.js";
 
@@ -19,7 +21,7 @@ export async function queryCurrentEditableId(
 // Head reopen / published-fallback target: newest non-archived published;
 // id desc tiebreak keeps the pick deterministic on a shared periodStart.
 export async function queryLatestPublishedNonArchivedId(
-  prisma: PrismaService,
+  prisma: PrismaService | Prisma.TransactionClient,
 ): Promise<string | null> {
   const publishedReport = await prisma.report.findFirst({
     where: { periodStatus: "published", archived: false },

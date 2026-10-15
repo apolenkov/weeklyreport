@@ -1,3 +1,4 @@
+export { queryLatestPublishedNonArchivedId } from "./report-lifecycle-ids.prisma-query.js";
 export { WeeklyReportModule } from "./weekly-report.module.js";
 export { WeeklyReportPrismaRepository } from "./weekly-report.prisma-repository.js";
 export {

@@ -2,6 +2,7 @@ import { Prisma } from "@prisma/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
+import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { AdminPeriodOverlapError } from "../../admin/index.js";
 import { WeeklyReportPrismaRepository } from "../../weekly-report/weekly-report.prisma-repository.js";
 import { PeriodScopeError } from "../application/period.service.js";
@@ -57,6 +58,7 @@ describe("PeriodPrismaRepository.publishPeriod", () => {
     };
     const updateMany = vi.fn().mockResolvedValue({ count: 1 });
     const tx = {
+      $executeRaw: vi.fn().mockResolvedValue(1),
       $queryRaw: vi.fn().mockResolvedValue([]),
       report: {
         findUnique: vi.fn().mockResolvedValue(candidate),
@@ -146,6 +148,10 @@ describe("PeriodPrismaRepository.publishPeriod", () => {
       where: { reportId, status: "active" },
       data: { status: "paused" },
     });
+    // The status-graph lane is taken before any read, as reopenPeriod does.
+    expect(tx.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
+      expectDefined(tx.report.findUnique.mock.invocationCallOrder[0]),
+    );
   });
 });
 
@@ -212,6 +218,46 @@ describe("PeriodPrismaRepository.reopenPeriod — overlap translation", () => {
       }
     },
   );
+
+  it("rejects a Head reopen once a newer publication commits after the service gates", async () => {
+    const tx = {
+      $executeRaw: vi.fn().mockResolvedValue(1),
+      $queryRaw: vi.fn().mockResolvedValue([]),
+      report: {
+        // No reopened period, but a newer period is now the latest published.
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce({ id: "newer-published" }),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        findUnique: vi.fn(),
+      },
+      reportSection: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+      reopenRequest: { updateMany: vi.fn().mockResolvedValue({ count: 1 }) },
+    };
+    const prisma = {
+      $transaction: vi.fn(
+        (operation: (client: typeof tx) => Promise<unknown>) => operation(tx),
+      ),
+    } as unknown as PrismaService;
+    const repository = new PeriodPrismaRepository(
+      prisma,
+      new WeeklyReportPrismaRepository(prisma),
+    );
+
+    await expect(
+      repository.reopenPeriod("report-1", publishedExpectation(), {
+        enforceSingleReopen: true,
+      }),
+    ).rejects.toBeInstanceOf(PeriodScopeError);
+    expect(tx.report.findFirst).toHaveBeenLastCalledWith({
+      where: { periodStatus: "published", archived: false },
+      orderBy: [{ periodStart: "desc" }, { id: "desc" }],
+      select: { id: true },
+    });
+    expect(tx.report.updateMany).not.toHaveBeenCalled();
+    expect(tx.reportSection.updateMany).not.toHaveBeenCalled();
+  });
 
   function periodOverlapP2039(): Prisma.PrismaClientKnownRequestError {
     return new Prisma.PrismaClientKnownRequestError(
@@ -286,7 +332,11 @@ describe("PeriodPrismaRepository.reopenPeriod — overlap translation", () => {
           },
         ]),
       report: {
-        findFirst: vi.fn().mockResolvedValue(null),
+        // No reopened period, then the target is the latest published one.
+        findFirst: vi
+          .fn()
+          .mockResolvedValueOnce(null)
+          .mockResolvedValueOnce({ id: reportId }),
         updateMany: vi.fn().mockResolvedValue({ count: 1 }),
         findUnique: vi.fn(),
       },
