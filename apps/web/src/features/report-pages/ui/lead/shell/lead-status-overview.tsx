@@ -131,12 +131,8 @@ export function LeadStatusOverview({
     staleTime: 30_000,
   });
 
-  useQueryErrorHandler(activeQ, {
-    event: "leadStatusOverview.activeReport.load_failed",
-    component: "LeadStatusOverview",
-    procedure: "reports.getActive",
-    toastPrefix: "Failed to load active report",
-  });
+  // The editor already reports a getActive failure (useLeadFormLoadErrors);
+  // a second handler on the same query would toast and log it twice.
   useQueryErrorHandler(overviewQ, {
     event: "leadStatusOverview.load_failed",
     component: "LeadStatusOverview",
