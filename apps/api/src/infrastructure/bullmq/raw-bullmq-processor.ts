@@ -6,7 +6,10 @@ import type { ClsService } from "nestjs-cls";
 import { errorMessage } from "../../lib/error-message.js";
 import type { AppLogger } from "../../lib/logger.js";
 import type { EnvConfig } from "../config/env.schema";
-import { closeBullMqResource } from "./bounded-shutdown.js";
+import {
+  BULLMQ_FAILED_HOOK_DRAIN_TIMEOUT_MS,
+  closeBullMqResource,
+} from "./bounded-shutdown.js";
 import { getBullMQOptions } from "./bullmq-options";
 import type { QueueName } from "./queue-registry";
 import type {
@@ -52,6 +55,8 @@ export abstract class RawBullMqProcessor<TData extends JobTraceContext>
 {
   private readonly lifecycle = new WorkerLifecycle<TData>();
   private registration: WorkerLivenessRegistration | null = null;
+  // worker.close() waits for the job, not for its failed-event continuation.
+  private readonly pendingFailedHooks = new Set<Promise<void>>();
 
   constructor(
     protected readonly env: EnvConfig,
@@ -88,7 +93,7 @@ export abstract class RawBullMqProcessor<TData extends JobTraceContext>
     );
 
     worker.on("failed", (job, error) => {
-      void runInJobTraceContext(
+      const hook = runInJobTraceContext(
         job?.data,
         `${this.spanName}.failed`,
         this.cls,
@@ -100,6 +105,8 @@ export abstract class RawBullMqProcessor<TData extends JobTraceContext>
           }
         },
       );
+      this.pendingFailedHooks.add(hook);
+      void hook.finally(() => this.pendingFailedHooks.delete(hook));
     });
     this.lifecycle.start(worker);
     const registration = this.workerLiveness?.register(this.queueName, worker);
@@ -134,5 +141,27 @@ export abstract class RawBullMqProcessor<TData extends JobTraceContext>
         error: errorMessage(error),
       });
     });
+    await this.drainFailedHooks();
+  };
+
+  private readonly drainFailedHooks = async (): Promise<void> => {
+    if (this.pendingFailedHooks.size === 0) return;
+    const timeout = Promise.withResolvers<"timeout">();
+    const timer = setTimeout(
+      () => timeout.resolve("timeout"),
+      BULLMQ_FAILED_HOOK_DRAIN_TIMEOUT_MS,
+    );
+    timer.unref();
+    const drained = Promise.allSettled(this.pendingFailedHooks);
+    try {
+      if ((await Promise.race([drained, timeout.promise])) === "timeout") {
+        this.logger.error(
+          "BullMQ failed-event hook did not settle before shutdown",
+          { queueName: this.queueName, pending: this.pendingFailedHooks.size },
+        );
+      }
+    } finally {
+      clearTimeout(timer);
+    }
   };
 }
