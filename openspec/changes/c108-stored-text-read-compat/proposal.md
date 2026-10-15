@@ -16,7 +16,9 @@ Backlog: TASK-503.108 (follows TASK-503.104; TASK-503.107 stays separate).
 
 - Read-model text fields (items, risks, decisions, their stage names, review
   comments and verdict reasons, item outcome history and resolution) accept
-  persisted strings as stored, in publication snapshots and live reads alike. They do
+  persisted strings as stored, in publication snapshots and live reads alike.
+  The activity catalogue read (`projectActivitySchema` name and Jira accounts)
+  and the section activity title override follow the same rule. They do
   not re-apply visible-content or length rules and do not trim, normalize or
   replace values.
 - Author write schemas keep every current rule; nothing on the write side is
@@ -36,7 +38,8 @@ None.
 ### Modified Capabilities
 
 - `schema-conventions`: reads of persisted text do not re-apply author write
-  rules.
+  rules; the invisible-only stage-name rule of `reject-invisible-only-safe-text`
+  applies to writes only.
 
 ## Impact
 
@@ -48,5 +51,5 @@ No database migration, data cleanup or client change.
 
 - Relaxing any author write rule, or accepting such text in a new write.
 - Cleaning or migrating stored values (assessed separately).
-- Accepting an empty string: no writer ever admitted one, so it still fails
-  closed as malformed data.
+- Accepting an empty string or a null byte: no writer admitted either and
+  PostgreSQL text cannot hold a null byte, so both still fail closed.

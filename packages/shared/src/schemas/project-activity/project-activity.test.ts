@@ -27,29 +27,48 @@ describe("projectActivitySchema", () => {
     expect(parsed.leadIds).toEqual([]);
   });
 
+  // TASK-503.108: reads keep stored text the write rule rejects; only a null
+  // byte, which PostgreSQL text cannot hold, still fails closed.
   it.each(
     (["name", "jiraAccounts"] as const).flatMap((field) =>
-      [" ".repeat(3), "\u200B\u200D", "visible\u0000text"].map((text) => ({
+      [" ".repeat(3), "\u200B\u200D\u2060", "x".repeat(201)].map((text) => ({
         field,
         text,
       })),
     ),
-  )("rejects persisted $field text $text independently", ({ field, text }) => {
-    const base = {
+  )("reads persisted $field text $text exactly", ({ field, text }) => {
+    const parsed = projectActivitySchema.parse({
       id: ACTIVITY_ID,
       name: "Ops",
       groupId: GROUP_ID,
       archived: false,
-    };
-    const result = projectActivitySchema.safeParse({
-      ...base,
       [field]: field === "name" ? text : [text],
     });
-    expect(result.success).toBe(false);
-    expect(result.error?.issues[0]?.path).toEqual(
-      field === "name" ? ["name"] : ["jiraAccounts", 0],
+    expect(field === "name" ? parsed.name : parsed.jiraAccounts).toEqual(
+      field === "name" ? text : [text],
     );
   });
+
+  it.each(["name", "jiraAccounts"] as const)(
+    "rejects a persisted %s with a null byte",
+    (field) => {
+      const text = "visible\u0000text";
+      const base = {
+        id: ACTIVITY_ID,
+        name: "Ops",
+        groupId: GROUP_ID,
+        archived: false,
+      };
+      const result = projectActivitySchema.safeParse({
+        ...base,
+        [field]: field === "name" ? text : [text],
+      });
+      expect(result.success).toBe(false);
+      expect(result.error?.issues[0]?.path).toEqual(
+        field === "name" ? ["name"] : ["jiraAccounts", 0],
+      );
+    },
+  );
 
   it("retains write guards for invisible and null-byte text", () => {
     for (const text of [" ".repeat(3), "\u200B\u200D", "visible\u0000text"]) {
@@ -85,7 +104,7 @@ describe("projectActivitySchema", () => {
     },
   );
 
-  it("retains exact name and Jira length bounds without adding read cardinality limits", () => {
+  it("reads stored names and Jira accounts past the write bounds without cardinality limits", () => {
     const base = {
       id: ACTIVITY_ID,
       name: "x".repeat(200),
@@ -97,11 +116,17 @@ describe("projectActivitySchema", () => {
     expect(
       projectActivitySchema.safeParse({ ...base, name: "x".repeat(201) })
         .success,
-    ).toBe(false);
+    ).toBe(true);
     expect(
       projectActivitySchema.safeParse({
         ...base,
         jiraAccounts: ["x".repeat(101)],
+      }).success,
+    ).toBe(true);
+    expect(
+      projectActivityCreateSchema.safeParse({
+        name: "x".repeat(201),
+        groupId: GROUP_ID,
       }).success,
     ).toBe(false);
     expect(projectActivitySchema.safeParse({ ...base, name: "" }).success).toBe(
