@@ -1,7 +1,14 @@
 "use client";
 
 import type { ItemOutcomeResult } from "@weeklyreport/shared";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import {
   blockedReasonOf,
@@ -79,7 +86,9 @@ function useOutcomeGate(
   const liveScopeRef = useRef<OutcomeScope | null>(scope);
   const [pending, setPendingScope] = useState<string | null>(null);
 
-  useEffect(
+  // Layout effects run at commit, so a reply settling before passive effects
+  // already sees the committed scope (lead-form-draft-orchestration spec).
+  useLayoutEffect(
     () => () => {
       liveScopeRef.current = null;
       activeRef.current = null;
@@ -87,7 +96,7 @@ function useOutcomeGate(
     [],
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     liveScopeRef.current = scope;
     const nextScopeKey = scope?.key ?? null;
     if (
