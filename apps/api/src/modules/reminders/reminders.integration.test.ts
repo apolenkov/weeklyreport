@@ -21,13 +21,19 @@ import {
   TEST_IDS,
 } from "../../test-utils/prisma-test-helper";
 import { saveReminderPolicy } from "../admin/admin-reminder-policy.queries.js";
+import {
+  fakeOrganizationService,
+  schedulerTestEnv,
+} from "./__tests__/reminders-scheduler-harness.js";
 import { RemindersPrismaRepository } from "./reminders.prisma-repository";
+import { RemindersScheduler } from "./reminders.scheduler";
 import { RemindersService } from "./reminders.service.js";
 import {
   insertExecutionOnConflict,
   UNCERTAIN_DELIVERY_ERROR,
 } from "./reminders-execution.prisma-query.js";
 import type { ReminderQueuePayload } from "./reminders-queue-payload.js";
+import { RemindersReaperScheduler } from "./reminders-reaper.scheduler";
 
 const DEADLINE_POLICY_ID = "a0000000-0000-4000-a000-000000000703";
 const ESCALATION_POLICY_ID = "a0000000-0000-4000-a000-000000000704";
@@ -744,6 +750,128 @@ describe("RemindersPrismaRepository (integration)", () => {
 
     expect(stuck).toHaveLength(1);
     expect(expectDefined(stuck[0]).id).toBe(TEST_IDS.reminderExec1);
+  });
+
+  it("leaves a reaper-recoverable queued row when the queue and its compensation both fail", async () => {
+    const faultedEmail = "faulted-recipient@test.local";
+    const nextEmail = "next-recipient@test.local";
+    const [dueRule] = await repo.findDueDeadlineRules(
+      new Date("2026-04-11T10:00:00.000Z"),
+    );
+    const scheduledRule = {
+      ...expectDefined(dueRule),
+      recipients: [
+        {
+          userId: testData.lead.id,
+          email: faultedEmail,
+          name: "Faulted Lead",
+          notificationOptOut: false,
+        },
+        {
+          userId: testData.head.id,
+          email: nextEmail,
+          name: "Next Lead",
+          notificationOptOut: false,
+        },
+      ],
+    };
+    const enqueueError = new Error("Connection is closed.");
+    const queue = {
+      enqueue: vi
+        .fn()
+        .mockRejectedValueOnce(enqueueError)
+        .mockResolvedValue(undefined),
+    };
+    const logger = { ...createNullLogger(), error: vi.fn() };
+    const service = new RemindersService(repo, logger, queue);
+    const request = vi.spyOn(service, "requestReminderExecutionWithOutcome");
+    const scheduler = new RemindersScheduler(
+      service,
+      {
+        findDueDeadlineRules: () => Promise.resolve([scheduledRule]),
+        findDueEscalationRules: () => Promise.resolve([]),
+      },
+      fakeOrganizationService,
+      schedulerTestEnv,
+    );
+
+    // PostgreSQL itself rejects the compensating failed write for one row.
+    await prisma.$executeRawUnsafe(`
+      CREATE OR REPLACE FUNCTION c1376_reject_failed_mark() RETURNS trigger AS $$
+      BEGIN
+        RAISE EXCEPTION 'c1376 compensation write rejected';
+      END $$ LANGUAGE plpgsql
+    `);
+    await prisma.$executeRawUnsafe(`
+      CREATE TRIGGER c1376_reject_failed_mark
+      BEFORE UPDATE ON "ReminderExecution" FOR EACH ROW
+      WHEN (NEW."status" = 'failed'
+        AND NEW."recipientEmail" = 'faulted-recipient@test.local')
+      EXECUTE FUNCTION c1376_reject_failed_mark()
+    `);
+    const tick = await scheduler
+      .runOnce(new Date("2026-04-11T10:00:00.000Z"))
+      .finally(async () => {
+        await prisma.$executeRawUnsafe(
+          `DROP TRIGGER IF EXISTS c1376_reject_failed_mark ON "ReminderExecution"`,
+        );
+        await prisma.$executeRawUnsafe(
+          `DROP FUNCTION IF EXISTS c1376_reject_failed_mark()`,
+        );
+      });
+
+    // The enqueue cause is logged; the caller gets the database rejection of
+    // the compensation, never a fabricated failed execution.
+    expect(logger.error).toHaveBeenCalledWith(
+      "failed to enqueue email reminder job",
+      expect.objectContaining({ error: enqueueError.message }),
+    );
+    expect(request.mock.settledResults[0]?.type).toBe("rejected");
+    const callerError: unknown = request.mock.settledResults[0]?.value;
+    expect(callerError).toBeInstanceOf(Error);
+    expect(callerError).not.toBe(enqueueError);
+    expect(tick.requested).toBe(1);
+    expect(tick.failed).toBe(1);
+    expect(tick.failures.map((failure) => failure.recipientUserId)).toEqual([
+      testData.lead.id,
+    ]);
+
+    const faulted = await prisma.reminderExecution.findFirstOrThrow({
+      where: { recipientEmail: faultedEmail },
+    });
+    expect(faulted).toMatchObject({
+      status: "pending",
+      error: null,
+      sentAt: null,
+    });
+    const next = await prisma.reminderExecution.findFirstOrThrow({
+      where: { recipientEmail: nextEmail },
+    });
+    expect(next.status).toBe("pending");
+    expect(queue.enqueue).toHaveBeenCalledTimes(2);
+    expect(queue.enqueue.mock.calls[1]?.[0]).toBe(next.id);
+
+    // The database has recovered; the reaper owns the stranded row. Deliver
+    // the next row first so it is not another stale reaper candidate.
+    await prisma.reminderExecution.update({
+      where: { id: next.id },
+      data: { status: "sent", sentAt: new Date() },
+    });
+    queue.enqueue.mockClear();
+    const reaper = new RemindersReaperScheduler(service, repo);
+    await reaper.runOnce(new Date(faulted.createdAt.getTime() + 16 * 60_000));
+
+    expect(queue.enqueue).toHaveBeenCalledTimes(1);
+    expect(queue.enqueue.mock.calls[0]?.[0]).toBe(faulted.id);
+    expect(queue.enqueue.mock.calls[0]?.[3]).toEqual({
+      replaceTerminal: true,
+    });
+    await expect(
+      repo.transitionExecutionToSending(faulted.id),
+    ).resolves.not.toBeNull();
+    await expect(repo.transitionExecutionToSending(faulted.id)).resolves.toBe(
+      null,
+    );
   });
 
   it("escalation resolves the late lead's group head for an unpublished period", async () => {
