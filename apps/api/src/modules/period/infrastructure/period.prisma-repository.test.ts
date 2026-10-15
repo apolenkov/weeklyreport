@@ -148,8 +148,13 @@ describe("PeriodPrismaRepository.publishPeriod", () => {
       where: { reportId, status: "active" },
       data: { status: "paused" },
     });
-    // The status-graph lane is taken before any read, as reopenPeriod does.
-    expect(tx.$executeRaw.mock.invocationCallOrder[0]).toBeLessThan(
+    // The status-graph lane is taken before the policy locks and any read,
+    // the same lock order as reopenPeriod.
+    const laneLock = expectDefined(tx.$executeRaw.mock.invocationCallOrder[0]);
+    expect(laneLock).toBeLessThan(
+      expectDefined(tx.$queryRaw.mock.invocationCallOrder[0]),
+    );
+    expect(laneLock).toBeLessThan(
       expectDefined(tx.report.findUnique.mock.invocationCallOrder[0]),
     );
   });

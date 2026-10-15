@@ -17,6 +17,9 @@ published after the gate (C1177, VERIFY-06) still lets the older one reopen.
 - Take the status-graph lock at the start of the Head publish transaction, the
   same lane reopen uses, so a publication still committing cannot be missed by
   the reopen re-check (with no reminder policies nothing else orders them).
+  This gives Head publish and reopen a strict commit order; the cost is that a
+  publish now also waits behind other writers on that lane, such as a Lead
+  section save.
 - Pin the existing integration scenario to the expected winner (newer period)
   and add a publish↔reopen interleave scenario.
 
@@ -43,3 +46,7 @@ None.
 - No unique index on reopened periods (Admin recovery may hold a second one).
 - No change to the scheduler auto-publish transaction (RepeatableRead; its
   snapshot timing under the lock needs its own analysis) or to the Admin path.
+- The reopen policy read (`allowReopenAfterPublish`, reopen window in
+  `PeriodService.reopenPeriod`) stays a pre-transaction gate; a Settings change
+  that lands between that gate and the reopen commit is not re-checked. Tracked
+  as a separate finding, not closed by this change.
