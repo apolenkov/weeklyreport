@@ -106,10 +106,10 @@ if [ "$user_count" = 0 ]; then
 fi
 
 for _ in $(seq 1 60); do
-  [ "$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:$APP_PORT/health/ready")" = 200 ] && break
+  [ "$(curl -s --max-time 5 -o /dev/null -w '%{http_code}' "http://localhost:$APP_PORT/health/ready")" = 200 ] && break
   sleep 2
 done
-[ "$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:$APP_PORT/health/ready")" = 200 ] \
+[ "$(curl -s --max-time 5 -o /dev/null -w '%{http_code}' "http://localhost:$APP_PORT/health/ready")" = 200 ] \
   || { echo "/health/ready is not 200. See: kubectl -n $NS logs deploy/api" >&2; exit 1; }
 
 set -a; . "$STATE_DIR/secrets.env"; set +a
