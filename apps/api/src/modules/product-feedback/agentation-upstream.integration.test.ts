@@ -485,10 +485,10 @@ describe("Agentation contract fixture failure cleanup", () => {
     );
 
     expect(failure).toBeInstanceOf(AggregateError);
-    expect((failure as AggregateError).errors).toEqual([
-      startupFailure,
-      closeFailure,
-    ]);
+    const errors: unknown[] = (failure as AggregateError).errors;
+    expect(errors).toHaveLength(2);
+    expect((errors[0] as Error).cause).toBe(startupFailure);
+    expect(errors[1]).toBe(closeFailure);
     expect(transportClose).toHaveBeenCalledOnce();
     expect(
       (transportClose.mock.contexts[0] as StdioClientTransport).pid,

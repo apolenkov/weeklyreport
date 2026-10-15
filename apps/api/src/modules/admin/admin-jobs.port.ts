@@ -41,7 +41,8 @@ export interface AdminJobHandle {
   // Requeues a failed job. Not idempotent: when two callers race, the loser
   // throws instead of returning a no-op.
   readonly retry: () => Promise<void>;
-  // Deletes the job; a job that has already disappeared does not throw.
+  // Deletes the job in any state. Throws only while a worker holds the job's
+  // lock; a job that has already disappeared does not throw.
   readonly remove: () => Promise<void>;
 }
 
