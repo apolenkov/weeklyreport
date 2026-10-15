@@ -55,16 +55,15 @@ export interface SessionState {
 // useSession() still throws when context is absent.
 export const SessionContext = createContext<SessionState | null>(null);
 
-function mapSessionState(
-  data: UserSession | null | undefined,
-  isLoading: boolean,
-): SessionState {
+function mapSessionState(data: UserSession | null | undefined): SessionState {
   if (!data) {
-    // undefined means loading; null means resolved unauthenticated.
+    // undefined means unresolved — including a pending query whose retry is
+    // paused offline or in a background tab, where TanStack reports
+    // isLoading false; null means resolved unauthenticated.
     return {
       user: null,
       organization: null,
-      isLoading,
+      isLoading: data === undefined,
       isAuthenticated: false,
     };
   }
@@ -126,17 +125,14 @@ function SessionLoadError({
 export function SessionProvider({ children }: { children: ReactNode }) {
   const trpc = useTRPC();
   const query = useQuery(trpc.auth.me.queryOptions());
-  const { data, isLoading } = query;
+  const { data } = query;
   useQueryErrorHandler(query, {
     component: "SessionProvider",
     event: "auth.session.load_failed",
     procedure: "auth.me",
   });
 
-  const value = useMemo(
-    () => mapSessionState(data, isLoading),
-    [data, isLoading],
-  );
+  const value = useMemo(() => mapSessionState(data), [data]);
 
   // Client-only write so the landing page can offer a 1-click resume hint.
   useEffect(() => {

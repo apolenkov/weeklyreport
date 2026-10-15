@@ -1,4 +1,9 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  onlineManager,
+  QueryClient,
+  QueryClientProvider,
+  type QueryObserverOptions,
+} from "@tanstack/react-query";
 import {
   act,
   fireEvent,
@@ -33,10 +38,13 @@ const clients: QueryClient[] = [];
 function buildHarness(
   queryFn: () => UserSession | null | Promise<UserSession | null> = () =>
     session,
+  queryOptions: Pick<QueryObserverOptions, "retry" | "retryDelay"> = {
+    retry: false,
+  },
 ) {
   const { proxy } = createMockTRPC([{ path: ["auth", "me"], query: queryFn }]);
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    defaultOptions: { queries: queryOptions, mutations: { retry: false } },
   });
   clients.push(queryClient);
   function Wrapper({ children }: { readonly children: ReactNode }) {
@@ -57,6 +65,7 @@ beforeEach(() => {
   window.localStorage.removeItem(LAST_ROLE_STORAGE_KEY);
 });
 afterEach(() => {
+  onlineManager.setOnline(true);
   for (const client of clients) client.clear();
   clients.length = 0;
   window.localStorage.removeItem(LAST_ROLE_STORAGE_KEY);
@@ -70,6 +79,34 @@ describe("SessionProvider + useSession", () => {
       () => new Promise<UserSession>(() => undefined),
     );
     const { result } = renderHook(() => useSession(), { wrapper: Wrapper });
+    expect(result.current).toEqual({
+      user: null,
+      organization: null,
+      isLoading: true,
+      isAuthenticated: false,
+    });
+  });
+
+  it("keeps loading while the retry after a failed first auth.me is paused offline", async () => {
+    // Real producer: the first auth.me fails, then the browser goes offline
+    // before the retry, so the query stays pending with fetchStatus "paused".
+    const { Wrapper, queryClient } = buildHarness(
+      () => {
+        onlineManager.setOnline(false);
+        return Promise.reject(new Error("auth.me unavailable"));
+      },
+      { retry: 1, retryDelay: 0 },
+    );
+    const { result } = renderHook(() => useSession(), { wrapper: Wrapper });
+
+    await waitFor(() => {
+      const [query] = queryClient.getQueryCache().getAll();
+      expect(query?.state).toMatchObject({
+        status: "pending",
+        fetchStatus: "paused",
+        fetchFailureCount: 1,
+      });
+    });
     expect(result.current).toEqual({
       user: null,
       organization: null,
