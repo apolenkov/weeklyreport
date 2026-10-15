@@ -579,9 +579,13 @@ build-images:
       cat image-digests.txt
 
 # Defined only when DevOps supplies a file-type KUBECONFIG variable. The values
-# file (HELM_VALUES_FILE, file-type) and HELM_NAMESPACE come from CI variables;
-# no cluster credential lives in the repository. --atomic waits for readiness
-# and rolls the release back on failure; it cannot undo a database migration.
+# file (HELM_VALUES_FILE, file-type), HELM_NAMESPACE and HELM_KUBE_CONTEXT come
+# from CI variables; no cluster credential lives in the repository. A missing
+# release is installed and an existing deployed one is upgraded; discovery
+# errors and any other release state stop the job before a mutation. Neither
+# command rolls back: install rollback is an uninstall that would take the
+# pdfdata/pgbackups claims with it, and CI cannot prove an upgrade is
+# schema-compatible, so a failed release stays for diagnosis or a forward fix.
 deploy-production:
   stage: deploy
   # Deployable only after this pipeline's image build.
@@ -600,4 +604,17 @@ deploy-production:
   script:
     - ': "${HELM_VALUES_FILE:?HELM_VALUES_FILE (file variable) is not set}"'
     - ': "${HELM_NAMESPACE:?HELM_NAMESPACE is not set}"'
-    - helm upgrade --install weeklyreport deploy/helm/weeklyreport --namespace "$HELM_NAMESPACE" -f "$HELM_VALUES_FILE" --set "images.tag=$CI_COMMIT_SHA" --atomic --timeout 10m
+    - ': "${HELM_KUBE_CONTEXT:?HELM_KUBE_CONTEXT is not set}"'
+    - |
+      set -eu
+      set -- --kube-context "$HELM_KUBE_CONTEXT" --namespace "$HELM_NAMESPACE"
+      known="$(helm list "$@" --filter '^weeklyreport$' -q)"
+      deployed="$(helm list "$@" --filter '^weeklyreport$' --deployed -q)"
+      if [ -z "$known" ] && [ -z "$deployed" ]; then
+        helm install weeklyreport deploy/helm/weeklyreport "$@" -f "$HELM_VALUES_FILE" --set "images.tag=$CI_COMMIT_SHA" --wait=watcher --timeout 10m
+      elif [ "$known" = weeklyreport ] && [ "$deployed" = weeklyreport ]; then
+        helm upgrade weeklyreport deploy/helm/weeklyreport "$@" -f "$HELM_VALUES_FILE" --set "images.tag=$CI_COMMIT_SHA" --wait=watcher --timeout 10m
+      else
+        echo "release weeklyreport is not in a single deployed or absent state (known='$known' deployed='$deployed'); refusing to mutate" >&2
+        exit 1
+      fi
