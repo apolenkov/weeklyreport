@@ -4,7 +4,10 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { createNullLogger } from "../../../lib/logger.js";
-import { lockStatusGraph } from "../../../lib/status-graph-lock.js";
+import {
+  lockStatusGraph,
+  STATUS_GRAPH_ADVISORY_LOCK_KEY,
+} from "../../../lib/status-graph-lock.js";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
@@ -542,7 +545,15 @@ describe("PeriodService single-active-reopen guard (integration)", () => {
       while (Date.now() < deadline && !reopenState.finished) {
         const rows = await prisma.$queryRaw<{ waiting: boolean }[]>`
           SELECT EXISTS (
-            SELECT 1 FROM pg_locks WHERE locktype = 'advisory' AND NOT granted
+            SELECT 1 FROM pg_locks
+            WHERE locktype = 'advisory'
+              AND NOT granted
+              AND database = (
+                SELECT oid FROM pg_database WHERE datname = current_database()
+              )
+              AND classid = 0
+              AND objid = ${STATUS_GRAPH_ADVISORY_LOCK_KEY}::bigint::oid
+              AND objsubid = 1
           ) AS waiting
         `;
         if (expectDefined(rows[0]).waiting) break;

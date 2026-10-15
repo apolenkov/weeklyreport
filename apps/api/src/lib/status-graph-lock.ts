@@ -4,7 +4,7 @@ import type { Prisma } from "@prisma/client";
 // from the current assignment graph. A global lane is intentional: a new
 // report can appear after another writer's candidate scan, so a narrower key
 // would leave a phantom gap unless every report-creation path joined it.
-const STATUS_GRAPH_ADVISORY_LOCK_KEY = 2_147_483_647;
+export const STATUS_GRAPH_ADVISORY_LOCK_KEY = 2_147_483_647;
 
 /** Serializes assignment/status projection scans with section provisioning. */
 export async function lockStatusGraph(
