@@ -74,6 +74,12 @@ export type RunRecord = Readonly<{
   findings: readonly Finding[];
 }>;
 
+// A requested crawl output that could not be used; reports list it instead of dropping it.
+export type MissingOutput = Readonly<{
+  role: string;
+  reason: string;
+}>;
+
 export type RoleResult = Readonly<{
   role: string;
   ms: number;

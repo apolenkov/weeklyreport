@@ -1,10 +1,11 @@
 import { spawn } from "node:child_process";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { type Cli, loadPasswords, parseCli } from "./config.ts";
 import { matrix } from "./coverage.ts";
 import { renderMarkdown } from "./report.ts";
+import { readRoleOutputs } from "./role-outputs.ts";
 import { type RoleResult, ROLES } from "./types.ts";
 import { crawlRole, writeJson } from "./worker.ts";
 
@@ -49,18 +50,6 @@ async function runPool(
   return results;
 }
 
-function readRole(out: string, name: string): readonly RoleResult[] {
-  try {
-    return [
-      JSON.parse(
-        readFileSync(join(out, `role-${name}.json`), "utf8"),
-      ) as RoleResult,
-    ];
-  } catch {
-    return [];
-  }
-}
-
 function childMode(cli: Cli, roleName: string): void {
   const role = ROLES.find((r) => r.name === roleName);
   const password = role
@@ -86,7 +75,7 @@ async function parentMode(cli: Cli): Promise<void> {
     rmSync(join(config.out, `role-${role}.json`), { force: true });
   const settled = await runPool(cli);
   const wallMs = Math.round(performance.now() - start);
-  const results = cli.roles.flatMap((role) => readRole(config.out, role));
+  const { results, missing } = readRoleOutputs(config.out, cli.roles);
   const meta = {
     url: config.url,
     started,
@@ -94,6 +83,7 @@ async function parentMode(cli: Cli): Promise<void> {
     parallel: cli.parallel,
     mode: config.mode,
     state: config.state,
+    missing,
   };
   writeJson(join(config.out, "report.json"), {
     ...meta,
@@ -104,7 +94,7 @@ async function parentMode(cli: Cli): Promise<void> {
   console.log(`Report: ${join(config.out, "report.md")} (${wallMs} ms)`);
   const failed = settled.filter((s) => s.status === "rejected");
   const incomplete =
-    results.length !== cli.roles.length ||
+    missing.length > 0 ||
     results.some((result) =>
       result.runs.some(
         (run) =>
@@ -120,7 +110,7 @@ async function parentMode(cli: Cli): Promise<void> {
     );
   if (failed.length > 0 || incomplete)
     throw new Error(
-      `Incomplete crawl: ${failed.length} failed role process(es); see report`,
+      `Incomplete crawl: ${failed.length} failed role process(es), ${missing.length} missing role output(s); see report`,
     );
 }
 

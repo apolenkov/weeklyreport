@@ -94,7 +94,7 @@ describe("crawler video evidence", () => {
         results: [{ role: "lead", ms: 0, runs }],
       }),
     );
-    expect(mergeReports(out)).toBe(1);
+    expect(mergeReports(out)).toEqual({ passes: 1, missing: [] });
     const merged = JSON.parse(
       readFileSync(join(out, "report.json"), "utf8"),
     ) as { results: { runs: { video: string | null }[] }[] };
