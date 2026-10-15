@@ -34,11 +34,17 @@ export class NestAppLoggerAdapter implements LoggerService {
     stackOrContext?: string,
     context?: string,
   ): void => {
+    // Nest's static shutdown hooks log `error(err, err.stack)`; that second
+    // argument is the Error's own stack, not a context.
+    const ownStack =
+      message instanceof Error && stackOrContext === message.stack;
     this.sink.current().error(String(message), {
       ...(message instanceof Error
         ? { name: message.name, stack: message.stack }
         : {}),
-      nestContext: context ?? stackOrContext,
+      ...(context === undefined && ownStack
+        ? {}
+        : { nestContext: context ?? stackOrContext }),
       ...(context && stackOrContext !== undefined
         ? { stack: stackOrContext }
         : {}),

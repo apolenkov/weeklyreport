@@ -155,7 +155,8 @@ const logStreams = new Map<string, WriteStream>();
 function logStreamFor(logDir: string): WriteStream {
   const dir = resolve(logDir);
   const existing = logStreams.get(dir);
-  if (existing !== undefined) return existing;
+  // A failed fs stream auto-destroys; reopen rather than write into it.
+  if (existing !== undefined && !existing.destroyed) return existing;
   mkdirSync(dir, { recursive: true });
   const stream = createWriteStream(join(dir, "app.log"), { flags: "a" });
   stream.on("error", (error) => {
@@ -180,12 +181,11 @@ class AppLoggerImpl implements AppLogger {
   private readonly baseContext: Record<string, unknown>;
   private readonly logDir: string | undefined;
   private readonly clsService: ClsService | undefined;
-  private readonly logStream: WriteStream | undefined;
 
   constructor(
     options: LoggerOptions,
     baseContext: Record<string, unknown> = {},
-    inheritedStream?: WriteStream,
+    openSink = true,
   ) {
     this.minLevel = options.minLevel ?? DEFAULT_MIN_LEVEL;
     this.minPriority = LEVEL_PRIORITY[this.minLevel];
@@ -196,9 +196,8 @@ class AppLoggerImpl implements AppLogger {
       ...baseContext,
     };
 
-    this.logStream =
-      inheritedStream ??
-      (this.logDir === undefined ? undefined : logStreamFor(this.logDir));
+    // A configured LOG_DIR fails closed here; children reuse the parent's sink.
+    if (openSink && this.logDir !== undefined) logStreamFor(this.logDir);
   }
 
   debug(message: string, context?: Record<string, unknown>): void {
@@ -225,14 +224,18 @@ class AppLoggerImpl implements AppLogger {
         clsService: this.clsService,
       },
       { ...this.baseContext, ...context },
-      this.logStream,
+      false,
     );
   }
 
   // An empty write completes only after every earlier write; its callback
   // carries the stream's error, if any.
   flush = (): Promise<void> => {
-    const stream = this.logStream;
+    // The current registry entry, without reopening: a failed sink rejects.
+    const stream =
+      this.logDir === undefined
+        ? undefined
+        : logStreams.get(resolve(this.logDir));
     if (stream === undefined) return Promise.resolve();
     return new Promise((done, fail) => {
       stream.write("", (error) => {
@@ -241,6 +244,17 @@ class AppLoggerImpl implements AppLogger {
       });
     });
   };
+
+  // A reopen failure must not throw out of a log call; stdout keeps the entry.
+  private fileSink(): WriteStream | undefined {
+    if (this.logDir === undefined) return undefined;
+    try {
+      return logStreamFor(this.logDir);
+    } catch (error) {
+      process.stderr.write(`[logger] file reopen failed: ${String(error)}\n`);
+      return undefined;
+    }
+  }
 
   private resolveCorrelationId(): string {
     const cls = this.clsService;
@@ -289,7 +303,7 @@ class AppLoggerImpl implements AppLogger {
     }
 
     // Fire-and-forget; a failed write surfaces through flush().
-    this.logStream?.write(`${formatted}\n`);
+    this.fileSink()?.write(`${formatted}\n`);
 
     // Forward to OTel log provider (no-op when provider not registered).
     logs.getLogger("weeklyreport-api").emit({
