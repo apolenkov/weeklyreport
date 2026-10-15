@@ -1,4 +1,6 @@
 import {
+  hasVisibleText,
+  INVISIBLE_TEXT_MESSAGE,
   MAX_ACTIVITY_NAME_LENGTH,
   SAFE_TEXT_MAX_LENGTH,
 } from "@weeklyreport/shared";
@@ -18,13 +20,16 @@ export interface StatusOverviewActivityFieldsChange {
   readonly description: string | null;
 }
 
-// Lengths are checked on the trimmed value, as the save schema trims it.
+// Lengths are checked on the trimmed value, as the save schema trims it. Blank
+// clears the field; invisible-only text is refused, as the save schema does.
 function limitError(
   label: string,
   value: string,
   limit: number,
 ): string | undefined {
-  return value.trim().length > limit
+  const trimmed = value.trim();
+  if (trimmed !== "" && !hasVisibleText(trimmed)) return INVISIBLE_TEXT_MESSAGE;
+  return trimmed.length > limit
     ? `${label} must be ${String(limit)} characters or fewer.`
     : undefined;
 }

@@ -1,4 +1,9 @@
-import { SAFE_TEXT_MAX_LENGTH, safeText } from "@weeklyreport/shared";
+import {
+  hasVisibleText,
+  INVISIBLE_TEXT_MESSAGE,
+  SAFE_TEXT_MAX_LENGTH,
+  safeText,
+} from "@weeklyreport/shared";
 
 import { deriveItemAlarmFromRisks } from "../model/alarms/item-alarm";
 import type { ParentActivityOption } from "../model/record-parent";
@@ -51,13 +56,18 @@ export function collectItemStatusErrors(args: {
           nextStepText: `Next step must be ${SAFE_TEXT_MAX_LENGTH} characters or fewer.`,
         }
       : {}),
+    // The server refuses invisible-only text; the editor refuses it too.
+    ...(args.trimmedNextStepText.length > 0 &&
+    !hasVisibleText(args.trimmedNextStepText)
+      ? { nextStepText: INVISIBLE_TEXT_MESSAGE }
+      : {}),
     ...(args.status === "completed" && args.trimmedNextStepText.length > 0
       ? {
           nextStepText:
             "A completed item cannot have a next step. Resume it or clear the plan.",
         }
       : {}),
-    ...(args.status === "paused" && args.trimmedPausedReason.length === 0
+    ...(args.status === "paused" && !hasVisibleText(args.trimmedPausedReason)
       ? { pausedReason: "A reason is required to pause an item." }
       : {}),
     ...(args.status === "paused" &&

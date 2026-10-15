@@ -123,6 +123,14 @@ describe("activity weekly title override", () => {
     expect(parsed.activityStatuses[1]?.titleOverride).toBeNull();
   });
 
+  it("rejects an invisible-only override or description instead of resetting it", () => {
+    for (const field of [{ titleOverride: "\u200B" }, { note: " \u200D " }]) {
+      expect(() =>
+        payload([{ activityId: ACTIVITY_ID, status: "green", ...field }]),
+      ).toThrow("Text must contain visible characters");
+    }
+  });
+
   it("normalizes a cleared description to null while preserving a note", () => {
     const parsed = payload([
       { activityId: ACTIVITY_ID, status: "green", note: "" },

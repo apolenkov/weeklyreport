@@ -181,6 +181,7 @@ export {
   failedJobSchema,
   groupProductEdgeInputSchema,
   groupProductSchema,
+  hasVisibleText,
   INVISIBLE_TEXT_MESSAGE,
   itemOutcomeEventSchema,
   itemOutcomeResultSchema,

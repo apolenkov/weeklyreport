@@ -2,7 +2,8 @@ import { z } from "zod";
 
 // Reject whitespace and selected invisible-only text without changing accepted bytes.
 // CGJ stays separate to avoid a misleading combined character inside the class.
-const noInvisibleOnly = (val: string) =>
+/** Whether text has a character safeText treats as visible; clients reuse it to match the server. */
+export const hasVisibleText = (val: string) =>
   val.replaceAll(
     /\u034F|[\s\u00AD\u180E\u200B-\u200D\u2060-\u2064\uFEFF]/gu,
     "",
@@ -26,7 +27,7 @@ export const safeText = (
     .min(opts.min ?? 1)
     .max(opts.max ?? SAFE_TEXT_MAX_LENGTH)
     .refine(noNullBytes, { message: "Text must not contain null bytes" })
-    .refine(noInvisibleOnly, {
+    .refine(hasVisibleText, {
       message: INVISIBLE_TEXT_MESSAGE,
     });
 
@@ -150,7 +151,7 @@ const stageNameElement = z
   .string()
   .min(1)
   .refine(noNullBytes, { message: "Stage must not contain null bytes" })
-  .refine(noInvisibleOnly, {
+  .refine(hasVisibleText, {
     message: "Stage must contain visible characters",
   });
 
