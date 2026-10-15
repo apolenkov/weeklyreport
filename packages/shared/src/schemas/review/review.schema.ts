@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { safeText } from "../primitives/report-primitives.schema.js";
+import { storedText } from "../primitives/stored-text.schema.js";
 
 /** Maximum length accepted for a review comment. */
 export const REVIEW_COMMENT_MAX_LENGTH = 2000;
@@ -16,7 +17,7 @@ export const recordCommentViewSchema = z
     id: z.uuid(),
     reviewerId: z.uuid(),
     reviewerName: z.string().min(1).optional(),
-    text: reviewCommentTextSchema,
+    text: storedText(),
     createdAt: z.coerce.date(),
   })
   .readonly();
@@ -29,7 +30,7 @@ export const sectionReviewViewSchema = z
     verdict: reviewVerdictSchema,
     judgedVersion: z.number().int().min(1),
     /** Reviewer reason recorded with `changes_requested`; absent otherwise. */
-    comment: reviewCommentTextSchema.optional(),
+    comment: storedText().optional(),
     isCurrent: z.boolean(),
     createdAt: z.coerce.date(),
   })

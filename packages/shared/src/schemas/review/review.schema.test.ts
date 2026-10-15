@@ -100,23 +100,13 @@ describe.each([
     "comment",
   ],
 ] as const)("%s read format", (_label, schema, view, field) => {
-  it.each([
-    ["whitespace-only text", " ".repeat(3)],
-    ["invisible-only text", "\u200B\u200C\u200D\uFEFF"],
-    ["a null byte", "Review\u0000text"],
-    ["text above 2000 characters", "x".repeat(2001)],
-  ])("rejects %s at its own field", (_case, value) => {
-    const result = schema.safeParse({ ...view, [field]: value });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues).toContainEqual(
-        expect.objectContaining({ path: [field] }),
-      );
-    }
-  });
-
+  // TASK-503.108: reads return stored comments as written; only the
+  // composer and command inputs apply the comment write rule.
   it.each([
     ["the exact 2000-character boundary", "x".repeat(2000)],
+    ["whitespace-only text", " ".repeat(3)],
+    ["invisible-only text", "\u200B\u200C\u200D\uFEFF\u2060"],
+    ["text above 2000 characters", "x".repeat(2001)],
     [
       "multiline text with surrounding spaces",
       "  Add a risk owner.\nNext line.  ",

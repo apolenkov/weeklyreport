@@ -5,7 +5,6 @@ import {
   addParentStageIssues,
   addParentXorIssue,
   addPausedReasonIssues,
-  currentStageNamesField,
   itemTypeSchema,
   itemWorkflowStatusSchema,
   riskSeveritySchema,
@@ -14,6 +13,10 @@ import {
   trafficLightStatusSchema,
   writeStageNamesField,
 } from "../primitives/report-primitives.schema.js";
+import {
+  storedStageNamesField,
+  storedText,
+} from "../primitives/stored-text.schema.js";
 import { recordCommentViewSchema } from "../review/review.schema.js";
 import {
   itemOutcomeEventSchema,
@@ -155,8 +158,13 @@ export const itemInputSchema = itemInputObjectSchema
   .superRefine(addPausedReasonIssues)
   .readonly();
 
+// Read models carry stored text; only the write schemas apply safeText.
 const itemReadModelObjectSchema = itemInputObjectSchema.extend({
-  stageNames: currentStageNamesField,
+  text: storedText(),
+  tag: storedText(),
+  pausedReason: storedText().nullable().optional(),
+  nextStepText: storedText().nullable().optional(),
+  stageNames: storedStageNamesField,
   comments: z.array(recordCommentViewSchema.readonly()).readonly().optional(),
   resolution: itemResolutionSchema.nullable().optional(),
   outcomeHistory: z.array(itemOutcomeEventSchema).readonly().optional(),
@@ -196,7 +204,10 @@ const riskInputObjectSchema = z.object({
 export const riskInputSchema = riskInputObjectSchema.readonly();
 
 const riskReadModelObjectSchema = riskInputObjectSchema.extend({
-  stageNames: currentStageNamesField,
+  risk: storedText(),
+  impact: storedText(),
+  mitigation: storedText(),
+  stageNames: storedStageNamesField,
   comments: z.array(recordCommentViewSchema.readonly()).readonly().optional(),
 });
 
@@ -228,7 +239,10 @@ const decisionInputObjectSchema = z.object({
 export const decisionInputSchema = decisionInputObjectSchema.readonly();
 
 const decisionReadModelObjectSchema = decisionInputObjectSchema.extend({
-  stageNames: currentStageNamesField,
+  text: storedText(),
+  owner: storedText(),
+  impact: storedText(),
+  stageNames: storedStageNamesField,
   comments: z.array(recordCommentViewSchema.readonly()).readonly().optional(),
 });
 
