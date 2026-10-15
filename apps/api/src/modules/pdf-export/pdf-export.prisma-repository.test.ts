@@ -6,6 +6,7 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
+import { withDomainErrorMapping } from "../../infrastructure/trpc/trpc.error-mapper.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
   PdfExportDomainError,
@@ -19,6 +20,15 @@ const AUTHOR_ID = "6f99661a-cac6-4d06-bf08-2a14cced554d";
 const EXPORT_JOB_ID = "759b2767-0f86-41e2-b025-49730ca010e4";
 const EXPORT_CREATED_AT = new Date("2026-06-09T00:00:00Z");
 const EXPORT_ARTIFACT_URL = `/pdfs/${EXPORT_JOB_ID}.pdf`;
+
+// TASK-503.31 C0520: a broken stored invariant is an internal fault, never a
+// row-removed NOT_FOUND; the client gets the masked internal error.
+async function expectMaskedInternal(run: () => Promise<unknown>) {
+  await expect(withDomainErrorMapping(run)).rejects.toMatchObject({
+    code: "INTERNAL_SERVER_ERROR",
+    message: "Unexpected error",
+  });
+}
 
 const publishedSnapshot = {
   reportId: REPORT_ID,
@@ -238,6 +248,23 @@ describe("PdfExportPrismaRepository", () => {
       generation: 3,
       requestedBy: AUTHOR_ID,
     });
+  });
+});
+
+describe("PdfExportPrismaRepository published report for a job", () => {
+  it("reports a snapshot that names another report as an internal fault", async () => {
+    const findUnique = vi.fn().mockResolvedValue({
+      reportId: "859b2767-0f86-41e2-b025-49730ca010e4",
+      publicationAt: new Date(publishedSnapshot.publishedAt),
+      publicationSnapshot: publishedSnapshot,
+    });
+    const repo = new PdfExportPrismaRepository({
+      pdfExportJob: { findUnique },
+    } as unknown as PrismaService);
+
+    await expectMaskedInternal(() =>
+      repo.getPublishedReportForJob(EXPORT_JOB_ID),
+    );
   });
 });
 
@@ -741,11 +768,11 @@ describe("PdfExportPrismaRepository runLockedExportJob", () => {
       prisma as unknown as PrismaService,
     );
 
-    await expect(
+    await expectMaskedInternal(() =>
       repo.runLockedExportJob(EXPORT_JOB_ID, async (_job, writes) => {
         await writes.advanceGeneration(1);
       }),
-    ).rejects.toBeInstanceOf(PdfExportDomainError);
+    );
     expect(readCurrent()).toMatchObject({ status: "failed", generation: 2 });
   });
 
@@ -755,11 +782,11 @@ describe("PdfExportPrismaRepository runLockedExportJob", () => {
       prisma as unknown as PrismaService,
     );
 
-    await expect(
+    await expectMaskedInternal(() =>
       repo.runLockedExportJob(EXPORT_JOB_ID, async (_job, writes) => {
         await writes.advanceGeneration(1);
       }),
-    ).rejects.toBeInstanceOf(PdfExportDomainError);
+    );
     expect(readCurrent()).toMatchObject({ status: "pending", generation: 1 });
   });
 
@@ -813,11 +840,11 @@ describe("PdfExportPrismaRepository runLockedExportJob", () => {
       prisma as unknown as PrismaService,
     );
 
-    await expect(
+    await expectMaskedInternal(() =>
       repo.runLockedExportJob(EXPORT_JOB_ID, async (_job, writes) => {
         await writes.markRecoveryRequired(2);
       }),
-    ).rejects.toBeInstanceOf(PdfExportDomainError);
+    );
     expect(readCurrent()).toMatchObject({ status: "pending", generation: 1 });
   });
 
@@ -829,11 +856,11 @@ describe("PdfExportPrismaRepository runLockedExportJob", () => {
         prisma as unknown as PrismaService,
       );
 
-      await expect(
+      await expectMaskedInternal(() =>
         repo.runLockedExportJob(EXPORT_JOB_ID, async (_job, writes) => {
           await writes.markRecoveryRequired(1);
         }),
-      ).rejects.toBeInstanceOf(PdfExportDomainError);
+      );
       expect(readCurrent()).toMatchObject({ status });
     },
   );

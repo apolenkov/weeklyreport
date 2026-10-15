@@ -10,6 +10,7 @@ import {
 } from "@weeklyreport/shared";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { withDomainErrorMapping } from "../../../infrastructure/trpc/trpc.error-mapper.js";
 import { LeadFormConstraintError } from "../domain/lead-form-shared";
 import {
   promotePlanTx,
@@ -752,6 +753,27 @@ describe("item outcome transactions", () => {
     await expect(
       resolvePlanTx(client as never, resolveCommand(), AUTHOR_ID),
     ).rejects.toMatchObject({ code: "STAGE_NOT_OWNED" });
+    expect(tx.item.update).not.toHaveBeenCalled();
+    expect(tx.itemOutcomeEvent.create).not.toHaveBeenCalled();
+  });
+
+  // TASK-503.31 C0520: the source resolver guards the identity and the column
+  // is non-null, so this is a broken invariant, never a row-removed NOT_FOUND.
+  it("reports a source without a durable identity as an internal fault", async () => {
+    const tx = transaction();
+    const client = prisma(tx);
+    mocked.loadOutcomeTarget.mockResolvedValue(target(section([item()])));
+    const { stableId: _identity, ...withoutIdentity } = item();
+    mocked.resolveOutcomeSource.mockResolvedValue(withoutIdentity);
+
+    await expect(
+      withDomainErrorMapping(() =>
+        resolvePlanTx(client as never, resolveCommand(), AUTHOR_ID),
+      ),
+    ).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Unexpected error",
+    });
     expect(tx.item.update).not.toHaveBeenCalled();
     expect(tx.itemOutcomeEvent.create).not.toHaveBeenCalled();
   });
