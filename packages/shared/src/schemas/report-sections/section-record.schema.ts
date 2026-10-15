@@ -89,16 +89,12 @@ export const linkedProductSchema = z
 export const sectionActivitySchema = z
   .object({
     activityId: z.uuid(),
-    activityName: z.string().min(1),
+    activityName: storedText(),
     // Weekly override of activityName; null/absent renders the catalogue name.
-    titleOverride: z
-      .string()
-      .max(MAX_ACTIVITY_NAME_LENGTH)
-      .nullable()
-      .optional(),
+    titleOverride: storedText().nullable().optional(),
     status: trafficLightStatusSchema.nullable(),
     note: z.string().nullable().optional(),
-    jiraAccounts: z.array(z.string().min(1)).readonly(),
+    jiraAccounts: z.array(storedText()).readonly(),
     linkedProducts: z.array(linkedProductSchema).readonly().default([]),
     derivedStatus: trafficLightStatusSchema.nullable().default(null),
     alarmFloor: trafficLightStatusSchema.nullable().default(null),

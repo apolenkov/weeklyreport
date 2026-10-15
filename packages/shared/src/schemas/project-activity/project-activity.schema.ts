@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { safeText } from "../primitives/report-primitives.schema.js";
+import { storedText } from "../primitives/stored-text.schema.js";
 import {
   linkedProductSchema,
   MAX_ACTIVITY_NAME_LENGTH,
@@ -18,12 +19,13 @@ const jiraAccountSchema = safeText({ max: MAX_JIRA_ACCOUNT_LENGTH });
 export const projectActivitySchema = z
   .object({
     id: z.uuid(),
-    name: activityNameSchema,
+    // Catalogue reads carry stored text; only create/update apply safeText.
+    name: storedText(),
     groupId: z.uuid(),
     // M:N label-only product links from linkedProductIds — never feeds product health.
     // Same record the section read model carries, so the two halves can't drift.
     linkedProducts: z.array(linkedProductSchema).readonly().default([]),
-    jiraAccounts: z.array(jiraAccountSchema).readonly().default([]),
+    jiraAccounts: z.array(storedText()).readonly().default([]),
     archived: z.boolean(),
     leadIds: z.array(z.uuid()).readonly().default([]),
   })
