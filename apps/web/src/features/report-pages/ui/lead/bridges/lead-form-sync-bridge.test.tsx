@@ -817,7 +817,7 @@ describe("LeadFormSyncBridge — severity floor and chip toggle", () => {
     await user.click(screen.getByRole("button", { name: /^Dev: At risk/ }));
 
     expect(toast.info).toHaveBeenCalledWith(
-      "Status saved. Another lead's risk keeps this stage colored until that risk is resolved.",
+      "Another lead's risk keeps this stage colored until that risk is resolved.",
     );
     expect(onProductsChangeSpy).toHaveBeenCalled();
   });

@@ -31,10 +31,11 @@ import {
 // its risk in the Risks section.
 const COVERED_STAGE_HINT_MESSAGE =
   "This stage's status comes from a covering risk. Resolve it in Risks & Blockers to change the stage.";
-// A foreign risk only colors the chip; the lead's own status still saves,
-// so the hint explains why the chip does not visibly change.
+// A foreign risk only colors the chip; the lead's own status change still
+// applies and autosave persists it, so the hint explains why the chip does not
+// visibly change. It claims no save: autosave owns that status.
 const FOREIGN_COVERED_STAGE_HINT_MESSAGE =
-  "Status saved. Another lead's risk keeps this stage colored until that risk is resolved.";
+  "Another lead's risk keeps this stage colored until that risk is resolved.";
 
 // Provider + Pipeline/Risks consumers: pipeline and risks live in separate
 // accordion bodies, so one component cannot emit both inline.
