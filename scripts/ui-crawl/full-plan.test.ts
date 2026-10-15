@@ -119,6 +119,9 @@ describe("full walk write guard", () => {
       ["submit", "button"],
       ["image", "button"],
       ["date", null],
+      ["password", null],
+      ["search", "searchbox"],
+      ["email", "combobox"],
       ["nonsense", "textbox"],
       [null, "textbox"],
     ] as const)
