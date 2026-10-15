@@ -35,10 +35,13 @@ export type AdminJobDomainReference =
 export interface AdminJobHandle {
   readonly failedJob: FailedJob;
   readonly domainReference: AdminJobDomainReference;
-  // Live queue state. Coordinated retries re-read it after the durable row
-  // lock is held; a state captured beforehand is already stale.
+  // Live queue state, read without any lock: the job can change state between
+  // this read and a following retry or remove.
   readonly getState: () => Promise<string>;
+  // Requeues a failed job. Not idempotent: when two callers race, the loser
+  // throws instead of returning a no-op.
   readonly retry: () => Promise<void>;
+  // Deletes the job; a job that has already disappeared does not throw.
   readonly remove: () => Promise<void>;
 }
 
