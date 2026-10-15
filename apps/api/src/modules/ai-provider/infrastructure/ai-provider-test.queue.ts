@@ -28,6 +28,21 @@ export class AiProviderTestBullmqEnqueuer implements AiProviderTestEnqueuer {
   constructor(private readonly queue: JobEnqueuer) {}
 
   async enqueue(job: AiProviderTestJobData): Promise<void> {
+    // BullMQ silently ignores an add whose jobId is still retained, so a job
+    // that failed before claiming its execution would swallow every later
+    // re-dispatch of that still-queued row. Remove the terminal job first,
+    // mirroring the semantic-index and reminders replacement paths.
+    const existing = await this.queue.getJob?.(job.executionId);
+    const state = await existing?.getState();
+    if (existing && (state === "failed" || state === "completed")) {
+      try {
+        await existing.remove();
+      } catch (error) {
+        // Another request may have replaced this id before a worker locked it.
+        if ((await existing.getState()) === "active") return;
+        throw error;
+      }
+    }
     await this.queue.add("execute", job, {
       jobId: job.executionId,
       attempts: 3,
