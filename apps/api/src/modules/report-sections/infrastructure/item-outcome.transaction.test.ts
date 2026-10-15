@@ -701,6 +701,46 @@ describe("item outcome transactions", () => {
     expect(tx.item.update).toHaveBeenCalledTimes(1);
   });
 
+  // TASK-503.108: the moved item is a server copy of a stored row, so its
+  // stored text and stage names are read as stored, not re-validated.
+  it.each(["done", "continue"] as const)(
+    "resolves %s on a stored item whose text the write rule now rejects, keeping it",
+    async (outcome) => {
+      const LEGACY = "⁠";
+      const source = item({
+        text: LEGACY,
+        tag: LEGACY,
+        stageNames: [LEGACY],
+      });
+      const tx = transaction();
+      const client = prisma(tx);
+      mocked.loadOutcomeTarget.mockResolvedValue(target(section([source])));
+      mocked.resolveOutcomeSource.mockResolvedValue(source);
+      mocked.readOutcomeResult.mockResolvedValue({
+        section: section([source]),
+        stableId: STABLE_ID,
+        replayed: false,
+      });
+      tx.itemOutcomeEvent.create.mockResolvedValue({
+        id: COMMAND_ID,
+        actorId: AUTHOR_ID,
+        actorName: "Lead",
+        occurredAt: new Date("2026-09-05T12:00:00.000Z"),
+      });
+      tx.item.update.mockResolvedValue({});
+
+      await resolvePlanTx(
+        client as never,
+        resolveCommand({ outcome }),
+        AUTHOR_ID,
+      );
+
+      expect(tx.item.update.mock.calls).toMatchObject([
+        [{ data: { text: LEGACY, tag: LEGACY, stageNames: [LEGACY] } }],
+      ]);
+    },
+  );
+
   it("rejects an outcome whose item gains an unowned stage over the stored one", async () => {
     const tx = transaction();
     const client = prisma(tx);
