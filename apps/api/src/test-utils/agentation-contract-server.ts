@@ -23,24 +23,27 @@ import { ProductFeedbackMemoryRepository } from "./product-feedback.memory-repos
 const ORIGIN = "http://localhost:3000";
 
 // Keeps the server's last stderr output so a failed connect explains itself.
-const STDERR_TAIL_CHARS = 4096;
+// Always wraps: the server prints a startup banner, so a conditional wrap would
+// depend on stdout/stderr ordering.
+const STDERR_TAIL_BYTES = 4096;
 
 export async function connectWithStderrTail(
   client: Client,
   transport: StdioClientTransport,
   timeout: number,
 ) {
-  let tail = "";
+  // Bytes, decoded once: decoding per chunk could split a multibyte character.
+  let tail = Buffer.alloc(0);
   transport.stderr?.on("data", (chunk: Buffer) => {
-    tail = (tail + chunk.toString()).slice(-STDERR_TAIL_CHARS);
+    tail = Buffer.concat([tail, chunk]).subarray(-STDERR_TAIL_BYTES);
   });
   try {
     await client.connect(transport, { timeout });
   } catch (error) {
-    if (!tail) throw error;
-    throw new Error(`MCP server failed to connect; stderr tail:\n${tail}`, {
-      cause: error,
-    });
+    throw new Error(
+      `MCP client connect failed; server stderr tail:\n${tail.toString() || "(empty)"}`,
+      { cause: error },
+    );
   }
 }
 
