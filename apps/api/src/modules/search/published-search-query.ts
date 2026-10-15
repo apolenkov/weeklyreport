@@ -58,7 +58,8 @@ function buildPublishedSearchQuery(
       AND document."recordType" IN (${Prisma.join(typeValues)})
       ${groupFilter}
     ORDER BY "rank" DESC, document."createdAt" DESC,
-      document."reportId" DESC, document."recordId" DESC
+      document."recordId" ASC, document."reportId" ASC,
+      document."recordType" ASC
     LIMIT ${params.limit}
   `;
 }
