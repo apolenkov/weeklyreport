@@ -72,6 +72,58 @@ describe("getPdfExportRender", () => {
     expect(init.signal).toBeInstanceOf(AbortSignal);
   });
 
+  // TASK-503.108: U+2060 alone passed the earlier write rule; the current
+  // write rule rejects it. A published report holding it must still print.
+  it("returns a stored section whose text the write rule now rejects", async () => {
+    vi.stubEnv("API_URL", "http://api:3002");
+    cookieGetMock.mockReturnValue({ value: "worker-jwt" });
+    const legacyItem = {
+      id: "33333333-3333-4333-8333-333333333331",
+      stableId: "33333333-3333-4333-8333-333333333332",
+      projectId: null,
+      activityId: "33333333-3333-4333-8333-333333333333",
+      stageNames: [],
+      type: "current",
+      text: "⁠",
+      tag: "general",
+      workflowStatus: "in_progress",
+      carriedOver: false,
+      pausedReason: null,
+      nextStepText: null,
+    };
+    stubFetch([
+      {
+        result: {
+          data: {
+            json: {
+              ...READ_MODEL,
+              leadSections: [
+                {
+                  reportSectionId: "33333333-3333-4333-8333-333333333334",
+                  reportId: REPORT_ID,
+                  authorId: "33333333-3333-4333-8333-333333333335",
+                  authorName: "Lead",
+                  authorRole: "lead",
+                  version: 1,
+                  status: "submitted",
+                  submittedAt: "2026-06-05T00:00:00.000Z",
+                  projects: [],
+                  items: [legacyItem],
+                  risks: [],
+                  decisions: [],
+                },
+              ],
+            },
+          },
+        },
+      },
+    ]);
+
+    const data = await getPdfExportRender(JOB_ID, REPORT_ID);
+
+    expect(data?.leadSections[0]?.items).toEqual([legacyItem]);
+  });
+
   it("fails closed without a session cookie and never calls the API", async () => {
     vi.stubEnv("API_URL", "http://api:3002");
     cookieGetMock.mockReturnValue(undefined);
