@@ -62,14 +62,18 @@ function useAcknowledgeGroup(
     ? []
     : (acksQ.data ?? []);
   const rosterUnavailable = acksQ.isError;
+  // Own status is unknown until the roster loads: no click, no pressed state.
+  const rosterLoading = acksQ.isPending;
 
   const ackMut = useMutation(
     trpc.review.acknowledge.mutationOptions({
-      onSuccess: () => {
-        void qc
+      // Awaiting the refetch keeps the mutation pending until the roster shows
+      // the receipt, so the control never re-enables in between.
+      onSuccess: async () => {
+        toast.success("Acknowledged");
+        await qc
           .invalidateQueries(trpc.review.acknowledgements.pathFilter())
           .catch(() => undefined);
-        toast.success("Acknowledged");
       },
       onError: (err: unknown) => {
         toast.error(
@@ -85,8 +89,19 @@ function useAcknowledgeGroup(
     acks,
     acknowledged: acks.some((ack) => ack.userId === currentUserId),
     rosterUnavailable,
+    rosterLoading,
     ackMut,
   };
+}
+
+function acknowledgeLabel(
+  pending: boolean,
+  rosterLoading: boolean,
+  acknowledged: boolean,
+): string {
+  if (pending) return "Acknowledging…";
+  if (rosterLoading) return "Acknowledge…";
+  return acknowledged ? "Acknowledged" : "Acknowledge";
 }
 
 function AcknowledgeGroupControl({
@@ -101,11 +116,8 @@ function AcknowledgeGroupControl({
   readonly isHeadOrAdmin: boolean;
 }) {
   const suffix = ` · ${group.label}`;
-  const { acks, acknowledged, rosterUnavailable, ackMut } = useAcknowledgeGroup(
-    reportId,
-    group.groupId,
-    currentUserId,
-  );
+  const { acks, acknowledged, rosterUnavailable, rosterLoading, ackMut } =
+    useAcknowledgeGroup(reportId, group.groupId, currentUserId);
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -113,15 +125,14 @@ function AcknowledgeGroupControl({
         type="button"
         className="btn-press inline-flex items-center gap-1.5 max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-3 py-1 text-[12px] font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-60"
         onClick={() => ackMut.mutate({ reportId, groupId: group.groupId })}
-        disabled={ackMut.isPending || acknowledged || rosterUnavailable}
-        aria-pressed={acknowledged}
-        aria-busy={ackMut.isPending}
+        disabled={
+          ackMut.isPending || acknowledged || rosterUnavailable || rosterLoading
+        }
+        aria-pressed={rosterLoading ? undefined : acknowledged}
+        aria-busy={ackMut.isPending || rosterLoading}
       >
-        {(ackMut.isPending
-          ? "Acknowledging…"
-          : acknowledged
-            ? "Acknowledged"
-            : "Acknowledge") + suffix}
+        {acknowledgeLabel(ackMut.isPending, rosterLoading, acknowledged) +
+          suffix}
       </button>
       {rosterUnavailable ? (
         <span className="text-xs text-[var(--color-destructive)]" role="alert">

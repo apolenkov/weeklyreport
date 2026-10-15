@@ -383,6 +383,75 @@ describe("review-actions (integration)", () => {
     );
   });
 
+  describe("acknowledgement receipt", () => {
+    it("keeps the first seenAt when the same reviewer acknowledges again", async () => {
+      const actor = {
+        userId: testData.head.id,
+        role: "head" as const,
+        reportingGroupId: expectDefined(testData.head.reportingGroupId),
+      };
+
+      const firstSeenAt = new Date("2026-01-05T09:00:00.000Z");
+      await repo.acknowledge(actor, testData.report.id, TEST_IDS.group);
+      // Pin the first view in the past so a refreshed seenAt cannot tie with it.
+      await prisma.reviewAcknowledgement.updateMany({
+        where: { userId: actor.userId, reportId: testData.report.id },
+        data: { seenAt: firstSeenAt },
+      });
+      await prisma.reviewAcknowledgement.create({
+        data: {
+          userId: admin.id,
+          reportId: testData.report.id,
+          groupId: TEST_IDS.group,
+          seenAt: new Date("2026-01-06T09:00:00.000Z"),
+        },
+      });
+      const rosterBefore = await repo.listAcknowledgements(
+        testData.report.id,
+        TEST_IDS.group,
+      );
+
+      const repeat = await repo.acknowledge(
+        actor,
+        testData.report.id,
+        TEST_IDS.group,
+      );
+
+      expect(repeat.seenAt).toEqual(firstSeenAt);
+      const rosterAfter = await repo.listAcknowledgements(
+        testData.report.id,
+        TEST_IDS.group,
+      );
+      expect(rosterAfter.map((ack) => ack.userId)).toEqual(
+        rosterBefore.map((ack) => ack.userId),
+      );
+      expect(rosterAfter.map((ack) => ack.userId)).toEqual([
+        admin.id,
+        actor.userId,
+      ]);
+    });
+
+    it("stores one receipt with the first seenAt when the same reviewer acknowledges twice at once", async () => {
+      const actor = {
+        userId: testData.head.id,
+        role: "head" as const,
+        reportingGroupId: expectDefined(testData.head.reportingGroupId),
+      };
+
+      const [a, b] = await Promise.all([
+        repo.acknowledge(actor, testData.report.id, TEST_IDS.group),
+        repo.acknowledge(actor, testData.report.id, TEST_IDS.group),
+      ]);
+
+      expect(a.seenAt).toEqual(b.seenAt);
+      await expect(
+        prisma.reviewAcknowledgement.count({
+          where: { reportId: testData.report.id, groupId: TEST_IDS.group },
+        }),
+      ).resolves.toBe(1);
+    });
+  });
+
   describe("transactional entitlement rechecks", () => {
     it("rejects an acknowledgement when the actor is demoted after admission", async () => {
       const actor = {

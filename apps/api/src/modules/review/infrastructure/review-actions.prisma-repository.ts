@@ -97,7 +97,8 @@ export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
           },
         },
         create: { userId: actor.userId, reportId, groupId },
-        update: { seenAt: new Date() },
+        // seenAt is the first view; a repeat keeps the "Seen by" order.
+        update: {},
         select: { userId: true, reportId: true, groupId: true, seenAt: true },
       });
     });

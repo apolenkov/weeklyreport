@@ -177,6 +177,10 @@ describe("ReviewActionsPrismaRepository.acknowledge", () => {
       groupId: GROUP_ID,
       seenAt,
     });
+    // seenAt is the first view: a repeat keeps the stored receipt.
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ update: {} }),
+    );
     expect(tx.user.findUnique).toHaveBeenCalledWith({
       where: { id: REVIEWER_ID },
       select: {
