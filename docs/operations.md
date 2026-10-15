@@ -557,7 +557,7 @@ The PDF artifact generation compatibility constraint above also applies.
 `.gitlab-ci.yml` runs the lint/test lanes (`node-toolchain`, `quality`,
 `dependency-scan`, `coverage`, `api-integration`, `migrate-reset`), one gated
 image build (`build-images`, rootless BuildKit, no Docker-in-Docker), and an
-optional manual `deploy-production` job; see `docs/gitlab-ci.md`. The `api-integration` lane runs the API unit and
+optional manual `deploy-production` job (it installs a missing release with `helm install --wait=watcher` and upgrades only an existing deployed release; discovery errors or a non-deployed release stop the job; it requires `HELM_KUBE_CONTEXT`); see `docs/gitlab-ci.md`. The `api-integration` lane runs the API unit and
 integration suites once, serially, against disposable Postgres/Redis/Mailpit
 (in-job loopback Postgres; Redis and Mailpit as service aliases) and enforces the API coverage thresholds.
 The `coverage` lane enforces Web coverage without starting a second dependency
