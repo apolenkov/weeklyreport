@@ -49,7 +49,8 @@ export class AgentationReadRepository {
       where: { id, ...sessionScope(access) },
       include: {
         annotations: {
-          orderBy: { timestamp: "asc" },
+          // Ingress admits equal client timestamps; the server ID fixes their order.
+          orderBy: [{ timestamp: "asc" }, { id: "asc" }],
           include: THREAD_MESSAGES_INCLUDE,
         },
       },
