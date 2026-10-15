@@ -21,6 +21,9 @@ function resetFixture(options: {
   scaleExit?: number;
   forwardFailure?: boolean;
   password?: string;
+  backupSuspend?: string;
+  suspendCaptureExit?: number;
+  activeBackup?: string;
 }) {
   mkdirSync(resolve("output"), { recursive: true });
   const root = mkdtempSync(resolve("output/d37-f07-reset-"));
@@ -57,6 +60,8 @@ printf 'kubectl %s\n' "$*" >> "$TEST_EVENTS"
 case "$*" in
   'config current-context') printf 'orbstack\n' ;;
   *'get deploy/api'*'jsonpath'*) printf '%s\n' "$TEST_REPLICAS"; exit "$TEST_CAPTURE_EXIT" ;;
+  *'get cronjob/backup'*'jsonpath'*) printf '%s' "$TEST_BACKUP_SUSPEND"; exit "$TEST_SUSPEND_CAPTURE_EXIT" ;;
+  *'get pods'*'component=backup'*) [ -z "$TEST_ACTIVE_BACKUP" ] || printf '%s\n' "$TEST_ACTIVE_BACKUP" ;;
   *'scale deploy/api'*)
     case "$*" in *'--replicas=0'*) exit "$TEST_SCALE_EXIT" ;; *) exit "$TEST_RESTORE_EXIT" ;; esac ;;
   *'port-forward'*)
@@ -99,6 +104,9 @@ count=$((count + 1)); printf '%s' "$count" > "$TEST_STATE/lsof-count"
         TEST_RESTORE_EXIT: String(options.restoreExit ?? 0),
         TEST_SCALE_EXIT: String(options.scaleExit ?? 0),
         TEST_FORWARD_FAILURE: options.forwardFailure ? "1" : "0",
+        TEST_BACKUP_SUSPEND: options.backupSuspend ?? "false",
+        TEST_SUSPEND_CAPTURE_EXIT: String(options.suspendCaptureExit ?? 0),
+        TEST_ACTIVE_BACKUP: options.activeBackup ?? "",
       },
     });
     const calls = existsSync(events) ? readFileSync(events, "utf8") : "";
@@ -202,5 +210,51 @@ test("ambiguous scale-down failure still restores captured replicas", () => {
   assert.equal(result.status, 23, result.stderr);
   assert.match(calls, /scale deploy\/api --replicas=3/u);
   assert.doesNotMatch(calls, /prisma\/operations\/migrate-reset\.ts/u);
+  assert.equal(unlocked, true);
+});
+
+// The hourly tester backup dumps the same database the reset drops and reseeds.
+const callIndex = (calls: string, pattern: RegExp) =>
+  calls.split("\n").findIndex((call) => pattern.test(call));
+const SUSPEND = /patch cronjob\/backup .*"suspend":true/u;
+const RESUME = /patch cronjob\/backup .*"suspend":false/u;
+const MIGRATE = /prisma\/operations\/migrate-reset\.ts/u;
+
+test.each([0, 31])(
+  "reset quiesces backups before migrate and resumes them after exit %s",
+  (operationExit) => {
+    const { result, calls, unlocked } = resetFixture({ operationExit });
+    assert.equal(result.status, operationExit, result.stderr);
+    const suspended = callIndex(calls, SUSPEND);
+    const drained = callIndex(calls, /get pods .*component=backup/u);
+    assert.ok(suspended >= 0, calls);
+    assert.ok(suspended < drained && drained < callIndex(calls, MIGRATE));
+    assert.ok(callIndex(calls, RESUME) > callIndex(calls, MIGRATE), calls);
+    assert.equal(unlocked, true);
+  },
+);
+
+test("reset leaves an already suspended backup CronJob suspended", () => {
+  const { result, calls } = resetFixture({ backupSuspend: "true" });
+  assert.equal(result.status, 0, result.stderr);
+  assert.doesNotMatch(calls, RESUME);
+});
+
+test("an unfinished backup blocks migrate and scale, then resumes backups", () => {
+  const { result, calls, unlocked } = resetFixture({
+    activeBackup: "pod/backup-29000000-abcde",
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /backup/iu);
+  assert.doesNotMatch(calls, MIGRATE);
+  assert.doesNotMatch(calls, /scale deploy\/api --replicas=0/u);
+  assert.match(calls, RESUME);
+  assert.equal(unlocked, true);
+});
+
+test("unreadable backup suspension refuses before any patch or scale", () => {
+  const { result, calls, unlocked } = resetFixture({ suspendCaptureExit: 9 });
+  assert.notEqual(result.status, 0);
+  assert.doesNotMatch(calls, /patch cronjob|scale deploy\/api|migrate-reset/u);
   assert.equal(unlocked, true);
 });
