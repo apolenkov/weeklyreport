@@ -673,6 +673,49 @@ describe("item outcome transactions", () => {
     expect(tx.itemOutcomeEvent.create).not.toHaveBeenCalled();
   });
 
+  it("resolves a stored item whose stage the author no longer owns", async () => {
+    const source = item({ stageNames: ["Unowned"] });
+    const tx = transaction();
+    const client = prisma(tx);
+    mocked.loadOutcomeTarget.mockResolvedValue(target(section([source])));
+    mocked.resolveOutcomeSource.mockResolvedValue(source);
+    mocked.readOutcomeResult.mockResolvedValue({
+      section: section([source]),
+      stableId: STABLE_ID,
+      replayed: false,
+    });
+    tx.itemOutcomeEvent.create.mockResolvedValue({
+      id: COMMAND_ID,
+      actorId: AUTHOR_ID,
+      actorName: "Lead",
+      occurredAt: new Date("2026-09-05T12:00:00.000Z"),
+    });
+    tx.item.update.mockResolvedValue({});
+
+    await resolvePlanTx(
+      client as never,
+      resolveCommand({ outcome: "plan_next", text: "Verify metrics" }),
+      AUTHOR_ID,
+    );
+
+    expect(tx.item.update).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects an outcome whose item gains an unowned stage over the stored one", async () => {
+    const tx = transaction();
+    const client = prisma(tx);
+    mocked.loadOutcomeTarget.mockResolvedValue(target(section([item()])));
+    mocked.resolveOutcomeSource.mockResolvedValue(
+      item({ stageNames: ["Development", "Unowned"] }),
+    );
+
+    await expect(
+      resolvePlanTx(client as never, resolveCommand(), AUTHOR_ID),
+    ).rejects.toMatchObject({ code: "STAGE_NOT_OWNED" });
+    expect(tx.item.update).not.toHaveBeenCalled();
+    expect(tx.itemOutcomeEvent.create).not.toHaveBeenCalled();
+  });
+
   it("propagates a transaction callback failure without claiming a rollback", async () => {
     const source = item();
     const tx = transaction();

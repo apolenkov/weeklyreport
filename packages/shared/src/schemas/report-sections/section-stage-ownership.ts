@@ -25,16 +25,11 @@ const toRow = (
   stageNames: row.stageNames ?? [],
 });
 
-const sameStages = (
-  left: readonly string[],
-  right: readonly string[],
-): boolean =>
-  left.length === right.length && left.every((stage) => right.includes(stage));
-
-// A row saved back exactly as stored (same lineage, product and stages) was
-// validated when it was written; revalidating it would let one assignment
-// removal block every save of the section.
-const isUnchanged = (
+// A row that keeps its stored lineage and product and adds no stage beyond its
+// stored stages brings no new stage; its stages were validated when written,
+// and revalidating them would let one assignment removal block every save of
+// the section. Other fields may change.
+const keepsStoredStages = (
   row: StageOwnershipRow,
   stored: readonly StageOwnershipRow[],
 ): boolean =>
@@ -43,7 +38,7 @@ const isUnchanged = (
     (candidate) =>
       candidate.stableId === row.stableId &&
       candidate.projectId === row.projectId &&
-      sameStages(candidate.stageNames, row.stageNames),
+      row.stageNames.every((stage) => candidate.stageNames.includes(stage)),
   );
 
 const authorOwnedStages = (
@@ -77,7 +72,7 @@ const validateStageRows = (
 ): readonly DraftSaveValidationError[] => {
   return Object.freeze(
     payloadRows.flatMap((row) => {
-      if (isUnchanged(row, storedRows)) return [];
+      if (keepsStoredStages(row, storedRows)) return [];
       const owned = authorOwnedStages(section, row.projectId);
       const offending = row.stageNames.find((stage) => !owned.includes(stage));
       return offending === undefined
@@ -106,10 +101,11 @@ export function validateStageOwnership(
   section: ReportSectionReadModel,
   input: DraftSaveInput | SubmitSectionInput,
 ): readonly DraftSaveValidationError[] {
-  const stored = recordRows(section);
-  return Object.freeze(
-    recordRows(input).flatMap((rows, kind) =>
-      validateStageRows(rows, stored[kind], section),
-    ),
-  );
+  const [items, risks, decisions] = recordRows(input);
+  const [storedItems, storedRisks, storedDecisions] = recordRows(section);
+  return Object.freeze([
+    ...validateStageRows(items, storedItems, section),
+    ...validateStageRows(risks, storedRisks, section),
+    ...validateStageRows(decisions, storedDecisions, section),
+  ]);
 }

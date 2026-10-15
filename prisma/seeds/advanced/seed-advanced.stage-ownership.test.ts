@@ -625,7 +625,13 @@ describe("advanced authored stage ownership", () => {
         risks: section.risks,
         decisions: section.decisions,
       });
-      expect(validateStageOwnership(section, input)).toEqual([]);
+      // Empty stored rows validate every seeded row as new.
+      expect(
+        validateStageOwnership(
+          { ...section, items: [], risks: [], decisions: [] },
+          input,
+        ),
+      ).toEqual([]);
     }
   });
 
