@@ -126,12 +126,13 @@ function SlidesQuickAddRiskDialog({
     const prefill = quickAdd.riskPrefill;
     if (!prefill || prefill.signal <= lastPrefillSignal.current) return;
     lastPrefillSignal.current = prefill.signal;
+    if (viewModel.isReadOnly) return;
     setActivePrefill(prefill);
     openCreate({
       ...(prefill.productId ? { productId: prefill.productId } : {}),
       ...(prefill.activityId ? { activityId: prefill.activityId } : {}),
     });
-  }, [quickAdd.riskPrefill, openCreate]);
+  }, [quickAdd.riskPrefill, openCreate, viewModel.isReadOnly]);
 
   const close = () => {
     setActivePrefill(null);
