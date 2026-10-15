@@ -122,4 +122,41 @@ describe("listPeriodsByState progress (integration)", () => {
 
     expect(row).toMatchObject({ submittedCount: 1, totalCount: 1 });
   });
+  // C0455: a keyset cursor, so unarchiving a listed row cannot shift page 2.
+  it("pages the archive by cursor and survives an unarchive between pages", async () => {
+    const weekMs = 7 * 24 * 3600 * 1000;
+    const base = Date.UTC(2024, 0, 1);
+    await prisma.report.createMany({
+      data: Array.from({ length: 51 }, (_, i) => ({
+        periodStart: new Date(base + i * weekMs),
+        periodEnd: new Date(base + i * weekMs + 6 * 24 * 3600 * 1000),
+        deadline: new Date(base + i * weekMs + 4 * 24 * 3600 * 1000),
+        status: "published" as const,
+        periodStatus: "published" as const,
+        periodState: "archived" as const,
+        archived: true,
+      })),
+    });
+    const states = ["archived" as const];
+
+    const first = await listPeriodsByState(prisma as never, {
+      states,
+      limit: 50,
+    });
+    const [head] = first;
+    const last = first[first.length - 1];
+    expect(first).toHaveLength(50);
+    if (!head || !last) throw new Error("archive page is empty");
+    await prisma.report.update({
+      where: { id: head.id },
+      data: { periodState: "published", archived: false },
+    });
+    const second = await listPeriodsByState(prisma as never, {
+      states,
+      cursor: { periodStart: last.periodStart, id: last.id },
+      limit: 50,
+    });
+
+    expect(second.map((row) => row.periodStart.getTime())).toEqual([base]);
+  });
 });

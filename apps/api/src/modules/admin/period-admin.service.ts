@@ -21,6 +21,7 @@ import {
   AdminPeriodNotFoundError,
   AdminPeriodOverlapError,
   type AdminRepository,
+  type PeriodListCursor,
 } from "./admin-shared";
 import {
   assertEnvelopeEditable,
@@ -92,8 +93,12 @@ export class PeriodAdminService {
   // Server-precomputed canReopen/canArchive; hot path uses (periodState, periodStart desc).
   async listPeriodsByState(input: {
     bucket: PeriodListBucket;
+    cursor?: PeriodListCursor;
     limit?: number;
-  }): Promise<PeriodListItem[]> {
+  }): Promise<{
+    periods: PeriodListItem[];
+    nextCursor: PeriodListCursor | null;
+  }> {
     const limit = Math.min(
       Math.max(input.limit ?? DEFAULT_PERIOD_LIST_LIMIT, 1),
       MAX_PERIOD_LIST_LIMIT,
@@ -101,11 +106,17 @@ export class PeriodAdminService {
     const settings = await this.getSettings();
     const rows = await this.repository.listPeriodsByState({
       states: resolveBucketStates(input.bucket),
+      ...(input.cursor && { cursor: input.cursor }),
       limit,
     });
 
     const now = Date.now();
-    return rows.map((row) => toPeriodListItem(row, settings, now));
+    // A full page may have a successor; the last row is where it resumes.
+    const last = rows.length === limit ? rows.at(-1) : undefined;
+    return {
+      periods: rows.map((row) => toPeriodListItem(row, settings, now)),
+      nextCursor: last ? { periodStart: last.periodStart, id: last.id } : null,
+    };
   }
 
   // Flips archived + periodState together; CAS fails closed on concurrent archive.

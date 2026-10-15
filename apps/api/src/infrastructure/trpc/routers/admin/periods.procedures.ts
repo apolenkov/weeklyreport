@@ -22,6 +22,9 @@ import {
 import { createReopenRequestsProcedures } from "./reopen-requests.procedures.js";
 
 const MAX_PERIOD_LIST_LIMIT = 200;
+const periodListCursorSchema = z
+  .object({ periodStart: z.coerce.date(), id: z.uuid() })
+  .readonly();
 
 export interface AdminPeriodsDeps {
   readonly periodAdminService: PeriodAdminService;
@@ -122,6 +125,7 @@ function createPeriodLifecycleProcedures(deps: AdminPeriodsDeps) {
       .input(
         z.object({
           bucket: periodListBucketSchema,
+          cursor: periodListCursorSchema.optional(),
           limit: z.number().int().min(1).max(MAX_PERIOD_LIST_LIMIT).optional(),
         }),
       )
