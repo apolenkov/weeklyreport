@@ -79,17 +79,45 @@ role password, which a Secret update or pod restart does not do. Follow
 
 ## Install and upgrade
 
+`helm lint -f <values>` and `helm template -f <values>` run offline; a plain
+`helm lint` without values fails by design. Install and upgrade are two distinct
+branches: choose by whether the release already exists.
+
+**First install** is an explicit `helm install` that waits for readiness with
+the watcher strategy and never removes anything on failure:
+
 ```sh
-helm upgrade --install weeklyreport deploy/helm/weeklyreport -n <ns> --create-namespace \
-  -f values.yaml --set images.tag=<commit-sha> --atomic --timeout 10m
+helm install weeklyreport deploy/helm/weeklyreport -n <ns> --create-namespace \
+  -f values.yaml --set images.tag=<commit-sha> --wait=watcher --timeout 10m
 ```
 
-`--atomic` waits for readiness and rolls the release back on failure; do not add
-`--wait` as well. `helm lint -f <values>` and `helm template -f <values>` run
-offline; a plain `helm lint` without values fails by design.
+Do not add `--atomic` or `--rollback-on-failure` to an install: on failure Helm
+would uninstall the release, and `pdfdata` and `pgbackups` are ordinary chart
+PVCs without a keep policy, so the claims (and, with a `Delete` reclaim policy,
+the backing volumes) can go with it. After a timeout keep the failed release, its
+resources, the PVCs and the logs (`helm status`, `kubectl describe`,
+`kubectl logs deploy/api -c migrate`) for diagnosis; any cleanup is a separate,
+target-bound operator decision. The failure path of a first install has not been
+exercised on a real cluster yet (see
+[Rollback and failed migrations](#rollback-and-failed-migrations)).
+
+**Upgrade of an existing release** is a different command and needs the data
+compatibility of the previous images and values with the already migrated schema,
+durable PDFs, queues and security policy to be confirmed first. It never uses
+`--install`, so an upgrade cannot silently become an install:
+
+```sh
+helm upgrade weeklyreport deploy/helm/weeklyreport -n <ns> \
+  -f values.yaml --set images.tag=<commit-sha> --rollback-on-failure --timeout 10m
+```
+
+`--rollback-on-failure` returns to the previous release and implies the watcher
+wait. Where compatibility is not proven, omit it and plan a forward-only upgrade
+that keeps the resources on failure. Neither rollback restores SQL data, cache,
+Redis or PDFs.
 
 The `postgres` pod mounts the `pgbackups` volume read-only, so storage classes with
-`WaitForFirstConsumer` bind it at install and `--atomic` can finish; the backup
+`WaitForFirstConsumer` bind it at install and `--wait=watcher` can finish; the backup
 Job must then run on the node that holds that ReadWriteOnce volume.
 
 The api runs one replica with strategy `Recreate` because `pdfdata` is a
@@ -116,10 +144,12 @@ SHA=$(git rev-parse HEAD); STATE=<dir outside Git>
 #    same targets and build args as the CI job build-images
 # 2. dependencies: generates secrets/IdP key into $STATE, Secrets, Keycloak, Mailpit
 STATE_DIR=$STATE deploy/local-prod/setup.sh
-# 3. chart (copy the example outside Git first; the cert comes from setup.sh)
-helm upgrade --install weeklyreport deploy/helm/weeklyreport -n wr-local-prod \
+# 3. chart (copy the example outside Git first; the cert comes from setup.sh).
+#    First install; on an existing release use the upgrade command from
+#    "Install and upgrade" with the same values.
+helm install weeklyreport deploy/helm/weeklyreport -n wr-local-prod \
   -f $STATE/values-local-prod.yaml --set images.tag=$SHA \
-  --set-string api.env.KEYCLOAK_SAML_CERT="$(cat $STATE/secrets/idp-cert.b64)" --atomic --timeout 10m
+  --set-string api.env.KEYCLOAK_SAML_CERT="$(cat $STATE/secrets/idp-cert.b64)" --wait=watcher --timeout 10m
 # 4. roles (below), then browser access
 kubectl -n wr-local-prod port-forward svc/edge 8080:8080 &       # app
 kubectl -n wr-local-prod port-forward svc/keycloak 8081:8080 &   # IdP, browser-facing
@@ -161,11 +191,13 @@ The local stand is the same chart with three stand-ins: Keycloak (IdP), Mailpit
 those and the items below; the chart, the migrations and the backup job do not
 change.
 
-Install command (the same as in the local stand section, with production inputs):
+First-install command (the same as in the local stand section, with production
+inputs; later releases follow the upgrade branch of
+[Install and upgrade](#install-and-upgrade)):
 
 ```sh
-helm upgrade --install weeklyreport deploy/helm/weeklyreport -n <ns> --create-namespace \
-  -f values.production.yaml --set images.tag=<commit-sha> --atomic --timeout 10m
+helm install weeklyreport deploy/helm/weeklyreport -n <ns> --create-namespace \
+  -f values.production.yaml --set images.tag=<commit-sha> --wait=watcher --timeout 10m
 ```
 
 Start from `deploy/helm/weeklyreport/values.production.example.yaml`. The table
@@ -234,8 +266,10 @@ VERIFIED):
 
 ## Rollback and failed migrations
 
-- `helm rollback` and `--atomic` restore the previous manifests and image tag;
-  they do not roll the database back. Migrations are forward-only; fix forward
+- `helm rollback` and an upgrade's `--rollback-on-failure` restore the previous
+  manifests and image tag; they do not roll the database back. A failed first
+  install has no previous release: keep it as described in
+  [Install and upgrade](#install-and-upgrade). Migrations are forward-only; fix forward
   or restore a dump (see `docs/operations.md` "Rollback").
 - **Failed migration.** The api pod runs `prisma migrate deploy` as an
   initContainer, so a failing migration leaves the pod in `Init:Error`; with
