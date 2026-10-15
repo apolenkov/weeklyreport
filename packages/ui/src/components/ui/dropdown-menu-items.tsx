@@ -31,7 +31,7 @@ function DropdownMenuItem({
   return (
     <DropdownMenuPrimitive.Item
       data-slot="dropdown-menu-item"
-      data-inset={inset}
+      data-inset={inset ? true : undefined}
       data-variant={variant}
       className={cn(
         ITEM_LAYOUT,
@@ -60,7 +60,7 @@ function DropdownMenuLabel({
   return (
     <DropdownMenuPrimitive.Label
       data-slot="dropdown-menu-label"
-      data-inset={inset}
+      data-inset={inset ? true : undefined}
       className={cn(
         "px-2 py-1.5 text-sm font-medium data-[inset]:pl-8",
         className,
