@@ -269,8 +269,10 @@ describe("ReportSectionsService — stage-ownership guard", () => {
     ).rejects.toMatchObject({ code: "STAGE_NOT_OWNED" });
   });
 
-  // A cross row references a product the author owns no stage on. Current
-  // writes validate every product-parented row, including unchanged rows.
+  // A cross row references a product the author owns no stage on, e.g. after an
+  // admin removed the assignment. Writes validate new and changed rows; a row
+  // saved unchanged keeps its stored stages so one stale row cannot block the
+  // whole section.
   const crossRowSection: ReportSectionReadModel = {
     ...testingOwner,
     referencedProjects: [
@@ -289,9 +291,66 @@ describe("ReportSectionsService — stage-ownership guard", () => {
     ],
   };
 
-  it("rejects an unchanged cross row when its stage is not currently owned", async () => {
+  it("accepts an unchanged row whose stage is no longer owned while another row is edited", async () => {
     const service = new ReportSectionsService(
       createRepository(crossRowSection),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
+
+    const saved = await service.saveDraft(
+      {
+        reportSectionId: baseSection.reportSectionId,
+        version: 1,
+        status: "draft",
+        stageStatuses: [],
+        activityStatuses: [],
+        projectStatuses: [{ projectId: PROJECT_P, status: "yellow" }],
+        items: [
+          {
+            projectId: PROJECT_P,
+            type: "current",
+            text: "Freshly edited item",
+            tag: "feature",
+            workflowStatus: "in_progress",
+            carriedOver: false,
+            stageNames: ["Testing"],
+          },
+        ],
+        risks: [
+          {
+            stableId: STABLE_ID,
+            projectId: CROSS_PROJECT,
+            risk: "Gateway certification slips",
+            impact: "Payments blocked",
+            mitigation: "Escalate to vendor",
+            severity: "at-risk",
+            stageNames: ["Integration"],
+          },
+        ],
+        decisions: [],
+      },
+      baseSection.authorId,
+    );
+
+    expect(saved.risks.map((risk) => risk.stageNames)).toEqual([
+      ["Integration"],
+    ]);
+    expect(saved.items.map((item) => item.text)).toEqual([
+      "Freshly edited item",
+    ]);
+  });
+
+  it("rejects a row without stable identity even when it matches a stored stale row", async () => {
+    // Neither side has lineage, so nothing proves the row is the stored one.
+    const anonymousRowSection: ReportSectionReadModel = {
+      ...crossRowSection,
+      risks: crossRowSection.risks.map(
+        ({ stableId: _stableId, ...risk }) => risk,
+      ),
+    };
+    const service = new ReportSectionsService(
+      createRepository(anonymousRowSection),
       NOOP_REPORT_SECTIONS_TELEMETRY,
       createNullLogger(),
     );
@@ -308,7 +367,6 @@ describe("ReportSectionsService — stage-ownership guard", () => {
           items: [],
           risks: [
             {
-              stableId: STABLE_ID,
               projectId: CROSS_PROJECT,
               risk: "Gateway certification slips",
               impact: "Payments blocked",
@@ -343,7 +401,7 @@ describe("ReportSectionsService — stage-ownership guard", () => {
           items: [],
           risks: [
             {
-              // Stable identity never bypasses current ownership validation.
+              // A reused stable identity with a changed stage is validated.
               stableId: STABLE_ID,
               projectId: CROSS_PROJECT,
               risk: "Gateway certification slips",

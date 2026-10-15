@@ -6,17 +6,45 @@ import type {
 import type { DraftSaveValidationError } from "./section-validation.types.js";
 
 interface StageOwnershipRow {
+  readonly stableId: string | undefined;
   readonly projectId: string | undefined;
   readonly stageNames: readonly string[];
 }
 
+interface StageOwnershipSource {
+  readonly stableId?: string | undefined;
+  readonly stageNames?: readonly string[] | undefined;
+}
+
 const toRow = (
-  projectId: string | undefined,
-  stageNames: readonly string[] | undefined,
+  row: StageOwnershipSource,
+  projectId: string | null | undefined,
 ): StageOwnershipRow => ({
-  projectId,
-  stageNames: stageNames ?? [],
+  stableId: row.stableId,
+  projectId: projectId ?? undefined,
+  stageNames: row.stageNames ?? [],
 });
+
+const sameStages = (
+  left: readonly string[],
+  right: readonly string[],
+): boolean =>
+  left.length === right.length && left.every((stage) => right.includes(stage));
+
+// A row saved back exactly as stored (same lineage, product and stages) was
+// validated when it was written; revalidating it would let one assignment
+// removal block every save of the section.
+const isUnchanged = (
+  row: StageOwnershipRow,
+  stored: readonly StageOwnershipRow[],
+): boolean =>
+  row.stableId !== undefined &&
+  stored.some(
+    (candidate) =>
+      candidate.stableId === row.stableId &&
+      candidate.projectId === row.projectId &&
+      sameStages(candidate.stageNames, row.stageNames),
+  );
 
 const authorOwnedStages = (
   section: ReportSectionReadModel,
@@ -44,10 +72,12 @@ const stageNotOwnedMessage = (
 
 const validateStageRows = (
   payloadRows: readonly StageOwnershipRow[],
+  storedRows: readonly StageOwnershipRow[],
   section: ReportSectionReadModel,
 ): readonly DraftSaveValidationError[] => {
   return Object.freeze(
     payloadRows.flatMap((row) => {
+      if (isUnchanged(row, storedRows)) return [];
       const owned = authorOwnedStages(section, row.projectId);
       const offending = row.stageNames.find((stage) => !owned.includes(stage));
       return offending === undefined
@@ -62,21 +92,24 @@ const validateStageRows = (
   );
 };
 
-const inputRows = (input: DraftSaveInput | SubmitSectionInput) =>
+const recordRows = (
+  records: Pick<DraftSaveInput, "items" | "risks" | "decisions">,
+) =>
   [
-    input.items.map((row) => toRow(row.projectId ?? undefined, row.stageNames)),
-    input.risks.map((row) => toRow(row.projectId ?? undefined, row.stageNames)),
-    input.decisions.map((row) =>
-      toRow(row.productId ?? undefined, row.stageNames),
-    ),
+    records.items.map((row) => toRow(row, row.projectId)),
+    records.risks.map((row) => toRow(row, row.projectId)),
+    records.decisions.map((row) => toRow(row, row.productId)),
   ] as const;
 
-/** Rejects payload record stages that the section author does not own. */
+/** Rejects new or changed payload record stages that the section author does not own. */
 export function validateStageOwnership(
   section: ReportSectionReadModel,
   input: DraftSaveInput | SubmitSectionInput,
 ): readonly DraftSaveValidationError[] {
+  const stored = recordRows(section);
   return Object.freeze(
-    inputRows(input).flatMap((rows) => validateStageRows(rows, section)),
+    recordRows(input).flatMap((rows, kind) =>
+      validateStageRows(rows, stored[kind], section),
+    ),
   );
 }
