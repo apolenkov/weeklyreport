@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from "@weeklyreport/ui/components/ui/dialog";
 import { LoaderCircle } from "lucide-react";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
 type ConfirmationDialogVariant = "default" | "destructive";
 
@@ -142,6 +142,19 @@ export function ConfirmationDialog({
   children,
 }: ConfirmationDialogProps) {
   const cancelRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Disabling the focused action drops focus to <body>, which the Radix trap
+  // does not reclaim; park it on the panel so the keyboard stays inside.
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!isPending || !panel) return;
+    const active = document.activeElement;
+    const lost =
+      !panel.contains(active) ||
+      (active instanceof HTMLButtonElement && active.disabled);
+    if (lost) panel.focus();
+  }, [isPending]);
 
   // While the action is in flight the dialog stays put: Escape and backdrop
   // dismissal are suppressed so the submit cannot be abandoned mid-flight.
@@ -156,6 +169,7 @@ export function ConfirmationDialog({
       }}
     >
       <DialogContent
+        ref={panelRef}
         showCloseButton={false}
         className="animate-scale-in z-[var(--layer-dialog)] block w-full max-w-[calc(100%-2rem)] rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl sm:max-w-md"
         overlayClassName="z-[var(--layer-dialog)] bg-[var(--color-overlay)]"
