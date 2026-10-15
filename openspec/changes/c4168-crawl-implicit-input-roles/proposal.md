@@ -13,9 +13,11 @@ would let the walk press inputs that no scenario has audited.
 
 - The probe reports the implicit ARIA role from html-aria for inputs:
   `button`/`submit`/`reset`/`image` → `button`, `number` → `spinbutton`,
-  `range` → `slider`, checkbox and radio as before, text-like types as
-  `textbox`. Types without an implicit ARIA role (date, time, color, file and
-  the like) report no role instead of an invented `textbox`. An unknown or
+  `range` → `slider`, checkbox and radio as before, `text`/`email`/`tel`/`url`
+  → `textbox`, `search` → `searchbox`, and any of those with a `list`
+  attribute → `combobox`. Types without an implicit ARIA role (password, date,
+  time, color, file and the like) report no role instead of an invented
+  `textbox`. An unknown or
   invalid `type` is the browser's `text`. An empty `role=""` still falls back
   to the implicit role; a non-empty explicit role is unchanged.
 - The full-walk write guard keeps protected inputs by tag and DOM type, not

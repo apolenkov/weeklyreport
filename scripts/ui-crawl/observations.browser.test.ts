@@ -22,6 +22,7 @@ const html = `<!doctype html><html><body style="margin:0">
 <button id="fetchfail" onclick="window.__fetchCaught=null;fetch('http://127.0.0.1:1/?token=secret').then(r=>r.text()).catch(e=>{window.__fetchCaught=e.name})">Refused request</button>
 <input type="number" aria-label="Count" value="2"><input type="range" aria-label="Level"><input type="submit" aria-label="Go"><input type="date" aria-label="Day">
 <input type="nonsense" aria-label="Odd"><input role="" aria-label="Blank role"><input type="radio" name="pick" aria-label="Pick">
+<input type="search" aria-label="Find"><input type="email" list="hints" aria-label="Suggest"><datalist id="hints"><option value="a@example.com"></option></datalist>
 </body></html>`;
 
 describe.runIf(process.env.CRAWL_BROWSER_TESTS === "1")(
@@ -198,6 +199,9 @@ describe.runIf(process.env.CRAWL_BROWSER_TESTS === "1")(
             "Text",
             "Pick",
             "Check",
+            "Password",
+            "Find",
+            "Suggest",
           ].map((name) => [name, byName(name).role]),
         ),
       ).toEqual({
@@ -210,8 +214,22 @@ describe.runIf(process.env.CRAWL_BROWSER_TESTS === "1")(
         Text: "textbox",
         Pick: "radio",
         Check: "checkbox",
+        Password: null,
+        Find: "searchbox",
+        Suggest: "combobox",
       });
-      for (const name of ["Count", "Level", "Go", "Day", "Odd", "Text", "Area"])
+      for (const name of [
+        "Count",
+        "Level",
+        "Go",
+        "Day",
+        "Odd",
+        "Text",
+        "Area",
+        "Password",
+        "Find",
+        "Suggest",
+      ])
         expect(fullControlReason(byName(name))).toBe(
           "input: requires a named scenario",
         );
