@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
 
 import type { INestApplication } from "@nestjs/common";
+import { getTRPCErrorFromUnknown } from "@trpc/server";
 import * as trpcExpress from "@trpc/server/adapters/express";
 import { AUTH_COOKIE_NAME } from "@weeklyreport/shared";
 import type { Express, RequestHandler } from "express";
@@ -16,6 +17,7 @@ import {
 import type { PrismaService } from "../infrastructure/prisma/prisma.service";
 import { createContextFactory } from "../infrastructure/trpc/trpc.context";
 import type { AppRouter } from "../infrastructure/trpc/trpc.router";
+import { NO_CORRELATION_ID, UNKNOWN_CLIENT_IP } from "../lib/actor-sentinels";
 import type { AppLogger } from "../lib/logger";
 import { SessionRevocationService } from "../modules/admin/index.js";
 import { createAuthController } from "../modules/auth/index.js";
@@ -108,6 +110,7 @@ export function mountApiIngress(deps: ApiIngressDeps): void {
 
   mountProductFeedback(deps, pdfAuthController);
 
+  const contextFactory = createContextFactory(app, logger, env);
   // `maxBodySize` bounds the tRPC ingress with an explicit, auditable cap so an
   // oversized mutation body is rejected with 413 before the procedure runs.
   expressApp.use(
@@ -115,7 +118,25 @@ export function mountApiIngress(deps: ApiIngressDeps): void {
     trpcLimiter,
     trpcExpress.createExpressMiddleware({
       router: appRouter,
-      createContext: createContextFactory(app, logger, env),
+      createContext: async (opts) => {
+        try {
+          return await contextFactory(opts);
+        } catch (error) {
+          const path = opts.info.calls[0]?.path;
+          logger.error("trpc context failed", {
+            phase: "trpc.context",
+            // CorrelationIdMiddleware normalizes this before the raw ingress.
+            correlationId: opts.req.get("x-request-id") ?? NO_CORRELATION_ID,
+            ip: opts.req.ip ?? UNKNOWN_CLIENT_IP,
+            path:
+              path && Object.hasOwn(appRouter._def.procedures, path)
+                ? path
+                : "unknown",
+            code: getTRPCErrorFromUnknown(error).code,
+          });
+          throw error;
+        }
+      },
       maxBodySize: TRPC_MAX_BODY_BYTES,
     }),
   );
