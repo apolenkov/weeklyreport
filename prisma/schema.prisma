@@ -999,15 +999,14 @@ model Organization {
 // (acknowledger, group, period): reportId pins the period, groupId makes it
 // per-group so a viewer with access to two groups in one period can
 // acknowledge one without the other. Re-acknowledging is an idempotent upsert
-// that refreshes seenAt. Requires only group access — never the reviewer flag.
+// that keeps the first seenAt. Requires only group access — never the reviewer flag.
 model ReviewAcknowledgement {
   id       String         @id @default(uuid())
   userId   String
   reportId String
   groupId  String
-  // Refreshed on every idempotent re-acknowledge (@default on create,
-  // @updatedAt on upsert-update).
-  seenAt   DateTime       @default(now()) @updatedAt
+  // First view: set on create, never moved by a repeat acknowledge.
+  seenAt   DateTime       @default(now())
   user     User           @relation("ReviewAckUser", fields: [userId], references: [id], onDelete: Restrict)
   report   Report         @relation(fields: [reportId], references: [id], onDelete: Cascade)
   group    ReportingGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)

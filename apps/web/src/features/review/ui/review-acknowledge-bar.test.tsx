@@ -60,9 +60,11 @@ function renderBar(options: {
   readonly acks?: readonly ReviewAcknowledgementView[];
   readonly isHeadOrAdmin?: boolean;
   readonly acksError?: boolean;
+  readonly acksPending?: boolean;
 }) {
   const initialAcks = options.acks ?? [];
   const getAcks = vi.fn(() => {
+    if (options.acksPending) return new Promise<never>(() => undefined);
     if (options.acksError) {
       return Promise.reject(new Error("roster query failed"));
     }
@@ -140,7 +142,8 @@ describe("ReviewAcknowledgeBar", () => {
     const button = await screen.findByRole("button", {
       name: `Acknowledge · ${GROUP_LABEL}`,
     });
-    expect(button).toBeEnabled();
+    // The control is inert until the roster loads.
+    await waitFor(() => expect(button).toBeEnabled());
     expect(button).toHaveAttribute("aria-pressed", "false");
 
     await userEvent.click(button);
@@ -164,6 +167,37 @@ describe("ReviewAcknowledgeBar", () => {
       expect(locked).toBeDisabled();
       expect(locked).toHaveAttribute("aria-pressed", "true");
     });
+  });
+
+  it("stays inert after success until the roster refetch shows the receipt", async () => {
+    const { captured, getAcks } = renderBar({ acks: [] });
+    const mutationFn = expectDefined(captured["review.acknowledge"]).mutationFn;
+    const refetch = Promise.withResolvers<ReviewAcknowledgementView[]>();
+    mutationFn.mockImplementation(() => {
+      getAcks.mockReturnValue(refetch.promise);
+      return Promise.resolve(undefined);
+    });
+    const user = userEvent.setup();
+
+    const button = await screen.findByRole("button", {
+      name: `Acknowledge · ${GROUP_LABEL}`,
+    });
+    await waitFor(() => expect(button).toBeEnabled());
+    await user.click(button);
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledTimes(1));
+
+    // The refetch is still in flight: a second click must not reach the server.
+    expect(button).toBeDisabled();
+    await user.click(button);
+    expect(mutationFn).toHaveBeenCalledTimes(1);
+
+    refetch.resolve([CURRENT_USER_ACK]);
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: `Acknowledged · ${GROUP_LABEL}` }),
+      ).toBeDisabled();
+    });
+    expect(toastSuccess).toHaveBeenCalledTimes(1);
   });
 
   it("head/admin sees the Seen-by roster when acknowledgements exist", async () => {
@@ -209,6 +243,27 @@ describe("ReviewAcknowledgeBar", () => {
         name: "Acknowledge · Finance Platforms",
       }),
     ).toBeVisible();
+  });
+
+  it("keeps the control inert, busy and unpressed-unknown while the roster loads", async () => {
+    const { captured } = renderBar({
+      acks: [CURRENT_USER_ACK],
+      acksPending: true,
+    });
+    const user = userEvent.setup();
+
+    const button = await screen.findByRole("button", {
+      name: `Acknowledge… · ${GROUP_LABEL}`,
+    });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("aria-busy", "true");
+    expect(button).not.toHaveAttribute("aria-pressed");
+
+    await user.click(button);
+    expect(
+      expectDefined(captured["review.acknowledge"]).mutationFn,
+    ).not.toHaveBeenCalled();
+    expect(toastSuccess).not.toHaveBeenCalled();
   });
 
   it("keeps the control inert and shows an error when the roster query fails", async () => {
