@@ -2,7 +2,7 @@
 
 ### Requirement: Worker shutdown waits for in-flight failed-event hooks
 
-The shared BullMQ worker base MUST NOT let `onModuleDestroy` resolve while a failed-event hook it started is still running. After the worker has closed it MUST wait for every pending hook, bounded by a fixed drain deadline shorter than the container stop grace period. A hook still pending at the deadline MUST be reported once as an error with the queue name and pending count, and shutdown MUST then continue. A rejecting hook MUST still reach Sentry and MUST NOT fail shutdown.
+The shared BullMQ worker base MUST NOT let `onModuleDestroy` resolve while a failed-event hook it started is still running. After the worker has closed it MUST wait for every pending hook, bounded by a fixed drain deadline that, added to the worker close deadlines, stays below the API `app.close` step deadline. A hook still pending at the deadline MUST be reported once as an error with the queue name and pending count, and shutdown MUST then continue. A rejecting hook MUST still reach Sentry and MUST NOT fail shutdown.
 
 #### Scenario: Shutdown waits for a slow hook
 

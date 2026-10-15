@@ -73,7 +73,13 @@ vi.mock("bullmq", () => ({
 }));
 vi.mock("./bullmq-options", () => ({ getBullMQOptions: () => ({}) }));
 
+import { CLOSE_TIMEOUT_MS, shutdownApi } from "../../bootstrap/api-shutdown.js";
 import { createAppLogger } from "../../lib/logger.js";
+import {
+  BULLMQ_FAILED_HOOK_DRAIN_TIMEOUT_MS,
+  BULLMQ_FORCE_CLOSE_TIMEOUT_MS,
+  BULLMQ_GRACEFUL_CLOSE_TIMEOUT_MS,
+} from "./bounded-shutdown.js";
 import { RawBullMqProcessor } from "./raw-bullmq-processor.js";
 import { WorkerLivenessRegistry } from "./worker-liveness.registry.js";
 import type { JobCls, JobTraceContext } from "./worker-observability.js";
@@ -379,9 +385,68 @@ describe("RawBullMqProcessor", () => {
     workerState.worker?.emit("failed", { data: {} }, new Error("boom"));
 
     const destroyed = processor.onModuleDestroy();
-    await vi.advanceTimersByTimeAsync(5000);
+    await vi.advanceTimersByTimeAsync(BULLMQ_FAILED_HOOK_DRAIN_TIMEOUT_MS);
     await destroyed;
 
+    expect(logger.error).toHaveBeenCalledWith(
+      "BullMQ failed-event hook did not settle before shutdown",
+      { queueName: "pdf-export", pending: 1 },
+    );
+  });
+
+  it("fits worker close and hook drain inside the API app.close budget", () => {
+    expect(
+      BULLMQ_GRACEFUL_CLOSE_TIMEOUT_MS +
+        BULLMQ_FORCE_CLOSE_TIMEOUT_MS +
+        BULLMQ_FAILED_HOOK_DRAIN_TIMEOUT_MS,
+    ).toBeLessThan(CLOSE_TIMEOUT_MS);
+  });
+
+  it("lets a failed-event hook finish inside the real API shutdown pipeline", async () => {
+    vi.useFakeTimers();
+    const processor = new HookGatedProcessor({} as never, {} as never, null);
+    processor.onModuleInit();
+    workerState.worker?.emit("failed", { data: {} }, new Error("boom"));
+    let hookDone = false;
+    void processor.hook.promise.then(() => {
+      hookDone = true;
+    });
+    setTimeout(() => processor.hook.resolve(), 1000);
+
+    const shutdown = shutdownApi({
+      app: { close: () => processor.onModuleDestroy() },
+      logger: { info: vi.fn(), error: vi.fn() } as never,
+      shutdownRateLimitStore: () => Promise.resolve(),
+      shutdownOtel: () => Promise.resolve(),
+      shutdownSentry: () => Promise.resolve(),
+    });
+    await vi.advanceTimersByTimeAsync(CLOSE_TIMEOUT_MS + 100);
+
+    await expect(shutdown).resolves.toBeUndefined();
+    expect(hookDone).toBe(true);
+  });
+
+  it("reports a never-settling hook from the drain, not as an app.close deadline", async () => {
+    vi.useFakeTimers();
+    const logger = { info: vi.fn(), error: vi.fn() };
+    const processor = new HookGatedProcessor(
+      {} as never,
+      logger as never,
+      null,
+    );
+    processor.onModuleInit();
+    workerState.worker?.emit("failed", { data: {} }, new Error("boom"));
+
+    const shutdown = shutdownApi({
+      app: { close: () => processor.onModuleDestroy() },
+      logger: logger as never,
+      shutdownRateLimitStore: () => Promise.resolve(),
+      shutdownOtel: () => Promise.resolve(),
+      shutdownSentry: () => Promise.resolve(),
+    });
+    await vi.advanceTimersByTimeAsync(CLOSE_TIMEOUT_MS + 100);
+
+    await expect(shutdown).resolves.toBeUndefined();
     expect(logger.error).toHaveBeenCalledWith(
       "BullMQ failed-event hook did not settle before shutdown",
       { queueName: "pdf-export", pending: 1 },

@@ -5,7 +5,7 @@ TASK-503.24 (F489-3). The shared worker base runs the subclass `onJobFailed` hoo
 ## What Changes
 
 - The base class tracks every in-flight failed-event hook continuation.
-- `onModuleDestroy` waits for them after the worker has closed, for at most a bounded drain window (5 s, inside the container stop grace period); a hook still running at the deadline is logged once with the queue name and pending count, and shutdown proceeds.
+- `onModuleDestroy` waits for them after the worker has closed, for at most a bounded drain window (1.5 s: worker close 0.5 s + force close 0.5 s + drain 1.5 s stays inside the API `app.close` 3 s step of `shutdownApi`, which is itself inside the 20 s pod grace); a hook still running at the deadline is logged once with the queue name and pending count, and shutdown proceeds.
 - Hook rejections keep going to Sentry exactly as today; the PDF handler's internal catch and its startup/schedule recovery are unchanged.
 
 ## Capabilities

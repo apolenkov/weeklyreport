@@ -15,7 +15,7 @@ export interface ApiShutdownDependencies {
 
 // Per-step deadlines sum to 12.5 s, inside the Helm API pod's 20 s
 // terminationGracePeriodSeconds; raise that grace period before raising these.
-const CLOSE_TIMEOUT_MS = 3000;
+export const CLOSE_TIMEOUT_MS = 3000;
 const LOG_FLUSH_TIMEOUT_MS = 1500;
 const OTEL_SHUTDOWN_TIMEOUT_MS = 2000;
 const SENTRY_FLUSH_TIMEOUT_MS = 1500;
