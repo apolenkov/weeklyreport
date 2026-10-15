@@ -117,6 +117,17 @@ export async function assertThreadHasRoom(
     throw new FeedbackLimitError("Thread message limit reached");
 }
 
+const BYTES_PER_KIB = 1024;
+// Every SSE subscriber receives an action event whole, so it is bounded.
+const MAX_ACTION_EVENT_BYTES = BYTES_PER_KIB * BYTES_PER_KIB;
+
+export function assertActionEventFits(payload: unknown): void {
+  if (
+    Buffer.byteLength(JSON.stringify(payload), "utf8") > MAX_ACTION_EVENT_BYTES
+  )
+    throw new FeedbackLimitError("Action event size limit reached");
+}
+
 export async function lockVisibleAnnotation(
   db: Db,
   access: FeedbackAccess,
