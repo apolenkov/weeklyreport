@@ -14,6 +14,8 @@ import {
   publishedSnapshotFixture,
   seedTestData,
 } from "../../../test-utils/prisma-test-helper.js";
+import { AdminReopenRequestNotFoundError } from "../../admin/admin-errors.js";
+import { deleteReport } from "../../admin/admin-period.queries.js";
 import { decideReopenRequest } from "../../admin/admin-reopen-request-lifecycle.js";
 import {
   LeadFormConstraintError,
@@ -304,5 +306,79 @@ describe("lead-form published-period write locks (integration)", () => {
         select: { status: true, submittedAt: true },
       }),
     ).resolves.toEqual({ status: "submitted", submittedAt });
+  });
+  // C0694: an open draft period may be deleted (cascading its sections and
+  // requests) after the decision read the request but before it locks the
+  // report. The request no longer exists, so the caller gets NOT_FOUND.
+  it("reports NOT_FOUND when period deletion wins a decision race", async () => {
+    const testData = await seedTestData(prisma);
+    await prisma.reportSection.update({
+      where: { id: testData.section.id },
+      data: {
+        status: "submitted",
+        submittedAt: new Date("2026-07-22T11:00:00.000Z"),
+      },
+    });
+    const request = await prisma.reopenRequest.create({
+      data: {
+        reportSectionId: testData.section.id,
+        requestedById: testData.lead.id,
+      },
+    });
+    const session: UserSession = {
+      userId: testData.head.id,
+      email: testData.head.email,
+      name: testData.head.name,
+      role: "admin",
+    };
+    // Hold the author's row so the decision stops after its request read.
+    const held = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const holder = prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${testData.lead.id} FOR UPDATE`;
+      held.resolve();
+      await release.promise;
+    });
+    await held.promise;
+    const decision = decideReopenRequest(prisma as unknown as PrismaService, {
+      id: request.id,
+      decision: "approved",
+      reviewNote: null,
+      decidedBy: testData.head.id,
+      session,
+    });
+    const settled = decision.then(
+      () => undefined,
+      () => undefined,
+    );
+    try {
+      await expect
+        .poll(
+          async () => {
+            const waiting = await prisma.$queryRaw<{ count: number }[]>`
+            SELECT count(*)::int AS count FROM pg_stat_activity
+            WHERE datname = current_database() AND wait_event_type = 'Lock'
+              AND query LIKE '%FROM "User"%FOR NO KEY UPDATE%'`;
+            return waiting[0]?.count;
+          },
+          { timeout: 5000 },
+        )
+        .toBe(1);
+      await deleteReport(
+        prisma as unknown as PrismaService,
+        testData.report.id,
+      );
+    } finally {
+      // Never leave the holder transaction or the blocked decision behind.
+      release.resolve();
+      await Promise.allSettled([holder, settled]);
+    }
+
+    await expect(decision).rejects.toBeInstanceOf(
+      AdminReopenRequestNotFoundError,
+    );
+    await expect(
+      prisma.reopenRequest.findUnique({ where: { id: request.id } }),
+    ).resolves.toBeNull();
   });
 });
