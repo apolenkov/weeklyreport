@@ -14,7 +14,11 @@ used `curl` without a per-request timeout, so one stalled request could hang the
   written, and the log path is reported.
 - Check and start run under a per-name `mkdir` lock released by a subshell `EXIT` trap; a
   second caller waits, then reuses the owned forward.
-- `start.sh` health requests use `curl --max-time 5`; the final readiness probe stays.
+- An existing owned record is reused only when it carries the requested service and ports and
+  its own process listens on the local port; a mismatched or never-listening owned record is
+  stopped (the PID is proven ours) and replaced. A foreign process is never signalled.
+- `start.sh` health requests use `curl --max-time 5` (no separate connect timeout); the final
+  readiness probe stays. Worst case of the 60-iteration loop is about 60×(5+2)+5 ≈ 425 s.
 
 ## Impact
 

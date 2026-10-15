@@ -459,6 +459,78 @@ test("pf_start returns only after its own forward child listens", () => {
   }
 });
 
+// Reuse path: an existing owned record is trusted only for the requested target
+// while its own process listens; anything else is replaced, never reported ready.
+const startedForward = (directory: string, args: string) => {
+  const run = runEnv(
+    directory,
+    `pf_start ${args}; cut -f1 "$STATE_DIR/pf-app.pid"`,
+  );
+  assert.equal(run.result.status, 0, run.result.stderr);
+  return { ...run, pid: Number(run.result.stdout.trim()) };
+};
+
+test("pf_start reuses a ready forward for the same target without starting another", () => {
+  const directory = mkdtempSync(join(tmpdir(), "tester-kit-env-"));
+  fixtureRoots.add(directory);
+  const { bin } = runEnv(directory, "true");
+  writeStub(bin, "kubectl", FORWARD_STUB, "#!/bin/bash");
+  const first = startedForward(directory, "app edge 18080 8080");
+  try {
+    const second = startedForward(directory, "app edge 18080 8080");
+    assert.equal(second.pid, first.pid, "ready forward was replaced");
+    assert.ok(alive(first.pid));
+  } finally {
+    runEnv(directory, "pf_stop app");
+  }
+});
+
+test("pf_start replaces a live owned forward that does not listen", () => {
+  const directory = mkdtempSync(join(tmpdir(), "tester-kit-env-"));
+  fixtureRoots.add(directory);
+  const { bin, stateDir } = runEnv(directory, "true");
+  writeStub(bin, "kubectl", FORWARD_STUB, "#!/bin/bash");
+  const first = startedForward(directory, "app edge 18080 8080");
+  try {
+    // From now on the first child is alive but never owns the listener.
+    writeFileSync(join(stateDir, "silent.pid"), String(first.pid));
+    writeStub(
+      bin,
+      "lsof",
+      String.raw`a="$*"; case "$a" in *"-p "*) p=$(printf '%s' "$a" | sed 's/.*-p \([0-9]*\).*/\1/'); [ "$p" != "$(cat "$STATE_DIR/silent.pid")" ] && kill -0 "$p" 2>/dev/null ;; *) exit 1 ;; esac`,
+    );
+    const second = startedForward(directory, "app edge 18080 8080");
+    assert.notEqual(second.pid, first.pid, "silent forward reported ready");
+    assert.equal(alive(first.pid), false, "silent owned forward survived");
+    assert.ok(alive(second.pid));
+  } finally {
+    runEnv(directory, "pf_stop app");
+  }
+});
+
+test("pf_start does not report an old forward ready for a changed local port", () => {
+  const directory = mkdtempSync(join(tmpdir(), "tester-kit-env-"));
+  fixtureRoots.add(directory);
+  const { bin } = runEnv(directory, "true");
+  writeStub(bin, "kubectl", FORWARD_STUB, "#!/bin/bash");
+  const first = startedForward(directory, "app edge 18080 8080");
+  try {
+    const second = startedForward(directory, "app edge 18081 8080");
+    assert.notEqual(second.pid, first.pid, "old port forward reused");
+    assert.equal(alive(first.pid), false, "old owned forward survived");
+    assert.match(
+      readFileSync(join(directory, "state", "pf-app.pid"), "utf8"),
+      /svc\/edge 18081:8080/u,
+    );
+    assert.match(
+      second.calls,
+      new RegExp(`lsof .*-p ${second.pid} .*-iTCP:18081`, "u"),
+    );
+  } finally {
+    runEnv(directory, "pf_stop app");
+  }
+});
+
 // C0068: two overlapping starts must not leave an unowned forward behind.
 test("concurrent pf_start leaves no forward alive after pf_stop", () => {
   const directory = mkdtempSync(join(tmpdir(), "tester-kit-env-"));

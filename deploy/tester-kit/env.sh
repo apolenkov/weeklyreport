@@ -43,8 +43,17 @@ pf_start() {
 }
 
 pf_start_locked() {
-  local pidf="$STATE_DIR/pf-$1.pid" log="$STATE_DIR/pf-$1.log" pid
-  if pf_owned "$1"; then return; fi
+  local pidf="$STATE_DIR/pf-$1.pid" log="$STATE_DIR/pf-$1.log" pid recorded
+  local want="port-forward --address 127.0.0.1 svc/$2 $3:$4"
+  if pf_owned "$1"; then
+    IFS="$(printf '\t')" read -r pid _ recorded <"$pidf"
+    # Reuse only the requested forward whose own process listens now. A verified-owned
+    # record for another target or one that never listened is replaced (pf_owned already
+    # proved the PID is ours); a foreign process never reaches this branch.
+    if [ "$recorded" = "$want" ] && lsof -a -p "$pid" -iTCP:"$3" -sTCP:LISTEN >/dev/null 2>&1; then return; fi
+    pf_stop "$1"
+    for _ in $(seq 1 25); do lsof -iTCP:"$3" -sTCP:LISTEN >/dev/null 2>&1 || break; sleep 0.2; done
+  fi
   rm -f "$pidf"
   if lsof -iTCP:"$3" -sTCP:LISTEN >/dev/null 2>&1; then
     echo "Port $3 is busy (another stand or program). Free it and re-run." >&2
@@ -55,7 +64,7 @@ pf_start_locked() {
   for _ in $(seq 1 50); do
     if lsof -a -p "$pid" -iTCP:"$3" -sTCP:LISTEN >/dev/null 2>&1; then
       printf '%s\t%s\t%s\n' "$pid" "$(ps -o lstart= -p "$pid" 2>/dev/null)" \
-        "port-forward --address 127.0.0.1 svc/$2 $3:$4" >"$pidf"
+        "$want" >"$pidf"
       return
     fi
     kill -0 "$pid" 2>/dev/null || break
