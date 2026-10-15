@@ -58,9 +58,15 @@ alternative is a runner configured with seccomp, AppArmor, and system paths
 unconfined. Whether the project runner then permits the build is not
 verified — the first run decides.
 
-`deploy-production` runs `helm upgrade --install --atomic` with a values file
-from the file-type variable `HELM_VALUES_FILE` and `HELM_NAMESPACE`, and exists
-only when a file-type `KUBECONFIG` variable is set. See `docs/kubernetes.md`.
+`deploy-production` exists only when a file-type `KUBECONFIG` variable is set and
+needs the variables `HELM_VALUES_FILE` (file), `HELM_NAMESPACE` and
+`HELM_KUBE_CONTEXT`; it fails before any Helm call if one is missing. It looks the
+release up with `helm list` in that context and namespace: no release →
+`helm install --wait=watcher`; a `deployed` release → `helm upgrade
+--wait=watcher` (never `--install`). A discovery error, an inconsistent answer or a
+release in another state stops the job. There is no automatic rollback: a failed
+install keeps the release and its volume claims, and an upgrade is fixed forward
+because CI cannot prove schema compatibility. See `docs/kubernetes.md`.
 
 ## Database-lane topology
 

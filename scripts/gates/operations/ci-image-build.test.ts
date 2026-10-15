@@ -215,10 +215,8 @@ test("the deploy job exists only with a kubeconfig, manually, on the default bra
   assert.match(active[0]?.if ?? "", /\$CI_DEFAULT_BRANCH/);
   assert.equal(active[0]?.when, "manual");
   assert.equal(rules.at(-1)?.when, "never");
-  const script = deployJob.script.join("\n");
-  assert.match(script, /--atomic/);
-  assert.doesNotMatch(script, /--wait/);
-  assert.match(script, /images\.tag=\$CI_COMMIT_SHA/);
+  // The install/upgrade command contract lives in deploy-production.test.ts.
+  assert.match(deployJob.script.join("\n"), /images\.tag=\$CI_COMMIT_SHA/);
   // A deploy must wait for this pipeline's image build, when it has one.
   assert.deepEqual(deployJob.needs, [{ job: "build-images" }]);
 });
