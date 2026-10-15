@@ -543,6 +543,53 @@ describe("RecordComments — mutation success", () => {
     });
   });
 
+  it.each([
+    ["the reviewer loses review rights", { canReview: false }],
+    ["the comment leaves the list", { comments: [] as RecordCommentView[] }],
+  ])("closes an open delete confirmation when %s", (_case, change) => {
+    const other: RecordCommentView = {
+      ...OWN_COMMENT,
+      id: "44444444-4444-4444-8444-444444444444",
+      reviewerName: "Second Reviewer",
+      text: "Another note.",
+    };
+    const props = {
+      anchor: { itemId: "11111111-1111-4111-8111-111111111111" },
+      comments: [OWN_COMMENT, other],
+      canReview: true,
+      currentUserId: REVIEWER_ID,
+      isAdmin: false,
+      onMutated: vi.fn(),
+    };
+    const client = new QueryClient();
+    const { rerender } = render(
+      <QueryClientProvider client={client}>
+        <RecordComments {...props} />
+      </QueryClientProvider>,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: /Delete comment by Head Reviewer/ }),
+    );
+    expect(
+      screen.getByRole("alertdialog", { name: "Delete review comment?" }),
+    ).toBeInTheDocument();
+
+    rerender(
+      <QueryClientProvider client={client}>
+        <RecordComments
+          {...props}
+          {...change}
+          comments={change.comments ? [other] : props.comments}
+        />
+      </QueryClientProvider>,
+    );
+
+    expect(
+      screen.queryByRole("alertdialog", { name: "Delete review comment?" }),
+    ).not.toBeInTheDocument();
+    expect(mutationCalls.deleteComment).toHaveLength(0);
+  });
+
   it("does not delete when the confirmation is cancelled", () => {
     renderComments();
 
