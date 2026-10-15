@@ -525,6 +525,10 @@ describe("RecordComments — mutation success", () => {
       name: "Delete review comment?",
     });
     expect(dialog).toHaveTextContent(OWN_COMMENT.text);
+    expect(within(dialog).getByText("Head Reviewer")).toBeVisible();
+    expect(
+      within(dialog).getAllByText("This action cannot be undone."),
+    ).toHaveLength(1);
     fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
 
     await waitFor(() => {
