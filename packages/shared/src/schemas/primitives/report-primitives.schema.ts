@@ -1,13 +1,9 @@
 import { z } from "zod";
 
-// Reject whitespace and selected invisible-only text without changing accepted bytes.
-// CGJ stays separate to avoid a misleading combined character inside the class.
+// Presence-only validation preserves formatting in accepted multilingual text and emoji.
 /** Whether text has a character safeText treats as visible; clients reuse it to match the server. */
 export const hasVisibleText = (val: string) =>
-  val.replaceAll(
-    /\u034F|[\s\u00AD\u180E\u200B-\u200D\u2060-\u2064\uFEFF]/gu,
-    "",
-  ).length > 0;
+  /[^\s\p{Default_Ignorable_Code_Point}]/u.test(val);
 
 // Null bytes are PostgreSQL-incompatible.
 const noNullBytes = (val: string) => !val.includes("\u0000");
