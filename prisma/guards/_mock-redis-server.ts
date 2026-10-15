@@ -1,5 +1,4 @@
-// Shared loopback Redis peer for the flush specs. Not a suite: vitest.prisma
-// config only collects `prisma/*.test.ts`.
+// Shared loopback Redis peer for the flush specs.
 
 import { createServer, type Socket } from "node:net";
 import { setTimeout as delay } from "node:timers/promises";
@@ -14,6 +13,36 @@ export interface MockRedisServer {
 
 const openServers = new Set<MockRedisServer>();
 
+function readLength(buffer: Buffer, offset: number, prefix: string) {
+  if (offset >= buffer.length) return undefined;
+  if (buffer[offset] !== prefix.charCodeAt(0))
+    throw new Error("Expected a RESP command array of bulk strings");
+  const end = buffer.indexOf("\r\n", offset);
+  if (end === -1) return undefined;
+  const digits = buffer.subarray(offset + 1, end).toString("ascii");
+  const length = Number(digits);
+  if (!/^\d+$/u.test(digits) || !Number.isSafeInteger(length))
+    throw new Error("Invalid RESP command length");
+  return { length, next: end + 2 };
+}
+
+function commandLength(buffer: Buffer): number | undefined {
+  const array = readLength(buffer, 0, "*");
+  if (array === undefined) return undefined;
+  if (array.length === 0) throw new Error("Empty RESP command");
+  let offset = array.next;
+  for (let index = 0; index < array.length; index += 1) {
+    const bulk = readLength(buffer, offset, "$");
+    if (bulk === undefined) return undefined;
+    const end = bulk.next + bulk.length;
+    if (end + 2 > buffer.length) return undefined;
+    if (buffer.subarray(end, end + 2).toString("ascii") !== "\r\n")
+      throw new Error("Invalid RESP command terminator");
+    offset = end + 2;
+  }
+  return offset;
+}
+
 // Starts a loopback Redis peer that returns one reply per received command.
 // `undefined` means close without answering that command.
 export async function startMockRedisServer(
@@ -22,26 +51,36 @@ export async function startMockRedisServer(
   const sockets = new Set<Socket>();
   const replies: readonly (string | undefined)[] =
     typeof reply === "string" || reply === undefined ? [reply] : reply;
-  let received = "";
+  let received = Buffer.alloc(0);
   const server = createServer((socket) => {
     sockets.add(socket);
     socket.once("close", () => {
       sockets.delete(socket);
     });
     let replyIndex = 0;
-    socket.on("data", (chunk: unknown) => {
-      const data = Buffer.isBuffer(chunk)
-        ? chunk.toString("utf8")
-        : String(chunk);
-      received += data;
-      const nextReply = replies[replyIndex];
-      replyIndex += 1;
-      if (nextReply === undefined) {
-        socket.end();
-      } else if (replyIndex >= replies.length) {
-        socket.end(nextReply);
-      } else {
-        socket.write(nextReply);
+    let pending = Buffer.alloc(0);
+    socket.on("data", (chunk: Buffer) => {
+      received = Buffer.concat([received, chunk]);
+      pending = Buffer.concat([pending, chunk]);
+      try {
+        let length = commandLength(pending);
+        while (length !== undefined) {
+          pending = pending.subarray(length);
+          const nextReply = replies[replyIndex++];
+          if (nextReply === undefined) {
+            socket.end();
+            return;
+          }
+          if (replyIndex >= replies.length) {
+            socket.end(nextReply);
+            return;
+          }
+          socket.write(nextReply);
+          length = commandLength(pending);
+        }
+      } catch {
+        // A malformed request must fail the caller, not consume a scripted OK.
+        socket.destroy();
       }
     });
   });
@@ -57,7 +96,7 @@ export async function startMockRedisServer(
 
   const mockServer: MockRedisServer = {
     port: address.port,
-    receivedData: () => received,
+    receivedData: () => received.toString("utf8"),
     async close() {
       // Self-deregistering and idempotent, so a spec may close a server early
       // to free its port and the teardown still runs cleanly.
