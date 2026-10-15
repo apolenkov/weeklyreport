@@ -16,6 +16,11 @@ consumer sees an anonymous session while the user is in fact unresolved
   `null` is anonymous.
 - The failed-query branch (`Could not verify your session.` with retry) is
   unchanged.
+- The Lead section preview, which reads `auth.me` directly, keeps its skeleton
+  while the query is pending (`isPending`) instead of opening the report
+  without the Lead's author id (follow-up TASK-503.42).
+- The login page needs no change: it renders the same landing while the
+  session is loading or paused and only redirects once a session resolves.
 
 ## Capabilities
 
@@ -25,13 +30,15 @@ None.
 
 ### Modified Capabilities
 
-- `session-hydration-error-scoping`: the web client does not show an unresolved
-  session as anonymous.
+- `session-hydration-error-scoping`: `SessionProvider` and the Lead section
+  preview do not treat an unresolved `auth.me` as anonymous.
 
 ## Impact
 
-`apps/web/src/shared/lib/auth/session-provider.tsx` and its colocated test. The
-`SessionState` shape is unchanged; consumers already handle `isLoading`.
+`apps/web/src/shared/lib/auth/session-provider.tsx`,
+`apps/web/src/features/report-pages/ui/lead/shell/lead-section-preview-auth.tsx`
+and their colocated tests. The `SessionState` shape is unchanged; consumers
+already handle `isLoading`.
 
 ## Non-goals
 

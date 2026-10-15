@@ -19,8 +19,9 @@ export function LeadSectionPreviewAuth({ reportId }: Props) {
 
   // Render the same skeleton as the page Suspense fallback uses. A bespoke inline
   // skeleton here can diverge from server-streamed output on preview and trigger
-  // hydration issues.
-  if (meQ.isLoading) {
+  // hydration issues. isPending, not isLoading: a retry paused offline or in a
+  // background tab is still unresolved and must not open the page authorless.
+  if (meQ.isPending) {
     return <WeeklyReportSkeleton />;
   }
 
