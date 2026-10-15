@@ -31,6 +31,15 @@ export class LeadFormDomainError extends Error {
   }
 }
 
+// A broken stored invariant, not a missing record: kept out of the domain
+// error table so the client gets the masked internal error (C0520).
+export class LeadFormIntegrityError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "LeadFormIntegrityError";
+  }
+}
+
 export class LeadFormAccessError extends Error {
   constructor(message: string) {
     super(message);
