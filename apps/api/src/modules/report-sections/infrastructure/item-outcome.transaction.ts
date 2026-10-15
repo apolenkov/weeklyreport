@@ -5,6 +5,7 @@ import {
   MAX_RECORDS_PER_SECTION_SAVE,
   type PromotePlanInput,
   type ReportSectionReadModel,
+  reportSectionReadModelSchema,
   type ResolvePlanInput,
   type RestorePlanInput,
   validateRecordActivityIds,
@@ -73,14 +74,21 @@ function validateOutcomeItem(
   section: ReportSectionReadModel,
   item: ReportSectionReadModel["items"][number],
 ) {
-  const input = draftSaveSchema.parse({
-    reportSectionId: section.reportSectionId,
-    version: section.version,
-    projectStatuses: [],
-    items: [item],
-    risks: [],
-    decisions: [],
-  });
+  // The moved item is a server copy of a stored row: its stored text and
+  // stage names are read as stored. Command-supplied text, stage names and
+  // reason were already validated by the command schema.
+  const input = {
+    ...draftSaveSchema.parse({
+      reportSectionId: section.reportSectionId,
+      version: section.version,
+      projectStatuses: [],
+      items: [],
+      risks: [],
+      decisions: [],
+    }),
+    items: reportSectionReadModelSchema.parse({ ...section, items: [item] })
+      .items,
+  };
   const violation =
     validateStageOwnership(section, input)[0] ??
     validateRecordActivityIds(section, input)[0];

@@ -91,7 +91,8 @@ export const sectionActivitySchema = z
     activityId: z.uuid(),
     activityName: storedText(),
     // Weekly override of activityName; null/absent renders the catalogue name.
-    titleOverride: storedText().nullable().optional(),
+    // Consumers treat a blank stored override as absent, so it stays readable.
+    titleOverride: z.string().nullable().optional(),
     status: trafficLightStatusSchema.nullable(),
     note: z.string().nullable().optional(),
     jiraAccounts: z.array(storedText()).readonly(),
