@@ -29,6 +29,7 @@ import type {
   AdminRepository,
   DecideReopenRequestInput,
   ListReopenRequestsInput,
+  PeriodListCursor,
   PeriodRowFromRepo,
   ProductGroupOwnership,
   ReopenDecisionOutcome,
@@ -145,6 +146,7 @@ export class AdminPrismaRepository implements AdminRepository {
 
   listPeriodsByState(filter: {
     states: readonly PeriodState[];
+    cursor?: PeriodListCursor;
     limit: number;
   }): Promise<PeriodRowFromRepo[]> {
     return periodQueries.listPeriodsByState(this.prisma, filter);

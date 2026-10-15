@@ -7,7 +7,7 @@ import {
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { lockAllReminderPolicies } from "../reminders/index.js";
 import { requirePublishedSnapshot } from "../report-sections/index.js";
-import type { PeriodRowFromRepo } from "./admin-shared";
+import type { PeriodListCursor, PeriodRowFromRepo } from "./admin-shared";
 import { AdminAccessError, AdminPeriodNotFoundError } from "./admin-shared.js";
 
 // Read side of the Admin Periods tab; lifecycle-transition writes
@@ -79,12 +79,23 @@ export async function listPeriodsByState(
   prisma: PrismaService,
   filter: {
     states: readonly PeriodState[];
+    cursor?: PeriodListCursor;
     limit: number;
   },
 ): Promise<PeriodRowFromRepo[]> {
+  const { cursor } = filter;
   const periods = await prisma.report.findMany({
-    where: { periodState: { in: filter.states as PeriodState[] } },
-    orderBy: { periodStart: "desc" },
+    where: {
+      periodState: { in: filter.states as PeriodState[] },
+      // Keyset, not offset: an unarchived row does not shift later pages.
+      ...(cursor && {
+        OR: [
+          { periodStart: { lt: cursor.periodStart } },
+          { periodStart: cursor.periodStart, id: { lt: cursor.id } },
+        ],
+      }),
+    },
+    orderBy: [{ periodStart: "desc" }, { id: "desc" }],
     take: filter.limit,
     select: {
       id: true,

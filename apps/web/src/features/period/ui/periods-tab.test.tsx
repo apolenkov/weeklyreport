@@ -96,6 +96,68 @@ describe("PeriodsTab", () => {
     });
   });
 
+  it("loads the next archive page on request (C0455)", async () => {
+    const user = userEvent.setup();
+    const older = makeRow({
+      id: "11111111-1111-4111-8111-1111111111a5",
+      periodStart: new Date("2026-03-02T00:00:00Z"),
+      periodEnd: new Date("2026-03-08T23:59:59Z"),
+      periodState: "archived",
+      periodStatus: "published",
+      archived: true,
+    });
+    const cursor = { periodStart: archivedRow.periodStart, id: archivedRow.id };
+    const archivePages = vi.fn((input: { cursor?: unknown }) =>
+      input.cursor === undefined
+        ? { periods: [archivedRow], nextCursor: cursor }
+        : { periods: [older], nextCursor: null },
+    );
+    renderTab({ archivePages });
+
+    await user.click(screen.getByTestId("periods-archive-toggle"));
+    await screen.findByTestId(`periods-archive-row-${archivedRow.id}`);
+    expect(
+      screen.queryByTestId(`periods-archive-row-${older.id}`),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Load more" }));
+
+    await screen.findByTestId(`periods-archive-row-${older.id}`);
+    expect(archivePages).toHaveBeenLastCalledWith(
+      expect.objectContaining({ bucket: "archive", cursor }),
+    );
+    expect(
+      screen.getByTestId(`periods-archive-row-${archivedRow.id}`),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Load more" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps loaded archive rows when the next page fails (C0455)", async () => {
+    const user = userEvent.setup();
+    const cursor = { periodStart: archivedRow.periodStart, id: archivedRow.id };
+    renderTab({
+      archivePages: (input) => {
+        if (input.cursor === undefined) {
+          return { periods: [archivedRow], nextCursor: cursor };
+        }
+        throw new Error("page unavailable");
+      },
+    });
+
+    await user.click(screen.getByTestId("periods-archive-toggle"));
+    await screen.findByTestId(`periods-archive-row-${archivedRow.id}`);
+    await user.click(screen.getByRole("button", { name: "Load more" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Failed to load more archived periods.",
+    );
+    expect(
+      screen.getByTestId(`periods-archive-row-${archivedRow.id}`),
+    ).toBeInTheDocument();
+  });
+
   it("filters archive rows by the search query", async () => {
     const user = userEvent.setup();
     const archiveOnly = makeRow({

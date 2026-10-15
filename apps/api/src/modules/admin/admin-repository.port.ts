@@ -16,6 +16,7 @@ import type {
 import type {
   DecideReopenRequestInput,
   ListReopenRequestsInput,
+  PeriodListCursor,
   PeriodRowFromRepo,
   ProductGroupOwnership,
   ReopenDecisionOutcome,
@@ -57,6 +58,7 @@ export interface AdminRepository {
   deleteReminderPolicy(policyId: string): Promise<void>;
   listPeriodsByState(filter: {
     states: readonly PeriodState[];
+    cursor?: PeriodListCursor;
     // Explicit: the service resolves the default and cap upstream.
     limit: number;
   }): Promise<PeriodRowFromRepo[]>;

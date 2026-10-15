@@ -1,5 +1,5 @@
 import type { AppSettings } from "@weeklyreport/shared";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
@@ -90,13 +90,70 @@ function makePeriodAwareRepository(
   };
 }
 
+describe("PeriodAdminService — archive pages (C0455)", () => {
+  const newer = periodFixture(PERIOD_ID_ARCHIVED, "archived", {
+    periodStart: new Date("2026-05-11T00:00:00Z"),
+  });
+  const older = periodFixture(PERIOD_ID_PUBLISHED_STALE, "archived");
+
+  function pagedService(rows: PeriodRowFromRepo[]) {
+    const repository = createRepository(initialSnapshot);
+    const listPeriodsByState = vi.fn().mockResolvedValue(rows);
+    return {
+      service: new PeriodAdminService(
+        { ...repository, listPeriodsByState },
+        createNullLogger(),
+      ),
+      listPeriodsByState,
+    };
+  }
+
+  it("returns the last row as the cursor when a page is full", async () => {
+    const { service, listPeriodsByState } = pagedService([newer, older]);
+    const cursor = {
+      periodStart: new Date("2026-05-18T00:00:00Z"),
+      id: PERIOD_ID_OPEN,
+    };
+
+    const page = await service.listPeriodsByState({
+      bucket: "archive",
+      cursor,
+      limit: 2,
+    });
+
+    expect(page.periods.map((row) => row.id)).toEqual([newer.id, older.id]);
+    expect(page.nextCursor).toEqual({
+      periodStart: older.periodStart,
+      id: older.id,
+    });
+    expect(listPeriodsByState).toHaveBeenCalledWith({
+      states: ["archived"],
+      cursor,
+      limit: 2,
+    });
+  });
+
+  it("ends the archive when a page is not full", async () => {
+    const { service, listPeriodsByState } = pagedService([older]);
+
+    const page = await service.listPeriodsByState({ bucket: "archive" });
+
+    expect(page.nextCursor).toBeNull();
+    expect(listPeriodsByState).toHaveBeenCalledWith({
+      states: ["archived"],
+      limit: 50,
+    });
+  });
+});
+
 describe("PeriodAdminService — listPeriodsByState", () => {
   it("returns empty when the repository has no matching rows", async () => {
     const service = new PeriodAdminService(
       createRepository(initialSnapshot),
       createNullLogger(),
     );
-    const result = await service.listPeriodsByState({ bucket: "active" });
+    const result = (await service.listPeriodsByState({ bucket: "active" }))
+      .periods;
     expect(result).toEqual([]);
   });
 
@@ -114,7 +171,8 @@ describe("PeriodAdminService — listPeriodsByState", () => {
       createNullLogger(),
     );
 
-    const rows = await service.listPeriodsByState({ bucket: "active" });
+    const rows = (await service.listPeriodsByState({ bucket: "active" }))
+      .periods;
     const ids = rows.map((r) => r.id);
     expect(ids).toContain(PERIOD_ID_OPEN);
     expect(ids).toContain(PERIOD_ID_PUBLISHED_FRESH);
@@ -129,7 +187,8 @@ describe("PeriodAdminService — listPeriodsByState", () => {
       createNullLogger(),
     );
 
-    const rows = await service.listPeriodsByState({ bucket: "archive" });
+    const rows = (await service.listPeriodsByState({ bucket: "archive" }))
+      .periods;
     expect(rows.map((r) => r.id)).toEqual([PERIOD_ID_ARCHIVED]);
   });
 
@@ -146,7 +205,8 @@ describe("PeriodAdminService — listPeriodsByState", () => {
       createNullLogger(),
     );
 
-    const rows = await service.listPeriodsByState({ bucket: "active" });
+    const rows = (await service.listPeriodsByState({ bucket: "active" }))
+      .periods;
     const row = rows.find((r) => r.id === PERIOD_ID_PUBLISHED_FRESH);
     expect(row?.canReopen).toBe(true);
   });
@@ -164,7 +224,8 @@ describe("PeriodAdminService — listPeriodsByState", () => {
       createNullLogger(),
     );
 
-    const rows = await service.listPeriodsByState({ bucket: "active" });
+    const rows = (await service.listPeriodsByState({ bucket: "active" }))
+      .periods;
     expect(rows[0]?.canReopen).toBe(false);
   });
 
@@ -181,7 +242,8 @@ describe("PeriodAdminService — listPeriodsByState", () => {
       createNullLogger(),
     );
 
-    const rows = await service.listPeriodsByState({ bucket: "active" });
+    const rows = (await service.listPeriodsByState({ bucket: "active" }))
+      .periods;
     expect(rows[0]?.canReopen).toBe(false);
   });
 
@@ -192,9 +254,11 @@ describe("PeriodAdminService — listPeriodsByState", () => {
       makePeriodAwareRepository([fresh, archived]),
       createNullLogger(),
     );
-    const active = await service.listPeriodsByState({ bucket: "active" });
+    const active = (await service.listPeriodsByState({ bucket: "active" }))
+      .periods;
     expect(active[0]?.canArchive).toBe(true);
-    const archive = await service.listPeriodsByState({ bucket: "archive" });
+    const archive = (await service.listPeriodsByState({ bucket: "archive" }))
+      .periods;
     expect(archive[0]?.canArchive).toBe(false);
   });
 
@@ -209,12 +273,15 @@ describe("PeriodAdminService — listPeriodsByState", () => {
       createNullLogger(),
     );
     // Negative gets clamped to 1, then filtered (and the one row matches).
-    const a = await service.listPeriodsByState({ bucket: "active", limit: 0 });
+    const a = (await service.listPeriodsByState({ bucket: "active", limit: 0 }))
+      .periods;
     expect(a).toHaveLength(1);
-    const b = await service.listPeriodsByState({
-      bucket: "active",
-      limit: 1000,
-    });
+    const b = (
+      await service.listPeriodsByState({
+        bucket: "active",
+        limit: 1000,
+      })
+    ).periods;
     expect(b).toHaveLength(200);
   });
 });
@@ -228,7 +295,8 @@ describe("PeriodAdminService — archivePeriod / unarchivePeriod", () => {
     const result = await service.archivePeriod(PERIOD_ID_OPEN);
     expect(result).toEqual({ success: true });
 
-    const rows = await service.listPeriodsByState({ bucket: "archive" });
+    const rows = (await service.listPeriodsByState({ bucket: "archive" }))
+      .periods;
     expect(rows.map((r) => r.id)).toContain(PERIOD_ID_OPEN);
   });
 

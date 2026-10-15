@@ -3,12 +3,20 @@ import type { PeriodListItem } from "@weeklyreport/shared";
 import { Chevron } from "./periods-tab-icons";
 import { PeriodTable, type PeriodTableProps } from "./periods-tab-table";
 
+export interface ArchivePaging {
+  readonly hasLoadedRows: boolean;
+  readonly hasNextPage: boolean;
+  readonly isFetchingNextPage: boolean;
+  readonly onLoadMore: () => void;
+}
+
 // Caller gates the archive query on `expanded` — first fetch is on open.
 export function PeriodsArchiveSection({
   expanded,
   onToggle,
   isLoading,
   isError,
+  paging,
   rows,
   ...rowActions
 }: {
@@ -16,6 +24,7 @@ export function PeriodsArchiveSection({
   readonly onToggle: () => void;
   readonly isLoading: boolean;
   readonly isError: boolean;
+  readonly paging?: ArchivePaging;
   readonly rows: readonly PeriodListItem[];
 } & Omit<PeriodTableProps, "rows" | "testIdPrefix">) {
   return (
@@ -41,10 +50,30 @@ export function PeriodsArchiveSection({
         <div id="periods-archive-body" data-testid="periods-archive-body">
           <ArchiveBody
             isLoading={isLoading}
-            isError={isError}
+            isError={isError && !paging?.hasLoadedRows}
             rows={rows}
             {...rowActions}
           />
+          {isError && paging?.hasLoadedRows && (
+            <p
+              role="alert"
+              className="mt-3 text-sm text-[var(--color-destructive)]"
+            >
+              Failed to load more archived periods.
+            </p>
+          )}
+          {paging?.hasNextPage && (
+            <div className="mt-3 flex justify-center">
+              <button
+                type="button"
+                onClick={paging.onLoadMore}
+                disabled={paging.isFetchingNextPage}
+                className="min-h-[var(--touch-target-min)] rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-background)] px-4 py-2 text-sm text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] disabled:opacity-50"
+              >
+                {paging.isFetchingNextPage ? "Loading…" : "Load more"}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </section>

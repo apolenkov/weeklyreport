@@ -65,6 +65,8 @@ export const archivedRow = makeRow({
 export function renderTab(args?: {
   active?: PeriodListItem[];
   archive?: PeriodListItem[];
+  // Archive page by server input (cursor included); defaults to one page.
+  archivePages?: (input: { cursor?: unknown }) => unknown;
   activeError?: boolean;
 }) {
   const activeRows = args?.active ?? [openRow, publishedFresh, publishedStale];
@@ -86,13 +88,19 @@ export function renderTab(args?: {
     { path: ["admin", "getOrganization"] },
     {
       path: ["admin", "listPeriodsByState"],
-      // Input-parameterized: active vs archive caches stay independent.
-      queryByInput: (input: unknown) => {
-        const { bucket } = input as { bucket: string };
-        if (bucket === "active" && args?.activeError) {
-          throw new Error("boom");
+      // The mock calls plain queries without input, so they are the active
+      // bucket; the archive pages through infiniteQueryOptions with its input.
+      query: (input?: { bucket?: string; cursor?: unknown }) => {
+        if (input?.bucket !== "archive") {
+          if (args?.activeError) throw new Error("boom");
+          return { periods: activeRows, nextCursor: null };
         }
-        return bucket === "archive" ? archiveRows : activeRows;
+        return (
+          args?.archivePages?.(input) ?? {
+            periods: archiveRows,
+            nextCursor: null,
+          }
+        );
       },
     },
     { path: ["admin", "archivePeriod"], mutation: true },

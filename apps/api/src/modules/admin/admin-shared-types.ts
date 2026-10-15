@@ -66,6 +66,13 @@ export interface ProductGroupOwnership {
   readonly group: { id: string; name: string } | null;
 }
 
+// Last listed period of a page; the next page starts strictly after it in
+// (periodStart, id) descending order (C0455).
+export interface PeriodListCursor {
+  readonly periodStart: Date;
+  readonly id: string;
+}
+
 // Raw shape from `listPeriodsByState` before the service derives `canReopen` /
 // `canArchive`. The service holds the AppSettings references so the repository
 // stays settings-agnostic.

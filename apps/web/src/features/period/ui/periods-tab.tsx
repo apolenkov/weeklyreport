@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import type { PeriodListItem } from "@weeklyreport/shared";
 import { useMemo, useState } from "react";
 
@@ -48,17 +48,21 @@ function usePeriodRows(showArchive: boolean, search: string) {
   );
   // Archive section is collapsed by default. The query stays disabled until
   // the user opens the section (single round-trip for the active bucket).
-  const archiveQuery = useQuery({
-    ...trpc.admin.listPeriodsByState.queryOptions({ bucket: "archive" }),
+  // Keyset-paged: the archive grows without bound (C0455).
+  const archiveQuery = useInfiniteQuery({
+    ...trpc.admin.listPeriodsByState.infiniteQueryOptions(
+      { bucket: "archive" },
+      { getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined },
+    ),
     enabled: showArchive,
   });
 
   const allActiveRows = useMemo(
-    () => activeQuery.data ?? [],
+    () => activeQuery.data?.periods ?? [],
     [activeQuery.data],
   );
   const archiveRows = useMemo(
-    () => archiveQuery.data ?? [],
+    () => archiveQuery.data?.pages.flatMap((page) => page.periods) ?? [],
     [archiveQuery.data],
   );
   const activeRows = useMemo(
@@ -235,6 +239,15 @@ export function PeriodsTab() {
         onToggle={() => setShowArchive((prev) => !prev)}
         isLoading={archiveQuery.isLoading}
         isError={archiveQuery.isError}
+        paging={{
+          hasLoadedRows: archiveQuery.data !== undefined,
+          hasNextPage: archiveQuery.hasNextPage,
+          isFetchingNextPage: archiveQuery.isFetchingNextPage,
+          // Keeps a post-mutation refetch alive so stale first pages are not kept.
+          onLoadMore: () => {
+            void archiveQuery.fetchNextPage({ cancelRefetch: false });
+          },
+        }}
         rows={filteredArchiveRows}
         {...rowActions}
       />
