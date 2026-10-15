@@ -3,6 +3,8 @@ import type {
   ItemOutcomeResult,
   ReportSectionReadModel,
 } from "@weeklyreport/shared";
+import { useLayoutEffect } from "react";
+import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
 
 import { makeReportSectionFixture } from "../../../../test-utils/report-section-fixtures";
@@ -355,6 +357,101 @@ describe("useLeadFormOutcomeCoordinator", () => {
         expect(acceptVersion).not.toHaveBeenCalled();
         expect(adoptServerSection).not.toHaveBeenCalled();
       }
+    },
+  );
+
+  it.each(["changed", "unmounted"] as const)(
+    "drops a reply settled after the %s activation commits but before passive effects run",
+    async (activation) => {
+      const sectionA = makeSection();
+      const sectionB = makeSection({
+        reportSectionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        reportId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      });
+      let finish!: (value: ItemOutcomeResult) => void;
+      const writePort = new InMemoryLeadFormWriteAdapter({
+        saveDraft: () => Promise.resolve(sectionA),
+        submit: () => Promise.resolve(sectionA),
+        resolvePlan: () =>
+          new Promise<ItemOutcomeResult>((resolve) => {
+            finish = resolve;
+          }),
+        restorePlan: () => Promise.reject(new Error("restore is not used")),
+      });
+      const acceptVersion = vi.fn(() => true);
+      const adoptServerSection = vi.fn();
+      const argsA = buildArgs({
+        writePort,
+        draftSection: sectionA,
+        acceptVersion,
+        adoptServerSection,
+      });
+      const argsB: OutcomeCoordinatorArgs = {
+        ...argsA,
+        generation: leadFormGenerationOf(sectionB),
+        sectionId: sectionB.reportSectionId,
+        draftSection: sectionB,
+      };
+      let actions!: ReturnType<typeof useLeadFormOutcomeCoordinator>;
+      function Coordinator({
+        args,
+      }: {
+        readonly args: OutcomeCoordinatorArgs;
+      }) {
+        actions = useLeadFormOutcomeCoordinator(args);
+        return null;
+      }
+      // Settles the old reply from a layout effect of the committed B render;
+      // its continuation runs as a microtask, before the scheduled passive effects.
+      function Sibling({ sectionId }: { readonly sectionId: string | null }) {
+        useLayoutEffect(() => {
+          if (sectionId === sectionB.reportSectionId) {
+            finish(outcome({ ...sectionA, version: 2 }));
+          }
+        }, [sectionId]);
+        return null;
+      }
+      const view = (args: OutcomeCoordinatorArgs) => (
+        <>
+          <Coordinator args={args} />
+          <Sibling sectionId={args.sectionId} />
+        </>
+      );
+      const root = createRoot(document.createElement("div"));
+      act(() => {
+        root.render(view(argsA));
+      });
+      let request!: Promise<ItemOutcomeResult>;
+      act(() => {
+        request = actions.resolve(resolveInput(), STABLE_ID);
+      });
+
+      // act() would flush passive effects with the commit; a plain default-priority
+      // render keeps the real gap between layout and passive effects.
+      const environment = globalThis as {
+        IS_REACT_ACT_ENVIRONMENT?: boolean | undefined;
+      };
+      const actEnvironment = environment.IS_REACT_ACT_ENVIRONMENT;
+      environment.IS_REACT_ACT_ENVIRONMENT = false;
+      try {
+        // "unmounted" keeps only the sibling, so the coordinator unmounts in the same commit.
+        root.render(
+          activation === "changed" ? (
+            view(argsB)
+          ) : (
+            <Sibling sectionId={sectionB.reportSectionId} />
+          ),
+        );
+        await request;
+      } finally {
+        environment.IS_REACT_ACT_ENVIRONMENT = actEnvironment;
+        act(() => {
+          root.unmount();
+        });
+      }
+
+      expect(acceptVersion).not.toHaveBeenCalled();
+      expect(adoptServerSection).not.toHaveBeenCalled();
     },
   );
 });
