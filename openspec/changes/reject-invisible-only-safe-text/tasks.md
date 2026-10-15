@@ -4,7 +4,7 @@
 
 - [x] 1.1 Define the selected invisible-only and exact-byte preservation contracts; verify with `openspec validate reject-invisible-only-safe-text --strict`.
 - [x] 1.2 Extend the existing real-primitive rejection table and positive controls, including the stage-name read/write boundary; preserve an intended pre-fix RED receipt.
-- [ ] 1.3 Extend only the shared predicate; verify the primary test and existing report, review, activity, search and assistant caller suites pass without changing successful bytes or length/null-byte guards.
+- [x] 1.3 Extend only the shared predicate; verify the primary test and existing report, review, activity, search and assistant caller suites pass without changing successful bytes or length/null-byte guards.
 
 ## 2. Acceptance and delivery
 
