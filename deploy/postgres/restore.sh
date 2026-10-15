@@ -92,7 +92,7 @@ if [ "$environment" = "production" ] &&
   exit 3
 fi
 
-if ! "$restore_bin" --list "$dump" > /dev/null 2>&1; then
+if ! "$restore_bin" --list -- "$dump" > /dev/null 2>&1; then
   echo "refusing: unreadable pg_dump custom-format archive" >&2
   exit 4
 fi
@@ -108,5 +108,5 @@ echo "[restore] target=${target} archive=${dump}"
   --single-transaction \
   --no-owner \
   --no-privileges \
-  "$dump"
+  -- "$dump"
 echo "[restore] complete; verify /health/ready before serving traffic"
