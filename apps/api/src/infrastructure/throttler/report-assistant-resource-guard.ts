@@ -21,6 +21,8 @@ const LEASE_MS =
   REPORT_ASSISTANT_RESOURCE_RETRY_MAX_SECONDS * MILLISECONDS_PER_SECOND;
 const LEASE_RENEWAL_INTERVAL_MS = 40_000;
 const REDIS_COMMAND_TIMEOUT_MS = 5000;
+// Stays well inside the API's 3 s app-close budget.
+const SHUTDOWN_RELEASE_MS = 1000;
 const DECISION_PART_COUNT = 3;
 const ACQUIRE_KEY_COUNT = 3;
 const CANCEL_KEY_COUNT = 3;
@@ -81,6 +83,7 @@ export class ReportAssistantResourceGuard
     Readonly<{
       controller: AbortController;
       renewalTimer: ReturnType<typeof setInterval>;
+      leaseKey: string;
     }>
   >();
   private destroyed = false;
@@ -146,7 +149,6 @@ export class ReportAssistantResourceGuard
           ),
         };
       }
-      this.observe("granted", "none");
       return this.grantLease(token, leaseKey);
     } catch (error) {
       await this.redis
@@ -170,6 +172,13 @@ export class ReportAssistantResourceGuard
     token: string,
     leaseKey: string,
   ): ReportAssistantResourceDecision {
+    if (this.destroyed) {
+      // Shutdown already took its lease snapshot; release this late grant.
+      void this.release(leaseKey, token);
+      this.observe("denied", "unavailable");
+      return { kind: "denied", reason: "unavailable", retryAfterSeconds: 1 };
+    }
+    this.observe("granted", "none");
     const controller = new AbortController();
     const leaseState = { released: false };
     const stopRenewal = (): void => {
@@ -205,7 +214,7 @@ export class ReportAssistantResourceGuard
       void renew();
     }, LEASE_RENEWAL_INTERVAL_MS);
     renewalTimer.unref();
-    this.activeLeases.set(token, { controller, renewalTimer });
+    this.activeLeases.set(token, { controller, renewalTimer, leaseKey });
     return {
       kind: "granted",
       lease: {
@@ -257,13 +266,26 @@ export class ReportAssistantResourceGuard
     });
   }
 
-  onModuleDestroy(): void {
+  // Graceful shutdown is a terminal path: release still-active leases before
+  // disconnecting. Unsettled releases fall back to lease expiry.
+  async onModuleDestroy(): Promise<void> {
     this.destroyed = true;
-    for (const { controller, renewalTimer } of this.activeLeases.values()) {
+    const leases = [...this.activeLeases];
+    this.activeLeases.clear();
+    for (const [, { controller, renewalTimer }] of leases) {
       controller.abort();
       clearInterval(renewalTimer);
     }
-    this.activeLeases.clear();
+    const budget = Promise.withResolvers<void>();
+    const deadline = setTimeout(budget.resolve, SHUTDOWN_RELEASE_MS);
+    deadline.unref();
+    await Promise.race([
+      Promise.all(
+        leases.map(([token, { leaseKey }]) => this.release(leaseKey, token)),
+      ),
+      budget.promise,
+    ]);
+    clearTimeout(deadline);
     this.redis.disconnect();
   }
 }
