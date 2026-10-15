@@ -91,14 +91,21 @@ interface UserActionLogEntry {
   readonly durationMs: number;
 }
 
-// Durable half of the audit trail. Best-effort: a persist failure is reported
-// as an error AND a metric, never propagated, so audit bookkeeping cannot fail
-// the mutation that already succeeded. No-op without a Prisma client (unit).
+interface AuditFailure {
+  readonly phase: "audit.stream" | "audit.persist";
+  readonly message: string;
+  readonly error: unknown;
+}
+
+// Durable half of the audit trail. Best-effort and independent of the log
+// stream: a persist failure is returned for disclosure, never thrown, so audit
+// bookkeeping cannot fail the mutation whose outcome is already fixed. No-op
+// without a Prisma client (unit).
 async function persistUserActionLog(
   ctx: MutationAuditContext,
   entry: UserActionLogEntry,
-): Promise<void> {
-  if (!ctx.prisma?.userActionLog) return;
+): Promise<AuditFailure | null> {
+  if (!ctx.prisma?.userActionLog) return null;
   try {
     await ctx.prisma.userActionLog.create({
       data: {
@@ -107,16 +114,52 @@ async function persistUserActionLog(
         correlationId: ctx.correlationId ?? NO_CORRELATION_ID,
       },
     });
+    return null;
   } catch (error) {
-    // Audit rows are security-relevant: a dropped record surfaces as an error
-    // log and a rising metric, never silently.
-    auditPersistFailuresTotal.inc();
-    ctx.logger.error("user action log persist failed", {
+    return {
       phase: "audit.persist",
-      procedure: entry.procedure,
-      status: entry.status,
-      error: deriveCauseInfo(error) ?? { name: typeof error },
-    });
+      message: "user action log persist failed",
+      error,
+    };
+  }
+}
+
+// Audit rows are security-relevant: a dropped record surfaces as an error log
+// and a rising metric. Each disclosure step is guarded on its own; when the
+// log itself fails, one stderr line (no retry, no recursion, no throw) keeps
+// the loss visible.
+function discloseAuditFailures(
+  ctx: MutationAuditContext,
+  record: Pick<MutationAuditRecord, "procedure" | "status">,
+  failures: readonly AuditFailure[],
+): void {
+  const unlogged: string[] = [];
+  for (const failure of failures) {
+    if (failure.phase === "audit.persist") {
+      try {
+        auditPersistFailuresTotal.inc();
+      } catch {
+        // The log below still discloses the dropped row.
+      }
+    }
+    try {
+      ctx.logger.error(failure.message, {
+        phase: failure.phase,
+        procedure: record.procedure,
+        status: record.status,
+        error: deriveCauseInfo(failure.error) ?? { name: typeof failure.error },
+      });
+    } catch {
+      unlogged.push(failure.phase);
+    }
+  }
+  if (unlogged.length === 0) return;
+  try {
+    process.stderr.write(
+      `audit reporting failed: ${record.procedure} ${unlogged.join(",")}\n`,
+    );
+  } catch {
+    // Nothing is left to report to.
   }
 }
 
@@ -151,19 +194,28 @@ export async function recordMutationAudit(
   const role = ctx.session?.role ?? null;
   const reason = record.failureCode;
 
-  ctx.auditLogger.mutation({
-    userId,
-    role,
-    ip: ctx.ip,
-    procedure: record.procedure,
-    ...(target === undefined ? {} : { target }),
-    ...(targets.length > 0 ? { targets } : {}),
-    status: record.status,
-    duration: record.durationMs,
-    ...(reason === null ? {} : { reason }),
-  });
+  const failures: AuditFailure[] = [];
+  try {
+    ctx.auditLogger.mutation({
+      userId,
+      role,
+      ip: ctx.ip,
+      procedure: record.procedure,
+      ...(target === undefined ? {} : { target }),
+      ...(targets.length > 0 ? { targets } : {}),
+      status: record.status,
+      duration: record.durationMs,
+      ...(reason === null ? {} : { reason }),
+    });
+  } catch (error) {
+    failures.push({
+      phase: "audit.stream",
+      message: "audit log stream failed",
+      error,
+    });
+  }
 
-  await persistUserActionLog(ctx, {
+  const persistFailure = await persistUserActionLog(ctx, {
     userId,
     role,
     procedure: record.procedure,
@@ -172,4 +224,6 @@ export async function recordMutationAudit(
     reason,
     durationMs: record.durationMs,
   });
+  if (persistFailure) failures.push(persistFailure);
+  if (failures.length > 0) discloseAuditFailures(ctx, record, failures);
 }

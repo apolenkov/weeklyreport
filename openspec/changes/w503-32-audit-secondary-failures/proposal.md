@@ -17,6 +17,15 @@ throwing drop metric or a throwing error logger inside the persist catch
   production path today (see `wave3/claude-D-C0555/REPORT.md`), so this is the
   documented contract made explicit as defense in depth. API owner confirms.
 
+## Scope limits
+
+- Post-outcome only. Audit-before-commit for named procedures (a future
+  fail-closed clause) is not implemented and not precluded.
+- The `trpc.logging.ts` caller (`recordTrpcFailure` / `recordTrpcSuccess`) logs
+  the request end with the same logger outside the audit path; a throwing
+  logger replaces the result there too. Not changed here; the error-path
+  control therefore breaks only the audit sinks, not the logger.
+
 ## Remaining clauses of TASK-503.32 (no RED, reason recorded)
 
 | Clause | Why no RED from source                                                                                                                                          |

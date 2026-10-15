@@ -15,3 +15,14 @@ mutation that was audited.
 
 - **WHEN** a mutation succeeds, the durable audit write fails, and the drop metric or the error logger throws
 - **THEN** the caller receives the mutation's own result
+
+#### Scenario: the durable row is attempted independently
+
+- **WHEN** the audit log stream throws
+- **THEN** the durable audit row is still attempted
+- **AND** when the audit log fails to report a lost record, one stderr line names the procedure and the lost sink
+
+#### Scenario: a failed mutation keeps its own error
+
+- **WHEN** a mutation fails with its own error and the audit sinks throw
+- **THEN** the caller receives the mutation's original error code

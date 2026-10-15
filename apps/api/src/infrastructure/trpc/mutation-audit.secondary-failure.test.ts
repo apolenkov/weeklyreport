@@ -1,3 +1,4 @@
+import { TRPCError } from "@trpc/server";
 import type { UserSession } from "@weeklyreport/shared";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -26,6 +27,12 @@ const testRouter = router({
     .input(z.object({ sectionId: z.string() }))
     .use(captureMutationAuditInputMiddleware)
     .mutation(() => "saved"),
+  failingMutation: protectedProcedure
+    .input(z.object({ sectionId: z.string() }))
+    .use(captureMutationAuditInputMiddleware)
+    .mutation(() => {
+      throw new TRPCError({ code: "BAD_REQUEST", message: "invalid" });
+    }),
 });
 
 function caller(overrides: {
@@ -103,5 +110,60 @@ describe("audit reporting failures never replace the mutation outcome", () => {
         create: () => Promise.reject(new Error("db unavailable")),
       }).saveDraft({ sectionId: "sec-42" }),
     ).resolves.toBe("saved");
+  });
+
+  it("keeps the mutation's own error code when the stream and the drop metric throw", async () => {
+    const auditLogger: AuditLogger = {
+      ...createNullAuditLogger(),
+      mutation: () => {
+        throw new Error("audit sink unavailable");
+      },
+    };
+    vi.spyOn(auditPersistFailuresTotal, "inc").mockImplementation(() => {
+      throw new Error("metric registry unavailable");
+    });
+
+    await expect(
+      caller({
+        auditLogger,
+        create: () => Promise.reject(new Error("db unavailable")),
+      }).failingMutation({ sectionId: "sec-42" }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+  });
+
+  it("still attempts the durable row when the log stream throws", async () => {
+    const auditLogger: AuditLogger = {
+      ...createNullAuditLogger(),
+      mutation: () => {
+        throw new Error("audit sink unavailable");
+      },
+    };
+    const create = vi.fn(() => Promise.resolve({}));
+
+    await caller({ auditLogger, create }).saveDraft({ sectionId: "sec-42" });
+
+    expect(create).toHaveBeenCalledOnce();
+  });
+
+  it("writes one stderr line when the loss cannot be logged", async () => {
+    const write = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation(() => true);
+    const logger = {
+      ...createNullLogger(),
+      error: () => {
+        throw new Error("log transport unavailable");
+      },
+    };
+
+    await caller({
+      logger,
+      create: () => Promise.reject(new Error("db unavailable")),
+    }).saveDraft({ sectionId: "sec-42" });
+
+    expect(write).toHaveBeenCalledOnce();
+    expect(String(write.mock.calls[0]?.[0])).toContain(
+      "audit reporting failed: saveDraft audit.persist",
+    );
   });
 });
