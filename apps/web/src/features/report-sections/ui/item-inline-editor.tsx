@@ -100,7 +100,8 @@ function InlineEditPrimaryFields({
           tabIndex={-1}
           className="text-xs text-[var(--color-destructive)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
         >
-          Cancel, then choose More actions → Update status.
+          {form.nextStepTextError} Cancel, then choose More actions → Update
+          status.
         </p>
       ) : null}
       {!form.isActivityParent ? (
