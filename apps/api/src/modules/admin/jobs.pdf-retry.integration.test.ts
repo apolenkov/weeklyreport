@@ -27,6 +27,7 @@ import {
   assertE2eRuntimeDestructiveTarget,
   assertRedisDbMatchesDatabase,
 } from "../../../../../prisma/guards/_destructive-guard.js";
+import { listPdfRecoveryPage } from "../../bootstrap/jobs-service.js";
 import { AdminBullmqJobsQueue } from "../../infrastructure/bullmq/admin-jobs-queue.adapter.js";
 import { getBullMQOptions } from "../../infrastructure/bullmq/bullmq-options";
 import { PdfExportReconciliationScheduler } from "../../infrastructure/bullmq/pdf-export-reconciliation.scheduler.js";
@@ -259,22 +260,8 @@ describe("JobsService — pdf-export generation retry (Postgres + BullMQ integra
             new Error("reminder retry is not exercised by this suite"),
           ),
         retryPdfExportGeneration: retrySpy,
-        // Same DB-backed read the bootstrap wires — quarantined rows never
-        // require a live Redis job.
-        listPdfRecoveryJobs: async () => {
-          const rows = await prisma.pdfExportJob.findMany({
-            where: { status: "recovery_required" },
-            orderBy: { createdAt: "asc" },
-          });
-          return rows.map((row) => ({
-            jobId: row.id,
-            reportId: row.reportId,
-            generation: row.generation,
-            requestedBy: row.requestedBy,
-            status: "recovery_required" as const,
-            createdAt: row.createdAt,
-          }));
-        },
+        // The exact DB-backed page query the bootstrap wires.
+        listPdfRecoveryJobs: (page) => listPdfRecoveryPage(prisma, page),
       },
       createNullLogger(),
     );
@@ -668,6 +655,39 @@ describe("JobsService — pdf-export generation retry (Postgres + BullMQ integra
     ).toBe("waiting");
     await expect(jobsService.listPdfRecovery()).resolves.toEqual({
       jobs: [],
+      nextCursor: null,
+    });
+  });
+
+  it("pages recovery rows by createdAt then id and keeps the cursor stable after a retry", async () => {
+    const ids = [TEST_IDS.pdfJob1, TEST_IDS.pdfJob2, randomUUID()];
+    for (const id of ids) {
+      await createDurableExport(id, 1);
+      await repo.runLockedExportJob(id, async (job, writes) => {
+        await writes.markRecoveryRequired(expectDefined(job).generation);
+      });
+    }
+    // Equal createdAt forces the id tie-breaker on every boundary.
+    await prisma.pdfExportJob.updateMany({
+      where: { id: { in: ids } },
+      data: { createdAt: new Date("2026-09-01T10:00:00.000Z") },
+    });
+    const ordered = [...ids].sort();
+
+    const first = await jobsService.listPdfRecovery({ limit: 2 });
+    expect(first.jobs.map((job) => job.jobId)).toEqual(ordered.slice(0, 2));
+    const cursor = expectDefined(first.nextCursor ?? undefined);
+
+    await worker.pause();
+    await jobsService.retryPdfRecovery({
+      jobId: expectDefined(ordered[0]),
+      expectedGeneration: 1,
+    });
+
+    const second = await jobsService.listPdfRecovery({ cursor, limit: 2 });
+    expect(second).toEqual({
+      jobs: [expect.objectContaining({ jobId: ordered[2] })],
+      nextCursor: null,
     });
   });
 

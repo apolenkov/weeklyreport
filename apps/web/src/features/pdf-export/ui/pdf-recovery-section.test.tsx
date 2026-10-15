@@ -88,7 +88,7 @@ describe("PdfRecoverySection — DB-backed recovery list", () => {
 
   it("lists a quarantined export row even though its queue job is gone", async () => {
     const recoveryQuery = vi.fn(() =>
-      Promise.resolve({ jobs: [RECOVERY_JOB] }),
+      Promise.resolve({ jobs: [RECOVERY_JOB], nextCursor: null }),
     );
     renderSection(recoveryQuery);
 
@@ -104,7 +104,7 @@ describe("PdfRecoverySection — DB-backed recovery list", () => {
 
   it("lists a terminally failed export with its status and retries its listed generation", async () => {
     const { captured } = renderSection(() =>
-      Promise.resolve({ jobs: [RECOVERY_JOB, FAILED_JOB] }),
+      Promise.resolve({ jobs: [RECOVERY_JOB, FAILED_JOB], nextCursor: null }),
     );
     const retryFn = expectDefined(
       captured["admin.jobs.retryPdfRecovery"],
@@ -139,7 +139,7 @@ describe("PdfRecoverySection — DB-backed recovery list", () => {
   });
 
   it("renders the empty state when nothing awaits recovery", async () => {
-    renderSection(() => Promise.resolve({ jobs: [] }));
+    renderSection(() => Promise.resolve({ jobs: [], nextCursor: null }));
 
     expect(
       await screen.findByText(
@@ -149,7 +149,7 @@ describe("PdfRecoverySection — DB-backed recovery list", () => {
   });
 
   it("points to a report as the place where exports start", async () => {
-    renderSection(() => Promise.resolve({ jobs: [] }));
+    renderSection(() => Promise.resolve({ jobs: [], nextCursor: null }));
 
     expect(
       await screen.findByRole("link", {
@@ -160,7 +160,7 @@ describe("PdfRecoverySection — DB-backed recovery list", () => {
 
   it("posts {jobId, expectedGeneration} taken from the listed row on retry", async () => {
     const { captured } = renderSection(() =>
-      Promise.resolve({ jobs: [RECOVERY_JOB] }),
+      Promise.resolve({ jobs: [RECOVERY_JOB], nextCursor: null }),
     );
     const retryFn = expectDefined(
       captured["admin.jobs.retryPdfRecovery"],
@@ -187,7 +187,7 @@ describe("PdfRecoverySection — DB-backed recovery list", () => {
   it("refreshes the recovery list once the retry settles", async () => {
     let listed = true;
     const recoveryQuery = vi.fn(() =>
-      Promise.resolve({ jobs: listed ? [RECOVERY_JOB] : [] }),
+      Promise.resolve({ jobs: listed ? [RECOVERY_JOB] : [], nextCursor: null }),
     );
     const { captured } = renderSection(recoveryQuery);
     expectDefined(
@@ -220,7 +220,7 @@ describe("PdfRecoverySection — DB-backed recovery list", () => {
     "reports the %s outcome as info, not success",
     async (outcome) => {
       const { captured } = renderSection(() =>
-        Promise.resolve({ jobs: [RECOVERY_JOB] }),
+        Promise.resolve({ jobs: [RECOVERY_JOB], nextCursor: null }),
       );
       expectDefined(
         captured["admin.jobs.retryPdfRecovery"],
@@ -240,6 +240,151 @@ describe("PdfRecoverySection — DB-backed recovery list", () => {
       expect(toastSuccess).not.toHaveBeenCalled();
     },
   );
+
+  it("loads the next recovery page on request and keeps the total open until the last page", async () => {
+    const cursor = {
+      createdAt: RECOVERY_JOB.createdAt,
+      jobId: RECOVERY_JOB.jobId,
+    };
+    const recoveryQuery = vi.fn((input: unknown) =>
+      Promise.resolve(
+        (input as { cursor?: unknown }).cursor === undefined
+          ? { jobs: [RECOVERY_JOB], nextCursor: cursor }
+          : { jobs: [FAILED_JOB], nextCursor: null },
+      ),
+    );
+    renderSection(recoveryQuery);
+
+    await screen.findByTestId(`pdf-recovery-row-${RECOVERY_JOB.jobId}`);
+    expect(screen.getByText("1 loaded · more available")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId(`pdf-recovery-row-${FAILED_JOB.jobId}`),
+    ).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Load more" }));
+
+    await screen.findByTestId(`pdf-recovery-row-${FAILED_JOB.jobId}`);
+    expect(recoveryQuery).toHaveBeenLastCalledWith(
+      expect.objectContaining({ cursor }),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Load more" }),
+    ).not.toBeInTheDocument();
+    const heading = screen.getByRole("heading", { name: "Failed exports" });
+    expect(
+      within(expectDefined(heading.parentElement)).getByText("2"),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps loaded rows when the next page fails and retries from Load more", async () => {
+    const cursor = {
+      createdAt: RECOVERY_JOB.createdAt,
+      jobId: RECOVERY_JOB.jobId,
+    };
+    let nextPageAttempts = 0;
+    const recoveryQuery = vi.fn((input: unknown) => {
+      if ((input as { cursor?: unknown }).cursor === undefined) {
+        return Promise.resolve({ jobs: [RECOVERY_JOB], nextCursor: cursor });
+      }
+      nextPageAttempts += 1;
+      return nextPageAttempts === 1
+        ? Promise.reject(new Error("page unavailable"))
+        : Promise.resolve({ jobs: [FAILED_JOB], nextCursor: null });
+    });
+    renderSection(recoveryQuery);
+
+    await screen.findByTestId(`pdf-recovery-row-${RECOVERY_JOB.jobId}`);
+    await userEvent.click(screen.getByRole("button", { name: "Load more" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Failed to refresh or load more exports: page unavailable",
+    );
+    expect(
+      screen.getByTestId(`pdf-recovery-row-${RECOVERY_JOB.jobId}`),
+    ).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Load more" }));
+    await screen.findByTestId(`pdf-recovery-row-${FAILED_JOB.jobId}`);
+    expect(
+      screen.getByTestId(`pdf-recovery-row-${RECOVERY_JOB.jobId}`),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps loaded rows and alerts when the post-retry refresh fails", async () => {
+    let refreshFails = false;
+    const recoveryQuery = vi.fn(() =>
+      refreshFails
+        ? Promise.reject(new Error("refresh unavailable"))
+        : Promise.resolve({ jobs: [RECOVERY_JOB], nextCursor: null }),
+    );
+    const { captured } = renderSection(recoveryQuery);
+    expectDefined(
+      captured["admin.jobs.retryPdfRecovery"],
+    ).mutationFn.mockResolvedValue({
+      jobId: RECOVERY_JOB.jobId,
+      outcome: "retried",
+    });
+
+    await screen.findByTestId(`pdf-recovery-row-${RECOVERY_JOB.jobId}`);
+    refreshFails = true;
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: `Retry PDF export ${RECOVERY_JOB.jobId}`,
+      }),
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Failed to refresh or load more exports: refresh unavailable",
+    );
+    expect(
+      screen.getByTestId(`pdf-recovery-row-${RECOVERY_JOB.jobId}`),
+    ).toBeInTheDocument();
+  });
+
+  it("lets a post-retry refresh finish when Load more is pressed during it", async () => {
+    const cursor = {
+      createdAt: RECOVERY_JOB.createdAt,
+      jobId: RECOVERY_JOB.jobId,
+    };
+    let retried = false;
+    const refresh = Promise.withResolvers<unknown>();
+    const recoveryQuery = vi.fn((input: unknown) => {
+      if ((input as { cursor?: unknown }).cursor !== undefined) {
+        return Promise.resolve({ jobs: [FAILED_JOB], nextCursor: null });
+      }
+      return retried
+        ? refresh.promise
+        : Promise.resolve({ jobs: [RECOVERY_JOB], nextCursor: cursor });
+    });
+    const { captured } = renderSection(recoveryQuery);
+    expectDefined(
+      captured["admin.jobs.retryPdfRecovery"],
+    ).mutationFn.mockResolvedValue({
+      jobId: RECOVERY_JOB.jobId,
+      outcome: "retried",
+    });
+
+    await screen.findByTestId(`pdf-recovery-row-${RECOVERY_JOB.jobId}`);
+    retried = true;
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: `Retry PDF export ${RECOVERY_JOB.jobId}`,
+      }),
+    );
+    await waitFor(() => expect(recoveryQuery).toHaveBeenCalledTimes(2));
+    await userEvent.click(screen.getByRole("button", { name: "Load more" }));
+    refresh.resolve({ jobs: [FAILED_JOB], nextCursor: null });
+
+    // A cancelled refresh would keep the retried row from the stale first page.
+    await waitFor(() =>
+      expect(
+        screen.queryByTestId(`pdf-recovery-row-${RECOVERY_JOB.jobId}`),
+      ).toBeNull(),
+    );
+    expect(
+      screen.getByTestId(`pdf-recovery-row-${FAILED_JOB.jobId}`),
+    ).toBeInTheDocument();
+  });
 
   it("surfaces an accessible loading state while the recovery list loads", async () => {
     renderSection("pending");

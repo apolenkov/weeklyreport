@@ -73,4 +73,25 @@ describe("createBootstrapJobsService — listPdfRecoveryJobs", () => {
       },
     ]);
   });
+
+  it("reads one bounded page strictly after the cursor in createdAt, id order", async () => {
+    const { service, findMany } = serviceReturning([QUARANTINED_ROW]);
+    const cursor = { createdAt: FAILED_ROW.createdAt, jobId: FAILED_ROW.id };
+
+    await service.listPdfRecovery({ cursor, limit: 2 });
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          status: { in: ["failed", "recovery_required"] },
+          OR: [
+            { createdAt: { gt: cursor.createdAt } },
+            { createdAt: cursor.createdAt, id: { gt: cursor.jobId } },
+          ],
+        },
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+        take: 2,
+      }),
+    );
+  });
 });

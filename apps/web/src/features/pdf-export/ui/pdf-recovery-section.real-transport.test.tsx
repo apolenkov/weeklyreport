@@ -84,7 +84,10 @@ describe("PdfRecoverySection — real transport retry", () => {
         }
         const results = paths.map((path) => {
           if (path === "admin.jobs.listPdfRecovery") {
-            return { jobs: recoveryListed ? [RECOVERY_ROW] : [] };
+            return {
+              jobs: recoveryListed ? [RECOVERY_ROW] : [],
+              nextCursor: null,
+            };
           }
           if (path === "admin.jobs.retryPdfRecovery") {
             return { jobId: JOB_ID, outcome: "retried" };

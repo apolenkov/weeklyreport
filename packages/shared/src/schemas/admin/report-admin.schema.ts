@@ -295,10 +295,19 @@ export const pdfRecoveryJobSchema = z
   })
   .readonly();
 
-/** Validates the full DB-backed list of exports awaiting recovery. */
+/** Last listed row of a recovery page; the next page starts strictly after it. */
+export const pdfRecoveryCursorSchema = z
+  .object({
+    createdAt: z.coerce.date(),
+    jobId: z.uuid(),
+  })
+  .readonly();
+
+/** Validates one DB-backed page of exports awaiting recovery. */
 export const pdfRecoveryJobListSchema = z
   .object({
     jobs: z.array(pdfRecoveryJobSchema).readonly(),
+    nextCursor: pdfRecoveryCursorSchema.nullable(),
   })
   .readonly();
 
@@ -371,7 +380,9 @@ export type FailedJob = z.infer<typeof failedJobSchema>;
 export type FailedJobList = z.infer<typeof failedJobListSchema>;
 /** Durable export row listed for head-driven recovery. */
 export type PdfRecoveryJob = z.infer<typeof pdfRecoveryJobSchema>;
-/** DB-backed list of exports awaiting recovery. */
+/** Last listed recovery row; the next page starts strictly after it. */
+export type PdfRecoveryCursor = z.infer<typeof pdfRecoveryCursorSchema>;
+/** One DB-backed page of exports awaiting recovery. */
 export type PdfRecoveryJobList = z.infer<typeof pdfRecoveryJobListSchema>;
 /** Generation-bound retry input for the recovery surface. */
 export type PdfRecoveryRetryInput = z.infer<typeof pdfRecoveryRetryInputSchema>;
