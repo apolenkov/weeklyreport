@@ -70,7 +70,12 @@ function isPart(value: unknown): value is Part {
     results.every((result: unknown) =>
       Array.isArray((result as { runs?: unknown } | null)?.runs),
     ) &&
-    (missing === undefined || Array.isArray(missing))
+    (missing === undefined ||
+      (Array.isArray(missing) &&
+        missing.every((entry: unknown) => {
+          const { role, reason } = (entry ?? {}) as Record<string, unknown>;
+          return typeof role === "string" && typeof reason === "string";
+        })))
   );
 }
 
