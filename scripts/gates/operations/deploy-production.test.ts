@@ -200,22 +200,25 @@ test("a release in any state but deployed is left untouched", () => {
   assert.deepEqual(mutations, []);
 });
 
-test("inconsistent or unexpected discovery answers fail closed", () => {
-  for (const answers of [
-    { STUB_HISTORY: "present" },
-    { STUB_HISTORY: "present", STUB_KNOWN: "weeklyreport" },
-    { STUB_DEPLOYED: "weeklyreport" },
-    {
-      STUB_KNOWN: "weeklyreport\nweeklyreport-old",
-      STUB_DEPLOYED: "weeklyreport",
-    },
-    { STUB_KNOWN: "other", STUB_DEPLOYED: "other" },
-  ]) {
+// One shell per case: a loop in a single test exceeds the default test timeout
+// on a loaded machine.
+test.each([
+  { STUB_HISTORY: "present" },
+  { STUB_HISTORY: "present", STUB_KNOWN: "weeklyreport" },
+  { STUB_DEPLOYED: "weeklyreport" },
+  {
+    STUB_KNOWN: "weeklyreport\nweeklyreport-old",
+    STUB_DEPLOYED: "weeklyreport",
+  },
+  { STUB_KNOWN: "other", STUB_DEPLOYED: "other" },
+])(
+  "inconsistent or unexpected discovery answers fail closed: %j",
+  (answers) => {
     const { result, mutations } = runDeploy(answers);
-    assert.notEqual(result.status, 0, JSON.stringify(answers));
-    assert.deepEqual(mutations, [], JSON.stringify(answers));
-  }
-});
+    assert.notEqual(result.status, 0);
+    assert.deepEqual(mutations, []);
+  },
+);
 
 test("an empty list over unreadable release records is not an absent release", () => {
   // Helm's list omits unknown-state records and skips ones it cannot decode, so
@@ -226,13 +229,14 @@ test("an empty list over unreadable release records is not an absent release", (
   assert.deepEqual(mutations, []);
 });
 
-test("only Helm's exact release-not-found error confirms absence", () => {
-  for (const history of ["denied", "similar"]) {
+test.each(["denied", "similar"])(
+  "only Helm's exact release-not-found error confirms absence: %s",
+  (history) => {
     const { result, mutations } = runDeploy({ STUB_HISTORY: history });
-    assert.notEqual(result.status, 0, history);
-    assert.deepEqual(mutations, [], history);
-  }
-});
+    assert.notEqual(result.status, 0);
+    assert.deepEqual(mutations, []);
+  },
+);
 
 test("a history failure explains itself without exposing the values file", () => {
   const { result } = runDeploy({ STUB_HISTORY: "denied" });
