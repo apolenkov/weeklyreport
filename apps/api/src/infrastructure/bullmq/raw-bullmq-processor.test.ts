@@ -151,6 +151,14 @@ class LoggingFailingProcessor extends RawBullMqProcessor<JobTraceContext> {
   };
 }
 
+class HookGatedProcessor extends RawBullMqProcessor<JobTraceContext> {
+  readonly hook = Promise.withResolvers<void>();
+  protected readonly queueName = "pdf-export";
+  protected readonly spanName = "test.process";
+  protected readonly processJob = vi.fn(() => Promise.resolve());
+  protected readonly onJobFailed = vi.fn(() => this.hook.promise);
+}
+
 describe("RawBullMqProcessor", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -329,5 +337,54 @@ describe("RawBullMqProcessor", () => {
       error: "close handshake failed",
     });
     stderr.mockRestore();
+  });
+
+  it("keeps shutdown open until an in-flight failed-event hook settles", async () => {
+    const processor = new HookGatedProcessor({} as never, {} as never, null);
+    processor.onModuleInit();
+    workerState.worker?.emit("failed", { data: {} }, new Error("boom"));
+
+    let destroyed = false;
+    const destroy = processor.onModuleDestroy().then(() => {
+      destroyed = true;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(destroyed).toBe(false);
+
+    processor.hook.resolve();
+    await destroy;
+    expect(destroyed).toBe(true);
+  });
+
+  it("still captures a rejecting failed-event hook and finishes shutdown", async () => {
+    const processor = new HookGatedProcessor({} as never, {} as never, null);
+    processor.onModuleInit();
+    workerState.worker?.emit("failed", { data: {} }, new Error("boom"));
+    const hookError = new Error("reconcile failed");
+    processor.hook.reject(hookError);
+
+    await processor.onModuleDestroy();
+    expect(Sentry.captureException).toHaveBeenCalledWith(hookError);
+  });
+
+  it("stops waiting for a failed-event hook that never settles and logs it", async () => {
+    vi.useFakeTimers();
+    const logger = { error: vi.fn() };
+    const processor = new HookGatedProcessor(
+      {} as never,
+      logger as never,
+      null,
+    );
+    processor.onModuleInit();
+    workerState.worker?.emit("failed", { data: {} }, new Error("boom"));
+
+    const destroyed = processor.onModuleDestroy();
+    await vi.advanceTimersByTimeAsync(5000);
+    await destroyed;
+
+    expect(logger.error).toHaveBeenCalledWith(
+      "BullMQ failed-event hook did not settle before shutdown",
+      { queueName: "pdf-export", pending: 1 },
+    );
   });
 });
