@@ -1,13 +1,25 @@
 import { act, renderHook } from "@testing-library/react";
-import type {
-  DraftSavePayload,
-  ReportSectionReadModel,
+import {
+  type DraftSavePayload,
+  draftSaveSchema,
+  type ReportSectionReadModel,
+  reportSectionReadModelSchema,
 } from "@weeklyreport/shared";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeReportSectionFixture } from "../../../../test-utils/report-section-fixtures";
-import { sectionToDraftPayload } from "../lead-section-draft-payload";
+import {
+  CURRENT_ITEM_ID,
+  makeDraftMergeSection,
+  PROJECT_ID,
+  RISK_ID,
+} from "../lead-form/draft/lead-form-draft-merge-test-fixtures";
+import { useLeadFormDraftCore } from "../lead-form/use-lead-form-draft-core";
+import {
+  countLocalOnlyRows,
+  sectionToDraftPayload,
+} from "../lead-section-draft-payload";
 import { encodeAutosaveComparisonKey } from "./autosave-stable-stringify";
 import type { PersistedSaveResult } from "./autosave-types";
 import { encodeDraftSaveComparisonKey } from "./draft-save-comparison-key";
@@ -37,6 +49,117 @@ afterEach(() => {
 });
 
 describe("useLeadFormAutosave", () => {
+  it("saves a visible multilingual neighbour while retaining an invisible-only risk after ACK", async () => {
+    const fixture = makeDraftMergeSection();
+    const server = reportSectionReadModelSchema.parse({
+      ...fixture,
+      items: fixture.items.filter((item) => item.id === CURRENT_ITEM_ID),
+      decisions: [],
+    });
+    const visibleText = "Отчёт 报告 👩‍💻 e\u0301";
+    const acknowledgement = Promise.withResolvers<ReportSectionReadModel>();
+    const { wrapper, calls, writePort } = buildHarness({
+      mutationFn: (request) => {
+        draftSaveSchema.parse(request);
+        return acknowledgement.promise;
+      },
+    });
+    const refetchSection = vi.fn().mockResolvedValue(undefined);
+    const { result } = renderHook(
+      () =>
+        useLeadFormDraftCore({
+          writePort,
+          generation: `${server.reportId}:${server.reportSectionId}`,
+          serverSection: server,
+          sectionIdForActions: server.reportSectionId,
+          serverReadOnly: false,
+          refetchSection,
+        }),
+      { wrapper },
+    );
+
+    act(() => {
+      result.current.apply({
+        kind: "item-patch",
+        itemId: CURRENT_ITEM_ID,
+        patch: { text: visibleText },
+      });
+      result.current.apply({
+        kind: "risks",
+        risks: [
+          {
+            id: RISK_ID,
+            productId: PROJECT_ID,
+            productName: "Test Product",
+            stageNames: ["Development"],
+            severity: "at-risk",
+            text: "\u200B",
+            impact: "Existing impact",
+            mitigation: "Existing mitigation",
+          },
+        ],
+      });
+    });
+    expect(result.current.autosave.state).toBe("pending");
+    expect(result.current.draft?.risks[0]?.risk).toBe("\u200B");
+    expect(calls).toHaveLength(0);
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000);
+    });
+    expect(calls).toHaveLength(1);
+    const request = calls[0];
+    if (!request) throw new Error("Missing actual autosave request");
+    expect(request.risks).toEqual([]);
+    expect(
+      request.items.find((item) => item.id === CURRENT_ITEM_ID)?.text,
+    ).toBe(visibleText);
+    expect(result.current.autosave.isInFlight).toBe(true);
+    expect(result.current.lastSaveReceipt).toBeNull();
+
+    // The transport fixture echoes only accepted rows, not the raw local risk.
+    const saved = reportSectionReadModelSchema.parse({
+      ...persistedReply(request, server),
+      risks: [],
+    });
+    await act(async () => {
+      acknowledgement.resolve(saved);
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    expect(result.current.autosave.state).toBe("saved");
+    expect(result.current.autosave.isInFlight).toBe(false);
+    expect(result.current.version).toBe(request.version + 1);
+    expect(result.current.lastSaveReceipt).toMatchObject({
+      reportSectionId: server.reportSectionId,
+      version: saved.version,
+    });
+    expect(
+      result.current.lastSaveReceipt?.persistedItems.find(
+        (item) => item.id === CURRENT_ITEM_ID,
+      )?.text,
+    ).toBe(visibleText);
+    const raw = result.current.draft;
+    if (!raw) throw new Error("Missing raw correction draft after ACK");
+    expect(raw.items.find((item) => item.id === CURRENT_ITEM_ID)?.text).toBe(
+      visibleText,
+    );
+    expect(raw.risks).toMatchObject([
+      {
+        id: RISK_ID,
+        risk: "\u200B",
+        impact: "Existing impact",
+        mitigation: "Existing mitigation",
+      },
+    ]);
+    expect(countLocalOnlyRows(raw)).toBe(1);
+    const leave = new Event("beforeunload", { cancelable: true });
+    await act(() => window.dispatchEvent(leave));
+    expect(leave.defaultPrevented).toBe(true);
+    expect(calls).toHaveLength(1);
+    expect(refetchSection).not.toHaveBeenCalled();
+  });
+
   it("compares the saved baseline even when a failed draft becomes read-only", async () => {
     const { wrapper, calls, writePort } = buildHarness({
       mutationFn: () => Promise.reject(new Error("Network down")),
