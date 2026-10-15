@@ -138,7 +138,10 @@ function runDeploy(env: Readonly<Record<string, string | undefined>> = {}) {
   return {
     result,
     calls: recorded,
-    mutations: recorded.filter((call) => !call.startsWith("list ")),
+    // Discovery is read-only; anything else would change the release.
+    mutations: recorded.filter(
+      (call) => !call.startsWith("list ") && !call.startsWith("history "),
+    ),
     values,
   };
 }
