@@ -4,6 +4,7 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -343,6 +344,68 @@ describe("createAppLogger", () => {
 
     logger.info("doomed");
     await expect(expectDefined(logger.flush)()).rejects.toThrow();
+  });
+
+  describe("after a failed file write", () => {
+    // A directory at the log path fails the open; removing it lets a reopen succeed.
+    const failOnce = async (logDir: string) => {
+      vi.spyOn(process.stdout, "write").mockReturnValue(true);
+      const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+      const blocker = join(logDir, "app.log");
+      mkdirSync(blocker);
+      const logger = createAppLogger({ logDir });
+      logger.info("doomed");
+      await expect(expectDefined(logger.flush)()).rejects.toThrow();
+      rmSync(blocker, { recursive: true });
+      return { logger, stderr, appLog: blocker };
+    };
+
+    it("reopens the sink for the same logger", async () => {
+      const { logger, appLog } = await failOnce(createLogDir());
+
+      logger.info("after-recovery");
+      await expectDefined(logger.flush)();
+
+      expect(readFileSync(appLog, "utf-8")).toContain("after-recovery");
+    });
+
+    it("reopens the sink for a child and for a new logger on the same directory", async () => {
+      const logDir = createLogDir();
+      const { logger, appLog } = await failOnce(logDir);
+      const child = logger.child({ scope: "child" });
+      const sibling = createAppLogger({ logDir });
+
+      child.info("child-line");
+      sibling.info("sibling-line");
+      await expectDefined(sibling.flush)();
+
+      const written = readFileSync(appLog, "utf-8");
+      expect(written).toContain("child-line");
+      expect(written).toContain("sibling-line");
+    });
+
+    it("does not throw from a log call when the reopen fails", async () => {
+      const logDir = createLogDir();
+      const { logger, stderr } = await failOnce(logDir);
+      // A file where the directory was makes mkdirSync fail on reopen.
+      rmSync(logDir, { recursive: true });
+      writeFileSync(logDir, "");
+
+      expect(() => logger.info("no-sink")).not.toThrow();
+      expect(stderr).toHaveBeenCalledWith(
+        expect.stringContaining("[logger] file reopen failed"),
+      );
+    });
+  });
+
+  it("fails closed when the configured log directory cannot be created", () => {
+    const logDir = createLogDir();
+    const notADirectory = join(logDir, "file");
+    writeFileSync(notADirectory, "");
+
+    expect(() =>
+      createAppLogger({ logDir: join(notADirectory, "logs") }),
+    ).toThrow();
   });
 
   it("writes log entries asynchronously to <logDir>/app.log", async () => {

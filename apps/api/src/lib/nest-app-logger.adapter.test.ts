@@ -93,6 +93,37 @@ describe("NestAppLoggerAdapter with the real Nest exception producer", () => {
     });
   });
 
+  it("keeps an Error's own stack out of nestContext in the static shutdown-hook form", () => {
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    const error = new Error("synthetic destroy failure");
+    Logger.overrideLogger(new NestAppLoggerAdapter(createAppLogger()));
+    try {
+      // Nest's module-destroy and shutdown hooks log a rejected provider this way.
+      Logger.error(error, error.stack);
+      expect(stderr).toHaveBeenCalledOnce();
+      const entry = JSON.parse(String(stderr.mock.calls[0]?.[0])) as Record<
+        string,
+        unknown
+      >;
+      expect(entry).toMatchObject({ name: "Error", stack: error.stack });
+      expect(entry).not.toHaveProperty("nestContext");
+    } finally {
+      Logger.overrideLogger(new ConsoleLogger());
+      stderr.mockRestore();
+    }
+  });
+
+  it("keeps a two-argument Error context that is not its own stack", () => {
+    const sink = createLogger();
+    const error = new Error("synthetic failure");
+    new NestAppLoggerAdapter(sink).error(error, "Caller");
+    expect(sink.error).toHaveBeenCalledWith("Error: synthetic failure", {
+      name: "Error",
+      stack: error.stack,
+      nestContext: "Caller",
+    });
+  });
+
   it("keeps two-argument string context unchanged without inventing a stack", () => {
     const sink = createLogger();
     new NestAppLoggerAdapter(sink).error("synthetic failure", "Caller");
