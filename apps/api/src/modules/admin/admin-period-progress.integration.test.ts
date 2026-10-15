@@ -1,3 +1,5 @@
+import { randomUUID } from "node:crypto";
+
 import { afterAll, beforeEach, describe, expect, it } from "vitest";
 
 import {
@@ -122,20 +124,37 @@ describe("listPeriodsByState progress (integration)", () => {
 
     expect(row).toMatchObject({ submittedCount: 1, totalCount: 1 });
   });
+
   // C0455: a keyset cursor, so unarchiving a listed row cannot shift page 2.
   it("pages the archive by cursor and survives an unarchive between pages", async () => {
-    const weekMs = 7 * 24 * 3600 * 1000;
+    const dayMs = 24 * 3600 * 1000;
+    const weekMs = 7 * dayMs;
     const base = Date.UTC(2024, 0, 1);
+    // Published rows need publishedAt and a matching snapshot (CHECK constraints).
     await prisma.report.createMany({
-      data: Array.from({ length: 51 }, (_, i) => ({
-        periodStart: new Date(base + i * weekMs),
-        periodEnd: new Date(base + i * weekMs + 6 * 24 * 3600 * 1000),
-        deadline: new Date(base + i * weekMs + 4 * 24 * 3600 * 1000),
-        status: "published" as const,
-        periodStatus: "published" as const,
-        periodState: "archived" as const,
-        archived: true,
-      })),
+      data: Array.from({ length: 51 }, (_, i) => {
+        const periodStart = new Date(base + i * weekMs);
+        const periodEnd = new Date(base + i * weekMs + 6 * dayMs);
+        const publishedAt = new Date(base + i * weekMs + 7 * dayMs);
+        const id = randomUUID();
+        return {
+          id,
+          periodStart,
+          periodEnd,
+          deadline: new Date(base + i * weekMs + 4 * dayMs),
+          status: "published" as const,
+          periodStatus: "published" as const,
+          periodState: "archived" as const,
+          archived: true,
+          publishedAt,
+          publishedSnapshot: publishedSnapshotFixture({
+            reportId: id,
+            periodStart,
+            periodEnd,
+            publishedAt,
+          }),
+        };
+      }),
     });
     const states = ["archived" as const];
 
