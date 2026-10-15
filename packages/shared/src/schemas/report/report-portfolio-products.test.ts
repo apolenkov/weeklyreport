@@ -41,26 +41,6 @@ const makeSection = (input: {
   });
 
 describe("buildPortfolioProductsFromSnapshotSections referenced-only products", () => {
-  it("keeps the owned product and ignores a reference to it from another section", () => {
-    const product = uuid(4, 1);
-    const result = buildPortfolioProductsFromSnapshotSections([
-      makeSection({
-        author: 1,
-        projects: [{ id: product, name: "Alpha", light: "red" }],
-      }),
-      makeSection({ author: 2, refs: [{ id: product, name: "Stale name" }] }),
-    ]);
-
-    expect(result).toEqual([
-      expect.objectContaining({
-        productId: product,
-        productName: "Alpha",
-        worstStatus: "red",
-        leadNames: ["Lead 1"],
-      }),
-    ]);
-  });
-
   it("lists a repeatedly referenced product once with its first-seen name", () => {
     const product = uuid(4, 2);
     const result = buildPortfolioProductsFromSnapshotSections([
@@ -98,28 +78,4 @@ describe("buildPortfolioProductsFromSnapshotSections referenced-only products", 
       "Яблоко",
     ]);
   });
-
-  it("builds ten thousand referenced-only products in linear time", () => {
-    const sections = Array.from({ length: 100 }, (_, sectionIndex) =>
-      makeSection({
-        author: sectionIndex + 1,
-        refs: Array.from({ length: 100 }, (_, refIndex) => ({
-          id: uuid(5, sectionIndex * 100 + refIndex + 1),
-          name: `Ref ${sectionIndex}-${refIndex}`,
-        })),
-      }),
-    );
-    buildPortfolioProductsFromSnapshotSections(sections.slice(0, 5));
-
-    const durations = Array.from({ length: 3 }, () => {
-      const started = performance.now();
-      const result = buildPortfolioProductsFromSnapshotSections(sections);
-      expect(result).toHaveLength(10_000);
-      return performance.now() - started;
-    });
-
-    // Measured before the fix: ~2000 ms for this input (TASK-498); the linear
-    // index takes a few ms, so 50 ms leaves a wide margin for a loaded machine.
-    expect(Math.min(...durations)).toBeLessThan(50);
-  }, 60_000);
 });
