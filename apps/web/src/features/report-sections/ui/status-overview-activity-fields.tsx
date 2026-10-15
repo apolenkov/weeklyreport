@@ -7,6 +7,10 @@ import {
 import { Pencil } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import {
+  activityDraftDirty,
+  normalize,
+} from "./status-overview-activity-draft";
 import { useInlineEditUnloadGuard } from "./use-inline-edit-unload-guard";
 
 export interface StatusOverviewActivityFieldsValue {
@@ -70,11 +74,6 @@ function FieldError({
   );
 }
 
-export function normalize(value: string): string | null {
-  const trimmed = value.trim();
-  return trimmed === "" ? null : trimmed;
-}
-
 export function useActivityFieldsDraft(
   activityId: string,
   values: StatusOverviewActivityFieldsValue,
@@ -132,11 +131,11 @@ export function useActivityFieldsDraft(
     stale: dirty && changed,
     editTitle: (next: string) => {
       setTitle(next);
-      setDraftDirty(true);
+      setDraftDirty(activityDraftDirty(authoritativeValues, next, description));
     },
     editDescription: (next: string) => {
       setDescription(next);
-      setDraftDirty(true);
+      setDraftDirty(activityDraftDirty(authoritativeValues, title, next));
     },
     markClean: () => setDraftDirty(false),
     reset,
