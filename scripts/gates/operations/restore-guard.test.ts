@@ -28,13 +28,17 @@ test("backup image restore entrypoint is executable", () => {
   assert.notEqual(statSync(restoreScript).mode & 0o111, 0);
 });
 
-function runRestore(overrides: NodeJS.ProcessEnv = {}) {
+function runRestore(
+  overrides: NodeJS.ProcessEnv = {},
+  options: { dumpName?: string; dumpArg?: string } = {},
+) {
   const directory = mkdtempSync(join(tmpdir(), "restore-guard-"));
   fixtureRoots.add(directory);
   const log = join(directory, "pg-restore.log");
   const fakeRestore = join(directory, "pg_restore");
-  const dump = join(directory, "backup.dump");
-  writeFileSync(dump, "test archive placeholder");
+  const dumpFile = join(directory, options.dumpName ?? "backup.dump");
+  writeFileSync(dumpFile, "test archive placeholder");
+  const dump = options.dumpArg ?? dumpFile;
   writeFileSync(
     fakeRestore,
     '#!/bin/sh\nprintf \'%s\\n\' "$*" >> "$PG_RESTORE_LOG"\n' +
@@ -58,6 +62,7 @@ function runRestore(overrides: NodeJS.ProcessEnv = {}) {
   };
   const result = spawnSync("/bin/sh", [restoreScript, dump], {
     env,
+    cwd: options.dumpArg ? directory : undefined,
     encoding: "utf8",
   });
   const calls = (() => {
@@ -170,4 +175,24 @@ test("an unreadable archive never reaches the destructive command", () => {
   assert.equal(result.status, 4);
   assert.equal(calls.length, 1);
   assert.match(calls[0] ?? "", /^--list /);
+});
+
+test("a dash-leading dump argument stays a positional archive operand", () => {
+  const { calls, result } = runRestore(
+    {},
+    { dumpName: "--dbname=other", dumpArg: "--dbname=other" },
+  );
+  assert.equal(result.status, 0);
+  assert.equal(calls.length, 2);
+  assert.match(calls[0] ?? "", /^--list -- --dbname=other$/);
+  assert.match(calls[1] ?? "", / -- --dbname=other$/);
+});
+
+test("a ./-prefixed dump path is passed through unchanged", () => {
+  const { calls, result } = runRestore(
+    {},
+    { dumpName: "--dbname=other", dumpArg: "./--dbname=other" },
+  );
+  assert.equal(result.status, 0);
+  assert.equal(calls[0], "--list -- ./--dbname=other");
 });
