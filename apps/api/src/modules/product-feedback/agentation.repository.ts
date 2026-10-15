@@ -15,6 +15,7 @@ import {
 import {
   actorId,
   annotationData,
+  assertActionEventFits,
   assertThreadHasRoom,
   deletedAnnotationResponse,
   emit,
@@ -294,15 +295,17 @@ export class AgentationPrismaRepository extends AgentationReadRepository {
       });
       if (!session) return null;
       const output = typeof input === "string" ? input : input.output;
+      const payload = {
+        sessionId,
+        annotations: session.annotations.map(mapAnnotation),
+        output,
+        timestamp: new Date().toISOString(),
+      };
+      assertActionEventFits(payload);
       await emit(db, {
         type: "action.requested",
         sessionId,
-        payload: {
-          sessionId,
-          annotations: session.annotations.map(mapAnnotation),
-          output,
-          timestamp: new Date().toISOString(),
-        },
+        payload,
         ...(actorId(access, role)
           ? { authorUserId: actorId(access, role) }
           : {}),
