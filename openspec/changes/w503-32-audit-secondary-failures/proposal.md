@@ -26,6 +26,14 @@ throwing drop metric or a throwing error logger inside the persist catch
   logger replaces the result there too. Not changed here; the error-path
   control therefore breaks only the audit sinks, not the logger.
 
+## Not claimed
+
+- No production sink outage or PostgreSQL proof: the tests are fault injections
+  through the canonical `protectedProcedure` chain.
+- Async stderr stream errors, the durable audit guarantee, the mutation's own
+  database commit and fail-closed audit for privileged flows (login, admin,
+  cron) are outside this change.
+
 ## Remaining clauses of TASK-503.32 (no RED, reason recorded)
 
 | Clause | Why no RED from source                                                                                                                                          |
