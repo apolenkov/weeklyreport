@@ -50,14 +50,18 @@ describe("admin snapshot restore vs targeted group save (integration)", () => {
     };
     const gate = createPauseGate();
     let held = false;
-    // Test-side barrier: hold the restore right after it reads which group
-    // ids exist, before it writes any group.
+    // Test-side barrier: hold the restore right after upsertGroups reads which
+    // group ids exist (the only unfiltered read), before it writes any group.
     const pausedPrisma = prisma.$extends({
       query: {
         reportingGroup: {
           async findMany({ args, query }) {
             const rows = await query(args);
-            if (!held) {
+            if (
+              !held &&
+              args.select === undefined &&
+              args.where === undefined
+            ) {
               held = true;
               await gate.pause();
             }
