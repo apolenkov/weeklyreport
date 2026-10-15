@@ -6,12 +6,14 @@ import {
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service";
 import { type AppLogger, createNullLogger } from "../../lib/logger.js";
+import { isUniqueViolation } from "../../lib/prisma-unique-violation.js";
 import { reconcileRestoredProjectAssignment } from "../../lib/project-assignment.js";
 import { lockStatusGraph } from "../../lib/status-graph-lock.js";
 import { lockAndAssertGroupHead } from "../../lib/user-activity-assignment.js";
 import type { PolicyApplicatorService } from "../reminders/index.js";
 import { replaceRestoredPublishedProjections } from "../search/index.js";
 import { writePeriodRow } from "./admin-entity-write.queries";
+import { AdminSnapshotConflictError } from "./admin-errors.js";
 import { getSnapshot } from "./admin-snapshot.queries";
 import { lockAndValidateSnapshotAssignmentGraph } from "./admin-snapshot/assignment-graph.js";
 import { lockRestoredReports } from "./admin-snapshot/period-locks.js";
@@ -120,56 +122,70 @@ export async function saveSnapshot(
   // opening a transaction. Non-viewer users must carry their explicit group;
   // restore never selects or creates a substitute group.
   const parsedSnapshot = adminSnapshotRestoreSchema.parse(snapshot);
-  const { newlyCreatedPeriods } = await prisma.$transaction(async (tx) => {
-    await lockStatusGraph(tx);
-    const currentRules = await lockReminderRestoreGraph(
-      tx,
-      parsedSnapshot.reminderRules.map((rule) => rule.id),
-      parsedSnapshot.policies.map((policy) => policy.id),
-      parsedSnapshot.periods.map((period) => period.id),
-    );
-    await lockRestoredReports(
-      tx,
-      parsedSnapshot.periods.map((period) => period.id),
-    );
+  const { newlyCreatedPeriods } = await prisma
+    .$transaction(async (tx) => {
+      await lockStatusGraph(tx);
+      const currentRules = await lockReminderRestoreGraph(
+        tx,
+        parsedSnapshot.reminderRules.map((rule) => rule.id),
+        parsedSnapshot.policies.map((policy) => policy.id),
+        parsedSnapshot.periods.map((period) => period.id),
+      );
+      await lockRestoredReports(
+        tx,
+        parsedSnapshot.periods.map((period) => period.id),
+      );
 
-    const previousLeadByProject = await lockAndValidateSnapshotAssignmentGraph(
-      tx,
-      parsedSnapshot,
-    );
+      const previousLeadByProject =
+        await lockAndValidateSnapshotAssignmentGraph(tx, parsedSnapshot);
 
-    // Groups precede users because User.reportingGroupId is a foreign key.
-    await upsertGroups(tx, parsedSnapshot.groups);
-    await upsertUsers(tx, parsedSnapshot.users);
-    // Apply group head assignments now that every head's User row exists;
-    // upsertGroups only wrote name/description/archived.
-    await applyGroupHeads(tx, parsedSnapshot.groups);
-    const periods = await upsertPeriods(tx, parsedSnapshot.periods);
-    await upsertRestoredProjects(
-      tx,
-      parsedSnapshot.projects,
-      previousLeadByProject,
-    );
-    await replaceRestoredPublishedProjections(
-      tx,
-      parsedSnapshot.periods.map((period) => ({
-        reportId: period.id,
-        snapshot: period.publishedSnapshot,
-      })),
-    );
-    await upsertReminderPolicies(tx, parsedSnapshot.policies);
-    await upsertReminderRules(tx, parsedSnapshot.reminderRules, currentRules);
-    await reconcileRestoredReminderRuleStatuses(
-      tx,
-      parsedSnapshot.policies,
-      parsedSnapshot.periods.map((period) => period.id),
-    );
-    // Executions depend on rules and carry the dedupe/payload lifecycle that
-    // prevents recovery from rescheduling or losing a delivery.
-    await upsertReminderExecutions(tx, parsedSnapshot.reminderExecutions);
+      // Groups precede users because User.reportingGroupId is a foreign key.
+      await upsertGroups(tx, parsedSnapshot.groups);
+      await upsertUsers(tx, parsedSnapshot.users);
+      // Apply group head assignments now that every head's User row exists;
+      // upsertGroups only wrote name/description/archived.
+      await applyGroupHeads(tx, parsedSnapshot.groups);
+      const periods = await upsertPeriods(tx, parsedSnapshot.periods);
+      await upsertRestoredProjects(
+        tx,
+        parsedSnapshot.projects,
+        previousLeadByProject,
+      );
+      await replaceRestoredPublishedProjections(
+        tx,
+        parsedSnapshot.periods.map((period) => ({
+          reportId: period.id,
+          snapshot: period.publishedSnapshot,
+        })),
+      );
+      await upsertReminderPolicies(tx, parsedSnapshot.policies);
+      await upsertReminderRules(tx, parsedSnapshot.reminderRules, currentRules);
+      await reconcileRestoredReminderRuleStatuses(
+        tx,
+        parsedSnapshot.policies,
+        parsedSnapshot.periods.map((period) => period.id),
+      );
+      // Executions depend on rules and carry the dedupe/payload lifecycle that
+      // prevents recovery from rescheduling or losing a delivery.
+      await upsertReminderExecutions(tx, parsedSnapshot.reminderExecutions);
 
-    return periods;
-  });
+      return periods;
+    })
+    .catch((error: unknown) => {
+      // A live row (e.g. a concurrent targeted save) already holds a unique
+      // identity the snapshot writes. The restore has rolled back, so this is a
+      // live-data conflict, not a crash; keep the constraint detail in the log.
+      if (isUniqueViolation(error)) {
+        logger.warn("snapshot restore hit a unique constraint", {
+          phase: "snapshot-restore",
+          error: error instanceof Error ? error.message : String(error),
+        });
+        throw new AdminSnapshotConflictError(
+          "Snapshot restore conflicts with an existing record (id, email or SAML identity). Resolve the conflicting record and retry.",
+        );
+      }
+      throw error;
+    });
 
   // Post-commit so applicator failure cannot roll back periods. Skip pairs the
   // snapshot already wrote (would clobber restored status) and pass `now` so

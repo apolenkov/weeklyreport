@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import {
   adminSnapshotReminderExecutionSchema,
   adminSnapshotReminderRuleSchema,
@@ -252,6 +253,41 @@ describe("saveSnapshot — deterministic pre-transaction validation", () => {
       saveSnapshot(prisma, undefined, duplicateEmailSnapshot as never),
     ).rejects.toThrow(/User email duplicates users\[0\]/);
     expect(transaction).not.toHaveBeenCalled();
+  });
+});
+
+describe("saveSnapshot — concurrent identity collisions", () => {
+  const emptySnapshot = {
+    users: [],
+    groups: [],
+    projects: [],
+    periods: [],
+    reminderRules: [],
+    reminderExecutions: [],
+    policies: [],
+  };
+
+  it("reports a unique collision inside the restore transaction as a conflict", async () => {
+    const collision = new Prisma.PrismaClientKnownRequestError(
+      "Unique constraint failed on the fields: (`id`)",
+      { code: "P2002", clientVersion: "test" },
+    );
+    const transaction = vi.fn().mockRejectedValue(collision);
+    const prisma = { $transaction: transaction } as unknown as PrismaService;
+
+    await expect(
+      saveSnapshot(prisma, undefined, emptySnapshot as never),
+    ).rejects.toBeInstanceOf(AdminSnapshotConflictError);
+  });
+
+  it("propagates any other restore failure unchanged", async () => {
+    const failure = new Error("restore failed");
+    const transaction = vi.fn().mockRejectedValue(failure);
+    const prisma = { $transaction: transaction } as unknown as PrismaService;
+
+    await expect(
+      saveSnapshot(prisma, undefined, emptySnapshot as never),
+    ).rejects.toBe(failure);
   });
 });
 
