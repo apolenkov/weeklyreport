@@ -22,6 +22,28 @@ import { ProductFeedbackMemoryRepository } from "./product-feedback.memory-repos
 
 const ORIGIN = "http://localhost:3000";
 
+// Keeps the server's last stderr output so a failed connect explains itself.
+const STDERR_TAIL_CHARS = 4096;
+
+export async function connectWithStderrTail(
+  client: Client,
+  transport: StdioClientTransport,
+  timeout: number,
+) {
+  let tail = "";
+  transport.stderr?.on("data", (chunk: Buffer) => {
+    tail = (tail + chunk.toString()).slice(-STDERR_TAIL_CHARS);
+  });
+  try {
+    await client.connect(transport, { timeout });
+  } catch (error) {
+    if (!tail) throw error;
+    throw new Error(`MCP server failed to connect; stderr tail:\n${tail}`, {
+      cause: error,
+    });
+  }
+}
+
 export async function startAgentationContractServer() {
   const prisma = createTestPrisma();
   clearOrgCache();
@@ -146,7 +168,7 @@ export async function startAgentationContractServer() {
     }
   }
   try {
-    await client.connect(transport, { timeout: 4000 });
+    await connectWithStderrTail(client, transport, 4000);
   } catch (error) {
     await close([error]);
     throw error;
