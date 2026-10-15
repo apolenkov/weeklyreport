@@ -8,6 +8,8 @@ process.env.PDF_BASE_URL ??= "http://localhost:3000";
 process.env.GOTENBERG_URL ??= "http://gotenberg:3000";
 process.env.APP_BASE_URL ??= "http://localhost:3000";
 process.env.API_HOST ??= "127.0.0.1";
+// The unit config pins REDIS_HOST through `test.env` (C2139); this default
+// serves the coverage and mutation contours.
 process.env.REDIS_HOST ??= "localhost";
 process.env.REDIS_PORT ??= "6379";
 process.env.REDIS_DB ??= "15";

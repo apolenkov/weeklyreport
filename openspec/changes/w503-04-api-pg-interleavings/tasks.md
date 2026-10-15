@@ -14,6 +14,6 @@
       lineage reads stays locked.
 - [x] 2.3 C0976 RED, then one REPEATABLE READ control read.
 - [x] 2.4 C1219, C0766 and C1805 are covered by existing PostgreSQL tests
-      (single-active-reopen :413, admin integration :282/:336, published
+      (single-active-reopen :413, admin integration :282/:337, published
       tie order); no new test.
 - [ ] 2.5 Six gates and independent review.

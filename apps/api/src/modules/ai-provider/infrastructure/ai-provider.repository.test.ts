@@ -274,6 +274,10 @@ describe("AiProviderConfigurationRepository", () => {
     expect(harness.configurationFindMany).toHaveBeenCalledWith(
       expect.objectContaining({ take: 100, orderBy: { updatedAt: "desc" } }),
     );
+    expect(harness.transactionRunner).toHaveBeenCalledWith(
+      expect.any(Function),
+      { isolationLevel: "RepeatableRead" },
+    );
   });
 
   it("persists a new encrypted revision and initializes the singleton in one transaction", async () => {

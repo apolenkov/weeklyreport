@@ -8,6 +8,8 @@ import { buildFailOpenRedisConnectionOptions } from "../infrastructure/config/re
 // C2139: the unit contour must not reach a developer's or CI's real Redis, even
 // when a unit test builds a real client from the defaults instead of a mock.
 const UNROUTABLE = /\.invalid$/u;
+// A sandbox without a resolver reports EAI_AGAIN instead of ENOTFOUND.
+const DNS_FAILURE: unknown = expect.stringMatching(/^(ENOTFOUND|EAI_AGAIN)$/u);
 
 function unitRedisEnv() {
   const { REDIS_HOST, REDIS_PORT, REDIS_DB } = process.env;
@@ -29,7 +31,7 @@ describe("unit Redis defaults", () => {
 
     expect(REDIS_HOST).toMatch(UNROUTABLE);
     await expect(lookup(REDIS_HOST)).rejects.toMatchObject({
-      code: "ENOTFOUND",
+      code: DNS_FAILURE,
     });
   });
 
@@ -46,7 +48,9 @@ describe("unit Redis defaults", () => {
     try {
       await expect(client.ping()).rejects.toThrow();
       expect(errors).toContainEqual(
-        expect.objectContaining({ code: "ENOTFOUND" }),
+        expect.objectContaining({
+          code: DNS_FAILURE,
+        }),
       );
     } finally {
       client.disconnect();
