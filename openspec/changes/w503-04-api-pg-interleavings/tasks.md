@@ -8,8 +8,12 @@
 
 ## PostgreSQL interleavings (after their REDs)
 
-- [ ] 2.1 C0707/C0724 restore vs targeted group/user create.
-- [ ] 2.2 C1665 fill-from vs restore/auto-publish lineage view.
-- [ ] 2.3 C0976 consistent AI provider control read.
-- [ ] 2.4 Positive controls C1219, C0766, C1805.
+- [ ] 2.1 C0707/C0724 positive control: restore vs targeted group create
+      rolls back with a typed conflict.
+- [ ] 2.2 C1665 positive control: a publication committing between the
+      lineage reads stays locked.
+- [ ] 2.3 C0976 RED, then one REPEATABLE READ control read.
+- [x] 2.4 C1219, C0766 and C1805 are covered by existing PostgreSQL tests
+      (single-active-reopen :413, admin integration :282/:336, published
+      tie order); no new test.
 - [ ] 2.5 Six gates and independent review.

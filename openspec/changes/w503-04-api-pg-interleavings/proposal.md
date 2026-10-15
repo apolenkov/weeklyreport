@@ -15,15 +15,17 @@ uses.
   a real client built from the unit defaults fails on DNS before any command
   reaches a server. The coverage contour, which runs the integration suites
   against the guarded Redis target from `.env.test`, is unchanged.
-- Further deltas for the PostgreSQL interleavings (C0707/C0724, C1665, C0976)
-  are added here only after their real REDs, per the 008 policy of
-  2026-10-15.
+- The AI provider control read uses one REPEATABLE READ transaction for the
+  control row and the revision list (C0976), after its PostgreSQL RED.
+- C0707/C0724, C1665, C1219, C0766 and C1805 are positive controls: no product
+  change unless their PostgreSQL checks fail (008, 2026-10-15).
 
 ## Capabilities
 
 ### Modified Capabilities
 
 - `test-evidence-integrity`: the unit contour cannot reach a real Redis.
+- `ai-provider-configuration`: the control read is one consistent snapshot.
 
 ## Impact
 
