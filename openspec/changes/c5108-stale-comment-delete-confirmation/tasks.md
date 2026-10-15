@@ -9,4 +9,4 @@
 - [x] 2.1 Mounted regressions for withdrawn rights and a removed comment, failing before the change.
 - [x] 2.2 Retire the stale delete candidate in `RecordComments`.
 - [x] 2.4 Keep the confirmation while its delete is in flight (review Medium).
-- [ ] 2.3 Full gates and independent review.
+- [x] 2.3 Full gates and independent review.
