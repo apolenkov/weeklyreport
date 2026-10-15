@@ -80,28 +80,27 @@ export function buildPortfolioProductsFromSnapshotSections(
   );
   // Frozen references grant display membership only; owned occurrences above
   // remain the sole source of health, stage, and lead attribution.
-  const referencedProducts = sections
-    .flatMap(({ referencedProjects }) => referencedProjects)
-    .reduce<ReadonlyMap<string, string>>((current, reference) => {
-      if (
-        ownedProductIds.has(reference.projectId) ||
-        current.has(reference.projectId)
-      ) {
-        return current;
-      }
-      return new Map(current).set(reference.projectId, reference.projectName);
-    }, new Map<string, string>());
-
-  const referencedOnlyProducts: PortfolioProductOverview[] = [
-    ...referencedProducts,
-  ].map(([productId, productName]) => ({
-    productId,
-    productName,
-    worstStatus: null,
-    stageCount: 0,
-    leadIds: [],
-    leadNames: [],
-  }));
+  // One pass groups the references in first-seen order; the first occurrence
+  // names the product.
+  const referencedOnlyProducts = [
+    ...Map.groupBy(
+      sections.flatMap(({ referencedProjects }) => referencedProjects),
+      ({ projectId }) => projectId,
+    ),
+  ].flatMap(([productId, [reference]]): PortfolioProductOverview[] =>
+    reference === undefined || ownedProductIds.has(productId)
+      ? []
+      : [
+          {
+            productId,
+            productName: reference.projectName,
+            worstStatus: null,
+            stageCount: 0,
+            leadIds: [],
+            leadNames: [],
+          },
+        ],
+  );
 
   return [...ownedProducts, ...referencedOnlyProducts].sort((a, b) =>
     a.productName.localeCompare(b.productName, "ru"),
