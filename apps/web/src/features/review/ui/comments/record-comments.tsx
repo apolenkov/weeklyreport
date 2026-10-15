@@ -110,10 +110,12 @@ export function RecordComments({
   const c = useRecordCommentState(anchor, onMutated);
   const { id, feedback, feedbackId, deleteCandidate } = c;
 
-  // An open confirmation is retired once its comment leaves the list or the
-  // actor may no longer delete it; the server still decides every delete.
+  // An idle confirmation is retired once its comment leaves the list or the
+  // actor may no longer delete it; an in-flight delete keeps its dialog until
+  // it settles. The server still decides every delete.
   if (
     deleteCandidate &&
+    !c.isDeletePending &&
     !comments.some(
       (comment) =>
         comment.id === deleteCandidate.id &&

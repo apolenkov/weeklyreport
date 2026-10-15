@@ -25,6 +25,7 @@ const mutationCalls = vi.hoisted(() => ({
   deleteComment: [] as unknown[],
   commentError: null as Error | null,
   deleteError: null as Error | null,
+  deletePending: null as Promise<unknown> | null,
   commentPending: null as Promise<unknown> | null,
 }));
 
@@ -55,6 +56,9 @@ vi.mock("../../../../shared/lib/trpc/trpc-context", () => ({
           ...options,
           mutationFn: (input: unknown) => {
             mutationCalls.deleteComment.push(input);
+            if (mutationCalls.deletePending != null) {
+              return mutationCalls.deletePending;
+            }
             if (mutationCalls.deleteError) {
               return Promise.reject(mutationCalls.deleteError);
             }
@@ -76,11 +80,19 @@ const OWN_COMMENT: RecordCommentView = {
   createdAt: new Date("2026-07-01T10:00:00Z"),
 };
 
+const OTHER_COMMENT: RecordCommentView = {
+  ...OWN_COMMENT,
+  id: "44444444-4444-4444-8444-444444444444",
+  reviewerName: "Second Reviewer",
+  text: "Another note.",
+};
+
 beforeEach(() => {
   mutationCalls.comment.length = 0;
   mutationCalls.deleteComment.length = 0;
   mutationCalls.commentError = null;
   mutationCalls.deleteError = null;
+  mutationCalls.deletePending = null;
   mutationCalls.commentPending = null;
 });
 
@@ -543,19 +555,10 @@ describe("RecordComments — mutation success", () => {
     });
   });
 
-  it.each([
-    ["the reviewer loses review rights", { canReview: false }],
-    ["the comment leaves the list", { comments: [] as RecordCommentView[] }],
-  ])("closes an open delete confirmation when %s", (_case, change) => {
-    const other: RecordCommentView = {
-      ...OWN_COMMENT,
-      id: "44444444-4444-4444-8444-444444444444",
-      reviewerName: "Second Reviewer",
-      text: "Another note.",
-    };
+  function renderOpenDeleteConfirmation() {
     const props = {
       anchor: { itemId: "11111111-1111-4111-8111-111111111111" },
-      comments: [OWN_COMMENT, other],
+      comments: [OWN_COMMENT, OTHER_COMMENT],
       canReview: true,
       currentUserId: REVIEWER_ID,
       isAdmin: false,
@@ -570,24 +573,69 @@ describe("RecordComments — mutation success", () => {
     fireEvent.click(
       screen.getByRole("button", { name: /Delete comment by Head Reviewer/ }),
     );
-    expect(
-      screen.getByRole("alertdialog", { name: "Delete review comment?" }),
-    ).toBeInTheDocument();
+    const refresh = (next: {
+      readonly canReview: boolean;
+      readonly comments: readonly RecordCommentView[];
+    }) => {
+      rerender(
+        <QueryClientProvider client={client}>
+          <RecordComments {...props} {...next} />
+        </QueryClientProvider>,
+      );
+    };
+    return refresh;
+  }
 
-    rerender(
-      <QueryClientProvider client={client}>
-        <RecordComments
-          {...props}
-          {...change}
-          comments={change.comments ? [other] : props.comments}
-        />
-      </QueryClientProvider>,
-    );
+  const confirmation = () =>
+    screen.queryByRole("alertdialog", { name: "Delete review comment?" });
 
-    expect(
-      screen.queryByRole("alertdialog", { name: "Delete review comment?" }),
-    ).not.toBeInTheDocument();
+  it.each([
+    [
+      "the reviewer loses review rights",
+      { canReview: false, comments: [OWN_COMMENT, OTHER_COMMENT] },
+    ],
+    [
+      "the comment leaves the list",
+      { canReview: true, comments: [OTHER_COMMENT] },
+    ],
+  ])("closes an idle delete confirmation when %s", (_case, next) => {
+    const consoleError = vi.spyOn(console, "error");
+    const refresh = renderOpenDeleteConfirmation();
+    expect(confirmation()).toBeInTheDocument();
+
+    refresh(next);
+
+    expect(confirmation()).not.toBeInTheDocument();
     expect(mutationCalls.deleteComment).toHaveLength(0);
+    expect(consoleError).not.toHaveBeenCalled();
+  });
+
+  it("keeps the confirmation open while its delete is in flight", async () => {
+    let settle = () => undefined as unknown;
+    mutationCalls.deletePending = new Promise((resolve) => {
+      settle = () => {
+        resolve({});
+      };
+    });
+    const refresh = renderOpenDeleteConfirmation();
+    const dialog = screen.getByRole("alertdialog", {
+      name: "Delete review comment?",
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+    await waitFor(() => {
+      expect(mutationCalls.deleteComment).toEqual([
+        { commentId: OWN_COMMENT.id },
+      ]);
+    });
+
+    // A refresh may drop the comment before the mutation settles.
+    refresh({ canReview: true, comments: [OTHER_COMMENT] });
+    expect(confirmation()).toBeInTheDocument();
+
+    settle();
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("Comment deleted.");
+    });
   });
 
   it("does not delete when the confirmation is cancelled", () => {
