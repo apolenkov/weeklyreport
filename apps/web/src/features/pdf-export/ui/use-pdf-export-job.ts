@@ -161,10 +161,10 @@ export function usePdfExportJob({
 
   function handleExport() {
     if (disabled) return;
-    setRecoveryNotice(null);
     requestMut.mutate(
       { reportId },
       exportRequestHandlers((nextJobId) => {
+        setRecoveryNotice(null);
         setFallback(null);
         storeActiveJob(reportId, nextJobId);
         setActiveJob({ reportId, jobId: nextJobId });
