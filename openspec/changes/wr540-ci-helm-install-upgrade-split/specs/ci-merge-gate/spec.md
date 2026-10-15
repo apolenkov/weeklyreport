@@ -14,9 +14,9 @@ not enough, because the list omits records in an unknown state and records Helm
 cannot decode); only then is the release installed with
 `helm install --wait=watcher`. A release whose history is readable and which is in
 the `deployed` state is upgraded with `helm upgrade --wait=watcher` and without
-`--install`. A discovery error (access, network, Helm), unreadable release records,
-an inconsistent or unexpected answer, or any other release state MUST stop the job
-without installing or upgrading. The job MUST NOT use `--atomic` or
+`--install`. A history error (access, network, Helm), a successful history with no readable
+revision, an inconsistent or unexpected answer, or any other release state MUST
+stop the job without installing or upgrading. The job MUST NOT use `--atomic` or
 `--rollback-on-failure`, MUST NOT uninstall or delete a release, and MUST NOT
 create the namespace. The repository MUST NOT contain cluster credentials, and
 MUST NOT assume Argo CD.
@@ -44,7 +44,7 @@ MUST NOT assume Argo CD.
 
 #### Scenario: Discovery cannot be trusted
 
-- **WHEN** release discovery fails, answers inconsistently, shows a release that is not `deployed`, or the release history cannot be read although release records exist
+- **WHEN** the history lookup fails, answers inconsistently with the release list, shows a release that is not `deployed`, or succeeds without a readable revision although release records exist
 - **THEN** the job stops without installing or upgrading
 
 #### Scenario: Only release-not-found proves absence

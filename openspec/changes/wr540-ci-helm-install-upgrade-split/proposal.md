@@ -17,8 +17,8 @@ branch). Production roll-out will go through this job.
   `helm list` alone is not trusted, because it omits unknown-state records and
   skips records it cannot decode. Absent → `helm install --wait=watcher`;
   readable and deployed → `helm upgrade --wait=watcher` (no `--install`);
-  discovery failure, unreadable records, an inconsistent answer or any other
-  release state → stop before a mutation.
+  a history error, a successful history with no readable revision, an
+  inconsistent answer or any other release state → stop before a mutation.
 - No automatic rollback or uninstall in CI: install keeps a failed release and its
   resources; an upgrade is forward-fix because CI cannot prove schema and data
   compatibility. `helm rollback` stays a manual runbook step.
