@@ -116,7 +116,14 @@ export function computeDeadline(
     timezone,
   );
   const dt = DateTime.fromJSDate(shifted).setZone(timezone);
-  return dt.set({ ...deadlineTime, second: 0, millisecond: 0 }).toJSDate();
+  const resolved = dt.set({ ...deadlineTime, second: 0, millisecond: 0 });
+  // Temporal "compatible": a gap time is already moved forward by set(); an
+  // ambiguous (fold) time takes the earlier occurrence, whatever offset
+  // periodStart's own clock time happened to carry.
+  const [earlier] = resolved
+    .getPossibleOffsets()
+    .toSorted((a, b) => a.toMillis() - b.toMillis());
+  return (earlier ?? resolved).toJSDate();
 }
 
 // The explicit utc zone — not the host clock — anchors the Monday

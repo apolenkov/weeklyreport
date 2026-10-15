@@ -465,3 +465,48 @@ describe("getCurrentWeekBounds — periodLengthDays override", () => {
     expect(periodEnd.toISOString()).toBe("2026-04-27T23:59:59.999Z");
   });
 });
+
+describe("business-date: computeDeadline DST gap and fold (TASK-503.33 C0576)", () => {
+  // America/New_York 2026: spring-forward Sun 03-08 (02:00→03:00), fall-back Sun 11-01 (02:00→01:00).
+  const schedule = (hour: number, minute: number) => ({
+    workingDays: "mon-sun" as const,
+    timezone: TZ_NYC,
+    deadlineTime: { hour, minute },
+  });
+  // Two period starts on the same Monday, with different clock times: computeDeadline
+  // "discards the hour of periodStart", so both must give the same deadline.
+  const FOLD_STARTS = [
+    inZone("2026-10-26T00:10:00", TZ_NYC),
+    inZone("2026-10-26T09:00:00", TZ_NYC),
+  ];
+  const GAP_STARTS = [
+    inZone("2026-03-02T00:10:00", TZ_NYC),
+    inZone("2026-03-02T09:00:00", TZ_NYC),
+  ];
+
+  it("resolves an ambiguous fold time independently of periodStart's clock time", () => {
+    const [early, late] = FOLD_STARTS.map((start) =>
+      computeDeadline(start, 6, schedule(1, 30)),
+    );
+
+    expect(early?.toISOString()).toBe(late?.toISOString());
+  });
+
+  it("resolves an ambiguous fold time to its earlier occurrence (01:30 EDT)", () => {
+    // Policy P-fold = earlier occurrence: the deadline passes the first time the clock reads it.
+    for (const start of FOLD_STARTS) {
+      expect(computeDeadline(start, 6, schedule(1, 30)).toISOString()).toBe(
+        "2026-11-01T05:30:00.000Z",
+      );
+    }
+  });
+
+  it("moves a nonexistent gap time forward by the gap length (02:30 → 03:30 EDT)", () => {
+    // Policy P-gap = shift forward (current Luxon behavior), pinned so it stays explicit.
+    for (const start of GAP_STARTS) {
+      expect(computeDeadline(start, 6, schedule(2, 30)).toISOString()).toBe(
+        "2026-03-08T07:30:00.000Z",
+      );
+    }
+  });
+});
