@@ -100,12 +100,18 @@ function makeQueryClient() {
 }
 
 function renderButton(options: {
-  readonly statusQuery: unknown;
+  readonly statusQuery?: unknown;
+  readonly statusQueryByInput?: (input: unknown) => unknown;
   readonly periodStatus?: "open" | "published" | "reopened";
 }) {
   const { proxy, captured } = createMockTRPC([
     { path: ["pdfExport", "request"], mutation: true },
-    { path: ["pdfExport", "status"], query: options.statusQuery },
+    {
+      path: ["pdfExport", "status"],
+      ...(options.statusQueryByInput
+        ? { queryByInput: options.statusQueryByInput }
+        : { query: options.statusQuery }),
+    },
   ]);
 
   const statusProcedure = proxy.pdfExport.status;
@@ -558,6 +564,80 @@ describe("ExportPdfButton", () => {
     expect(expectDefined(captured["pdfExport.request"]).calls).toEqual([
       { reportId: REPORT_ID },
     ]);
+  });
+
+  it("retains the quarantine notice through pending and failed replacement until a new job is acknowledged", async () => {
+    const replacementJobId = "44444444-4444-4444-8444-444444444444";
+    const replacement = Promise.withResolvers<{ jobId: string }>();
+    const retry = Promise.withResolvers<{ jobId: string }>();
+    const statusQuery = vi
+      .fn()
+      .mockReturnValueOnce(RECOVERY_STATUS)
+      .mockReturnValue(
+        pdfExportJobSchema.parse({
+          ...RECOVERY_STATUS_INPUT,
+          jobId: replacementJobId,
+          status: "queued",
+        }),
+      );
+    window.sessionStorage.setItem(ACTIVE_JOB_STORAGE_KEY, JOB_ID);
+    const { captured } = renderButton({ statusQueryByInput: statusQuery });
+    const requestMutation = expectDefined(
+      captured["pdfExport.request"],
+    ).mutationFn;
+    requestMutation
+      .mockImplementationOnce(() => replacement.promise)
+      .mockImplementationOnce(() => retry.promise);
+    const button = screen.getByRole("button", { name: "Export PDF" });
+
+    expect(await screen.findByText(RECOVERY_MESSAGE)).toBeVisible();
+    await waitFor(() => expect(button).toBeEnabled());
+    expect(window.sessionStorage.getItem(ACTIVE_JOB_STORAGE_KEY)).toBeNull();
+    expect(requestMutation).not.toHaveBeenCalled();
+
+    await userEvent.click(button);
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByText(RECOVERY_MESSAGE)).toBeVisible();
+    expect(window.sessionStorage.getItem(ACTIVE_JOB_STORAGE_KEY)).toBeNull();
+    await act(async () => {
+      replacement.reject(new Error("replacement request failed"));
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(toastError).toHaveBeenCalledWith("replacement request failed");
+      expect(button).toBeEnabled();
+      expect(button).toHaveAttribute("aria-busy", "false");
+    });
+    expect(screen.getByText(RECOVERY_MESSAGE)).toBeVisible();
+    expect(window.sessionStorage.getItem(ACTIVE_JOB_STORAGE_KEY)).toBeNull();
+    expect(requestMutation).toHaveBeenCalledTimes(1);
+    expect(statusQuery).toHaveBeenCalledTimes(1);
+
+    await userEvent.click(button);
+    expect(screen.getByText(RECOVERY_MESSAGE)).toBeVisible();
+    await act(async () => {
+      retry.resolve({ jobId: replacementJobId });
+      await Promise.resolve();
+    });
+    await waitFor(() => {
+      expect(screen.queryByText(RECOVERY_MESSAGE)).not.toBeInTheDocument();
+      expect(window.sessionStorage.getItem(ACTIVE_JOB_STORAGE_KEY)).toBe(
+        replacementJobId,
+      );
+    });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("aria-busy", "true");
+    expect(statusQuery).toHaveBeenNthCalledWith(1, { jobId: JOB_ID });
+    expect(statusQuery).toHaveBeenNthCalledWith(2, {
+      jobId: replacementJobId,
+    });
+    expect(expectDefined(captured["pdfExport.request"]).calls).toEqual([
+      { reportId: REPORT_ID },
+      { reportId: REPORT_ID },
+    ]);
+    expect(anchorClick).not.toHaveBeenCalled();
+    expect(toastSuccess).not.toHaveBeenCalled();
   });
 
   it("uses a reduced-motion-safe spinner while the export request is pending", async () => {
