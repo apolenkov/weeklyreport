@@ -11,4 +11,4 @@
       without `report.json`, failing before the change.
 - [x] 2.2 Report missing roles and passes in `crawl.ts`, `merge.ts` and
       `report.ts`; keep raw outputs; non-zero exit.
-- [ ] 2.3 Full gates and independent review.
+- [x] 2.3 Full gates and independent review.
