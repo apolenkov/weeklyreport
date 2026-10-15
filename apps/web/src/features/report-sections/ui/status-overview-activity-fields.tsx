@@ -113,6 +113,8 @@ export function useActivityFieldsDraft(
   };
 
   const reset = (): void => {
+    // An already-empty title is unchanged: Reset must not arm a pending edit.
+    if (title === "") return;
     setTitle("");
     setDraftDirty(true);
   };

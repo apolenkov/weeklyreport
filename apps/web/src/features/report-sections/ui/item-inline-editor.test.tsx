@@ -100,6 +100,10 @@ describe("ItemInlineEditor", () => {
     expect(onSave).not.toHaveBeenCalled();
     const guidance = document.querySelector<HTMLElement>('[role="alert"]');
     expect(guidance).not.toBeNull();
+    // TASK-503.22 / C5002: the focused fallback also states the actual rule.
+    expect(guidance).toHaveTextContent(
+      "A completed item cannot have a next step.",
+    );
     expect(guidance).toHaveTextContent(
       "Cancel, then choose More actions → Update status.",
     );

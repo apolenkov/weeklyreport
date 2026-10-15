@@ -166,6 +166,72 @@ describe("StatusOverviewActivityEditor", () => {
     ).toHaveValue("Ship it");
   });
 
+  // TASK-503.22 / C5076: Reset on a title that is already empty changes nothing,
+  // so it must not arm the unload guard, report a pending edit or enable Save.
+  it("keeps a catalogue reset on an already-empty title clean", async () => {
+    const onPendingChange = vi.fn();
+    render(
+      <StatusOverviewActivityEditor
+        activityId={ACTIVITY_ID}
+        values={{
+          titleOverride: null,
+          description: null,
+          catalogueName: "Catalogue duty",
+        }}
+        onChange={vi.fn()}
+        onPendingChange={onPendingChange}
+        onClose={vi.fn()}
+      />,
+    );
+    const user = userEvent.setup();
+
+    await user.click(
+      screen.getByTestId(`activity-fields-reset-${ACTIVITY_ID}`),
+    );
+
+    expect(onPendingChange).not.toHaveBeenCalledWith(ACTIVITY_ID, true);
+    expect(
+      screen.getByTestId(`activity-fields-save-${ACTIVITY_ID}`),
+    ).toBeDisabled();
+    const unload = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(unload);
+    expect(unload.defaultPrevented).toBe(false);
+  });
+
+  it("keeps an edited description pending when Reset finds the title already empty", async () => {
+    const onPendingChange = vi.fn();
+    render(
+      <StatusOverviewActivityEditor
+        activityId={ACTIVITY_ID}
+        values={{
+          titleOverride: null,
+          description: null,
+          catalogueName: "Catalogue duty",
+        }}
+        onChange={vi.fn()}
+        onPendingChange={onPendingChange}
+        onClose={vi.fn()}
+      />,
+    );
+    const user = userEvent.setup();
+
+    await user.type(
+      screen.getByTestId(`activity-description-${ACTIVITY_ID}`),
+      "Ship it",
+    );
+    await user.click(
+      screen.getByTestId(`activity-fields-reset-${ACTIVITY_ID}`),
+    );
+
+    expect(onPendingChange).toHaveBeenLastCalledWith(ACTIVITY_ID, true);
+    expect(
+      screen.getByTestId(`activity-fields-save-${ACTIVITY_ID}`),
+    ).toBeEnabled();
+    expect(
+      screen.getByTestId(`activity-description-${ACTIVITY_ID}`),
+    ).toHaveValue("Ship it");
+  });
+
   it("syncs a clean draft before a later one-field save", async () => {
     const onChange = vi.fn();
     const user = userEvent.setup();
