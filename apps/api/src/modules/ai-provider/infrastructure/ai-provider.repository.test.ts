@@ -144,6 +144,14 @@ const buildHarness = () => {
   const configurationFindMany = vi
     .fn<() => Promise<readonly RevisionRecord[]>>()
     .mockResolvedValue([active, revision("revision-old")]);
+  const controlFindUnique = vi.fn().mockResolvedValue({
+    id: "singleton",
+    activeConfigurationId: active.id,
+    enabled: true,
+    createdAt: active.createdAt,
+    updatedAt: active.updatedAt,
+    activeConfiguration: active,
+  });
   const transaction = {
     aiProviderConfiguration: {
       create: revisionCreate,
@@ -156,11 +164,13 @@ const buildHarness = () => {
             ),
         ),
       findUniqueOrThrow: vi.fn().mockResolvedValue(candidate),
+      findMany: configurationFindMany,
       update: revisionUpdate,
       updateMany: revisionUpdateMany,
       deleteMany: configurationDeleteMany,
     },
     aiProviderControl: {
+      findUnique: controlFindUnique,
       upsert: controlUpsert,
       update: controlUpdate,
       updateMany: controlUpdateMany,
@@ -195,14 +205,7 @@ const buildHarness = () => {
   const prisma = {
     $transaction: transactionRunner,
     aiProviderControl: {
-      findUnique: vi.fn().mockResolvedValue({
-        id: "singleton",
-        activeConfigurationId: active.id,
-        enabled: true,
-        createdAt: active.createdAt,
-        updatedAt: active.updatedAt,
-        activeConfiguration: active,
-      }),
+      findUnique: controlFindUnique,
       findFirst: controlFindFirst,
       upsert: controlUpsert,
     },

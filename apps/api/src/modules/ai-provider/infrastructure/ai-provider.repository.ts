@@ -130,17 +130,23 @@ export class AiProviderConfigurationRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async getControl(): Promise<StoredAiProviderControl | null> {
-    const [control, revisions] = await Promise.all([
-      this.prisma.aiProviderControl.findUnique({
-        where: { id: "singleton" },
-        include: aiProviderControlInclude,
-      }),
-      this.prisma.aiProviderConfiguration.findMany({
-        select: aiProviderRevisionSelect,
-        orderBy: { updatedAt: "desc" },
-        take: 100,
-      }),
-    ]);
+    // One snapshot: an activation committing between the two reads must not
+    // pair the old active pointer with the new revision lifecycles (C0976).
+    const [control, revisions] = await this.prisma.$transaction(
+      async (tx) =>
+        [
+          await tx.aiProviderControl.findUnique({
+            where: { id: "singleton" },
+            include: aiProviderControlInclude,
+          }),
+          await tx.aiProviderConfiguration.findMany({
+            select: aiProviderRevisionSelect,
+            orderBy: { updatedAt: "desc" },
+            take: 100,
+          }),
+        ] as const,
+      { isolationLevel: "RepeatableRead" },
+    );
     return control ? toControl(control, revisions.map(toRevision)) : null;
   }
 
