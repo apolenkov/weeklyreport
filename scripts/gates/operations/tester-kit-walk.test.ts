@@ -74,7 +74,10 @@ fi`,
       join(bin, "kubectl"),
       'if [ "$1" = config ]; then echo orbstack; fi',
     );
-    executable(join(bin, "lsof"), "exit 1");
+    executable(
+      join(bin, "lsof"),
+      'case "$*" in *"-p "*) exit 0 ;; *) exit 1 ;; esac',
+    );
     try {
       const result = spawnSync(
         "/bin/bash",

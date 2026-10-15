@@ -29,7 +29,7 @@ type PairState =
   | "corrupt-key"
   | "mismatched";
 
-function runSetup(pairState: PairState, failure = "") {
+function runSetup(pairState: PairState, failure = "", secrets?: string) {
   mkdirSync(resolve("output"), { recursive: true });
   const root = mkdtempSync(resolve("output/local-prod-certificate-"));
   const state = join(root, "state"),
@@ -41,19 +41,20 @@ function runSetup(pairState: PairState, failure = "") {
     for (const path of [state, bin]) mkdirSync(path);
     writeFileSync(
       join(state, "secrets.env"),
-      [
-        "DB_PASSWORD",
-        "AUTH_JWT_SECRET",
-        "PDF_EXPORT_JWT_SECRET",
-        "AI_PROVIDER_CONFIG_ENCRYPTION_KEY",
-        "KC_ADMIN_PASSWORD",
-        "PW_LEAD1",
-        "PW_HEAD",
-        "PW_VIEWER",
-        "PW_ADMIN",
-      ]
-        .map((name) => `${name}=${secretMarker}\n`)
-        .join(""),
+      secrets ??
+        [
+          "DB_PASSWORD",
+          "AUTH_JWT_SECRET",
+          "PDF_EXPORT_JWT_SECRET",
+          "AI_PROVIDER_CONFIG_ENCRYPTION_KEY",
+          "KC_ADMIN_PASSWORD",
+          "PW_LEAD1",
+          "PW_HEAD",
+          "PW_VIEWER",
+          "PW_ADMIN",
+        ]
+          .map((name) => `${name}=${secretMarker}\n`)
+          .join(""),
       { mode: 0o600 },
     );
     if (pairState !== "fresh") {
@@ -210,5 +211,17 @@ test.each(["req", "x509", "pkcs8"])(
     assert.equal(result.status, 42);
     assert.match(result.stderr, new RegExp(failureMarker, "u"));
     assert.equal(mutated, false);
+  },
+);
+
+// C0057: an interrupted first write leaves secrets.env empty or cut short; the
+// next run must refuse before Kubernetes instead of sourcing it as complete.
+test.each(["", "DB_PASSWORD=ab", "DB_PASSWORD=ab\nAUTH_JWT_SECRET="])(
+  "local-prod refuses an interrupted secrets.env %j before Kubernetes",
+  (secrets) => {
+    const { result, mutated } = runSetup("valid", "", secrets);
+    assert.notEqual(result.status, 0);
+    assert.equal(mutated, false);
+    assert.match(result.stderr, /Missing required secret/u);
   },
 );

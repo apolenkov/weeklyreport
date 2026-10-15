@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -85,8 +86,13 @@ const runStart = (
   writeStub(bin, "kubectl", KUBECTL_STUB);
   writeStub(bin, "bash", "exit 0");
   writeStub(bin, "nohup", 'exec "$@"');
-  writeStub(bin, "lsof", "exit 1");
-  writeStub(bin, "curl", "printf '200'");
+  // Busy checks see free ports; the owned-listener probe (-p) answers ready.
+  writeStub(bin, "lsof", 'case "$*" in *"-p "*) exit 0 ;; *) exit 1 ;; esac');
+  writeStub(
+    bin,
+    "curl",
+    `case "$WR_TEST_STALL:$*" in 1:*--max-time*|:*) printf '200' ;; *) exec /bin/sleep 60 ;; esac`,
+  );
   for (const name of ["helm", "openssl", "envsubst", "pnpm", "docker"]) {
     writeStub(bin, name, "exit 0");
   }
@@ -253,7 +259,14 @@ const runEnv = (
   const path = process.env.PATH;
   assert.ok(path);
   writeStub(bin, "nohup", 'exec "$@"');
-  writeStub(bin, "lsof", "exit 1");
+  // Like real lsof, the owned probe (-p <pid>) answers only for a live process;
+  // busy checks see free ports. Tests may replace it before their own call.
+  if (!existsSync(join(bin, "lsof")))
+    writeStub(
+      bin,
+      "lsof",
+      String.raw`a="$*"; case "$a" in *"-p "*) p=$(printf '%s' "$a" | sed 's/.*-p \([0-9]*\).*/\1/'); kill -0 "$p" 2>/dev/null ;; *) exit 1 ;; esac`,
+    );
   const result = spawnSync("/bin/bash", ["-c", `. "$ENVSH"\n${script}`], {
     env: {
       ...process.env,
@@ -396,4 +409,99 @@ test("pf_start ignores a stale live PID and pf_stop reaps only the owned forward
   } finally {
     spawnSync("/bin/kill", [String(foreign)]);
   }
+});
+
+// C0065/C0102: a forward is ready only when its own child owns the listener.
+test("pf_start refuses a forward whose child exits before listening", () => {
+  const directory = mkdtempSync(join(tmpdir(), "tester-kit-env-"));
+  fixtureRoots.add(directory);
+  const { bin } = runEnv(directory, "true");
+  writeStub(bin, "kubectl", String.raw`printf 'PF_BIND_REFUSED\n' >&2; exit 1`);
+  writeStub(bin, "lsof", "exit 1");
+  writeStub(bin, "sleep", "exit 0");
+  const started = runEnv(directory, "pf_start app edge 18080 8080");
+  assert.notEqual(started.result.status, 0, "dead forward reported ready");
+  assert.match(started.result.stderr, /pf-app\.log|PF_BIND_REFUSED/u);
+  assert.ok(
+    !readdirSync(started.stateDir).includes("pf-app.pid"),
+    "dead forward left a pidfile",
+  );
+});
+
+test("pf_start returns only after its own forward child listens", () => {
+  const directory = mkdtempSync(join(tmpdir(), "tester-kit-env-"));
+  fixtureRoots.add(directory);
+  const { bin } = runEnv(directory, "true");
+  writeStub(bin, "kubectl", FORWARD_STUB, "#!/bin/bash");
+  // Busy check sees a free port; the owned probe (-p <pid>) answers on its third call.
+  writeStub(
+    bin,
+    "lsof",
+    'case "$*" in *"-p "*) n=$(cat "$PROBE_LOG.n" 2>/dev/null || echo 0); n=$((n + 1)); echo "$n" > "$PROBE_LOG.n"; [ "$n" -ge 3 ] ;; *) exit 1 ;; esac',
+  );
+  const started = runEnv(
+    directory,
+    'pf_start app edge 18080 8080; cut -f1 "$STATE_DIR/pf-app.pid"',
+  );
+  const recorded = Number(started.result.stdout.trim());
+  try {
+    assert.equal(started.result.status, 0, started.result.stderr);
+    assert.match(
+      started.calls,
+      new RegExp(`lsof .*-p ${recorded} .*-iTCP:18080`, "u"),
+    );
+    assert.equal(
+      started.calls.split("\n").filter((call) => call.includes("-p ")).length,
+      3,
+    );
+  } finally {
+    runEnv(directory, "pf_stop app");
+  }
+});
+
+// C0068: two overlapping starts must not leave an unowned forward behind.
+test("concurrent pf_start leaves no forward alive after pf_stop", () => {
+  const directory = mkdtempSync(join(tmpdir(), "tester-kit-env-"));
+  fixtureRoots.add(directory);
+  const { bin } = runEnv(directory, "true");
+  writeStub(
+    bin,
+    "kubectl",
+    FORWARD_STUB.replace(
+      "child=$!",
+      () => `child=$!\nprintf 'forwardpid=%s\\n' "$$" >> "$PROBE_LOG"`,
+    ),
+    "#!/bin/bash",
+  );
+  // Widen the check-then-start window; a forward listens once it has started its child.
+  writeStub(
+    bin,
+    "lsof",
+    String.raw`a="$*"; case "$a" in *"-p "*) p=$(printf '%s' "$a" | sed 's/.*-p \([0-9]*\).*/\1/'); grep -q "^forwardpid=$p$" "$PROBE_LOG" ;; *) /bin/sleep 0.3; exit 1 ;; esac`,
+  );
+  const raced = runEnv(
+    directory,
+    "pf_start app edge 18080 8080 & pf_start app edge 18080 8080 & wait; pf_stop app",
+  );
+  const calls = readWhen(raced.probeLog, /forwardchild=\d+/);
+  const pids = [...calls.matchAll(/forward(?:pid|child)=(\d+)/gu)].map(
+    (match) => Number(match[1]),
+  );
+  try {
+    assert.ok(pids.length > 0, calls);
+    spawnSync("/bin/sleep", ["0.3"]);
+    assert.deepEqual(
+      pids.filter((pid) => alive(pid)),
+      [],
+      "a forward survived pf_stop",
+    );
+  } finally {
+    for (const pid of pids) spawnSync("/bin/kill", [String(pid)]);
+  }
+});
+
+// C0089: one stalled health request must not outlast the readiness loop.
+test("a stalled health request cannot hang start beyond its bound", () => {
+  const { result } = runStart({ WR_TEST_STALL: "1" }, ["--tag", "fixture-tag"]);
+  assert.equal(result.error, undefined, "start.sh hung on a stalled curl");
 });
