@@ -13,6 +13,7 @@ import {
 } from "./ai-provider.activation-guards.js";
 import {
   AiProviderActivationPreparation,
+  type PreparationFailureCause,
   type PreparationResult,
 } from "./ai-provider.activation-preparation.js";
 import { AiProviderReadService } from "./ai-provider.read-service.js";
@@ -232,6 +233,12 @@ export class AiProviderActivationService {
       embeddingScope,
     );
     const state: { progress: PreparationResult | null } = { progress: null };
+    const fail = (result: PreparationResult, cause: PreparationFailureCause) =>
+      this.preparationState.fail(revisionId, actorId, embeddingScope, {
+        result,
+        startedAt: preparing.preparationStartedAt ?? now(),
+        cause,
+      });
     try {
       const result = await this.dependencies.preparation.prepare(
         preparing,
@@ -247,12 +254,7 @@ export class AiProviderActivationService {
         },
       );
       if (result.failed > 0 || result.completed < result.total) {
-        return await this.preparationState.fail(
-          revisionId,
-          actorId,
-          embeddingScope,
-          { result, startedAt: preparing.preparationStartedAt ?? now() },
-        );
+        return await fail(result, "preparation_incomplete");
       }
       await this.preparationState.complete(
         revisionId,
@@ -264,8 +266,8 @@ export class AiProviderActivationService {
     } catch (error) {
       if (error instanceof AiProviderConflictError) throw error;
       const observed = state.progress;
-      return this.preparationState.fail(revisionId, actorId, embeddingScope, {
-        result: {
+      return fail(
+        {
           completed: observed?.completed ?? preparing.preparationCompleted,
           total: Math.max(1, observed?.total ?? preparing.preparationTotal),
           failed: observed?.failed ?? Math.max(1, preparing.preparationFailed),
@@ -274,8 +276,8 @@ export class AiProviderActivationService {
             Date.now() - (preparing.preparationStartedAt ?? now()).getTime(),
           ),
         },
-        startedAt: preparing.preparationStartedAt ?? now(),
-      });
+        "preparation_exception",
+      );
     }
   }
 

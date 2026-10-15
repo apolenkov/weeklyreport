@@ -25,6 +25,13 @@ export type PreparationResult = Readonly<{
 
 const PREPARATION_OWNER_CONFLICT = "AI provider preparation lost its owner";
 
+/**
+ * Closed audit categories for a failed preparation. An exception's name,
+ * message and stack are never recorded: they are caller-controlled strings.
+ */
+export type PreparationFailureCause =
+  "preparation_exception" | "preparation_incomplete";
+
 const preparationAlreadyCompleted = (
   revision: StoredAiProviderRevision,
 ): boolean =>
@@ -148,9 +155,13 @@ export class AiProviderActivationPreparation {
     revisionId: string,
     actorId: string,
     profile: ResolvedEmbeddingProfile,
-    preparation: Readonly<{ result: PreparationResult; startedAt: Date }>,
+    preparation: Readonly<{
+      result: PreparationResult;
+      startedAt: Date;
+      cause: PreparationFailureCause;
+    }>,
   ): Promise<AiProviderControlRead> {
-    const { result, startedAt } = preparation;
+    const { result, startedAt, cause } = preparation;
     const failed = await this.dependencies.repository.updateProgress(
       revisionId,
       {
@@ -168,6 +179,7 @@ export class AiProviderActivationPreparation {
       actorId,
       revisionId,
       profile: profile.profile,
+      cause,
     });
     this.dependencies.metrics.recordActivation({
       profile: profile.profile,
