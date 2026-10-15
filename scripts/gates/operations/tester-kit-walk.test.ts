@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import {
   copyFileSync,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -23,6 +24,7 @@ test.each([
   [0, 0, false, 0, true, "separate"],
   [0, 0, false, 0, true, "equals"],
   [0, 0, false, 1, false, "empty"],
+  [42, 0, false, 1, true, "separate"],
 ] as const)(
   "walk crawl=%s reset=%s requested=%s exit=%s full=%s output=%s",
   (crawlExit, resetExit, requested, expectedExit, full, outputForm) => {
@@ -128,6 +130,8 @@ fi`,
           full ? join(output, "state-draft/read") : output,
         );
         if (full) {
+          // A pass that fails before writing anything still has its directory for the merge.
+          assert.ok(existsSync(join(output, "state-draft/read")));
           const merged = readFileSync(mergeArgs, "utf8")
             .split("\0")
             .slice(0, -1);

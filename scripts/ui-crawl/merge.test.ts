@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -18,6 +19,13 @@ afterEach(() => {
   for (const dir of dirs.splice(0))
     rmSync(dir, { recursive: true, force: true });
 });
+
+function walkDir(): string {
+  mkdirSync(root, { recursive: true });
+  const walk = mkdtempSync(join(root, "walk-"));
+  dirs.push(walk);
+  return walk;
+}
 
 function pass(walk: string, dir: string, report: string | null): void {
   mkdirSync(join(walk, dir), { recursive: true });
@@ -71,5 +79,40 @@ describe("mergeReports", () => {
       readFileSync(join(walk, "state-published/read/report.json"), "utf8"),
     ).toBe('{"url":');
     expect(existsSync(join(walk, "state-draft/synthetic"))).toBe(true);
+  });
+
+  it.each([
+    ['{"results":{}}'],
+    ['{"results":[{}]}'],
+    ['{"results":[{"role":"lead","ms":1,"runs":[]}],"missing":{}}'],
+    ["null"],
+  ])("names a pass report of the wrong shape: %s", (report) => {
+    const walk = walkDir();
+    pass(walk, "state-draft/read", report);
+
+    expect(mergeReports(walk)).toEqual({
+      passes: 0,
+      missing: [{ role: "state-draft/read", reason: "not a crawl report" }],
+    });
+  });
+
+  it("exits non-zero from the command line when an output is missing", () => {
+    const walk = walkDir();
+    pass(walk, "state-draft/read", null);
+
+    const result = spawnSync(
+      process.execPath,
+      [
+        "--experimental-strip-types",
+        join(import.meta.dirname, "merge.ts"),
+        walk,
+      ],
+      { encoding: "utf8", timeout: 30_000 },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      "Incomplete full walk: 1 expected output(s) missing",
+    );
   });
 });

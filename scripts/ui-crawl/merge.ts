@@ -61,6 +61,19 @@ function passDirs(root: string): readonly string[] {
     .flatMap(directories);
 }
 
+// shortcut: checks each result's runs list, not every nested record; deeper damage still fails the merge.
+function isPart(value: unknown): value is Part {
+  if (typeof value !== "object" || value === null) return false;
+  const { results, missing } = value as Record<string, unknown>;
+  return (
+    Array.isArray(results) &&
+    results.every((result: unknown) =>
+      Array.isArray((result as { runs?: unknown } | null)?.runs),
+    ) &&
+    (missing === undefined || Array.isArray(missing))
+  );
+}
+
 // A pass report that cannot be used becomes a missing entry; the raw file is left as found.
 function readPart(
   root: string,
@@ -68,14 +81,22 @@ function readPart(
 ): Readonly<{ part: Part | null; reason: string }> {
   const file = join(root, dir, REPORT);
   if (!existsSync(file)) return { part: null, reason: "no report.json" };
+  let text: string;
   try {
-    const part = JSON.parse(readFileSync(file, "utf8")) as Part;
-    return Array.isArray(part.results)
-      ? { part, reason: "" }
-      : { part: null, reason: "not a crawl report" };
+    text = readFileSync(file, "utf8");
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code ?? "unknown";
+    return { part: null, reason: `unreadable report.json (${code})` };
+  }
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
   } catch {
     return { part: null, reason: "invalid report.json" };
   }
+  return isPart(value)
+    ? { part: value, reason: "" }
+    : { part: null, reason: "not a crawl report" };
 }
 
 function parts(root: string): Readonly<{

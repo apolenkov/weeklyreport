@@ -86,6 +86,8 @@ export CRAWL_SYNTHETIC_ORIGIN="http://localhost:$APP_PORT"
 crawl() { # crawl <state> <pass> <manifest> <extra args...>
   local state=$1 pass=$2 manifest=$3
   shift 3
+  # The pass directory exists before the crawler can fail, so the merge reports it as missing.
+  mkdir -p "$OUT/state-$state/$pass"
   node --experimental-strip-types scripts/ui-crawl/crawl.ts --full \
     --url "$CRAWL_SYNTHETIC_ORIGIN" --secrets "$STATE_DIR/secrets.env" \
     --fixture-manifest "$manifest" --out "$OUT/state-$state/$pass" \
