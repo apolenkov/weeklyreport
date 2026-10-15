@@ -12,10 +12,11 @@ response is built, counting global and session-scoped listeners alike;
 `webhooks` is `0` and `total` equals `sseListeners`. The count is advisory: it
 MUST NOT be presented as an acknowledgement that any listener received the
 `action.requested` event, nor as a count of listeners for that session.
-Listeners receive the event through their own authorized, session-scoped
-polling, which runs asynchronously after the response and stops when a
-listener disconnects; a listener counted in the response may therefore never
-receive it. Other API processes' listeners are not counted.
+Each listener reads stored events through its own authorized, scope-filtered
+polling, which runs independently of the action request; there is no ordering
+between the response and any delivery, and a listener counted in the response
+may never receive the event on that connection. Other API processes' listeners
+are not counted.
 
 #### Scenario: Listeners of another session are counted but not served
 
@@ -28,10 +29,12 @@ receive it. Other API processes' listeners are not counted.
 
 - **GIVEN** an authorized agent listener is connected to the global stream
 - **WHEN** an action is requested for a session it may read
-- **THEN** that listener receives `action.requested` on a later poll
-- **AND** the response count was computed before that delivery
+- **THEN** while that connection stays open and its polls succeed, the
+  listener receives `action.requested`
+- **AND** the response does not depend on that delivery
 
 #### Scenario: The count does not confirm delivery
 
-- **WHEN** a counted listener disconnects before its next poll
-- **THEN** it never receives the event, and the response is unchanged
+- **WHEN** a counted listener disconnects before its poll reads the event
+- **THEN** that connection does not deliver it, and the response already sent
+  is unchanged
