@@ -85,6 +85,8 @@ describe("mergeReports", () => {
     ['{"results":{}}'],
     ['{"results":[{}]}'],
     ['{"results":[{"role":"lead","ms":1,"runs":[]}],"missing":{}}'],
+    ['{"results":[{"role":"lead","ms":1,"runs":[]}],"missing":[1]}'],
+    ['{"results":[],"missing":[{"role":"viewer"}]}'],
     ["null"],
   ])("names a pass report of the wrong shape: %s", (report) => {
     const walk = walkDir();

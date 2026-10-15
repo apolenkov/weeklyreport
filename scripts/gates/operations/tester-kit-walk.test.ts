@@ -145,4 +145,6 @@ fi`,
       rmSync(fixture, { recursive: true, force: true });
     }
   },
+  // Above the 15 s spawn bound, so a busy host reports the shell result.
+  20_000,
 );
