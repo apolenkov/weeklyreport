@@ -4,7 +4,7 @@
 
 When embedding preparation fails during activation, the
 `ai_provider.activation_failed` audit event MUST carry a `cause` from a closed
-set: `preparation_exception` when preparation throws, and
+set: `preparation_exception` when the preparation step or its accounting throws, and
 `preparation_incomplete` when it returns failed or missing vectors. The audit
 MUST NOT record the exception's name, message, stack or cause. A conflict error
 MUST keep its separate handling.
