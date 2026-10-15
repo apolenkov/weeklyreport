@@ -16,7 +16,13 @@ export default mergeConfig(
     test: {
       setupFiles: ["./src/test-utils/test-env.setup.ts"],
       include: ["src/**/*.test.ts"],
-      exclude: ["**/dist/**", "**/node_modules/**"],
+      // The Redis isolation test asserts the unit contour only; this contour
+      // deliberately targets the guarded Redis from `.env.test` (C2139).
+      exclude: [
+        "**/dist/**",
+        "**/node_modules/**",
+        "src/test-utils/test-env.redis-isolation.test.ts",
+      ],
       fileParallelism: false,
       maxWorkers: 1,
       coverage: {
