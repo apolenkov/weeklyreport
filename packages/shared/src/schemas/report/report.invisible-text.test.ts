@@ -40,7 +40,9 @@ function expectInvisibleTextRejected(value: string): void {
 
 describe("safeText visible-content validation", () => {
   it.each([
+    ["empty text", ""],
     ["spaces", " ".repeat(3)],
+    ["non-breaking space", "\u00A0"],
     ["zero-width space", "​"],
     ["zero-width non-joiner", "‌"],
     ["zero-width joiner", "‍"],
@@ -49,6 +51,7 @@ describe("safeText visible-content validation", () => {
     ["combining grapheme joiner", "\u034F"],
     ["Mongolian vowel separator", "\u180E"],
     ["word joiner", "\u2060"],
+    ["repeated word joiner", "\u2060\u2060"],
     ["function application", "\u2061"],
     ["invisible times", "\u2062"],
     ["invisible separator", "\u2063"],
