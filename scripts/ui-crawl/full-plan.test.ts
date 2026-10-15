@@ -111,6 +111,34 @@ describe("full walk write guard", () => {
       );
     expect(fullControlReason(control("Open details"))).toBeNull();
   });
+
+  it("keeps inputs behind a named scenario whatever role the probe reports", () => {
+    for (const [type, role] of [
+      ["number", "spinbutton"],
+      ["range", "slider"],
+      ["submit", "button"],
+      ["image", "button"],
+      ["date", null],
+      ["nonsense", "textbox"],
+      [null, "textbox"],
+    ] as const)
+      expect(
+        fullControlReason(control("Count", { tag: "input", type, role })),
+      ).toBe("input: requires a named scenario");
+    expect(
+      fullControlReason(control("Notes", { tag: "textarea", role: "textbox" })),
+    ).toBe("input: requires a named scenario");
+  });
+
+  it("leaves checkbox, radio and button admission unchanged", () => {
+    for (const type of ["checkbox", "radio", "CHECKBOX"])
+      expect(
+        fullControlReason(
+          control("Pick", { tag: "input", type, role: type.toLowerCase() }),
+        ),
+      ).toBeNull();
+    expect(fullControlReason(control("Pick", { type: "submit" }))).toBeNull();
+  });
 });
 
 function probeOf(...controls: FullControl[]): FullProbe {

@@ -122,8 +122,15 @@ export function matchControl(
   return now[was.findIndex((c) => c.elementId === planned.elementId)];
 }
 
+// Decided by tag and DOM type, not role, so a corrected input role admits no new action.
+function guardedInput(control: FullControl): boolean {
+  const type = control.type?.toLowerCase();
+  return control.tag === "input" && type !== "checkbox" && type !== "radio";
+}
+
 export function fullControlReason(control: FullControl): string | null {
-  if (control.role === "textbox") return "input: requires a named scenario";
+  if (control.role === "textbox" || guardedInput(control))
+    return "input: requires a named scenario";
   if (
     /^(activate|enable|move|plan this work|mark|save|apply|create|confirm|toggle|detach|attach|unlink|assign|unassign|transfer)\b/i.test(
       control.name,
