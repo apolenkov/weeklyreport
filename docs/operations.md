@@ -45,19 +45,36 @@ PgBouncer. `pdfdata` holds exported files separately from the database.
    runtime configuration. `NEXT_PUBLIC_SENTRY_DSN` is compiled into the Web image;
    changing it requires a new image build and deployment. The build and chart
    own the same fixed `API_URL=http://api:3001`; it is not an operator override.
-4. Review the render before activation, then install the release:
+4. Review the render before activation, then install or upgrade the release:
 
    ```sh
    kubectl config current-context
    helm lint deploy/helm/weeklyreport --strict -f <values-file> --set images.tag=<commit-sha>
    helm template weeklyreport deploy/helm/weeklyreport -n <ns> -f <values-file> --set images.tag=<commit-sha>
-   helm upgrade --install weeklyreport deploy/helm/weeklyreport -n <ns> --create-namespace \
-     -f <values-file> --set images.tag=<commit-sha> --atomic --timeout 10m
    ```
 
-   Use the same reviewed values and tag for rendering and installation. Rendered
-   output can contain Secrets when `secrets.create=true`; protect it accordingly.
-   `--atomic` restores manifests on failure, but does not undo migrations.
+   First install (the release does not exist yet). Do not add `--atomic` or
+   `--rollback-on-failure`: on install they uninstall the release, and the
+   `pdfdata`/`pgbackups` claims go with it.
+
+   ```sh
+   helm --kube-context <approved-context> -n <ns> install weeklyreport deploy/helm/weeklyreport --create-namespace      -f <values-file> --set images.tag=<commit-sha> --wait=watcher --timeout 10m
+   ```
+
+   If it times out or fails, keep the failed release, its resources, PVC/PV and
+   logs for diagnosis; deleting them is a separate, target-bound operator decision.
+   Upgrade an existing, deployed release (never with `--install`):
+
+   ```sh
+   helm --kube-context <approved-context> -n <ns> upgrade weeklyreport deploy/helm/weeklyreport \
+     -f <values-file> --set images.tag=<commit-sha> --wait=watcher --timeout 10m
+   ```
+
+   Add `--rollback-on-failure` to an upgrade only after the previous images and
+   values are shown compatible with the current post-migration schema and durable
+   data; otherwise fix forward. Use the same reviewed values and tag for rendering
+   and installation. Rendered output can contain Secrets when `secrets.create=true`;
+   protect it accordingly. Neither flag undoes migrations.
 
 5. Verify the release before serving users:
 
@@ -527,8 +544,8 @@ kubectl -n <ns> rollout status deployment/api --timeout=5m
 curl -fsS https://<host>/health/ready
 ```
 
-Helm rollback and an upgrade's `--atomic` rollback restore manifests and image
-tags; neither restores the database. Never overwrite a published image tag.
+Helm rollback and an upgrade's `--rollback-on-failure` rollback restore manifests
+and image tags; neither restores the database. Never overwrite a published image tag.
 If a migration shipped, either fix forward with a new migration or use an
 explicitly authorized pre-deploy dump restore and accept the agreed loss of
 later writes. Prepare and verify that dump with

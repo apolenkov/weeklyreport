@@ -108,13 +108,15 @@ durable PDFs, queues and security policy to be confirmed first. It never uses
 
 ```sh
 helm upgrade weeklyreport deploy/helm/weeklyreport -n <ns> \
-  -f values.yaml --set images.tag=<commit-sha> --rollback-on-failure --timeout 10m
+  -f values.yaml --set images.tag=<commit-sha> --wait=watcher --timeout 10m
 ```
 
-`--rollback-on-failure` returns to the previous release and implies the watcher
-wait. Where compatibility is not proven, omit it and plan a forward-only upgrade
-that keeps the resources on failure. Neither rollback restores SQL data, cache,
-Redis or PDFs.
+Add `--rollback-on-failure` only after the previous images and values are shown
+compatible with the current post-migration schema and durable data; it returns to
+the previous release and implies the watcher wait. Otherwise keep the command
+above and fix forward, which keeps the resources on failure while the migration
+initContainer and API readiness are still waited for. Neither rollback restores
+SQL data, cache, Redis or PDFs.
 
 The `postgres` pod mounts the `pgbackups` volume read-only, so storage classes with
 `WaitForFirstConsumer` bind it at install and `--wait=watcher` can finish; the backup
