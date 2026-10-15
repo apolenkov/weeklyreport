@@ -236,3 +236,36 @@ The authenticated-encryption additional data and the credential fingerprint doma
 - **WHEN** the credential codec decrypts it after the product rename
 - **THEN** decryption succeeds and returns the original credential
 - **AND** the fingerprint of the same credential equals the previously stored fingerprint
+
+### Requirement: The control read is one consistent snapshot
+
+The AI provider control read MUST return the active pointer, the active
+revision and the revision list from one database snapshot, so an activation
+that commits during the read cannot pair the previous active pointer with the
+new revision lifecycles.
+
+#### Scenario: An activation commits during the control read
+
+- **WHEN** an activation commits after the control row is read and before the revision list is read
+- **THEN** the returned revision list marks as active exactly the revision the returned pointer names
+
+### Requirement: A failed preparation records a closed cause
+
+When embedding preparation fails during activation, the
+`ai_provider.activation_failed` audit event MUST carry a `cause` from a closed
+set: `preparation_exception` when the preparation step or its accounting throws, and
+`preparation_incomplete` when it returns failed or missing vectors. The audit
+MUST NOT record the exception's name, message, stack or cause. A conflict error
+MUST keep its separate handling.
+
+#### Scenario: Preparation throws
+
+- **WHEN** preparation rejects with an error whose message or name contains a secret
+- **THEN** the audit event has `cause` equal to `preparation_exception`
+- **AND** no part of the error appears in the event
+- **AND** the previous provider stays active
+
+#### Scenario: Preparation returns an incomplete result
+
+- **WHEN** preparation resolves with failed or missing vectors
+- **THEN** the audit event has `cause` equal to `preparation_incomplete`
