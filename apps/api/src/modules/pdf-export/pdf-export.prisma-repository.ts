@@ -15,12 +15,14 @@ import {
 import { scopeSnapshotWithOrgProgress } from "../weekly-report/index.js";
 import {
   assertCanonicalArtifact,
+  assertJobPublication,
   assertValidCompletionJob,
   type CompletedPdfExportJob,
   isIdenticalCompletedArtifact,
   type LockedPdfExportJobRow,
   type PdfExportDb,
   PdfExportDomainError,
+  PdfExportIntegrityError,
   type PdfExportJobRow,
   PdfExportStateConflictError,
   pdfStatusToDb,
@@ -119,14 +121,7 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
     const snapshot = publishedReportSnapshotSchema.parse(
       row.publicationSnapshot,
     );
-    if (
-      snapshot.reportId !== row.reportId ||
-      snapshot.publishedAt.getTime() !== row.publicationAt.getTime()
-    ) {
-      throw new PdfExportDomainError(
-        `PDF export job ${jobId} has an invalid publication snapshot.`,
-      );
-    }
+    assertJobPublication(jobId, row, snapshot);
     return snapshot;
   }
 
@@ -289,7 +284,7 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
 
     if (count === 0) {
       const current = await this.readExportJobRow(db, jobId);
-      throw new PdfExportDomainError(
+      throw new PdfExportIntegrityError(
         `PDF export job ${jobId} is ${current.status} at generation ${current.generation}; the recovery quarantine was not applied.`,
       );
     }
@@ -321,7 +316,7 @@ export class PdfExportPrismaRepository implements PdfExportRepository {
       // Unreachable under the row lock after the caller's eligibility check;
       // failing loud rolls the transaction back instead of stranding the row.
       const current = await this.readExportJobRow(db, jobId);
-      throw new PdfExportDomainError(
+      throw new PdfExportIntegrityError(
         `PDF export job ${jobId} is ${current.status} at generation ${current.generation}; the generation advance from ${expectedGeneration} was not applied.`,
       );
     }

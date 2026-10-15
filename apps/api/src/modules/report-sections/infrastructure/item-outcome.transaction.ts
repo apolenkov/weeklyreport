@@ -22,6 +22,7 @@ import {
 import {
   LeadFormConstraintError,
   LeadFormDomainError,
+  LeadFormIntegrityError,
 } from "../domain/lead-form-shared.js";
 import { resolveOutcomeSource } from "./item-outcome-source.js";
 import {
@@ -108,7 +109,7 @@ export async function resolvePlanTx(
       const source = await resolveOutcomeSource(tx, target.section, command);
       const stableId = source.stableId;
       if (!stableId)
-        throw new LeadFormDomainError("This plan has no durable identity.");
+        throw new LeadFormIntegrityError("This plan has no durable identity.");
       if (
         command.source.kind === "prior" &&
         target.section.items.length >= MAX_RECORDS_PER_SECTION_SAVE

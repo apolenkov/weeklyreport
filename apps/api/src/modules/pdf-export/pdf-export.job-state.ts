@@ -28,6 +28,15 @@ export const dbStatusToDomain: Record<string, PdfExportJob["status"]> = {
   recovery_required: "recovery_required",
 };
 
+// A broken stored invariant, not a missing export: kept out of the domain
+// error table so the client gets the masked internal error (C0520).
+export class PdfExportIntegrityError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PdfExportIntegrityError";
+  }
+}
+
 export class UnsupportedPdfExportStatusError extends Error {
   constructor(status: string) {
     super(`Unsupported PDF export database status: ${status}`);
@@ -110,6 +119,23 @@ export function toExportJob(row: LockedPdfExportJobRow): PdfExportJobRecord {
     }),
     requestedBy: row.requestedBy,
   };
+}
+
+// The job row freezes its publication; a snapshot naming another report or
+// publication time is a broken stored invariant.
+export function assertJobPublication(
+  jobId: string,
+  row: { reportId: string; publicationAt: Date },
+  snapshot: { reportId: string; publishedAt: Date },
+): void {
+  if (
+    snapshot.reportId !== row.reportId ||
+    snapshot.publishedAt.getTime() !== row.publicationAt.getTime()
+  ) {
+    throw new PdfExportIntegrityError(
+      `PDF export job ${jobId} has an invalid publication snapshot.`,
+    );
+  }
 }
 
 export function assertValidCompletionJob(
