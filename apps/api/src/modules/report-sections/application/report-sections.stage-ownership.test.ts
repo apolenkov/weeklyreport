@@ -382,6 +382,66 @@ describe("ReportSectionsService — stage-ownership guard", () => {
     ).rejects.toMatchObject({ code: "STAGE_NOT_OWNED" });
   });
 
+  const saveCrossRisk = (
+    section: ReportSectionReadModel,
+    risk: ReportSectionReadModel["risks"][number],
+  ) =>
+    new ReportSectionsService(
+      createRepository(section),
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    ).saveDraft(
+      {
+        reportSectionId: baseSection.reportSectionId,
+        version: 1,
+        status: "draft",
+        stageStatuses: [],
+        activityStatuses: [],
+        projectStatuses: [{ projectId: PROJECT_P, status: "yellow" }],
+        items: [],
+        risks: [risk],
+        decisions: [],
+      },
+      baseSection.authorId,
+    );
+
+  it("keeps an unchanged-stage row saveable when its other fields change", async () => {
+    const [stored] = crossRowSection.risks;
+    if (stored === undefined) throw new Error("Expected a stored risk");
+
+    const saved = await saveCrossRisk(crossRowSection, {
+      ...stored,
+      risk: "Gateway certification slips again",
+    });
+
+    expect(saved.risks.map((risk) => risk.risk)).toEqual([
+      "Gateway certification slips again",
+    ]);
+  });
+
+  it.each([
+    ["adds an unowned stage", ["Integration"], ["Integration", "DevOps"]],
+    [
+      "swaps a repeated stored stage for an unowned one",
+      ["Integration", "Integration"],
+      ["Integration", "DevOps"],
+    ],
+  ])(
+    "rejects a reused stableId that %s",
+    async (_case, storedStages, sentStages) => {
+      const [stored] = crossRowSection.risks;
+      if (stored === undefined) throw new Error("Expected a stored risk");
+      const section: ReportSectionReadModel = {
+        ...crossRowSection,
+        risks: [{ ...stored, stageNames: storedStages }],
+      };
+
+      await expect(
+        saveCrossRisk(section, { ...stored, stageNames: sentStages }),
+      ).rejects.toMatchObject({ code: "STAGE_NOT_OWNED" });
+    },
+  );
+
   it("rejects a smuggle that reuses a stableId but swaps in an unowned stage", async () => {
     const service = new ReportSectionsService(
       createRepository(crossRowSection),

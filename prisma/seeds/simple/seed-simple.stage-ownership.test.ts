@@ -122,7 +122,13 @@ describe("demo record stage ownership", () => {
       decisions: section.decisions,
     });
     expect(input.items.length).toBeGreaterThan(0);
-    expect(validateStageOwnership(section, input)).toEqual([]);
+    // Empty stored rows validate every seeded row as new.
+    expect(
+      validateStageOwnership(
+        { ...section, items: [], risks: [], decisions: [] },
+        input,
+      ),
+    ).toEqual([]);
     const statuses = demo.stageStatuses.filter(
       (row) => row.reportSectionId === source.id,
     );
