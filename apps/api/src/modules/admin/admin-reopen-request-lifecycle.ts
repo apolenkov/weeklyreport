@@ -231,6 +231,10 @@ export async function decideReopenRequest(
     if (gate.kind === "inconsistent") {
       throw new PeriodLifecycleIntegrityError();
     }
+    // A period deletion that won before this lock cascaded the request away.
+    if (gate.kind === "not-found") {
+      throw new AdminReopenRequestNotFoundError(REQUEST_NOT_FOUND);
+    }
     if (gate.kind !== "editable") {
       throw new LeadFormConstraintError(
         "Cannot decide a reopen request outside an editable report.",

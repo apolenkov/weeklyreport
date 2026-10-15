@@ -2,6 +2,7 @@ import type { UserSession } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { LeadFormConstraintError } from "../report-sections/index.js";
 import { decideReopenRequest } from "./admin-reopen-request-lifecycle.js";
 import {
   AdminAccessError,
@@ -164,5 +165,44 @@ describe("reopen decision current group boundary", () => {
       decision: "approved",
     });
     expect(fixture.tx.reopenRequest.updateMany).toHaveBeenCalledOnce();
+  });
+});
+
+describe("reopen decision report gate", () => {
+  // C0694: a period deletion that wins before the gate removed the request.
+  it("reports a deleted report as a missing request", async () => {
+    const fixture = setup();
+    fixture.tx.$queryRaw.mockImplementation(
+      (strings: TemplateStringsArray, id: string) =>
+        Promise.resolve(
+          strings.join("?").includes('FROM "User"') ? [{ id }] : [],
+        ),
+    );
+    await expect(fixture.decide()).rejects.toBeInstanceOf(
+      AdminReopenRequestNotFoundError,
+    );
+    expect(fixture.tx.reopenRequest.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("keeps an archived report as a lifecycle constraint", async () => {
+    const fixture = setup();
+    const lock = fixture.tx.$queryRaw.getMockImplementation();
+    if (!lock) throw new Error("Missing lock reader in test fixture.");
+    fixture.tx.$queryRaw.mockImplementation(
+      async (strings: TemplateStringsArray, id: string) => {
+        const rows = await lock(strings, id);
+        return strings.join("?").includes('FROM "User"')
+          ? rows
+          : rows.map((row) => ({
+              ...row,
+              periodState: "archived",
+              archived: true,
+            }));
+      },
+    );
+    await expect(fixture.decide()).rejects.toBeInstanceOf(
+      LeadFormConstraintError,
+    );
+    expect(fixture.tx.reopenRequest.updateMany).not.toHaveBeenCalled();
   });
 });
