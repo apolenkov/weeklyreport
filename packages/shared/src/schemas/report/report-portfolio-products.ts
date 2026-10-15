@@ -22,9 +22,9 @@ function groupProjectOccurrences(
 function computePublishedStageCount(
   occurrences: readonly ProjectOccurrence[],
 ): number {
-  return Math.max(
+  return occurrences.reduce(
+    (max, { project }) => Math.max(max, project.stageSet.length),
     0,
-    ...occurrences.map(({ project }) => project.stageSet.length),
   );
 }
 
