@@ -1133,4 +1133,91 @@ describe("AI provider control-plane database states", () => {
       }),
     ).resolves.toBe(1);
   });
+
+  // C0976: an activation that commits between the control read and the
+  // revision read must not yield a control whose active pointer and revision
+  // list describe different states.
+  it("reads the control and its revisions from one snapshot across an activation", async () => {
+    const current = await revision(
+      "a0000000-0000-4000-8000-000000000020",
+      AiProviderLifecycle.active,
+    );
+    const candidate = await revision(
+      "a0000000-0000-4000-8000-000000000021",
+      AiProviderLifecycle.validated,
+    );
+    await createControl(current.id, true);
+    await prisma.aiProviderTestExecution.create({
+      data: {
+        identity: candidate.compositeTestIdentity,
+        providerRevisionId: candidate.id,
+        testSuiteVersion: AI_PROVIDER_TEST_SUITE_VERSION,
+        state: "completed",
+        outcome: "passed",
+        checks: [],
+        requestedAt: new Date("2026-08-11T01:00:00.000Z"),
+        startedAt: new Date("2026-08-11T01:00:01.000Z"),
+        completedAt: new Date("2026-08-11T01:00:02.000Z"),
+      },
+    });
+    let reachRevisionRead!: () => void;
+    const revisionReadReached = new Promise<void>((resolve) => {
+      reachRevisionRead = resolve;
+    });
+    let releaseRevisionRead!: () => void;
+    const revisionReadReleased = new Promise<void>((resolve) => {
+      releaseRevisionRead = resolve;
+    });
+    let finishControlRead!: () => void;
+    const controlReadFinished = new Promise<void>((resolve) => {
+      finishControlRead = resolve;
+    });
+    // Test-side barrier: the control row is read first, then the revision
+    // list waits until the activation below has committed.
+    const pausedPrisma = prisma.$extends({
+      query: {
+        aiProviderControl: {
+          async findUnique({ args, query }) {
+            const row = await query(args);
+            finishControlRead();
+            return row;
+          },
+        },
+        aiProviderConfiguration: {
+          async findMany({ args, query }) {
+            reachRevisionRead();
+            await revisionReadReleased;
+            return query(args);
+          },
+        },
+      },
+    });
+    const pausedRepository = new AiProviderConfigurationRepository(
+      pausedPrisma as unknown as PrismaService,
+    );
+
+    const read = pausedRepository.getControl();
+    await Promise.all([revisionReadReached, controlReadFinished]);
+    await expect(
+      repository.activateRevision(
+        candidate.id,
+        new Date("2026-08-11T02:00:00.000Z"),
+        {
+          mode: "prepared",
+          sourceFingerprint: "prepared",
+          sourceGeneration: 0n,
+        },
+      ),
+    ).resolves.toBeTruthy();
+    releaseRevisionRead();
+    const control = await read;
+
+    const activeInList = (control?.revisions ?? [])
+      .filter((entry) => entry.lifecycle === AiProviderLifecycle.active)
+      .map((entry) => entry.id);
+    expect(activeInList).toEqual([control?.activeConfiguration?.id]);
+    expect(control?.activeConfigurationId).toBe(
+      control?.activeConfiguration?.id,
+    );
+  });
 });
