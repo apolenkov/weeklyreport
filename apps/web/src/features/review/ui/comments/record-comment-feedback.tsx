@@ -52,7 +52,6 @@ export function CommentDeleteDialog({
       title="Delete review comment?"
       preview={candidate?.text ?? ""}
       subtitle={candidate?.reviewerName ?? "Reviewer"}
-      consequence="This action cannot be undone."
       isPending={isPending}
       onConfirm={() => {
         if (candidate) onConfirm(candidate.id);
