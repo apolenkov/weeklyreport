@@ -694,6 +694,7 @@ describe("AiProviderConfigurationService", () => {
         {
           result: { completed: 0, total: 1, failed: 1, elapsedMs: -1 },
           startedAt: second.preparationStartedAt ?? now,
+          cause: "preparation_exception",
         },
       );
       const failed = repository.updateProgress.mock.lastCall?.[1];
@@ -973,6 +974,102 @@ describe("AiProviderConfigurationService", () => {
       );
     },
   );
+
+  const namedSecretError = Object.assign(new Error("hidden"), {
+    name: "https://secret-name-marker.example",
+  });
+  it.each([
+    ["an Error with a secret message", new Error("secret-message-marker")],
+    ["an Error with a secret name", namedSecretError],
+    ["a thrown string", "secret-string-marker"],
+  ] as const)(
+    "records only the closed preparation_exception code when preparation throws %s",
+    async (_label, thrown) => {
+      const events: Record<string, unknown>[] = [];
+      const active = revision(activeId, {
+        lifecycle: AiProviderLifecycle.active,
+      });
+      const candidate = revision(revisionId, {
+        lifecycle: AiProviderLifecycle.validated,
+        embeddingModel: "new-embed",
+      });
+      const repository = repositoryFor({
+        control: control(active),
+        draft: candidate,
+      });
+      repository.getRevision.mockResolvedValue(candidate);
+      const preparation = {
+        prepare: vi
+          .fn<AiProviderPreparationCoordinator["prepare"]>()
+          .mockRejectedValue(thrown),
+      };
+      const service = new AiProviderConfigurationService(
+        repository as never,
+        codec,
+        env,
+        tester,
+        preparation,
+        {
+          ...createNullLogger(),
+          info: (_message, event) => events.push({ ...event }),
+        },
+      );
+
+      await service.activate(revisionId, "admin-1");
+
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          event: "ai_provider.activation_failed",
+          cause: "preparation_exception",
+        }),
+      );
+      expect(JSON.stringify(events)).not.toMatch(/marker/);
+    },
+  );
+
+  it("records the closed preparation_incomplete code when preparation reports failed vectors without throwing", async () => {
+    const events: Record<string, unknown>[] = [];
+    const active = revision(activeId, {
+      lifecycle: AiProviderLifecycle.active,
+    });
+    const candidate = revision(revisionId, {
+      lifecycle: AiProviderLifecycle.validated,
+      embeddingModel: "new-embed",
+    });
+    const repository = repositoryFor({
+      control: control(active),
+      draft: candidate,
+    });
+    repository.getRevision.mockResolvedValue(candidate);
+    const preparation = {
+      prepare: vi.fn().mockResolvedValue({
+        completed: 1,
+        total: 2,
+        failed: 1,
+        elapsedMs: 20,
+      }),
+    };
+    const service = new AiProviderConfigurationService(
+      repository as never,
+      codec,
+      env,
+      tester,
+      preparation,
+      {
+        ...createNullLogger(),
+        info: (_message, event) => events.push({ ...event }),
+      },
+    );
+
+    await service.activate(revisionId, "admin-1");
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        event: "ai_provider.activation_failed",
+        cause: "preparation_incomplete",
+      }),
+    );
+  });
 
   const auditFailureScenarios = [
     {
