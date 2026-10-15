@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import {
   chmodSync,
   mkdirSync,
@@ -22,6 +23,11 @@ async function driver(script: string, interpreter = process.execPath) {
   const file = join(dir, "cli.cjs");
   writeFileSync(file, `#!${interpreter}\n${script}`);
   chmodSync(file, 0o700);
+  // The first exec of a freshly written file costs far more than later ones
+  // (about 200 ms median, near 1 s under CPU load, against 16 ms warm), which
+  // alone can exhaust the 1 s budget of the timeout cases. Pay it outside the
+  // budget; "session" is the one argument every fixture answers quickly.
+  execFileSync(file, ["session"], { stdio: "ignore", timeout: 30_000 });
   vi.stubEnv("AGENT_BROWSER_BIN", file);
   vi.resetModules();
   return import("./driver.ts");
