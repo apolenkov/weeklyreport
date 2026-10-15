@@ -110,6 +110,18 @@ export function RecordComments({
   const c = useRecordCommentState(anchor, onMutated);
   const { id, feedback, feedbackId, deleteCandidate } = c;
 
+  // An open confirmation is retired once its comment leaves the list or the
+  // actor may no longer delete it; the server still decides every delete.
+  if (
+    deleteCandidate &&
+    !comments.some(
+      (comment) =>
+        comment.id === deleteCandidate.id &&
+        canDeleteComment(comment, canReview, currentUserId, isAdmin),
+    )
+  )
+    c.setDeleteCandidate(null);
+
   // A synthetic (non-persisted) record has no real UUID — the composer stays
   // hidden so a synthetic id can never reach the uuid-validated mutation.
   const canCompose = canReview && id !== undefined && UUID_RE.test(id);
