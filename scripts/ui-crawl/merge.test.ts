@@ -98,6 +98,72 @@ describe("mergeReports", () => {
     });
   });
 
+  // C4157: links are relative to the report, so a walk root with spaces or
+  // parentheses never reaches a link target.
+  it("writes valid relative evidence links under a walk root with spaces and parentheses", () => {
+    mkdirSync(root, { recursive: true });
+    const walk = mkdtempSync(join(root, "walk (copy) "));
+    dirs.push(walk);
+    const video = "video/lead-1280.webm";
+    const shot = "shots/lead-1280/00-fixture.png";
+    pass(
+      walk,
+      "state-draft/read",
+      JSON.stringify({
+        url: "http://127.0.0.1:3000",
+        started: "fixture",
+        wallMs: 5,
+        results: [
+          {
+            role: "lead",
+            ms: 5,
+            runs: [
+              {
+                role: "lead",
+                width: 1280,
+                ms: 5,
+                video,
+                pages: [],
+                findings: [
+                  {
+                    severity: "high",
+                    kind: "console-error",
+                    role: "lead",
+                    width: 1280,
+                    page: "/fixture",
+                    detail: "fixture",
+                    shot,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    for (const file of [video, shot]) {
+      const path = join(walk, "state-draft/read", file);
+      mkdirSync(join(path, ".."), { recursive: true });
+      writeFileSync(path, "");
+    }
+
+    expect(mergeReports(walk)).toEqual({ passes: 1, missing: [] });
+
+    const targets = [
+      ...readFileSync(join(walk, "report.md"), "utf8").matchAll(
+        /\]\(([^)]*)\)/g,
+      ),
+    ].map((match) => match[1] ?? "");
+    expect(targets.toSorted()).toEqual([
+      `state-draft/read/${shot}`,
+      `state-draft/read/${video}`,
+    ]);
+    for (const target of targets) {
+      expect(target).toMatch(/^[\w./-]+$/);
+      expect(existsSync(join(walk, target))).toBe(true);
+    }
+  });
+
   it("exits non-zero from the command line when an output is missing", () => {
     const walk = walkDir();
     pass(walk, "state-draft/read", null);
