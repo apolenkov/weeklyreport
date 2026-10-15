@@ -238,9 +238,11 @@ was already processed.
 
 Before any request or section mutation, the decision transaction MUST lock the
 parent report through the same shared lifecycle gate used by section writes. A
-publish, archive, deletion, or contradictory lifecycle that wins before this
-lock MUST leave the request pending and the section submitted; neither approval
-nor rejection may mutate a closed report.
+publish, archive, or contradictory lifecycle that wins before this lock MUST
+leave the request pending and the section submitted; neither approval nor
+rejection may mutate a closed report. A legal period deletion that wins before
+this lock removes the report, its sections and their requests; the decision
+MUST then fail as not found and MUST NOT recreate or mutate any row.
 
 #### Scenario: Concurrent approve and reject
 
@@ -263,6 +265,13 @@ nor rejection may mutate a closed report.
   transaction locks the parent report
 - **THEN** approval fails closed, the request stays pending, and the section
   stays submitted
+
+#### Scenario: Period deletion wins a request decision
+
+- **WHEN** an administrator deletes the open draft period after a decision has
+  read the request but before the decision transaction locks the parent report
+- **THEN** the decision fails as not found, and the request and section stay
+  deleted
 
 ### Requirement: A period reopen closes the pending section requests it supersedes
 
