@@ -783,10 +783,10 @@ describe("LeadFormSyncBridge — severity floor and chip toggle", () => {
     ).toBeInTheDocument();
   });
 
-  it("a foreign risk does NOT floor the mine chip, so its toggle still applies", async () => {
-    // Only own risks floor the live chip. A foreign risk covering a mine stage
-    // collapses the chip to on-track and lives in another lead's section, so
-    // the toggle is not blocked — the lead sets their own status.
+  it("a foreign risk floors the mine chip for display, hints, and does not block its toggle", async () => {
+    // Everyone mode: a co-owner's covering risk colors the chip (display
+    // floor). The toggle guard stays on own risks, so the lead still sets
+    // their own status; a non-blocking hint explains the unchanged color.
     const user = userEvent.setup();
     const onProductsChangeSpy = vi.fn<(next: readonly Product[]) => void>();
     const product = buildProduct({
@@ -814,11 +814,51 @@ describe("LeadFormSyncBridge — severity floor and chip toggle", () => {
       />,
     );
 
-    // The mine chip shows the lead's own on-track (foreign risk never floors it).
-    await user.click(screen.getByRole("button", { name: /^Dev: On track/ }));
+    await user.click(screen.getByRole("button", { name: /^Dev: At risk/ }));
 
-    // The toggle applies — no hint, no block.
-    expect(toast.info).not.toHaveBeenCalled();
+    expect(toast.info).toHaveBeenCalledWith(
+      "Status saved. Another lead's risk keeps this stage colored until that risk is resolved.",
+    );
     expect(onProductsChangeSpy).toHaveBeenCalled();
+  });
+
+  it("an untouched mine stage covered only by a foreign risk colors but does not count", () => {
+    const product = buildProduct({
+      stages: [
+        {
+          stageName: "Dev",
+          status: "empty",
+          ownership: "mine",
+          assignee: "Lead",
+        },
+        {
+          stageName: "Testing",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "Lead",
+        },
+      ],
+    });
+    const foreignRisk = coveringRisk({
+      id: "r-foreign",
+      severity: "blocked",
+      foreign: true,
+      authorName: "Other Lead",
+    });
+
+    const { container } = render(
+      <Harness
+        initialProducts={[product]}
+        initialRisks={[]}
+        displayRisks={[foreignRisk]}
+      />,
+    );
+
+    expect(
+      screen.getByRole("button", { name: /^Dev: Blocked/ }),
+    ).toBeInTheDocument();
+    const pill = container.querySelector<HTMLElement>("[data-complete]");
+    expect(pill?.textContent).toContain("1/2 Your stages");
+    expect(pill?.dataset.complete).toBe("false");
   });
 });

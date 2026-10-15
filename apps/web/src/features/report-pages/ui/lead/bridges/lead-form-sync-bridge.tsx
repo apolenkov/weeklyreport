@@ -31,6 +31,10 @@ import {
 // its risk in the Risks section.
 const COVERED_STAGE_HINT_MESSAGE =
   "This stage's status comes from a covering risk. Resolve it in Risks & Blockers to change the stage.";
+// A foreign risk only colors the chip; the lead's own status still saves,
+// so the hint explains why the chip does not visibly change.
+const FOREIGN_COVERED_STAGE_HINT_MESSAGE =
+  "Status saved. Another lead's risk keeps this stage colored until that risk is resolved.";
 
 // Provider + Pipeline/Risks consumers: pipeline and risks live in separate
 // accordion bodies, so one component cannot emit both inline.
@@ -93,7 +97,13 @@ type BridgeHandlers = Pick<
 function useBridgeHandlers(
   props: LeadFormSyncBridgeProviderProps,
 ): BridgeHandlers {
-  const { risks, readOnly = false, onProductsChange, onRisksChange } = props;
+  const {
+    risks,
+    displayRisks,
+    readOnly = false,
+    onProductsChange,
+    onRisksChange,
+  } = props;
 
   const sync = useStatusRiskSync({
     onProductsChange,
@@ -108,9 +118,15 @@ function useBridgeHandlers(
         toast.info(COVERED_STAGE_HINT_MESSAGE);
         return;
       }
+      const foreignRisks = (displayRisks ?? []).filter((r) => r.foreign);
+      if (
+        coveringRisksForStage(foreignRisks, productId, stageName).length > 0
+      ) {
+        toast.info(FOREIGN_COVERED_STAGE_HINT_MESSAGE);
+      }
       sync.handleStageStatusChange(productId, stageName, newStatus);
     },
-    [readOnly, sync, risks],
+    [readOnly, sync, risks, displayRisks],
   );
 
   const handleRisksChange = useCallback(
@@ -202,7 +218,12 @@ function Pipeline() {
   // Apply the same render-time severity floor as mapLeadProducts so live chips
   // cannot show on-track or empty while covering risks exist, and an orphan severity
   // collapses to on-track exactly as the read model does.
-  const flooredProducts = applyRiskSeverityFloor(rawWithCoverage, ctx.risks);
+  // Display floor includes foreign risks shown in Everyone mode (color only);
+  // coverage and the toggle guard stay on own risks.
+  const flooredProducts = applyRiskSeverityFloor(
+    rawWithCoverage,
+    ctx.displayRisks ?? ctx.risks,
+  );
   return (
     <SdlcPipeline
       products={flooredProducts}
