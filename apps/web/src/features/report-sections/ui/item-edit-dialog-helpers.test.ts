@@ -4,6 +4,7 @@ import {
   buildActivityItemSave,
   buildProductItemSave,
   collectItemErrors,
+  collectItemStatusErrors,
   resolveInitialItem,
 } from "./item-edit-dialog-helpers";
 
@@ -77,5 +78,36 @@ describe("item author resolution", () => {
       effectiveStageNames: [],
     });
     expect(productSave.author).toBe("");
+  });
+});
+
+// The server refuses invisible-only text, so the editor refuses it before the
+// draft autosave instead of rewriting it.
+describe("item status text follows the server visible-text rule", () => {
+  it("requires a visible pause reason", () => {
+    expect(
+      collectItemStatusErrors({
+        status: "paused",
+        trimmedNextStepText: "",
+        trimmedPausedReason: "\u200B",
+      }).pausedReason,
+    ).toBe("A reason is required to pause an item.");
+  });
+
+  it("refuses an invisible-only next step instead of dropping it", () => {
+    expect(
+      collectItemStatusErrors({
+        status: "in-progress",
+        trimmedNextStepText: "\u200B",
+        trimmedPausedReason: "",
+      }).nextStepText,
+    ).toBe("Text must contain visible characters");
+    expect(
+      collectItemStatusErrors({
+        status: "in-progress",
+        trimmedNextStepText: "",
+        trimmedPausedReason: "",
+      }),
+    ).toEqual({});
   });
 });

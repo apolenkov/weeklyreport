@@ -382,6 +382,24 @@ describe("StatusOverviewActivityEditor", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  it.each(["activity-title", "activity-description"])(
+    "refuses invisible-only %s text and keeps it for correction",
+    async (testIdPrefix) => {
+      const { onChange } = renderEditor();
+      const field = screen.getByTestId(`${testIdPrefix}-${ACTIVITY_ID}`);
+      fireEvent.change(field, { target: { value: " \u200B " } });
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Text must contain visible characters",
+      );
+      expect(field).toHaveValue(" \u200B ");
+      await userEvent.click(
+        screen.getByTestId(`activity-fields-save-${ACTIVITY_ID}`),
+      );
+      expect(onChange).not.toHaveBeenCalled();
+    },
+  );
+
   it.each([
     ["title", "activity-title", MAX_ACTIVITY_NAME_LENGTH, "Weekly title"],
     [

@@ -1,17 +1,18 @@
-import type {
-  DraftSavePayload,
-  ReportSectionReadModel,
-  TrafficLightStatus,
+import {
+  type DraftSavePayload,
+  hasVisibleText,
+  type ReportSectionReadModel,
+  type TrafficLightStatus,
 } from "@weeklyreport/shared";
 
 // The draft producer owns content without optimistic-lock metadata; writers
 // inject the current version only when they issue a mutation.
 export type DraftSaveContent = Omit<DraftSavePayload, "version">;
 
-// Filter blank required text — safeText({min:1}) would reject and toast-fail
-// on every "+ Add" before the user types. Empty rows stay local-only until filled.
+// Filter required text safeText would reject (blank or invisible-only): one such
+// row would fail the whole autosave. Those rows stay local-only until filled.
 const hasText = (s: string | null | undefined) =>
-  typeof s === "string" && s.trim().length > 0;
+  typeof s === "string" && hasVisibleText(s);
 
 function toItemDrafts(items: ReportSectionReadModel["items"]) {
   return items

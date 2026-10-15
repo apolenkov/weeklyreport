@@ -1,4 +1,7 @@
-import type { ReportSectionReadModel } from "@weeklyreport/shared";
+import {
+  draftSaveSchema,
+  type ReportSectionReadModel,
+} from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -321,5 +324,63 @@ describe("countLocalOnlyRows", () => {
 
     expect(sectionToDraftPayload(section).items).toHaveLength(1);
     expect(countLocalOnlyRows(section)).toBe(0);
+  });
+});
+
+// The server's safeText rejects these; a row carrying one must stay local like a
+// blank row instead of failing the whole autosave for its valid neighbors.
+const INVISIBLE_ONLY = [
+  "\u200B",
+  "\u200D",
+  "\uFEFF",
+  " \u200C ",
+  "\u2060\u00AD",
+];
+
+describe("invisible-only text follows the server visible-text rule", () => {
+  it.each(INVISIBLE_ONLY)(
+    "keeps an item with %j local and saves its valid neighbor",
+    (text) => {
+      const payload = sectionToDraftPayload(
+        makeSection({
+          items: [
+            makeItem({ id: "dddddddd-dddd-4ddd-8ddd-dddddddddddd", text }),
+            makeItem(),
+          ],
+        }),
+      );
+
+      expect(payload.items.map((item) => item.id)).toEqual([ITEM_ID]);
+      expect(
+        draftSaveSchema.safeParse({ ...payload, version: 1 }).success,
+      ).toBe(true);
+    },
+  );
+
+  it.each(INVISIBLE_ONLY)(
+    "keeps risks and decisions with a %j field local",
+    (text) => {
+      const section = makeSection({
+        risks: [makeRisk(text)],
+        decisions: [makeDecision({ impact: text })],
+      });
+      const payload = sectionToDraftPayload(section);
+
+      expect(payload.risks).toEqual([]);
+      expect(payload.decisions).toEqual([]);
+      expect(countLocalOnlyRows(section)).toBe(2);
+    },
+  );
+
+  it("saves visible multilingual and combining text verbatim", () => {
+    const text = "Отчёт 报告 👩‍💻 e\u0301";
+    const payload = sectionToDraftPayload(
+      makeSection({ items: [makeItem({ text })] }),
+    );
+
+    expect(payload.items.map((item) => item.text)).toEqual([text]);
+    expect(draftSaveSchema.safeParse({ ...payload, version: 1 }).success).toBe(
+      true,
+    );
   });
 });
