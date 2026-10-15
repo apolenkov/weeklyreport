@@ -536,6 +536,72 @@ describe("RecordComments — mutation success", () => {
     });
   });
 
+  // TASK-503.38 / C5096: a delete outcome and a draft validation error can show
+  // together; the composer description must keep both references.
+  async function deleteOwnComment() {
+    fireEvent.click(
+      screen.getByRole("button", { name: /Delete comment by Head Reviewer/ }),
+    );
+    const dialog = screen.getByRole("alertdialog", {
+      name: "Delete review comment?",
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+    await waitFor(() => {
+      expect(screen.getByRole("status")).toHaveTextContent("Comment deleted.");
+    });
+  }
+
+  it("keeps delete feedback in the composer description while a validation error shows", async () => {
+    renderComments();
+    const draft = screen.getByRole("textbox", { name: "Add a review comment" });
+    fireEvent.change(draft, { target: { value: " ".repeat(3) } });
+    expect(draft).toHaveAccessibleDescription(
+      `3 / ${REVIEW_COMMENT_MAX_LENGTH} Comment must contain visible characters.`,
+    );
+
+    await deleteOwnComment();
+
+    expect(draft).toHaveAttribute("aria-invalid", "true");
+    expect(draft).toHaveAccessibleDescription(
+      /Comment must contain visible characters\./,
+    );
+    expect(draft).toHaveAccessibleDescription(/Comment deleted\./);
+  });
+
+  it("describes a valid draft with the delete feedback and no validation error", async () => {
+    renderComments();
+    const draft = screen.getByRole("textbox", { name: "Add a review comment" });
+    fireEvent.change(draft, { target: { value: "Looks fine" } });
+
+    await deleteOwnComment();
+
+    expect(draft).toHaveAttribute("aria-invalid", "false");
+    expect(draft).toHaveAccessibleDescription(
+      `10 / ${REVIEW_COMMENT_MAX_LENGTH} Comment deleted.`,
+    );
+  });
+
+  // TASK-503.38 / C5097: the hint stays; the validation alert mounts as its own
+  // element instead of re-roling the hint paragraph.
+  it("keeps the character hint beside a separate validation alert", () => {
+    renderComments();
+    const draft = screen.getByRole("textbox", { name: "Add a review comment" });
+    const hint = screen.getByText(
+      `Up to ${REVIEW_COMMENT_MAX_LENGTH} characters.`,
+    );
+
+    fireEvent.change(draft, { target: { value: " ".repeat(3) } });
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toHaveTextContent("Comment must contain visible characters.");
+    expect(alert).not.toBe(hint);
+    expect(hint).toBeInTheDocument();
+    expect(hint).toHaveTextContent(
+      `Up to ${REVIEW_COMMENT_MAX_LENGTH} characters.`,
+    );
+    expect(hint).not.toHaveAttribute("role");
+  });
+
   it("keeps a failed add visible as inline live feedback", async () => {
     mutationCalls.commentError = new Error("Comment could not be saved");
     renderComments();

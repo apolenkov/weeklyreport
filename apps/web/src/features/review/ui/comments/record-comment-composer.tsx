@@ -52,23 +52,27 @@ export function RecordCommentComposer({
         aria-invalid={validationError ? "true" : "false"}
         aria-describedby={[
           limitId,
-          validationError ? validationErrorId : feedbackId,
+          validationError ? validationErrorId : undefined,
+          feedbackId,
         ]
           .filter(Boolean)
           .join(" ")}
       />
       <div className="flex items-start justify-between gap-2 text-xs">
-        <p
-          id={validationError ? validationErrorId : undefined}
-          role={validationError ? "alert" : undefined}
-          className={
-            validationError
-              ? "text-[var(--color-destructive)]"
-              : "text-[var(--color-muted-foreground)]"
-          }
-        >
-          {validationError ?? `Up to ${REVIEW_COMMENT_MAX_LENGTH} characters.`}
-        </p>
+        <div className="flex flex-col gap-0.5">
+          <p className="text-[var(--color-muted-foreground)]">
+            Up to {REVIEW_COMMENT_MAX_LENGTH} characters.
+          </p>
+          {validationError ? (
+            <p
+              id={validationErrorId}
+              role="alert"
+              className="text-[var(--color-destructive)]"
+            >
+              {validationError}
+            </p>
+          ) : null}
+        </div>
         <p id={limitId} className="text-[var(--color-muted-foreground)]">
           {characterCount} / {REVIEW_COMMENT_MAX_LENGTH}
         </p>
