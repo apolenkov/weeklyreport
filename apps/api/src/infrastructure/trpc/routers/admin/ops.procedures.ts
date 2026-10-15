@@ -3,6 +3,7 @@ import {
   adminActionLogPageSchema,
   omitUndefinedProperties,
   paginationInputSchema,
+  pdfRecoveryCursorSchema,
   pdfRecoveryJobListSchema,
   pdfRecoveryRetryInputSchema,
   pdfRecoveryRetryResultSchema,
@@ -71,6 +72,13 @@ const listFailedInputSchema = z.object({
   limit: z.number().int().min(1).max(MAX_FAILED_JOBS_LIMIT).optional(),
 });
 
+const listPdfRecoveryInputSchema = z
+  .object({
+    cursor: pdfRecoveryCursorSchema.optional(),
+    limit: z.number().int().min(1).max(MAX_FAILED_JOBS_LIMIT).optional(),
+  })
+  .prefault({});
+
 const retryFailedInputSchema = z.object({
   queue: queueNameSchema,
   jobId: z.string().min(1),
@@ -110,10 +118,13 @@ function createJobsRouter(deps: AdminOpsDeps) {
     // DB-backed quarantine list — the generation's queue job may already be
     // gone, so Redis is never consulted.
     listPdfRecovery: headProcedure
+      .input(listPdfRecoveryInputSchema)
       .output(pdfRecoveryJobListSchema)
-      .query(() =>
+      .query(({ input }) =>
         withDomainErrorMapping(() =>
-          requireJobsService(deps.jobsService).listPdfRecovery(),
+          requireJobsService(deps.jobsService).listPdfRecovery(
+            omitUndefinedProperties(input),
+          ),
         ),
       ),
 

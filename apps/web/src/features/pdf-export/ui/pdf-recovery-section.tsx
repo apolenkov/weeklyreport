@@ -1,9 +1,13 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import type { PdfRecoveryJob } from "@weeklyreport/shared";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
@@ -12,15 +16,25 @@ import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { TabHeader } from "../../../shared/ui/tabs/tab-header";
 
 // DB-backed, not Redis-backed: a quarantined row's queue job may be gone.
+// Cursor-paginated so every row stays reachable without loading the whole set.
 function usePdfRecoveryList() {
   const trpc = useTRPC();
-  const query = useQuery(trpc.admin.jobs.listPdfRecovery.queryOptions());
+  const query = useInfiniteQuery(
+    trpc.admin.jobs.listPdfRecovery.infiniteQueryOptions(
+      {},
+      { getNextPageParam: (lastPage) => lastPage.nextCursor },
+    ),
+  );
   useQueryErrorHandler(query, {
     component: "PdfRecoverySection",
     event: "admin.jobs.list_pdf_recovery",
     procedure: "admin.jobs.listPdfRecovery",
   });
-  return query;
+  const jobs = useMemo(
+    () => query.data?.pages.flatMap((page) => page.jobs) ?? [],
+    [query.data?.pages],
+  );
+  return { query, jobs };
 }
 
 // The id in flight marks which row shows the spinner; the settle path always
@@ -198,10 +212,34 @@ function PdfRecoveryTable({
   );
 }
 
+function LoadMoreButton({
+  onClick,
+  isFetching,
+}: {
+  readonly onClick: () => void;
+  readonly isFetching: boolean;
+}) {
+  return (
+    <div className="flex justify-center">
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={isFetching}
+        className="min-h-[var(--touch-target-min)] rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-background)] px-4 py-2 text-sm text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] disabled:opacity-50"
+      >
+        {isFetching ? "Loading…" : "Load more"}
+      </button>
+    </div>
+  );
+}
+
 export function PdfRecoverySection() {
-  const list = usePdfRecoveryList();
+  const { query: list, jobs } = usePdfRecoveryList();
   const retry = useRetryPdfRecovery();
-  const jobs = list.data?.jobs ?? [];
+  // No total until the last page: a partial count would understate the set.
+  const count = list.hasNextPage
+    ? `${jobs.length} loaded · more available`
+    : jobs.length;
 
   return (
     <section
@@ -212,11 +250,11 @@ export function PdfRecoverySection() {
       <TabHeader
         title="Failed exports"
         description="PDF exports that did not finish are listed here. Retry starts a fresh attempt."
-        count={list.data ? jobs.length : undefined}
+        count={list.data ? count : undefined}
       />
       {list.isLoading ? (
         <PdfRecoveryLoadingState />
-      ) : list.isError ? (
+      ) : list.isError && !list.data ? (
         <PdfRecoveryErrorState message={list.error.message} />
       ) : jobs.length === 0 ? (
         <PdfRecoveryEmptyState />
@@ -226,6 +264,20 @@ export function PdfRecoverySection() {
           retryingId={retry.retryingId}
           retryPending={retry.isPending}
           onRetry={retry.retry}
+        />
+      )}
+      {list.isError && list.data !== undefined && (
+        <p role="alert" className="text-sm text-[var(--color-destructive)]">
+          Failed to refresh or load more exports: {list.error.message}
+        </p>
+      )}
+      {list.hasNextPage && (
+        <LoadMoreButton
+          onClick={() => {
+            // Keeps a post-retry refetch alive so stale first pages are not kept.
+            void list.fetchNextPage({ cancelRefetch: false });
+          }}
+          isFetching={list.isFetchingNextPage}
         />
       )}
       <p className="text-sm text-[var(--color-muted-foreground)]">

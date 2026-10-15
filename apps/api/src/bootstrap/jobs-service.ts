@@ -1,3 +1,4 @@
+import type { PdfRecoveryCursor, PdfRecoveryJob } from "@weeklyreport/shared";
 import type { Queue } from "bullmq";
 
 import { AdminBullmqJobsQueue } from "../infrastructure/bullmq/admin-jobs-queue.adapter.js";
@@ -58,31 +59,50 @@ export function createBootstrapJobsService(deps: {
       // never Redis. Terminally `failed` rows are listed too — otherwise a
       // removed failed queue job would leave the row with no Head retry
       // surface even though retryExportGeneration accepts it.
-      listPdfRecoveryJobs: async () => {
-        const rows = await prisma.pdfExportJob.findMany({
-          where: { status: { in: ["failed", "recovery_required"] } },
-          orderBy: { createdAt: "asc" },
-          select: {
-            id: true,
-            reportId: true,
-            generation: true,
-            requestedBy: true,
-            status: true,
-            createdAt: true,
-          },
-        });
-        return rows.map((row) => ({
-          jobId: row.id,
-          reportId: row.reportId,
-          generation: row.generation,
-          requestedBy: row.requestedBy,
-          // Narrowed by the `in` filter above, not coerced — the procedure's
-          // output schema re-validates the vocabulary on the wire.
-          status: row.status as "failed" | "recovery_required",
-          createdAt: row.createdAt,
-        }));
-      },
+      listPdfRecoveryJobs: (page) => listPdfRecoveryPage(prisma, page),
     },
     logger,
   );
+}
+
+// Keyset page: strictly after the cursor row, so a retried row leaving the set
+// does not shift later pages. Exported so the DB integration suite reads the
+// exact production query.
+export async function listPdfRecoveryPage(
+  prisma: Pick<PrismaService, "pdfExportJob">,
+  { cursor, take }: { cursor?: PdfRecoveryCursor; take: number },
+): Promise<PdfRecoveryJob[]> {
+  const rows = await prisma.pdfExportJob.findMany({
+    where: {
+      status: { in: ["failed", "recovery_required"] },
+      ...(cursor
+        ? {
+            OR: [
+              { createdAt: { gt: cursor.createdAt } },
+              { createdAt: cursor.createdAt, id: { gt: cursor.jobId } },
+            ],
+          }
+        : {}),
+    },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    take,
+    select: {
+      id: true,
+      reportId: true,
+      generation: true,
+      requestedBy: true,
+      status: true,
+      createdAt: true,
+    },
+  });
+  return rows.map((row) => ({
+    jobId: row.id,
+    reportId: row.reportId,
+    generation: row.generation,
+    requestedBy: row.requestedBy,
+    // Narrowed by the `in` filter above, not coerced — the procedure's
+    // output schema re-validates the vocabulary on the wire.
+    status: row.status as "failed" | "recovery_required",
+    createdAt: row.createdAt,
+  }));
 }

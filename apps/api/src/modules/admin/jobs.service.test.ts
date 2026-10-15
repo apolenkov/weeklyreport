@@ -1,5 +1,6 @@
 import {
   type FailedJob,
+  type PdfRecoveryCursor,
   type PdfRecoveryJob,
   QUEUE_NAMES,
   type QueueName,
@@ -941,7 +942,10 @@ describe("JobsService — pdf recovery surface", () => {
   function recoveryService(
     overrides: Partial<{
       retryPdfExportGeneration: RetryPdfExportGeneration;
-      listPdfRecoveryJobs: () => Promise<readonly PdfRecoveryJob[]>;
+      listPdfRecoveryJobs: (page: {
+        cursor?: PdfRecoveryCursor;
+        take: number;
+      }) => Promise<readonly PdfRecoveryJob[]>;
     }> = {},
   ) {
     return new JobsService(
@@ -964,8 +968,32 @@ describe("JobsService — pdf recovery surface", () => {
 
     await expect(service.listPdfRecovery()).resolves.toEqual({
       jobs: [RECOVERY_ROW],
+      nextCursor: null,
     });
-    expect(listPdfRecoveryJobs).toHaveBeenCalledTimes(1);
+    expect(listPdfRecoveryJobs).toHaveBeenCalledWith({ take: 50 });
+  });
+
+  it("returns the last row as the cursor when a page is full", async () => {
+    const second = {
+      ...RECOVERY_ROW,
+      jobId: "88888888-8888-4888-8888-888888888888",
+    };
+    const listPdfRecoveryJobs = vi
+      .fn()
+      .mockResolvedValue([RECOVERY_ROW, second]);
+    const service = recoveryService({ listPdfRecoveryJobs });
+    const cursor = {
+      createdAt: RECOVERY_ROW.createdAt,
+      jobId: "99999999-9999-4999-8999-999999999999",
+    };
+
+    await expect(
+      service.listPdfRecovery({ cursor, limit: 2 }),
+    ).resolves.toEqual({
+      jobs: [RECOVERY_ROW, second],
+      nextCursor: { createdAt: second.createdAt, jobId: second.jobId },
+    });
+    expect(listPdfRecoveryJobs).toHaveBeenCalledWith({ cursor, take: 2 });
   });
 
   it.each(["retried", "already-advanced", "ineligible"] as const)(

@@ -283,6 +283,7 @@ describe("jobs pdf recovery contract", () => {
   function makeRecoveryService() {
     const listPdfRecovery = vi.fn().mockResolvedValue({
       jobs: [RECOVERY_ROW],
+      nextCursor: null,
     });
     const retryPdfRecovery = vi.fn().mockResolvedValue({
       jobId: RECOVERY_ROW.jobId,
@@ -302,10 +303,36 @@ describe("jobs pdf recovery contract", () => {
 
       await expect(
         buildJobsCaller(service, role).admin.jobs.listPdfRecovery(),
-      ).resolves.toEqual({ jobs: [RECOVERY_ROW] });
+      ).resolves.toEqual({ jobs: [RECOVERY_ROW], nextCursor: null });
       expect(listPdfRecovery).toHaveBeenCalledOnce();
     },
   );
+
+  it("passes the page cursor and limit through to the service", async () => {
+    const { service, listPdfRecovery } = makeRecoveryService();
+    const cursor = {
+      createdAt: RECOVERY_ROW.createdAt,
+      jobId: RECOVERY_ROW.jobId,
+    };
+
+    await buildJobsCaller(service, "head").admin.jobs.listPdfRecovery({
+      cursor,
+      limit: 10,
+    });
+
+    expect(listPdfRecovery).toHaveBeenCalledWith({ cursor, limit: 10 });
+  });
+
+  it("rejects a recovery page limit above 200", async () => {
+    const { service, listPdfRecovery } = makeRecoveryService();
+
+    await expect(
+      buildJobsCaller(service, "head").admin.jobs.listPdfRecovery({
+        limit: 201,
+      }),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+    expect(listPdfRecovery).not.toHaveBeenCalled();
+  });
 
   it.each(["lead", "viewer"] as const)(
     "rejects the %s role before listing quarantined exports",

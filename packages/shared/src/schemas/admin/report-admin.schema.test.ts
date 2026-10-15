@@ -5,6 +5,7 @@ import {
   adminReportPeriodSchema,
   adminSnapshotRestoreSchema,
   adminSnapshotSchema,
+  pdfRecoveryCursorSchema,
   pdfRecoveryJobListSchema,
   pdfRecoveryJobSchema,
   pdfRecoveryRetryInputSchema,
@@ -987,11 +988,33 @@ describe("PDF export recovery contracts", () => {
     },
   );
 
-  it("wraps the DB-backed recovery list, empty or populated", () => {
+  it("wraps one DB-backed recovery page, empty or populated", () => {
     expect(
-      pdfRecoveryJobListSchema.parse({ jobs: [recoveryJob] }).jobs,
+      pdfRecoveryJobListSchema.parse({ jobs: [recoveryJob], nextCursor: null })
+        .jobs,
     ).toHaveLength(1);
-    expect(pdfRecoveryJobListSchema.safeParse({ jobs: [] }).success).toBe(true);
+    expect(
+      pdfRecoveryJobListSchema.safeParse({ jobs: [], nextCursor: null })
+        .success,
+    ).toBe(true);
+  });
+
+  it("carries the last row as the next-page cursor", () => {
+    const cursor = {
+      createdAt: recoveryJob.createdAt,
+      jobId: recoveryJob.jobId,
+    };
+
+    expect(
+      pdfRecoveryJobListSchema.parse({
+        jobs: [recoveryJob],
+        nextCursor: cursor,
+      }).nextCursor,
+    ).toEqual(cursor);
+    expect(
+      pdfRecoveryCursorSchema.safeParse({ ...cursor, jobId: "not-a-uuid" })
+        .success,
+    ).toBe(false);
   });
 
   it("round-trips the generation-bound retry input", () => {

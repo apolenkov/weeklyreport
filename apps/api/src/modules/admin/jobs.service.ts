@@ -2,6 +2,7 @@ import {
   EMAIL_REMINDER_QUEUE_NAME,
   type FailedJobList,
   PDF_EXPORT_QUEUE_NAME,
+  type PdfRecoveryCursor,
   type PdfRecoveryJob,
   type PdfRecoveryJobList,
   type PdfRecoveryRetryInput,
@@ -50,9 +51,12 @@ interface JobsServiceOptions {
     jobId: string;
     expectedGeneration: number;
   }) => Promise<AdminPdfExportRetryOutcome>;
-  // Durable list of export rows quarantined as recovery_required. Their
+  // Durable page of export rows quarantined as recovery_required. Their
   // generation's queue job may already be gone, so Redis is never consulted.
-  listPdfRecoveryJobs: () => Promise<readonly PdfRecoveryJob[]>;
+  listPdfRecoveryJobs: (page: {
+    cursor?: PdfRecoveryCursor;
+    take: number;
+  }) => Promise<readonly PdfRecoveryJob[]>;
 }
 
 function assertQueueMatch(expected: QueueName, actual: QueueName): void {
@@ -265,8 +269,22 @@ export class JobsService {
     };
   }
 
-  async listPdfRecovery(): Promise<PdfRecoveryJobList> {
-    return { jobs: await this.options.listPdfRecoveryJobs() };
+  async listPdfRecovery(
+    input: { cursor?: PdfRecoveryCursor; limit?: number } = {},
+  ): Promise<PdfRecoveryJobList> {
+    const take = Math.min(
+      Math.max(input.limit ?? DEFAULT_FAILED_JOBS_LIMIT, 1),
+      MAX_FAILED_JOBS_LIMIT,
+    );
+    const jobs = await this.options.listPdfRecoveryJobs(
+      input.cursor ? { cursor: input.cursor, take } : { take },
+    );
+    const last = jobs.at(-1);
+    const nextCursor =
+      jobs.length < take || !last
+        ? null
+        : { createdAt: last.createdAt, jobId: last.jobId };
+    return { jobs, nextCursor };
   }
 
   async retryPdfRecovery(
