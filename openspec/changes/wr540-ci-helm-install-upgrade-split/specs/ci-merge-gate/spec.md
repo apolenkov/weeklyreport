@@ -26,6 +26,11 @@ MUST NOT assume Argo CD.
 - **WHEN** `KUBECONFIG` is not set
 - **THEN** the pipeline contains no deploy job
 
+#### Scenario: Manual deploy
+
+- **WHEN** an operator starts the deploy job on the default branch
+- **THEN** it works in the explicitly configured Kubernetes context and namespace with the commit-SHA image tag, installs a first release or upgrades a deployed one as the scenarios below require, and never rolls back or uninstalls automatically
+
 #### Scenario: Required target variable missing
 
 - **WHEN** the deploy job starts without `HELM_KUBE_CONTEXT`, `HELM_NAMESPACE` or `HELM_VALUES_FILE`
