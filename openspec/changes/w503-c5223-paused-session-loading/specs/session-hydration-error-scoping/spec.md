@@ -36,3 +36,8 @@ background tab, and MUST open the report with the Lead's author id once
 
 - **WHEN** the first `auth.me` request on the preview fails and the browser goes offline before the retry
 - **THEN** the preview shows the weekly-report skeleton and does not open the report without an author
+
+#### Scenario: Preview auth.me resolves
+
+- **WHEN** the preview's `auth.me` resolves with the Lead's session
+- **THEN** the preview opens the report with the Lead's author id
