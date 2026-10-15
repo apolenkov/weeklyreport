@@ -19,6 +19,7 @@ import { afterEach, test } from "vitest";
 const backupScript = resolve("deploy/postgres/backup-loop.sh");
 const backupHealthScript = resolve("deploy/postgres/backup-health.sh");
 const fixtureCredential = "fixture-only";
+const writerLock = ".backup-writer.lock";
 const fixtureRoots = new Set<string>();
 
 afterEach(() => {
@@ -64,6 +65,10 @@ const runBackup = (
   // the spawn timeout then makes that regression observable.
   writeCommandStub(bin, probeLog, "pg_dump", commandStubs.pgDump ?? "exit 1");
   writeCommandStub(bin, probeLog, "sleep", commandStubs.sleep ?? "exit 0");
+  // Hosts such as macOS lack flock(1); a silent grant keeps call logs exact.
+  // Tests that exercise the lock replace it through `additional`.
+  writeFileSync(join(bin, "flock"), "#!/bin/sh\nexit 0\n");
+  chmodSync(join(bin, "flock"), 0o755);
   for (const [name, body] of Object.entries(commandStubs.additional ?? {})) {
     writeCommandStub(bin, probeLog, name, body);
   }
@@ -94,6 +99,10 @@ const runBackup = (
   }
   return { calls, directory, result, runAgain };
 };
+
+// The persistent writer lock is not a backup artifact.
+const backupEntries = (directory: string): string[] =>
+  readdirSync(directory).filter((name) => name !== writerLock);
 
 const runBackupHealth = (interval: string) => {
   const directory = mkdtempSync(join(tmpdir(), "backup-health-"));
@@ -216,7 +225,7 @@ test("same-second one-shot dumps preserve both complete payloads", () => {
   const next = runAgain({ BACKUP_PAYLOAD: "second-finite-fixture" });
   assert.equal(next.status, 0, next.stderr);
   const backups = join(directory, "backups");
-  const files = readdirSync(backups);
+  const files = backupEntries(backups);
   assert.equal(
     files.length,
     2,
@@ -240,7 +249,7 @@ test("new backup directories and completed dumps exclude group and other access"
   assert.equal(result.status, 0, result.stderr);
   const backups = join(directory, "backups");
   assert.equal(statSync(backups).mode & 0o777, 0o700);
-  const [dump] = readdirSync(backups);
+  const [dump] = backupEntries(backups);
   assert.ok(dump);
   assert.equal(statSync(join(backups, dump)).mode & 0o777, 0o600);
   assert.match(result.stdout, /^-rw-------/m);
@@ -259,7 +268,7 @@ test("private dumps preserve an existing mounted directory mode", () => {
   );
   assert.equal(result.status, 0, result.stderr);
   assert.equal(statSync(mounted).mode & 0o777, 0o775);
-  const [dump] = readdirSync(mounted);
+  const [dump] = backupEntries(mounted);
   assert.ok(dump);
   assert.equal(statSync(join(mounted, dump)).mode & 0o777, 0o600);
   assert.match(result.stdout, /^-rw-------/m);
@@ -275,7 +284,7 @@ test("temporary-file failure calls neither pg_dump nor retention", () => {
   assert.match(result.stdout, /temporary dump file could not be reserved/);
   assert.doesNotMatch(result.stdout, /wrote|pruned/);
   assert.doesNotMatch(calls, /pg_dump|find|sleep/);
-  assert.deepEqual(readdirSync(join(directory, "backups")), []);
+  assert.deepEqual(backupEntries(join(directory, "backups")), []);
 });
 
 test("unique published names remain subject to retention and health freshness", () => {
@@ -347,7 +356,7 @@ printf '%s' 'existing-finite-fixture' > "$target"
   assert.doesNotMatch(result.stdout, /wrote|pruned/);
   assert.doesNotMatch(calls, /find/);
   const backups = join(directory, "backups");
-  const files = readdirSync(backups);
+  const files = backupEntries(backups);
   assert.equal(files.length, 1, "failed publication left a partial file");
   assert.equal(
     readFileSync(join(backups, files[0] ?? ""), "utf8"),
@@ -364,7 +373,7 @@ test("one-shot mode writes one dump, needs no interval, and never sleeps", () =>
 
   assert.equal(result.status, 0, result.stderr);
   assert.doesNotMatch(calls, /sleep/);
-  const files = readdirSync(join(directory, "backups"));
+  const files = backupEntries(join(directory, "backups"));
   assert.equal(files.length, 1);
   assert.match(files[0] ?? "", /^weeklyreport-.*\.dump$/);
 });
@@ -380,7 +389,7 @@ test("one-shot mode exits non-zero on a failed dump and leaves no partial file",
   assert.doesNotMatch(calls, /sleep/);
   assert.match(result.stdout, /pg_dump did not complete/);
   assert.doesNotMatch(result.stdout, /retrying after the interval/);
-  assert.deepEqual(readdirSync(join(directory, "backups")), []);
+  assert.deepEqual(backupEntries(join(directory, "backups")), []);
 });
 
 test("one-shot mode still requires retention and a boolean flag", () => {
@@ -392,4 +401,49 @@ test("one-shot mode still requires retention and a boolean flag", () => {
   assert.notEqual(badFlag.result.status, 0);
   assert.match(badFlag.result.stderr, /BACKUP_RUN_ONCE must be true or false/);
   assert.equal(badFlag.calls, "");
+});
+
+test("a held writer lock stops either mode before any backup work", () => {
+  for (const mode of [oneShot, {}]) {
+    const { calls, directory, result } = runBackup(mode, {
+      pgDump: dumpStub(0),
+      additional: {
+        flock: 'echo "flock-args:$*" >&2\nexit 1',
+        find: "exit 99",
+      },
+      timeoutMs: 10_000,
+    });
+    assert.equal(result.status, 75, result.stderr);
+    assert.match(result.stderr, /^flock-args:-n 9$/m);
+    assert.match(
+      result.stdout,
+      /another backup writer holds .*\/backups\/\.backup-writer\.lock/,
+    );
+    assert.equal(calls.trim(), "flock");
+    assert.deepEqual(backupEntries(join(directory, "backups")), []);
+  }
+});
+
+test("the writer lock is taken before the dump and outlives retention", () => {
+  const { calls, directory, result, runAgain } = runBackup(oneShot, {
+    // pg_dump must inherit the locked descriptor so its partial stays owned.
+    pgDump: `{ : >&9; } 2>/dev/null || exit 3\n${dumpStub(0)}`,
+    // A logging pass-through proves retention really ran on the second run.
+    additional: { flock: "exit 0", find: 'exec /usr/bin/find "$@"' },
+    timeoutMs: 10_000,
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.deepEqual(calls.trim().split("\n"), ["flock", "pg_dump", "find"]);
+  const lock = join(directory, "backups", writerLock);
+  assert.equal(statSync(lock).mode & 0o777, 0o600);
+
+  const old = new Date(Date.now() - 400 * 24 * 60 * 60 * 1000);
+  utimesSync(lock, old, old);
+  assert.equal(runAgain().status, 0);
+  assert.equal(
+    readFileSync(join(directory, "probe.log"), "utf8").match(/^find$/gm)
+      ?.length,
+    2,
+  );
+  assert.ok(statSync(lock).isFile());
 });

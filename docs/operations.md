@@ -148,6 +148,15 @@ drill. The CronJob has `concurrencyPolicy: Forbid`, no Job retry, and a bounded
 run time. A completed dump is published as `weeklyreport-<stamp>-<unique>.dump` only after
 `pg_dump` succeeds; failures leave no restorable-looking partial file.
 
+Every `backup-loop.sh` process, whether a scheduled Job, a manual Job or the
+standalone loop, holds an exclusive lock on `/backups/.backup-writer.lock` for
+its whole run. A second writer on the same directory does not wait: it logs
+`another backup writer holds …` and exits with status 75 before reserving a
+file, dumping or pruning. The kernel releases the lock when the holder and any `pg_dump` it started
+exit, including a killed or timed-out run, so a stale lock needs no cleanup. Never
+delete the lock file. Commands run by hand in the pod or on the node do not take
+this lock and must not write to the volume while a backup writer is active.
+
 The backup image also contains `restore.sh`. It uses the release's image tag,
 Secret, resource limits, and security context. No mutable host script is mounted.
 The Job is pinned to the PostgreSQL node because both mount the ReadWriteOnce
@@ -165,7 +174,9 @@ Record the CronJob's current suspension state, suspend it, and wait for any
 already-active backup Job to finish. Coordinate with other operators so they do
 not create a concurrent manual Job, then choose a unique Job name.
 `concurrencyPolicy: Forbid` governs the CronJob controller; it does not serialize
-manually created Jobs. Suspension does not stop an already-running Job.
+manually created Jobs. Suspension does not stop an already-running Job. If a
+writer is still active, the manual Job fails with status 75 and the writer-lock
+message; wait for the active writer and create a new Job instead of retrying it.
 
 ```sh
 kubectl -n <ns> get cronjob/backup -o jsonpath='{.spec.suspend}'
