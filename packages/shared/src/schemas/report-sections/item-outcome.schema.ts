@@ -8,6 +8,7 @@ import {
   safeText,
   writeStageNamesField,
 } from "../primitives/report-primitives.schema.js";
+import { storedText } from "../primitives/stored-text.schema.js";
 
 const itemOutcomeSchema = z.enum(["done", "continue", "plan_next", "wont_do"]);
 
@@ -15,11 +16,12 @@ const itemOutcomeStateObjectSchema = z
   .object({
     type: itemTypeSchema,
     workflowStatus: itemWorkflowStatusSchema,
-    pausedReason: safeText().nullable(),
-    nextStepText: safeText().nullable(),
+    // Server-owned copies of stored item text: read as stored.
+    pausedReason: storedText().nullable(),
+    nextStepText: storedText().nullable(),
     // Retained result text so a transition can present the superseded work.
     // Defaulted to null so events written before this field still parse.
-    text: safeText().nullable().default(null),
+    text: storedText().nullable().default(null),
   })
   .strict();
 
@@ -143,7 +145,7 @@ export const itemResolutionSchema = z
   .object({
     kind: z.literal("wont_do"),
     eventId: z.uuid(),
-    reason: safeText(),
+    reason: storedText(),
     actorId: z.uuid(),
     actorName: z.string().trim().min(1),
     occurredAt: z.iso.datetime(),
@@ -162,7 +164,7 @@ export const itemOutcomeEventSchema = z
       z.literal("restore"),
       z.literal("promote"),
     ]),
-    reason: safeText().nullable(),
+    reason: storedText().nullable(),
     actorId: z.uuid(),
     actorName: z.string().trim().min(1),
     occurredAt: z.iso.datetime(),
