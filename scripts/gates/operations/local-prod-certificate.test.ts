@@ -214,8 +214,10 @@ test.each(["req", "x509", "pkcs8"])(
   },
 );
 
-// C0057: an interrupted first write leaves secrets.env empty or cut short; the
-// next run must refuse before Kubernetes instead of sourcing it as complete.
+// C0057 (scoped refusal controls only): a pre-existing empty or key-truncated
+// secrets.env is refused before Kubernetes. These fixtures do not interrupt the
+// real writer, so a cut inside the last value with every key present stays
+// unproven and C0057 remains needs-evidence.
 test.each(["", "DB_PASSWORD=ab", "DB_PASSWORD=ab\nAUTH_JWT_SECRET="])(
   "local-prod refuses an interrupted secrets.env %j before Kubernetes",
   (secrets) => {
