@@ -2,12 +2,12 @@
 
 import { useEffect, useId, useRef } from "react";
 
+import { normalize } from "./status-overview-activity-draft";
 import {
   ActivityDescriptionField,
   ActivityFieldActions,
   activityFieldErrors,
   ActivityTitleField,
-  normalize,
   type StatusOverviewActivityFieldsChange,
   type StatusOverviewActivityFieldsValue,
   useActivityFieldsDraft,

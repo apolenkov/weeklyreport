@@ -504,3 +504,68 @@ describe("StatusOverviewActivityEditor", () => {
     },
   );
 });
+
+describe("StatusOverviewActivityEditor dirty state (TASK-503.37 C5073)", () => {
+  function renderDirtyProbe(values: {
+    titleOverride: string | null;
+    description: string | null;
+  }) {
+    const onPendingChange = vi.fn();
+    render(
+      <StatusOverviewActivityEditor
+        activityId={ACTIVITY_ID}
+        values={{ ...values, catalogueName: "Catalogue duty" }}
+        onChange={vi.fn()}
+        onPendingChange={onPendingChange}
+        onClose={vi.fn()}
+      />,
+    );
+    const unloadPrevented = (): boolean => {
+      const event = new Event("beforeunload", { cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    };
+    return { onPendingChange, unloadPrevented };
+  }
+  const save = () => screen.getByTestId(`activity-fields-save-${ACTIVITY_ID}`);
+  const title = () => screen.getByTestId(`activity-title-${ACTIVITY_ID}`);
+  const description = () =>
+    screen.getByTestId(`activity-description-${ACTIVITY_ID}`);
+
+  it("is clean again after typing both fields back to the authoritative values", async () => {
+    const { onPendingChange, unloadPrevented } = renderDirtyProbe({
+      titleOverride: "Weekly duty",
+      description: "Ship it",
+    });
+    const user = userEvent.setup();
+
+    await user.type(title(), "!");
+    await user.type(description(), "?");
+    expect(save()).toBeEnabled();
+    expect(unloadPrevented()).toBe(true);
+
+    await user.type(title(), "{Backspace}");
+    await user.type(description(), "{Backspace}");
+
+    expect(title()).toHaveValue("Weekly duty");
+    expect(description()).toHaveValue("Ship it");
+    expect(save()).toBeDisabled();
+    expect(unloadPrevented()).toBe(false);
+    expect(onPendingChange).toHaveBeenLastCalledWith(ACTIVITY_ID, false);
+  });
+
+  it("treats whitespace-only text over a null baseline as clean", async () => {
+    const { onPendingChange, unloadPrevented } = renderDirtyProbe({
+      titleOverride: null,
+      description: null,
+    });
+    const user = userEvent.setup();
+
+    await user.type(title(), " ".repeat(3));
+    await user.type(description(), "  ");
+
+    expect(save()).toBeDisabled();
+    expect(unloadPrevented()).toBe(false);
+    expect(onPendingChange).toHaveBeenLastCalledWith(ACTIVITY_ID, false);
+  });
+});
