@@ -2,7 +2,10 @@ import { z } from "zod";
 
 // Whitespace / zero-width-only strings fail; null bytes are PostgreSQL-incompatible.
 const noInvisibleOnly = (val: string) =>
-  val.replaceAll(/\s|\u200B|\u200C|\u200D|\uFEFF/gu, "").length > 0;
+  val.replaceAll(
+    /\u034F|[\s\u00AD\u180E\u200B-\u200D\u2060-\u2064\uFEFF]/gu,
+    "",
+  ).length > 0;
 
 const noNullBytes = (val: string) => !val.includes("\u0000");
 
