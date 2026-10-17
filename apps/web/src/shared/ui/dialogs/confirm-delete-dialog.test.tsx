@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState } from "react";
+import { type RefObject, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
@@ -435,6 +435,79 @@ describe("ConfirmDeleteDialog — shared confirmation contracts (TASK-503.43)", 
       expect(ids.length).toBeGreaterThan(0);
       expect(new Set(ids).size).toBe(ids.length);
       for (const id of ids) expect(document.getElementById(id)).not.toBeNull();
+    });
+  });
+
+  describe("C5246 focus restore target", () => {
+    function RestoreHarness({
+      triggerRef,
+    }: {
+      readonly triggerRef: RefObject<HTMLElement | null>;
+    }) {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button
+            type="button"
+            data-testid="opener"
+            onClick={() => setOpen(true)}
+          >
+            Open
+          </button>
+          <button type="button" data-testid="other">
+            Other
+          </button>
+          <ConfirmDeleteDialog
+            {...defaultProps}
+            open={open}
+            triggerRef={triggerRef}
+            onCancel={() => setOpen(false)}
+          />
+        </>
+      );
+    }
+
+    const openFromOpenerThenEscape = async () => {
+      const opener = screen.getByTestId("opener");
+      opener.focus();
+      fireEvent.click(opener);
+      await waitFor(() => {
+        expect(opener).not.toHaveFocus();
+      });
+      fireEvent.keyDown(document, { key: "Escape" });
+      return opener;
+    };
+
+    it("control: a connected explicit trigger ref wins over the previously focused element", async () => {
+      const triggerRef: { current: HTMLElement | null } = { current: null };
+      render(<RestoreHarness triggerRef={triggerRef} />);
+      triggerRef.current = screen.getByTestId("other");
+
+      await openFromOpenerThenEscape();
+
+      await waitFor(() => expect(screen.getByTestId("other")).toHaveFocus());
+    });
+
+    it("control: a null trigger ref falls back to the previously focused element", async () => {
+      const triggerRef: { current: HTMLElement | null } = { current: null };
+      render(<RestoreHarness triggerRef={triggerRef} />);
+
+      const opener = await openFromOpenerThenEscape();
+
+      await waitFor(() => expect(opener).toHaveFocus());
+    });
+
+    // Synthetic: React clears refs of unmounted elements, so a stale node needs an
+    // out-of-React removal. Proves the focus seam only; public removed-opener
+    // admission stays deferred (TASK-503.43 contract, C5246).
+    it("falls back to the previously focused element when the explicit trigger node is disconnected", async () => {
+      const detached = document.createElement("button");
+      const triggerRef: { current: HTMLElement | null } = { current: detached };
+      render(<RestoreHarness triggerRef={triggerRef} />);
+
+      const opener = await openFromOpenerThenEscape();
+
+      await waitFor(() => expect(opener).toHaveFocus());
     });
   });
 });

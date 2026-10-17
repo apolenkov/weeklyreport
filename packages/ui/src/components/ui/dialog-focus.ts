@@ -42,9 +42,14 @@ export function useDialogFocus({
   function handleCloseAutoFocus(event: DialogAutoFocusEvent) {
     onCloseAutoFocus?.(event);
     if (event.defaultPrevented) return;
-    const target =
-      restoreFocusRef?.current ??
-      (restoreFocusToPrevious ? previousFocusRef.current : null);
+    // A trigger can be gone by the time the dialog closes (its row was
+    // removed); focus would land nowhere, so fall back to the opener.
+    const explicit = restoreFocusRef?.current;
+    const target = explicit?.isConnected
+      ? explicit
+      : restoreFocusToPrevious
+        ? previousFocusRef.current
+        : null;
     if (!target) return;
     event.preventDefault();
     target.focus();
