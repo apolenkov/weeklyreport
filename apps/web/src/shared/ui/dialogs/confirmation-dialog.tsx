@@ -7,7 +7,9 @@ import {
   DialogTitle,
 } from "@weeklyreport/ui/components/ui/dialog";
 import { LoaderCircle } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
+
+import { usePendingFocusPark } from "./use-pending-focus-park";
 
 type ConfirmationDialogVariant = "default" | "destructive";
 
@@ -142,19 +144,7 @@ export function ConfirmationDialog({
   children,
 }: ConfirmationDialogProps) {
   const cancelRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  // Disabling the focused action drops focus to <body>, which the Radix trap
-  // does not reclaim; park it on the panel so the keyboard stays inside.
-  useEffect(() => {
-    const panel = panelRef.current;
-    if (!isPending || !panel) return;
-    const active = document.activeElement;
-    const lost =
-      !panel.contains(active) ||
-      (active instanceof HTMLButtonElement && active.disabled);
-    if (lost) panel.focus();
-  }, [isPending]);
+  const panelRef = usePendingFocusPark(isPending);
 
   // While the action is in flight the dialog stays put: Escape and backdrop
   // dismissal are suppressed so the submit cannot be abandoned mid-flight.

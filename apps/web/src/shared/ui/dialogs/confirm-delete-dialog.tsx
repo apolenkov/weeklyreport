@@ -9,6 +9,7 @@ import {
 import { type RefObject, useEffect, useRef } from "react";
 
 import { usePortalTarget } from "./document-body-portal";
+import { usePendingFocusPark } from "./use-pending-focus-park";
 
 interface ConfirmDeleteDialogProps {
   readonly open: boolean;
@@ -97,22 +98,10 @@ function ConfirmDeleteContent({
   triggerRef,
 }: ConfirmDeleteContentProps) {
   const cancelRef = useRef<HTMLButtonElement | null>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
+  const panelRef = usePendingFocusPark(isPending);
   const preventWhilePending = (event: Event) => {
     if (isPending) event.preventDefault();
   };
-
-  // C5241: disabling the focused action drops focus to <body>, which the Radix
-  // trap does not reclaim; park it on the panel so the keyboard stays inside.
-  useEffect(() => {
-    const panel = panelRef.current;
-    if (!isPending || !panel) return;
-    const active = document.activeElement;
-    const lost =
-      !panel.contains(active) ||
-      (active instanceof HTMLButtonElement && active.disabled);
-    if (lost) panel.focus();
-  }, [isPending]);
 
   return (
     <DialogContent
