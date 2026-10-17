@@ -87,16 +87,15 @@ describe("terminal removal reply and snapshot admission", () => {
     expect(queue.emit).not.toHaveBeenCalled();
   });
 
-  it("reports a terminal job without a completion stamp as identity-changed", async () => {
-    const { remover, job, runCommand } = responseFixture("identity-changed");
+  it("reports a terminal job without a finish stamp as identity-changed without Redis", async () => {
+    const { remover, job, runCommand } = responseFixture(1);
     expect(Reflect.deleteProperty(job, "finishedOn")).toBe(true);
     const observed = remover.capture(job);
+    // The stamp fences the observed terminal identity; without it the answer is
+    // decided before the conditional command runs.
     await expect(observed.removeIfTerminal("failed")).resolves.toBe(
       "identity-changed",
     );
-    expect(runCommand).toHaveBeenCalledOnce();
-    // The empty stamp can never equal the stored one, so the native guard cannot
-    // report removal for a job whose terminal identity is not frozen yet.
-    expect(runCommand.mock.calls[0]?.[1]).toContain("");
+    expect(runCommand).not.toHaveBeenCalled();
   });
 });
