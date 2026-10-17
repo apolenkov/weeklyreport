@@ -117,15 +117,19 @@ export class BullmqTerminalJobRemoval implements TerminalJobRemoval {
         ) {
           throw new Error("Terminal job snapshot is missing or invalid.");
         }
-        // A job can reach a terminal set before finishedOn is written. An empty
-        // stamp cannot match the stored one, so the guard answers
-        // identity-changed instead of failing the caller with a 500.
-        const finishedOn =
-          typeof snapshot.finishedOn === "number" &&
-          Number.isSafeInteger(snapshot.finishedOn) &&
-          snapshot.finishedOn > 0
-            ? String(snapshot.finishedOn)
-            : "";
+        // The handle can be captured just before its job enters the terminal
+        // set, so the observed snapshot may carry no finish stamp yet: the
+        // terminal identity cannot be fenced, and removal must not be attempted.
+        // Answer identity-changed before touching Redis (design.md, "Validate
+        // captured id, terminal timestamp and serialized fields before invoking
+        // Redis").
+        if (
+          typeof snapshot.finishedOn !== "number" ||
+          !Number.isSafeInteger(snapshot.finishedOn) ||
+          snapshot.finishedOn <= 0
+        ) {
+          return "identity-changed";
+        }
         const backend = this.queue.getBackend();
         const client = await backend.client;
         client.defineCommand(COMMAND_NAME, {
@@ -142,7 +146,7 @@ export class BullmqTerminalJobRemoval implements TerminalJobRemoval {
           snapshot.name,
           snapshot.data,
           String(snapshot.timestamp),
-          finishedOn,
+          String(snapshot.finishedOn),
         ]);
         if (result === 1) {
           // Job.remove emits the Job despite Queue's jobId-only event type.
