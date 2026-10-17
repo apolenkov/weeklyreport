@@ -6,7 +6,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@weeklyreport/ui/components/ui/dialog";
-import { type RefObject, useRef } from "react";
+import { type RefObject, useEffect, useRef } from "react";
 
 import { usePortalTarget } from "./document-body-portal";
 
@@ -31,13 +31,26 @@ interface ConfirmDeleteDialogProps {
 // never deletes. Portal escapes overflow:hidden ancestors.
 export function ConfirmDeleteDialog({
   open,
-  isPending = false,
+  isPending,
   onConfirm,
   onCancel,
   ...contentProps
 }: ConfirmDeleteDialogProps) {
-  const guardedCancel = isPending ? () => undefined : onCancel;
-  const guardedConfirm = isPending ? () => undefined : onConfirm;
+  const pending = isPending === true;
+  // C5240: a host that reports isPending runs the pending protocol, so the first
+  // confirm is spent; a host that leaves it out keeps confirming every time.
+  const confirmIsOneShot = isPending !== undefined;
+  const confirmSpent = useRef(false);
+  useEffect(() => {
+    // A new pending phase or a reopened dialog re-arms the confirm.
+    if (pending || !open) confirmSpent.current = false;
+  }, [open, pending]);
+  const guardedCancel = pending ? () => undefined : onCancel;
+  const guardedConfirm = () => {
+    if (pending || (confirmIsOneShot && confirmSpent.current)) return;
+    confirmSpent.current = true;
+    onConfirm();
+  };
   const portalTarget = usePortalTarget();
 
   return (
@@ -50,7 +63,7 @@ export function ConfirmDeleteDialog({
       <ConfirmDeleteContent
         {...contentProps}
         portalContainer={portalTarget}
-        isPending={isPending}
+        isPending={pending}
         onConfirm={guardedConfirm}
         onCancel={guardedCancel}
       />
