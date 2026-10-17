@@ -4,7 +4,7 @@
 # Node 26 does not ship Corepack, so pnpm is installed with npm — the pin is
 # held against package.json's packageManager by scripts/gates/environment/check-runtime-node-sync.ts.
 FROM node:26.11.1-trixie@sha256:32fa97f3363975684b08bf4e8a68a47c7905175cc20275b50b974bbd02aba731 AS base
-RUN npm install -g pnpm@12.13.0 turbo@2.11.7
+RUN npm install -g pnpm@12.13.0 turbo@2.11.9
 
 # Stage 2: Prune monorepo for api workspace
 FROM base AS pruner
