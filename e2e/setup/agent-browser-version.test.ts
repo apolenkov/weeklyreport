@@ -13,13 +13,13 @@ void test("only the exact pinned agent-browser version is accepted", () => {
   assert.doesNotThrow(() => assertAgentBrowserVersion(AGENT_BROWSER_VERSION));
   for (const output of [
     "agent-browser 0.38.2\n",
-    "agent-browser 0.39.0-rc.1\n",
+    "agent-browser 0.39.2-rc.1\n",
     "agent-browser 10.39.0",
     "",
   ]) {
     assert.throws(
       () => assertAgentBrowserVersion(output),
-      /requires agent-browser 0\.39\.0, found "/u,
+      /requires agent-browser 0\.39\.1, found "/u,
     );
   }
 });
