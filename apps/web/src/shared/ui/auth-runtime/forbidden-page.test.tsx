@@ -33,6 +33,13 @@ describe("ForbiddenPage", () => {
     expect(screen.getByText(/head or admin/)).toBeInTheDocument();
   });
 
+  it("does not render a broken role sentence when no role is allowed (feature-disabled feedback inbox)", () => {
+    // webEnv.productFeedbackInboxRoles() returns [] when feedback is disabled
+    // and feedback/layout.tsx passes it to RoleGate -> ForbiddenPage.
+    render(<ForbiddenPage requiredRoles={[]} homeHref="/head/dashboard" />);
+    expect(document.body.textContent).not.toMatch(/\bthe\s+role\b/);
+  });
+
   it.each([
     "/lead/report",
     "/reports/latest",

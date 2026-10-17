@@ -30,9 +30,12 @@ export function ForbiddenPage({ requiredRoles, homeHref }: ForbiddenPageProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            You do not have access to this page. It is available to the{" "}
-            {rolesLabel} role only; your home page lists what your role can
-            open.
+            You do not have access to this page.
+            {/* C5224: an empty list has no role to name, and the sentence read
+                "available to the  role only". */}
+            {requiredRoles.length > 0
+              ? ` It is available to the ${rolesLabel} role only; your home page lists what your role can open.`
+              : " Your home page lists what your role can open."}
           </p>
           <Button asChild>
             <Link href={homeHref}>Go to my home page</Link>
