@@ -32,7 +32,7 @@ const { removeJob } = z
   })
   .parse(require("bullmq/dist/cjs/scripts/removeJob-2.js"));
 const COMMAND_NAME = "weeklyreportRemoveTerminalJob";
-const REVIEWED_BULLMQ_VERSION = "6.3.14";
+const REVIEWED_BULLMQ_VERSION = "6.3.16";
 const REVIEWED_NATIVE_CONTENT_SHA256 =
   "f2acb16fda20ccac200abd5289a8910e48870d454c1577b19bd375ab809bb4b6";
 
