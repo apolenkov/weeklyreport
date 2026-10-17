@@ -14,7 +14,7 @@
     "@weeklyreport/shared": "workspace:*"
   },
   "peerDependencies": {
-    "@prisma/client": "^7.10.0"
+    "@prisma/client": "^7.10.1"
   },
   "devDependencies": {
     "typescript": "npm:@typescript/typescript6@^6.0.2"

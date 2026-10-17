@@ -4,6 +4,6 @@
   "private": true,
   "dependencies": {
     "dotenv": "18.0.8",
-    "prisma": "7.10.0"
+    "prisma": "7.10.1"
   }
 }
