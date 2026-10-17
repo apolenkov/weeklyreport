@@ -79,17 +79,28 @@ interface InlineSaveHandlersArgs {
   >["inlineEditRecord"];
   readonly pendingDeleteRef: GridRowEditableRef | null;
   readonly saveDraftSection: SaveDraftSection;
+  readonly closePendingDelete: () => void;
 }
 
 function createInlineSaveHandlers(args: InlineSaveHandlersArgs) {
-  const { section, inlineEditRecord, pendingDeleteRef, saveDraftSection } =
-    args;
+  const {
+    section,
+    inlineEditRecord,
+    pendingDeleteRef,
+    saveDraftSection,
+    closePendingDelete,
+  } = args;
   const activeItem = getActiveItemRecord(inlineEditRecord);
   const activeRisk = getActiveRiskRecord(inlineEditRecord);
   const activeDecision = getActiveDecisionRecord(inlineEditRecord);
 
   function onConfirmDelete() {
-    if (section === null || pendingDeleteRef === null) return;
+    if (section === null || pendingDeleteRef === null) {
+      // The row this confirmation pointed at is gone; an open dialog with a
+      // dead Confirm is worse than closing it.
+      closePendingDelete();
+      return;
+    }
     saveDraftSection(
       section,
       deleteSlideInlineRecord(section, pendingDeleteRef),
@@ -147,6 +158,7 @@ function useInlineEditCommands({
     inlineEditRecord: dialogData.inlineEditRecord,
     pendingDeleteRef: dialogData.pendingDeleteRecord?.ref ?? null,
     saveDraftSection,
+    closePendingDelete: () => setPendingDeleteRef(null),
   });
 
   function handleRowActivate(ref: GridRowEditableRef) {
