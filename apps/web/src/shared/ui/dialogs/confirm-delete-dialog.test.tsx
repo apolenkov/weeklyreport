@@ -249,3 +249,92 @@ describe("ConfirmDeleteDialog — a11y regression", () => {
     expect(onCancel).not.toHaveBeenCalled();
   });
 });
+
+// TASK-503.43 contracts for the frozen shared-confirmation clauses. RED = fails on
+// the current source; "control" = holds today and must keep holding. jsdom proves
+// DOM/focus contracts only; native AT, Tab order and request counts stay with the
+// separate native windows named in the TASK-503.43 contract.
+describe("ConfirmDeleteDialog — shared confirmation contracts (TASK-503.43)", () => {
+  const deleteButton = () => screen.getByRole("button", { name: /delete/i });
+
+  describe("C5240 one-shot confirm while the host has not reported pending yet", () => {
+    it("invokes onConfirm once for two rapid clicks", () => {
+      const onConfirm = vi.fn();
+      renderDialog({ onConfirm, isPending: false, confirmLabel: "Delete" });
+
+      fireEvent.click(deleteButton());
+      fireEvent.click(deleteButton());
+
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+    });
+
+    it("invokes onConfirm once for two Enter presses on the focused confirm button", async () => {
+      const user = userEvent.setup();
+      const onConfirm = vi.fn();
+      renderDialog({ onConfirm, isPending: false, confirmLabel: "Delete" });
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /cancel/i })).toHaveFocus();
+      });
+      await user.tab({ shift: true });
+      expect(deleteButton()).toHaveFocus();
+
+      await user.keyboard("{Enter}{Enter}");
+
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+    });
+
+    it("control: a single click confirms once", () => {
+      const onConfirm = vi.fn();
+      renderDialog({ onConfirm, isPending: false, confirmLabel: "Delete" });
+
+      fireEvent.click(deleteButton());
+
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+    });
+
+    it("control: confirm works again after the host's pending phase ended with the dialog still open", () => {
+      const onConfirm = vi.fn();
+      const props = { ...defaultProps, onConfirm, confirmLabel: "Delete" };
+      const { rerender } = render(
+        <ConfirmDeleteDialog {...props} isPending={false} />,
+      );
+      fireEvent.click(deleteButton());
+
+      rerender(<ConfirmDeleteDialog {...props} isPending={true} />);
+      rerender(<ConfirmDeleteDialog {...props} isPending={false} />);
+      fireEvent.click(deleteButton());
+
+      expect(onConfirm).toHaveBeenCalledTimes(2);
+    });
+
+    it("control: a host that omits isPending can confirm again while the dialog stays open", () => {
+      const onConfirm = vi.fn();
+      renderDialog({ onConfirm, confirmLabel: "Delete" });
+
+      fireEvent.click(deleteButton());
+      fireEvent.click(deleteButton());
+
+      expect(onConfirm).toHaveBeenCalledTimes(2);
+    });
+
+    it("control: confirm works again after the dialog was closed and reopened", async () => {
+      const onConfirm = vi.fn();
+      const props = { ...defaultProps, onConfirm, confirmLabel: "Delete" };
+      const { rerender } = render(
+        <ConfirmDeleteDialog {...props} isPending={false} />,
+      );
+      fireEvent.click(deleteButton());
+
+      rerender(
+        <ConfirmDeleteDialog {...props} open={false} isPending={false} />,
+      );
+      await waitFor(() => {
+        expect(screen.queryByRole("alertdialog")).toBeNull();
+      });
+      rerender(<ConfirmDeleteDialog {...props} isPending={false} />);
+      fireEvent.click(deleteButton());
+
+      expect(onConfirm).toHaveBeenCalledTimes(2);
+    });
+  });
+});
