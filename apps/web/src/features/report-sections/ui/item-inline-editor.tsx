@@ -56,7 +56,7 @@ function ActiveWeekFieldset({
         {(["current", "next"] as const).map((week) => (
           <label
             key={week}
-            className={`inline-flex min-h-[var(--touch-target-min)] flex-1 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border px-3 text-sm font-semibold focus-within:ring-2 focus-within:ring-[var(--color-ring)] ${activeWeek === week ? "border-[var(--color-toggle-active)] bg-[var(--color-toggle-active)] text-[var(--color-primary-foreground)]" : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-foreground)]"}`}
+            className={`inline-flex min-h-[var(--touch-target-min)] flex-1 cursor-pointer items-center justify-center rounded-[var(--radius-sm)] border px-3 text-sm font-semibold focus-within:ring-2 focus-within:ring-[var(--color-ring)] has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-50 ${activeWeek === week ? "border-[var(--color-toggle-active)] bg-[var(--color-toggle-active)] text-[var(--color-primary-foreground)]" : "border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-foreground)]"}`}
           >
             <input
               type="radio"
