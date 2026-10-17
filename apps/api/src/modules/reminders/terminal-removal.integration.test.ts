@@ -12,6 +12,7 @@ import {
 import {
   afterAll,
   afterEach,
+  beforeAll,
   beforeEach,
   describe,
   expect,
@@ -23,6 +24,7 @@ import {
   assertE2eRuntimeDestructiveTarget,
   assertRedisDbMatchesDatabase,
 } from "../../../../../prisma/guards/_destructive-guard.js";
+import { SEED_REPORTS } from "../../../../../prisma/seeds/support/seed-constants.js";
 import { ACTIVE_REPORT_ID } from "../../../../../prisma/seeds/support/seed-identifiers.js";
 import { createBootstrapJobsService } from "../../bootstrap/jobs-service.js";
 import { QueueRegistry } from "../../infrastructure/bullmq/queue-registry.js";
@@ -39,6 +41,7 @@ import {
 } from "../../modules/reminders/reminders-queue-payload.js";
 import { expectDefined } from "../../test-utils/expect-defined.js";
 import {
+  cleanDatabase,
   createTestPrisma,
   disconnectTestPrisma,
 } from "../../test-utils/prisma-test-helper.js";
@@ -136,6 +139,28 @@ describe("terminal removal — real BullMQ caller races", () => {
     };
   };
 
+  // The api-integration lane starts from a freshly migrated database and never
+  // applies a seed profile; earlier serial suites also truncate the schema.
+  // This proof is linked to the canonical demo active report, so provision that
+  // canonical row here instead of depending on an external seed or file order.
+  beforeAll(async () => {
+    safeTarget();
+    await cleanDatabase();
+    const active = SEED_REPORTS.active;
+    await prisma.report.create({
+      data: {
+        id: ACTIVE_REPORT_ID,
+        periodStart: new Date(active.periodStart),
+        periodEnd: new Date(active.periodEnd),
+        deadline: new Date(active.deadline),
+        weekLabel: active.weekLabel,
+        periodState: "open",
+        periodStatus: active.periodStatus,
+        status: active.status,
+      },
+    });
+  });
+
   beforeEach(async () => {
     queues = [];
     executionId = randomUUID();
@@ -144,7 +169,7 @@ describe("terminal removal — real BullMQ caller races", () => {
     const redis = safeTarget();
     const report = expectDefined(
       await prisma.report.findUnique({ where: { id: ACTIVE_REPORT_ID } }),
-      "Canonical demo seed must precede this suite",
+      "beforeAll must provision the canonical active report",
     );
     const deadline = expectDefined(report.deadline);
     const payload = {
@@ -262,7 +287,12 @@ describe("terminal removal — real BullMQ caller races", () => {
     }
   });
 
-  afterAll(disconnectTestPrisma);
+  afterAll(async () => {
+    // Leave the serial lane at a reset baseline; the next suite seeds its own
+    // fixtures.
+    await cleanDatabase();
+    await disconnectTestPrisma();
+  });
 
   async function failedJob(): Promise<Job> {
     worker = new Worker(
