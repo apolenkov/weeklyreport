@@ -55,9 +55,9 @@
       "enabled": false
     },
     {
-      "description": "2026-10-17 bullmq 6.3.14 is the reviewed native contract: terminal-job-removal reproduces its compiled removeJob-2.js byte-for-byte (sha256 f2acb16fda20ccac200abd5289a8910e48870d454c1577b19bd375ab809bb4b6) and the API fails closed on any other version. Re-review that script before accepting a bump (TASK-503.28, TASK-503.54).",
+      "description": "2026-10-18 re-reviewed bullmq 6.3.16: terminal-job-removal still reproduces the compiled removeJob-2.js byte-for-byte (sha256 f2acb16fda20ccac200abd5289a8910e48870d454c1577b19bd375ab809bb4b6), and the Node Redis path is unchanged (6.3.15/6.3.16 fix other language clients and the valkey-glide backend). Re-review that script before accepting the next bump (TASK-503.28, TASK-503.54, TASK-513).",
       "matchPackageNames": ["bullmq"],
-      "allowedVersions": "6.3.14"
+      "allowedVersions": "6.3.16"
     },
     {
       "description": "TASK-513 G1: jsdom 30.1.3 (via @asamuzakjp/dom-selector 10.0.3) breaks 8 web tests that assert toHaveStyle with CSS custom properties (4310/4318 pass, 8 fail); 30.1.2 keeps them green (40/40 on the two failing files). Recheck the selector/style graph before accepting a bump.",

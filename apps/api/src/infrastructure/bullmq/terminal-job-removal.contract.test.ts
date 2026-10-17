@@ -28,7 +28,7 @@ describe("BullMQ terminal-removal dependency contract", () => {
     expect(
       metadata,
       "Re-review native terminal-removal compatibility when BullMQ changes",
-    ).toMatchObject({ name: "bullmq", version: "6.3.14" });
+    ).toMatchObject({ name: "bullmq", version: "6.3.16" });
     expect({ name: removeJob.name, keys: removeJob.keys }).toEqual({
       name: "removeJob",
       keys: 2,
