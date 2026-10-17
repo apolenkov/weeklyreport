@@ -80,7 +80,10 @@ describe("ConfirmDeleteDialog — a11y regression", () => {
     expect(labelId).toBeTruthy();
     expect(descriptionId).toBeTruthy();
     expect(dialog).toHaveAccessibleName("Delete item?");
-    expect(dialog).toHaveAccessibleDescription("Quarterly planning item");
+    // Default props show the irreversibility note, which is part of the description (C5243).
+    expect(dialog).toHaveAccessibleDescription(
+      "Quarterly planning item This action cannot be undone.",
+    );
     for (const id of [labelId, descriptionId].flatMap((value) =>
       (value ?? "").trim().split(/\s+/u),
     )) {
@@ -335,6 +338,75 @@ describe("ConfirmDeleteDialog — shared confirmation contracts (TASK-503.43)", 
       fireEvent.click(deleteButton());
 
       expect(onConfirm).toHaveBeenCalledTimes(2);
+    });
+  });
+  describe("C5243 risk context in the accessible description", () => {
+    const risk = {
+      subtitle: "Owner: Ana",
+      consequence: "All slides are removed.",
+    };
+
+    it("reads preview, subtitle, consequence and the irreversibility note", () => {
+      renderDialog({ ...risk, reversible: false });
+
+      expect(screen.getByRole("alertdialog")).toHaveAccessibleDescription(
+        "Quarterly planning item Owner: Ana All slides are removed. This action cannot be undone.",
+      );
+    });
+
+    it("reads the reversibility note when the action can be reversed", () => {
+      renderDialog({ ...risk, reversible: true });
+
+      expect(screen.getByRole("alertdialog")).toHaveAccessibleDescription(
+        "Quarterly planning item Owner: Ana All slides are removed. This can be reversed later.",
+      );
+    });
+
+    it("leaves out the reversibility note when the client cannot know it", () => {
+      renderDialog({ ...risk, showReversibility: false });
+
+      expect(screen.getByRole("alertdialog")).toHaveAccessibleDescription(
+        "Quarterly planning item Owner: Ana All slides are removed.",
+      );
+    });
+
+    it("includes the shown irreversibility note even without subtitle or consequence", () => {
+      renderDialog({ reversible: false });
+
+      expect(screen.getByRole("alertdialog")).toHaveAccessibleDescription(
+        "Quarterly planning item This action cannot be undone.",
+      );
+    });
+
+    it("control: with only the preview the description is the preview", () => {
+      renderDialog({ showReversibility: false });
+
+      expect(screen.getByRole("alertdialog")).toHaveAccessibleDescription(
+        "Quarterly planning item",
+      );
+    });
+
+    it("control: every described-by reference resolves and stays unique across two dialogs with full context", () => {
+      render(
+        <>
+          <ConfirmDeleteDialog {...defaultProps} {...risk} />
+          <ConfirmDeleteDialog
+            {...defaultProps}
+            {...risk}
+            title="Delete second item?"
+            preview="Second planning item"
+          />
+        </>,
+      );
+
+      const ids = [
+        ...document.querySelectorAll<HTMLElement>('[role="alertdialog"]'),
+      ].flatMap((dialog) =>
+        (dialog.getAttribute("aria-describedby") ?? "").trim().split(/\s+/u),
+      );
+      expect(ids.length).toBeGreaterThan(0);
+      expect(new Set(ids).size).toBe(ids.length);
+      for (const id of ids) expect(document.getElementById(id)).not.toBeNull();
     });
   });
 });
