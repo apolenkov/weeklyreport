@@ -135,7 +135,7 @@ describe("useLeadFormAutosave", () => {
       version: saved.version,
     });
     expect(
-      result.current.lastSaveReceipt?.persistedItems.find(
+      result.current.lastSaveReceipt?.persistedItems?.find(
         (item) => item.id === CURRENT_ITEM_ID,
       )?.text,
     ).toBe(visibleText);
