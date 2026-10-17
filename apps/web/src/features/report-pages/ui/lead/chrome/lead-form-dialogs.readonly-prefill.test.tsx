@@ -132,11 +132,13 @@ function Harness({
       <button
         type="button"
         onClick={() =>
-          setRiskPrefill((current) => ({
+          setRiskPrefill((current): RiskPrefillRequest => ({
             signal: (current?.signal ?? 0) + 1,
             ...(prefillParent === "product"
               ? { productId: PROJECT_ID, stageNames: ["Development"] }
-              : { activityId: ACTIVITY_ID, stageNames: [] }),
+              : // productId stays declared as required, but the dialog reads it
+                // with a truthiness guard, so an empty value means "no product".
+                { productId: "", activityId: ACTIVITY_ID, stageNames: [] }),
             severity: "blocked",
           }))
         }

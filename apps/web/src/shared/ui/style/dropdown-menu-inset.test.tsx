@@ -11,12 +11,14 @@ import { describe, expect, it } from "vitest";
 // TASK-503.81 C5363: the primitives style with the presence selector
 // `data-[inset]:pl-8`, so `inset={false}` must not emit the attribute at all.
 function renderMenu(inset: boolean | undefined) {
+  // exactOptionalPropertyTypes: pass the prop only when it is defined.
+  const insetProp = inset === undefined ? {} : { inset };
   render(
     <DropdownMenu open>
       <DropdownMenuTrigger>Open</DropdownMenuTrigger>
       <DropdownMenuContent>
-        <DropdownMenuLabel inset={inset}>Label</DropdownMenuLabel>
-        <DropdownMenuItem inset={inset}>Item</DropdownMenuItem>
+        <DropdownMenuLabel {...insetProp}>Label</DropdownMenuLabel>
+        <DropdownMenuItem {...insetProp}>Item</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>,
   );
