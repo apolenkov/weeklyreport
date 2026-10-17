@@ -16,7 +16,7 @@ cloning, recreate them (init also drops a `.gitkeep` the cleanliness gate
 forbids):
 
 ```bash
-pnpm exec openspec init --tools claude,codex && rm openspec/changes/archive/.gitkeep
+pnpm exec openspec init --tools claude,agents && rm openspec/changes/archive/.gitkeep
 ```
 
 `db:bootstrap:local` is the single setup entrypoint: it verifies the exact
