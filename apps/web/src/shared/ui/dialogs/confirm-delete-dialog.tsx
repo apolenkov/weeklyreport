@@ -156,34 +156,38 @@ function ConfirmDeleteBody({
         </h3>
       </DialogTitle>
 
+      {/* C5243: every shown risk context belongs to the description, so the
+          dialog does not announce a preview that hides the consequence. */}
       <DialogDescription asChild>
-        <p
-          className="mt-3 line-clamp-2 break-words rounded-md border border-[var(--color-muted)] bg-[var(--color-surface-hover)] px-3 py-2 text-sm font-medium text-[var(--color-foreground)]"
-          title={preview}
-        >
-          {preview}
-        </p>
+        <div>
+          <p
+            className="mt-3 line-clamp-2 break-words rounded-md border border-[var(--color-muted)] bg-[var(--color-surface-hover)] px-3 py-2 text-sm font-medium text-[var(--color-foreground)]"
+            title={preview}
+          >
+            {preview}
+          </p>
+
+          {subtitle && (
+            <p className="mt-2 text-[12px] text-[var(--color-muted-foreground)]">
+              {subtitle}
+            </p>
+          )}
+
+          {consequence && (
+            <p className="mt-3 text-[12px] text-[var(--color-destructive)]">
+              {consequence}
+            </p>
+          )}
+
+          {showReversibility ? (
+            <p className="mt-4 text-xs text-[var(--color-muted-foreground)]">
+              {reversible
+                ? "This can be reversed later."
+                : "This action cannot be undone."}
+            </p>
+          ) : null}
+        </div>
       </DialogDescription>
-
-      {subtitle && (
-        <p className="mt-2 text-[12px] text-[var(--color-muted-foreground)]">
-          {subtitle}
-        </p>
-      )}
-
-      {consequence && (
-        <p className="mt-3 text-[12px] text-[var(--color-destructive)]">
-          {consequence}
-        </p>
-      )}
-
-      {showReversibility ? (
-        <p className="mt-4 text-xs text-[var(--color-muted-foreground)]">
-          {reversible
-            ? "This can be reversed later."
-            : "This action cannot be undone."}
-        </p>
-      ) : null}
     </>
   );
 }
