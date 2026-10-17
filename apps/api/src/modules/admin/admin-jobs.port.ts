@@ -43,7 +43,7 @@ export interface AdminJobHandle {
   // Requeues a failed job. Not idempotent: when two callers race, the loser
   // throws instead of returning a no-op.
   readonly retry: () => Promise<void>;
-  // The branch's terminal-only guard replaces main's unconditional remove.
+  // Atomically removes only an unchanged terminal job; reports the observed outcome.
   readonly removeIfTerminal: ObservedTerminalJob["removeIfTerminal"];
 }
 
