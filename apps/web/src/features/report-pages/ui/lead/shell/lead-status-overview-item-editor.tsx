@@ -166,6 +166,9 @@ function OverviewItemDialog({
       activities={viewModel.activityOptions}
       week={dialog.week}
       onWeekChange={onWeekChange}
+      // C4929: while a submission exists the host drops every week change, so
+      // the radios stay visible but honestly disabled instead of silently inert.
+      weekChangeDisabled={dialog.submission !== null}
       showNextStep={false}
       showPriority={false}
       confirmationOnly={
