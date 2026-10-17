@@ -36,10 +36,13 @@ type InlineForm = Omit<
 function ActiveWeekFieldset({
   week: activeWeek,
   onWeekChange,
+  disabled,
 }: {
   readonly week: "current" | "next";
-  readonly onWeekChange: (week: "current" | "next") => void;
+  readonly onWeekChange: ((week: "current" | "next") => void) | undefined;
+  readonly disabled: boolean;
 }) {
+  if (!onWeekChange) return null;
   return (
     <fieldset>
       <legend className="text-xs font-semibold text-[var(--color-muted-foreground)]">
@@ -60,6 +63,7 @@ function ActiveWeekFieldset({
               name="overview-active-week"
               value={week}
               checked={activeWeek === week}
+              disabled={disabled}
               onChange={() => onWeekChange(week)}
               className="sr-only"
             />
@@ -193,6 +197,7 @@ type ItemInlineEditorProps = Omit<ItemEditDialogProps, "open" | "onDelete"> & {
   readonly showPriority?: boolean | undefined;
   readonly confirmationOnly?: boolean | undefined;
   readonly onWeekChange?: ((week: "current" | "next") => void) | undefined;
+  readonly weekChangeDisabled?: boolean | undefined;
 };
 
 function InlineEditHint({
@@ -229,7 +234,6 @@ export function ItemInlineEditor({
   ...props
 }: ItemInlineEditorProps) {
   useInlineEditUnloadGuard();
-  const activities = props.activities ?? EMPTY_ACTIVITIES;
   const nextStepTextareaRef = useFocusNextStep(focusNextStep, props.week);
   const {
     dialogSurfaceRef,
@@ -240,17 +244,16 @@ export function ItemInlineEditor({
     ...form
   } = useItemEditDialog({
     ...props,
-    activities,
+    activities: props.activities ?? EMPTY_ACTIVITIES,
     presentation: "inline",
     onSave: (item) => {
       if (!saveDisabled) props.onSave(item);
     },
   });
-  const activeWeekLabel = overviewWeekLabel(props.week);
   return (
     <div ref={dialogSurfaceRef} className="min-w-0">
       <form
-        aria-label={`${activeWeekLabel} update for ${form.parentName}`}
+        aria-label={`${overviewWeekLabel(props.week)} update for ${form.parentName}`}
         noValidate
         onSubmit={(event) => {
           event.preventDefault();
@@ -266,15 +269,17 @@ export function ItemInlineEditor({
         className="min-w-0 space-y-3"
       >
         <p className="break-words text-xs font-semibold text-[var(--color-muted-foreground)]">
-          {form.parentName} · {activeWeekLabel}
+          {form.parentName} · {overviewWeekLabel(props.week)}
         </p>
         <fieldset
           disabled={confirmationOnly}
           className="min-w-0 space-y-3 border-0 p-0"
         >
-          {onWeekChange ? (
-            <ActiveWeekFieldset week={props.week} onWeekChange={onWeekChange} />
-          ) : null}
+          <ActiveWeekFieldset
+            week={props.week}
+            onWeekChange={onWeekChange}
+            disabled={props.weekChangeDisabled ?? false}
+          />
           <InlineEditPrimaryFields
             form={form}
             week={props.week}
@@ -285,7 +290,7 @@ export function ItemInlineEditor({
         <InlineEditDetails
           form={form}
           products={props.products}
-          activities={activities}
+          activities={props.activities ?? EMPTY_ACTIVITIES}
           showPriority={showPriority}
           disabled={confirmationOnly}
         />
