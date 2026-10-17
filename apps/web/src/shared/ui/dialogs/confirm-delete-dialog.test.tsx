@@ -340,6 +340,34 @@ describe("ConfirmDeleteDialog — shared confirmation contracts (TASK-503.43)", 
       expect(onConfirm).toHaveBeenCalledTimes(2);
     });
   });
+  describe("C5241 focus while pending", () => {
+    it("control: opening already pending keeps focus inside the dialog and off the destructive action", () => {
+      renderDialog({ isPending: true, confirmLabel: "Delete" });
+
+      const dialog = screen.getByRole("alertdialog");
+      expect(dialog.contains(document.activeElement)).toBe(true);
+      expect(deleteButton()).not.toHaveFocus();
+    });
+
+    it("keeps focus inside the dialog when the focused Cancel turns disabled by pending", async () => {
+      const user = userEvent.setup();
+      const props = { ...defaultProps, confirmLabel: "Delete" };
+      const { rerender } = render(<ConfirmDeleteDialog {...props} />);
+      await waitFor(() => {
+        expect(screen.getByRole("button", { name: /cancel/i })).toHaveFocus();
+      });
+
+      rerender(<ConfirmDeleteDialog {...props} isPending />);
+
+      const dialog = screen.getByRole("alertdialog");
+      expect(dialog).toHaveFocus();
+      await user.tab();
+      expect(dialog).toHaveFocus();
+      await user.tab({ shift: true });
+      expect(dialog).toHaveFocus();
+    });
+  });
+
   describe("C5243 risk context in the accessible description", () => {
     const risk = {
       subtitle: "Owner: Ana",

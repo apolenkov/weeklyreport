@@ -97,12 +97,26 @@ function ConfirmDeleteContent({
   triggerRef,
 }: ConfirmDeleteContentProps) {
   const cancelRef = useRef<HTMLButtonElement | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const preventWhilePending = (event: Event) => {
     if (isPending) event.preventDefault();
   };
 
+  // C5241: disabling the focused action drops focus to <body>, which the Radix
+  // trap does not reclaim; park it on the panel so the keyboard stays inside.
+  useEffect(() => {
+    const panel = panelRef.current;
+    if (!isPending || !panel) return;
+    const active = document.activeElement;
+    const lost =
+      !panel.contains(active) ||
+      (active instanceof HTMLButtonElement && active.disabled);
+    if (lost) panel.focus();
+  }, [isPending]);
+
   return (
     <DialogContent
+      ref={panelRef}
       portalContainer={portalContainer}
       showCloseButton={false}
       className="animate-scale-in z-[var(--layer-dialog)] block w-full max-w-[calc(100%-2rem)] rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] p-6 shadow-xl sm:max-w-md"
