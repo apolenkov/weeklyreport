@@ -5,6 +5,8 @@ export type {
   AdminJobHandle,
   AdminJobsQueue,
   AdminPdfExportIdentity,
+  TerminalJobPolicy,
+  TerminalRemovalOutcome,
 } from "./admin-jobs.port.js";
 export {
   AdminAccessError,
