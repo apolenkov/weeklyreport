@@ -234,6 +234,9 @@ export function LeadFormLoaded(props: LeadFormLoadedProps) {
     <SdlcTooltipProvider>
       <form
         className={`space-y-5 ${completion.showStickyCompletion ? LEAD_STICKY_COMPLETION_CLEARANCE_CLASS : ""}`}
+        // C4872: Enter in a field must not submit natively and reload the page
+        // with the unsaved draft; submission goes through the completion actions.
+        onSubmit={(event) => event.preventDefault()}
         data-testid="lead-report-form"
         data-layout-key="report-page"
         data-layout-stability="position-width"
