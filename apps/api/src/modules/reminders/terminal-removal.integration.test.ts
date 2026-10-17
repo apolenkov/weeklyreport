@@ -21,7 +21,7 @@ import {
 
 import {
   assertE2eRuntimeDestructiveTarget,
-  parseE2eRuntimeRedisTarget,
+  assertRedisDbMatchesDatabase,
 } from "../../../../../prisma/guards/_destructive-guard.js";
 import { ACTIVE_REPORT_ID } from "../../../../../prisma/seeds/support/seed-identifiers.js";
 import { createBootstrapJobsService } from "../../bootstrap/jobs-service.js";
@@ -47,10 +47,27 @@ const SCRIPT_NAME = "terminal-removal.integration";
 const FAILURE = "controlled terminal failure";
 const WAIT_MS = 10_000;
 
-function safeTarget() {
+interface SafeRedisTarget {
+  readonly db: string;
+  readonly host: string;
+  readonly port: number;
+}
+
+// Locally REDIS_HOST is the loopback process from `.env.test`; CI reaches the
+// same disposable Redis DB 15 through the `redis` service alias, as every
+// other integration suite does. The protection that matters here is the
+// guarded disposable database plus the Redis DB derived from its name; the
+// loopback Redis parser stays on the destructive reset/E2E flush paths.
+function safeTarget(): SafeRedisTarget {
   const databaseUrl = requireEnv(process.env, "E2E_DATABASE_URL");
   assertE2eRuntimeDestructiveTarget(SCRIPT_NAME, databaseUrl, process.env);
-  const redis = parseE2eRuntimeRedisTarget(SCRIPT_NAME, process.env);
+  const db = requireEnv(process.env, "REDIS_DB");
+  assertRedisDbMatchesDatabase(SCRIPT_NAME, databaseUrl, db);
+  const redis: SafeRedisTarget = {
+    db,
+    host: requireEnv(process.env, "REDIS_HOST"),
+    port: Number(requireEnv(process.env, "REDIS_PORT")),
+  };
   const target = new URL(databaseUrl);
   console.info(
     JSON.stringify({
