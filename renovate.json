@@ -54,6 +54,11 @@
       "matchPackageNames": ["@sentry/*"],
       "matchNewValue": "11.7.0",
       "enabled": false
+    },
+    {
+      "description": "2026-10-17 bullmq 6.3.14 is the reviewed native contract: terminal-job-removal reproduces its compiled removeJob-2.js byte-for-byte (sha256 f2acb16fda20ccac200abd5289a8910e48870d454c1577b19bd375ab809bb4b6) and the API fails closed on any other version. Re-review that script before accepting a bump (TASK-503.28, TASK-503.54).",
+      "matchPackageNames": ["bullmq"],
+      "allowedVersions": "6.3.14"
     }
   ]
 }

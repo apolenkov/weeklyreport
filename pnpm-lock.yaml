@@ -453,7 +453,7 @@ importers:
         specifier: workspace:*
         version: link:../../packages/shared
       bullmq:
-        specifier: ^6.3.14
+        specifier: 6.3.14
         version: 6.3.14(ioredis@6.0.0(supports-color@10.2.2))(pg@8.23.1)
       cookie:
         specifier: ^2.0.1
