@@ -5,8 +5,6 @@ import {
   type QueueName,
 } from "@weeklyreport/shared";
 
-import type { ObservedTerminalJob } from "../../infrastructure/bullmq/terminal-job-removal.js";
-
 /** Non-credential identity a pdf-export queue payload claims; the durable export row decides whether it is true. */
 export interface AdminPdfExportIdentity {
   readonly jobId: string;
@@ -34,6 +32,11 @@ export type AdminJobDomainReference =
       >;
     };
 
+/** Which terminal state a caller admits for removal. */
+export type TerminalJobPolicy = "failed" | "failed-or-completed";
+export type TerminalRemovalOutcome =
+  "removed" | "missing" | "state-changed" | "identity-changed";
+
 export interface AdminJobHandle {
   readonly failedJob: FailedJob;
   readonly domainReference: AdminJobDomainReference;
@@ -44,7 +47,9 @@ export interface AdminJobHandle {
   // throws instead of returning a no-op.
   readonly retry: () => Promise<void>;
   // Atomically removes only an unchanged terminal job; reports the observed outcome.
-  readonly removeIfTerminal: ObservedTerminalJob["removeIfTerminal"];
+  readonly removeIfTerminal: (
+    policy: TerminalJobPolicy,
+  ) => Promise<TerminalRemovalOutcome>;
 }
 
 export interface AdminJobsQueue {

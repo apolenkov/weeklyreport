@@ -5,9 +5,10 @@ import { createRequire } from "node:module";
 import type { Job, Queue, QueueBase } from "bullmq";
 import { z } from "zod";
 
-export type TerminalJobPolicy = "failed" | "failed-or-completed";
-export type TerminalRemovalOutcome =
-  "removed" | "missing" | "state-changed" | "identity-changed";
+import type {
+  TerminalJobPolicy,
+  TerminalRemovalOutcome,
+} from "../../modules/admin/index.js";
 
 export interface ObservedTerminalJob {
   readonly getState: () => Promise<string>;
