@@ -113,13 +113,19 @@ export class BullmqTerminalJobRemoval implements TerminalJobRemoval {
           snapshot.name.length === 0 ||
           typeof snapshot.data !== "string" ||
           !Number.isSafeInteger(snapshot.timestamp) ||
-          snapshot.timestamp <= 0 ||
-          typeof snapshot.finishedOn !== "number" ||
-          !Number.isSafeInteger(snapshot.finishedOn) ||
-          snapshot.finishedOn <= 0
+          snapshot.timestamp <= 0
         ) {
           throw new Error("Terminal job snapshot is missing or invalid.");
         }
+        // A job can reach a terminal set before finishedOn is written. An empty
+        // stamp cannot match the stored one, so the guard answers
+        // identity-changed instead of failing the caller with a 500.
+        const finishedOn =
+          typeof snapshot.finishedOn === "number" &&
+          Number.isSafeInteger(snapshot.finishedOn) &&
+          snapshot.finishedOn > 0
+            ? String(snapshot.finishedOn)
+            : "";
         const backend = this.queue.getBackend();
         const client = await backend.client;
         client.defineCommand(COMMAND_NAME, {
@@ -136,7 +142,7 @@ export class BullmqTerminalJobRemoval implements TerminalJobRemoval {
           snapshot.name,
           snapshot.data,
           String(snapshot.timestamp),
-          String(snapshot.finishedOn),
+          finishedOn,
         ]);
         if (result === 1) {
           // Job.remove emits the Job despite Queue's jobId-only event type.

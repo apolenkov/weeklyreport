@@ -87,13 +87,16 @@ describe("terminal removal reply and snapshot admission", () => {
     expect(queue.emit).not.toHaveBeenCalled();
   });
 
-  it("permits non-terminal lookup but refuses removal without a terminal snapshot", async () => {
-    const { remover, job, runCommand } = responseFixture(1);
+  it("reports a terminal job without a completion stamp as identity-changed", async () => {
+    const { remover, job, runCommand } = responseFixture("identity-changed");
     expect(Reflect.deleteProperty(job, "finishedOn")).toBe(true);
     const observed = remover.capture(job);
-    await expect(observed.removeIfTerminal("failed")).rejects.toThrow(
-      "snapshot is missing or invalid",
+    await expect(observed.removeIfTerminal("failed")).resolves.toBe(
+      "identity-changed",
     );
-    expect(runCommand).not.toHaveBeenCalled();
+    expect(runCommand).toHaveBeenCalledOnce();
+    // The empty stamp can never equal the stored one, so the native guard cannot
+    // report removal for a job whose terminal identity is not frozen yet.
+    expect(runCommand.mock.calls[0]?.[1]).toContain("");
   });
 });
