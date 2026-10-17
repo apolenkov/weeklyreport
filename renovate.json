@@ -18,10 +18,9 @@
       "labels": ["dependencies", "major"]
     },
     {
-      "description": "OpenSpec 1.14.1 promotes >500-character requirements to WARNING: unchanged main36 strict spec:check fails132/253 on 2026-10-13; retain 1.14.0, recheck future versions (wr-deploy dependency rehearsal)",
+      "description": "OpenSpec 1.14.1/1.14.3 promote >500-character requirements to WARNING: unchanged main strict spec:check fails (1.14.1 132/253 on 2026-10-13; 1.14.3 143/313 on 2026-10-18, same INFO->WARNING cause); retain 1.14.0 until the long requirements are split (TASK-513, wr-deploy dependency rehearsal)",
       "matchPackageNames": ["@fission-ai/openspec"],
-      "matchNewValue": "1.14.1",
-      "enabled": false
+      "allowedVersions": "1.14.0"
     },
     {
       "description": "pg_dump/pg_restore 18.6 and 17.11 emit transaction_timeout unsupported by the retained PostgreSQL 15 target; 16.15 passes the real backup/restore roundtrip (isolated synthetic proof 2026-10-09, TASK-359)",
