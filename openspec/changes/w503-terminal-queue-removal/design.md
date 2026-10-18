@@ -163,6 +163,15 @@ test is authored but NOT RUN and is not the atomicity RED. Coordinator already
 installed the own frozen tree and generated Prisma for RED; refresh actual
 resolution and signature again after final main rebase.
 
+After the final rebase the delivered pin is 6.3.16 (TASK-513 G6b, commit
+`02b37340e`). A fresh `npm pack` of the installed version shipped
+`removeJob-2.js` with content SHA256
+`f2acb16fda20ccac200abd5289a8910e48870d454c1577b19bd375ab809bb4b6` —
+byte-identical to the reviewed Lua above — so `REVIEWED_BULLMQ_VERSION`, the
+dependency contract test and the renovate hold moved to 6.3.16; the
+6.3.15/6.3.16 fixes touch other language clients and the valkey-glide backend,
+not the Node.js Redis path.
+
 Use typed `queue.getBackend()`, `backend.client`, `queue.toKey` and public
 `backend.finishedErrors`. IRedisClient exposes defineCommand/runCommand rather
 than eval: register the combined script and execute one native Lua transaction
@@ -199,6 +208,11 @@ only after confirmed native removal.
 2. Resolve the actual dependency and prepare the guard-approved D fixture only
    under a current lease. Guarded reset and explicit canonical demo seed precede
    each database-backed phase. No Redis flush or shared prefix mutation.
+   Deviation from this external-seed rule in the remote CI lane: the
+   `api-integration` job starts from a freshly migrated database, applies no
+   seed profile and runs serial suites that truncate between files, so
+   `terminal-removal.integration.test.ts` provisions the canonical active
+   report row itself in `beforeAll` (`cleanDatabase()` + `SEED_REPORTS.active`).
 3. Observe both native RED failures on unfixed source and retain immutable logs.
 4. Implement the one adapter and its required contracts/composition as one
    coherent product repair. No database migration or feature flag is needed.
