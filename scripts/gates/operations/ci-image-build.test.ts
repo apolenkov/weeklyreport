@@ -220,3 +220,22 @@ test("the deploy job exists only with a kubeconfig, manually, on the default bra
   // A deploy must wait for this pipeline's image build, when it has one.
   assert.deepEqual(deployJob.needs, [{ job: "build-images" }]);
 });
+
+test("every job runs on the img-build runner, is interruptible and deploy jobs are serialised", () => {
+  const config = parse(readFileSync(resolve(".gitlab-ci.yml"), "utf8"), {
+    maxAliasCount: 50,
+  }) as Record<string, Record<string, unknown>> & {
+    readonly default: Record<string, unknown>;
+  };
+  const defaults = config.default;
+  assert.deepEqual(defaults.tags, ["img-build"]);
+  assert.equal(defaults.interruptible, true);
+  const reserved = new Set(["workflow", "default", "stages", "variables"]);
+  for (const [name, job] of Object.entries(config)) {
+    if (name.startsWith(".") || reserved.has(name)) continue;
+    assert.deepEqual(job.tags ?? defaults.tags, ["img-build"], name);
+    assert.equal(job.interruptible ?? defaults.interruptible, true, name);
+  }
+  assert.ok(config["build-images"]?.resource_group, "build-images group");
+  assert.ok(config["deploy-production"]?.resource_group, "deploy group");
+});
