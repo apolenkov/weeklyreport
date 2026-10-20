@@ -32,8 +32,8 @@ stages:
   - image
   - deploy
 
-# Pipelines run only on the img-build runner pool; a newer commit cancels a
-# superseded pipeline. Deployment and image jobs keep their resource_group.
+# Pipelines run only on the img-build runner pool; a newer commit cancels a superseded pipeline, кроме выкладки и сборки образов.
+# Deployment and image jobs keep their resource_group.
 default:
   tags:
     - img-build
@@ -511,6 +511,7 @@ build-images:
     name: moby/buildkit:v0.34.0-rootless@sha256:65eca3c01cd1180c8f64565c4e3c5983af5145818b0e6fa863385d099eb73855
     entrypoint: [""]
   timeout: 45m
+  interruptible: false
   resource_group: weeklyreport-ci-heavy-$CI_PIPELINE_IID
   variables:
     # Job-side mitigation for a runner whose default seccomp/AppArmor profile
@@ -605,6 +606,7 @@ deploy-production:
   environment:
     name: production
   resource_group: weeklyreport-production-deploy
+  interruptible: false
   rules:
     - if: '$KUBECONFIG && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $CI_PIPELINE_SOURCE != "schedule"'
       when: manual

@@ -221,7 +221,7 @@ test("the deploy job exists only with a kubeconfig, manually, on the default bra
   assert.deepEqual(deployJob.needs, [{ job: "build-images" }]);
 });
 
-test("every job runs on the img-build runner, is interruptible and deploy jobs are serialised", () => {
+test("every job runs on the img-build runner and deploy jobs are serialised", () => {
   const config = parse(readFileSync(resolve(".gitlab-ci.yml"), "utf8"), {
     maxAliasCount: 50,
   }) as Record<string, Record<string, unknown>> & {
@@ -234,8 +234,29 @@ test("every job runs on the img-build runner, is interruptible and deploy jobs a
   for (const [name, job] of Object.entries(config)) {
     if (name.startsWith(".") || reserved.has(name)) continue;
     assert.deepEqual(job.tags ?? defaults.tags, ["img-build"], name);
-    assert.equal(job.interruptible ?? defaults.interruptible, true, name);
   }
   assert.ok(config["build-images"]?.resource_group, "build-images group");
   assert.ok(config["deploy-production"]?.resource_group, "deploy group");
+});
+
+test("only the image build and production deploy jobs are not interruptible", () => {
+  const config = parse(readFileSync(resolve(".gitlab-ci.yml"), "utf8"), {
+    maxAliasCount: 50,
+  }) as Record<string, Record<string, unknown>> & {
+    readonly default: Record<string, unknown>;
+  };
+  const reserved = new Set(["workflow", "default", "stages", "variables"]);
+  const uninterruptible = new Set(["build-images", "deploy-production"]);
+  for (const name of uninterruptible) {
+    assert.equal(config[name]?.interruptible, false, `${name} interruptible`);
+  }
+  for (const [name, job] of Object.entries(config)) {
+    if (name.startsWith(".") || reserved.has(name)) continue;
+    if (uninterruptible.has(name)) continue;
+    assert.equal(
+      job.interruptible ?? config.default.interruptible,
+      true,
+      `${name} interruptible`,
+    );
+  }
 });
