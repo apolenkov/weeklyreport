@@ -32,6 +32,13 @@ stages:
   - image
   - deploy
 
+# Pipelines run only on the img-build runner pool; a newer commit cancels a
+# superseded pipeline. Deployment and image jobs keep their resource_group.
+default:
+  tags:
+    - img-build
+  interruptible: true
+
 variables:
   GIT_DEPTH: "2"
   # The pinned pgvector job image has no Node and no curl/wget, so the Node
