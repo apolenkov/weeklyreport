@@ -123,8 +123,10 @@ GHSA-vfj7-8cjw-p6xm: no patched release, development tooling only). The
 `secret-scan` runs `scripts/gates/secret-scan.sh`: a checksum-verified Gitleaks
 binary scans the tree and the full unshallowed history with redaction, after
 synthetic controls prove a HEAD secret and a history-only secret both fail.
-Reviewed synthetic allowlists belong in `.gitleaks.toml`. Runner assignment is a
-GitLab setting, not declared in `.gitlab-ci.yml`.
+Reviewed synthetic allowlists belong in `.gitleaks.toml`. Runner assignment is declared in
+`default:` of `.gitlab-ci.yml`: every job carries the single `img-build` tag and
+`interruptible: true`, so a newer commit cancels a superseded pipeline. Image and
+deploy jobs stay serialised by their `resource_group`.
 
 ## Contract-test coverage
 
