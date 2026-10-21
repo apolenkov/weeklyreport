@@ -318,6 +318,10 @@ test("local checks retain the former CI verification routes", () => {
   assert.match(scanner, /scan_history "\$ROOT"/u);
   assert.match(scanner, /expect fail "secret in HEAD tree"/u);
   assert.match(scanner, /expect fail "history-only secret, history"/u);
+  assert.match(
+    read("lefthook.yml"),
+    /unset \$\(git rev-parse --local-env-vars\);/u,
+  );
   assert.match(read("lefthook.yml"), /pnpm check:push/u);
   assert.doesNotMatch(
     gitlabContent,

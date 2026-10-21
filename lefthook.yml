@@ -25,7 +25,9 @@ pre-push:
   jobs:
     # CI builds and deploys; local checks own verification.
     # Existing CI/agent skips are not evidence that checks passed.
+    # Git fixture subprocesses must resolve their own repositories.
     - name: check
       run: >-
         if [ -n "$CI" ] || env | grep -q '^AGENT_'; then exit 0; fi;
+        unset $(git rev-parse --local-env-vars);
         pnpm check:push
