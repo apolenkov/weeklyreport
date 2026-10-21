@@ -30,3 +30,11 @@ None.
 ## Non-goals
 
 No deployment, merge, project settings changes, database mutation or dependency upgrade campaign.
+
+## Archive coordination
+
+The active `wr522-ci-security-routes` delta modifies the superseded CI-lanes
+requirement. Its owner must reconcile that delta with this build/deploy-only
+contract before archiving it; applying the old delta would restore removed CI
+checks or fail on the renamed requirement. TASK-622 does not edit or archive
+that separately owned change.

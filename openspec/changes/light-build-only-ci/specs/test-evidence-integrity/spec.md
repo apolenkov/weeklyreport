@@ -7,15 +7,16 @@
 
 ### Requirement: API integration tests remain available locally
 
-The explicit local API integration command MUST execute the API integration suite against an
+The root `pnpm test:integration` and `pnpm test:coverage` commands MUST set
+`REQUIRED_INTEGRATION_DEPS=true` for the API suite. The integration suite MUST run against an
 accepted disposable PostgreSQL target, Redis logical DB 15, and a reachable
 Mailpit SMTP service. The lane MUST fail when any dependency is absent or any
 integration test fails; it MUST NOT convert required checks into skips.
 
 #### Scenario: Mailpit is unavailable
 
-- **WHEN** the required integration lane cannot reach its configured Mailpit service
-- **THEN** the lane fails non-zero instead of reporting skipped SMTP tests as PASS
+- **WHEN** either root command cannot reach its configured Mailpit service
+- **THEN** the command fails non-zero instead of reporting skipped SMTP tests as PASS
 
 #### Scenario: Integration suite passes
 
