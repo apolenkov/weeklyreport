@@ -565,19 +565,13 @@ The PDF artifact generation compatibility constraint above also applies.
 
 ## CI
 
-`.gitlab-ci.yml` runs the lint/test lanes (`node-toolchain`, `quality`,
-`dependency-scan`, `coverage`, `api-integration`, `migrate-reset`), one gated
-image build (`build-images`, rootless BuildKit, no Docker-in-Docker), and an
-optional manual `deploy-production` job (it installs a missing release with `helm install --wait=watcher` and upgrades only an existing deployed release; discovery errors or a non-deployed release stop the job; it requires `HELM_KUBE_CONTEXT`); see `docs/gitlab-ci.md`. The `api-integration` lane runs the API unit and
-integration suites once, serially, against disposable Postgres/Redis/Mailpit
-(in-job loopback Postgres; Redis and Mailpit as service aliases) and enforces the API coverage thresholds.
-The `coverage` lane enforces Web coverage without starting a second dependency
-stack; the `quality` lane runs lint, typecheck, and unit tests, and
-`migrate-reset` covers migration drift. The `production-build` lane checks the complete workspace build on the pipeline SHA; the
-PDF export, browser acceptance, and the read-back of a deployment are not CI
-evidence and stay required evidence collected outside CI; a successful
-`build-images` run produces images, not that evidence. Local
-commands remain the fast gate; run the same checks before pushing.
+GitLab runs only `build-images` and optional manual `deploy-production`.
+Run `pnpm check:push` locally for format, lint, typecheck, tests, spec validation,
+dependency audit and secrets. `pnpm build` remains required acceptance evidence.
+Coverage, mutation and Postgres/Redis/Mailpit integration checks run locally on
+demand with guarded reset and explicit seed. See [gitlab-ci.md](gitlab-ci.md)
+for the complete job-to-command table, tool prerequisites and evidence paths.
+PDF export, browser acceptance and deployment read-back stay separate checks.
 
 ## Load check
 

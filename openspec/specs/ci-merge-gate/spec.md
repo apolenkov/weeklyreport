@@ -2,31 +2,31 @@
 
 ## Purpose
 
-Define the GitLab CI lint/test gate for `main` and the acceptance evidence that
+Define the local verification and GitLab build/deploy gates for `main` and the acceptance evidence that
 must be collected outside CI.
 
 ## Requirements
 
-### Requirement: GitLab CI carries lint and test lanes and a gated image build
+### Requirement: GitLab CI builds and deploys with local pre-push checks
 
-Per the owner decisions of 2026-09-28 and 2026-10-01, `.gitlab-ci.yml` MUST run
-the lint and test lanes `node-toolchain`, `quality`, `coverage`,
-`api-integration`, and `migrate-reset` on push pipelines, plus `dependency-scan`
-on schedule and manual pipelines and on merge requests that change
-`pnpm-lock.yaml`, `pnpm-workspace.yaml`, or any `package.json`. It MAY run one
-image-build job and one manual deploy job as specified below. It MUST NOT run
-Docker-in-Docker or operational smoke checks. Disposable-database lanes MUST
-satisfy the exact loopback destructive guard with a real PostgreSQL process
-inside the job container bound to `127.0.0.1`; a GitLab service alias MUST NOT
-be presented as a loopback database target. Redis and Mailpit MAY run as
-ordinary service aliases.
+The repository MUST run only build-images and deploy-production in GitLab CI.
+Pipelines MUST be limited to same-project merge requests and default-branch pushes,
+without duplicate branch pipelines. Local pre-push MUST include format, lint,
+typecheck, unit tests, specification validation, dependency audit and secret scanning.
+Coverage, mutation and database integration/reset checks MUST remain available
+as documented local commands, with the existing destructive target guards.
 
-#### Scenario: A push pipeline runs lint and tests
+#### Scenario: A pipeline is created
 
-- **WHEN** a branch or merge-request pipeline runs on GitLab
-- **THEN** it contains the lint/test jobs above and no Docker-in-Docker or Compose smoke job
-- **AND** database lanes use an in-job loopback PostgreSQL with Redis and
-  Mailpit as service aliases
+- **WHEN** a same-project merge request or default-branch push creates a pipeline
+- **THEN** it contains only the image build and, when configured, manual deployment
+- **AND** it uses img-build runners and preserves non-interruptible build/deploy resource groups
+
+#### Scenario: Local verification
+
+- **WHEN** a candidate is prepared for push
+- **THEN** the local checks execute and failures block delivery
+- **AND** an agent or CI hook skip is not evidence that checks passed
 
 ### Requirement: Product-build evidence stays required outside CI
 
@@ -41,14 +41,17 @@ success does not waive them.
 - **WHEN** a candidate is proposed for `main` acceptance
 - **THEN** the required build, PDF, browser, and deployment evidence exists for the exact source SHA, or acceptance fails
 
-### Requirement: CI does not depend on local hooks
+### Requirement: Local checks are reproducible without GitLab
 
-The lint/test lanes MUST be complete when evaluated in a clean checkout by `.gitlab-ci.yml` itself. No local hook, opt-out variable, or developer-machine state may be required for CI acceptance.
+The repository MUST expose local check commands through package scripts and
+Lefthook. A clean developer checkout with the documented toolchain MUST be able
+to execute them without a GitLab runner. Expensive database checks MUST require
+an explicitly configured, coordinated, guard-approved disposable target.
 
-#### Scenario: A clean runner evaluates the repository
+#### Scenario: A developer verifies a candidate
 
-- **WHEN** the GitLab pipeline runs in a fresh job checkout
-- **THEN** all required lint and test checks execute from `.gitlab-ci.yml` and do not invoke a local hook
+- **WHEN** the documented local checks are run
+- **THEN** their exit status and exact source SHA are recorded independently of CI
 
 ### Requirement: Web typecheck covers maintained TypeScript entrypoints
 
@@ -107,7 +110,7 @@ named by `IMAGE_REGISTRY` when set, otherwise to `$CI_REGISTRY_IMAGE`, with
 token credentials, and MUST fail before building when the resolved registry,
 user, or password is empty, or any `WR_NEXT_PUBLIC_*` value `Dockerfile.web`
 requires is unset. It MUST use no keyword newer than the instance's GitLab
-version (15.10). It MUST run automatically on default-branch and tag pipelines
+version (15.10). It MUST run automatically on default-branch push pipelines
 once the web build variables are configured, be manual and non-blocking before
 that, and be manual and non-blocking on merge requests. It MUST tag each pushed image with the commit SHA,
 publish the resulting digests as a job artifact, and never print registry

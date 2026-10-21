@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Keep the Node and pnpm versions used by local gates, CI, and shipped images in
+// Keep the Node and pnpm versions used by local gates and shipped images in
 // sync. Node 26 images install the repository's explicit pnpm version.
 //
 // Usage: node scripts/gates/environment/check-runtime-node-sync.ts
@@ -43,15 +43,6 @@ const ROOT_MANIFEST = "package.json";
 const WORKSPACE_MANIFEST = "pnpm-workspace.yaml";
 
 const DOCKERFILES = ["Dockerfile.api", "Dockerfile.web"];
-const GITLAB_CI = ".gitlab-ci.yml";
-// Exact declaration counts written into .gitlab-ci.yml: a changed count is a
-// drift signal that must fail, not a smaller comparison set.
-const GITLAB_NODE_IMAGE_COUNT = 1;
-const GITLAB_NODE_ASSERT_COUNT = 1;
-const GITLAB_NODE_TOOLCHAIN_TARBALL_COUNT = 1;
-const GITLAB_NODE_TOOLCHAIN_DIST_COUNT = 1;
-const GITLAB_PNPM_INSTALL_COUNT = 3;
-const GITLAB_PNPM_ASSERT_COUNT = 3;
 const TYPESCRIPT_SCRIPT_MANIFESTS = [
   ROOT_MANIFEST,
   "apps/api/package.json",
@@ -90,89 +81,24 @@ const catalogTypesNodeMajor = (): Declaration => ({
   ),
 });
 
-// .gitlab-ci.yml writes the same versions into its job image,
-// global pnpm installs, and the checksum-verified Node toolchain tarball that
-// database jobs unpack. Each pattern is paired with the count the file must
-// contain, so a removed or restyled declaration fails as unreadable rather
-// than being skipped.
-const gitlabCiPins = (
-  pattern: RegExp,
-  expectedCount: number,
-  label: string,
-): readonly Declaration[] => {
-  const matches = [...read(GITLAB_CI).matchAll(pattern)];
-  return Array.from({ length: expectedCount }, (_, index) => ({
-    source: `${GITLAB_CI} ${label} ${index + 1}`,
-    value: matches.length === expectedCount ? matches[index]?.[1] : undefined,
-  }));
-};
-
-const gitlabNodeDeclarations = (): readonly Declaration[] => [
-  ...gitlabCiPins(
-    /^ +image: node:(\d+\.\d+\.\d+)-trixie@sha256:[\da-f]{64}$/gmu,
-    GITLAB_NODE_IMAGE_COUNT,
-    "Node image",
-  ),
-  ...gitlabCiPins(
-    /node --version\)" = "v(\d+\.\d+\.\d+)"/gu,
-    GITLAB_NODE_ASSERT_COUNT,
-    "node preflight",
-  ),
-  ...gitlabCiPins(
-    /NODE_TOOLCHAIN_TARBALL: node-v(\d+\.\d+\.\d+)-linux-x64\.tar\.gz/gu,
-    GITLAB_NODE_TOOLCHAIN_TARBALL_COUNT,
-    "Node toolchain tarball",
-  ),
-  ...gitlabCiPins(
-    /nodejs\.org\/dist\/v(\d+\.\d+\.\d+)\//gu,
-    GITLAB_NODE_TOOLCHAIN_DIST_COUNT,
-    "Node toolchain dist dir",
-  ),
-];
-
-const gitlabPnpmDeclarations = (): readonly Declaration[] => [
-  ...gitlabCiPins(
-    /npm install --global pnpm@(\d+\.\d+\.\d+)/gu,
-    GITLAB_PNPM_INSTALL_COUNT,
-    "pnpm install",
-  ),
-  ...gitlabCiPins(
-    /pnpm --version\)" = "(\d+\.\d+\.\d+)"/gu,
-    GITLAB_PNPM_ASSERT_COUNT,
-    "pnpm preflight",
-  ),
-];
-
-// The .gitlab-ci.yml job image is the same trixie base as Dockerfile.api's
-// FROM lines, so the pinned digest — not just the tag — must agree with them.
+// Node runs in the Dockerfiles; CI itself only runs BuildKit and Helm.
 const trixieImageDigests = (): readonly Declaration[] => {
-  const dockerfileDigests = DOCKERFILES.flatMap((file) =>
-    [
-      ...read(file).matchAll(
-        /^FROM node:\d+\.\d+\.\d+-trixie@sha256:([\da-f]{64})/gmu,
-      ),
-    ].map((match) => ({
-      source: `${file} trixie base`,
-      value: match[1],
-    })),
-  );
-
-  return [
-    ...(dockerfileDigests.length === 0
-      ? [{ source: "Dockerfiles trixie base", value: undefined }]
-      : dockerfileDigests),
-    ...gitlabCiPins(
-      /^ +image: node:\d+\.\d+\.\d+-trixie@sha256:([\da-f]{64})$/gmu,
-      GITLAB_NODE_IMAGE_COUNT,
-      "trixie digest",
+  const matches = [
+    ...read("Dockerfile.api").matchAll(
+      /^FROM node:\d+\.\d+\.\d+-trixie@sha256:([\da-f]{64})/gmu,
     ),
   ];
+  return matches.length === 0
+    ? [{ source: "Dockerfile.api trixie base", value: undefined }]
+    : matches.map((match) => ({
+        source: "Dockerfile.api trixie base",
+        value: match[1],
+      }));
 };
 
 const runtimeVersions = (): readonly Declaration[] => [
   { source: ".nvmrc", value: read(".nvmrc").trim() },
   ...imageNodeVersions(),
-  ...gitlabNodeDeclarations(),
 ];
 
 const nodeMajorDeclarations = (): readonly Declaration[] => [
@@ -215,7 +141,6 @@ const pnpmPins = (): readonly Declaration[] => [
     source: `${file} npm install -g`,
     value: /npm install -g pnpm@(\d+\.\d+\.\d+)/.exec(read(file))?.[1],
   })),
-  ...gitlabPnpmDeclarations(),
 ];
 
 const turboPins = (): readonly Declaration[] => [

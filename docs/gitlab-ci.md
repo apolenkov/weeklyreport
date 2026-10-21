@@ -1,62 +1,82 @@
 # GitLab CI
 
-`.gitlab-ci.yml` is the repository CI. It runs the repository lint/test gates, coverage jobs, the
-disposable-database integration and reset lanes, the blocking dependency audit, secret scan,
-mutation pilot and production build. Per the owner decision of 2026-09-28 it carries tests
-and linters; since the owner decision of 2026-10-01 it also has one gated image
-build (`build-images`, rootless BuildKit) and an optional manual deploy job.
-TASK-522 adds four blocking routes: `secret-scan`, a single `dependency-scan`,
-`mutation-period` and `production-build`. There is
-no Docker-in-Docker and no operational smoke. PDF export, release browser
-E2E, and the read-back of a deployment remain
-required evidence, collected outside CI as separate checks and never reported
-as skipped-but-passing — the `quality` job
-is a lint/test lane, not a full acceptance gate; `production-build` proves only
-that the production build and its dist gates pass on the pipeline's SHA. The GitLab instance
-is 15.10, so `.gitlab-ci.yml` uses no keyword introduced after 15.10.
+Owner decision 2026-10-20, confirmed 2026-10-21 (TASK-622): GitLab only builds
+images and deploys. Checks run locally. Pipelines are limited to same-project
+merge requests and default-branch pushes; schedules, tags, web/API starts and
+ordinary branch pushes do not create pipelines. Merge requests offer image
+builds manually and do not deploy.
 
-| GitLab job        | Execution                                                                                  |
-| ----------------- | ------------------------------------------------------------------------------------------ |
-| node-toolchain    | Pinned Node container on the shared Docker runner                                          |
-| quality           | Pinned Node container on the shared Docker runner                                          |
-| coverage          | Pinned Node container on the shared Docker runner                                          |
-| api-integration   | Pinned pgvector/PG18 Trixie job container on the shared Docker runner                      |
-| migrate-reset     | Pinned pgvector/PG18 Trixie job container on the shared Docker runner                      |
-| production-build  | MR and branch pipelines (not schedule); explicit build env, dist gates, SHA-bound manifest |
-| mutation-period   | MR and branch pipelines (not schedule); Stryker+Vitest period pilot, break 70              |
-| dependency-scan   | Every pipeline (MR, branch, schedule); blocking prod + dev audit                           |
-| secret-scan       | Every pipeline; Gitleaks tree + full history, synthetic controls                           |
-| renovate          | Schedule, web, or API pipeline with `RENOVATE_TOKEN` set; no `needs`                       |
-| build-images      | Rootless BuildKit; default branch and tags, manual on MRs                                  |
-| deploy-production | Manual, default branch, only when `KUBECONFIG` is set                                      |
+## Job destinations
 
-## Renovate
+| Former job        | Where it runs now                                                                                                                                              |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| node-toolchain    | Removed CI-only artifact transport; local Node from `.nvmrc`, pnpm from `package.json`; Dockerfiles still own image toolchains.                                |
+| quality           | `pnpm check:push` in Lefthook pre-push: format, lint, typecheck, tests and spec validation. Commitlint remains the commit-msg hook.                            |
+| dependency-scan   | `pnpm audit:dependencies` in pre-push, preserving production audit and high-severity full audit. Endpoint failure blocks verification.                         |
+| secret-scan       | `pnpm scan:secrets` in pre-push: existing Gitleaks tree/history scan with redaction and synthetic positive/negative controls. Install Gitleaks before pushing. |
+| mutation-period   | `pnpm test:mutation` on demand; existing serial Stryker pilot and threshold unchanged.                                                                         |
+| coverage          | `pnpm --filter @weeklyreport/web test:coverage` on demand.                                                                                                     |
+| api-integration   | `pnpm test:coverage` runs combined API unit/integration coverage once then Web coverage; `pnpm test:integration` offers integration-only checks.               |
+| migrate-reset     | `pnpm db:migrate:reset` on demand: guarded reset followed by explicit full seed.                                                                               |
+| production-build  | `pnpm build` is required local acceptance evidence. Image builds use Dockerfiles directly and never consumed this job's artifacts.                             |
+| renovate          | Operator-triggered local container command below; no scheduled update job in CI.                                                                               |
+| build-images      | GitLab, unchanged four SHA-tagged api/migrate/web/backup images and `image-digests.txt` (30 days).                                                             |
+| deploy-production | GitLab, unchanged conditional manual production deployment.                                                                                                    |
 
-The `renovate` job opens weekly dependency MRs from `renovate.json`. It runs only
-when the masked CI/CD variable `RENOVATE_TOKEN` (project access token, scope
-`api`) is set. The weekly cadence is a GitLab pipeline schedule (Build > Pipeline
-schedules, weekly, cron in the instance time zone); `renovate.json` holds no
-schedule, so a manual run is never silently skipped.
+## Local verification
 
-## Image build and deploy
+Run `pnpm install --frozen-lockfile` and
+`pnpm --filter @weeklyreport/api db:generate` with an explicit generation-only
+DATABASE_URL. Install Helm for chart contract tests and Gitleaks for scanning.
+Run `pnpm check:push` and `pnpm build`, recording the source SHA, command, exit
+status and logs in the external handoff evidence directory. Existing CI/agent
+hook skips remain unchanged; a skipped hook is **NOT VERIFIED**. Agents must run
+`pnpm check:push` explicitly before publishing.
 
-`build-images` builds `api`, `migrate`, `web`, and `backup` with
-the digest-pinned `moby/buildkit` rootless image from `.gitlab-ci.yml`
-(no Docker daemon or socket) and
-pushes them tagged with the commit SHA to `$CI_REGISTRY_IMAGE`. `IMAGE_REGISTRY`,
-`IMAGE_REGISTRY_USER`, and `IMAGE_REGISTRY_PASSWORD` override the registry and
-credentials; the job fails in its first step when the resolved registry, user,
-or password is empty, or when a `WR_NEXT_PUBLIC_*` value that `Dockerfile.web`
-compiles in is unset. It runs automatically on the default branch and on tags
-when the single CI variable `WR_NEXT_PUBLIC_CLIENT_LOG_FORWARDING` is set —
-the only variable the rule evaluates — and is a manual, non-blocking job
-otherwise and on merge requests. The digests are the artifact `image-digests.txt`. The job sets
-`BUILDKITD_FLAGS=--oci-worker-no-process-sandbox`, the job-side mitigation
-for a runner whose default seccomp/AppArmor profile denies rootless
-buildkitd its worker sandbox (`mount proc: operation not permitted`); the
-alternative is a runner configured with seccomp, AppArmor, and system paths
-unconfined. Whether the project runner then permits the build is not
-verified — the first run decides.
+On the owner's shared host, use `run-checks <worktree> 'pnpm check:push'` so the
+existing global pre-push semaphore covers the whole check. Other machines must
+coordinate heavy checks with their resource owner. Coverage, mutation and DB
+checks are deliberately excluded from every push.
+
+Before each database-backed phase, coordinate the exact synthetic target with
+other sessions, print its credential-masked address, verify the destructive
+guard, set `NODE_ENV=test` and per-command
+`PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION=давай`, then run
+`pnpm db:migrate:reset` against that same target. Supply matching DATABASE_URL
+and E2E_DATABASE_URL explicitly, Redis DB15 for the main target (lane a/b use
+DB1/2), and reachable Postgres/Redis/Mailpit. Follow [AGENTS.md](../AGENTS.md) and
+[README.md](../README.md); localhost alone does not authorize a reset.
+
+Coverage thresholds and Vitest JSON reporting remain intact. Use
+`VITEST_JSON_OUTPUT_FILE` with an absolute external evidence path for per-suite
+JSON; native coverage summaries remain under each app's coverage directory.
+The old CI Markdown summaries, production-build checksum manifest and temporary
+Node tarball are no longer produced or uploaded. Preserve local logs, native
+coverage reports and exact SHA instead; they are not GitLab artifacts.
+
+Renovate remains configured by `renovate.json`. With operator-provided
+RENOVATE_TOKEN in the environment (never print it), run the former pinned image:
+
+```sh
+docker run --rm -e RENOVATE_TOKEN -e RENOVATE_PLATFORM=gitlab \
+  -e RENOVATE_ENDPOINT=https://gitlab.example.org/api/v4 \
+  -e RENOVATE_ONBOARDING=false \
+  -v "$PWD/renovate.json:/usr/src/app/renovate.json:ro" \
+  renovate/renovate:44.155.2@sha256:93e8dc64410276bb44854b4f6fce2306f8fe24c87301d558a920381130b30851 \
+  acme/weeklyreport
+```
+
+This creates external dependency MRs and is an explicit operator action, never
+a pre-push side effect. No GitLab project setting or schedule is changed here.
+
+## Build and deployment
+
+Both retained jobs use `img-build`, `interruptible: false` and their existing
+resource groups. BuildKit stays rootless and daemonless with
+`BUILDKITD_FLAGS=--oci-worker-no-process-sandbox`. Registry and web build inputs
+remain fail-closed. The image job runs automatically on default-branch pushes
+when configured and otherwise remains manual and non-blocking. The four image
+outputs, digest artifact and production environment are unchanged.
 
 `deploy-production` exists only when a file-type `KUBECONFIG` variable is set and
 needs the variables `HELM_VALUES_FILE` (file), `HELM_NAMESPACE` and
@@ -69,76 +89,5 @@ release in another state stops the job. There is no automatic rollback: a failed
 install keeps the release and its volume claims, and an upgrade is fixed forward
 because CI cannot prove schema compatibility. See `docs/kubernetes.md`.
 
-## Database-lane topology
-
-The destructive guard (`prisma/guards/_destructive-guard.ts` →
-`apps/api/src/infrastructure/prisma/e2e-destructive-target.ts`) accepts only an
-exact loopback `DATABASE_URL`/`E2E_DATABASE_URL`. GitLab services on the Docker
-executor are reachable through DNS aliases, never through the job container's
-loopback, so a `postgres` service could not satisfy the guard without masking a
-remote host as localhost — forbidden by the `destructive-db-guard` spec and by
-the owner decision. The honest topology is:
-
-- `api-integration` and `migrate-reset` run on the same pinned
-  `pgvector/pgvector:0.8.7-pg18-trixie` image. These CI clusters use fresh
-  storage; existing local and Helm volumes remain on PG15 Bookworm under the
-  separately verified storage compatibility rule.
-  PostgreSQL starts inside the job container (`initdb` + `pg_ctl`)
-  bound to `127.0.0.1` — a real in-job process, so the guarded
-  `postgresql://…@127.0.0.1:5432/weeklyreport_e2e` target is truthful. The
-  `weeklyreport` role is a superuser, the
-  privilege `prisma migrate reset` needs to drop and recreate the database.
-- The image carries no Node, curl, wget, or git, so the `node-toolchain` job
-  downloads the Linux x64 tarball named by `NODE_TOOLCHAIN_TARBALL` in the
-  Trixie toolchain image, verifies `NODE_TOOLCHAIN_SHA256`, adds the
-  `libatomic.so.1` that Node 26 links and the slim image lacks (copied from the
-  same Trixie toolchain image), and passes one
-  composite artifact to database jobs. `pnpm install --frozen-lockfile` needs
-  no git inside the database image. Egress endpoints: the npm registry,
-  Docker Hub, nodejs.org (`node-toolchain` tarball), and get.helm.sh in
-  `quality`. The checksum-pinned `helm` CLI only renders and validates the chart;
-  it is not a cluster smoke lane.
-- `api-integration` also declares `services:` for Redis (`redis` alias) and
-  Mailpit (`mailpit` alias). Neither is guard-constrained; the suite reads the
-  real hostnames (`REDIS_HOST=redis`, `SMTP_HOST=mailpit`,
-  `MAILPIT_API_URL=http://mailpit:8025`). `REDIS_DB=15` is preserved.
-- The earlier isolated-shell-runner + Compose design and the DinD runtime
-  smoke are retired by the 2026-09-28 owner decision; the
-  `weeklyreport-ci-isolated` runner prerequisite no longer applies.
-
-`migrate-reset` runs the guarded `prisma migrate reset` plus the canonical
-`full` seed against its own in-job cluster, keeping the reset gate independent
-of the integration suite's data.
-
-## Schedule and manual pipeline
-
-The weekly dependency scan uses a GitLab schedule for the default branch at
-Monday 06:00 UTC; create that schedule after the main cutover. `dependency-scan`
-runs in every pipeline and blocks on `pnpm audit --prod` and
-`pnpm audit --audit-level high` (production and development dependencies,
-tooling included); an unreachable audit endpoint fails it too. The one reviewed
-exception is `audit.ignore` in `pnpm-workspace.yaml` (braces,
-GHSA-vfj7-8cjw-p6xm: no patched release, development tooling only). The
-`renovate` job above is the dependency-update route; the audit does not replace it.
-`secret-scan` runs `scripts/gates/secret-scan.sh`: a checksum-verified Gitleaks
-binary scans the tree and the full unshallowed history with redaction, after
-synthetic controls prove a HEAD secret and a history-only secret both fail.
-Reviewed synthetic allowlists belong in `.gitleaks.toml`. Runner assignment is declared in
-`default:` of `.gitlab-ci.yml`: every job carries the single `img-build` tag and
-`interruptible: true`, so a newer commit cancels a superseded pipeline. Image and
-deploy jobs stay serialised by their `resource_group`.
-
-## Contract-test coverage
-
-Node and pnpm declarations in `.gitlab-ci.yml` are pinned in sync by
-`lint:runtime-node`, including the toolchain tarball version. The mechanical
-contract gates — the CI/image gates under `scripts/gates/operations/`,
-`operations-config-docs.test.ts`, and `vitest-reporting-contract.test.ts` —
-assert `.gitlab-ci.yml` directly: reviewed external images are collected from `.gitlab-ci.yml` jobs and
-services (adding the pinned Node image to `REVIEWED_EXTERNAL_IMAGES`), a
-negative lock forbids Docker build/Compose smoke lanes, the single combined
-API coverage contour and fail-closed `ci-reports` summary contract are
-asserted, and the `quality` job is pinned as build-free; the product
-build has its own `production-build` job. The Helm CLI version and download
-checksum have one declaration site in `.gitlab-ci.yml`; production chart
-validation needs no Docker daemon or Compose CLI.
+PDF export, browser acceptance and deployment read-back remain separate
+required evidence. Successful image publication proves none of those checks.
