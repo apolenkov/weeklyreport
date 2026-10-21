@@ -1,10 +1,10 @@
 ## Purpose
 
 Every tRPC procedure in WeeklyReport MUST be constructed through one of 7 canonical
-middleware-chain builders that live in `apps/api/src/infrastructure/trpc/`. The CI
+middleware-chain builders that live in `apps/api/src/infrastructure/trpc/`. The local
 role-coverage gate verifies this by reference identity — not structural equality —
 so that copying a builder's body into a local helper still counts as a violation.
-A PR that adds a non-compliant procedure MUST fail CI before the branch can be merged.
+A PR that adds a non-compliant procedure MUST fail local verification before the branch can be merged.
 
 The 7 canonical builders are: `publicProcedure`, `protectedProcedure`,
 `headProcedure`, `leadProcedure`, `anyRoleProcedure`, `adminProcedure`, and
@@ -12,8 +12,8 @@ The 7 canonical builders are: `publicProcedure`, `protectedProcedure`,
 `apps/api/src/infrastructure/trpc/trpc.middleware.ts`.
 
 Consumer surfaces: `apps/api/src/infrastructure/trpc/` (canonical builders),
-all `*.router.ts` files under `apps/api/src/` (targets), and the GitLab
-`quality` job in `.gitlab-ci.yml` (enforcement point).
+all `*.router.ts` files under `apps/api/src/` (targets), and the
+local `pre-push` hook in `lefthook.yml` (enforcement point).
 
 ## Requirements
 
@@ -22,21 +22,21 @@ all `*.router.ts` files under `apps/api/src/` (targets), and the GitLab
 Every tRPC procedure defined in `apps/api/src/**/*.router.ts` MUST be constructed
 using one of the 7 canonical middleware-chain builders exported from
 `apps/api/src/infrastructure/trpc/`. Procedures that do not reference a canonical
-builder MUST be rejected by the CI gate.
+builder MUST be rejected by the local gate.
 
 #### Scenario: Procedure imports a canonical builder
 
 - **WHEN** a `*.router.ts` file defines a procedure using `publicProcedure`, `protectedProcedure`, or another canonical builder imported from `apps/api/src/infrastructure/trpc/`
-- **THEN** the role-coverage gate reports the procedure as compliant and CI passes
+- **THEN** the role-coverage gate reports the procedure as compliant and local verification passes
 
 #### Scenario: Procedure defines its own middleware chain inline
 
 - **WHEN** a `*.router.ts` file defines a procedure by calling `t.procedure.use(myLocalMiddleware)` without going through a canonical builder
-- **THEN** the role-coverage gate reports a violation citing `role-coverage-gate` and CI fails with a non-zero exit code
+- **THEN** the role-coverage gate reports a violation citing `role-coverage-gate` and local verification fails with a non-zero exit code
 
 ### Requirement: Gate Compares Builders by Reference Identity
 
-The CI gate MUST verify that a procedure's builder is the same object reference
+The local gate MUST verify that a procedure's builder is the same object reference
 as one of the 7 canonical builders. A developer who copies a canonical builder's
 middleware chain into a new local helper and uses that helper MUST still fail the
 gate.
@@ -44,12 +44,12 @@ gate.
 #### Scenario: Local helper replicates canonical builder body
 
 - **WHEN** a `*.router.ts` file constructs a procedure via a local `const myProcedure = t.procedure.use(authMiddleware)` whose middleware chain is byte-for-byte identical to a canonical builder, but is a distinct object
-- **THEN** the gate treats it as a non-canonical builder and CI fails citing `role-coverage-gate`
+- **THEN** the gate treats it as a non-canonical builder and local verification fails citing `role-coverage-gate`
 
 #### Scenario: Re-exported canonical builder passes identity check
 
 - **WHEN** a module re-exports a canonical builder under an alias and a router imports that alias
-- **THEN** the gate resolves the alias to the original canonical reference, confirms identity, and CI passes
+- **THEN** the gate resolves the alias to the original canonical reference, confirms identity, and local verification passes
 
 ### Requirement: Gate Allow-List Enumerates All Seven Canonical Builders
 
@@ -69,7 +69,7 @@ lead is EXCLUDED (FORBIDDEN) — the lead surface does not show an Export button
 #### Scenario: A router uses leadershipProcedure
 
 - **WHEN** a `*.router.ts` file defines a procedure with `leadershipProcedure`
-- **THEN** the role-coverage gate reports the procedure as compliant and CI passes
+- **THEN** the role-coverage gate reports the procedure as compliant and local verification passes
 
 #### Scenario: An eighth builder is exported
 
@@ -102,9 +102,9 @@ reference-identity gate keeps passing.
 - **THEN** the role-coverage gate's reference-identity check passes with zero
   changes to router files
 
-### Requirement: Gate Runs in CI for Every PR Touching Router Files
+### Requirement: Gate Runs Locally Before Push
 
-The role-coverage gate MUST execute in the GitLab `quality` job (`pnpm test`) on every pipeline, including merge requests that add or modify at least one `*.router.ts` file. A merge request that introduces a non-canonical procedure MUST be blocked from merging — the violation is surfaced at CI review time, not at runtime.
+The role-coverage gate MUST execute through local pre-push (`pnpm test`), including merge requests that add or modify at least one `*.router.ts` file. A merge request that introduces a non-canonical procedure MUST be blocked from merging — the violation is surfaced before push, not at runtime.
 
 #### Scenario: PR adds a new router file with a canonical procedure
 
@@ -114,7 +114,7 @@ The role-coverage gate MUST execute in the GitLab `quality` job (`pnpm test`) on
 #### Scenario: PR adds a router file with a non-canonical procedure
 
 - **WHEN** a merge request creates or modifies a `*.router.ts` file that contains at least one procedure not using a canonical builder
-- **THEN** the role-coverage gate fails, the pipeline is marked as failing, and merge is blocked until the violation is corrected
+- **THEN** the role-coverage gate fails, local verification fails, and delivery is blocked until the violation is corrected
 
 ### Requirement: Middleware-chain matching MUST be exact, not prefix
 

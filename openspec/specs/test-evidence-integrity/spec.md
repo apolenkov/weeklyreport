@@ -2,30 +2,31 @@
 
 ## Purpose
 
-Keep CI evidence truthful without a repository-local campaign or evidence harness.
+Keep local verification evidence truthful without a repository-local campaign or evidence harness.
 
 ## Requirements
 
-### Requirement: API integration tests are a required CI lane
+### Requirement: API integration tests remain available locally
 
-The API integration CI lane MUST execute the API integration suite against an
+The root `pnpm test:integration` and `pnpm test:coverage` commands MUST set
+`REQUIRED_INTEGRATION_DEPS=true` for the API suite. The integration suite MUST run against an
 accepted disposable PostgreSQL target, Redis logical DB 15, and a reachable
 Mailpit SMTP service. The lane MUST fail when any dependency is absent or any
 integration test fails; it MUST NOT convert required checks into skips.
 
 #### Scenario: Mailpit is unavailable
 
-- **WHEN** the required integration lane cannot reach its configured Mailpit service
-- **THEN** the lane fails non-zero instead of reporting skipped SMTP tests as PASS
+- **WHEN** either root command cannot reach its configured Mailpit service
+- **THEN** the command fails non-zero instead of reporting skipped SMTP tests as PASS
 
 #### Scenario: Integration suite passes
 
 - **WHEN** all guarded database, Redis, and SMTP dependencies are available and every integration test passes
-- **THEN** CI records the integration lane as PASS independently of the unit lane
+- **THEN** the local check records the integration lane as PASS independently of the unit lane
 
 ### Requirement: Coverage proof is explicit and non-empty
 
-The API and Web merge gates MUST invoke Vitest with coverage enabled and enforce
+The explicit local API and Web coverage commands MUST invoke Vitest with coverage enabled and enforce
 their declared thresholds without weakening exclusions. Their coverage configs
 MUST keep the complete source scope explicit: API includes `src/**/*.ts` and
 `src/**/*.tsx`, and Web includes `src/**/*.{ts,tsx}`. A missing, empty, or

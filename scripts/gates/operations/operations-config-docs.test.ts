@@ -38,7 +38,6 @@ const webPackageJson = JSON.parse(read("apps/web/package.json")) as {
 };
 const gitlabContent = read(".gitlab-ci.yml");
 const gitlabCiDoc = read("docs/gitlab-ci.md");
-const vitestBase = read("vitest.base.config.ts");
 
 const assertLocalBootstrapContract = (
   environmentExample: string,
@@ -289,87 +288,59 @@ test("production documents the browser DSN as a build-time input", () => {
   );
 });
 
-test("operations documentation inventories integration and coverage lanes", () => {
-  assert.match(
-    operations,
-    /`api-integration` lane[\s\S]*Postgres\/Redis\/Mailpit/,
-  );
-  assert.match(
-    operations,
-    /`api-integration` lane[\s\S]*API coverage thresholds/u,
-  );
-  assert.match(operations, /`coverage` lane[\s\S]*Web coverage/u);
-  assert.match(gitlabContent, /\napi-integration:/u);
-  assert.match(gitlabContent, /\nmigrate-reset:/u);
-  assert.match(gitlabContent, /\nnode-toolchain:/u);
+test("local checks retain the former CI verification routes", () => {
   assert.equal(
-    [...gitlabContent.matchAll(/@weeklyreport\/api test:coverage/gu)].length,
-    1,
+    packageJson.scripts["check:push"],
+    "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm spec:check && pnpm audit:dependencies && pnpm scan:secrets",
   );
-});
-
-const jobBlock = (name: string): string => {
-  const start = gitlabContent.indexOf(`\n${name}:\n`);
-  assert.ok(start !== -1, `${name} job must exist`);
-  return gitlabContent.slice(start + 1).split(/\n(?=\S)/u)[0] ?? "";
-};
-
-test("the GitLab quality lane stays build-free and the build has its own job", () => {
-  assert.doesNotMatch(jobBlock("quality"), /pnpm build/u);
-  assert.match(gitlabCiDoc, /`production-build`/u);
-});
-
-test("production-build is a blocking route with explicit build env bound to the SHA", () => {
-  const job = jobBlock("production-build");
-  assert.doesNotMatch(job, /allow_failure|when: manual|when: never/u);
-  assert.match(job, /^ {4}- pnpm build$/mu);
+  assert.equal(
+    packageJson.scripts["audit:dependencies"],
+    "pnpm audit --prod && pnpm audit --audit-level high",
+  );
+  assert.equal(
+    packageJson.scripts["scan:secrets"],
+    "sh scripts/gates/secret-scan.sh",
+  );
+  assert.equal(
+    packageJson.scripts["test:coverage"],
+    "REQUIRED_INTEGRATION_DEPS=true pnpm --filter @weeklyreport/api test:coverage && pnpm --filter @weeklyreport/web test:coverage",
+  );
+  assert.equal(
+    packageJson.scripts["test:integration"],
+    "REQUIRED_INTEGRATION_DEPS=true pnpm --filter @weeklyreport/api test:integration",
+  );
+  assert.equal(
+    packageJson.scripts["db:migrate:reset"],
+    "tsx prisma/operations/migrate-reset.ts && tsx prisma/seeds/profiles/seed-profile.ts full",
+  );
+  const scanner = read("scripts/gates/secret-scan.sh");
+  assert.match(scanner, /git -C "\$ROOT" archive --format=tar/u);
+  assert.match(scanner, /scan_history "\$ROOT"/u);
+  assert.match(scanner, /expect fail "secret in HEAD tree"/u);
+  assert.match(scanner, /expect fail "history-only secret, history"/u);
+  assert.match(
+    read("lefthook.yml"),
+    /unset \$\(git rev-parse --local-env-vars\);/u,
+  );
+  assert.match(read("lefthook.yml"), /pnpm check:push/u);
+  assert.doesNotMatch(
+    gitlabContent,
+    /\n(?:quality|coverage|api-integration|migrate-reset|production-build|secret-scan|dependency-scan|renovate|node-toolchain):/u,
+  );
   for (const name of [
-    "API_URL",
-    "NEXT_PUBLIC_AUTH_STUB",
-    "NEXT_PUBLIC_DEV_ROLE_SWITCHER",
-    String.raw`NEXT_PUBLIC_APP_VERSION: \$CI_COMMIT_SHA`,
-    "NEXT_PUBLIC_CLIENT_LOG_FORWARDING",
-    "NEXT_PUBLIC_WEB_VITALS",
-    "NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED",
-    "NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES",
+    "test:coverage",
+    "test:integration",
+    "test:mutation",
+    "db:migrate:reset",
+    "production-build",
+    "renovate",
   ]) {
-    assert.match(job, new RegExp(`^ {4}${name}`, "mu"), `${name} must be set`);
+    assert.ok(
+      gitlabCiDoc.includes(name),
+      `${name} must have a documented destination`,
+    );
   }
-  assert.match(job, /commit=%s.*\$CI_COMMIT_SHA/su);
-  assert.match(job, /production-build-\$CI_COMMIT_SHA\.manifest/u);
-});
-
-test("dependency-scan blocks on prod and dev audits in every pipeline", () => {
-  const job = jobBlock("dependency-scan");
-  assert.match(job, /^ {2}needs: \[\]$/mu);
-  assert.match(job, /rules:\n {4}- when: on_success\n/u);
-  assert.doesNotMatch(job, /allow_failure|\|\||when: never|changes:/u);
-  assert.match(job, /^ {4}- pnpm audit --prod$/mu);
-  assert.match(job, /^ {4}- pnpm audit --audit-level high$/mu);
-  assert.doesNotMatch(gitlabContent, /\ndependency-scan-dev:/u);
-  assert.match(gitlabContent, /\nrenovate:\n/u);
-});
-
-test("secret-scan is blocking, unshallowed and checksum-verified", () => {
-  const job = jobBlock("secret-scan");
-  assert.match(job, /^ {2}needs: \[\]$/mu);
-  assert.doesNotMatch(job, /allow_failure|when: manual|when: never/u);
-  assert.match(job, /GIT_DEPTH: "0"/u);
-  assert.match(job, /GITLEAKS_SHA256: [0-9a-f]{64}/u);
-  assert.match(job, /sha256sum -c -/u);
-  assert.match(job, /^ {4}- scripts\/gates\/secret-scan\.sh$/mu);
-});
-
-test("Vitest CI output has one labelled summary contract", () => {
-  assert.match(vitestBase, /jobSummary:\s*\{\s*enabled:\s*false\s*\}/u);
-  assert.match(vitestBase, /displayAnnotations:\s*true/u);
-  assert.match(vitestBase, /VITEST_JSON_OUTPUT_FILE/u);
-  assert.match(gitlabContent, /VITEST_JSON_OUTPUT_FILE/u);
-  assert.match(gitlabContent, /ci-reports\/api-verification-summary\.md/u);
-  assert.match(gitlabContent, /ci-reports\/web-coverage-summary\.md/u);
-  assert.match(gitlabContent, /CI_COMMIT_SHA/u);
-  assert.match(gitlabContent, /coverage-summary\.json/u);
-  assert.match(gitlabContent, /throw new Error/u);
+  assert.match(operations, /pnpm check:push/u);
 });
 
 const assertRecoveryEvidenceIsTruthful = (document: string): void => {
