@@ -303,11 +303,11 @@ test("local checks retain the former CI verification routes", () => {
   );
   assert.equal(
     packageJson.scripts["test:coverage"],
-    "pnpm --filter @weeklyreport/api test:coverage && pnpm --filter @weeklyreport/web test:coverage",
+    "REQUIRED_INTEGRATION_DEPS=true pnpm --filter @weeklyreport/api test:coverage && pnpm --filter @weeklyreport/web test:coverage",
   );
   assert.equal(
     packageJson.scripts["test:integration"],
-    "pnpm --filter @weeklyreport/api test:integration",
+    "REQUIRED_INTEGRATION_DEPS=true pnpm --filter @weeklyreport/api test:integration",
   );
   assert.equal(
     packageJson.scripts["db:migrate:reset"],
