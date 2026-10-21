@@ -23,9 +23,9 @@ commit-msg:
       run: pnpm exec commitlint --edit {1}
 pre-push:
   jobs:
-    # Light by design: agents push from parallel worktrees, and lint and the
-    # test suites run in the CI `quality` job. Skipped in CI and for agents (AGENT_*).
+    # CI builds and deploys; local checks own verification.
+    # Existing CI/agent skips are not evidence that checks passed.
     - name: check
       run: >-
         if [ -n "$CI" ] || env | grep -q '^AGENT_'; then exit 0; fi;
-        pnpm format:check && pnpm typecheck && pnpm spec:check
+        pnpm check:push

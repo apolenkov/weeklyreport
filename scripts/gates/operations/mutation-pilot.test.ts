@@ -9,7 +9,6 @@ const stryker = JSON.parse(read("apps/api/stryker.config.json")) as Record<
   string,
   unknown
 >;
-const gitlab = read(".gitlab-ci.yml");
 
 test("the mutation pilot mutates exactly the period transition owner", () => {
   assert.deepEqual(stryker.mutate, [
@@ -45,10 +44,12 @@ test("the pilot suite is flat so Stryker can select tests by name", () => {
   assert.doesNotMatch(suite, /\b(?:describe|suite)(?:\.\w+)*\(/u);
 });
 
-test("CI runs the pilot as a blocking job", () => {
-  const start = gitlab.indexOf("\nmutation-period:\n");
-  assert.ok(start !== -1, "mutation-period job must exist");
-  const job = gitlab.slice(start + 1).split(/\n(?=\S)/u)[0] ?? "";
-  assert.doesNotMatch(job, /allow_failure|when: manual|when: never/u);
-  assert.match(job, /pnpm --filter @weeklyreport\/api test:mutation/u);
+test("the mutation pilot remains an explicit local command", () => {
+  const manifest = JSON.parse(read("package.json")) as {
+    scripts: Record<string, string>;
+  };
+  assert.equal(
+    manifest.scripts["test:mutation"],
+    "pnpm --filter @weeklyreport/api test:mutation",
+  );
 });
