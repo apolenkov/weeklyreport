@@ -8,20 +8,20 @@ builds manually and do not deploy.
 
 ## Job destinations
 
-| Former job        | Where it runs now                                                                                                                                              |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| node-toolchain    | Removed CI-only artifact transport; local Node from `.nvmrc`, pnpm from `package.json`; Dockerfiles still own image toolchains.                                |
-| quality           | `pnpm check:push` in Lefthook pre-push: format, lint, typecheck, tests and spec validation. Commitlint remains the commit-msg hook.                            |
-| dependency-scan   | `pnpm audit:dependencies` in pre-push, preserving production audit and high-severity full audit. Endpoint failure blocks verification.                         |
-| secret-scan       | `pnpm scan:secrets` in pre-push: existing Gitleaks tree/history scan with redaction and synthetic positive/negative controls. Install Gitleaks before pushing. |
-| mutation-period   | `pnpm test:mutation` on demand; existing serial Stryker pilot and threshold unchanged.                                                                         |
-| coverage          | `pnpm --filter @weeklyreport/web test:coverage` on demand.                                                                                                     |
-| api-integration   | `pnpm test:coverage` runs combined API unit/integration coverage once then Web coverage; `pnpm test:integration` offers integration-only checks.               |
-| migrate-reset     | `pnpm db:migrate:reset` on demand: guarded reset followed by explicit full seed.                                                                               |
-| production-build  | `pnpm build` is required local acceptance evidence. Image builds use Dockerfiles directly and never consumed this job's artifacts.                             |
-| renovate          | Operator-triggered local container command below; no scheduled update job in CI.                                                                               |
-| build-images      | GitLab, unchanged four SHA-tagged api/migrate/web/backup images and `image-digests.txt` (30 days).                                                             |
-| deploy-production | GitLab, unchanged conditional manual production deployment.                                                                                                    |
+| Former job        | Where it runs now                                                                                                                                               |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| node-toolchain    | Removed CI-only artifact transport; local Node from `.nvmrc`, pnpm from `package.json`; Dockerfiles still own image toolchains.                                 |
+| quality           | `pnpm check:push` in Lefthook pre-push: format, lint, typecheck, tests and spec validation. Commitlint remains the commit-msg hook.                             |
+| dependency-scan   | `pnpm audit:dependencies` in pre-push, preserving production audit and high-severity full audit. Endpoint failure blocks verification.                          |
+| secret-scan       | `pnpm scan:secrets` in pre-push: Gitleaks committed-tree/history scan with redaction and synthetic positive/negative controls. Install Gitleaks before pushing. |
+| mutation-period   | `pnpm test:mutation` on demand; existing serial Stryker pilot and threshold unchanged.                                                                          |
+| coverage          | `pnpm --filter @weeklyreport/web test:coverage` on demand.                                                                                                      |
+| api-integration   | `pnpm test:coverage` runs combined API unit/integration coverage once then Web coverage; `pnpm test:integration` offers integration-only checks.                |
+| migrate-reset     | `pnpm db:migrate:reset` on demand: guarded reset followed by explicit full seed.                                                                                |
+| production-build  | `pnpm build` is required local acceptance evidence. Image builds use Dockerfiles directly and never consumed this job's artifacts.                              |
+| renovate          | Operator-triggered local container command below; no scheduled update job in CI.                                                                                |
+| build-images      | GitLab, unchanged four SHA-tagged api/migrate/web/backup images and `image-digests.txt` (30 days).                                                              |
+| deploy-production | GitLab, unchanged conditional manual production deployment.                                                                                                     |
 
 ## Local verification
 
@@ -38,7 +38,10 @@ pnpm --filter @weeklyreport/api db:generate
 pnpm check:push
 ```
 
-Install Helm for chart contract tests and Gitleaks for scanning.
+Install Helm for chart contract tests and Gitleaks for scanning. The secret scan
+archives HEAD before scanning, matching the clean CI checkout and excluding
+uncommitted local files, dependencies and build caches. Full reachable Git
+history and the synthetic HEAD/history controls remain required.
 Run `pnpm check:push` and `pnpm build`, recording the source SHA, command, exit
 status and logs in the external handoff evidence directory. Existing CI/agent
 hook skips remain unchanged; a skipped hook is **NOT VERIFIED**. Agents must run

@@ -313,6 +313,11 @@ test("local checks retain the former CI verification routes", () => {
     packageJson.scripts["db:migrate:reset"],
     "tsx prisma/operations/migrate-reset.ts && tsx prisma/seeds/profiles/seed-profile.ts full",
   );
+  const scanner = read("scripts/gates/secret-scan.sh");
+  assert.match(scanner, /git -C "\$ROOT" archive --format=tar/u);
+  assert.match(scanner, /scan_history "\$ROOT"/u);
+  assert.match(scanner, /expect fail "secret in HEAD tree"/u);
+  assert.match(scanner, /expect fail "history-only secret, history"/u);
   assert.match(read("lefthook.yml"), /pnpm check:push/u);
   assert.doesNotMatch(
     gitlabContent,
