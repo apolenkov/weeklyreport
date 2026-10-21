@@ -6,5 +6,8 @@
 
 ## 2. Verification and delivery
 
-- [ ] 2.1 Run pnpm format:check, pnpm lint, pnpm typecheck, pnpm test, pnpm build, pnpm spec:check, glab ci lint and complete local pre-push checks.
+- [x] 2.1 Run pnpm format:check, pnpm lint, pnpm typecheck, pnpm test, pnpm build, pnpm spec:check, glab ci lint and complete local pre-push checks.
 - [ ] 2.2 Commit, push once, create a non-draft MR and deliver exact-SHA evidence to Fable without merging.
+
+Publication receipts for 2.2 are recorded after the single push in TASK-622 and
+the external CI-FLEET handoff report; no second push is made for that receipt.
