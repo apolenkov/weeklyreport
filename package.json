@@ -38,7 +38,7 @@
     "test:eslint-suppressions": "vitest run --testTimeout=30000 scripts/gates/eslint-suppressions.test.ts",
     "test:cleanliness": "vitest run scripts/gates/repository-cleanliness.test.ts",
     "test:operations": "vitest run --testTimeout=30000 scripts/gates/production-dist-policy.test.ts scripts/gates/operations && node --import tsx --test scripts/gates/production-deps-prune.fixture.test.ts scripts/gates/prepare-hooks.fixture.test.ts",
-    "test:coverage": "pnpm --filter @weeklyreport/api test:coverage && pnpm --filter @weeklyreport/web test:coverage",
+    "test:coverage": "REQUIRED_INTEGRATION_DEPS=true pnpm --filter @weeklyreport/api test:coverage && pnpm --filter @weeklyreport/web test:coverage",
     "db:bootstrap:local": "node --import tsx prisma/operations/bootstrap-local.ts",
     "db:seed:profile": "tsx prisma/seeds/profiles/seed-profile.ts",
     "db:seed:verify": "tsx prisma/seeds/profiles/seed-profile-proof.ts",
@@ -50,7 +50,7 @@
     "audit:dependencies": "pnpm audit --prod && pnpm audit --audit-level high",
     "scan:secrets": "sh scripts/gates/secret-scan.sh",
     "test:mutation": "pnpm --filter @weeklyreport/api test:mutation",
-    "test:integration": "pnpm --filter @weeklyreport/api test:integration",
+    "test:integration": "REQUIRED_INTEGRATION_DEPS=true pnpm --filter @weeklyreport/api test:integration",
     "db:migrate:reset": "tsx prisma/operations/migrate-reset.ts && tsx prisma/seeds/profiles/seed-profile.ts full"
   },
   "devDependencies": {

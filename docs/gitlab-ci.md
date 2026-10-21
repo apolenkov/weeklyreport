@@ -62,6 +62,11 @@ and E2E_DATABASE_URL explicitly, Redis DB15 for the main target (lane a/b use
 DB1/2), and reachable Postgres/Redis/Mailpit. Follow [AGENTS.md](../AGENTS.md) and
 [README.md](../README.md); localhost alone does not authorize a reset.
 
+`pnpm test:integration` and `pnpm test:coverage` set
+`REQUIRED_INTEGRATION_DEPS=true` for the API suite. Missing Mailpit is a hard
+failure, never a successful run with skipped SMTP assertions. Use these root
+commands for integration acceptance and combined API/Web coverage.
+
 Coverage thresholds and Vitest JSON reporting remain intact. Use
 `VITEST_JSON_OUTPUT_FILE` with an absolute external evidence path for per-suite
 JSON; native coverage summaries remain under each app's coverage directory.
