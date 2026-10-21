@@ -63,18 +63,17 @@ context size. See `Dockerfile.api`, `Dockerfile.web` and `turbo.json`.
 
 ## GitLab outputs
 
-| Output                                     | Declared consumer/storage                                     | Declared retention                     |
-| ------------------------------------------ | ------------------------------------------------------------- | -------------------------------------- |
-| Common job `ci-reports/` evidence          | GitLab job artifacts; audit, diagnostics and coverage reports | One week                               |
-| Downloaded Node toolchain                  | Downstream pipeline jobs                                      | One day                                |
-| `image-digests.txt`                        | Build-images evidence for API/migrate/web/backup images       | 30 days                                |
-| Container images tagged by `CI_COMMIT_SHA` | GitLab registry, then manual Helm deployment                  | External registry policy is unverified |
+| Output                                     | Declared consumer/storage                               | Declared retention                     |
+| ------------------------------------------ | ------------------------------------------------------- | -------------------------------------- |
+| `image-digests.txt`                        | Build-images evidence for API/migrate/web/backup images | 30 days                                |
+| Container images tagged by `CI_COMMIT_SHA` | GitLab registry, then manual Helm deployment            | External registry policy is unverified |
 
 These declarations in `.gitlab-ci.yml` are not evidence of a successful pipeline
 or deployment. A GREEN CI claim requires the pipeline's exact tested SHA.
 Follow the task's current decision about intermediate CI; one final corporate
-CI remains required for the full completion program. The conditional Renovate
-job is declared, while token provisioning and actual activation remain unverified.
+CI remains required for the full completion program. The local operator-triggered Renovate
+command is documented in `docs/gitlab-ci.md`; token provisioning and actual
+activation remain unverified.
 
 ## Product report exports
 

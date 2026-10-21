@@ -2,7 +2,7 @@
 
 **Status:** accepted
 **Date:** 2026-10-15
-**Superseded-by:** None
+**Superseded-by:** [ADR 0023](0023-ci-builds-and-deploys-local-checks.md) (CI scope)
 
 ## Context
 

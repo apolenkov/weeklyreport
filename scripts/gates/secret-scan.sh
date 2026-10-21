@@ -1,5 +1,5 @@
 #!/bin/sh
-# Blocking secret scan of the working tree and the full Git history.
+# Blocking secret scan of the published commit tree and full Git history.
 # Findings are redacted, so a leaked value never reaches job logs. A control
 # run on synthetic secrets proves the scanner can fail before the repository
 # is trusted: HEAD secret, history-only secret and a clean repository.
@@ -56,6 +56,12 @@ git -C "$CONTROL" commit -q -m "control: remove leak"
 expect pass "history-only secret, tree" scan_tree "$CONTROL"
 expect fail "history-only secret, history" scan_history "$CONTROL" HEAD
 
-scan_tree "$ROOT" || { echo "secret-scan: secrets found in the working tree" >&2; exit 1; }
+# Match a clean CI checkout, excluding local dependencies and build caches.
+# Archive failure must stop before extraction, so do not use a shell pipeline.
+TREE="$CONTROL/published-tree"
+mkdir "$TREE"
+git -C "$ROOT" archive --format=tar --output="$CONTROL/published.tar" "${CI_COMMIT_SHA:-HEAD}"
+tar -xf "$CONTROL/published.tar" -C "$TREE"
+scan_tree "$TREE" || { echo "secret-scan: secrets found in the published tree" >&2; exit 1; }
 scan_history "$ROOT" "${CI_COMMIT_SHA:-HEAD}" || { echo "secret-scan: secrets found in Git history" >&2; exit 1; }
-echo "secret-scan: tree and history clean; controls passed"
+echo "secret-scan: published tree and history clean; controls passed"

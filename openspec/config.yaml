@@ -61,7 +61,7 @@ context: |
     `*.prisma-repository.ts`, `*.router.ts`, `*.module.ts`); React component
     files kebab-case, exports PascalCase
   - tRPC procedures must use one of 7 canonical middleware-chain builders,
-    including `leadProcedure` (role-coverage gate; CI compares by reference identity)
+    including `leadProcedure` (role-coverage gate; local tests compare by reference identity)
   - Repository interfaces stay within their owning module, in the service or
     focused `*.port.ts` / `*.ports.ts` files. Follow the explicit-contract
     boundary principle in `docs/exemplary-code-standard.md`. Prisma implementations

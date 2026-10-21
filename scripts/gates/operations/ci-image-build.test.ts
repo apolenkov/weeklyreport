@@ -260,3 +260,13 @@ test("only the image build and production deploy jobs are not interruptible", ()
     );
   }
 });
+
+test("CI contains only build and deployment jobs", () => {
+  const reserved = new Set(["workflow", "default", "stages", "variables"]);
+  assert.deepEqual(
+    Object.keys(jobs)
+      .filter((name) => !reserved.has(name))
+      .sort(),
+    ["build-images", "deploy-production"],
+  );
+});
