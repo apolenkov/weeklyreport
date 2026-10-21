@@ -27,7 +27,18 @@ builds manually and do not deploy.
 
 Run `pnpm install --frozen-lockfile` and
 `pnpm --filter @weeklyreport/api db:generate` with an explicit generation-only
-DATABASE_URL. Install Helm for chart contract tests and Gitleaks for scanning.
+DATABASE_URL. Keep that explicit value exported for `pnpm check:push`: mocked
+Prisma seed tests require it even though they never connect to a database.
+For an isolated checkout without local environment files:
+
+```sh
+export DATABASE_URL=postgresql://weeklyreport:localdev@127.0.0.1:5432/weeklyreport_generate_only
+export API_URL=http://127.0.0.1:3002
+pnpm --filter @weeklyreport/api db:generate
+pnpm check:push
+```
+
+Install Helm for chart contract tests and Gitleaks for scanning.
 Run `pnpm check:push` and `pnpm build`, recording the source SHA, command, exit
 status and logs in the external handoff evidence directory. Existing CI/agent
 hook skips remain unchanged; a skipped hook is **NOT VERIFIED**. Agents must run
