@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { logs } from "@opentelemetry/api-logs";
+import { logs } from "@opentelemetry/api";
 import type { Request, Response } from "express";
 import type { ClsService } from "nestjs-cls";
 import { afterEach, describe, expect, it, onTestFinished, vi } from "vitest";

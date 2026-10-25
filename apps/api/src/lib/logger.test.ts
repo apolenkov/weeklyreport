@@ -9,7 +9,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { logs } from "@opentelemetry/api-logs";
+import { logs } from "@opentelemetry/api";
 import {
   InMemoryLogRecordExporter,
   LoggerProvider,

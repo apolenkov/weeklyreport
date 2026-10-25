@@ -1,8 +1,7 @@
 import { createWriteStream, mkdirSync, type WriteStream } from "node:fs";
 import { join, resolve } from "node:path";
 
-import { trace } from "@opentelemetry/api";
-import { logs, SeverityNumber } from "@opentelemetry/api-logs";
+import { logs, SeverityNumber, trace } from "@opentelemetry/api";
 import { ClsService } from "nestjs-cls";
 import { z } from "zod";
 
