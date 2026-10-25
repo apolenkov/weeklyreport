@@ -59,7 +59,7 @@
     "@commitlint/types": "21.2.3",
     "@eslint-community/eslint-plugin-eslint-comments": "^4.8.1",
     "@fission-ai/openspec": "1.14.0",
-    "@next/eslint-plugin-next": "^16.4.2",
+    "@next/eslint-plugin-next": "^16.4.3",
     "@types/eslint-plugin-jsx-a11y": "^6.10.1",
     "@types/node": "catalog:",
     "@types/pg": "^8.23.1",

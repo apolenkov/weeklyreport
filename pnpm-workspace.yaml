@@ -12,7 +12,7 @@ catalog:
   "react": "^19.3.1"
   "superjson": "^2.2.6"
   "zod": "^4.6.7"
-  "lucide-react": "^1.59.0"
+  "lucide-react": "^1.61.0"
   "react-dom": "^19.3.1"
   "sonner": "^2.0.8"
 
@@ -60,7 +60,7 @@ overrides:
   "samlify>@xmldom/xmldom": ">=0.9.12 <0.10"
   protobufjs: ">=8.8.1 <9"
   # Keep the Vite peer resolution identical across workspace test consumers.
-  vite: "8.3.4"
+  vite: "8.3.5"
   # Keep both brace-expansion ranges: the graph contains incompatible 1.x and
   # 5.x consumers, so one cross-major override would be unsafe.
   "brace-expansion@<2": ">=1.1.21 <2"
@@ -87,24 +87,13 @@ overrides:
   # These are transitive through Prisma, Next.js, and the CSS toolchain.
   find-my-way: ">=9.10.0 <10"
   sharp: ">=0.35.5 <0.36"
-  postcss: ">=8.5.30 <9"
+  postcss: ">=8.5.31 <9"
   # Prisma pins valibot exactly, so the safe current range is enforced here.
   valibot: ">=1.5.0 <2"
   # Prisma 7.10 pins a recursion-vulnerable 7.x; require the cycle-safe major.
   deepmerge-ts: ">=8.0.2 <9"
 
 minimumReleaseAgeExclude:
-  - "@next/env@16.4.0"
-  - "@next/eslint-plugin-next@16.4.0"
-  - "@next/swc-darwin-arm64@16.4.0"
-  - "@next/swc-darwin-x64@16.4.0"
-  - "@next/swc-linux-arm64-gnu@16.4.0"
-  - "@next/swc-linux-arm64-musl@16.4.0"
-  - "@next/swc-linux-x64-gnu@16.4.0"
-  - "@next/swc-linux-x64-musl@16.4.0"
-  - "@next/swc-win32-arm64-msvc@16.4.0"
-  - "@next/swc-win32-x64-msvc@16.4.0"
-  - next@16.4.0
   - nodemailer@10.0.16
   - dotenv@18.0.6
   - "@sentry/browser-utils@11.6.0 || 11.7.0"
@@ -134,8 +123,6 @@ minimumReleaseAgeExclude:
   - lefthook-windows-arm64@2.2.1 || 2.2.2
   - lefthook-windows-x64@2.2.1 || 2.2.2
   - lefthook@2.2.1 || 2.2.2
-  - lucide-react@1.54.0 || 1.56.0 || 1.59.0
-  - vite@8.3.4
   - "@radix-ui/primitive@1.2.0"
   - "@radix-ui/react-accessible-icon@1.2.0"
   - "@radix-ui/react-accordion@1.3.0 || 1.3.1"
@@ -185,14 +172,11 @@ minimumReleaseAgeExclude:
   - "@radix-ui/react-use-controllable-state@1.3.0"
   - "@radix-ui/react-use-escape-keydown@1.1.6"
   - "@radix-ui/react-visually-hidden@1.2.13"
-  - "@tanstack/query-core@5.104.2 || 5.104.4"
-  - "@tanstack/react-query@5.104.2 || 5.104.4"
   - radix-ui@1.8.0 || 1.8.1
   - zod@4.6.6 || 4.6.7
   - "@testing-library/user-event@14.6.8"
   - eslint-plugin-unicorn@78.0.0
   - lefthook-android-arm64@2.2.2
-  - postcss@8.5.30
 
 audit:
   ignore:
