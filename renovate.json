@@ -18,7 +18,7 @@
       "labels": ["dependencies", "major"]
     },
     {
-      "description": "OpenSpec 1.14.1/1.14.3 promote >500-character requirements to WARNING: unchanged main strict spec:check fails (1.14.1 132/253 on 2026-10-13; 1.14.3 143/313 on 2026-10-18, same INFO->WARNING cause); retain 1.14.0 until the long requirements are split (TASK-513, wr-deploy dependency rehearsal)",
+      "description": "OpenSpec 1.14.1/1.14.3/1.15.0 promote >500-character requirements to WARNING: unchanged main strict spec:check fails (1.14.1 132/253 on 2026-10-13; 1.14.3 143/313 on 2026-10-18; 1.15.0 143/314 on 2026-10-25 -- 'Requirement text is very long (>500 characters)', now also reported in change deltas, same INFO->WARNING cause); retain 1.14.0 until the long requirements are split (TASK-513, wr-deploy dependency rehearsal)",
       "matchPackageNames": ["@fission-ai/openspec"],
       "allowedVersions": "1.14.0"
     },
