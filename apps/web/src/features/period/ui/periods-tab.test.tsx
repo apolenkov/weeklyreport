@@ -158,6 +158,37 @@ describe("PeriodsTab", () => {
     ).toBeInTheDocument();
   });
 
+  it("does not show the next-page banner when a background refetch fails", async () => {
+    const user = userEvent.setup();
+    const archivePages = vi.fn(() => {
+      if (archivePages.mock.calls.length > 1) {
+        throw new Error("background refetch failed");
+      }
+      return { periods: [archivedRow], nextCursor: null };
+    });
+    renderTab({ archivePages });
+
+    await user.click(screen.getByTestId("periods-archive-toggle"));
+    await screen.findByTestId(`periods-archive-row-${archivedRow.id}`);
+
+    // The archive mutation invalidates the period list; this follow-up refetch
+    // fails in the background, but it is not a failed next-page load.
+    await user.click(screen.getByTestId(`action-archive-${publishedFresh.id}`));
+    await waitFor(() => {
+      expect(archivePages.mock.calls.length).toBeGreaterThan(1);
+    });
+
+    expect(
+      screen.queryByText("Failed to load more archived periods."),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Archive could not be loaded."),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId(`periods-archive-row-${archivedRow.id}`),
+    ).toBeInTheDocument();
+  });
+
   it("filters archive rows by the search query", async () => {
     const user = userEvent.setup();
     const archiveOnly = makeRow({

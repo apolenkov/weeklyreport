@@ -7,6 +7,9 @@ export interface ArchivePaging {
   readonly hasLoadedRows: boolean;
   readonly hasNextPage: boolean;
   readonly isFetchingNextPage: boolean;
+  // Only a failed "Load more" deserves the inline banner; a background refetch
+  // after archive/unarchive must not claim the next page failed.
+  readonly isFetchNextPageError: boolean;
   readonly onLoadMore: () => void;
 }
 
@@ -54,7 +57,7 @@ export function PeriodsArchiveSection({
             rows={rows}
             {...rowActions}
           />
-          {isError && paging?.hasLoadedRows && (
+          {paging?.isFetchNextPageError && paging.hasLoadedRows && (
             <p
               role="alert"
               className="mt-3 text-sm text-[var(--color-destructive)]"
