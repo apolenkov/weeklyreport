@@ -49,10 +49,15 @@ overrides:
   # Upper bounds are load-bearing on EVERY entry here: an open-ended floor let
   # `pnpm update` carry vite across a major silently, which is a decision, not a
   # currency bump. Below 1.0 the minor is the breaking axis, hence `<0.9`:
-  # node-saml, samlify, xml-crypto, and xml-encryption all declare `^0.8.x`
-  # and break on the 0.9 parser API (removed errorHandler object, required
-  # parseFromString mimeType), so the override must stay inside the 0.8 line.
+  # node-saml 5.1.0, xml-crypto, and xml-encryption declare `^0.8.x` and break
+  # on the 0.9 parser API (removed errorHandler object, required
+  # parseFromString mimeType), so the global override must stay inside the 0.8
+  # line. samlify 2.15.1 migrated to `^0.9.12`; that edge alone is scoped below
+  # so the production node-saml parser keeps the compatible line (TASK-513 G3b).
   "@xmldom/xmldom": ">=0.8.15 <0.9"
+  # samlify 2.15.1's own parser must be 0.9.12+; every other consumer of
+  # @xmldom/xmldom stays on 0.8 via the global override above.
+  "samlify>@xmldom/xmldom": ">=0.9.12 <0.10"
   protobufjs: ">=8.8.1 <9"
   # Keep the Vite peer resolution identical across workspace test consumers.
   vite: "8.3.4"

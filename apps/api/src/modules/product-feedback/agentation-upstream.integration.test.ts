@@ -148,7 +148,8 @@ describe("installed Agentation MCP against the authenticated adapter", () => {
     );
     expect(response.headers.get("content-type")).toContain("text/event-stream");
     expect(response.headers.get("cache-control")).toContain("no-transform");
-    const reader = response.body?.getReader();
+    const reader: ReadableStreamDefaultReader<Uint8Array> | undefined =
+      response.body?.getReader();
     if (!reader) throw new Error("Missing SSE response body");
     const decoder = new TextDecoder();
     const state = { buffer: "" };

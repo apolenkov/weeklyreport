@@ -128,7 +128,7 @@ function responseTemplate(requestId: string) {
       '<saml:Attribute Name="displayName"><saml:AttributeValue>' +
       `${TEST_DISPLAY_NAME}</saml:AttributeValue></saml:Attribute>` +
       "</saml:AttributeStatement>";
-    const assertion = samlify.SamlLib.replaceTagsByValue(template, {
+    const assertion = samlify.SamlLib.renderTemplate(template, {
       ID: responseId,
       AssertionID: `_${randomUUID()}`,
       Destination: SP_ACS,

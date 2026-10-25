@@ -38,7 +38,7 @@
       ]
     },
     {
-      "description": "2026-10-13 actual node-saml5.1 parseDomFromString rejects xmldom0.9.12: errorHandler object is no longer supported; identical XML passes before/after on latest compatible0.8.15. Retain <0.9 until SAML consumers migrate the parser API.",
+      "description": "2026-10-13 actual node-saml5.1 parseDomFromString rejects xmldom0.9.12: errorHandler object is no longer supported; identical XML passes before/after on latest compatible0.8.15. Retain <0.9 globally; samlify2.15.1's declared ^0.9.12 edge is pinned by the scoped pnpm override samlify>@xmldom/xmldom (TASK-513 G3b) and is not an automatic update candidate.",
       "matchPackageNames": ["@xmldom/xmldom"],
       "allowedVersions": "<0.9"
     },
