@@ -1,21 +1,19 @@
 "use client";
 
-import {
-  hasVisibleText,
-  INVISIBLE_TEXT_MESSAGE,
-  SAFE_TEXT_MAX_LENGTH,
-} from "@weeklyreport/shared";
+import { SAFE_TEXT_MAX_LENGTH } from "@weeklyreport/shared";
 import { useRef, useState } from "react";
 
 import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
 import { DialogSurface } from "../../../shared/ui/dialogs/dialog-surface";
 import { DocumentBodyPortal } from "../../../shared/ui/dialogs/document-body-portal";
+import { getPauseReasonError } from "../../../shared/ui/forms/pause-reason-validation";
 import { RecordTextareaField } from "../../../shared/ui/forms/record-textarea-field";
 
-// Persisted pause reasons pass through safeText's default bound and visible-text
-// rule (section-record pausedReason); gate the confirmed trimmed value on the
-// same bound so oversized and invisible-only pastes fail visibly instead of at
-// persistence, where one such field rejects the whole autosave draft.
+// Persisted pause reasons pass through the server's safeText rule
+// (section-record pausedReason); gate the confirmed trimmed value with the same
+// helper the item editor uses so oversized, null-byte and invisible-only pastes
+// fail visibly instead of at persistence, where one such field rejects the whole
+// autosave draft.
 
 interface PauseReasonDialogProps {
   readonly open: boolean;
@@ -49,10 +47,10 @@ function PauseReasonDialogContent({
   useDialogFocus({ open: true, onClose: onCancel, containerRef: surfaceRef });
 
   const trimmed = reason.trim();
-  const isTooLong = trimmed.length > SAFE_TEXT_MAX_LENGTH;
-  // Blank still means "not entered yet"; non-blank invisible-only text keeps the
-  // typed value for correction, as the item editor does. The server rejects it.
-  const isInvisibleOnly = trimmed.length > 0 && !hasVisibleText(trimmed);
+  const pauseReasonError = getPauseReasonError(trimmed);
+  // Blank still means "not entered yet"; only a typed invalid value is flagged
+  // before confirm, while the item editor reports the required message on save.
+  const visibleError = trimmed.length === 0 ? undefined : pauseReasonError;
 
   return (
     <DocumentBodyPortal>
@@ -66,10 +64,10 @@ function PauseReasonDialogContent({
         <PauseReasonField
           reason={reason}
           onReasonChange={setReason}
-          error={isInvisibleOnly ? INVISIBLE_TEXT_MESSAGE : undefined}
+          error={visibleError}
         />
         <PauseReasonActions
-          canConfirm={trimmed.length > 0 && !isTooLong && !isInvisibleOnly}
+          canConfirm={pauseReasonError === undefined}
           onCancel={onCancel}
           onConfirm={() => onConfirm(trimmed)}
         />
