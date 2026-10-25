@@ -3,7 +3,10 @@ import "@testing-library/jest-dom/vitest";
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { SAFE_TEXT_MAX_LENGTH } from "@weeklyreport/shared";
+import {
+  INVISIBLE_TEXT_MESSAGE,
+  SAFE_TEXT_MAX_LENGTH,
+} from "@weeklyreport/shared";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -33,6 +36,34 @@ describe("PauseReasonDialog", () => {
       "waiting on a dependency",
     );
     expect(pause).toBeEnabled();
+  });
+
+  it("refuses an invisible-only reason and keeps it for correction", () => {
+    const onConfirm = vi.fn();
+    render(
+      <PauseReasonDialog
+        open
+        preview="Implement CI pipeline"
+        onConfirm={onConfirm}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    const reason = screen.getByLabelText("Reason *");
+    const pause = screen.getByRole("button", { name: "Pause" });
+    // The server's safeText rejects invisible-only text and one such pause
+    // reason would fail the whole autosave draft, so the prompt refuses it.
+    fireEvent.change(reason, { target: { value: " \u200B " } });
+    expect(pause).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent(INVISIBLE_TEXT_MESSAGE);
+    expect(reason).toHaveValue(" \u200B ");
+
+    // Correcting the value keeps the same dialog usable.
+    fireEvent.change(reason, { target: { value: "blocked upstream" } });
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(pause).toBeEnabled();
+    fireEvent.click(pause);
+    expect(onConfirm).toHaveBeenCalledWith("blocked upstream");
   });
 
   it("confirms with the trimmed reason", async () => {

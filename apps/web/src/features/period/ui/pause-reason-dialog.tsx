@@ -1,6 +1,10 @@
 "use client";
 
-import { SAFE_TEXT_MAX_LENGTH } from "@weeklyreport/shared";
+import {
+  hasVisibleText,
+  INVISIBLE_TEXT_MESSAGE,
+  SAFE_TEXT_MAX_LENGTH,
+} from "@weeklyreport/shared";
 import { useRef, useState } from "react";
 
 import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
@@ -8,9 +12,10 @@ import { DialogSurface } from "../../../shared/ui/dialogs/dialog-surface";
 import { DocumentBodyPortal } from "../../../shared/ui/dialogs/document-body-portal";
 import { RecordTextareaField } from "../../../shared/ui/forms/record-textarea-field";
 
-// Persisted pause reasons pass through safeText's default bound
-// (section-record pausedReason); gate the confirmed trimmed value on the
-// same bound so oversized pastes fail visibly instead of at persistence.
+// Persisted pause reasons pass through safeText's default bound and visible-text
+// rule (section-record pausedReason); gate the confirmed trimmed value on the
+// same bound so oversized and invisible-only pastes fail visibly instead of at
+// persistence, where one such field rejects the whole autosave draft.
 
 interface PauseReasonDialogProps {
   readonly open: boolean;
@@ -45,6 +50,9 @@ function PauseReasonDialogContent({
 
   const trimmed = reason.trim();
   const isTooLong = trimmed.length > SAFE_TEXT_MAX_LENGTH;
+  // Blank still means "not entered yet"; non-blank invisible-only text keeps the
+  // typed value for correction, as the item editor does. The server rejects it.
+  const isInvisibleOnly = trimmed.length > 0 && !hasVisibleText(trimmed);
 
   return (
     <DocumentBodyPortal>
@@ -55,9 +63,13 @@ function PauseReasonDialogContent({
         ariaLabelledBy="pause-reason-title"
       >
         <PauseReasonPreview preview={preview} />
-        <PauseReasonField reason={reason} onReasonChange={setReason} />
+        <PauseReasonField
+          reason={reason}
+          onReasonChange={setReason}
+          error={isInvisibleOnly ? INVISIBLE_TEXT_MESSAGE : undefined}
+        />
         <PauseReasonActions
-          canConfirm={trimmed.length > 0 && !isTooLong}
+          canConfirm={trimmed.length > 0 && !isTooLong && !isInvisibleOnly}
           onCancel={onCancel}
           onConfirm={() => onConfirm(trimmed)}
         />
@@ -89,9 +101,11 @@ function PauseReasonPreview({ preview }: { readonly preview: string }) {
 function PauseReasonField({
   reason,
   onReasonChange,
+  error,
 }: {
   readonly reason: string;
   readonly onReasonChange: (next: string) => void;
+  readonly error?: string | undefined;
 }) {
   return (
     <div className="mt-4">
@@ -101,6 +115,7 @@ function PauseReasonField({
         required
         value={reason}
         onChange={onReasonChange}
+        error={error}
         placeholder="Why is this paused? (e.g. waiting on a dependency)"
         minHeightPx={64}
         characterLimit={SAFE_TEXT_MAX_LENGTH}
