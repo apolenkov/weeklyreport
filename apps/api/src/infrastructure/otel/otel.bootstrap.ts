@@ -3,8 +3,7 @@
 
 import { format } from "node:url";
 
-import { propagation } from "@opentelemetry/api";
-import { logs } from "@opentelemetry/api-logs";
+import { logs, propagation } from "@opentelemetry/api";
 import {
   CompositePropagator,
   W3CTraceContextPropagator,
@@ -22,7 +21,7 @@ import { NodeSDK } from "@opentelemetry/sdk-node";
 import {
   ParentBasedSampler,
   TraceIdRatioBasedSampler,
-} from "@opentelemetry/sdk-trace-base";
+} from "@opentelemetry/sdk-trace";
 import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,

@@ -8,19 +8,19 @@ import { createRequire } from "node:module";
 
 import {
   context,
+  logs,
   metrics,
   propagation,
   SpanKind,
   SpanStatusCode,
   trace,
 } from "@opentelemetry/api";
-import { logs } from "@opentelemetry/api-logs";
 import { ExpressInstrumentation } from "@opentelemetry/instrumentation-express";
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import type {
   InMemorySpanExporter,
   ReadableSpan,
-} from "@opentelemetry/sdk-trace-base";
+} from "@opentelemetry/sdk-trace";
 import { PrismaInstrumentation } from "@prisma/instrumentation";
 import {
   afterAll,
@@ -41,8 +41,7 @@ const { exporters } = vi.hoisted(() => ({
 
 // Replace only the collector boundary; bootstrap, SDK and HTTP patches are real.
 vi.mock("@opentelemetry/exporter-trace-otlp-http", async () => {
-  const { InMemorySpanExporter } =
-    await import("@opentelemetry/sdk-trace-base");
+  const { InMemorySpanExporter } = await import("@opentelemetry/sdk-trace");
   return {
     OTLPTraceExporter: class extends InMemorySpanExporter {
       constructor() {

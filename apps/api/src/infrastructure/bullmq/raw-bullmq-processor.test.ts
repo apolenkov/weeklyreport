@@ -6,7 +6,7 @@ import { NodeSDK } from "@opentelemetry/sdk-node";
 import {
   InMemorySpanExporter,
   SimpleSpanProcessor,
-} from "@opentelemetry/sdk-trace-base";
+} from "@opentelemetry/sdk-trace";
 import * as Sentry from "@sentry/nestjs";
 import type { Job, Processor } from "bullmq";
 import type { ClsService } from "nestjs-cls";
@@ -92,7 +92,7 @@ const otelSdk = new NodeSDK({
   instrumentations: [],
   logRecordProcessors: [],
   metricReaders: [],
-  spanProcessors: [new SimpleSpanProcessor(exporter)],
+  spanProcessors: [new SimpleSpanProcessor({ exporter })],
   textMapPropagator: new W3CTraceContextPropagator(),
 });
 

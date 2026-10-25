@@ -3,10 +3,10 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { propagation, SpanStatusCode, trace } from "@opentelemetry/api";
 import { W3CTraceContextPropagator } from "@opentelemetry/core";
 import {
-  BasicTracerProvider,
   InMemorySpanExporter,
   SimpleSpanProcessor,
-} from "@opentelemetry/sdk-trace-base";
+  TracerProvider,
+} from "@opentelemetry/sdk-trace";
 import {
   afterAll,
   beforeAll,
@@ -33,8 +33,8 @@ const ENQUEUE_TRACEPARENT = `00-${ENQUEUE_TRACE_ID}-b7ad6b7169203331-01`;
 beforeAll(() => {
   propagation.setGlobalPropagator(new W3CTraceContextPropagator());
   trace.setGlobalTracerProvider(
-    new BasicTracerProvider({
-      spanProcessors: [new SimpleSpanProcessor(exporter)],
+    new TracerProvider({
+      spanProcessors: [new SimpleSpanProcessor({ exporter })],
     }),
   );
 });
