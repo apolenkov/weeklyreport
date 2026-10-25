@@ -8,6 +8,10 @@ export function createSentryPrivacyOptions() {
   return {
     // Bugsink accepts errors only; transaction mode keeps its discard hook active.
     traceLifecycle: "static" as const,
+    // Only runs under the static lifecycle above. The SDK marks it deprecated
+    // (removed in v12; migration tracked in TASK-536), so it lives here once
+    // for every runtime instead of at four typed init call sites.
+    beforeSendTransaction: () => null,
     dataCollection: {
       userInfo: false,
       cookies: false,

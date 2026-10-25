@@ -23,8 +23,6 @@ Sentry.init({
   // Same-origin api paths the browser calls (Next rewrites them to the api).
   // Only these carry the propagation header — keeps it off cross-origin URLs.
   tracePropagationTargets: [/^\/(?:trpc|auth|api)(?:\/|$)/],
-  // Bugsink stores errors only — drop browser transactions before they send.
-  beforeSendTransaction: () => null,
 });
 
 // App Router navigation instrumentation.

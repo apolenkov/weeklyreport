@@ -49,12 +49,7 @@
       "matchCurrentVersion": "<2"
     },
     {
-      "description": "TASK-513 G1: typescript-eslint 8.72.0 widens @typescript-eslint/no-deprecated to deprecated option/property reads and fails 6 real sites in unchanged web sources (Sentry beforeSendTransaction in apps/web/instrumentation-client.ts; react-query isInitialLoading in reports page.test.tsx and test-utils/query-state.ts). 8.71.2 is green on the identical tree (A/B 2026-10-25, logs in ~/work/handoffs/wr-513/g1/). Retain 8.71.2 until those three sites migrate off the deprecated APIs.",
-      "matchPackageNames": ["typescript-eslint"],
-      "allowedVersions": "8.71.2"
-    },
-    {
-      "description": "TASK-513 G1: retained typescript-eslint 8.71.2 peers typescript >=4.8.4 <6.1.0; hold the TypeScript 7 line (<7) until a compatible typescript-eslint widens that peer range. The workspace pin resolves through the @typescript/typescript6 alias (6.0.2).",
+      "description": "TASK-513/703: typescript-eslint 8.72.0 (latest, pin lifted) peers typescript >=4.8.4 <6.1.0, so hold the TypeScript 7 line (<7) until a typescript-eslint release widens that peer range. The workspace pin resolves through the @typescript/typescript6 alias (6.0.2), which only publishes 6.x, so today the rule is insurance against changing the alias.",
       "matchPackageNames": ["typescript", "@typescript/typescript6"],
       "allowedVersions": "<7"
     },

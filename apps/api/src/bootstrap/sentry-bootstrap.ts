@@ -25,7 +25,6 @@ export function initializeSentry(): void {
     enableOpenTelemetrySetup: false,
     environment: nodeEnv.data,
     beforeSend: stampActiveTrace,
-    beforeSendTransaction: () => null,
   });
 }
 
