@@ -113,4 +113,56 @@ describe("PeriodsArchiveSection loading semantics", () => {
       expect(document.querySelector('[aria-busy="true"]')).toBeNull();
     },
   );
+
+  it("shows the next-page banner only when the next page fetch failed", () => {
+    render(
+      <PeriodsArchiveSection
+        expanded={true}
+        onToggle={() => undefined}
+        isLoading={false}
+        isError={true}
+        rows={[row]}
+        paging={{
+          hasLoadedRows: true,
+          hasNextPage: true,
+          isFetchingNextPage: false,
+          isFetchNextPageError: true,
+          onLoadMore: () => undefined,
+        }}
+        {...rowActions}
+      />,
+    );
+
+    expect(
+      screen.getByText("Failed to load more archived periods."),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps a loaded archive quiet when a background refetch fails", () => {
+    render(
+      <PeriodsArchiveSection
+        expanded={true}
+        onToggle={() => undefined}
+        isLoading={false}
+        isError={true}
+        rows={[row]}
+        paging={{
+          hasLoadedRows: true,
+          hasNextPage: false,
+          isFetchingNextPage: false,
+          isFetchNextPageError: false,
+          onLoadMore: () => undefined,
+        }}
+        {...rowActions}
+      />,
+    );
+
+    expect(
+      screen.queryByText("Failed to load more archived periods."),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("Archive could not be loaded."),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId(`periods-archive-row-${row.id}`)).toBeVisible();
+  });
 });

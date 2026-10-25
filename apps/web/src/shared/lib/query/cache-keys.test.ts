@@ -102,6 +102,9 @@ describe("cache-keys helpers with the real tRPC proxy", () => {
       ...(["active", "archive"] as const).map((bucket) =>
         trpc.admin.listPeriodsByState.queryKey({ bucket }),
       ),
+      // The Periods tab reads the archive through useInfiniteQuery, so the real
+      // infinite key must be invalidated too, not only its plain query key.
+      trpc.admin.listPeriodsByState.infiniteQueryKey({ bucket: "archive" }),
       trpc.admin.snapshot.queryKey(),
       trpc.admin.pendingReopenCount.queryKey(),
       trpc.admin.listReopenRequests.infiniteQueryKey({ status: "pending" }),

@@ -12,5 +12,11 @@ Backlog: TASK-503.31. Report: `task-503/wave7/011-503.31/REPORT.md`.
       "Load more".
 - [x] 5. Fix C0455: procedure cursor schema, keyset query, service, procedure and
       archive section on `useInfiniteQuery`.
-- [ ] 6. DB-backed keyset integration test, browser check and six gates in a
-      fresh window; independent review.
+- [x] 6. Local gates on the delivery tree through `run-checks`:
+      `format:check`, `lint`, `typecheck`, `test`, `build`, `spec:check`
+      (`audit:dependencies` is a known repo-wide blocker, not this change).
+- [x] 7. Review follow-ups: `createCaller` input-validation tests for
+      `listPeriodsByState`, archive infinite-key invalidation, and the
+      next-page-error-only banner.
+- [ ] 8. Run the DB-backed keyset integration test and the browser check in a
+      fresh window.

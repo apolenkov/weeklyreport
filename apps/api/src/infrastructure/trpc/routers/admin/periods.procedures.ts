@@ -22,8 +22,13 @@ import {
 import { createReopenRequestsProcedures } from "./reopen-requests.procedures.js";
 
 const MAX_PERIOD_LIST_LIMIT = 200;
+// A keyset cursor names a real row. Accept a Date (superjson transport) or a
+// date string, but never let coercion turn null/invalid input into epoch (C0455).
 const periodListCursorSchema = z
-  .object({ periodStart: z.coerce.date(), id: z.uuid() })
+  .object({
+    periodStart: z.union([z.date(), z.string()]).pipe(z.coerce.date()),
+    id: z.uuid(),
+  })
   .readonly();
 
 export interface AdminPeriodsDeps {

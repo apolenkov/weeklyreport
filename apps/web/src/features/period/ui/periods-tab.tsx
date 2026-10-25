@@ -243,6 +243,7 @@ export function PeriodsTab() {
           hasLoadedRows: archiveQuery.data !== undefined,
           hasNextPage: archiveQuery.hasNextPage,
           isFetchingNextPage: archiveQuery.isFetchingNextPage,
+          isFetchNextPageError: archiveQuery.isFetchNextPageError,
           // Keeps a post-mutation refetch alive so stale first pages are not kept.
           onLoadMore: () => {
             void archiveQuery.fetchNextPage({ cancelRefetch: false });
