@@ -47,7 +47,8 @@ it("keeps polling after the GET request has finished while its response stays op
       signal: controller.signal,
     });
     state.published = true;
-    const reader = response.body?.getReader();
+    const reader: ReadableStreamDefaultReader<Uint8Array> | undefined =
+      response.body?.getReader();
     expect(reader).toBeDefined();
     const first = await reader?.read();
     const opened = new TextDecoder().decode(first?.value);
