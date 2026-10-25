@@ -18,6 +18,12 @@
       "labels": ["dependencies", "major"]
     },
     {
+      "description": "TASK-704: the stable and experimental OpenTelemetry trains must move together because sdk-node 0.300.0 hard-pins core/sdk-logs/resources/sdk-trace; one group (majors included) keeps a single core copy",
+      "matchPackageNames": ["@opentelemetry/**"],
+      "groupName": "OpenTelemetry",
+      "separateMajorMinor": false
+    },
+    {
       "description": "OpenSpec 1.14.1/1.14.3/1.15.0 promote >500-character requirements to WARNING: unchanged main strict spec:check fails (1.14.1 132/253 on 2026-10-13; 1.14.3 143/313 on 2026-10-18; 1.15.0 143/314 on 2026-10-25 -- 'Requirement text is very long (>500 characters)', now also reported in change deltas, same INFO->WARNING cause); retain 1.14.0 until the long requirements are split (TASK-513, wr-deploy dependency rehearsal)",
       "matchPackageNames": ["@fission-ai/openspec"],
       "allowedVersions": "1.14.0"
