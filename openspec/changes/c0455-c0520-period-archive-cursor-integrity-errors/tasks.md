@@ -12,9 +12,10 @@ Backlog: TASK-503.31. Report: `task-503/wave7/011-503.31/REPORT.md`.
       "Load more".
 - [x] 5. Fix C0455: procedure cursor schema, keyset query, service, procedure and
       archive section on `useInfiniteQuery`.
-- [x] 6. Local gates on the delivery tree through `run-checks`:
-      `format:check`, `lint`, `typecheck`, `test`, `build`, `spec:check`
-      (`audit:dependencies` is a known repo-wide blocker, not this change).
+- [x] 6. Full six gates on the delivery HEAD (`format:check`, `lint`,
+      `typecheck`, `test`, `build`, `spec:check`; `audit:dependencies` is a
+      known repo-wide blocker, not this change) and independent review
+      (two reviewer passes, both APPROVE WITH CHANGES; remarks closed).
 - [x] 7. Review follow-ups: `createCaller` input-validation tests for
       `listPeriodsByState`, archive infinite-key invalidation, and the
       next-page-error-only banner.

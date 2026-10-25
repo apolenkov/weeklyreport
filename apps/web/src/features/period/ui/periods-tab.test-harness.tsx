@@ -173,5 +173,7 @@ export function renderTab(args?: {
   }
 
   const result = render(<PeriodsTab />, { wrapper: Wrapper });
-  return { ...result, captured };
+  // qc + the mock proxy let a test wait for a specific query state before it
+  // asserts on the rendered surface (an error may not be painted yet).
+  return { ...result, captured, qc, trpc: proxy };
 }
