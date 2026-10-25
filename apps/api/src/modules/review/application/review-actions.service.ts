@@ -119,7 +119,19 @@ export class ReviewActionsService {
       input.reportId,
       input.groupId,
     );
-    return reviewAcknowledgementViewSchema.array().parse(acks);
+    const parsed = reviewAcknowledgementViewSchema.array().parse(acks);
+    // TASK-503.39 / C5117: Head/Admin keep the scoped named roster; every other
+    // admitted role reads only the caller's own receipt. The head/admin allowlist
+    // fails closed if the leadership chain ever admits another role.
+    if (session.role === "head" || session.role === "admin") return parsed;
+    return parsed
+      .filter((ack) => ack.userId === session.userId)
+      .map(({ userId, reportId, groupId, seenAt }) => ({
+        userId,
+        reportId,
+        groupId,
+        seenAt,
+      }));
   }
 
   async comment(
