@@ -22,7 +22,7 @@ None.
 
 ## Impact
 
-The owner is `packages/shared/src/schemas/primitives/report-primitives.schema.ts`. Its predicate also validates stage-name arrays. Consumers include report prose/outcomes, review comments, activity names/Jira accounts, search and assistant inputs. Read schemas using the same validators also reject newly covered invisible-only values. No dependency or storage migration is required.
+The owner is `packages/shared/src/schemas/primitives/report-primitives.schema.ts`. Its predicate also validates stage-name arrays. Consumers include report prose/outcomes, review comments, activity names/Jira accounts, search and assistant inputs. At delivery, read schemas sharing these validators also rejected the newly covered invisible-only values; `c108-stored-text-read-compat` later separated stored reads from author write rules, so the read models accept persisted text as stored and this rule applies to writes only. No dependency or storage migration is required.
 
 ## Non-goals
 
