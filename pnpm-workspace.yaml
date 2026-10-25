@@ -177,12 +177,6 @@ minimumReleaseAgeExclude:
 
 audit:
   ignore:
-    # Dev-tooling advisory with no patched release (braces<=3.0.3 via micromatch/fast-glob
-    # in stylelint, openspec and the Next ESLint plugin). Reachable only from
-    # repository-owned glob patterns in local/CI tooling, never from production
-    # dependencies. Remove when braces publishes a fix.
-    - GHSA-vfj7-8cjw-p6xm
-
     # Dev-tooling advisory with no reachable patch (GHSA-mrhx-c7xc-m3w5: zod <4.6.6
     # validates oversized constrained collections with unbounded memory).
     # agentation-mcp@1.3.2 (latest) pins zod ^3.25.76, so the bridge cannot move to
