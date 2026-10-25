@@ -194,6 +194,7 @@ export {
   MAX_WEEK_LABEL_LENGTH,
   myHistoryEntrySchema,
   normalizeEmail,
+  NULL_BYTES_MESSAGE,
   paginationInputSchema,
   PDF_EXPORT_QUEUE_NAME,
   pdfExportJobSchema,

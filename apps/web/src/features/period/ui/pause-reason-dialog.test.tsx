@@ -5,6 +5,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import {
   INVISIBLE_TEXT_MESSAGE,
+  NULL_BYTES_MESSAGE,
   SAFE_TEXT_MAX_LENGTH,
 } from "@weeklyreport/shared";
 import { useState } from "react";
@@ -64,6 +65,59 @@ describe("PauseReasonDialog", () => {
     expect(pause).toBeEnabled();
     fireEvent.click(pause);
     expect(onConfirm).toHaveBeenCalledWith("blocked upstream");
+  });
+
+  it("refuses a null byte before it can fail the whole autosave draft", () => {
+    const onConfirm = vi.fn();
+    render(
+      <PauseReasonDialog
+        open
+        preview="Implement CI pipeline"
+        onConfirm={onConfirm}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    const reason = screen.getByLabelText("Reason *");
+    const pause = screen.getByRole("button", { name: "Pause" });
+    // safeText rejects null bytes, and one such pause reason would fail the
+    // whole autosave draft, so the prompt refuses it before confirming.
+    fireEvent.change(reason, { target: { value: "blocked\u0000upstream" } });
+    expect(pause).toBeDisabled();
+    expect(screen.getByRole("alert")).toHaveTextContent(NULL_BYTES_MESSAGE);
+    expect(reason).toHaveValue("blocked\u0000upstream");
+  });
+
+  it("counts the length limit in code points like the server schema", () => {
+    const onConfirm = vi.fn();
+    render(
+      <PauseReasonDialog
+        open
+        preview="Implement CI pipeline"
+        onConfirm={onConfirm}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    const reason = screen.getByLabelText("Reason *");
+    const pause = screen.getByRole("button", { name: "Pause" });
+
+    // 500 non-BMP code points are 1000 UTF-16 units but exactly the server's
+    // safeText maximum, so the prompt must accept them.
+    fireEvent.change(reason, {
+      target: { value: "😀".repeat(SAFE_TEXT_MAX_LENGTH) },
+    });
+    expect(pause).toBeEnabled();
+
+    fireEvent.change(reason, {
+      target: { value: "😀".repeat(SAFE_TEXT_MAX_LENGTH + 1) },
+    });
+    expect(pause).toBeDisabled();
+    expect(
+      screen.getByText(
+        `Pause reason must be ${SAFE_TEXT_MAX_LENGTH} characters or fewer.`,
+      ),
+    ).toBeVisible();
   });
 
   it("confirms with the trimmed reason", async () => {

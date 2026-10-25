@@ -1,3 +1,8 @@
+import {
+  INVISIBLE_TEXT_MESSAGE,
+  NULL_BYTES_MESSAGE,
+  SAFE_TEXT_MAX_LENGTH,
+} from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -81,17 +86,54 @@ describe("item author resolution", () => {
   });
 });
 
-// The server refuses invisible-only text, so the editor refuses it before the
-// draft autosave instead of rewriting it.
-describe("item status text follows the server visible-text rule", () => {
-  it("requires a visible pause reason", () => {
+// The server's safeText refuses invisible-only text and null bytes, so the
+// editor refuses them before the draft autosave instead of rewriting the value.
+describe("item status text follows the server safeText rule", () => {
+  it("requires a non-blank pause reason", () => {
+    expect(
+      collectItemStatusErrors({
+        status: "paused",
+        trimmedNextStepText: "",
+        trimmedPausedReason: "",
+      }).pausedReason,
+    ).toBe("A reason is required to pause an item.");
+  });
+
+  it("rejects an invisible-only pause reason with the shared visible-content message", () => {
     expect(
       collectItemStatusErrors({
         status: "paused",
         trimmedNextStepText: "",
         trimmedPausedReason: "\u200B",
       }).pausedReason,
-    ).toBe("A reason is required to pause an item.");
+    ).toBe(INVISIBLE_TEXT_MESSAGE);
+  });
+
+  it("rejects a pause reason containing a null byte", () => {
+    expect(
+      collectItemStatusErrors({
+        status: "paused",
+        trimmedNextStepText: "",
+        trimmedPausedReason: "blocked\u0000upstream",
+      }).pausedReason,
+    ).toBe(NULL_BYTES_MESSAGE);
+  });
+
+  it("measures the pause reason in code points like the server schema", () => {
+    expect(
+      collectItemStatusErrors({
+        status: "paused",
+        trimmedNextStepText: "",
+        trimmedPausedReason: "😀".repeat(SAFE_TEXT_MAX_LENGTH),
+      }),
+    ).toEqual({});
+    expect(
+      collectItemStatusErrors({
+        status: "paused",
+        trimmedNextStepText: "",
+        trimmedPausedReason: "😀".repeat(SAFE_TEXT_MAX_LENGTH + 1),
+      }).pausedReason,
+    ).toBe(`Pause reason must be ${SAFE_TEXT_MAX_LENGTH} characters or fewer.`);
   });
 
   it("refuses an invisible-only next step instead of dropping it", () => {

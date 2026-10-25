@@ -8,6 +8,9 @@ export const hasVisibleText = (val: string) =>
 // Null bytes are PostgreSQL-incompatible.
 const noNullBytes = (val: string) => !val.includes("\u0000");
 
+/** Validation message shared with consumers that reject null bytes. */
+export const NULL_BYTES_MESSAGE = "Text must not contain null bytes";
+
 /** Maximum length for report prose validated by safeText defaults. */
 export const SAFE_TEXT_MAX_LENGTH = 500;
 
@@ -22,7 +25,7 @@ export const safeText = (
     .string()
     .min(opts.min ?? 1)
     .max(opts.max ?? SAFE_TEXT_MAX_LENGTH)
-    .refine(noNullBytes, { message: "Text must not contain null bytes" })
+    .refine(noNullBytes, { message: NULL_BYTES_MESSAGE })
     .refine(hasVisibleText, {
       message: INVISIBLE_TEXT_MESSAGE,
     });

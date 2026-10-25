@@ -5,6 +5,7 @@ import {
   safeText,
 } from "@weeklyreport/shared";
 
+import { getPauseReasonError } from "../../../shared/ui/forms/pause-reason-validation";
 import { deriveItemAlarmFromRisks } from "../model/alarms/item-alarm";
 import type { ParentActivityOption } from "../model/record-parent";
 import { canonicalStageNames } from "../model/stage-tags";
@@ -50,6 +51,10 @@ export function collectItemStatusErrors(args: {
   readonly trimmedNextStepText: string;
   readonly trimmedPausedReason: string;
 }): { nextStepText?: string; pausedReason?: string } {
+  const pausedReasonError =
+    args.status === "paused"
+      ? getPauseReasonError(args.trimmedPausedReason)
+      : undefined;
   return {
     ...(Array.from(args.trimmedNextStepText).length > SAFE_TEXT_MAX_LENGTH
       ? {
@@ -67,15 +72,9 @@ export function collectItemStatusErrors(args: {
             "A completed item cannot have a next step. Resume it or clear the plan.",
         }
       : {}),
-    ...(args.status === "paused" && !hasVisibleText(args.trimmedPausedReason)
-      ? { pausedReason: "A reason is required to pause an item." }
-      : {}),
-    ...(args.status === "paused" &&
-    Array.from(args.trimmedPausedReason).length > SAFE_TEXT_MAX_LENGTH
-      ? {
-          pausedReason: `Pause reason must be ${SAFE_TEXT_MAX_LENGTH} characters or fewer.`,
-        }
-      : {}),
+    // The server's safeText also refuses null bytes and oversized values; the
+    // same helper gates the pause prompt, so both surfaces agree.
+    ...(pausedReasonError ? { pausedReason: pausedReasonError } : {}),
   };
 }
 
