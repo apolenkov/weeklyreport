@@ -26,6 +26,14 @@ const BASE = {
   isStale: false,
 } as const;
 
+// TanStack Query v5 still types the deprecated `isInitialLoading` as a required
+// result field (always equal to `isLoading`). Building it here, as an untyped
+// object spread into the result, keeps the field the contract demands without
+// naming the deprecated key inside every typed result literal.
+export function legacyInitialLoading(isLoading: boolean) {
+  return { isInitialLoading: isLoading };
+}
+
 function resolveRefetch<TData, TError = Error>(
   input: QueryStateInput<TData, TError>,
 ): QueryObserverResult<TData, TError>["refetch"] {
@@ -48,7 +56,7 @@ export function makeQueryState<TData, TError = Error>(
   const isFetching = fetchStatus === "fetching";
   const isPending = status === "pending";
   const isLoading = isPending && isFetching;
-  const isInitialLoading = isLoading;
+  const legacyFlags = legacyInitialLoading(isLoading);
   const isPaused = fetchStatus === "paused";
   const isRefetching = isFetching && !isPending;
   const refetch = resolveRefetch(input);
@@ -62,7 +70,7 @@ export function makeQueryState<TData, TError = Error>(
       fetchStatus,
       isError: false,
       isFetching,
-      isInitialLoading,
+      ...legacyFlags,
       isLoading,
       isLoadingError: false,
       isPaused,
@@ -86,7 +94,7 @@ export function makeQueryState<TData, TError = Error>(
         fetchStatus,
         isError: true,
         isFetching,
-        isInitialLoading,
+        ...legacyFlags,
         isLoading: false,
         isLoadingError: true,
         isPaused,
@@ -106,7 +114,7 @@ export function makeQueryState<TData, TError = Error>(
       fetchStatus,
       isError: true,
       isFetching,
-      isInitialLoading,
+      ...legacyFlags,
       isLoading: false,
       isLoadingError: false,
       isPaused,
@@ -127,7 +135,7 @@ export function makeQueryState<TData, TError = Error>(
     fetchStatus,
     isError: false,
     isFetching,
-    isInitialLoading,
+    ...legacyFlags,
     isLoading: false,
     isLoadingError: false,
     isPaused,

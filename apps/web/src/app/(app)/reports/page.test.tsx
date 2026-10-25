@@ -11,6 +11,7 @@ import type {
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { SessionState } from "../../../shared/lib/auth/session-provider";
+import { legacyInitialLoading } from "../../../test-utils/query-state";
 import ReportsPage from "./page";
 
 const navigationMock = vi.hoisted(() => ({
@@ -190,7 +191,7 @@ function mockQueries() {
     isLoading: false,
     isPending: false,
     isLoadingError: false,
-    isInitialLoading: false,
+    ...legacyInitialLoading(false),
     isPaused: false,
     isPlaceholderData: false,
     isRefetchError: false,

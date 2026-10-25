@@ -23,6 +23,13 @@ describe("createSentryInitOptions", () => {
     );
   });
 
+  it("keeps the static lifecycle and drops every transaction", () => {
+    const options = createSentryInitOptions();
+
+    expect(options.traceLifecycle).toBe("static");
+    expect(options.beforeSendTransaction()).toBeNull();
+  });
+
   it.each([
     ["SENTRY_DSN", "SENTRY_DSN"],
     ["NEXT_PUBLIC_SENTRY_DSN", "NEXT_PUBLIC_SENTRY_DSN"],
