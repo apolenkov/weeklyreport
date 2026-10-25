@@ -11,7 +11,7 @@ Shared `safeText` fields and report stage-name fields MUST reject values compose
 
 #### Scenario: Stage-name arrays use the same visible-content boundary
 
-- **WHEN** a report write or current read model contains a stage name made only of the selected invisible characters and whitespace
+- **WHEN** a report write contains a stage name made only of the selected invisible characters and whitespace
 - **THEN** validation rejects the stage name
 - **AND** the existing stage-name array bounds and optional write-array policy remain unchanged
 

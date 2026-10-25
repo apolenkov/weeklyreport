@@ -28,7 +28,7 @@ Period lifecycle, canonical authorization chains, foreign keys and destructive g
 
 ## Risks / Trade-offs
 
-- Existing stored invisible-only values newly fail shared read validation → disclose the compatibility change; no cleanup or recovery runtime is included.
+- Existing stored invisible-only values would newly fail shared read validation → disclose the compatibility change; `c108-stored-text-read-compat` later separated stored reads from this write rule, so the current contract keeps the rejection on writes only. No cleanup or recovery runtime is included.
 - Overbroad Unicode rejection could damage multilingual text → test exact-byte preservation, combining marks, embedded formatting and emoji joiners.
 - Stage names share the predicate → exercise the existing read/write array exports, preserving optionality and bounds.
 
