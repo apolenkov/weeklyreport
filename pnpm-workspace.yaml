@@ -99,7 +99,6 @@ minimumReleaseAgeExclude:
   - "@next/swc-linux-x64-musl@16.4.0"
   - "@next/swc-win32-arm64-msvc@16.4.0"
   - "@next/swc-win32-x64-msvc@16.4.0"
-  - eslint-plugin-jsdoc@65.2.1 || 65.3.1 || 65.3.2 || 65.3.11
   - next@16.4.0
   - nodemailer@10.0.16
   - dotenv@18.0.6
@@ -186,20 +185,9 @@ minimumReleaseAgeExclude:
   - radix-ui@1.8.0 || 1.8.1
   - zod@4.6.6 || 4.6.7
   - "@testing-library/user-event@14.6.8"
-  - "@typescript-eslint/eslint-plugin@8.71.2"
-  - "@typescript-eslint/parser@8.71.2"
-  - "@typescript-eslint/project-service@8.71.2"
-  - "@typescript-eslint/scope-manager@8.71.2"
-  - "@typescript-eslint/tsconfig-utils@8.71.2"
-  - "@typescript-eslint/type-utils@8.71.2"
-  - "@typescript-eslint/types@8.71.2"
-  - "@typescript-eslint/typescript-estree@8.71.2"
-  - "@typescript-eslint/utils@8.71.2"
-  - "@typescript-eslint/visitor-keys@8.71.2"
   - eslint-plugin-unicorn@78.0.0
   - lefthook-android-arm64@2.2.2
   - postcss@8.5.30
-  - typescript-eslint@8.71.2
 
 audit:
   ignore:
