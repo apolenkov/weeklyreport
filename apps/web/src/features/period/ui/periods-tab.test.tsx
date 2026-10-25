@@ -166,7 +166,7 @@ describe("PeriodsTab", () => {
       }
       return { periods: [archivedRow], nextCursor: null };
     });
-    renderTab({ archivePages });
+    const { qc, trpc } = renderTab({ archivePages });
 
     await user.click(screen.getByTestId("periods-archive-toggle"));
     await screen.findByTestId(`periods-archive-row-${archivedRow.id}`);
@@ -175,8 +175,14 @@ describe("PeriodsTab", () => {
     // fails in the background, but it is not a failed next-page load.
     await user.click(screen.getByTestId(`action-archive-${publishedFresh.id}`));
     await waitFor(() => {
-      expect(archivePages.mock.calls.length).toBeGreaterThan(1);
+      expect(
+        qc.getQueryState(
+          trpc.admin.listPeriodsByState.infiniteQueryKey({ bucket: "archive" }),
+        )?.status,
+      ).toBe("error");
     });
+    // Let the error-driven rerender flush before asserting on the DOM.
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(
       screen.queryByText("Failed to load more archived periods."),

@@ -30,7 +30,7 @@ const VALID_CURSOR = {
 
 function buildCaller() {
   const listPeriodsByState = vi
-    .fn()
+    .fn<PeriodAdminService["listPeriodsByState"]>()
     .mockResolvedValue({ periods: [], nextCursor: null });
   const periodAdminService = {
     listPeriodsByState,
@@ -91,6 +91,25 @@ describe("admin.listPeriodsByState cursor contract (C0455)", () => {
         }),
       ).rejects.toMatchObject({ code: "BAD_REQUEST" });
       expect(listPeriodsByState).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ["an ISO timestamp", "2026-04-01T00:00:00.000Z"],
+    ["a date-only value", "2026-10-25"],
+  ])(
+    "normalizes %s cursor to a Date before the domain call",
+    async (_label, periodStart) => {
+      const { caller, listPeriodsByState } = buildCaller();
+
+      await caller.listPeriodsByState({
+        bucket: "archive",
+        cursor: { periodStart, id: CURSOR_ID },
+      });
+
+      const call = listPeriodsByState.mock.calls[0]?.[0];
+      expect(call?.cursor?.periodStart).toBeInstanceOf(Date);
+      expect(call?.cursor?.periodStart).toEqual(new Date(periodStart));
     },
   );
 
