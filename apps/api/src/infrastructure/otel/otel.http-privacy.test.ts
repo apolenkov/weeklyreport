@@ -17,6 +17,7 @@ import {
 } from "@opentelemetry/api";
 import { ExpressInstrumentation } from "@opentelemetry/instrumentation-express";
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
+import type { InMemoryLogRecordExporter } from "@opentelemetry/sdk-logs";
 import type {
   InMemorySpanExporter,
   ReadableSpan,
@@ -35,8 +36,11 @@ import {
 
 import { shutdownOtel, startOtel } from "./otel.bootstrap.js";
 
-const { exporters } = vi.hoisted(() => ({
+const { exporters, logExporters } = vi.hoisted(() => ({
   exporters: [] as InMemorySpanExporter[],
+  logExporters: [] as (InMemoryLogRecordExporter & {
+    url: string | undefined;
+  })[],
 }));
 
 // Replace only the collector boundary; bootstrap, SDK and HTTP patches are real.
@@ -52,6 +56,20 @@ vi.mock("@opentelemetry/exporter-trace-otlp-http", async () => {
   };
 });
 
+vi.mock("@opentelemetry/exporter-logs-otlp-http", async () => {
+  const { InMemoryLogRecordExporter } = await import("@opentelemetry/sdk-logs");
+  return {
+    OTLPLogExporter: class extends InMemoryLogRecordExporter {
+      readonly url: string | undefined;
+      constructor(options?: { url?: string }) {
+        super();
+        this.url = options?.url;
+        logExporters.push(this);
+      }
+    },
+  };
+});
+
 const require = createRequire(import.meta.url);
 const servers = new Set<Server>();
 const instrumentationCalls: unknown[][] = [];
@@ -60,8 +78,6 @@ const queryPath =
 
 beforeAll(() => {
   vi.stubEnv("OTEL_SDK_DISABLED", "false");
-  vi.stubEnv("OTEL_METRICS_EXPORTER", "none");
-  vi.stubEnv("OTEL_LOGS_EXPORTER", "none");
   vi.stubEnv("OTEL_BSP_SCHEDULE_DELAY", "1");
   for (const prototype of [
     HttpInstrumentation.prototype,
@@ -80,6 +96,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   exporters[0]?.reset();
+  for (const exporter of logExporters) exporter.reset();
 });
 
 afterEach(async () => {
@@ -103,6 +120,7 @@ afterAll(async () => {
   }
   instrumentationCalls.length = 0;
   exporters.length = 0;
+  logExporters.length = 0;
   context.disable();
   metrics.disable();
   propagation.disable();
@@ -337,5 +355,99 @@ describe("HTTP span query privacy through startOtel", () => {
       ],
     ).toBe(`http://[::1]:${port}/trpc/report%3Fquery`);
     expectPrivateQueryRemoved(spans);
+  });
+});
+
+interface PrismaEngineSpan {
+  readonly id: string;
+  readonly parentId: string | null;
+  readonly name: string;
+  readonly kind: "client" | "internal";
+  readonly startTime: [number, number];
+  readonly endTime: [number, number];
+  readonly attributes: Record<string, unknown>;
+}
+
+interface PrismaTracingHelper {
+  dispatchEngineSpans(
+    spans: PrismaEngineSpan[],
+    events: unknown[],
+    emitLogEvent: (event: unknown) => void,
+  ): void;
+}
+
+function prismaTracingHelper(): PrismaTracingHelper | undefined {
+  const globalWithPrisma = globalThis as unknown as Record<
+    string,
+    { helper?: PrismaTracingHelper } | undefined
+  >;
+  return globalWithPrisma.PRISMA_INSTRUMENTATION?.helper;
+}
+
+describe("third-party telemetry through the bootstrap SDK", () => {
+  it("exports log records only through the bootstrap-owned global logger provider", async () => {
+    const logExporter = logExporters.find(
+      (exporter) => exporter.url === "http://collector.invalid/v1/logs",
+    );
+    if (!logExporter) {
+      throw new Error("Expected the bootstrap OTLP log exporter");
+    }
+    logs.getLogger("otel-log-wiring").emit({
+      body: "bootstrap-log-exporter-marker",
+    });
+
+    // The SDK owns the global provider only when bootstrap passes the
+    // processors explicitly instead of registering a second provider.
+    await vi.waitFor(
+      () => {
+        expect(
+          logExporter.getFinishedLogRecords().map((record) => record.body),
+        ).toContain("bootstrap-log-exporter-marker");
+      },
+      { timeout: 5000 },
+    );
+  });
+
+  it("drops nested third-party span attributes before export", async () => {
+    const helper = prismaTracingHelper();
+    if (!helper) {
+      throw new Error(
+        "Expected the Prisma instrumentation helper registered by the started SDK",
+      );
+    }
+    const startSeconds = Math.floor(Date.now() / 1000);
+    helper.dispatchEngineSpans(
+      [
+        {
+          id: "third-party-span",
+          parentId: null,
+          name: "prisma:engine:query",
+          kind: "internal",
+          startTime: [startSeconds, 0],
+          endTime: [startSeconds, 1_000_000],
+          attributes: {
+            "db.system": "postgresql",
+            "db.query.batch": [1, 2],
+            "db.query.parameters": {
+              recipientEmail: "nested-private-marker",
+            },
+            "db.query.unset": null,
+          },
+        },
+      ],
+      [],
+      () => undefined,
+    );
+
+    const spans = await finishedSpans(1);
+    const span = spans[0];
+    expect(span?.name).toBe("prisma:engine:query");
+    expect(span?.attributes["db.system"]).toBe("postgresql");
+    expect(span?.attributes["db.query.batch"]).toEqual([1, 2]);
+    expect(span?.attributes["db.query.parameters"]).toBeUndefined();
+    expect(span?.attributes["db.query.unset"]).toBeUndefined();
+    expect(JSON.stringify(span?.attributes)).not.toContain(
+      "nested-private-marker",
+    );
   });
 });

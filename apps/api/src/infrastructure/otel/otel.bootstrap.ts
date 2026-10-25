@@ -3,9 +3,10 @@
 
 import { format } from "node:url";
 
-import { logs, propagation } from "@opentelemetry/api";
+import { propagation } from "@opentelemetry/api";
 import {
   CompositePropagator,
+  type ExportResult,
   W3CTraceContextPropagator,
 } from "@opentelemetry/core";
 import { OTLPLogExporter } from "@opentelemetry/exporter-logs-otlp-http";
@@ -13,13 +14,12 @@ import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { ExpressInstrumentation } from "@opentelemetry/instrumentation-express";
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
 import { resourceFromAttributes } from "@opentelemetry/resources";
-import {
-  BatchLogRecordProcessor,
-  LoggerProvider,
-} from "@opentelemetry/sdk-logs";
+import { BatchLogRecordProcessor } from "@opentelemetry/sdk-logs";
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import {
   ParentBasedSampler,
+  type ReadableSpan,
+  type SpanExporter,
   TraceIdRatioBasedSampler,
 } from "@opentelemetry/sdk-trace";
 import {
@@ -88,21 +88,61 @@ export function createTraceContextPropagator(): CompositePropagator {
   });
 }
 
-class OtelLifecycle {
-  private handles: {
-    readonly sdk: NodeSDK | null;
-    readonly loggerProvider: LoggerProvider | null;
-  } = { sdk: null, loggerProvider: null };
+// sdk-trace 3.x keeps any AnyValue on span attributes and the OTLP transformer
+// serializes nested objects as kvlistValue; pre-3.x runtimes dropped non-primitive
+// values. Third-party instrumentations can pass such payloads, so keep the
+// collector edge limited to primitive values and arrays of primitives.
+const isExportableAttributeValue = (value: unknown): boolean => {
+  if (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  ) {
+    return true;
+  }
+  if (!Array.isArray(value)) return false;
+  return value.every(
+    (entry) =>
+      typeof entry === "string" ||
+      typeof entry === "number" ||
+      typeof entry === "boolean",
+  );
+};
 
-  install(sdk: NodeSDK, loggerProvider: LoggerProvider): void {
-    this.handles = { sdk, loggerProvider };
+class SpanAttributePrivacyExporter implements SpanExporter {
+  constructor(private readonly exporter: SpanExporter) {}
+
+  export(
+    spans: ReadableSpan[],
+    resultCallback: (result: ExportResult) => void,
+  ): void {
+    // The batch processor has already ended and owns these spans; removing
+    // unsafe values here is the last point before serialization.
+    for (const span of spans) {
+      for (const key of Object.keys(span.attributes)) {
+        const value: unknown = span.attributes[key];
+        if (!isExportableAttributeValue(value)) {
+          delete span.attributes[key];
+        }
+      }
+    }
+    this.exporter.export(spans, resultCallback);
+  }
+
+  shutdown(): Promise<void> {
+    return this.exporter.shutdown();
+  }
+}
+
+class OtelLifecycle {
+  private sdk: NodeSDK | null = null;
+
+  install(sdk: NodeSDK): void {
+    this.sdk = sdk;
   }
 
   async shutdown(): Promise<void> {
-    await Promise.all([
-      this.handles.sdk?.shutdown(),
-      this.handles.loggerProvider?.shutdown(),
-    ]);
+    await this.sdk?.shutdown();
   }
 }
 
@@ -137,7 +177,19 @@ export function startOtel(
     sampler: new ParentBasedSampler({
       root: new TraceIdRatioBasedSampler(decision.samplingRatio),
     }),
-    traceExporter: new OTLPTraceExporter({ url: `${base}/v1/traces` }),
+    traceExporter: new SpanAttributePrivacyExporter(
+      new OTLPTraceExporter({ url: `${base}/v1/traces` }),
+    ),
+    // Explicit processors stop the SDK from building an env-driven OTLP log
+    // provider; the SDK registers this one as the single global logger provider.
+    logRecordProcessors: [
+      new BatchLogRecordProcessor({
+        exporter: new OTLPLogExporter({ url: `${base}/v1/logs` }),
+      }),
+    ],
+    // Metrics are application-owned (Prometheus scrape), so the SDK must not
+    // create an env-driven meter provider.
+    metricReaders: [],
     // Browser→api shared trace id; W3C-wins precedence in createTraceContextPropagator.
     textMapPropagator: createTraceContextPropagator(),
     instrumentations: [
@@ -168,22 +220,14 @@ export function startOtel(
   } catch (error) {
     // Non-fatal: api should still boot if the collector is unreachable. The
     // SDK failed to start, so the reported result must not claim "started",
-    // and no log provider / shutdown handler may be registered for it.
+    // and no shutdown handler may be registered for it.
     process.stderr.write(`[otel] start failed: ${errorMessage(error)}\n`);
     return { started: false, reason: "start-failed" };
   }
 
-  // Register global log provider so AppLogger can forward logs to Loki via OTLP.
-  const loggerProvider = new LoggerProvider({
-    resource,
-    processors: [
-      new BatchLogRecordProcessor({
-        exporter: new OTLPLogExporter({ url: `${base}/v1/logs` }),
-      }),
-    ],
-  });
-  logs.setGlobalLoggerProvider(loggerProvider);
-  otelLifecycle.install(sdk, loggerProvider);
+  // The SDK owns the global tracer, meter and logger providers now; shutdown
+  // drains every provider it created from the explicit configuration above.
+  otelLifecycle.install(sdk);
 
   return decision;
 }
