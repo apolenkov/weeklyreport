@@ -65,7 +65,12 @@ overrides:
   # line, cap below the next major. mysql2 is prisma's internal MySQL driver
   # and is never exercised by this PostgreSQL-only product.
   mysql2: ">=3.24.5 <4"
-  fast-uri: ">=4.2.2 <5"
+  fast-uri: ">=4.2.3 <5"
+  # @nestjs/platform-express 12.2.0 (the current release) pins multer 2.4.0
+  # exactly, which carries GHSA-q7qp-rjg7-q26m; the patched 2.5.0 belongs to the
+  # same major. Temporarily, until the platform adapter ships a fixed pin, floor
+  # at the patched release and cap below the next major.
+  multer: ">=2.5.0 <3"
   # Dev-only transitives (jsdom, agentation-mcp) with open advisories; stay in the same major.
   # Keep the jsdom transport reproducible; the complete Web suite verifies this exact release.
   undici: "8.11.2"

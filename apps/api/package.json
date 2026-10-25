@@ -54,7 +54,7 @@
     "jsonwebtoken": "^9.0.3",
     "luxon": "catalog:",
     "nestjs-cls": "^7.0.1",
-    "nodemailer": "^10.1.2",
+    "nodemailer": "^10.2.1",
     "passport": "^0.7.0",
     "pg": "^8.23.1",
     "rate-limit-redis": "^6.0.1",
