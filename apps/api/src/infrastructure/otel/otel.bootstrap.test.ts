@@ -1,17 +1,37 @@
+import { logs } from "@opentelemetry/api";
+import { BatchLogRecordProcessor } from "@opentelemetry/sdk-logs";
+import type { NodeSDKConfiguration } from "@opentelemetry/sdk-node";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { decideOtelBootstrap, startOtel } from "./otel.bootstrap.js";
+import {
+  decideOtelBootstrap,
+  shutdownOtel,
+  startOtel,
+} from "./otel.bootstrap.js";
 
-const { startSdk } = vi.hoisted(() => ({ startSdk: vi.fn() }));
+const { configurations, shutdownSdk, startSdk } = vi.hoisted(() => ({
+  configurations: [] as NodeSDKConfiguration[],
+  shutdownSdk: vi.fn(() => Promise.resolve()),
+  startSdk: vi.fn(),
+}));
 
 vi.mock("@opentelemetry/sdk-node", () => ({
   NodeSDK: class {
+    constructor(configuration: NodeSDKConfiguration) {
+      configurations.push(configuration);
+    }
     start = startSdk;
+    shutdown = shutdownSdk;
   },
 }));
 
-afterEach(() => {
+afterEach(async () => {
+  await shutdownOtel();
+  configurations.length = 0;
+  startSdk.mockReset();
+  shutdownSdk.mockClear();
   vi.restoreAllMocks();
+  logs.disable();
 });
 
 // Env-knob → decision only; avoids pulling a live collector into the unit suite.
@@ -115,6 +135,26 @@ describe("OTel bootstrap decision", () => {
 });
 
 describe("startOtel SDK start outcome", () => {
+  it("lets NodeSDK own the global logger provider and disables env metric readers", () => {
+    const setGlobalLoggerProvider = vi.spyOn(logs, "setGlobalLoggerProvider");
+
+    expect(
+      startOtel({ OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel:4318" }).started,
+    ).toBe(true);
+
+    const configuration = configurations.at(-1);
+    if (!configuration) throw new Error("Expected a NodeSDK configuration");
+    expect(configuration.metricReaders).toEqual([]);
+    expect(configuration.logRecordProcessors).toHaveLength(1);
+    expect(configuration.logRecordProcessors?.[0]).toBeInstanceOf(
+      BatchLogRecordProcessor,
+    );
+    // The SDK registers the provided processors as the single global logger
+    // provider; registering a second one here would return false and leave the
+    // Loki exporter dead.
+    expect(setGlobalLoggerProvider).not.toHaveBeenCalled();
+  });
+
   it("reports start-failed (not started) when the SDK start throws", () => {
     startSdk.mockImplementation(() => {
       throw new Error("instrumentation conflict");
