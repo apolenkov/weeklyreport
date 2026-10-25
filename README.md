@@ -77,7 +77,7 @@ weeklyreport
 
 ## Требования
 
-- Node.js **26.11.1 Current** (`>=26.0.0 <27.0.0`, версия `.nvmrc`)
+- Node.js **26.12.1 Current** (`>=26.0.0 <27.0.0`, версия `.nvmrc`)
 - pnpm — версия из поля `packageManager` в `package.json` (`npm install -g pnpm@<версия>`; Node 26 не поставляет Corepack)
 - OrbStack с включённым Kubernetes и `kubectl` (локальные Postgres, Redis, Mailpit и Gotenberg живут в namespace `wr-dev`)
 

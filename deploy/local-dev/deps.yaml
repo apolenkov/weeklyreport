@@ -146,7 +146,7 @@ spec:
     spec:
       containers:
         - name: mailpit
-          image: axllent/mailpit:v1.31.5@sha256:94f6b70c1436defae6799d9ac7ff0eeff9540465b842026d5cdb018f1c0234ea
+          image: axllent/mailpit:v1.32.0@sha256:0790692be935ea4420d085694f7985b1f692ca6a8771ab0e0bd8ba75ac180498
           env:
             - { name: MP_SMTP_AUTH_ALLOW_INSECURE, value: "true" }
             - { name: MP_MAX_MESSAGES, value: "5000" }
@@ -180,7 +180,7 @@ spec:
     spec:
       containers:
         - name: gotenberg
-          image: gotenberg/gotenberg:8.37.0-chromium@sha256:0d28ae9a96441588ef739623726bd500ad0720b77266c6f1351a13e333fbd61c
+          image: gotenberg/gotenberg:8.38.1-chromium@sha256:5da4ab7b8fe7326537369e17b661be765d9a2887f77722faacdbe6d55812fb96
           # Conversions are serialized and the clear-* flags keep the shared
           # browser stateless. The renderer must reach the host-run web on
           # the OrbStack host alias, so the allow-list is pinned to that alias
