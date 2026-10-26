@@ -48,13 +48,14 @@ function reviewErrorMessage(err: unknown, fallback: string): string {
 
 function commentValidationError(
   draft: string,
+  submittedText: string,
   validationSucceeded: boolean,
   validationAttempted: boolean,
 ): string | undefined {
   if (validationSucceeded || (draft.length === 0 && !validationAttempted)) {
     return undefined;
   }
-  return Array.from(draft).length > REVIEW_COMMENT_MAX_LENGTH
+  return Array.from(submittedText).length > REVIEW_COMMENT_MAX_LENGTH
     ? `Comment must be ${REVIEW_COMMENT_MAX_LENGTH} characters or fewer.`
     : "Comment must contain visible characters.";
 }
@@ -148,12 +149,17 @@ export function useRecordCommentState(
         toast.error(message);
       },
     });
+  // The composer validates the text it submits: surrounding whitespace is not
+  // part of the comment, so the counter and the schema bounds apply to the
+  // trimmed value instead of a payload that differs from the validated draft.
+  const submittedText = draft.trim();
   const validationResult = reviewCommentInputSchema.safeParse({
     ...anchor,
-    text: draft,
+    text: submittedText,
   });
   const validationError = commentValidationError(
     draft,
+    submittedText,
     validationResult.success,
     validationAttempted,
   );
@@ -163,10 +169,10 @@ export function useRecordCommentState(
     setValidationAttempted(true);
     const currentResult = reviewCommentInputSchema.safeParse({
       ...anchor,
-      text: draft,
+      text: draft.trim(),
     });
     if (!currentResult.success || isCommentPending) return;
-    submitComment(currentResult.data.text.trim());
+    submitComment(currentResult.data.text);
   };
 
   const changeDraft = (value: string) => {
@@ -177,6 +183,7 @@ export function useRecordCommentState(
 
   return {
     draft,
+    characterCount: Array.from(submittedText).length,
     changeDraft,
     submitDraft,
     submitDisabled,
