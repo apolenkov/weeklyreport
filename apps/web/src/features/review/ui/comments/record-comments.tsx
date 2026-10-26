@@ -156,6 +156,7 @@ export function RecordComments({
       {canCompose ? (
         <RecordCommentComposer
           draft={c.draft}
+          characterCount={c.characterCount}
           onDraftChange={c.changeDraft}
           onSubmit={c.submitDraft}
           submitDisabled={c.submitDisabled}

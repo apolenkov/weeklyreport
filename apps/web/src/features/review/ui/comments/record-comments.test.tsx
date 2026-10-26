@@ -218,7 +218,7 @@ describe("RecordComments — mutation success", () => {
 
   it.each([
     ["empty", "", 0],
-    ["ordinary whitespace", " ".repeat(3), 3],
+    ["ordinary whitespace", " ".repeat(3), 0],
     ["zero-width space", "\u200B", 1],
     ["zero-width non-joiner", "\u200C", 1],
     ["zero-width joiner", "\u200D", 1],
@@ -289,6 +289,45 @@ describe("RecordComments — mutation success", () => {
     );
     expect(screen.getByRole("button", { name: "Comment" })).toBeDisabled();
     expect(mutationCalls.comment).toHaveLength(0);
+  });
+
+  // TASK-503.38 / C5107: the composer must validate and count the text it
+  // actually submits; surrounding whitespace is not part of the comment.
+  it("validates and submits the trimmed draft value", async () => {
+    renderComments();
+    const draft = screen.getByRole("textbox", {
+      name: "Add a review comment",
+    });
+    const comment = "A".repeat(REVIEW_COMMENT_MAX_LENGTH);
+    fireEvent.change(draft, { target: { value: `  ${comment}  ` } });
+
+    expect(draft).toHaveAttribute("aria-invalid", "false");
+    expect(draft).toHaveAccessibleDescription(
+      `${REVIEW_COMMENT_MAX_LENGTH} / ${REVIEW_COMMENT_MAX_LENGTH}`,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Comment" }));
+
+    await waitFor(() => {
+      expect(mutationCalls.comment).toEqual([
+        {
+          itemId: "11111111-1111-4111-8111-111111111111",
+          text: comment,
+        },
+      ]);
+    });
+  });
+
+  it("counts the submitted characters without surrounding whitespace", () => {
+    renderComments();
+    const draft = screen.getByRole("textbox", {
+      name: "Add a review comment",
+    });
+    fireEvent.change(draft, { target: { value: "  Looks fine  " } });
+
+    expect(draft).toHaveValue("  Looks fine  ");
+    expect(draft).toHaveAccessibleDescription(
+      `10 / ${REVIEW_COMMENT_MAX_LENGTH}`,
+    );
   });
 
   it.each([
@@ -560,7 +599,7 @@ describe("RecordComments — mutation success", () => {
     const draft = screen.getByRole("textbox", { name: "Add a review comment" });
     fireEvent.change(draft, { target: { value: " ".repeat(3) } });
     expect(draft).toHaveAccessibleDescription(
-      `3 / ${REVIEW_COMMENT_MAX_LENGTH} Comment must contain visible characters.`,
+      `0 / ${REVIEW_COMMENT_MAX_LENGTH} Comment must contain visible characters.`,
     );
 
     await deleteOwnComment();

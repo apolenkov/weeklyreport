@@ -5,6 +5,8 @@ import { useId } from "react";
 
 interface RecordCommentComposerProps {
   readonly draft: string;
+  /** Submitted characters, excluding surrounding whitespace. */
+  readonly characterCount: number;
   readonly onDraftChange: (value: string) => void;
   readonly onSubmit: () => void;
   readonly submitDisabled: boolean;
@@ -19,6 +21,7 @@ interface RecordCommentComposerProps {
 
 export function RecordCommentComposer({
   draft,
+  characterCount,
   onDraftChange,
   onSubmit,
   submitDisabled,
@@ -31,7 +34,6 @@ export function RecordCommentComposer({
   const id = useId();
   const limitId = `${id}-review-comment-limit`;
   const validationErrorId = `${id}-review-comment-validation-error`;
-  const characterCount = Array.from(draft).length;
   return (
     <form
       className="flex flex-col gap-1.5"
