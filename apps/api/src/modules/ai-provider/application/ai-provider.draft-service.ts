@@ -48,15 +48,15 @@ export class AiProviderDraftService {
         traceId: randomUUID(),
         executionId: execution.id,
       });
+      this.dependencies.audit.record({
+        event: "ai_provider.test_queued",
+        actorId,
+        revisionId,
+        profile: toSharedProfile(revision.generationProfile),
+      });
     }
-    const queued = await requireRevision(this.dependencies, revisionId);
-    this.dependencies.audit.record({
-      event: "ai_provider.test_queued",
-      actorId,
-      revisionId,
-      profile: toSharedProfile(revision.generationProfile),
-    });
-    return safeRevision(queued, this.dependencies.codec);
+    const current = await requireRevision(this.dependencies, revisionId);
+    return safeRevision(current, this.dependencies.codec);
   }
 
   executeTest(

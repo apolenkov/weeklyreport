@@ -7,8 +7,8 @@
 
 ## 2. GREEN (after Root GO)
 
-- [ ] 2.1 Audit and enqueue only when `created || queued` (`ai-provider.draft-service.ts`)
-- [ ] 2.2 Select `testSuiteVersion` in the fallback and rethrow on mismatch (`ai-provider.repository.executions.ts`)
+- [x] 2.1 Audit and enqueue only when `created || queued` (`ai-provider.draft-service.ts`)
+- [x] 2.2 Select `testSuiteVersion` in the fallback and rethrow on mismatch (`ai-provider.repository.executions.ts`)
 
 ## 3. Native / DB evidence (separate windows, not claimed)
 
