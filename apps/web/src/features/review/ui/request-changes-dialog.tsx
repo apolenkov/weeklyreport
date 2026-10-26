@@ -101,7 +101,6 @@ function RequestChangesForm({
         name="request-changes-reason"
         autoComplete="off"
         rows={4}
-        maxLength={REVIEW_COMMENT_MAX_LENGTH}
         value={reason}
         onChange={(event) => onReasonChange(event.target.value)}
         aria-invalid={error ? "true" : "false"}
@@ -175,7 +174,14 @@ export function RequestChangesDialog({
       comment: reason.trim(),
     });
     if (!command.success) {
-      setError(EMPTY_REASON_ERROR);
+      const isOverLimit = command.error.issues.some(
+        (issue) => issue.path[0] === "comment" && issue.code === "too_big",
+      );
+      setError(
+        isOverLimit
+          ? `Shorten the reason to ${REVIEW_COMMENT_MAX_LENGTH} characters or fewer (excluding leading and trailing whitespace).`
+          : EMPTY_REASON_ERROR,
+      );
       return;
     }
     setError(null);

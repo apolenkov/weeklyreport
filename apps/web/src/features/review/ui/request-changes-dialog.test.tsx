@@ -4,7 +4,10 @@ import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { reviewVerdictInputSchema } from "@weeklyreport/shared";
+import {
+  REVIEW_COMMENT_MAX_LENGTH,
+  reviewVerdictInputSchema,
+} from "@weeklyreport/shared";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -133,7 +136,95 @@ describe("RequestChangesDialog", () => {
     );
   });
 
-  it("counts a schema-valid non-BMP reason below the unchanged native cap", async () => {
+  it.each([
+    ["ordinary boundary", "a".repeat(REVIEW_COMMENT_MAX_LENGTH)],
+    ["padded boundary", `  ${"a".repeat(REVIEW_COMMENT_MAX_LENGTH - 2)}  `],
+    ["non-BMP boundary", "😀".repeat(REVIEW_COMMENT_MAX_LENGTH)],
+  ])(
+    "accepts the canonical %s without a raw input cap",
+    async (_name, reason) => {
+      const user = userEvent.setup();
+      const { mutationFn, onClose } = setup();
+      const command = reviewVerdictInputSchema.parse({
+        reportSectionId: SECTION,
+        verdict: "changes_requested",
+        version: 3,
+        comment: reason,
+      });
+      mutationFn.mockResolvedValue({
+        verdict: "changes_requested",
+        judgedVersion: 3,
+        unsubmitted: true,
+      });
+      const field = screen.getByLabelText("Reason for the lead");
+      expect(field).not.toHaveAttribute("maxlength");
+      await user.click(field);
+      await user.paste(reason);
+      expect(field).toHaveValue(reason);
+      expect(field).toHaveAccessibleDescription(
+        `The lead sees this note on the returned section. ${Array.from(reason.trim()).length} / ${REVIEW_COMMENT_MAX_LENGTH}`,
+      );
+      await user.click(submitButton());
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledTimes(1);
+      });
+      expect(mutationFn).toHaveBeenCalledExactlyOnceWith(
+        command,
+        expect.anything(),
+      );
+    },
+  );
+
+  it.each(["a", "😀"])(
+    "retains over-limit %s input with an actionable error until correction",
+    async (character) => {
+      const user = userEvent.setup();
+      const { mutationFn, onClose } = setup();
+      const reason = `  ${character.repeat(REVIEW_COMMENT_MAX_LENGTH + 1)}  `;
+      const command = {
+        reportSectionId: SECTION,
+        verdict: "changes_requested",
+        version: 3,
+        comment: reason,
+      };
+      expect(reviewVerdictInputSchema.safeParse(command).success).toBe(false);
+      const field = screen.getByLabelText("Reason for the lead");
+      await user.click(field);
+      await user.paste(reason);
+      await user.click(submitButton());
+      const error = `Shorten the reason to ${REVIEW_COMMENT_MAX_LENGTH} characters or fewer (excluding leading and trailing whitespace).`;
+      expect(await screen.findByRole("alert")).toHaveTextContent(error);
+      expect(field).toHaveAccessibleDescription(
+        `${error} ${REVIEW_COMMENT_MAX_LENGTH + 1} / ${REVIEW_COMMENT_MAX_LENGTH}`,
+      );
+      expect(field).toBeInvalid();
+      expect(field).toHaveValue(reason);
+      expect(mutationFn).not.toHaveBeenCalled();
+      expect(onClose).not.toHaveBeenCalled();
+
+      const corrected = `  ${character.repeat(REVIEW_COMMENT_MAX_LENGTH)}  `;
+      await user.clear(field);
+      await user.paste(corrected);
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(field).toHaveAttribute("aria-invalid", "false");
+      expect(field).toHaveValue(corrected);
+      mutationFn.mockResolvedValue({
+        verdict: "changes_requested",
+        judgedVersion: 3,
+        unsubmitted: true,
+      });
+      await user.click(submitButton());
+      await waitFor(() => {
+        expect(onClose).toHaveBeenCalledTimes(1);
+      });
+      expect(mutationFn).toHaveBeenCalledExactlyOnceWith(
+        reviewVerdictInputSchema.parse({ ...command, comment: corrected }),
+        expect.anything(),
+      );
+    },
+  );
+
+  it("counts a schema-valid non-BMP reason", async () => {
     const user = userEvent.setup();
     const { mutationFn, onRequested } = setup();
     const reason = "😀".repeat(500);
@@ -150,7 +241,7 @@ describe("RequestChangesDialog", () => {
     };
     mutationFn.mockResolvedValue(result);
     const field = screen.getByLabelText("Reason for the lead");
-    expect(field).toHaveAttribute("maxlength", "2000");
+    expect(field).not.toHaveAttribute("maxlength");
     await user.click(field);
     await user.paste(reason);
     expect(field).toHaveValue(reason);

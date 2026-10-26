@@ -98,7 +98,7 @@ describe("Request changes rejection through the public tRPC client", () => {
   });
 
   it("preserves a meaningful domain conflict and the typed reason", async () => {
-    const reason = "Add a risk owner.";
+    const reason = "  Add a risk owner.  ";
     const message = "The section changed. Refresh and try again.";
     const { fetcher, onClose, parsed } = renderRejectedRequest(reason, message);
     expect(parsed.success).toBe(true);
