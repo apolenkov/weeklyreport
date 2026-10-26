@@ -23,7 +23,7 @@ export interface RiskSaveArgs {
     next: RiskEntry & { impact: string; mitigation: string },
   ) => void;
   readonly dialogSurfaceRef: RefObject<HTMLDivElement | null>;
-  // The product/parent id is dialog-scoped (C5135), so it is not literal.
+  // Field ids are dialog-scoped, so the picker id is derived, not literal.
   readonly idPrefix: string;
 }
 
@@ -45,7 +45,7 @@ function reportRiskErrors(args: RiskSaveArgs, errors: RiskFieldErrors): void {
   args.parentStage.setStageError(errors.stageNames);
   if (args.fields.focusFirstInvalid(errors)) return;
   if (errors.parent) {
-    // The picker id is dialog-scoped (C5135); ids stay unique document-wide.
+    // The picker id is dialog-scoped, so ids stay unique document-wide.
     document.getElementById(`${args.idPrefix}-risk-product`)?.focus();
     return;
   }

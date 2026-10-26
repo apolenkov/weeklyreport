@@ -290,8 +290,8 @@ describe("SectionVerdictControl — verdict buttons", () => {
     await user.click(requestChanges);
     const dialog = within(screen.getByRole("dialog"));
 
-    // TASK-503.40 / C5150: an independent dialog mutation must not leave a
-    // second verdict writer armed behind the modal.
+    // An independent dialog mutation must not leave a second verdict writer
+    // armed behind the modal.
     expect(approve).toHaveAttribute("aria-disabled", "true");
     expect(approve).toHaveTextContent("Approve");
     expect(requestChanges).toHaveAttribute("aria-disabled", "true");
