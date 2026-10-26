@@ -16,7 +16,74 @@ const autosave: AutosaveSnapshot = {
 };
 
 describe("LeadCompletionActions", () => {
-  it("keeps global completion actions limited to save and submit", async () => {
+  it.each(["idle", "pending", "saving", "saved"] as const)(
+    "does not render a Save control for %s autosave",
+    (state) => {
+      render(
+        <LeadCompletionActions
+          autosave={{ ...autosave, state }}
+          onSubmit={vi.fn()}
+          submitDisabled={false}
+          label="Completion"
+        />,
+      );
+      expect(screen.getAllByRole("button")).toHaveLength(1);
+    },
+  );
+
+  it("keeps the review jump usable when schema errors hide carried blockers", async () => {
+    render(
+      <>
+        <button data-overview-focus="confirm:current:carried">
+          Carried status
+        </button>
+        <LeadCompletionActions
+          autosave={autosave}
+          onSubmit={vi.fn()}
+          submitDisabled
+          pendingReviewCount={1}
+          label="Completion"
+        />
+      </>,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "1 to review" }));
+    expect(
+      screen.getByRole("button", { name: "Carried status" }),
+    ).toHaveFocus();
+  });
+
+  it("offers Retry only after a save error", async () => {
+    render(
+      <LeadCompletionActions
+        autosave={{ ...autosave, state: "error" }}
+        onSubmit={vi.fn()}
+        submitDisabled={false}
+        label="Completion"
+      />,
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "Retry saving draft" }),
+    );
+    expect(autosave.forceSave).toHaveBeenCalledOnce();
+  });
+
+  it("shows the disabled reason next to Submit without relying on hover", () => {
+    render(
+      <LeadCompletionActions
+        autosave={autosave}
+        onSubmit={vi.fn()}
+        submitDisabled
+        submitDisabledReason="Review the carried work."
+        label="Completion"
+      />,
+    );
+    const reason = screen.getByText("Review the carried work.");
+    expect(reason).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Submit" }),
+    ).toHaveAccessibleDescription("Review the carried work.");
+  });
+  it("keeps completion actions limited to Submit outside save failures", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();
     const props = {
@@ -35,11 +102,9 @@ describe("LeadCompletionActions", () => {
 
     expect(within(header).queryByRole("button", { name: "+ Add" })).toBeNull();
     await user.click(within(header).getByRole("button", { name: "Submit" }));
-    await user.click(
-      within(header).getByRole("button", { name: "Save draft now" }),
-    );
+    expect(within(header).queryByRole("button", { name: /sav/i })).toBeNull();
     expect(onSubmit).toHaveBeenCalledOnce();
-    expect(autosave.forceSave).toHaveBeenCalledOnce();
+    expect(autosave.forceSave).not.toHaveBeenCalled();
 
     rerender(
       <div dir="rtl">
@@ -74,6 +139,7 @@ describe("LeadCompletionActions", () => {
 
     const bar = screen.getByTestId("lead-sticky-completion-actions");
     expect(bar.className).toContain("safe-area-inset-bottom");
+    expect(bar.className).not.toContain("fixed");
     // The header badge is the single autosave live region.
     expect(screen.queryByRole("status")).toBeNull();
     expect(
@@ -104,8 +170,14 @@ describe("LeadCompletionActions", () => {
     );
     expect(group.className).toContain("[&_button]:min-h-10");
   });
-  it("shows the review counter beside Submit and hides it at zero", () => {
-    const props = { autosave, onSubmit: vi.fn(), submitDisabled: true };
+  it("shows an actionable review counter beside Submit and hides it at zero", async () => {
+    const onReviewPending = vi.fn();
+    const props = {
+      autosave,
+      onSubmit: vi.fn(),
+      submitDisabled: true,
+      onReviewPending,
+    };
     const { rerender } = render(
       <LeadStickyCompletionActions
         actions={{ ...props, pendingReviewCount: 2 }}
@@ -114,7 +186,9 @@ describe("LeadCompletionActions", () => {
     const sticky = screen.getByRole("group", {
       name: "Sticky completion actions",
     });
-    const counter = within(sticky).getByText("2 to review");
+    const counter = within(sticky).getByRole("button", { name: "2 to review" });
+    await userEvent.click(counter);
+    expect(onReviewPending).toHaveBeenCalledOnce();
     expect(counter.nextElementSibling).toBe(
       within(sticky).getByRole("button", { name: "Submit" }),
     );

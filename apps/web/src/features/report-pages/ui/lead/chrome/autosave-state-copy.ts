@@ -24,7 +24,7 @@ const AUTOSAVE_COPY: Record<AutosaveState, AutosaveCopy> = {
   saved: SAVED_COPY,
   error: {
     status: "Draft save failed",
-    readiness: "Draft save failed. Use Save to retry.",
+    readiness: "Draft save failed. Use Retry to save again.",
   },
 };
 

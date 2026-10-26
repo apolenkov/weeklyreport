@@ -2,8 +2,8 @@
 // over report content at either supported viewport. A probe that only counts
 // box rects lies here — content inside a closed <details> or clipped away by an
 // inner scroll container keeps a rect while painting nothing — so the probe
-// filters by paint state and clips against every ancestor. The zeroed-clearance
-// control proves the probe still reports an overlap when one exists.
+// filters by paint state and clips against every ancestor. The overlay control
+// proves the probe still reports an overlap when one exists.
 import assert from "node:assert/strict";
 import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
@@ -64,11 +64,20 @@ const PROBE = `(() => {
     const horizontal = Math.min(rect.right, railRect.right) - Math.max(rect.left, railRect.left);
     if (vertical > 1 && horizontal > 1) overlaps.push(text.slice(0, 60));
   }
-  const scrolling = document.scrollingElement;
+  const scrolling = document.querySelector('[data-testid="lead-completion-scrollport"]') ?? document.scrollingElement;
+  const hitSamples = [];
+  for (let x = Math.ceil(railRect.left + 16); x < railRect.right; x += 24) {
+    for (let y = Math.ceil(railRect.top + 2); y < railRect.bottom; y += 16) {
+      const hit = document.elementFromPoint(x, y);
+      if (!hit || !rail.contains(hit)) hitSamples.push(hit?.textContent?.trim().slice(0, 60) ?? 'No painted rail');
+    }
+  }
   return {
     railPresent: true,
     railTop: Math.round(railRect.top),
-    atBottomPx: Math.round(scrolling.scrollHeight - scrolling.scrollTop - window.innerHeight),
+    atBottomPx: Math.round(scrolling.scrollHeight - scrolling.scrollTop - scrolling.clientHeight),
+    hitSamples,
+    scrollportBottom: scrolling.getBoundingClientRect().bottom,
     overlaps: overlaps.length,
     samples: overlaps.slice(0, 5),
   };
@@ -80,6 +89,8 @@ interface Measured {
   readonly atBottomPx?: number;
   readonly overlaps?: number;
   readonly samples?: readonly string[];
+  readonly hitSamples?: readonly string[];
+  readonly scrollportBottom?: number;
 }
 
 const probe = async (): Promise<Measured> => {
@@ -87,13 +98,16 @@ const probe = async (): Promise<Measured> => {
   return data.result as Measured;
 };
 
-// Activating the rail adds its clearance to the document, so the page lands
-// short of the bottom again after the first scroll: settle by scrolling and
-// re-probing until the probe itself reports the anchored state.
+// The rail handoff changes the scrollport height. Re-probe until that intrinsic
+// row has settled and the final content is reachable above it.
 const settleAtBottom = async (): Promise<Measured> => {
   let measured = await probe();
   for (let attempt = 0; attempt < 12; attempt += 1) {
     if (measured.railPresent && measured.atBottomPx === 0) return measured;
+    await command([
+      "eval",
+      `(document.querySelector('[data-testid="lead-completion-scrollport"]') ?? document.scrollingElement).scrollTop = Number.MAX_SAFE_INTEGER`,
+    ]);
     await command([
       "eval",
       "document.scrollingElement.scrollTop = Number.MAX_SAFE_INTEGER",
@@ -128,16 +142,89 @@ for (const [width, height] of [
       `The completion rail paints over content at ${width}×${height}`,
     );
 
-    // Control: without the clearance the same probe must find painted overlap,
-    // otherwise a probe that never reports anything would pass this test.
+    assert.deepEqual(
+      measured.hitSamples,
+      [],
+      "Rail hit testing must stay inside the rail",
+    );
+    assert.ok(
+      (measured.scrollportBottom ?? Infinity) <= (measured.railTop ?? 0),
+      "The content scrollport must end above the rail",
+    );
+
+    for (const fraction of [0, 0.5, 1]) {
+      await command([
+        "eval",
+        `document.querySelector('[data-testid="lead-completion-scrollport"]').scrollTop = (document.querySelector('[data-testid="lead-completion-scrollport"]').scrollHeight - document.querySelector('[data-testid="lead-completion-scrollport"]').clientHeight) * ${fraction}`,
+      ]);
+      await delay(300);
+      const position = await probe();
+      if (fraction > 0) assert.equal(position.railPresent, true);
+      if (position.railPresent) {
+        assert.deepEqual(
+          position.samples,
+          [],
+          `Content overlap at scroll fraction ${fraction}`,
+        );
+        assert.deepEqual(
+          position.hitSamples,
+          [],
+          `Rail hit testing failed at scroll fraction ${fraction}`,
+        );
+      }
+    }
+
+    // Tab is the real browser focus-scrolling path, not programmatic geometry.
     await command([
       "eval",
-      "document.documentElement.style.setProperty('--lead-sticky-completion-clearance', '0rem')",
+      `document.querySelector('[data-testid="lead-completion-scrollport"]').scrollTop = 0; document.activeElement?.blur()`,
+    ]);
+    let contentVisits = 0;
+    let reachedRail = false;
+    for (let index = 0; index < 250; index += 1) {
+      await command(["press", "Tab"]);
+      const focus = (
+        await command([
+          "eval",
+          `(() => {
+        const active = document.activeElement;
+        const rail = document.querySelector(${JSON.stringify(RAIL)});
+        const scrollport = document.querySelector('[data-testid="lead-completion-scrollport"]');
+        return { inRail: !!rail?.contains(active), inContent: !!scrollport?.contains(active), bottom: active?.getBoundingClientRect().bottom, railTop: rail?.getBoundingClientRect().top };
+      })()`,
+        ])
+      ).result as {
+        inRail: boolean;
+        inContent: boolean;
+        bottom: number;
+        railTop?: number;
+      };
+      if (focus.inRail) {
+        reachedRail = true;
+        break;
+      }
+      if (focus.inContent) contentVisits += 1;
+      if (focus.inContent && focus.railTop !== undefined)
+        assert.ok(
+          focus.bottom <= focus.railTop,
+          `Tab ${index}: focus is obscured`,
+        );
+    }
+
+    assert.ok(contentVisits > 0, "Tab must visit report content");
+    assert.equal(reachedRail, true, "Tab must reach the completion rail");
+
+    // Control: turn the reserved row back into the old overlay; the same probe
+    // must detect painted content underneath it, rather than always returning 0.
+    await settleAtBottom();
+    await command([
+      "eval",
+      `document.querySelector('[data-testid="lead-completion-layout"]').style.gridTemplateRows = 'minmax(0, 1fr) 0px'; document.querySelector(${JSON.stringify(RAIL)}).style.cssText = 'position:fixed;bottom:0;left:12px;right:12px;z-index:50'`,
     ]);
     const control = await settleAtBottom();
     await command([
       "eval",
-      "document.documentElement.style.removeProperty('--lead-sticky-completion-clearance')",
+      `document.querySelector('[data-testid="lead-completion-layout"]').style.removeProperty('grid-template-rows'); document.querySelector(${JSON.stringify(RAIL)}).removeAttribute('style')`,
     ]);
     assert.ok(
       (control.overlaps ?? 0) > 0,

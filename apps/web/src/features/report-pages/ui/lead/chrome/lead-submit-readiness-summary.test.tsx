@@ -21,6 +21,42 @@ const ready: LeadSubmitReadiness = {
 };
 
 describe("LeadSubmitReadinessSummary", () => {
+  it("visibly describes the disabled summary Submit beside the button", () => {
+    render(
+      <LeadSubmitReadinessSummary
+        readiness={{
+          ...ready,
+          canOpenConfirmation: false,
+          blockingIssues: [
+            {
+              id: "missing-draft",
+              label: "The report draft is not available.",
+            },
+          ],
+        }}
+        onSubmit={vi.fn()}
+        showSubmitAction
+      />,
+    );
+    const submit = screen.getByRole("button", { name: "Submit report" });
+    expect(submit).toHaveAccessibleDescription(
+      "The report draft is not available.",
+    );
+    expect(submit.parentElement).toHaveTextContent(
+      "The report draft is not available.",
+    );
+  });
+
+  it("suppresses redundant save copy when the page owns the save indicator", () => {
+    render(
+      <LeadSubmitReadinessSummary
+        readiness={ready}
+        onSubmit={vi.fn()}
+        showAutosaveStatus={false}
+      />,
+    );
+    expect(screen.queryByText("Draft is saved.")).toBeNull();
+  });
   it("announces ready state without duplicating the global submit action", () => {
     const onSubmit = vi.fn();
     render(

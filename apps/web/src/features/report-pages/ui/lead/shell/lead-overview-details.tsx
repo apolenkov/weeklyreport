@@ -39,7 +39,8 @@ export function LeadOverviewDetails({
         <LeadSubmitReadinessSummary
           readiness={view.submitReadiness}
           onSubmit={view.writeActions.handleSubmit}
-          showSubmitAction
+          showSubmitAction={false}
+          showAutosaveStatus={false}
         />
       ) : null}
     </div>

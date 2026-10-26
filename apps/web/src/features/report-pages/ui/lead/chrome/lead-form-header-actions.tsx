@@ -15,6 +15,7 @@ import { ReportBreadcrumb } from "../../../../../shared/ui/report-shell/report-b
 import { DocumentActionGroup } from "../../../../../shared/ui/report-shell/report-toolbar";
 import { FillFromButton } from "../../../../period";
 import type { LeadFormLoadedViewModel } from "../../../../report-sections";
+import { formatAutosaveLabel } from "./format-autosave-label";
 import {
   type LeadCompletionActionContract,
   LeadCompletionActions,
@@ -57,21 +58,6 @@ const AUTOSAVE_ICON: Partial<Record<HeaderAutosave["state"], LucideIcon>> = {
   error: TriangleAlert,
 };
 
-function formatAutosaveLabel(autosave: HeaderAutosave): string {
-  if (autosave.state === "saving") return "Saving…";
-  if (autosave.state === "pending") return "Pending…";
-  if (autosave.state === "error") return "Save failed";
-  if (autosave.state === "saved" && autosave.lastSavedAt) {
-    return `Saved ${autosave.lastSavedAt.toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    })}`;
-  }
-  return "Autosaved";
-}
-
-// The badge shares the green success treatment for every non-error state; an
-// error must not read as a success, so it takes a destructive variant.
 function AutosaveBadge({
   autosave,
   announce,
@@ -86,7 +72,6 @@ function AutosaveBadge({
 
   const Icon = AUTOSAVE_ICON[autosave.state];
 
-  // A stable role keeps error announcements from re-announcing on a role switch.
   return (
     <span
       role={announce ? "status" : undefined}
@@ -204,6 +189,7 @@ function HeaderStatusBadge({
   readonly isReadOnly: boolean;
   readonly autosave: HeaderAutosave;
 }) {
+  if (!announceAutosave && !isSubmitted && !isReadOnly) return null;
   if (pendingInput) {
     return (
       <span className="text-xs font-medium text-[var(--color-muted-foreground)]">
@@ -271,7 +257,12 @@ function HeaderActionToolbar({
           writeActions={writeActions}
         />
       )}
-      <div ref={completionSentinelRef} className="min-h-px min-w-px">
+      <div className="relative min-h-px min-w-px">
+        <div
+          ref={completionSentinelRef}
+          aria-hidden="true"
+          className="lead-completion-sentinel"
+        />
         {canEditDraft && showCompletionActions && (
           <LeadCompletionActions
             {...completionActions}
