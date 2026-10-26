@@ -1,5 +1,6 @@
+import { Logger } from "@nestjs/common";
 import type { AppSettings } from "@weeklyreport/shared";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createNullAuditLogger } from "../../../test-utils/audit-logger.js";
 import { AutoArchiverScheduler } from "./auto-archiver.scheduler.js";
@@ -48,6 +49,10 @@ function withReminderTransaction<
 }
 
 describe("AutoArchiverScheduler", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("skip-when-disabled: autoArchiveWeeksAfterPublish=0 → no DB scan, no audit", async () => {
     const prisma = withReminderTransaction({
       report: {
@@ -442,5 +447,64 @@ describe("AutoArchiverScheduler", () => {
       failures: [],
     });
     expect(audit.periodAutoArchive).toHaveBeenCalledTimes(1);
+  });
+
+  // TASK-503.52 / C1165. Reporting a committed archive is best-effort, so the
+  // guard must contain a throwing log sink itself: the fallback error line is
+  // guarded too, and the audit stays independent from the log. Without the
+  // nested catch the fallback logger.error escapes and aborts the tick.
+  it("keeps reporting the committed archive when the log sink throws", async () => {
+    const prisma = withReminderTransaction({
+      report: {
+        findMany: vi
+          .fn()
+          .mockResolvedValue([
+            { id: "rep-old-1", publishedAt: new Date("2026-05-01T00:00:00Z") },
+          ]),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+    });
+    const admin = {
+      getSettings: vi.fn().mockResolvedValue(makeSettings()),
+    };
+    const audit = {
+      ...createNullAuditLogger(),
+      periodAutoArchive: vi.fn(),
+    };
+    vi.spyOn(Logger.prototype, "log").mockImplementation(() => {
+      throw new Error("log sink unavailable");
+    });
+    const errorSpy = vi
+      .spyOn(Logger.prototype, "error")
+      .mockImplementation(() => {
+        throw new Error("log sink still unavailable");
+      });
+
+    const scheduler = new AutoArchiverScheduler(
+      asAny(prisma),
+      asAny(admin),
+      asAny(audit),
+    );
+
+    const result = await scheduler.runOnce(new Date("2026-06-15T00:15:00Z"));
+
+    // The tick reached its result instead of rejecting on the log failure, and
+    // the committed archive is still reported as archived.
+    expect(result).toEqual({
+      archived: true,
+      periodIds: ["rep-old-1"],
+      failures: [],
+    });
+    expect(errorSpy).toHaveBeenCalledWith(
+      "auto-archive log period=rep-old-1 report failed: log sink unavailable",
+    );
+    // The audit reports the committed outcome even though both log attempts
+    // threw: a broken log sink cannot swallow the compliance trail.
+    expect(audit.periodAutoArchive).toHaveBeenCalledTimes(1);
+    expect(audit.periodAutoArchive).toHaveBeenCalledWith({
+      periodId: "rep-old-1",
+      from: "published",
+      to: "archived",
+    });
   });
 });
