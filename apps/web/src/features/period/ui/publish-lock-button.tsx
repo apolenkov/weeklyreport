@@ -8,6 +8,13 @@ import { ConfirmDeleteDialog } from "../../../shared/ui/dialogs/confirm-delete-d
 export const PUBLISH_REQUIREMENT_HINT =
   "Publish requires at least one submitted section.";
 
+// A hand-off may only take focus the replaced control dropped. Focus the
+// reviewer moved while the status flip was pending stays where they put it.
+function focusWasDropped(): boolean {
+  const active = document.activeElement;
+  return active === null || active === document.body;
+}
+
 interface PublishLockButtonProps {
   readonly pendingCount: number;
   readonly totalLeads: number;
@@ -38,7 +45,7 @@ function ReopenPeriodControl({
 
   // The Publish button this replaces held focus; hand it to the successor once.
   useEffect(() => {
-    if (takeFocusRequest()) buttonRef.current?.focus();
+    if (takeFocusRequest() && focusWasDropped()) buttonRef.current?.focus();
   }, [takeFocusRequest]);
 
   function handleConfirmReopen() {
@@ -152,6 +159,7 @@ export function PublishLockButton({
   useEffect(() => {
     if (periodStatus === "published" || !focusPublishRef.current) return;
     focusPublishRef.current = false;
+    if (!focusWasDropped()) return;
     const button = publishButtonRef.current;
     if (button && !button.disabled) button.focus();
     else document.getElementById("main-content")?.focus();
