@@ -336,6 +336,36 @@ describe("PublishLockButton", () => {
       expect(elsewhere).toHaveFocus();
     });
 
+    // TASK-503.59 / C4678: declining to take moved focus must also retire the
+    // armed request, so a later foreign status cycle with focus on the page
+    // cannot spend it and pull focus to the successor control.
+    it("retires the armed hand-off so a later foreign transition leaves focus alone", async () => {
+      const { rerender } = render(
+        <>
+          {renderStatus("open")}
+          <button type="button">Elsewhere</button>
+        </>,
+      );
+      await confirmPublish();
+      screen.getByRole("button", { name: "Elsewhere" }).focus();
+
+      // The published flip keeps the moved focus and retires the request.
+      rerender(
+        <>
+          {renderStatus("published")}
+          <button type="button">Elsewhere</button>
+        </>,
+      );
+      expect(screen.getByRole("button", { name: "Elsewhere" })).toHaveFocus();
+
+      // A foreign reopen→publish cycle later unmounts the focused button, so
+      // focus sits on <body> when Reopen period mounts again.
+      rerender(renderStatus("open"));
+      expect(document.body).toHaveFocus();
+      rerender(renderStatus("published"));
+      expect(document.body).toHaveFocus();
+    });
+
     it("does not steal focus when a published period is simply displayed", () => {
       render(renderStatus("published"));
       expect(document.body).toHaveFocus();
