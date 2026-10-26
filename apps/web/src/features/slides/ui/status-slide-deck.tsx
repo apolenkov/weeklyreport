@@ -52,14 +52,18 @@ function isEditableTarget(target: EventTarget | null): boolean {
   );
 }
 
-// Arrow keys page the deck, except while a form control has focus. On an empty
-// deck navigation is a no-op: no index (including -1) is emitted.
+// Arrow keys page the deck, except while a form control has focus or a
+// modifier is held: Ctrl/Meta/Alt/Shift+Arrow belongs to the browser and AT
+// (Find, word/selection movement, reading commands), so the deck leaves the
+// event unprevented and emits no index for it (C5189). On an empty deck
+// navigation is a no-op: no index (including -1) is emitted.
 function makeArrowKeyHandler(
   selectedIndex: number,
   count: number,
   onSelect: (index: number) => void,
 ) {
   return (e: React.KeyboardEvent) => {
+    if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
     if (isEditableTarget(e.target)) return;
     if (count === 0) return;
     if (e.key === "ArrowRight") {

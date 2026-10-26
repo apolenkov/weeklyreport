@@ -95,6 +95,8 @@ function ProductStatusMark({
 }) {
   const presentation = SLIDE_PRODUCT_STATUS_PRESENTATION[status];
   const Icon = presentation.Icon;
+  // role="img" takes its name from aria-label only; a second hidden copy of
+  // the label is a mechanism some AT can read twice (C5176).
   return (
     <span
       role="img"
@@ -102,7 +104,6 @@ function ProductStatusMark({
       className="inline-flex h-4 w-4 shrink-0 items-center justify-center"
     >
       <Icon aria-hidden="true" className="h-3.5 w-3.5" />
-      <span className="sr-only">{presentation.label}</span>
     </span>
   );
 }

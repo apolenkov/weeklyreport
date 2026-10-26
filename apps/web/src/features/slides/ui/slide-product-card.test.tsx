@@ -113,6 +113,26 @@ describe("SlideProductCard status presentation", () => {
     },
   );
 
+  // C5176 (TASK-503.41): a role="img" mark with aria-label already owns the
+  // accessible name; a second hidden copy of the same label is a mechanism AT
+  // can read twice.
+  it.each(STATUS_CASES)(
+    "names the $label mark once, without a hidden duplicate",
+    ({ status, label }) => {
+      render(
+        <SlideProductCard
+          card={productCard(status, "Core Product")}
+          authorsById={authorsById}
+        />,
+      );
+
+      const mark = screen.getByRole("img", { name: label });
+      expect(mark).toHaveAttribute("aria-label", label);
+      expect(mark.textContent).toBe("");
+      expect(screen.queryByText(label)).toBeNull();
+    },
+  );
+
   it("collapses a product whose only activity has no status or records, and omits empty Shared", () => {
     const grid = buildSlideGridModel({
       section: makeReportSectionFixture({
@@ -204,7 +224,10 @@ describe("SlideProductCard status presentation", () => {
       />,
     );
 
-    expect(screen.getByText("On Track")).toHaveClass("sr-only");
+    // The status label is the mark's accessible name only: no visible status
+    // word sits beside the product name (C5176 removed the second copy).
+    expect(screen.getByRole("img", { name: "On Track" })).toBeInTheDocument();
+    expect(screen.queryByText("On Track")).toBeNull();
     const title = screen.getByTitle(name);
     expect(title).toHaveTextContent(name);
     expect(title).not.toHaveClass("truncate");
