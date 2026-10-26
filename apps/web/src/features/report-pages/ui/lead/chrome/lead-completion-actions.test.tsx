@@ -377,4 +377,79 @@ describe("LeadCompletionActions", () => {
     );
     expect(screen.queryByText(/to review/)).toBeNull();
   });
+
+  it("counts pending review in the header presentation and blocks Submit", async () => {
+    const onReviewPending = vi.fn();
+    // The header cluster renders the same contract without the rail wrapper;
+    // the counter and blocker must not depend on the rail presentation.
+    const props = {
+      autosave,
+      onSubmit: vi.fn(),
+      submitDisabled: true,
+      submitDisabledReason: "Review the carried work.",
+      onReviewPending,
+    };
+    const { rerender } = render(
+      <LeadCompletionActions
+        {...props}
+        pendingReviewCount={2}
+        label="Header completion actions"
+      />,
+    );
+    const header = screen.getByRole("group", {
+      name: "Header completion actions",
+    });
+    await userEvent.click(
+      within(header).getByRole("button", { name: "2 to review" }),
+    );
+    expect(onReviewPending).toHaveBeenCalledOnce();
+    expect(
+      within(header).getByRole("button", { name: "Submit" }),
+    ).toBeDisabled();
+    expect(
+      within(header).getByRole("button", { name: "Submit" }),
+    ).toHaveAccessibleDescription("Review the carried work.");
+
+    rerender(
+      <LeadCompletionActions
+        {...props}
+        pendingReviewCount={0}
+        label="Header completion actions"
+      />,
+    );
+    expect(screen.queryByText(/to review/)).toBeNull();
+  });
+
+  it("keeps Submit the resting forward primary while Retry is busy", () => {
+    const props = {
+      onSubmit: vi.fn(),
+      onReviewPending: vi.fn(),
+      submitDisabled: false,
+      label: "Completion",
+    };
+    const { rerender } = render(
+      <LeadCompletionActions
+        {...props}
+        autosave={{ ...autosave, state: "error" }}
+      />,
+    );
+    const submit = screen.getByRole("button", { name: "Submit" });
+    const retry = screen.getByRole("button", { name: "Retry saving draft" });
+    expect(submit.className).toContain("bg-[var(--color-starbucks-accent)]");
+    // The resting Retry is a neutral outline control, never a second primary.
+    expect(retry.className).not.toContain("bg-[var(--color-starbucks-accent)]");
+
+    rerender(
+      <LeadCompletionActions
+        {...props}
+        autosave={{ ...autosave, state: "saving", isInFlight: true }}
+      />,
+    );
+    const busy = screen.getByRole("button", { name: "Saving draft" });
+    expect(busy).toBe(retry);
+    // Accent while in flight is the one transient exemption; Submit keeps the
+    // single resting accent fill beside it.
+    expect(busy.className).toContain("bg-[var(--color-starbucks-accent)]");
+    expect(submit.className).toContain("bg-[var(--color-starbucks-accent)]");
+  });
 });

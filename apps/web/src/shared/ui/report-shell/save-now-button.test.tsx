@@ -332,6 +332,8 @@ describe("SaveNowButton", () => {
     expect(btn.getAttribute("aria-busy")).toBe("true");
     expect(btn.className).toContain("bg-[var(--color-starbucks-accent)]");
     expect(btn.className).toContain("text-[var(--color-primary-foreground)]");
+    // The busy accent is full opacity; the resting disabled fill is not.
+    expect(btn.className).toContain("disabled:opacity-100");
     expect(btn.disabled).toBe(true);
   });
 
