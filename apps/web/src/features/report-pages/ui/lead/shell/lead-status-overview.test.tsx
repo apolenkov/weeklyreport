@@ -2077,17 +2077,34 @@ describe("LeadForm Overview", () => {
 
     await user.click(screen.getByRole("button", { name: "Save update" }));
     await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
-    const moved = (
+    const saved = (
       saveDraft.mock.calls[0]?.[0] as {
         readonly items: ReportSectionReadModel["items"];
       }
-    ).items.find((item) => item.text === "Current work");
+    ).items;
+    const movedStableId = "a0000000-0000-4000-8000-000000000011";
+    const moved = saved.find((item) => item.text === "Current work");
     expect(moved).toMatchObject({
+      id: "a0000000-0000-4000-8000-000000000010",
+      stableId: movedStableId,
       type: "next",
       text: "Current work",
       workflowStatus: "in_progress",
       carriedOver: false,
+      nextStepText: null,
     });
+    // Placement changes, the occurrence does not: the same record is no longer
+    // Current and no second occurrence is synthesized for the lineage.
+    expect(
+      saved.filter((item) => item.stableId === movedStableId),
+    ).toHaveLength(1);
+    expect(
+      saved.filter(
+        (item) => item.type === "current" && item.stableId === movedStableId,
+      ),
+    ).toHaveLength(0);
+    // The action is named postponement; stored progress keeps its own meaning.
+    expect(moved?.workflowStatus).not.toBe("postponed");
   });
 
   it("returns focus to a visible same-item control after cancelling a Move", async () => {

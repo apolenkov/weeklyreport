@@ -204,6 +204,38 @@ describe("buildMoveItemPatch", () => {
       items: [source, duplicate],
     };
     expect(buildMoveItemPatch(conflicted, source.id ?? "", "next")).toBeNull();
+    // An explicit Next blocks the colliding move and stays the only target:
+    // the refused move touches neither occurrence.
+    expect(conflicted.items).toEqual([source, duplicate]);
+    expect(
+      conflicted.items.filter(
+        (item) => item.stableId === source.stableId && item.type === "next",
+      ),
+    ).toHaveLength(1);
+
+    // A published source is read-only: no patch and no mutation.
+    const published = section(source, "submitted");
+    expect(buildMoveItemPatch(published, source.id ?? "", "next")).toBeNull();
+    expect(published.items).toEqual([source]);
+    expect(published.status).toBe("submitted");
+  });
+
+  it("keeps at most one target occurrence when the same move is saved twice", () => {
+    const source = { ...carriedItem(), carriedOver: false };
+    const original = section(source);
+    const moved = applyDraftPatch(
+      original,
+      expectDefined(buildMoveItemPatch(original, source.id ?? "", "next")),
+    );
+
+    // A second attempt is a placement no-op, not another occurrence.
+    expect(buildMoveItemPatch(moved, source.id ?? "", "next")).toBeNull();
+    expect(moved.items).toHaveLength(1);
+    expect(
+      moved.items.filter(
+        (item) => item.stableId === source.stableId && item.type === "next",
+      ),
+    ).toHaveLength(1);
   });
 
   it("preserves postponed status when explicitly moving Next to Current", () => {
