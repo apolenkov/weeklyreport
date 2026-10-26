@@ -11,8 +11,9 @@ that need a database, Redis or load observation before any product change is jus
 ## What Changes
 
 - `AiProviderDraftService.test` records `ai_provider.test_queued` only when it actually
-  enqueued the execution; a request that finds the execution already running enqueues nothing,
-  records no queued event and returns the current revision state.
+  enqueued the execution; a request that does not enqueue records no queued event and returns the
+  current revision state. Re-enqueueing an execution that is already running stays with the C0890
+  Root decision, so its current behaviour is not made a requirement here.
 - The retry-identity unique-collision fallback never attaches a caller to an existing
   execution of a different `testSuiteVersion`.
 - No change to recovery of a `running` execution whose job is gone, progress writes,

@@ -3,16 +3,16 @@
 ### Requirement: A provider test request audits an enqueue only when it enqueued
 
 `AiProviderDraftService.test` MUST record `ai_provider.test_queued` only for a request that
-enqueued the provider test execution (a created execution or a queued one). A request that finds the
-execution already `running` MUST NOT enqueue, MUST NOT record `ai_provider.test_queued` and
-MUST return the revision with its current execution state.
+enqueued the provider test execution (a created execution or a queued one). A request that does not
+enqueue MUST NOT record `ai_provider.test_queued` and MUST return the revision with its current
+execution state. Re-enqueueing an execution that is already `running`, and recovery of an execution
+whose job is gone, remain open for the C0890 Root decision.
 
-#### Scenario: execution already running
+#### Scenario: already running execution
 
 - **WHEN** an administrator requests a provider test and the reusable execution is `running`
-- **THEN** nothing is enqueued
-- **AND** no `ai_provider.test_queued` event is recorded
-- **AND** the returned revision shows the current execution state
+- **THEN** the returned revision shows the current execution state
+- **AND** `ai_provider.test_queued` is recorded only if the request enqueued the execution
 
 ### Requirement: Retry identity collisions never cross suite versions
 
