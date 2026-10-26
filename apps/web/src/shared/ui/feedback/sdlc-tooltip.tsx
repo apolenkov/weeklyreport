@@ -17,6 +17,7 @@ import { useHydratedClient } from "../../hooks/browser/use-hydrated-client";
 import { DocumentBodyPortal } from "../dialogs/document-body-portal";
 
 interface TooltipState {
+  owner: symbol;
   content: string;
   anchorRect: DOMRect;
   top: number;
@@ -29,7 +30,12 @@ interface ContextValue {
   hide: () => void;
 }
 
-const SdlcTooltipContext = createContext<ContextValue | null>(null);
+interface ProviderContextValue {
+  show: (owner: symbol, rect: DOMRect, content: string) => void;
+  hide: (owner: symbol) => void;
+}
+
+const SdlcTooltipContext = createContext<ProviderContextValue | null>(null);
 
 const TOOLTIP_VERTICAL_GAP_PX = 8;
 const TOOLTIP_VIEWPORT_GAP_PX = 8;
@@ -112,19 +118,17 @@ function positionTooltip(rect: DOMRect, size: TooltipSize) {
 
 export function useSdlcTooltip(): ContextValue {
   const ctx = useContext(SdlcTooltipContext);
-  if (!ctx) {
-    // Graceful no-op when provider is absent (e.g. Storybook, unit tests
-    // rendering StageChip in isolation).
-    return {
-      show: () => {
-        /* intentionally empty: no-op when provider is absent (Storybook / unit tests) */
-      },
-      hide: () => {
-        /* intentionally empty: no-op when provider is absent (Storybook / unit tests) */
-      },
-    };
-  }
-  return ctx;
+  const [owner] = useState(() => Symbol("sdlc-tooltip-owner"));
+  const show = useCallback(
+    (rect: DOMRect, content: string) => ctx?.show(owner, rect, content),
+    [ctx, owner],
+  );
+  const hide = useCallback(() => ctx?.hide(owner), [ctx, owner]);
+
+  // A previous anchor's cleanup must not dismiss a newer anchor's tooltip.
+  useEffect(() => hide, [hide]);
+
+  return useMemo(() => ({ show, hide }), [show, hide]);
 }
 
 export function SdlcTooltipProvider({
@@ -136,16 +140,19 @@ export function SdlcTooltipProvider({
   const mounted = useHydratedClient();
   const tooltipRef = useRef<HTMLDivElement | null>(null);
 
-  const show = useCallback((rect: DOMRect, content: string) => {
+  const show = useCallback((owner: symbol, rect: DOMRect, content: string) => {
     if (!content) return;
     setState({
+      owner,
       content,
       anchorRect: rect,
       ...positionTooltip(rect, { width: 0, height: 0 }),
     });
   }, []);
 
-  const hide = useCallback(() => setState(null), []);
+  const hide = useCallback((owner: symbol) => {
+    setState((current) => (current?.owner === owner ? null : current));
+  }, []);
 
   const visible = state !== null;
   useEffect(() => {
@@ -178,7 +185,10 @@ export function SdlcTooltipProvider({
     );
   }, [state]);
 
-  const value = useMemo<ContextValue>(() => ({ show, hide }), [show, hide]);
+  const value = useMemo<ProviderContextValue>(
+    () => ({ show, hide }),
+    [show, hide],
+  );
 
   return (
     <SdlcTooltipContext.Provider value={value}>

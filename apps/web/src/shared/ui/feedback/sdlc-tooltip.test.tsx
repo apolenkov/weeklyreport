@@ -2,8 +2,10 @@
 import "@testing-library/jest-dom/vitest";
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { StrictMode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import { LockBadge } from "../report-shell/lock-badge";
 import { SdlcTooltipProvider, useSdlcTooltip } from "./sdlc-tooltip";
 
 function rect({
@@ -114,5 +116,91 @@ describe("SdlcTooltipProvider positioning", () => {
     await waitFor(() =>
       expect(screen.queryByRole("tooltip")).not.toBeInTheDocument(),
     );
+  });
+});
+
+// TASK-503.79 / C5298: the provider keeps its state until hide/scroll/resize and
+// a removed anchor fires no mouseleave, so the tooltip must follow its owner.
+describe("SdlcTooltipProvider anchor lifetime", () => {
+  it("removes the lock badge tooltip when the hovered badge unmounts", async () => {
+    const { rerender } = render(
+      <SdlcTooltipProvider>
+        <LockBadge authorName="Alice" />
+      </SdlcTooltipProvider>,
+    );
+    fireEvent.mouseEnter(screen.getByRole("img"));
+    await screen.findByRole("tooltip");
+
+    rerender(<SdlcTooltipProvider>{null}</SdlcTooltipProvider>);
+
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+  });
+
+  it.each(["unmount", "mouseleave"])(
+    "keeps the new owner's tooltip after the previous owner's %s",
+    async (cleanup) => {
+      const tree = (withAlice: boolean) => (
+        <SdlcTooltipProvider>
+          {withAlice ? <LockBadge key="alice" authorName="Alice" /> : null}
+          <LockBadge key="bob" authorName="Bob" />
+        </SdlcTooltipProvider>
+      );
+      const { rerender } = render(tree(true));
+      const alice = screen.getByRole("img", { name: /authored by Alice/ });
+      fireEvent.mouseEnter(alice);
+      expect(await screen.findByRole("tooltip")).toHaveTextContent("Alice");
+      fireEvent.mouseEnter(
+        screen.getByRole("img", { name: /authored by Bob/ }),
+      );
+      expect(screen.getByRole("tooltip")).toHaveTextContent("Bob");
+
+      if (cleanup === "unmount") {
+        rerender(tree(false));
+      } else {
+        fireEvent.mouseLeave(alice);
+      }
+
+      expect(screen.getByRole("tooltip")).toHaveTextContent("Bob");
+      fireEvent.mouseLeave(
+        screen.getByRole("img", { name: /authored by Bob/ }),
+      );
+      expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+    },
+  );
+
+  it("keeps ownership through StrictMode rerenders and cleans up on removal", async () => {
+    const tree = (authorName: string | null) => (
+      <StrictMode>
+        <SdlcTooltipProvider>
+          {authorName ? <LockBadge authorName={authorName} /> : null}
+        </SdlcTooltipProvider>
+      </StrictMode>
+    );
+    const { rerender } = render(tree("Alice"));
+    fireEvent.mouseEnter(screen.getByRole("img"));
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("Alice");
+
+    rerender(tree("Alice Updated"));
+    expect(screen.getByRole("tooltip")).toHaveTextContent("Alice");
+    rerender(tree(null));
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+  });
+
+  it("keeps another anchor's tooltip when an unrelated lock badge unmounts", async () => {
+    const tree = (withBadge: boolean) => (
+      <SdlcTooltipProvider>
+        <TooltipProbe anchorRect={rect({ top: 100, left: 100 })} />
+        {withBadge ? <LockBadge authorName="Alice" /> : null}
+      </SdlcTooltipProvider>
+    );
+    const { rerender } = render(tree(true));
+    fireEvent.mouseEnter(screen.getByRole("button", { name: "Show tooltip" }));
+    await screen.findByRole("tooltip", { name: "probe tooltip" });
+
+    rerender(tree(false));
+
+    expect(
+      screen.getByRole("tooltip", { name: "probe tooltip" }),
+    ).toBeInTheDocument();
   });
 });
