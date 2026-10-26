@@ -1,10 +1,12 @@
 import type { SetStateAction } from "react";
 
+import type { DraftStageMemory } from "../model/draft-stage-memory";
 import type {
   ParentActivityOption,
   RecordParent,
 } from "../model/record-parent";
 import { resolveRecordParent } from "../model/record-parent";
+import { resolveInitialStageNames } from "../model/stage-ownership";
 import type { ItemStatus, KanbanItem, Product } from "../model/types";
 import { resolveInitialItem } from "./item-edit-dialog-helpers";
 
@@ -16,6 +18,10 @@ export interface ItemEditDraftSeed {
   readonly currentUserName?: string | undefined;
   readonly defaultProductId?: string | undefined;
   readonly defaultActivityId?: string | undefined;
+  // Open-draft stage memory and the product stage ownership it is scoped by.
+  readonly stageMemory?: DraftStageMemory | undefined;
+  readonly stagesForProduct?:
+    ((productId: string) => readonly string[]) | undefined;
 }
 
 interface ItemEditDraftFields {
@@ -40,23 +46,33 @@ export function createItemEditDraftStore(args: ItemEditDraftSeed) {
       : undefined,
     currentUserName: args.currentUserName,
   });
+  const parent = resolveRecordParent(
+    initial,
+    {
+      activityId: isCreate ? args.defaultActivityId : undefined,
+      productId: isCreate ? args.defaultProductId : undefined,
+    },
+    args.activities,
+    args.products,
+  );
+  const productId = parent.kind === "product" ? parent.id : undefined;
+  const stageNames = resolveInitialStageNames({
+    isCreate,
+    storedStageNames: args.item?.stageNames,
+    rememberedStageName:
+      productId === undefined ? undefined : args.stageMemory?.recall(productId),
+    availableStages:
+      productId === undefined ? [] : (args.stagesForProduct?.(productId) ?? []),
+  });
   const state: { snapshot: ItemEditDraftFields } = {
     snapshot: {
       text: initial.text,
       nextStepText: initial.nextStepText ?? "",
       status: initial.status,
       pausedReason: args.item?.pausedReason ?? "",
-      parent: resolveRecordParent(
-        initial,
-        {
-          activityId: isCreate ? args.defaultActivityId : undefined,
-          productId: isCreate ? args.defaultProductId : undefined,
-        },
-        args.activities,
-        args.products,
-      ),
+      parent,
       priorityRank: args.item?.priorityRank ?? null,
-      stageNames: [...(args.item?.stageNames ?? [])],
+      stageNames: [...stageNames],
     },
   };
   const baseline = state.snapshot;

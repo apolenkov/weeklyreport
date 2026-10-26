@@ -1,5 +1,6 @@
 import type { ParentActivityOption } from "../model/record-parent";
 import type { KanbanItem, Product, RiskEntry } from "../model/types";
+import { useDraftStageMemory } from "./draft-stage-memory-context";
 import { deriveItemEditFields } from "./item-edit-dialog-derive";
 import { collectItemStatusErrors } from "./item-edit-dialog-helpers";
 import type { ItemEditDraftStore } from "./item-edit-draft-store";
@@ -101,6 +102,9 @@ function buildItemEditHandle(
 }
 
 export function useItemEditDialog(args: UseItemEditDialogArgs) {
+  // A record dialog reads the open draft's stage memory; outside a lead-form
+  // draft there is none, so the selector keeps its empty/sole-stage defaults.
+  const stageMemory = useDraftStageMemory();
   const formState = useItemEditFormState({
     item: args.item,
     products: args.products,
@@ -113,6 +117,8 @@ export function useItemEditDialog(args: UseItemEditDialogArgs) {
     isPending: args.isPending,
     presentation: args.presentation,
     draftStore: args.draftStore,
+    stageMemory: stageMemory ?? undefined,
+    stagesForProduct: args.stagesForProduct,
   });
 
   const derived = deriveItemEditFields({
