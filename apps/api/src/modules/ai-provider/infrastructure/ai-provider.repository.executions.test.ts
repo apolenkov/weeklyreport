@@ -271,4 +271,53 @@ describe("provider test execution identity", () => {
       select: { id: true },
     });
   });
+
+  describe("unique-identity fallback (TASK-503.50 C0956)", () => {
+    const racing = (winner: { testSuiteVersion: string }) => {
+      const uniqueViolation = Object.assign(new Error("Unique constraint"), {
+        code: "P2002",
+      });
+      const findUnique = vi
+        .fn()
+        .mockResolvedValueOnce({ compositeTestIdentity: "composite" })
+        .mockResolvedValueOnce({
+          id: "winner-execution",
+          state: "queued",
+          ...winner,
+        });
+      const prisma = {
+        aiProviderConfiguration: { findUnique: findUnique },
+        aiProviderTestExecution: {
+          findMany: vi.fn().mockResolvedValue([]),
+          create: vi.fn().mockRejectedValue(uniqueViolation),
+          findUnique,
+        },
+      } as unknown as PrismaService;
+      return { prisma, uniqueViolation };
+    };
+
+    it("control: attaches the loser to the winner's row when the suite version matches", async () => {
+      const { prisma } = racing({ testSuiteVersion: "suite-x" });
+
+      await expect(
+        createOrReuseProviderExecution(prisma, "revision-1", {
+          testSuiteVersion: "suite-x",
+        }),
+      ).resolves.toEqual(
+        expect.objectContaining({ id: "winner-execution", created: false }),
+      );
+    });
+
+    it("never attaches the loser to a winner row of a different suite version", async () => {
+      const { prisma, uniqueViolation } = racing({
+        testSuiteVersion: "suite-y",
+      });
+
+      await expect(
+        createOrReuseProviderExecution(prisma, "revision-1", {
+          testSuiteVersion: "suite-x",
+        }),
+      ).rejects.toBe(uniqueViolation);
+    });
+  });
 });
