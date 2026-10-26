@@ -1,6 +1,9 @@
 "use client";
 
-import { DraftStageMemoryProvider } from "../../../../report-sections";
+import {
+  DraftStageMemoryProvider,
+  DraftStageMemoryScopeProvider,
+} from "../../../../report-sections";
 import { LeadFormEmptyState } from "./lead-form-empty-state";
 import { LeadFormLoadError } from "./lead-form-load-error";
 import { LeadFormLoaded } from "./lead-form-loaded";
@@ -70,7 +73,17 @@ function LeadFormEditor(
   );
 }
 
+// The stage-memory scope lives above the view switch: Overview and the editor
+// are different branches, but a view switch must not forget the open draft's
+// remembered stage. Keying on the report starts another report empty.
 export function LeadForm({ mode = "edit", ...props }: LeadFormProps) {
-  if (mode === "overview") return <LeadStatusOverview {...props} />;
-  return <LeadFormEditor {...props} mode={mode} />;
+  return (
+    <DraftStageMemoryScopeProvider key={props.reportId ?? "current-report"}>
+      {mode === "overview" ? (
+        <LeadStatusOverview {...props} />
+      ) : (
+        <LeadFormEditor {...props} mode={mode} />
+      )}
+    </DraftStageMemoryScopeProvider>
+  );
 }
