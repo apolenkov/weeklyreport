@@ -517,3 +517,56 @@ describe("useSlideInlineEditor — conflict path", () => {
     expect(screen.getByTestId("item-dialog")).toBeInTheDocument();
   });
 });
+
+// C5208 (TASK-503.75): scoped edit state is only gated by sectionId, never cleared when the section changes.
+describe("useSlideInlineEditor — section change", () => {
+  function renderSwitchable() {
+    const { proxy } = createMockTRPC([
+      { path: ["reports", "getActive"], query: { reportId: REPORT_ID } },
+      { path: ["leadForm", "byPeriod"], query: { section: makeSection() } },
+      { path: ["reports", "saveDraft"], mutation: true },
+    ]);
+    const queryClient = makeQueryClient();
+    const refetchSection = vi.fn().mockResolvedValue(undefined);
+    const ui = (section: ReportSectionReadModel) => (
+      <QueryClientProvider client={queryClient}>
+        <TRPCProxyContext.Provider value={proxy}>
+          <Harness
+            section={section}
+            formData={makeFormData()}
+            canInlineEdit
+            refetchSection={refetchSection}
+            activateRef={ITEM_REF}
+          />
+        </TRPCProxyContext.Provider>
+      </QueryClientProvider>
+    );
+    return { ui, ...render(ui(makeSection())) };
+  }
+
+  it("hides the dialog while another section is shown", () => {
+    const { rerender, ui } = renderSwitchable();
+    fireEvent.click(screen.getByTestId("activate"));
+    expect(screen.getByTestId("item-dialog")).toBeInTheDocument();
+    rerender(ui(makeSection({ reportSectionId: "sec-2" })));
+    expect(screen.queryByTestId("item-dialog")).not.toBeInTheDocument();
+  });
+
+  it("does not resurrect the old dialog when the user navigates back", () => {
+    const { rerender, ui } = renderSwitchable();
+    fireEvent.click(screen.getByTestId("activate"));
+    rerender(ui(makeSection({ reportSectionId: "sec-2" })));
+    rerender(ui(makeSection()));
+    expect(screen.queryByTestId("item-dialog")).not.toBeInTheDocument();
+  });
+
+  it("does not resurrect the old delete confirmation when the user navigates back", () => {
+    const { rerender, ui } = renderSwitchable();
+    fireEvent.click(screen.getByTestId("activate"));
+    fireEvent.click(screen.getByTestId("delete-item"));
+    expect(screen.getByTestId("confirm-delete")).toBeInTheDocument();
+    rerender(ui(makeSection({ reportSectionId: "sec-2" })));
+    rerender(ui(makeSection()));
+    expect(screen.queryByTestId("confirm-delete")).not.toBeInTheDocument();
+  });
+});
