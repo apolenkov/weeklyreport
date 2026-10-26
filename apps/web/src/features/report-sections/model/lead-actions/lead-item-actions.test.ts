@@ -203,10 +203,11 @@ describe("buildMoveItemPatch", () => {
       ...section(source),
       items: [source, duplicate],
     };
+    const conflictedBefore = structuredClone(conflicted);
     expect(buildMoveItemPatch(conflicted, source.id ?? "", "next")).toBeNull();
-    // An explicit Next blocks the colliding move and stays the only target:
-    // the refused move touches neither occurrence.
-    expect(conflicted.items).toEqual([source, duplicate]);
+    // An explicit Next blocks the colliding move: the refused move touches
+    // neither occurrence (a deep snapshot catches an in-place mutation).
+    expect(conflicted).toEqual(conflictedBefore);
     expect(
       conflicted.items.filter(
         (item) => item.stableId === source.stableId && item.type === "next",
@@ -215,8 +216,9 @@ describe("buildMoveItemPatch", () => {
 
     // A published source is read-only: no patch and no mutation.
     const published = section(source, "submitted");
+    const publishedBefore = structuredClone(published);
     expect(buildMoveItemPatch(published, source.id ?? "", "next")).toBeNull();
-    expect(published.items).toEqual([source]);
+    expect(published).toEqual(publishedBefore);
     expect(published.status).toBe("submitted");
   });
 
