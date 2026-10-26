@@ -5,7 +5,11 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../../test-utils/expect-defined.js";
-import type { Product } from "../../report-sections";
+import {
+  createDraftStageMemory,
+  DraftStageMemoryProvider,
+  type Product,
+} from "../../report-sections";
 import { RiskEditDialog } from "./risk-edit-dialog";
 
 const products: Product[] = [
@@ -23,6 +27,69 @@ const products: Product[] = [
     ],
   },
 ];
+
+const MULTI_STAGE_PRODUCT: Product = {
+  id: "p-multi-risk",
+  name: "Payments",
+  overallStatus: "on-track",
+  stages: [
+    {
+      stageName: "Development",
+      status: "on-track",
+      ownership: "mine",
+      assignee: "Test Lead",
+    },
+    {
+      stageName: "Testing",
+      status: "on-track",
+      ownership: "mine",
+      assignee: "Test Lead",
+    },
+  ],
+};
+
+function rememberedRiskStageMemory(stageName: string) {
+  const memory = createDraftStageMemory();
+  const recordId = "saved-risk";
+  memory.stageChangedSelections([
+    { recordId, productId: MULTI_STAGE_PRODUCT.id, stageNames: [stageName] },
+  ]);
+  memory.confirmPersisted({
+    items: [],
+    risks: [
+      {
+        id: recordId,
+        projectId: MULTI_STAGE_PRODUCT.id,
+        stageNames: [stageName],
+      },
+    ],
+    decisions: [],
+  });
+  return memory;
+}
+
+function riskDialog(stageMemory?: ReturnType<typeof createDraftStageMemory>) {
+  const dialog = (
+    <RiskEditDialog
+      open
+      risk={null}
+      products={[MULTI_STAGE_PRODUCT]}
+      defaultProductId={MULTI_STAGE_PRODUCT.id}
+      stagesForProduct={(id) =>
+        id === MULTI_STAGE_PRODUCT.id ? ["Development", "Testing"] : []
+      }
+      onSave={vi.fn()}
+      onCancel={vi.fn()}
+    />
+  );
+  return stageMemory === undefined ? (
+    dialog
+  ) : (
+    <DraftStageMemoryProvider memory={stageMemory}>
+      {dialog}
+    </DraftStageMemoryProvider>
+  );
+}
 
 describe("RiskEditDialog - SDLC stage selector", () => {
   it("clears only the old parent's stage error and validates the selected parent on save", () => {
@@ -88,6 +155,33 @@ describe("RiskEditDialog - SDLC stage selector", () => {
       productId: "p2",
       stageNames: ["Analysis"],
     });
+  });
+
+  it("applies the remembered stage without changing Impact, Mitigation or severity", () => {
+    const severityOf = () =>
+      ["At risk", "Blocked"].map((label) =>
+        screen
+          .getByRole("button", { name: label })
+          .getAttribute("aria-pressed"),
+      );
+
+    const baseline = render(riskDialog());
+    expect(screen.getByRole("checkbox", { name: "Testing" })).not.toBeChecked();
+    const severityBefore = severityOf();
+    expect(screen.getByLabelText(/^Impact \*/i)).toHaveValue("");
+    expect(screen.getByLabelText(/^Mitigation \*/i)).toHaveValue("");
+    baseline.unmount();
+
+    render(riskDialog(rememberedRiskStageMemory("Testing")));
+    expect(screen.getByRole("checkbox", { name: "Testing" })).toBeChecked();
+    expect(
+      screen.getByRole("checkbox", { name: "Development" }),
+    ).not.toBeChecked();
+    // The remembered stage is only a selector default: the derived severity and
+    // the required empty prose fields stay exactly as they were.
+    expect(severityOf()).toEqual(severityBefore);
+    expect(screen.getByLabelText(/^Impact \*/i)).toHaveValue("");
+    expect(screen.getByLabelText(/^Mitigation \*/i)).toHaveValue("");
   });
 
   it("starts with empty stage selection when no stages are flagged in create mode", () => {

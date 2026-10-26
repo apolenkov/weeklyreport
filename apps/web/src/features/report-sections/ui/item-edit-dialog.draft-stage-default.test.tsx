@@ -64,7 +64,7 @@ function renderCreate(
   memory: ReturnType<typeof createDraftStageMemory>,
   onSave = vi.fn(),
 ) {
-  render(
+  const view = render(
     <DraftStageMemoryProvider memory={memory}>
       <ItemEditDialog
         open
@@ -79,7 +79,7 @@ function renderCreate(
       />
     </DraftStageMemoryProvider>,
   );
-  return { onSave };
+  return { onSave, unmount: view.unmount };
 }
 
 describe("ItemEditDialog — editable draft stage default", () => {
@@ -155,6 +155,45 @@ describe("ItemEditDialog — editable draft stage default", () => {
     );
 
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+  });
+
+  it("keeps the remembered stage when the dialog remounts", () => {
+    const memory = remembered("Testing");
+    const first = renderCreate(memory);
+    expect(screen.getByRole("checkbox", { name: "Testing" })).toBeChecked();
+    first.unmount();
+
+    renderCreate(memory);
+    expect(screen.getByRole("checkbox", { name: "Testing" })).toBeChecked();
+    expect(
+      screen.getByRole("checkbox", { name: "Development" }),
+    ).not.toBeChecked();
+  });
+
+  it("does not move the remembered stage when the lead cancels", () => {
+    const memory = remembered("Development");
+    const onCancel = vi.fn();
+    render(
+      <DraftStageMemoryProvider memory={memory}>
+        <ItemEditDialog
+          open
+          item={null}
+          products={[PRODUCT, SINGLE_PRODUCT]}
+          week="current"
+          defaultProductId={PRODUCT.id}
+          stagesForProduct={stagesForProduct}
+          onSave={vi.fn()}
+          onCancel={onCancel}
+        />
+      </DraftStageMemoryProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Testing" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    fireEvent.click(screen.getByRole("button", { name: "Discard" }));
+
+    expect(onCancel).toHaveBeenCalledOnce();
+    expect(memory.recall(PRODUCT.id)).toBe("Development");
   });
 
   it("shows no remembered stage when the dialog has no memory provider", () => {

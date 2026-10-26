@@ -5,7 +5,12 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { SAFE_TEXT_MAX_LENGTH } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import type { DecisionEntry, Product } from "../../report-sections";
+import {
+  createDraftStageMemory,
+  type DecisionEntry,
+  DraftStageMemoryProvider,
+  type Product,
+} from "../../report-sections";
 import { DecisionEditDialog } from "./decision-edit-dialog";
 import { collectDecisionErrors } from "./decision-edit-dialog-helpers";
 
@@ -26,6 +31,64 @@ const products: Product[] = [
 ];
 
 describe("DecisionEditDialog prose limits", () => {
+  it("pre-selects the stage remembered by the open draft", () => {
+    const multiStageProduct: Product = {
+      id: "p-multi-decision",
+      name: "Payments",
+      overallStatus: "on-track",
+      stages: [
+        {
+          stageName: "Development",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "Test Lead",
+        },
+        {
+          stageName: "Testing",
+          status: "on-track",
+          ownership: "mine",
+          assignee: "Test Lead",
+        },
+      ],
+    };
+    const memory = createDraftStageMemory();
+    const recordId = "saved-decision";
+    memory.stageChangedSelections([
+      { recordId, productId: multiStageProduct.id, stageNames: ["Testing"] },
+    ]);
+    memory.confirmPersisted({
+      items: [],
+      risks: [],
+      decisions: [
+        {
+          id: recordId,
+          productId: multiStageProduct.id,
+          stageNames: ["Testing"],
+        },
+      ],
+    });
+
+    render(
+      <DraftStageMemoryProvider memory={memory}>
+        <DecisionEditDialog
+          open
+          decision={null}
+          defaultOwner="Test Lead"
+          products={[multiStageProduct]}
+          defaultProductId={multiStageProduct.id}
+          stagesForProduct={() => ["Development", "Testing"]}
+          onSave={vi.fn()}
+          onCancel={() => undefined}
+        />
+      </DraftStageMemoryProvider>,
+    );
+
+    expect(screen.getByRole("checkbox", { name: "Testing" })).toBeChecked();
+    expect(
+      screen.getByRole("checkbox", { name: "Development" }),
+    ).not.toBeChecked();
+  });
+
   it.each(["text", "impact"] as const)(
     "validates the shared boundary for %s",
     (field) => {
