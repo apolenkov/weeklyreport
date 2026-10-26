@@ -75,9 +75,13 @@ export const createOrReuseProviderExecution = async (
   } catch (error) {
     const raced = await prisma.aiProviderTestExecution.findUnique({
       where: { identity },
-      select: { id: true, state: true },
+      select: { id: true, state: true, testSuiteVersion: true },
     });
-    if (raced) return { ...raced, created: false };
+    // Another suite version may have taken the identity first: attaching this
+    // caller to that row would hand it evidence it never requested.
+    if (raced?.testSuiteVersion === input.testSuiteVersion) {
+      return { id: raced.id, state: raced.state, created: false };
+    }
     throw error;
   }
 };
