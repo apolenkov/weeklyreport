@@ -60,17 +60,22 @@ describe("RequestChangesDialog", () => {
     expect(screen.getByLabelText("Reason for the lead")).toHaveFocus();
   });
 
-  it("blocks an empty reason with an inline error and sends nothing", async () => {
+  it("blocks an empty reason with a field error while the hint stays described", async () => {
     const { mutationFn } = setup();
-    await userEvent.type(
-      screen.getByLabelText("Reason for the lead"),
-      " ".repeat(3),
-    );
+    const field = screen.getByLabelText("Reason for the lead");
+    await userEvent.type(field, " ".repeat(3));
     await userEvent.click(submitButton());
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Enter a reason for the lead.",
     );
-    expect(screen.getByLabelText("Reason for the lead")).toBeInvalid();
+    expect(field).toBeInvalid();
+    // TASK-503.40 / C5125: the explanatory hint persists next to the error.
+    expect(
+      screen.getByText("The lead sees this note on the returned section."),
+    ).toBeVisible();
+    expect(field).toHaveAccessibleDescription(
+      "The lead sees this note on the returned section. Enter a reason for the lead. 0 / 2000",
+    );
     expect(mutationFn).not.toHaveBeenCalled();
   });
 
@@ -99,15 +104,25 @@ describe("RequestChangesDialog", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps the dialog and typed text when the server rejects the request", async () => {
+  it("keeps the hint and a valid field when the server rejects the request", async () => {
     const { mutationFn, onClose } = setup();
     mutationFn.mockRejectedValue(new Error("The section changed."));
-    await userEvent.type(screen.getByLabelText("Reason for the lead"), "Fix X");
+    const field = screen.getByLabelText("Reason for the lead");
+    await userEvent.type(field, "Fix X");
     await userEvent.click(submitButton());
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "The section changed.",
     );
-    expect(screen.getByLabelText("Reason for the lead")).toHaveValue("Fix X");
+    expect(field).toHaveValue("Fix X");
+    // TASK-503.40 / C5125: a request/version rejection is not a bad field
+    // value, so the reason stays valid and the hint keeps its context.
+    expect(field).toBeValid();
+    expect(
+      screen.getByText("The lead sees this note on the returned section."),
+    ).toBeVisible();
+    expect(field).toHaveAccessibleDescription(
+      "The lead sees this note on the returned section. The section changed. 5 / 2000",
+    );
     expect(onClose).not.toHaveBeenCalled();
   });
 
@@ -198,7 +213,7 @@ describe("RequestChangesDialog", () => {
       const error = OVER_LIMIT_REASON_ERROR;
       expect(await screen.findByRole("alert")).toHaveTextContent(error);
       expect(field).toHaveAccessibleDescription(
-        `${error} ${REVIEW_COMMENT_MAX_LENGTH + 1} / ${REVIEW_COMMENT_MAX_LENGTH}`,
+        `The lead sees this note on the returned section. ${error} ${REVIEW_COMMENT_MAX_LENGTH + 1} / ${REVIEW_COMMENT_MAX_LENGTH}`,
       );
       expect(field).toBeInvalid();
       expect(field).toHaveValue(reason);
@@ -211,6 +226,9 @@ describe("RequestChangesDialog", () => {
       expect(screen.queryByRole("alert")).not.toBeInTheDocument();
       expect(field).toHaveAttribute("aria-invalid", "false");
       expect(field).toHaveValue(corrected);
+      expect(field).toHaveAccessibleDescription(
+        `The lead sees this note on the returned section. ${REVIEW_COMMENT_MAX_LENGTH} / ${REVIEW_COMMENT_MAX_LENGTH}`,
+      );
       mutationFn.mockResolvedValue({
         verdict: "changes_requested",
         judgedVersion: 3,

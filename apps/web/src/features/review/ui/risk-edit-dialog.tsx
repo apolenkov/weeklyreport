@@ -87,12 +87,14 @@ type RiskDialogState = Omit<
 
 interface RiskDialogBodyProps extends RiskFieldRefs {
   readonly dialog: RiskDialogState;
+  readonly idPrefix: string;
   readonly products: readonly Product[];
   readonly activities: readonly ParentActivityOption[];
 }
 
 function RiskDialogBody({
   dialog,
+  idPrefix,
   products,
   activities,
   textRef,
@@ -109,6 +111,7 @@ function RiskDialogBody({
       )}
 
       <RiskEditDialogFields
+        idPrefix={idPrefix}
         text={dialog.text}
         onTextChange={dialog.onTextChange}
         textError={dialog.textError}
@@ -194,8 +197,12 @@ function RiskDialogSurface({
 
 function RiskEditDialogContent(props: RiskEditDialogProps) {
   const activities = props.activities ?? [];
+  // One id scope per open dialog instance: field ids and their derived
+  // -error/-limit/-hint nodes stay unique when two editors co-mount.
+  const idPrefix = useId();
   const { dialogSurfaceRef, textRef, impactRef, mitigationRef, ...dialog } =
     useRiskEditDialog({
+      idPrefix,
       risk: props.risk,
       products: props.products,
       activities,
@@ -220,6 +227,7 @@ function RiskEditDialogContent(props: RiskEditDialogProps) {
       >
         <RiskDialogBody
           dialog={dialog}
+          idPrefix={idPrefix}
           products={props.products}
           activities={activities}
           textRef={textRef}

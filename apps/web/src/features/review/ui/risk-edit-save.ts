@@ -23,6 +23,8 @@ export interface RiskSaveArgs {
     next: RiskEntry & { impact: string; mitigation: string },
   ) => void;
   readonly dialogSurfaceRef: RefObject<HTMLDivElement | null>;
+  // The product/parent id is dialog-scoped (C5135), so it is not literal.
+  readonly idPrefix: string;
 }
 
 interface TrimmedProse {
@@ -43,9 +45,8 @@ function reportRiskErrors(args: RiskSaveArgs, errors: RiskFieldErrors): void {
   args.parentStage.setStageError(errors.stageNames);
   if (args.fields.focusFirstInvalid(errors)) return;
   if (errors.parent) {
-    args.dialogSurfaceRef.current
-      ?.querySelector<HTMLSelectElement>("#risk-product")
-      ?.focus();
+    // The picker id is dialog-scoped (C5135); ids stay unique document-wide.
+    document.getElementById(`${args.idPrefix}-risk-product`)?.focus();
     return;
   }
   if (errors.stageNames) {

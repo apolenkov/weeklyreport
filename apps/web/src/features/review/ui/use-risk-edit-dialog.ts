@@ -17,6 +17,8 @@ import { useRiskEditFields } from "./use-risk-edit-fields";
 import { useRiskEditParentStage } from "./use-risk-edit-parent-stage";
 
 interface UseRiskEditDialogArgs {
+  // Dialog-scoped prefix for the form ids (see RiskEditDialogContent).
+  readonly idPrefix: string;
   readonly risk: RiskEntry | null;
   readonly products: readonly Product[];
   readonly activities: readonly ParentActivityOption[];
@@ -92,7 +94,15 @@ export function useRiskEditDialog(args: UseRiskEditDialogArgs) {
   );
 
   function handleSave() {
-    saveRisk({ fields, parentStage, products, risk, onSave, dialogSurfaceRef });
+    saveRisk({
+      fields,
+      parentStage,
+      products,
+      risk,
+      onSave,
+      dialogSurfaceRef,
+      idPrefix: args.idPrefix,
+    });
   }
 
   // Escape + focus trap via the shared primitive; the surface autofocuses its

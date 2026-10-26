@@ -80,11 +80,15 @@ const REQUEST_CHANGES_BUTTON_CLASSNAME =
 // focus to <body>.
 function VerdictActions({
   subjectName,
+  pending,
   disabled,
   onApprove,
   onRequestChanges,
 }: {
   readonly subjectName: string | undefined;
+  // Pending drives the "Saving…" copy; blocked also covers an open reason
+  // dialog, which owns the next verdict write even before it is pending.
+  readonly pending: boolean;
   readonly disabled: boolean;
   readonly onApprove: () => void;
   readonly onRequestChanges: () => void;
@@ -101,12 +105,12 @@ function VerdictActions({
         aria-disabled={disabled}
         aria-label={
           subjectName
-            ? `${disabled ? "Saving verdict for" : "Approve"} ${subjectName}`
+            ? `${pending ? "Saving verdict for" : "Approve"} ${subjectName}`
             : undefined
         }
-        aria-busy={disabled}
+        aria-busy={pending}
       >
-        {disabled ? "Saving…" : "Approve"}
+        {pending ? "Saving…" : "Approve"}
       </button>
       <button
         type="button"
@@ -119,7 +123,7 @@ function VerdictActions({
         aria-label={
           subjectName ? `Request changes for ${subjectName}` : undefined
         }
-        aria-busy={disabled}
+        aria-busy={pending}
       >
         Request changes
       </button>
@@ -188,7 +192,11 @@ export function SectionVerdictControl({
       {canReview ? (
         <VerdictActions
           subjectName={subjectName}
-          disabled={verdictMut.isPending}
+          pending={verdictMut.isPending}
+          // The reason dialog owns an independent mutation; while it is open
+          // (and therefore while it is pending) the background Approve must
+          // not arm a second verdict write for the same version.
+          disabled={verdictMut.isPending || requestingChanges}
           onApprove={() => {
             if (approveInFlight.current) return;
             approveInFlight.current = true;

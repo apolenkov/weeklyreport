@@ -278,6 +278,67 @@ describe("SectionVerdictControl — verdict buttons", () => {
     ).not.toHaveBeenCalled();
   });
 
+  it("keeps the background verdict actions inert while the reason dialog is open", async () => {
+    const user = userEvent.setup();
+    const { captured } = renderControl({ canReview: true });
+    const mutationFn = expectDefined(captured["review.verdict"]).mutationFn;
+    const approve = screen.getByRole("button", { name: "Approve" });
+    const requestChanges = screen.getByRole("button", {
+      name: "Request changes",
+    });
+
+    await user.click(requestChanges);
+    const dialog = within(screen.getByRole("dialog"));
+
+    // TASK-503.40 / C5150: an independent dialog mutation must not leave a
+    // second verdict writer armed behind the modal.
+    expect(approve).toHaveAttribute("aria-disabled", "true");
+    expect(approve).toHaveTextContent("Approve");
+    expect(requestChanges).toHaveAttribute("aria-disabled", "true");
+    await user.click(approve);
+    expect(mutationFn).not.toHaveBeenCalled();
+
+    await user.click(dialog.getByRole("button", { name: "Cancel" }));
+    expect(approve).toHaveAttribute("aria-disabled", "false");
+    expect(requestChanges).toHaveAttribute("aria-disabled", "false");
+  });
+
+  it("keeps Approve inert while the reason dialog mutation is pending", async () => {
+    const user = userEvent.setup();
+    const { captured } = renderControl({ canReview: true });
+    const mutationFn = expectDefined(captured["review.verdict"]).mutationFn;
+    const response = Promise.withResolvers<ReviewVerdictResult>();
+    mutationFn.mockReturnValue(response.promise);
+    const approve = screen.getByRole("button", { name: "Approve" });
+
+    await user.click(screen.getByRole("button", { name: "Request changes" }));
+    const dialog = within(screen.getByRole("dialog"));
+    await user.type(
+      dialog.getByLabelText("Reason for the lead"),
+      "Add the missing risk owner.",
+    );
+    await user.click(dialog.getByRole("button", { name: "Request changes" }));
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toHaveAttribute("aria-busy", "true");
+    });
+
+    expect(approve).toHaveAttribute("aria-disabled", "true");
+    await user.click(approve);
+    expect(mutationFn).toHaveBeenCalledTimes(1);
+
+    response.resolve(
+      reviewVerdictResultSchema.parse({
+        verdict: "changes_requested",
+        judgedVersion: VERSION,
+        unsubmitted: true,
+      }),
+    );
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
+    expect(mutationFn).toHaveBeenCalledTimes(1);
+  });
+
   it("Request changes with unsubmit toasts the lead-return message and invalidates", async () => {
     const { captured, onMutated } = renderControl({ canReview: true });
     const mutationFn = expectDefined(captured["review.verdict"]).mutationFn;
