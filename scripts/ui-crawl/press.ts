@@ -152,7 +152,10 @@ export function hung(
   control: ProbedControl,
   cause: string,
 ): StepRecord {
-  const reason = cause.split("\n")[0] ?? cause;
+  // An empty first line must not erase the diagnostic: take the first non-blank line.
+  const reason =
+    cause.split("\n").find((line) => line.trim() !== "") ??
+    "press failed without a message";
   add(
     ctx,
     { page: target.key, shot: null },
