@@ -367,4 +367,26 @@ describe("WeeklyReportPage — Archive / Restore wiring", () => {
     });
     expect(invalidatePeriodLifecycle).not.toHaveBeenCalled();
   });
+
+  it("locks Reopen while an archive write is in flight", async () => {
+    const { captured } = renderWeeklyReportPage(
+      makeWeeklyReportData("published"),
+    );
+    // A never-settling mutation keeps the page in the lifecycle-pending state.
+    expectDefined(captured["archive.archiveReport"]).mutationFn.mockReturnValue(
+      new Promise<never>(() => undefined),
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: ARCHIVE_BUTTON }),
+    );
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: /reopen period/i }),
+      ).toBeDisabled();
+    });
+    // The archive control itself keeps its progress state under the same guard.
+    expect(screen.getByRole("button", { name: ARCHIVE_BUTTON })).toBeDisabled();
+  });
 });
