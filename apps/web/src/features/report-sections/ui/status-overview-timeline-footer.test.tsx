@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -84,6 +84,19 @@ describe("unit creation controls", () => {
       // Always visible: no reveal-only opacity on the mobile affordance.
       expect(control).not.toHaveClass("opacity-0");
     }
+    // Three identical "+" icons sit side by side here; the two week controls
+    // carry visible labels so they are distinguishable without hovering.
+    for (const [control, label] of [
+      [current, "Current"],
+      [next, "Next"],
+    ] as const) {
+      const text = within(control).getByText(label);
+      expect(text).toBeVisible();
+      expect(text).not.toHaveClass("sr-only");
+      expect(within(control).getByText(label)).toHaveClass("whitespace-nowrap");
+    }
+    // The control row wraps rather than overflowing a 375px unit header.
+    expect(controls).toHaveClass("flex-wrap");
     expect(current).toHaveAttribute(
       "data-overview-focus",
       "add:product:product-1:mobile:current",
@@ -158,8 +171,11 @@ describe("unit creation controls", () => {
     expect(classes).toContain("opacity-0");
     expect(classes).toContain("group-hover/lane:opacity-100");
     expect(classes).toContain("group-focus-within/lane:opacity-100");
-    // Where hover cannot exist the control stays visible.
-    expect(classes).toContain("[@media(hover=none)]:opacity-100");
+    // Where hover cannot exist the control stays visible. The arbitrary
+    // variant must spell the media feature as `hover:none`, otherwise the
+    // generated CSS rule never matches a touch device.
+    expect(classes).toContain("[@media(hover:none)]:opacity-100");
+    expect(classes).not.toContain("[@media(hover=none)]:opacity-100");
     // Mobile creation lives in the unit header instead.
     expect(classes).toContain("hidden");
     expect(classes).toContain("md:inline-flex");
