@@ -178,10 +178,16 @@ describe("SdlcTooltipProvider anchor lifetime", () => {
     );
     const { rerender } = render(tree("Alice"));
     fireEvent.mouseEnter(screen.getByRole("img"));
-    expect(await screen.findByRole("tooltip")).toHaveTextContent("Alice");
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      /^Read-only — authored by Alice · You can't edit this card$/,
+    );
 
     rerender(tree("Alice Updated"));
-    expect(screen.getByRole("tooltip")).toHaveTextContent("Alice");
+    // The content captured at hover time stays for the old owner; a substring
+    // match would also pass for the updated "Alice Updated" name.
+    expect(screen.getByRole("tooltip")).toHaveTextContent(
+      /^Read-only — authored by Alice · You can't edit this card$/,
+    );
     rerender(tree(null));
     expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   });
