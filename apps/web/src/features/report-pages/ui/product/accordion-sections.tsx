@@ -130,7 +130,7 @@ export function AccordionSections({
       {report.nextWeek.length > 0 && (
         <ItemsSection
           title="Next Week"
-          items={report.nextWeek}
+          items={sortByPriorityRank(report.nextWeek)}
           review={review}
         />
       )}
