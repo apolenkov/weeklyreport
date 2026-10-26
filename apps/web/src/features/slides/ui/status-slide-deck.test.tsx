@@ -588,6 +588,39 @@ describe("StatusSlideDeck — by-product grid article", () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
+  // C5189 (TASK-503.41): a modified arrow belongs to the browser/AT; the deck
+  // must not page on it and must leave the event unprevented.
+  it.each([
+    { ctrlKey: true },
+    { metaKey: true },
+    { altKey: true },
+    { shiftKey: true },
+  ])("leaves a modified arrow key to the browser and AT: %o", (modifier) => {
+    const slide = buildSectionSlideModel(makeSection({ items: [item()] }));
+    const onSelect = vi.fn();
+    render(
+      <StatusSlideDeck
+        slides={[slide]}
+        selectedIndex={0}
+        onSelect={onSelect}
+        mode="lead"
+      />,
+    );
+    const deck = screen.getByTestId("lead-slides-deck");
+
+    for (const key of ["ArrowRight", "ArrowLeft"]) {
+      const event = new KeyboardEvent("keydown", {
+        key,
+        bubbles: true,
+        cancelable: true,
+        ...modifier,
+      });
+      fireEvent(deck, event);
+      expect(event.defaultPrevented).toBe(false);
+    }
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
   it("shows the empty state when there are no slides", () => {
     render(
       <StatusSlideDeck

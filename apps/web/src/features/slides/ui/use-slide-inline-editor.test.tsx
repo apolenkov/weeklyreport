@@ -9,6 +9,7 @@ import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
+import * as clientErrors from "../../../shared/lib/errors/client-error-reporting";
 import { makeQueryClient } from "../../../shared/lib/query/query-client";
 import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
@@ -515,6 +516,77 @@ describe("useSlideInlineEditor — conflict path", () => {
     // A conflict reloads the section instead of silently closing the editor —
     // the caller re-applies the edit against the fresh data.
     expect(screen.getByTestId("item-dialog")).toBeInTheDocument();
+  });
+});
+
+// C5206 (TASK-503.41): a non-conflict save failure must not echo a technical
+// backend payload; it shows the curated mutation copy and logs the raw failure.
+describe("useSlideInlineEditor — save failure copy", () => {
+  const RAW_VALIDATION_PAYLOAD = JSON.stringify([
+    {
+      code: "too_big",
+      maximum: 500,
+      path: ["items", 0, "text"],
+      message: "String must contain at most 500 character(s)",
+    },
+  ]);
+
+  function trpcError(message: string, data: Record<string, unknown>) {
+    const error = new TRPCClientError<never>(message);
+    Object.defineProperty(error, "data", { value: data, configurable: true });
+    return error;
+  }
+
+  it("masks a raw input-validation payload and logs the raw failure", async () => {
+    const logClientError = vi
+      .spyOn(clientErrors, "logClientError")
+      .mockImplementation(() => undefined);
+    const { captured } = renderHarness();
+    const saveDraft = captured["reports.saveDraft"];
+    const error = trpcError(RAW_VALIDATION_PAYLOAD, {
+      code: "BAD_REQUEST",
+      httpStatus: 400,
+    });
+    saveDraft?.mutationFn.mockRejectedValueOnce(error);
+
+    fireEvent.click(screen.getByTestId("activate"));
+    fireEvent.click(screen.getByTestId("save-item"));
+
+    await waitFor(() => expect(saveDraft?.calls).toHaveLength(1));
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith("Slide save failed. Try again."),
+    );
+    expect(toastError).not.toHaveBeenCalledWith(RAW_VALIDATION_PAYLOAD);
+    expect(logClientError).toHaveBeenCalledWith(
+      "slides.inlineEdit.save_failed",
+      error,
+      {
+        component: "useSlideInlineEditor",
+        procedure: "reports.saveDraft",
+        reportSectionId: SECTION_ID,
+      },
+    );
+  });
+
+  it("keeps a curated domain message instead of replacing it", async () => {
+    const { captured } = renderHarness();
+    const saveDraft = captured["reports.saveDraft"];
+    saveDraft?.mutationFn.mockRejectedValueOnce(
+      trpcError("This section is locked while its review is open.", {
+        code: "BAD_REQUEST",
+        httpStatus: 400,
+      }),
+    );
+
+    fireEvent.click(screen.getByTestId("activate"));
+    fireEvent.click(screen.getByTestId("save-item"));
+
+    await waitFor(() => expect(saveDraft?.calls).toHaveLength(1));
+    await waitFor(() =>
+      expect(toastError).toHaveBeenCalledWith(
+        "This section is locked while its review is open.",
+      ),
+    );
   });
 });
 

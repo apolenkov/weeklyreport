@@ -3,6 +3,8 @@ import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { useMemo } from "react";
 import { toast } from "sonner";
 
+import { logClientError } from "../../../shared/lib/errors/client-error-reporting";
+import { mutationErrorMessage } from "../../../shared/lib/errors/mutation-error-message";
 import { invalidateLeadForm } from "../../../shared/lib/query/cache-keys";
 import { isConflictError } from "../../../shared/lib/trpc/trpc";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
@@ -20,6 +22,10 @@ import {
   toDialogRisks,
 } from "../model/slide-inline-edit";
 export type SaveOperation = "saved" | "deleted";
+
+// A raw transport or input-validation payload is not actionable copy; curated
+// domain messages are kept by the shared mutation error policy.
+const SLIDE_SAVE_FAILURE_MESSAGE = "Slide save failed. Try again.";
 
 // Single write path for inline save/delete; conflict reloads rather than toast-retrying.
 export function useSlideDraftSaveMutation({
@@ -57,9 +63,14 @@ export function useSlideDraftSaveMutation({
         },
         onError: (err: unknown) => {
           if (!isConflictError(err)) {
-            toast.error(
-              err instanceof Error ? err.message : "Slide save failed",
-            );
+            // Keep the raw failure for diagnostics; the toast shows either the
+            // curated domain message or the safe generic copy (C5206).
+            logClientError("slides.inlineEdit.save_failed", err, {
+              component: "useSlideInlineEditor",
+              procedure: "reports.saveDraft",
+              reportSectionId: section.reportSectionId,
+            });
+            toast.error(mutationErrorMessage(err, SLIDE_SAVE_FAILURE_MESSAGE));
             return;
           }
           void refetchSection()
