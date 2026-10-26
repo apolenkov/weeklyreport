@@ -150,6 +150,8 @@ describe("AiProviderDraftService.test enqueue, audit and returned state (TASK-50
     expect(read.latestExecution).toMatchObject({ state: "queued" });
   });
 
+  // Current behaviour only: re-enqueueing a running execution and recovering a stuck one stay
+  // open for the C0890 Root decision, so this case pins the audit and returned-state obligations.
   it("does not enqueue, does not audit and returns the current running state for an execution that is already running", async () => {
     const { service, enqueue, record } = harness(
       { id: executionId, created: false, state: "running" },

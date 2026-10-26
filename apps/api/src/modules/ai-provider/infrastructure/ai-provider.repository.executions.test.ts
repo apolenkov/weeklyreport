@@ -277,20 +277,20 @@ describe("provider test execution identity", () => {
       const uniqueViolation = Object.assign(new Error("Unique constraint"), {
         code: "P2002",
       });
-      const findUnique = vi
-        .fn()
-        .mockResolvedValueOnce({ compositeTestIdentity: "composite" })
-        .mockResolvedValueOnce({
-          id: "winner-execution",
-          state: "queued",
-          ...winner,
-        });
       const prisma = {
-        aiProviderConfiguration: { findUnique: findUnique },
+        aiProviderConfiguration: {
+          findUnique: vi
+            .fn()
+            .mockResolvedValue({ compositeTestIdentity: "composite" }),
+        },
         aiProviderTestExecution: {
           findMany: vi.fn().mockResolvedValue([]),
           create: vi.fn().mockRejectedValue(uniqueViolation),
-          findUnique,
+          findUnique: vi.fn().mockResolvedValue({
+            id: "winner-execution",
+            state: "queued",
+            ...winner,
+          }),
         },
       } as unknown as PrismaService;
       return { prisma, uniqueViolation };
