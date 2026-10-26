@@ -42,7 +42,7 @@ The `/lead/report/:reportId` route MUST expose addressable Report and Slides vie
 #### Scenario: An editable lead opens the default route
 
 - **WHEN** the lead opens `/lead/report/:reportId` without a mode query
-- **THEN** Report retains report identity, autosave, Fill from, Save, Submit, period navigation, visibility, mode controls, and the eligible unit-header Add item action
+- **THEN** Report retains report identity, autosave, Fill from, Retry after autosave error, Submit, period navigation, visibility, mode controls, and the eligible unit-header Add item action
 - **AND** all actions use canonical editor eligibility and handlers
 
 #### Scenario: An Overview action opens a canonical dialog
