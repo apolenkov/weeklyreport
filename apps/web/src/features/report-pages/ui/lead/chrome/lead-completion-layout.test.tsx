@@ -86,6 +86,10 @@ describe("completion rail layout", () => {
       ".app-viewport:has(.lead-completion-layout) .lead-completion-layout {",
     );
     expect(fillRule).toContain("flex: 1 1 0;");
+    // Absolute sr-only labels inside rows must be contained by the scrollport.
+    expect(cssBlockAt(appCss, ".lead-completion-scrollport {")).toContain(
+      "position: relative;",
+    );
     expect(
       cssBlockAt(appCss, ".app-viewport:has(.lead-completion-layout) {"),
     ).toContain("height: 100dvh;");

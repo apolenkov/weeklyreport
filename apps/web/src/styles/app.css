@@ -19,7 +19,10 @@
     overflow-y: auto;
   }
 
+  /* Containing block for the absolutely positioned sr-only labels, so they
+     never stretch the document's scroll height. */
   .lead-completion-scrollport {
+    position: relative;
     min-height: 0;
     overflow-y: auto;
     scroll-padding-block: var(--sticky-toolbar-offset, 5rem) 1rem;
