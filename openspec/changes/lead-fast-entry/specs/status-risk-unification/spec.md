@@ -2,7 +2,7 @@
 
 ### Requirement: The risk-entry dialog stage multi-select does not default to all stages
 
-The Lead Report risk-entry dialog MUST NOT default to every owned stage checked. An explicit originating-stage prefill MUST select only that stage and take precedence over the last chosen stage for the same Product in this draft. Without a prefill, creation MUST use the editable draft-scoped stage default defined in `risk-stage-integrity`, including its sole-owned-stage shortcut and empty fallback. Product changes MUST clear the previous selection and MUST NOT auto-select all newly owned stages. A risk MAY still deliberately cover several stages; assigning a Product's entire multi-stage scope MUST never be an automatic default. Existing risk severity and render-floor derivation MUST remain unchanged.
+The Lead Report risk-entry dialog MUST NOT default to all owned stages on a multi-stage Product. An originating-stage prefill MUST select only that stage. Without it, creation MUST follow the editable draft-default contract in `risk-stage-integrity`. Product changes MUST reset selection rather than select all stages; deliberate multi-stage coverage MUST remain available.
 
 #### Scenario: opening the dialog with a prefilled stage selects only that stage
 
@@ -30,6 +30,8 @@ The Lead Report risk-entry dialog MUST NOT default to every owned stage checked.
 - **THEN** no stage is selected
 - **AND** saving requires a deliberate concrete-stage selection rather than interpreting emptiness as all stages
 
-Code anchors at baseline `99d3651f2`: [risk seed and explicit prefill](../../../../../apps/web/src/features/review/ui/use-risk-edit-parent-stage.ts#L35-L73), [effective single stage](../../../../../apps/web/src/features/review/ui/use-risk-edit-parent-stage.ts#L126-L135), [parent change reset](../../../../../apps/web/src/features/review/ui/use-risk-edit-parent-stage.ts#L173-L183). The shared draft default is proposed; originating-stage prefill, severity, and the reset boundary already exist.
+#### Scenario: stage convenience does not change risk derivation
 
-Unchanged invariants: explicit Next wins W+1 rollover; without it unfinished Current continues; at most one active Next per `stableId`; Previous is read-only; `periodState` and lifecycle tuple remain atomic. Risks remain the sole source of at-risk/blocked severity; no default can grant stage ownership or relax server `safeText`.
+- **WHEN** a risk uses a remembered stage, a sole-owned-stage fallback, or explicit originating-stage prefill
+- **THEN** only stage initialization changes; severity and render-floor derivation follow their existing contracts
+- **AND** stage ownership and server `safeText` remain enforced
