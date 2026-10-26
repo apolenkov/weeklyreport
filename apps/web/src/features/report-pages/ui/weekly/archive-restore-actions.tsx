@@ -6,6 +6,7 @@ const TOOLBAR_BUTTON_CLASS =
   "btn-press inline-flex h-[var(--toolbar-control-h)] items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-muted-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] hover:text-[var(--color-starbucks-accent)] disabled:cursor-not-allowed disabled:opacity-50";
 
 interface ArchivalMutationState {
+  readonly isPublishOrReopenPending: boolean;
   readonly isArchivePending: boolean;
   readonly isRestorePending: boolean;
   readonly archiveLabel: string;
@@ -53,13 +54,20 @@ export function ArchiveRestoreActions({
   onRestore,
   mutationState,
 }: ArchiveRestoreActionsProps) {
+  // One lifecycle write owns the period row: clicking archive/restore while a
+  // publish or reopen is in flight would only race that same transition.
+  const lifecyclePending =
+    mutationState.isArchivePending ||
+    mutationState.isRestorePending ||
+    mutationState.isPublishOrReopenPending;
+
   if (archived) {
     return (
       <ToolbarLifecycleButton
         label={mutationState.restoreLabel}
         ariaLabel="Restore this report from the archive"
         onClick={onRestore}
-        disabled={mutationState.isRestorePending}
+        disabled={lifecyclePending}
       />
     );
   }
@@ -73,7 +81,7 @@ export function ArchiveRestoreActions({
       label={mutationState.archiveLabel}
       ariaLabel="Move this report to the archive"
       onClick={onArchive}
-      disabled={mutationState.isArchivePending}
+      disabled={lifecyclePending}
     />
   );
 }
