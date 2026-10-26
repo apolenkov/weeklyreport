@@ -12,7 +12,7 @@ Make the owner decisions and P1/P2 contracts coherent across existing capabiliti
 
 ### 14. One correctable draft-stage default
 
-The stage delta replaces unconditional empty-on-create with a Product/lead-section-draft-scoped eligible stage. Stored edit stages and contextual prefill win; sole-stage auto-application, parent reset, ownership, and deliberate multi-select remain. No memory means empty multi-stage creation; never auto-select all assigned stages. Reject arbitrary stage order, Product-health inference, persisted browser preferences, or overwriting edit stages. Memory details remain gated below.
+The stage delta replaces unconditional empty-on-create with a Product/lead-section-draft-scoped eligible stage. Stored edit stages and contextual prefill win; sole-stage auto-application, parent reset, ownership, and deliberate multi-select remain. No memory means empty multi-stage creation; never auto-select all assigned stages. Reject arbitrary stage order, Product-health inference, persisted browser preferences, or overwriting edit stages. Advance, singleton, and draft-lifetime details are resolved below.
 
 ### 15. Several create entry points, one composer
 
@@ -70,7 +70,7 @@ Code anchors and implementation-status notes stay here, never in delta scenarios
 | lead-status-overview — Overview previews MUST preserve reading and secondary-action access             | [editor regression](../../../apps/web/src/features/report-pages/ui/lead/shell/lead-status-overview.test.tsx#L1703-L1744)                                                                                                                                                                              | I                    |
 | record-status-derivation — One stored progress vocabulary independent of week placement                | [placement/progress](../../../apps/web/src/features/report-sections/model/lead-actions/lead-item-actions.ts#L21-L72)                                                                                                                                                                                  | I                    |
 | record-status-derivation — Move to next week MUST change placement without asserting continuation      | [save](../../../apps/web/src/features/report-pages/ui/lead/shell/overview-item-save.ts#L163-L184), [promotion boundary](../../../apps/web/src/features/report-pages/ui/lead/shell/overview-item-save.ts#L287-L300)                                                                                    | I                    |
-| risk-stage-integrity — Record creation MUST use an editable Product-stage default from this draft      | [sole-stage helper](../../../apps/web/src/features/report-sections/model/stage-ownership.ts#L6-L15), [Item seed](../../../apps/web/src/features/report-sections/ui/item-edit-draft-store.ts#L43-L60), [Decision seed](../../../apps/web/src/features/period/ui/decision-edit-dialog-model.ts#L70-L87) | I; memory gated      |
+| risk-stage-integrity — Record creation MUST use an editable Product-stage default from this draft      | [sole-stage helper](../../../apps/web/src/features/report-sections/model/stage-ownership.ts#L6-L15), [Item seed](../../../apps/web/src/features/report-sections/ui/item-edit-draft-store.ts#L43-L60), [Decision seed](../../../apps/web/src/features/period/ui/decision-edit-dialog-model.ts#L70-L87) | I; memory resolved   |
 | status-risk-unification — The risk-entry dialog stage multi-select does not default to all stages      | [Risk seed](../../../apps/web/src/features/review/ui/use-risk-edit-parent-stage.ts#L35-L73), [reset](../../../apps/web/src/features/review/ui/use-risk-edit-parent-stage.ts#L173-L183)                                                                                                                | I                    |
 
 ### P1 reconciliation (`ed4c96fae`, read-only worktree)
@@ -99,15 +99,15 @@ The named rail implementation retains “sticky” identifiers for compatibility
 
 ## Risks / Trade-offs
 
-- Stage memory is underspecified → block package 14 at task 1.1 until normative deltas/scenarios capture accepted rules.
+- Stage memory is easy to overreach → package 14 tests must prove advance-on-success, singleton retention, and open-draft lifetime.
 - Empty mobile lanes hide create targets → package 15 tests unit-header Current/Next controls and whole-empty units at 375/1280.
 - Read-only P1/P2/P5 worktree anchors can drift → commits above identify reviewed sources; coordinator retains evidence before cleanup.
 - Syntax is not UI acceptance → P6 runs spec/format/link checks; integration requires independent review, focused tests, all gates, and coordinator browser evidence. In particular Retry focus and keyboard clearance require browser checks, not CSS inspection alone.
 
 ## Migration Plan
 
-Commit only this change on `wr707-spec`, no push/sync/archive. Coordinator integrates accepted P1/P2 behavior and resolves stage-memory gates before packages 14–16. No DB migration, server deployment ordering, or feature flag is needed. Revert a future web package if necessary; P6 itself only changes planning artifacts. Sync/archive after implementation acceptance, retaining external evidence.
+Commit only this change on `wr707-spec`, no push/sync/archive. Coordinator integrates accepted P1/P2 behavior; packages 14–16 follow the resolved boundaries above. No DB migration, server deployment ordering, or feature flag is needed. Revert a future web package if necessary; P6 itself only changes planning artifacts. Sync/archive after implementation acceptance, retaining external evidence.
 
-## Unresolved boundaries for package 14
+## Resolved boundaries for package 14
 
-The owner approved the source and editability of the default, not when choice memory advances (picker versus successful Save, Cancel/failure), which one stage survives multi-select, or remount/reload lifetime. No persistent preference is authorized. Task 1.1 requires coordinator decisions, updates to the normative stage delta and affected risk scenarios, strict validation and review **before 1.2**; a design note alone is insufficient. Other packages do not depend on these answers.
+Resolved for the stage deltas and scenarios in this change: a record Save accepted in this draft advances the remembered stage once it persists; Cancel or a failed Save keeps the previous default. Only a saved single-stage selection counts; multi-select, all-stage selection, and array order never set a default. The memory lives in the open draft, survives an editor remount, and ends on reload or a draft/report change without persistence. Source: p14 DECISIONS-PROPOSAL.
