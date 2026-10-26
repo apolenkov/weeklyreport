@@ -380,3 +380,41 @@ describe("SlidePriorityStrip rank badge", () => {
     expect(badge.className).not.toContain("text-white");
   });
 });
+
+// TASK-503.73 / C5180: a tooltip belongs to its anchor; the provider keeps it
+// until hide/scroll/resize, and an unmounted anchor never fires mouseleave.
+describe("hovered anchor lifetime", () => {
+  function renderDeck(rows: readonly GridRow[], withBadge: boolean) {
+    return (
+      <SdlcTooltipProvider>
+        <SlideCell
+          rows={rows}
+          authorsById={authorsById}
+          showStages={false}
+          label="Next focus"
+        />
+        {withBadge ? <AuthorBadge author={AUTHOR} /> : null}
+      </SdlcTooltipProvider>
+    );
+  }
+
+  it("removes the row tooltip when the hovered row leaves the list", async () => {
+    const { rerender } = render(renderDeck([ROW], false));
+    fireEvent.mouseEnter(screen.getByRole("listitem"));
+    expect(await screen.findByTestId("sdlc-tooltip")).toBeInTheDocument();
+
+    rerender(renderDeck([], false));
+
+    expect(screen.queryByTestId("sdlc-tooltip")).toBeNull();
+  });
+
+  it("keeps a hovered row's tooltip when an unrelated anchor unmounts", async () => {
+    const { rerender } = render(renderDeck([ROW], true));
+    fireEvent.mouseEnter(screen.getByRole("listitem"));
+    expect(await screen.findByTestId("sdlc-tooltip")).toBeInTheDocument();
+
+    rerender(renderDeck([ROW], false));
+
+    expect(screen.getByTestId("sdlc-tooltip")).toBeInTheDocument();
+  });
+});
