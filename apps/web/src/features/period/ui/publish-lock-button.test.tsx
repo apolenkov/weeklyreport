@@ -313,6 +313,29 @@ describe("PublishLockButton", () => {
       expect(document.body).toHaveFocus();
     });
 
+    // TASK-503.59 / C4678: the request is armed on success but the status flip
+    // follows the report refetch; focus the user moved meanwhile is not taken.
+    it("keeps focus the user moved elsewhere while the published status is still pending", async () => {
+      const { rerender } = render(
+        <>
+          {renderStatus("open")}
+          <button type="button">Elsewhere</button>
+        </>,
+      );
+      await confirmPublish();
+      const elsewhere = screen.getByRole("button", { name: "Elsewhere" });
+      elsewhere.focus();
+
+      rerender(
+        <>
+          {renderStatus("published")}
+          <button type="button">Elsewhere</button>
+        </>,
+      );
+
+      expect(elsewhere).toHaveFocus();
+    });
+
     it("does not steal focus when a published period is simply displayed", () => {
       render(renderStatus("published"));
       expect(document.body).toHaveFocus();
@@ -376,6 +399,28 @@ describe("PublishLockButton", () => {
       rerender(renderStatus("open", true, fails));
 
       expect(document.body).toHaveFocus();
+    });
+
+    // TASK-503.59 / C4678 (symmetric): the Publish hand-off after reopen.
+    it("keeps focus the user moved elsewhere while the reopened status is still pending", async () => {
+      const { rerender } = render(
+        <>
+          {renderStatus("published", true)}
+          <button type="button">Elsewhere</button>
+        </>,
+      );
+      await confirmReopen();
+      const elsewhere = screen.getByRole("button", { name: "Elsewhere" });
+      elsewhere.focus();
+
+      rerender(
+        <>
+          {renderStatus("open", true)}
+          <button type="button">Elsewhere</button>
+        </>,
+      );
+
+      expect(elsewhere).toHaveFocus();
     });
 
     it("does not move focus when the period is reopened by someone else", () => {
