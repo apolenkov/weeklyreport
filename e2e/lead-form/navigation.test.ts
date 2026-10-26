@@ -30,8 +30,10 @@ import {
   scopeCount,
   scopedRef,
   scopeSnapshot,
+  scopeSnapshots,
   setOffline,
   waitButton,
+  waitDraftSaved,
   waitScope,
   waitSnapshot,
 } from "./helpers.js";
@@ -188,18 +190,19 @@ async function clickViewMode(name: "Report" | "Slides"): Promise<void> {
   await command(["click", await scopedRef(VIEW_MODE_SCOPE, "link", name)]);
 }
 
-// The sticky Save/Submit cluster hides the header cluster while it is visible, so
-// the completion actions are present when exactly one save button shows in either.
+// Header and rail hand off one completion cluster. Autosave has no healthy
+// Save action; Submit is the persistent control even when readiness disables it.
 async function waitCompletionActions(): Promise<void> {
-  await command([
-    "wait",
-    "--fn",
-    `Array.from(document.getElementsByTagName('div'))
-      .filter(group => group.getAttribute('role') === 'group' && ['Header completion actions', 'Sticky completion actions'].includes(group.getAttribute('aria-label') ?? ''))
-      .flatMap(group => Array.from(group.getElementsByTagName('button')))
-      .filter(button => ['Save draft now', 'Retry saving draft', 'Saving draft', 'Draft saved'].includes(button.getAttribute('aria-label') ?? '') && button.getClientRects().length > 0)
-      .length === 1`,
-  ]);
+  await waitSnapshot((data) => {
+    const groups = [
+      "Header completion actions",
+      "Sticky completion actions",
+    ].flatMap((name) => scopeSnapshots(data, "group", name));
+    return (
+      groups.length === 1 &&
+      groups.every((group) => scopeCount(group, "button", "Submit") === 1)
+    );
+  }, "Expected one completion cluster with Submit");
 }
 
 async function openPeriodPicker(): Promise<void> {
@@ -237,7 +240,7 @@ void test("dev login opens the current lead report", async () => {
   assert.equal(new URL(await getUrl()).searchParams.has("mode"), false);
   await waitScope({ role: "region", name: "Status overview" });
   await waitScope({ role: "group", name: "Header completion actions" });
-  await waitButton("Save draft now");
+  await waitDraftSaved();
   assert.equal(
     await getAttr(
       await scopedRef(VIEW_MODE_SCOPE, "link", "Report"),
@@ -245,7 +248,20 @@ void test("dev login opens the current lead report", async () => {
     ),
     "page",
   );
-  assert.ok(await isVisible(await roleRef("button", "Save draft now")));
+  assert.ok(
+    await isVisible(
+      await scopedRef(
+        { role: "group", name: "Header completion actions" },
+        "button",
+        "Submit",
+      ),
+    ),
+  );
+  assert.equal(
+    refsByRole(await snapshot(), "button", "Save draft now").length,
+    0,
+    "Healthy drafts autosave without a manual Save action",
+  );
 });
 
 void test("Report and Slides preserve the selected period and record visibility", async () => {
@@ -963,7 +979,9 @@ void test("empty report states explain why authoring is unavailable", async () =
   );
   assert.equal(
     namedRefs(await snapshot(), "button", (name) =>
-      /^(?:Save draft now|Submit(?: report)?$|Add item to |\+ Add )/.test(name),
+      /^(?:Save draft now|Retry saving draft|Submit(?: report)?$|Add item to |\+ Add )/.test(
+        name,
+      ),
     ).length,
     0,
   );

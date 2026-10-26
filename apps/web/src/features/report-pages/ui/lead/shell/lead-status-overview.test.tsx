@@ -501,6 +501,12 @@ describe("LeadForm Overview", () => {
       screen.getByTestId("lead-status-overview-page").parentElement
         ?.parentElement,
     ).toHaveAttribute("data-testid", "lead-completion-layout");
+    expect(screen.getByTestId("lead-completion-layout")).toHaveClass(
+      "lead-completion-layout",
+    );
+    expect(screen.getByTestId("lead-completion-scrollport")).toHaveClass(
+      "lead-completion-scrollport",
+    );
   });
 
   it("jumps from the pending-review action to the first carried work", async () => {

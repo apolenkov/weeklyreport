@@ -194,6 +194,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.clearAllTimers();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
 });
@@ -212,18 +214,16 @@ describe("lead-form draft: save-echo + optimistic lock", () => {
     );
     expect(await screen.findByText("Autosaved")).toBeInTheDocument();
 
+    vi.useFakeTimers();
     clickEditableStageChip();
     expect(
       screen.queryByRole("button", { name: /Save draft now/i }),
     ).toBeNull();
-    await waitFor(
-      () =>
-        expect(
-          expectDefined(captured["reports.saveDraft"]).mutationFn,
-        ).toHaveBeenCalledTimes(1),
-      { timeout: 10_000 },
-    );
-  }, 15_000);
+    await act(() => vi.advanceTimersByTimeAsync(5000));
+    expect(
+      expectDefined(captured["reports.saveDraft"]).mutationFn,
+    ).toHaveBeenCalledTimes(1);
+  });
 
   it("a stale-version submit surfaces the reload prompt, not the raw error", async () => {
     const { Wrapper, captured } = buildHarness();

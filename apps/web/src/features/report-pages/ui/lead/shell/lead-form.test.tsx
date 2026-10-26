@@ -224,6 +224,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.clearAllTimers();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
   mockPathname = "/lead/report";
@@ -320,13 +322,17 @@ describe("LeadForm mutation wiring", () => {
           button.getAttribute("aria-label") ?? "",
         ),
       );
+    // Load on the real clock; virtualize only the autosave debounce so RTL's
+    // subsequent dialog waits do not share the fake-timer lifecycle.
+    vi.useFakeTimers();
     act(() => {
       expectDefined(editableChip).click();
     });
-    await screen.findByText(/Pending|Saving/i);
-    await waitFor(() => expect(saveDraftEntry.mutationFn).toHaveBeenCalled(), {
-      timeout: 10_000,
-    });
+    expect(screen.getByText(/Pending|Saving/i)).toBeInTheDocument();
+    await act(() => vi.advanceTimersByTimeAsync(5000));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(saveDraftEntry.mutationFn).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
 
     // Drive a real submit: toolbar Submit → confirm dialog → confirm.
     act(() => {
@@ -348,7 +354,7 @@ describe("LeadForm mutation wiring", () => {
       version?: number;
     };
     expect(sent.version).toBe(5);
-  }, 15_000);
+  });
 
   it("no unset own stages → the submit-confirm shows no warning", async () => {
     const seeded = makeSection();

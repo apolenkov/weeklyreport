@@ -317,7 +317,19 @@ async function addMarker(text: string): Promise<void> {
 async function openFillConfirmation(): Promise<{ role: string; name: RegExp }> {
   // The completion handoff changes the split button's horizontal position.
   // Wait for the header actions to return before measuring the click target.
-  await command(["eval", "scrollTo(0, 0)"]);
+  await command([
+    "eval",
+    `(() => {
+      const scrollport = document.querySelector('[data-testid="lead-completion-scrollport"]');
+      if (!(scrollport instanceof HTMLElement)) throw new Error('Missing Lead completion scrollport');
+      scrollport.scrollTo({ top: 0, behavior: 'instant' });
+    })()`,
+  ]);
+  await command([
+    "wait",
+    "--fn",
+    `document.querySelector('[data-testid="lead-completion-scrollport"]')?.scrollTop === 0`,
+  ]);
   await waitScope({ role: "group", name: "Header completion actions" });
   await findRole("button", "Fill from most recent submitted period", "click");
   const name = /^Fill from .+\?$/u;
@@ -411,7 +423,8 @@ void test("completion guidance jumps to missing work", async () => {
     /1 to review\. Complete the items below before submitting\./u,
   );
   const counters = await pendingReviewCounters();
-  assert(counters.length > 0, "The Save/Submit cluster must show the counter");
+  assert(counters.length > 0, "The completion cluster must show the counter");
+  assert.equal(scopeCount(await snapshot(), "button", PENDING_REVIEW), 1);
   assert(counters.every((counter) => counter === PENDING_REVIEW));
   await findRole("heading", "Fix before submitting", "text");
   const reviewName = `Review "${LEAD_FORM_FIXTURE.carriedText}".`;
@@ -468,11 +481,7 @@ void test("completion guidance jumps to missing work", async () => {
   await command(["click", expandDecisions]);
   await findRole("region", "Risks & Blockers", "text");
   await findRole("region", "Decisions", "text");
-  const submit = await scopedRef(
-    { role: "region", name: "Before you submit" },
-    "button",
-    "Submit report",
-  );
+  const submit = oneRef(await snapshot(), "button", "Submit");
   const disabled = await command(["is", "enabled", submit]);
   assert.equal(disabled.enabled, false);
   await assertNoReportWrites();
@@ -501,11 +510,7 @@ void test("confirming suggested continuations clears the review counter and its 
   const readiness = await roleText("region", "Before you submit");
   assert.doesNotMatch(readiness, /to review/u);
   assert.match(readiness, /Complete the items below before submitting\./u);
-  const submit = await scopedRef(
-    { role: "region", name: "Before you submit" },
-    "button",
-    "Submit report",
-  );
+  const submit = oneRef(await snapshot(), "button", "Submit");
   assert.equal((await command(["is", "enabled", submit])).enabled, false);
 });
 

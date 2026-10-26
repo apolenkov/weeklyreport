@@ -1,6 +1,12 @@
 "use client";
 
-import { type ReactNode, useEffect, useReducer, useRef } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useReducer,
+  useRef,
+} from "react";
 
 import { CheckIcon as SharedCheckIcon } from "../icons/action-icons";
 
@@ -16,6 +22,8 @@ export interface SaveNowButtonState {
 
 interface SaveNowButtonProps {
   autosave: SaveNowButtonState;
+  readonly retryOnly?: boolean;
+  readonly onFocusedRetryHidden?: () => void;
 }
 
 // In-flight presentation takes precedence, followed by the saved flash, error,
@@ -52,7 +60,11 @@ const REST_CLASS_NAME =
 // Post-success flash: true for SAVED_REVERT_MS after a save lands, and dropped
 // the moment autosave leaves "saved" (new edit → pending, failed save → error)
 // rather than waiting out the timer, which would strand a stale green check.
-function useSavedFlash(state: SaveState, isInFlight: boolean): boolean {
+function useSavedFlash(
+  state: SaveState,
+  isInFlight: boolean,
+  onFlashEnd?: () => void,
+): boolean {
   const [showSaved, setShowSaved] = useReducer(
     (_current: boolean, next: boolean) => next,
     false,
@@ -66,6 +78,7 @@ function useSavedFlash(state: SaveState, isInFlight: boolean): boolean {
         clearTimeout(revertTimerRef.current);
       }
       revertTimerRef.current = setTimeout(() => {
+        onFlashEnd?.();
         setShowSaved(false);
         revertTimerRef.current = null;
       }, SAVED_REVERT_MS);
@@ -76,7 +89,7 @@ function useSavedFlash(state: SaveState, isInFlight: boolean): boolean {
         revertTimerRef.current = null;
       }
     }
-  }, [state, isInFlight]);
+  }, [state, isInFlight, onFlashEnd]);
 
   useEffect(() => {
     return () => {
@@ -89,9 +102,44 @@ function useSavedFlash(state: SaveState, isInFlight: boolean): boolean {
   return showSaved;
 }
 
-export function SaveNowButton({ autosave }: SaveNowButtonProps) {
+export function SaveNowButton({
+  autosave,
+  retryOnly = false,
+  onFocusedRetryHidden,
+}: SaveNowButtonProps) {
   const { state, isInFlight, forceSave } = autosave;
-  const showSaved = useSavedFlash(state, isInFlight);
+  const [retryActive, setRetryActive] = useReducer(
+    (_current: boolean, next: boolean) => next,
+    state === "error",
+  );
+  const endRetry = useCallback(() => setRetryActive(false), []);
+  const showSaved = useSavedFlash(state, isInFlight, endRetry);
+  const buttonRef = useRef<HTMLButtonElement | null>(null);
+  const setButtonRef = useCallback(
+    (button: HTMLButtonElement | null) => {
+      // Ref detachment runs before removal, while the focused node still exists.
+      if (
+        button === null &&
+        buttonRef.current !== null &&
+        buttonRef.current === document.activeElement
+      ) {
+        onFocusedRetryHidden?.();
+      }
+      buttonRef.current = button;
+    },
+    [onFocusedRetryHidden],
+  );
+
+  if (state === "error" && !retryActive) {
+    setRetryActive(true);
+  } else if (
+    retryActive &&
+    state !== "error" &&
+    state !== "saved" &&
+    !isInFlight
+  ) {
+    setRetryActive(false);
+  }
 
   const isSaving = isInFlight;
   const isEnabled = (state === "pending" || state === "error") && !isSaving;
@@ -103,8 +151,11 @@ export function SaveNowButton({ autosave }: SaveNowButtonProps) {
 
   const { ariaLabel, label, icon } = deriveSaveView(state, isSaving, showSaved);
 
+  if (retryOnly && state !== "error" && !retryActive) return null;
+
   return (
     <button
+      ref={setButtonRef}
       type="button"
       disabled={!isEnabled}
       onClick={handleClick}

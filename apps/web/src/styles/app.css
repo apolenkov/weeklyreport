@@ -6,25 +6,21 @@
 @source "../../../../packages/ui/src";
 
 @layer base {
-  html {
-    --lead-sticky-completion-clearance: 7rem;
-  }
-
   /* Separate scroll and action rows prevent overlap at every scroll position,
      including when the reason wraps or the safe-area inset grows. */
-  [data-testid="lead-completion-layout"] {
+  .lead-completion-layout {
     display: grid;
     grid-template-rows: minmax(0, 1fr) auto;
-    height: 100%;
+    height: 100dvh;
     min-height: 0;
   }
 
-  [data-testid="lead-completion-layout"] > aside {
+  .lead-completion-layout > aside {
     max-height: 40dvh;
     overflow-y: auto;
   }
 
-  [data-testid="lead-completion-scrollport"] {
+  .lead-completion-scrollport {
     min-height: 0;
     overflow-y: auto;
     scroll-padding-block: var(--sticky-toolbar-offset, 5rem) 1rem;
@@ -72,42 +68,25 @@
   }
 }
 
-/* Only the Lead Overview uses a viewport-bound scrollport. The app navigation
-   stays outside it; other report modes retain document scrolling. */
-body:has([data-testid="lead-completion-layout"]) {
-  display: flex;
-  height: 100dvh;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-body:has([data-testid="lead-completion-layout"]) > header {
-  flex-shrink: 0;
-}
-
-.operational-paper-shell:has([data-testid="lead-completion-layout"]) {
-  flex: 1;
-  min-height: 0;
-}
-
-main:has([data-testid="lead-completion-layout"]),
-main:has([data-testid="lead-completion-layout"]) > div {
-  height: 100%;
-  min-height: 0;
-}
-
-main:has([data-testid="lead-completion-layout"]) > div {
-  padding-block: 0;
-}
-
 @layer components {
-  .lead-completion-sentinel {
-    position: absolute;
-    top: 0;
-    inset-inline: 0;
-    height: 1px;
-    min-width: 1px;
-    pointer-events: none;
+  .lead-overview-route {
+    min-height: 0;
+  }
+
+  .lead-overview-route-frame {
+    padding-block: 0;
+  }
+
+  /* At high zoom and short visual viewports, use document flow rather than
+     constraining the editor behind an on-screen keyboard. */
+  @media (height < 32rem) {
+    .lead-completion-layout {
+      height: auto;
+    }
+
+    .lead-completion-scrollport {
+      overflow-y: visible;
+    }
   }
 
   .operational-paper-shell {

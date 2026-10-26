@@ -1592,7 +1592,7 @@ void test("Confirm all as continue confirms every suggested continuation in one 
   const parent = LEAD_FORM_FIXTURE.carriedProductName;
   const text = LEAD_FORM_FIXTURE.carriedText;
   const pending = (data: BrowserSnapshot) =>
-    scopeCount(data, "StaticText", /^\d+ to review$/u);
+    scopeCount(data, "button", /^\d+ to review$/u);
   assert.ok(
     (await weekBlock("Current week", text, parent)).includes(CARRIED_MARKER),
   );

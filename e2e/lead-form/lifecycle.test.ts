@@ -35,8 +35,10 @@ import {
   scopedRef,
   scopeSnapshot,
   setOffline,
+  waitAutosaveStatus,
   waitButton,
   waitClosed,
+  waitDraftSaved,
   waitNotification,
   waitScope,
   waitSnapshot,
@@ -442,14 +444,14 @@ async function confirmCarriedItem(): Promise<void> {
   const unconfirmed = new RegExp(`${status.source}.*not updated this week`);
   const before = await snapshot();
   assert.equal(
-    scopeCount(completionActions(before), "StaticText", "1 to review"),
+    scopeCount(completionActions(before), "button", "1 to review"),
     1,
   );
   await command(["click", oneRef(before, "button", unconfirmed)]);
   await findRole("menuitem", "In progress", "click");
   await waitSnapshot(
     (data) =>
-      scopeCount(completionActions(data), "StaticText", /to review$/) === 0 &&
+      scopeCount(completionActions(data), "button", /to review$/) === 0 &&
       refsByRole(data, "button", unconfirmed).length === 0,
     "Expected the status choice to confirm the carried item",
   );
@@ -480,6 +482,7 @@ async function assertSubmitted(): Promise<void> {
   const data = await snapshot();
   assert.match(data.snapshot, /Submitted/);
   assert.equal(refsByRole(data, "button", "Save draft now").length, 0);
+  assert.equal(refsByRole(data, "button", "Retry saving draft").length, 0);
   assert.equal(refsByRole(data, "button", "Submit").length, 0);
   assert.equal(refsByRole(data, "button", "Submit report").length, 0);
   assert.equal(
@@ -638,7 +641,7 @@ void test("failed autosave retries through the draft action and persists", async
     await fillIn(WEEKLY_FORM, "Description", text);
     await clickIn(WEEKLY_FORM, "Save weekly fields");
     await waitClosed(WEEKLY_FORM);
-    await waitText("Draft save failed. Use Save to retry.");
+    await waitAutosaveStatus("Draft save failed");
     // The unsaved value stays visible as read-only text in the Activity header.
     assert.ok(
       scopeSnapshot(
@@ -653,8 +656,25 @@ void test("failed autosave retries through the draft action and persists", async
   } finally {
     await command(["network", "unroute", SAVE_ROUTE]);
   }
-  await saveDraft();
+  await command(["network", "requests", "--clear"]);
+  try {
+    await setOffline(true);
+    await clickCompletion("Retry saving draft");
+    await waitButton("Saving draft", { busy: true });
+    const saving = oneRef(await snapshot(), "button", "Saving draft");
+    assert.equal(await getAttr(saving, "aria-busy"), "true");
+    assert.equal((await command(["is", "enabled", saving])).enabled, false);
+    assert.equal(
+      await postCount("reports.saveDraft"),
+      0,
+      "The paused Retry must not send until connectivity returns",
+    );
+  } finally {
+    await setOffline(false);
+  }
+  await waitDraftSaved();
   await assertSavePost();
+  assert.equal(await postCount("reports.saveDraft"), 1);
   await reload();
   await waitText(text);
   await findRole("button", WEEKLY_EDIT, "click");
@@ -674,13 +694,11 @@ void test("pending canonical save locks write actions until connectivity returns
   try {
     await setOffline(true);
     await clickIn(ACTIVITY_FORM, "Save update");
-    await waitButton("Saving draft", { busy: true });
-    await waitText(
+    await waitAutosaveStatus(
       "You’re offline — changes will save when the connection returns",
     );
-    const saving = oneRef(await snapshot(), "button", "Saving draft");
-    assert.equal(await getAttr(saving, "aria-busy"), "true");
-    assert.equal((await command(["is", "enabled", saving])).enabled, false);
+    // The live status, not a healthy manual Save button, proves the write is
+    // paused. Busy/disabled Retry presentation is asserted in error recovery.
     const editor = namedScope(await snapshot(), ACTIVITY_FORM);
     disabledRef(editor, "button", "Save update");
     assert.equal(
@@ -838,7 +856,9 @@ void test("concurrent Lead edits recover unsaved input without overwriting the s
       await saveConcurrentLeadUpdate(form, serverText, peerSession);
       assert.equal(await inputValue(form, "Description *"), localText);
       await clickIn(form, "Save update");
-      await waitButton("Saving draft", { busy: true });
+      await waitAutosaveStatus(
+        "You’re offline — changes will save when the connection returns",
+      );
       assert.equal(await postCount("reports.saveDraft"), 0);
     } finally {
       await setOffline(false);
@@ -856,7 +876,18 @@ void test("concurrent Lead edits recover unsaved input without overwriting the s
     await waitNotification(
       "This section was changed elsewhere. Reloaded the latest version — re-apply your changes and save again.",
     );
-    await waitButton("Saving draft", { present: false });
+    const settled = await snapshot();
+    for (const status of scopeSnapshots(settled, "status")) {
+      assert.equal(scopeCount(status, "StaticText", "Saving draft"), 0);
+      assert.equal(
+        scopeCount(
+          status,
+          "StaticText",
+          "You’re offline — changes will save when the connection returns",
+        ),
+        0,
+      );
+    }
     await assertConflictingSave();
     const data = await snapshot();
     const retained = namedScope(data, recovery);
@@ -917,9 +948,10 @@ void test("submit, reopen and resubmit restore editability", async () => {
   await sendReopen("E2E reopen approval");
   await respondToReopen("E2E reopen approval", "Approve");
   await reload();
-  await waitButton("Save draft now");
+  await waitDraftSaved();
+  await waitButton(`Add item to ${LEAD_FORM_FIXTURE.activityName}`);
   assert.equal(
-    refsByRole(await snapshot(), "button", "Save draft now").length,
+    scopeCount(completionActions(await snapshot()), "button", "Submit"),
     1,
   );
   await startActivityUpdate("E2E correction after reopen");

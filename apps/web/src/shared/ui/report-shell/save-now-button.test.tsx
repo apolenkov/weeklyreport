@@ -154,6 +154,41 @@ describe("SaveNowButton", () => {
     expect(screen.getByTestId("save-now-disc")).toBeDefined();
   });
 
+  it("keeps the normal Save control mounted after retry success and its Saved flash", async () => {
+    const { rerender } = render(
+      <SaveNowButton
+        autosave={makeSnapshot({ state: "error", dirty: true })}
+      />,
+    );
+    const retry = screen.getByRole("button", { name: "Retry saving draft" });
+    retry.focus();
+    rerender(
+      <SaveNowButton
+        autosave={makeSnapshot({ state: "saving", isInFlight: true })}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Saving draft" })).toBe(retry);
+    rerender(<SaveNowButton autosave={makeSnapshot({ state: "saved" })} />);
+    expect(screen.getByRole("button", { name: "Draft saved" })).toBe(retry);
+    await act(() => vi.advanceTimersByTimeAsync(1500));
+    expect(screen.getByRole("button", { name: "Save draft now" })).toBe(retry);
+    expect(retry).toHaveFocus();
+    expect(retry).toBeDisabled();
+  });
+
+  it.each(["idle", "pending", "saving", "saved"] as const)(
+    "hides retry-only controls before an error even for %s autosave",
+    (state) => {
+      render(
+        <SaveNowButton
+          autosave={makeSnapshot({ state, isInFlight: state === "saving" })}
+          retryOnly
+        />,
+      );
+      expect(screen.queryByRole("button")).toBeNull();
+    },
+  );
+
   it("renders the canonical shared check icon with saved-state sizing and color", () => {
     const { rerender } = render(
       <SaveNowButton

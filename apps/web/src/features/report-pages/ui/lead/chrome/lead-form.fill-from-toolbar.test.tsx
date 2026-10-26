@@ -250,6 +250,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.clearAllTimers();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.clearAllMocks();
   mockPathname = "/lead/report";
@@ -399,13 +401,17 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
           button.getAttribute("aria-label") ?? "",
         ),
       );
+    // Load on the real clock; virtualize only the autosave debounce so RTL's
+    // subsequent dialog waits do not share the fake-timer lifecycle.
+    vi.useFakeTimers();
     act(() => {
       expectDefined(editableChip).click();
     });
-    await screen.findByText(/Pending|Saving/i);
-    await waitFor(() => expect(saveDraftEntry.mutationFn).toHaveBeenCalled(), {
-      timeout: 10_000,
-    });
+    expect(screen.getByText(/Pending|Saving/i)).toBeInTheDocument();
+    await act(() => vi.advanceTimersByTimeAsync(5000));
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(saveDraftEntry.mutationFn).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
 
     const documentActions = screen.getByRole("group", {
       name: "Document actions",
@@ -430,7 +436,7 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
       sourceSectionId,
       version: 5,
     });
-  }, 15_000);
+  });
 
   it("renders exactly one shared ReportToolbar container (head-toolbar-parity pin)", async () => {
     // Parity pin: lead form and head shell both render the shared
@@ -713,7 +719,7 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
     ).toBeNull();
   });
 
-  it("hands completion actions to the sticky bar with no duplicate active set", async () => {
+  it("keeps edit-mode completion actions in the header when its observer exits", async () => {
     let notify: IntersectionObserverCallback = (_entries, _observer) =>
       undefined;
     class Observer {
@@ -746,17 +752,18 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
         {} as IntersectionObserver,
       ),
     );
-    expect(
-      screen.queryByRole("group", { name: "Header completion actions" }),
-    ).toBeNull();
-    const sticky = screen.getByRole("group", {
-      name: "Sticky completion actions",
+    const header = screen.getByRole("group", {
+      name: "Header completion actions",
     });
-    expect(sticky).toBeInTheDocument();
+    expect(header).toBeInTheDocument();
+    expect(
+      screen.queryByRole("group", { name: "Sticky completion actions" }),
+    ).toBeNull();
+    expect(screen.queryByTestId("lead-sticky-completion-actions")).toBeNull();
     expect(screen.getAllByRole("button", { name: "Submit" })).toHaveLength(1);
 
     act(() => {
-      within(sticky).getByRole("button", { name: "Submit" }).click();
+      within(header).getByRole("button", { name: "Submit" }).click();
     });
     expect(
       await screen.findByRole("alertdialog", { name: "Confirm submission" }),

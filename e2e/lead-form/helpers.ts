@@ -258,57 +258,68 @@ export async function setOffline(
   await command(["wait", "--fn", `navigator.onLine === ${!offline}`], session);
 }
 
-const SAVE_BUTTONS = `Array.from(document.getElementsByTagName('div'))
-  .filter(group => group.getAttribute('role') === 'group' && ['Header completion actions', 'Sticky completion actions'].includes(group.getAttribute('aria-label')))
-  .flatMap(group => Array.from(group.getElementsByTagName('button')))
-  .filter(button => ['Save draft now', 'Retry saving draft', 'Saving draft', 'Draft saved'].includes(button.getAttribute('aria-label')))
-  .filter(button => button.getClientRects().length > 0)`;
+const AUTOSAVE_STATUS_TEXTS = `Array.from(document.querySelectorAll('[role="status"]'))
+  .map(element => element.textContent?.trim() ?? '')`;
+const SAVED_STATUS = `/^(?:Draft saved|Autosaved|Saved .+)$/u`;
+const UNSETTLED_STATUS = `/^(?:Draft changes pending|Saving draft|Draft save failed|Pending…|Saving…|Save failed|Unsaved update.*|Saving plan outcome…|You’re offline — changes will save when the connection returns)$/u`;
 
-// A click that edits the draft marks it dirty a moment later. Saving before then
-// sees a clean draft, clicks nothing and the edit is lost on reload; wait a
-// bounded time for the dirty state (or a save already running), then save.
+export async function waitAutosaveStatus(
+  text: string,
+  session?: string,
+): Promise<void> {
+  await waitSnapshot(
+    (data) =>
+      scopeSnapshots(data, "status").some(
+        (status) => scopeCount(status, "StaticText", text) > 0,
+      ),
+    `Expected autosave status: ${text}`,
+    session,
+  );
+}
+
+/** The live status follows the acknowledged baseline, not an optimistic row. */
+export async function waitDraftSaved(session?: string): Promise<void> {
+  await command(
+    [
+      "wait",
+      "--fn",
+      `(() => { const statuses = ${AUTOSAVE_STATUS_TEXTS}; const busySave = document.querySelector('button[aria-label="Saving draft"][aria-busy="true"]'); return statuses.some(text => ${SAVED_STATUS}.test(text)) && !statuses.some(text => ${UNSETTLED_STATUS}.test(text)) && busySave === null; })()`,
+      "--timeout",
+      String(VISIBILITY_TIMEOUT_MS),
+    ],
+    session,
+  );
+}
+
+// Local draft edits become pending on the next render. If the canonical editor
+// already acknowledged the edit (or it was a no-op), allow a bounded render
+// window before accepting its saved status. Pending edits use the real autosave
+// debounce; only an observed error exposes an action to click.
 const DIRTY_WAIT_MS = 3000;
 
 export async function saveChanges(session?: string): Promise<void> {
+  await saveDraft(session);
+}
+
+export async function saveDraft(session?: string): Promise<void> {
   await command(["eval", "window.__saveWaitFrom = performance.now()"], session);
   await command(
     [
       "wait",
       "--fn",
-      `(() => { const buttons = ${SAVE_BUTTONS}; const changed = buttons.length === 1 && (!buttons[0].disabled || buttons[0].getAttribute('aria-busy') === 'true'); return changed || performance.now() - window.__saveWaitFrom > ${DIRTY_WAIT_MS}; })()`,
-    ],
-    session,
-  );
-  await saveDraft(session);
-}
-
-export async function saveDraft(session?: string): Promise<void> {
-  await command(
-    [
-      "wait",
-      "--fn",
-      `(() => { const buttons = ${SAVE_BUTTONS}; return buttons.length === 1 && buttons[0].getAttribute('aria-busy') === 'false'; })()`,
+      `(() => { const statuses = ${AUTOSAVE_STATUS_TEXTS}; return statuses.some(text => ${UNSETTLED_STATUS}.test(text)) || performance.now() - window.__saveWaitFrom > ${DIRTY_WAIT_MS}; })()`,
+      "--timeout",
+      String(VISIBILITY_TIMEOUT_MS),
     ],
     session,
   );
   const data = await snapshot(session);
-  const saveRefs = [
-    "Save draft now",
-    "Retry saving draft",
-    "Draft saved",
-  ].flatMap((name) => refsByRole(data, "button", name));
-  assert(saveRefs.length === 1, "Expected one draft-save button");
-  const ref = saveRefs.at(0);
-  assert(ref, "Missing draft-save button");
-  if ((await getAttr(ref, "disabled", session)) === null) {
+  const retries = refsByRole(data, "button", "Retry saving draft");
+  if (retries.length > 0) {
+    const ref = oneRef(data, "button", "Retry saving draft");
+    assert.equal(await getAttr(ref, "disabled", session), null);
+    assert.equal(await getAttr(ref, "aria-busy", session), "false");
     await command(["click", ref], session);
   }
-  await command(
-    [
-      "wait",
-      "--fn",
-      `(() => { const buttons = ${SAVE_BUTTONS}; return buttons.length === 1 && buttons[0].disabled && buttons[0].getAttribute('aria-busy') === 'false' && ['Save draft now', 'Draft saved'].includes(buttons[0].getAttribute('aria-label')); })()`,
-    ],
-    session,
-  );
+  await waitDraftSaved(session);
 }

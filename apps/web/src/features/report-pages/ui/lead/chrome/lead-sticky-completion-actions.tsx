@@ -5,10 +5,6 @@ import {
   LeadCompletionActions,
 } from "./lead-completion-actions";
 
-// Legacy edit-mode consumers reserve end clearance; Overview uses its own row.
-export const LEAD_STICKY_COMPLETION_CLEARANCE_CLASS =
-  "pb-[var(--lead-sticky-completion-clearance)]";
-
 interface LeadStickyCompletionActionsProps {
   readonly actions: LeadCompletionActionContract;
 }

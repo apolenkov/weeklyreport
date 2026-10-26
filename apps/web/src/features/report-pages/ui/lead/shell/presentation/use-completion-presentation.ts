@@ -14,6 +14,7 @@ interface CompletionPresentationInput {
   readonly readiness: LeadSubmitReadiness;
   readonly isSlidesMode: boolean;
   readonly isReadOnly: boolean;
+  readonly canHandOffActions?: boolean;
 }
 
 export interface CompletionPresentation {
@@ -35,7 +36,10 @@ export interface CompletionPresentation {
 export function useCompletionPresentation(
   input: CompletionPresentationInput,
 ): CompletionPresentation {
-  const { headerActionsVisible, sentinelRef } = useHeaderActionsVisibility();
+  const { headerActionsVisible: observedHeaderVisible, sentinelRef } =
+    useHeaderActionsVisibility();
+  const headerActionsVisible =
+    input.canHandOffActions === false || observedHeaderVisible;
   const pendingFocus = firstPendingReviewFocus(input.readiness);
   const completionActions = {
     autosave: input.autosave,
