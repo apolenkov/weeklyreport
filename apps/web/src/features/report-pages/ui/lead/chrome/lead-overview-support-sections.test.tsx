@@ -139,7 +139,7 @@ describe("LeadOverviewSupportSections", () => {
     expect(screen.queryByTestId("lead-section-unified-items")).toBeNull();
   });
 
-  it("shows the head's changes-requested reason to the lead", () => {
+  it("does not duplicate priority changes-requested feedback in the lower support block", () => {
     const section: ReportSectionReadModel = {
       ...makeDraftMergeSection(),
       reviews: [
@@ -156,10 +156,50 @@ describe("LeadOverviewSupportSections", () => {
     };
     render(<Harness initialSection={section} />);
 
-    expect(screen.getByTestId("lead-review-feedback")).toHaveTextContent(
-      "Add the missing outcome details.",
-    );
+    expect(
+      screen.queryByTestId("lead-review-feedback"),
+    ).not.toBeInTheDocument();
   });
+
+  it.each(["risk", "decision"] as const)(
+    "focuses the %s card from feedback and opens its collapsed accordion",
+    async (kind) => {
+      const user = userEvent.setup();
+      const base = makeDraftMergeSection();
+      const comments = [
+        {
+          id: "note-1",
+          reviewerId: "head-1",
+          reviewerName: "Head",
+          text: "Clarify this record.",
+          createdAt: new Date("2026-09-05T08:00:00Z"),
+        },
+      ];
+      const section = {
+        ...base,
+        risks: base.risks.map((risk) => ({
+          ...risk,
+          comments: kind === "risk" ? comments : [],
+        })),
+        decisions: base.decisions.map((decision) => ({
+          ...decision,
+          comments: kind === "decision" ? comments : [],
+        })),
+      };
+      render(<Harness initialSection={section} groupExpanded={false} />);
+      const text = kind === "risk" ? "Existing risk" : "Existing decision";
+      const link = screen.getByRole("link", { name: text });
+      const id =
+        kind === "risk" ? section.risks[0]?.id : section.decisions[0]?.id;
+      const target = document.getElementById(
+        `review-record:${kind}:${id ?? ""}`,
+      );
+      expect(target).not.toBeNull();
+      await user.click(link);
+      await waitFor(() => expect(target).toHaveFocus());
+      expect(target?.closest("[inert]")).toBeNull();
+    },
+  );
 
   it("disables support writes while another Overview input is pending", () => {
     render(<Harness pendingInput />);

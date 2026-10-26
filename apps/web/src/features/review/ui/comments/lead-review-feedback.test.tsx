@@ -1,7 +1,9 @@
 // Lead read-only feedback surface — no composer (lead has no review capability).
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { SectionReviewView } from "@weeklyreport/shared";
+import { useState } from "react";
 import { describe, expect, it } from "vitest";
 
 import { makeReportSectionFixture } from "../../../../test-utils/report-section-fixtures";
@@ -201,6 +203,64 @@ describe("LeadReviewFeedback", () => {
       />,
     );
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it.each(["item", "risk", "decision"] as const)(
+    "links %s feedback to the actual record and reveals its collapsed container",
+    async (kind) => {
+      const user = userEvent.setup();
+      const first = records[0];
+      if (!first) throw new Error("Expected a feedback record");
+      const record = { ...first, kind };
+      const id = `review-record:${kind}:i1`;
+      function Harness() {
+        const [open, setOpen] = useState(false);
+        return (
+          <>
+            <LeadReviewFeedback records={[record]} reviews={[]} />
+            <article>
+              <button
+                aria-expanded={open}
+                aria-controls="record-panel"
+                onClick={() => setOpen(!open)}
+              >
+                Show records
+              </button>
+              <div id="record-panel">
+                <div hidden={!open} inert={!open}>
+                  <div id={id} tabIndex={-1}>
+                    Actual record
+                  </div>
+                </div>
+              </div>
+            </article>
+          </>
+        );
+      }
+      render(<Harness />);
+      const link = screen.getByRole("link", { name: record.text });
+      expect(link).toHaveAttribute("href", `#${id}`);
+      await user.click(link);
+      await waitFor(() => expect(document.getElementById(id)).toHaveFocus());
+      expect(
+        screen.getByRole("button", { name: "Show records" }),
+      ).toHaveAttribute("aria-expanded", "true");
+    },
+  );
+
+  it("preserves modified link navigation without moving focus", () => {
+    render(
+      <>
+        <LeadReviewFeedback records={records} reviews={[]} />
+        <div id="review-record:item:i1" tabIndex={-1}>
+          Actual record
+        </div>
+      </>,
+    );
+    const link = screen.getByRole("link", { name: "Ship the API" });
+    link.focus();
+    fireEvent.click(link, { ctrlKey: true });
+    expect(link).toHaveFocus();
   });
 
   it("renders nothing when there is no feedback", () => {

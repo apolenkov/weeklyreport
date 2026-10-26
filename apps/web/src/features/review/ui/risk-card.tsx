@@ -1,3 +1,4 @@
+import { reviewRecordAnchor } from "../../../shared/ui/feedback/review-record-focus";
 import { MetaRow } from "../../../shared/ui/report-shell/meta-row";
 import type { RiskEntry, StageStatus } from "../../report-sections";
 import {
@@ -146,7 +147,9 @@ export function RiskCard({
   return (
     <div
       data-testid="risk-card"
-      className="rounded-xl p-4"
+      id={reviewRecordAnchor("risk", risk.id)}
+      tabIndex={-1}
+      className="rounded-xl p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
       style={{
         background: state.isBlocked ? BLOCKED_CARD_BG : AT_RISK_CARD_BG,
         border: `1px solid ${state.isBlocked ? BLOCKED_CARD_BORDER : AT_RISK_CARD_BORDER}`,

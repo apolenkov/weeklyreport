@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 
 import { shortItemLabel } from "../../../shared/lib/format/short-label";
+import { reviewRecordAnchor } from "../../../shared/ui/feedback/review-record-focus";
 import type {
   StatusOverviewEditTarget,
   StatusOverviewItem,
@@ -104,9 +105,14 @@ export function StatusOverviewItemPreview(props: ActionProps) {
   return (
     <div
       ref={preview}
+      id={
+        item.recordId && item.comments.length > 0
+          ? reviewRecordAnchor("item", item.recordId)
+          : undefined
+      }
       tabIndex={-1}
       data-overview-item-preview
-      className="group/item flex min-w-0 items-start gap-1 focus:outline-none md:h-full"
+      className="group/item flex min-w-0 items-start gap-1 rounded-[var(--radius-sm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] md:h-full"
     >
       <StatusControl
         item={item}
