@@ -41,7 +41,7 @@ function setup(
 }
 
 describe("useItemEditDialog — characterization", () => {
-  it("create-mode defaults: empty text, in-progress status for current week, no priority rank, empty stageNames", () => {
+  it("create-mode defaults: empty text, in-progress status for current week, no priority rank, sole owned stage applied", () => {
     const { result } = setup({
       defaultProductId: "p1",
       stagesForProduct: () => ["Testing"],
@@ -50,7 +50,7 @@ describe("useItemEditDialog — characterization", () => {
     expect(result.current.text).toBe("");
     expect(result.current.status).toBe("in-progress");
     expect(result.current.priorityRank).toBeNull();
-    expect(result.current.stageNames).toEqual([]);
+    expect(result.current.stageNames).toEqual(["Testing"]);
     expect(result.current.parent).toEqual({ kind: "product", id: "p1" });
     expect(result.current.headerVerb).toBe("Add item");
     expect(result.current.isDeadEnd).toBe(false);

@@ -89,6 +89,9 @@ export function createOverviewComposerState(
         createTarget?.unitKind === "product" ? createTarget.unitId : undefined,
       defaultActivityId:
         createTarget?.unitKind === "activity" ? createTarget.unitId : undefined,
+      stageMemory: editor.draft.stageMemory,
+      stagesForProduct: (productId) =>
+        ownedStagesForProject(editor.draft.section, productId),
     }),
   };
 }
