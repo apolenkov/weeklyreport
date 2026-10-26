@@ -169,7 +169,7 @@ export function useRecordCommentState(
     setValidationAttempted(true);
     const currentResult = reviewCommentInputSchema.safeParse({
       ...anchor,
-      text: draft.trim(),
+      text: submittedText,
     });
     if (!currentResult.success || isCommentPending) return;
     submitComment(currentResult.data.text);
