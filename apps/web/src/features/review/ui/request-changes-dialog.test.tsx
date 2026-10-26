@@ -14,7 +14,10 @@ import { describe, expect, it, vi } from "vitest";
 import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { createMockTRPC } from "../../../test-utils/mock-trpc";
-import { RequestChangesDialog } from "./request-changes-dialog";
+import {
+  OVER_LIMIT_REASON_ERROR,
+  RequestChangesDialog,
+} from "./request-changes-dialog";
 
 const SECTION = "11111111-1111-4111-8111-111111111111";
 
@@ -192,7 +195,7 @@ describe("RequestChangesDialog", () => {
       await user.click(field);
       await user.paste(reason);
       await user.click(submitButton());
-      const error = `Shorten the reason to ${REVIEW_COMMENT_MAX_LENGTH} characters or fewer (excluding leading and trailing whitespace).`;
+      const error = OVER_LIMIT_REASON_ERROR;
       expect(await screen.findByRole("alert")).toHaveTextContent(error);
       expect(field).toHaveAccessibleDescription(
         `${error} ${REVIEW_COMMENT_MAX_LENGTH + 1} / ${REVIEW_COMMENT_MAX_LENGTH}`,
