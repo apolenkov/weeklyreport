@@ -1,5 +1,6 @@
 import { type OrganizationUpdate } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
+import { ZodError } from "zod";
 
 import { createNullLogger } from "../../lib/logger.js";
 import {
@@ -126,7 +127,11 @@ describe("OrganizationService", () => {
         updatedAt: new Date("2026-05-10T00:00:00Z"),
       });
       const svc = new OrganizationService(repo, logger);
-      await expect(svc.getPublic()).rejects.toThrow();
+      // Pin the parse boundary itself: any failure would satisfy a bare
+      // toThrow(), so require the ZodError and the offending field's issue.
+      const caught = await svc.getPublic().catch((error: unknown) => error);
+      expect(caught).toBeInstanceOf(ZodError);
+      expect(caught).toMatchObject({ issues: [{ path: [field] }] });
     },
   );
 });
