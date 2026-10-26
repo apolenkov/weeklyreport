@@ -10,6 +10,7 @@ import { SessionContext } from "../../../../../shared/lib/auth/session-provider"
 import { formatClientErrorMessage } from "../../../../../shared/lib/errors/client-error-reporting";
 import { useTRPC } from "../../../../../shared/lib/trpc/trpc-context";
 import { LEAD_REPORT_ROUTE } from "../../../../../shared/ui/navigation/nav-links";
+import { DraftStageMemoryProvider } from "../../../../report-sections";
 import { LeadFormEmptyState } from "./lead-form-empty-state";
 import { LeadFormLoadError } from "./lead-form-load-error";
 import { LeadStatusOverviewContent } from "./lead-status-overview-content";
@@ -166,13 +167,17 @@ export function LeadStatusOverview({
   }
 
   return (
-    <LeadStatusOverviewContent
-      key={targetReportId}
-      targetReportId={targetReportId}
-      output={overviewQ.data}
-      editor={editor}
-      refreshError={overviewQ.isError}
-      onRefresh={() => void overviewQ.refetch()}
-    />
+    <DraftStageMemoryProvider
+      memory={editor.status === "ready" ? editor.draft.stageMemory : null}
+    >
+      <LeadStatusOverviewContent
+        key={targetReportId}
+        targetReportId={targetReportId}
+        output={overviewQ.data}
+        editor={editor}
+        refreshError={overviewQ.isError}
+        onRefresh={() => void overviewQ.refetch()}
+      />
+    </DraftStageMemoryProvider>
   );
 }

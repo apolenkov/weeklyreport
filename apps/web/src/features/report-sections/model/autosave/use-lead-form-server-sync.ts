@@ -5,13 +5,19 @@ import {
   type Dispatch,
   type SetStateAction,
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
 
-import { leadFormGenerationOf } from "../lead-form/lead-form-generation";
+import type { DraftStageMemory } from "../draft-stage-memory";
+import {
+  type LeadFormGeneration,
+  leadFormGenerationOf,
+} from "../lead-form/lead-form-generation";
 import type { LeadFormWritePort } from "../lead-form/lead-form-write-port";
+import { useDraftStageMemory } from "../lead-form/use-draft-stage-memory";
 import { sectionToDraftPayload } from "../lead-section-draft-payload";
 import type { AutosaveSaveReceipt, DraftSaveContent } from "./autosave-types";
 import { encodeDraftSaveComparisonKey } from "./draft-save-comparison-key";
@@ -74,12 +80,24 @@ function reconcileOnSave(
       : current;
 }
 
-function useSaveEchoRecorder(
-  ledger: SaveEchoLedger,
-  setDraftSection: SetDraftSection,
-  setLastSaveReceipt: Dispatch<SetStateAction<AutosaveSaveReceipt | null>>,
-  receiptScope: string,
-) {
+interface SaveEchoRecorderArgs {
+  readonly ledger: SaveEchoLedger;
+  readonly setDraftSection: SetDraftSection;
+  readonly setLastSaveReceipt: Dispatch<
+    SetStateAction<AutosaveSaveReceipt | null>
+  >;
+  readonly receiptScope: string;
+  readonly stageMemory: DraftStageMemory;
+}
+
+function useSaveEchoRecorder(args: SaveEchoRecorderArgs) {
+  const {
+    ledger,
+    setDraftSection,
+    setLastSaveReceipt,
+    receiptScope,
+    stageMemory,
+  } = args;
   return useCallback(
     (
       savedSection: ReportSectionReadModel,
@@ -87,6 +105,7 @@ function useSaveEchoRecorder(
       queuedPayload: DraftSaveContent | null,
       attemptToken?: string,
     ) => {
+      stageMemory.confirmPersisted(savedSection);
       const savedPayload = sectionToDraftPayload(savedSection);
       const serverDraftKey = encodeDraftSaveComparisonKey(savedPayload);
       ledger.record({ persistedPayload, savedSection, serverDraftKey });
@@ -123,11 +142,12 @@ function useSaveEchoRecorder(
               ),
       };
     },
-    [ledger, receiptScope, setDraftSection, setLastSaveReceipt],
+    [ledger, receiptScope, setDraftSection, setLastSaveReceipt, stageMemory],
   );
 }
 
 interface DraftServerSyncArgs {
+  readonly generation: LeadFormGeneration | null;
   readonly receiptScope: string;
   readonly writePort: LeadFormWritePort;
   readonly serverSection: ReportSectionReadModel | null | undefined;
@@ -146,6 +166,7 @@ interface DraftServerSyncArgs {
 // Both directions of the server conversation: autosave writes out, and the
 // reseed effect re-bases the draft when a new server section arrives.
 export function useDraftServerSync({
+  generation,
   receiptScope,
   writePort,
   serverSection,
@@ -160,15 +181,18 @@ export function useDraftServerSync({
   setDraftSection,
   handleConflict,
 }: DraftServerSyncArgs) {
+  // The open draft owns one stage memory; it is reset with the generation.
+  const stageMemory = useDraftStageMemory(generation);
   const ledger = useSaveEchoLedger();
   const [lastSaveReceipt, setLastSaveReceipt] =
     useState<AutosaveSaveReceipt | null>(null);
-  const onSaved = useSaveEchoRecorder(
+  const onSaved = useSaveEchoRecorder({
     ledger,
     setDraftSection,
     setLastSaveReceipt,
     receiptScope,
-  );
+    stageMemory,
+  });
   const autosave = useLeadFormAutosave({
     writePort,
     reportSectionId,
@@ -192,8 +216,14 @@ export function useDraftServerSync({
     setDraftSection,
     handleConflict,
   });
+  // A failed persistence (including a 409 conflict) must not leave the failed
+  // choice as the default; a later successful save can still confirm it.
+  useEffect(() => {
+    if (autosave.state === "error") stageMemory.noteSaveFailed();
+  }, [autosave.state, stageMemory]);
   const adoptServerSection = useCallback(
     (section: ReportSectionReadModel) => {
+      stageMemory.confirmPersisted(section);
       const savedKey = encodeDraftSaveComparisonKey(
         sectionToDraftPayload(section),
       );
@@ -202,7 +232,7 @@ export function useDraftServerSync({
       setIsSubmitted(section.status === "submitted");
       setDraftSection(section);
     },
-    [autosave, ledger, setDraftSection, setIsSubmitted],
+    [autosave, ledger, setDraftSection, setIsSubmitted, stageMemory],
   );
 
   return useMemo(
@@ -210,8 +240,9 @@ export function useDraftServerSync({
       autosave,
       lastSaveReceipt,
       receiptScope,
+      stageMemory,
       adoptServerSection,
     }),
-    [adoptServerSection, autosave, lastSaveReceipt, receiptScope],
+    [adoptServerSection, autosave, lastSaveReceipt, receiptScope, stageMemory],
   );
 }

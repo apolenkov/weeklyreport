@@ -1,4 +1,9 @@
 export { crossAuthorContentFetchEnabled } from "./model/cross-author/cross-author-content-gate";
+export type { DraftStageMemory } from "./model/draft-stage-memory";
+export {
+  changedStageSelections,
+  createDraftStageMemory,
+} from "./model/draft-stage-memory";
 export { STATUS_BADGE } from "./model/item-card-style";
 export { buildItemDialogProps } from "./model/item-dialog-props";
 export { persistableItemStatusToWorkflow } from "./model/item-status";
@@ -68,6 +73,7 @@ export {
 export {
   computeEffectiveStageNames,
   isZeroOwnedStageDeadEnd,
+  resolveInitialStageNames,
 } from "./model/stage-ownership";
 export { canonicalStageNames, riskCoversStage } from "./model/stage-tags";
 export type {
@@ -116,6 +122,10 @@ export { ActivityStatusStrip } from "./ui/activity/activity-status-strip";
 export { UnifiedActivitySection } from "./ui/activity/unified-activity-section";
 export { BoardEmptyState } from "./ui/board-empty-state";
 export { BoardGrid } from "./ui/board-grid";
+export {
+  DraftStageMemoryProvider,
+  useDraftStageMemory,
+} from "./ui/draft-stage-memory-context";
 export { ItemCard } from "./ui/item-card";
 export { PublishedRecordMarker } from "./ui/item-card-actions";
 export { ItemDialogStack } from "./ui/item-dialog-stack";
