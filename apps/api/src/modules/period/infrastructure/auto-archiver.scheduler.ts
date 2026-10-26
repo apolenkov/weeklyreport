@@ -22,6 +22,13 @@ type ArchiveCandidateOutcome =
       readonly error: string;
     };
 
+// The guarded write behind an archive attempt: `failed` carries the write error
+// that must surface on the tick result, `written` the compare-and-set count
+// (0 means a concurrent writer already archived or reopened the period).
+type ArchiveWrite =
+  | { readonly outcome: "failed"; readonly error: string }
+  | { readonly outcome: "written"; readonly count: number };
+
 export type AutoArchiverResult =
   | { readonly archived: false; readonly reason: "disabled" }
   | {
@@ -126,10 +133,39 @@ export class AutoArchiverScheduler {
     periodId: string,
     expectedPublishedAt: Date,
   ): Promise<ArchiveCandidateOutcome> {
+    const write = await this.writeArchive(periodId, expectedPublishedAt);
+    if (write.outcome === "failed") {
+      this.logger.error(
+        `auto-archive failed period=${periodId}: ${write.error}`,
+      );
+      return { archived: false, reason: "failed", error: write.error };
+    }
+
+    if (write.count === 0) {
+      this.logger.log(
+        `auto-archive skipped period=${periodId}: reopened or archived by a concurrent writer`,
+      );
+      return { archived: false, reason: "skipped" };
+    }
+
+    // The archive transaction has committed. The log line and the audit event
+    // only report that outcome, so they are best-effort and stay outside the
+    // write guard: a failing audit transport must not turn the committed
+    // archive into a reported failure (and must not re-run the write).
+    this.reportArchived(periodId);
+    return { archived: true, periodId };
+  }
+
+  // Compare-and-set on the full selected publication identity. A reopen
+  // followed by republish can leave the same id published and non-archived;
+  // matching publishedAt prevents this stale scan from archiving it. A write
+  // error is returned as data, so the caller keeps a failed write distinct from
+  // a committed archive.
+  private async writeArchive(
+    periodId: string,
+    expectedPublishedAt: Date,
+  ): Promise<ArchiveWrite> {
     try {
-      // Compare-and-set on the full selected publication identity. A reopen
-      // followed by republish can leave the same id published and non-archived;
-      // matching publishedAt prevents this stale scan from archiving it.
       const count = await this.prisma.$transaction(async (tx) => {
         await lockAllReminderPolicies(tx);
         const result = await tx.report.updateMany({
@@ -146,23 +182,30 @@ export class AutoArchiverScheduler {
         }
         return result.count;
       });
-      if (count === 0) {
-        this.logger.log(
-          `auto-archive skipped period=${periodId}: reopened or archived by a concurrent writer`,
-        );
-        return { archived: false, reason: "skipped" };
-      }
+      return { outcome: "written", count };
+    } catch (error) {
+      return {
+        outcome: "failed",
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  private reportArchived(periodId: string): void {
+    try {
       this.logger.log(`auto-archive period=${periodId}`);
       this.auditLogger.periodAutoArchive({
         periodId,
         from: "published",
         to: "archived",
       });
-      return { archived: true, periodId };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(`auto-archive failed period=${periodId}: ${message}`);
-      return { archived: false, reason: "failed", error: message };
+      // Last-resort observation of the lost report; the archive stays counted
+      // as archived because the transaction above already committed.
+      this.logger.error(
+        `auto-archive report failed period=${periodId}: ${message}`,
+      );
     }
   }
 }
