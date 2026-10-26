@@ -27,7 +27,8 @@ describe("createSentryInitOptions", () => {
     const options = createSentryInitOptions();
 
     expect(options.traceLifecycle).toBe("static");
-    expect(options.beforeSendTransaction()).toBeNull();
+    expect(options).not.toHaveProperty("beforeSendTransaction");
+    expect(options.ignoreSpans).toContainEqual(/.*/u);
   });
 
   it.each([

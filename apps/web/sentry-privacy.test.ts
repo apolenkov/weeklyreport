@@ -108,7 +108,7 @@ describe("Sentry SDK privacy", () => {
     }
   });
 
-  it("drops transactions with the shared static lifecycle policy", async () => {
+  it("drops transactions through the shared span filter, not the deprecated hook", async () => {
     const send = vi.fn(() => Promise.resolve({ statusCode: 200 }));
     const client = new BrowserClient({
       ...createSentryPrivacyOptions(),
@@ -121,7 +121,22 @@ describe("Sentry SDK privacy", () => {
 
     try {
       client.init();
+      expect(client.getOptions()).not.toHaveProperty("beforeSendTransaction");
+      expect(client.getOptions().ignoreSpans).toContainEqual(/.*/u);
+
       client.captureEvent({ type: "transaction", transaction: "controlled" });
+      // Empty name exercises the `op` catch-all, which must also drop the root.
+      client.captureEvent({
+        type: "transaction",
+        transaction: "",
+        contexts: {
+          trace: {
+            trace_id: "11111111111111111111111111111111",
+            span_id: "2222222222222222",
+            op: "http.server",
+          },
+        },
+      });
       expect(await client.flush(1000)).toBe(true);
       expect(send).not.toHaveBeenCalled();
     } finally {

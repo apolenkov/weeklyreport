@@ -13,7 +13,9 @@ An error captured while an OTel span is active MUST be sent to Bugsink with
 links to its trace in Tempo. The Sentry SDK MUST run with
 `enableOpenTelemetrySetup: false` so the app's NodeSDK owns tracing and Tempo keeps
 receiving spans. Transactions MUST NOT be sent to Bugsink (it stores errors
-only).
+only). The shared policy MUST drop them through a supported span filter, not a
+hook the SDK deprecates or removes, so a major upgrade cannot silently
+re-enable transaction sending.
 
 #### Scenario: An in-request error links to its Tempo trace
 
@@ -32,8 +34,8 @@ only).
 
 - **GIVEN** any Sentry runtime (api, Next server, Next edge, browser)
 - **WHEN** the SDK would emit a transaction event
-- **THEN** the explicit `static` trace lifecycle keeps `beforeSendTransaction`
-  active, it drops the transaction, and Bugsink receives only errors
+- **THEN** the shared privacy policy matches the transaction root, the SDK
+  drops the transaction before send, and Bugsink receives only errors
 
 #### Scenario: SDK upgrades preserve the privacy policy
 
