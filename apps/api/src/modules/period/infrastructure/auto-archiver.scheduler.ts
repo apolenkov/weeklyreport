@@ -135,16 +135,12 @@ export class AutoArchiverScheduler {
   ): Promise<ArchiveCandidateOutcome> {
     const write = await this.writeArchive(periodId, expectedPublishedAt);
     if (write.outcome === "failed") {
-      this.logger.error(
-        `auto-archive failed period=${periodId}: ${write.error}`,
-      );
+      this.reportWriteFailure(periodId, write.error);
       return { archived: false, reason: "failed", error: write.error };
     }
 
     if (write.count === 0) {
-      this.logger.log(
-        `auto-archive skipped period=${periodId}: reopened or archived by a concurrent writer`,
-      );
+      this.reportSkipped(periodId);
       return { archived: false, reason: "skipped" };
     }
 
@@ -192,20 +188,48 @@ export class AutoArchiverScheduler {
   }
 
   private reportArchived(periodId: string): void {
-    try {
-      this.logger.log(`auto-archive period=${periodId}`);
+    this.guardReport(`auto-archive log period=${periodId}`, () =>
+      this.logger.log(`auto-archive period=${periodId}`),
+    );
+    // The audit reports the committed outcome as well; keep it independent from
+    // the log line so a broken log sink cannot swallow the compliance trail.
+    this.guardReport(`auto-archive audit period=${periodId}`, () =>
       this.auditLogger.periodAutoArchive({
         periodId,
         from: "published",
         to: "archived",
-      });
+      }),
+    );
+  }
+
+  private reportWriteFailure(periodId: string, error: string): void {
+    this.guardReport(`auto-archive failure period=${periodId}`, () =>
+      this.logger.error(`auto-archive failed period=${periodId}: ${error}`),
+    );
+  }
+
+  private reportSkipped(periodId: string): void {
+    this.guardReport(`auto-archive skip period=${periodId}`, () =>
+      this.logger.log(
+        `auto-archive skipped period=${periodId}: reopened or archived by a concurrent writer`,
+      ),
+    );
+  }
+
+  // Reporting a decided outcome is best-effort: a throwing log or audit must
+  // not change that outcome, skip the other report, or abort the remaining
+  // candidates. The fallback line is guarded as well, so an unusable log sink
+  // cannot escape into the fold that processes the remaining rows.
+  private guardReport(what: string, report: () => void): void {
+    try {
+      report();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      // Last-resort observation of the lost report; the archive stays counted
-      // as archived because the transaction above already committed.
-      this.logger.error(
-        `auto-archive report failed period=${periodId}: ${message}`,
-      );
+      try {
+        this.logger.error(`${what} report failed: ${message}`);
+      } catch {
+        // Nothing left to report to; the decided outcome stays authoritative.
+      }
     }
   }
 }

@@ -363,4 +363,84 @@ describe("AutoArchiverScheduler", () => {
       to: "archived",
     });
   });
+
+  // TASK-503.52 / C1207. The audit is emitted after the archive transaction has
+  // committed, so its failure cannot undo the archive. The throwing audit sink
+  // is a fault injection, not an admitted production path (the production
+  // AppLogger does not throw synchronously, see
+  // wave2/claude-E-C1165-C1207/SOURCE-PREFLIGHT.md); the policy follows the
+  // accepted TASK-503.32 post-outcome contract.
+  it("control: a working audit sink reports the archived period", async () => {
+    const prisma = withReminderTransaction({
+      report: {
+        findMany: vi
+          .fn()
+          .mockResolvedValue([
+            { id: "rep-old-1", publishedAt: new Date("2026-05-01T00:00:00Z") },
+          ]),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+    });
+    const admin = {
+      getSettings: vi.fn().mockResolvedValue(makeSettings()),
+    };
+    const audit = {
+      ...createNullAuditLogger(),
+      periodAutoArchive: vi.fn(),
+    };
+
+    const scheduler = new AutoArchiverScheduler(
+      asAny(prisma),
+      asAny(admin),
+      asAny(audit),
+    );
+
+    const result = await scheduler.runOnce(new Date("2026-06-15T00:15:00Z"));
+
+    expect(result).toEqual({
+      archived: true,
+      periodIds: ["rep-old-1"],
+      failures: [],
+    });
+    expect(audit.periodAutoArchive).toHaveBeenCalledTimes(1);
+  });
+
+  it("still reports an archived period as archived when the audit sink throws", async () => {
+    const prisma = withReminderTransaction({
+      report: {
+        findMany: vi
+          .fn()
+          .mockResolvedValue([
+            { id: "rep-old-1", publishedAt: new Date("2026-05-01T00:00:00Z") },
+          ]),
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+      },
+    });
+    const admin = {
+      getSettings: vi.fn().mockResolvedValue(makeSettings()),
+    };
+    const audit = {
+      ...createNullAuditLogger(),
+      periodAutoArchive: vi.fn(() => {
+        throw new Error("audit sink unavailable");
+      }),
+    };
+
+    const scheduler = new AutoArchiverScheduler(
+      asAny(prisma),
+      asAny(admin),
+      asAny(audit),
+    );
+
+    const result = await scheduler.runOnce(new Date("2026-06-15T00:15:00Z"));
+
+    // The archive has committed, so a throwing audit sink loses only the audit
+    // line: the period stays archived and is not counted as a failure.
+    expect(result).toEqual({
+      archived: true,
+      periodIds: ["rep-old-1"],
+      failures: [],
+    });
+    expect(audit.periodAutoArchive).toHaveBeenCalledTimes(1);
+  });
 });

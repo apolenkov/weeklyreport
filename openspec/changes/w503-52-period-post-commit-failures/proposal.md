@@ -45,4 +45,7 @@ None.
 
 ### Modified Capabilities
 
-- `period-dual-state`: post-commit reporting failures.
+- `publish-compare-and-set`: the failure report of a post-publish side effect
+  throwing does not fail the committed publish or skip the other side effect.
+- `period-scheduler-wiring`: a throwing auto-archive audit after the committed
+  archive keeps the period in the archived outcome and out of `failures`.
