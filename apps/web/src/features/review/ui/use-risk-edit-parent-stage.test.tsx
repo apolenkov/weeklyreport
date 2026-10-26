@@ -237,6 +237,23 @@ describe("useRiskEditParentStage — editable draft stage default", () => {
     expect(result.current.stageNames).toEqual([]);
   });
 
+  it("clears the remembered stage when the parent changes", () => {
+    const { result } = setupWithMemory("Build");
+    expect(result.current.stageNames).toEqual(["Build"]);
+
+    act(() => {
+      result.current.setParentAndStages({
+        kind: "product",
+        id: CLEAN_PRODUCT.id,
+      });
+    });
+
+    // The previous parent's choice is cleared; only the new parent's sole
+    // owned stage auto-applies.
+    expect(result.current.stageNames).toEqual([]);
+    expect(result.current.effectiveStageNames).toEqual(["Design"]);
+  });
+
   it("starts empty without memory on a multi-stage product", () => {
     const { result } = setupWithMemory(undefined);
 
