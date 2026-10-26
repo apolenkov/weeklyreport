@@ -1,4 +1,9 @@
-import type { StatusOverviewModel } from "../model/status-overview";
+import type { ReactNode } from "react";
+
+import type {
+  StatusOverviewModel,
+  StatusOverviewUnit,
+} from "../model/status-overview";
 import type { StatusOverviewLineageRow } from "../model/status-overview-lineage";
 import {
   REPORT_PREVIEW_COUNT,
@@ -12,6 +17,7 @@ import {
   TIMELINE_CELL,
   TIMELINE_GRID,
 } from "./status-overview-layout";
+import { CellCreateButton } from "./status-overview-timeline-footer";
 
 const PERIOD_UNAVAILABLE = "Period unavailable";
 function MobileWeekLabel({ label }: { readonly label: string }) {
@@ -42,16 +48,21 @@ function editorBelongsToLineageRow(
 
 function EmptyLane({
   column,
+  create,
 }: {
   readonly column: (typeof STATUS_OVERVIEW_COLUMNS)[number];
+  readonly create?: ReactNode;
 }) {
   // R55: an empty lane stays a quiet muted cell — one em dash instead of a
   // "No item" caption that competes with real content; on mobile it folds
-  // into one summary per unit, after its lineage row list.
+  // into one summary per unit, after its lineage row list. The dash is hidden
+  // from assistive technology; the screen-reader sentence carries the meaning.
+  // A creatable lane adds its contextual control under the dash, which also
+  // reveals on hover/focus of the lane.
   return (
     <div
       data-overview-lineage-lane={column.source}
-      className={`${TIMELINE_CELL} hidden md:min-h-24 md:flex md:flex-col md:items-center md:justify-center md:border-t-0 bg-[var(--color-surface-muted)]`}
+      className={`${TIMELINE_CELL} group/lane hidden md:min-h-24 md:flex md:flex-col md:items-center md:justify-center md:border-t-0 bg-[var(--color-surface-muted)]`}
     >
       <span
         aria-hidden="true"
@@ -60,7 +71,29 @@ function EmptyLane({
         —
       </span>
       <span className="sr-only">No item in this period</span>
+      {create}
     </div>
+  );
+}
+
+// Eligible lanes only: editable (handler present), non-historical and an
+// available Current/Next column. Previous stays read-only.
+function laneCreateControl(
+  unit: StatusOverviewUnit,
+  row: StatusOverviewLineageRow,
+  column: (typeof STATUS_OVERVIEW_COLUMNS)[number],
+  onAddItem: ItemHandlers["onAddItem"],
+): ReactNode {
+  if (!onAddItem || unit.historical || column.source === "previous")
+    return null;
+  if (unit.columns[column.key].availability !== "available") return null;
+  return (
+    <CellCreateButton
+      unit={unit}
+      source={column.source}
+      rowKey={row.key}
+      onAddItem={onAddItem}
+    />
   );
 }
 
@@ -94,11 +127,15 @@ export function MobilePeriodsSummary({
 
 function LineageRow({
   row,
+  unit,
   editorSlot,
   ...handlers
 }: {
   readonly row: StatusOverviewLineageRow;
-} & Omit<ItemHandlers, "onAddItem">) {
+  readonly unit: StatusOverviewUnit;
+  readonly editorSlot: ItemHandlers["editorSlot"];
+} & Omit<ItemHandlers, "editorSlot">) {
+  const { onAddItem, ...itemHandlers } = handlers;
   const editorBelongsToRow = editorBelongsToLineageRow(row, editorSlot);
   return (
     <div
@@ -107,14 +144,16 @@ function LineageRow({
     >
       {STATUS_OVERVIEW_COLUMNS.map((column) => {
         const item = row[column.source];
-        if (!item) return <EmptyLane key={column.key} column={column} />;
+        const create = laneCreateControl(unit, row, column, onAddItem);
+        if (!item)
+          return <EmptyLane key={column.key} column={column} create={create} />;
         return (
           <div
             key={column.key}
             data-overview-lineage-lane={column.source}
             role="group"
             aria-labelledby={STATUS_OVERVIEW_COLUMN_HEADER_IDS[column.key]}
-            className="min-w-0 px-3 py-1 block border-t border-[var(--color-border-subtle)] first:border-t-0 md:px-4 md:py-3 md:min-h-24 md:flex-col md:border-t-0 md:border-l md:border-[var(--color-border-subtle)] md:flex"
+            className="group/lane min-w-0 px-3 py-1 block border-t border-[var(--color-border-subtle)] first:border-t-0 md:px-4 md:py-3 md:min-h-24 md:flex-col md:border-t-0 md:border-l md:border-[var(--color-border-subtle)] md:flex"
           >
             <MobileWeekLabel label={column.label} />
             {column.source === "previous" && row.previousParent ? (
@@ -122,7 +161,10 @@ function LineageRow({
                 Previously in {row.previousParent}
               </p>
             ) : null}
-            <ReportItemSlot item={item} {...handlers} />
+            <ReportItemSlot item={item} {...itemHandlers} />
+            {create ? (
+              <div className="mt-1 flex justify-end md:mt-auto">{create}</div>
+            ) : null}
           </div>
         );
       })}
@@ -159,11 +201,13 @@ export function DesktopPeriodHeader({
 export function LineageRowList({
   rows,
   expanded,
+  unit,
   editorSlot,
   handlers,
 }: {
   readonly rows: readonly StatusOverviewLineageRow[];
   readonly expanded: boolean;
+  readonly unit: StatusOverviewUnit;
   readonly editorSlot: ItemHandlers["editorSlot"];
   readonly handlers: Omit<ItemHandlers, "editorSlot">;
 }) {
@@ -183,7 +227,12 @@ export function LineageRowList({
             hidden={index >= REPORT_PREVIEW_COUNT && !expanded}
             inert={index >= REPORT_PREVIEW_COUNT && !expanded}
           >
-            <LineageRow row={row} editorSlot={editorSlot} {...handlers} />
+            <LineageRow
+              row={row}
+              unit={unit}
+              editorSlot={editorSlot}
+              {...handlers}
+            />
           </li>
         ))}
       </ul>

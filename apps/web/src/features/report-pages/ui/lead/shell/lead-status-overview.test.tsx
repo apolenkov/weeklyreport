@@ -1643,6 +1643,155 @@ describe("LeadForm Overview", () => {
     ).toHaveFocus();
   });
 
+  it("creates a Next item from the Next cell with Planned progress and restores the cell focus", async () => {
+    const user = userEvent.setup();
+    const serverItemId = "a0000000-0000-4000-8000-000000000030";
+    const serverStableId = "a0000000-0000-4000-8000-000000000031";
+    const savedResponses: ReportSectionReadModel[] = [];
+    const saveDraft = vi.fn(
+      (input: unknown, current: ReportSectionReadModel) => {
+        const draft = input as {
+          readonly version: number;
+          readonly items: ReportSectionReadModel["items"];
+        };
+        const savedResponse = {
+          ...current,
+          version: draft.version + 1,
+          items: draft.items.map((item) =>
+            item.stableId === undefined
+              ? { ...item, id: serverItemId, stableId: serverStableId }
+              : item,
+          ),
+        };
+        savedResponses.push(savedResponse);
+        return Promise.resolve(savedResponse);
+      },
+    );
+    render(
+      <Wrapper saveDraft={saveDraft}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    const nextCreate = await pollUntil(() => {
+      const control = document.querySelector<HTMLButtonElement>(
+        '[data-overview-create-origin="cell"][data-overview-create-source="next"]',
+      );
+      if (!control)
+        throw new Error("Expected a contextual Next creation control");
+      return control;
+    });
+    expect(nextCreate.dataset.overviewFocus).toMatch(
+      new RegExp(`^add:product:${PROJECT_ID}:row:.*:cell:next$`),
+    );
+    await user.click(nextCreate);
+
+    const form = await screen.findByRole("form", {
+      name: "Next week update for Payments",
+    });
+    expect(screen.getAllByRole("form")).toHaveLength(1);
+    expect(screen.getByTestId("report-unit-footer")).toContainElement(form);
+    expect(
+      within(form).getByRole("button", { name: "Planned" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      within(form).getByRole("radio", { name: "Next week" }),
+    ).toBeChecked();
+    // The open composer is the only creation path: no second draft store.
+    expect(
+      document.querySelectorAll("[data-overview-create-origin]"),
+    ).toHaveLength(0);
+
+    await user.type(screen.getByLabelText(/Description \*/i), "Next path");
+    await user.click(screen.getByRole("button", { name: "Save update" }));
+
+    await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
+    await pollUntil(() =>
+      expect(
+        screen.queryByRole("form", {
+          name: "Next week update for Payments",
+        }),
+      ).not.toBeInTheDocument(),
+    );
+
+    const submitted = (
+      saveDraft.mock.calls[0]?.[0] as {
+        readonly items: ReportSectionReadModel["items"];
+      }
+    ).items;
+    const created = submitted.filter((item) => item.stableId === undefined);
+    expect(created).toHaveLength(1);
+    expect(created[0]).toMatchObject({
+      type: "next",
+      text: "Next path",
+      workflowStatus: "planned",
+      carriedOver: false,
+    });
+    expect(submitted.filter((item) => item.type === "next")).toHaveLength(2);
+    // Direct Next creation never rewrites the saved Current progress.
+    expect(submitted.find((item) => item.type === "current")).toMatchObject({
+      text: "Current work",
+      workflowStatus: "in_progress",
+    });
+    expect(savedResponses).toHaveLength(1);
+
+    await pollUntil(() => {
+      const active = document.activeElement;
+      expect(
+        active instanceof HTMLElement ? active.dataset.overviewFocus : null,
+      ).toMatch(new RegExp(`^add:product:${PROJECT_ID}:row:.*:cell:next$`));
+    });
+  });
+
+  it("creates a Current item from a populated Current cell and returns focus there on Cancel", async () => {
+    const user = userEvent.setup();
+    const saveDraft = vi.fn();
+    render(
+      <Wrapper saveDraft={saveDraft}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    const currentCreate = await pollUntil(() => {
+      const control = document.querySelector<HTMLButtonElement>(
+        '[data-overview-create-origin="cell"][data-overview-create-source="current"]',
+      );
+      if (!control)
+        throw new Error("Expected a contextual Current creation control");
+      return control;
+    });
+    await user.click(currentCreate);
+
+    const form = await screen.findByRole("form", {
+      name: "Current week update for Payments",
+    });
+    expect(screen.getAllByRole("form")).toHaveLength(1);
+    expect(screen.getByTestId("report-unit-footer")).toContainElement(form);
+    expect(
+      within(form).getByRole("button", { name: "In progress" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    expect(
+      within(form).getByRole("radio", { name: "Current week" }),
+    ).toBeChecked();
+
+    await user.click(within(form).getByRole("button", { name: "Cancel" }));
+
+    await pollUntil(() =>
+      expect(
+        screen.queryByRole("form", {
+          name: "Current week update for Payments",
+        }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(saveDraft).not.toHaveBeenCalled();
+    await pollUntil(() => {
+      const active = document.activeElement;
+      expect(
+        active instanceof HTMLElement ? active.dataset.overviewFocus : null,
+      ).toMatch(new RegExp(`^add:product:${PROJECT_ID}:row:.*:cell:current$`));
+    });
+  });
+
   it("returns focus and restores report actions when an inline edit is cancelled", async () => {
     const user = userEvent.setup();
     render(
