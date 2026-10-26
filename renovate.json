@@ -66,7 +66,7 @@
       "enabled": false
     },
     {
-      "description": "2026-10-26 re-reviewed bullmq 6.4.2: terminal-job-removal still reproduces the compiled removeJob-2.js byte-for-byte (sha256 f2acb16fda20ccac200abd5289a8910e48870d454c1577b19bd375ab809bb4b6, name removeJob keys 2), and the Node Redis path only gained a CLIENT INFO helper (6.4.0 adds opt-in realtime relay messaging; 6.4.1/6.4.2 are dependency security patches). The new optional relay peers pg/redis/bullmq-otel pull no production dependency into the lock. Re-review that script before accepting the next bump (TASK-513).",
+      "description": "2026-10-26 re-reviewed bullmq 6.4.2: terminal-job-removal still reproduces the compiled removeJob-2.js byte-for-byte (sha256 f2acb16fda20ccac200abd5289a8910e48870d454c1577b19bd375ab809bb4b6, name removeJob keys 2), and the Node Redis path only gained a CLIENT INFO helper (6.4.0 adds opt-in realtime relay messaging; 6.4.1/6.4.2 are dependency security patches). The optional relay peers pg/redis/bullmq-otel (unchanged since 6.3.16) pull no production dependency into the lock. Re-review that script before accepting the next bump (TASK-513).",
       "matchPackageNames": ["bullmq"],
       "allowedVersions": "6.4.2"
     },
