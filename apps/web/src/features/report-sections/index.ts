@@ -124,6 +124,7 @@ export { BoardEmptyState } from "./ui/board-empty-state";
 export { BoardGrid } from "./ui/board-grid";
 export {
   DraftStageMemoryProvider,
+  DraftStageMemoryScopeProvider,
   useDraftStageMemory,
 } from "./ui/draft-stage-memory-context";
 export { ItemCard } from "./ui/item-card";
