@@ -7,13 +7,16 @@ import type {
 import { createRequire } from "node:module";
 
 import {
+  type Attributes,
   context,
   logs,
   metrics,
   propagation,
+  type SpanContext,
   SpanKind,
   SpanStatusCode,
   trace,
+  TraceFlags,
 } from "@opentelemetry/api";
 import { ExpressInstrumentation } from "@opentelemetry/instrumentation-express";
 import { HttpInstrumentation } from "@opentelemetry/instrumentation-http";
@@ -449,5 +452,100 @@ describe("third-party telemetry through the bootstrap SDK", () => {
     expect(JSON.stringify(span?.attributes)).not.toContain(
       "nested-private-marker",
     );
+  });
+});
+
+// sdk-trace 3.0 cleans links with cleanAttributes (Tracer.mjs startSpan,
+// Span.mjs addLink), so nested AnyValue payloads survive into the exported
+// ReadableSpan; addEvent goes through cleanSimpleAttributes and drops them at
+// creation. Link attributes therefore need the same collector-edge policy as
+// span attributes.
+const linkSpanContext: SpanContext = {
+  traceId: "0af7651916cd43dd8448eb211c80319c",
+  spanId: "b7ad6b7169203331",
+  traceFlags: TraceFlags.SAMPLED,
+};
+
+function linkAttributesFixture(): Attributes {
+  return {
+    "link.primitive.string": "kept",
+    "link.primitive.number": 7,
+    "link.primitive.boolean": true,
+    "link.primitive.array": ["kept", 1, false],
+    "link.object": { recipient: "link-object-private-marker" },
+    "link.null": null,
+    "link.object.array": [{ recipient: "link-array-private-marker" }],
+  };
+}
+
+function expectOnlyExportableLinkAttributes(
+  attributes: Attributes | undefined,
+): void {
+  expect(attributes?.["link.primitive.string"]).toBe("kept");
+  expect(attributes?.["link.primitive.number"]).toBe(7);
+  expect(attributes?.["link.primitive.boolean"]).toBe(true);
+  expect(attributes?.["link.primitive.array"]).toEqual(["kept", 1, false]);
+  expect(attributes).not.toHaveProperty("link.object");
+  expect(attributes).not.toHaveProperty("link.null");
+  expect(attributes).not.toHaveProperty("link.object.array");
+  expect(JSON.stringify(attributes)).not.toContain("private-marker");
+}
+
+describe("span link attribute privacy through startOtel", () => {
+  it("drops nested attributes from a link supplied at span start", async () => {
+    const tracer = trace.getTracer("otel-link-privacy");
+    const span = tracer.startSpan("link-at-start", {
+      links: [
+        { context: linkSpanContext, attributes: linkAttributesFixture() },
+      ],
+    });
+    span.end();
+
+    const [exported] = await finishedSpans(1);
+    const link = exported?.links[0];
+    if (!link) throw new Error("Expected the exported span to keep its link");
+    expect(link.context.traceId).toBe(linkSpanContext.traceId);
+    expect(link.context.spanId).toBe(linkSpanContext.spanId);
+    expectOnlyExportableLinkAttributes(link.attributes);
+  });
+
+  it("drops nested attributes from a link added after span start", async () => {
+    const tracer = trace.getTracer("otel-link-privacy");
+    const span = tracer.startSpan("link-added-after-start");
+    span.addLink({
+      context: linkSpanContext,
+      attributes: linkAttributesFixture(),
+    });
+    span.end();
+
+    const [exported] = await finishedSpans(1);
+    const link = exported?.links[0];
+    if (!link) throw new Error("Expected the exported span to keep its link");
+    expect(link.context.traceId).toBe(linkSpanContext.traceId);
+    expectOnlyExportableLinkAttributes(link.attributes);
+  });
+
+  it("keeps event attributes because the SDK stores only simple values", async () => {
+    const tracer = trace.getTracer("otel-link-privacy");
+    const span = tracer.startSpan("event-attributes");
+    span.addEvent("privacy-check", {
+      "event.primitive": "kept",
+      "event.object": { recipient: "event-object-private-marker" },
+      "event.null": null,
+      "event.object.array": [{ recipient: "event-array-private-marker" }],
+    });
+    span.end();
+
+    const [exported] = await finishedSpans(1);
+    const event = exported?.events[0];
+    if (!event) {
+      throw new Error("Expected the exported span to keep its event");
+    }
+    expect(event.name).toBe("privacy-check");
+    expect(event.attributes?.["event.primitive"]).toBe("kept");
+    expect(event.attributes).not.toHaveProperty("event.object");
+    expect(event.attributes).not.toHaveProperty("event.null");
+    expect(event.attributes).not.toHaveProperty("event.object.array");
+    expect(JSON.stringify(event.attributes)).not.toContain("private-marker");
   });
 });
