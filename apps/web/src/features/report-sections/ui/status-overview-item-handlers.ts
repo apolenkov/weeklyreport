@@ -1,5 +1,6 @@
 import type { ItemWorkflowStatus } from "@weeklyreport/shared";
 
+import type { ItemStatusInput } from "../model/lead-actions/lead-item-status-patch";
 import type {
   StatusOverviewCreateTarget,
   StatusOverviewEditTarget,
@@ -14,6 +15,13 @@ export type VerdictHandler = (
   verdict: PlanVerdict,
   reason?: string,
 ) => Promise<string | null>;
+
+export type SetStatusHandler = (
+  item: StatusOverviewItem,
+  status: ItemWorkflowStatus,
+  focusKey?: string,
+  input?: ItemStatusInput,
+) => void | Promise<string | null>;
 
 /** Overview row callbacks threaded from the shell into every timeline lane. */
 export interface ItemHandlers {
@@ -31,13 +39,7 @@ export interface ItemHandlers {
       ) => void)
     | undefined;
   readonly onConfirmItem?: ((item: StatusOverviewItem) => void) | undefined;
-  readonly onSetStatus?:
-    | ((
-        item: StatusOverviewItem,
-        status: ItemWorkflowStatus,
-        focusKey?: string,
-      ) => void)
-    | undefined;
+  readonly onSetStatus?: SetStatusHandler | undefined;
   readonly onResolvePlan?:
     ((item: StatusOverviewItem, focusKey?: string) => void) | undefined;
   readonly onRestorePlan?:

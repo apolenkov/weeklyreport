@@ -11,7 +11,7 @@ import { markCompletePatch } from "./lead-item-actions";
 
 export interface ItemStatusInput {
   readonly pausedReason?: string;
-  readonly nextStepAction?: "clear" | "plan";
+  readonly nextStepAction?: "clear";
 }
 
 export function itemStatusRiskText(
@@ -35,8 +35,8 @@ export function itemStatusRiskText(
   return risks.length > 0 ? risks.map((risk) => risk.text).join("; ") : null;
 }
 
-// Inline input supplements the same guarded draft write; a retained next step
-// must instead use the existing server-owned promotion command.
+// Inline input supplements the same guarded draft write. Completing a result
+// requires an explicit choice to clear its next step; moving stays separate.
 export function buildSetItemStatusPatch(
   section: ReportSectionReadModel,
   itemId: string,

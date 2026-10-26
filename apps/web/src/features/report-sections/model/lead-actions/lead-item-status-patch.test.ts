@@ -135,14 +135,6 @@ describe("buildSetItemStatusPatch", () => {
         carriedOver: false,
       },
     });
-    expect(
-      buildSetItemStatusPatch(
-        section({ nextStepText: "Verify" }),
-        ITEM_ID,
-        "done",
-        { nextStepAction: "plan" },
-      ),
-    ).toBeNull();
   });
 
   it("refuses a resolved item, a missing item and a submitted section", () => {
