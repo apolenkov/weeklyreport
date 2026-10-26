@@ -142,12 +142,22 @@ describe("useRiskEditParentStage — editable draft stage default", () => {
   ) {
     const memory = createDraftStageMemory();
     if (rememberedStageName !== undefined) {
+      const recordId = "saved-risk";
+      const productId = overrides.risk?.productId ?? FLAGGED_PRODUCT.id;
       memory.stageChangedSelections([
-        {
-          productId: overrides.risk?.productId ?? FLAGGED_PRODUCT.id,
-          stageNames: [rememberedStageName],
-        },
+        { recordId, productId, stageNames: [rememberedStageName] },
       ]);
+      memory.confirmPersisted({
+        items: [],
+        risks: [
+          {
+            id: recordId,
+            projectId: productId,
+            stageNames: [rememberedStageName],
+          },
+        ],
+        decisions: [],
+      });
     }
     const args = {
       risk: overrides.risk ?? null,

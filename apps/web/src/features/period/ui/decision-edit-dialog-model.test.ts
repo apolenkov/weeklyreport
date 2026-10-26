@@ -66,7 +66,15 @@ function args(
 
 function remembered(stageName: string, productId = "p-multi") {
   const memory = createDraftStageMemory();
-  memory.stageChangedSelections([{ productId, stageNames: [stageName] }]);
+  const recordId = "saved-decision";
+  memory.stageChangedSelections([
+    { recordId, productId, stageNames: [stageName] },
+  ]);
+  memory.confirmPersisted({
+    items: [],
+    risks: [],
+    decisions: [{ id: recordId, productId, stageNames: [stageName] }],
+  });
   return memory;
 }
 

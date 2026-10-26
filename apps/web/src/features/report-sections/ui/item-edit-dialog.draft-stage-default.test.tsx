@@ -48,9 +48,15 @@ function stagesForProduct(productId: string): readonly string[] {
 
 function remembered(stageName: string) {
   const memory = createDraftStageMemory();
+  const recordId = "saved-item";
   memory.stageChangedSelections([
-    { productId: PRODUCT.id, stageNames: [stageName] },
+    { recordId, productId: PRODUCT.id, stageNames: [stageName] },
   ]);
+  memory.confirmPersisted({
+    items: [{ id: recordId, projectId: PRODUCT.id, stageNames: [stageName] }],
+    risks: [],
+    decisions: [],
+  });
   return memory;
 }
 

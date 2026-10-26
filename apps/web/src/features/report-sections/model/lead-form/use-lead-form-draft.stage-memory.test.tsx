@@ -45,7 +45,12 @@ function productItem(stageNames: readonly string[]): KanbanItem {
   };
 }
 
-function savedSectionFor(payload: DraftSavePayload): ReportSectionReadModel {
+function savedSectionFor(
+  payload: DraftSavePayload,
+  stageNamesOf: (stageNames: readonly string[]) => readonly string[] = (
+    stageNames,
+  ) => stageNames,
+): ReportSectionReadModel {
   return makeReportSectionFixture({
     reportSectionId: payload.reportSectionId,
     reportId: REPORT,
@@ -67,7 +72,7 @@ function savedSectionFor(payload: DraftSavePayload): ReportSectionReadModel {
       tag: item.tag,
       workflowStatus: item.workflowStatus,
       carriedOver: item.carriedOver ?? false,
-      stageNames: [...(item.stageNames ?? [])],
+      stageNames: [...stageNamesOf(item.stageNames ?? [])],
     })),
   });
 }
@@ -113,7 +118,7 @@ function saveItem(
 }
 
 describe("open lead-form draft stage memory", () => {
-  it("remembers a saved singleton and keeps it after the save confirms", async () => {
+  it("remembers a saved singleton only once the server confirms it", async () => {
     const saveDraft = vi
       .fn<LeadFormWritePort["saveDraft"]>()
       .mockImplementation((payload) =>
@@ -122,20 +127,21 @@ describe("open lead-form draft stage memory", () => {
     const { result } = renderCore(saveDraft);
 
     act(() => saveItem(result.current, ["Testing"]));
-    expect(result.current.stageMemory.recall(PRODUCT)).toBe("Testing");
+    // An unconfirmed local choice is not the default.
+    expect(result.current.stageMemory.recall(PRODUCT)).toBeUndefined();
 
     await act(() => result.current.autosave.forceSave());
     expect(result.current.stageMemory.recall(PRODUCT)).toBe("Testing");
   });
 
-  it("drops a locally saved default when persistence fails", async () => {
+  it("does not recall a failed save's stage", async () => {
     const saveDraft = vi
       .fn<LeadFormWritePort["saveDraft"]>()
       .mockRejectedValue(new Error("offline"));
     const { result } = renderCore(saveDraft);
 
     act(() => saveItem(result.current, ["Testing"]));
-    expect(result.current.stageMemory.recall(PRODUCT)).toBe("Testing");
+    expect(result.current.stageMemory.recall(PRODUCT)).toBeUndefined();
 
     await act(async () => {
       await result.current.autosave.forceSave().catch(() => undefined);
@@ -144,7 +150,7 @@ describe("open lead-form draft stage memory", () => {
     expect(result.current.stageMemory.recall(PRODUCT)).toBeUndefined();
   });
 
-  it("keeps the persisted default when a later save fails", async () => {
+  it("keeps the confirmed default when a later save fails", async () => {
     const saveDraft = vi
       .fn<LeadFormWritePort["saveDraft"]>()
       .mockImplementationOnce((payload) =>
@@ -164,6 +170,22 @@ describe("open lead-form draft stage memory", () => {
 
     expect(result.current.autosave.state).toBe("error");
     expect(result.current.stageMemory.recall(PRODUCT)).toBe("Development");
+  });
+
+  it("does not advance when the accepted save persists no selected stage", async () => {
+    const saveDraft = vi
+      .fn<LeadFormWritePort["saveDraft"]>()
+      .mockImplementation((payload) =>
+        Promise.resolve(savedSectionFor(payload, () => [])),
+      );
+    const { result } = renderCore(saveDraft);
+
+    act(() => saveItem(result.current, ["Testing"]));
+    await act(() => result.current.autosave.forceSave());
+
+    // The server is the authority on eligibility: its echo carries no stage, so
+    // the remembered default stays empty rather than trusting the local choice.
+    expect(result.current.stageMemory.recall(PRODUCT)).toBeUndefined();
   });
 
   it("does not remember a deliberate multi-stage save", async () => {

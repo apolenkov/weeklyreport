@@ -2,62 +2,77 @@ import type { ReportSectionReadModel } from "@weeklyreport/shared";
 
 import type { DraftPatch } from "./lead-form/draft/lead-form-draft-patch";
 
-// One record's saved stage selection: the item/risk/decision parent plus the
-// stages the lead left selected.
+// One record's stage choice made in this draft: the draft row it belongs to,
+// the record's parent, and the stages the lead left selected.
 export interface SavedStageSelection {
+  // The draft row identity. A choice is confirmed only by the save of this
+  // exact record, never by another record of the same Product.
+  readonly recordId: string;
   readonly productId: string | null | undefined;
   readonly stageNames: readonly string[];
 }
 
-export interface PersistedStageRecords {
-  readonly items: readonly {
-    readonly projectId?: string | null | undefined;
-    readonly stageNames: readonly string[];
-  }[];
-  readonly risks: readonly {
-    readonly projectId?: string | null | undefined;
-    readonly stageNames: readonly string[];
-  }[];
-  readonly decisions: readonly {
-    readonly productId?: string | null | undefined;
-    readonly stageNames: readonly string[];
-  }[];
+// The accepted server section, narrowed to what confirming a choice needs.
+interface PersistedStageRecords {
+  readonly items: readonly Pick<
+    ReportSectionReadModel["items"][number],
+    "id" | "projectId" | "stageNames"
+  >[];
+  readonly risks: readonly Pick<
+    ReportSectionReadModel["risks"][number],
+    "id" | "projectId" | "stageNames"
+  >[];
+  readonly decisions: readonly Pick<
+    ReportSectionReadModel["decisions"][number],
+    "id" | "productId" | "stageNames"
+  >[];
 }
 
-// Per-draft memory of the last stage a record save left selected, so the next
+// This accepted save's draft-row to server-row mapping. A row absent here was
+// not part of the save, so it can confirm nobody's pending choice.
+interface PersistedRecordIdentity {
+  readonly clientId: string;
+  readonly serverId: string;
+}
+
+// Per-draft memory of the last stage a record save persisted, so the next
 // create opens on the same product stage. Seen from the UI as a convenience
 // default only: it never overrides a stored selection, an explicit prefill, or
-// stage ownership.
+// stage ownership, and it only ever reflects what the server accepted.
 export interface DraftStageMemory {
-  // Remembered stage for the product: the pending save first, then the persisted
-  // one. A pending choice the draft failed to persist is not recalled.
+  // Remembered stage for the product, as confirmed by the server. A local
+  // choice that has not persisted is never recalled.
   recall(productId: string | null | undefined): string | undefined;
-  // Records stage selections accepted into the local draft, before the save is
-  // confirmed. Only a single selected stage is remembered; a deliberate
-  // multi-select leaves the previous singleton in place.
+  // Records stage selections accepted into the local draft. Only a single
+  // selected stage is remembered; a deliberate multi-select leaves the previous
+  // singleton in place.
   stageChangedSelections(selections: readonly SavedStageSelection[]): void;
-  // A persistence attempt failed: unconfirmed choices stop being the default
-  // but may still be confirmed by a later successful save.
-  noteSaveFailed(): void;
-  // Promotes locally saved singletons the server has now persisted.
-  confirmPersisted(section: PersistedStageRecords): void;
+  // Promotes locally saved singletons the server has now persisted for the very
+  // rows that carried them. `identities` maps this save's draft rows to its
+  // server rows; a created row additionally matches the section by that id.
+  confirmPersisted(
+    section: PersistedStageRecords,
+    identities?: readonly PersistedRecordIdentity[],
+  ): void;
 }
 
 interface PendingStage {
+  readonly productId: string;
   readonly stageName: string;
-  readonly recallable: boolean;
 }
 
 function singletonOf(selection: SavedStageSelection): {
+  readonly recordId: string;
   readonly productId: string;
   readonly stageName: string;
 } | null {
-  const { productId, stageNames } = selection;
+  const { recordId, productId, stageNames } = selection;
+  if (recordId === "") return null;
   if (productId === null || productId === undefined || productId === "")
     return null;
   if (stageNames.length !== 1) return null;
   const [stageName] = stageNames;
-  return stageName === undefined ? null : { productId, stageName };
+  return stageName === undefined ? null : { recordId, productId, stageName };
 }
 
 function sameStageSet(
@@ -69,60 +84,81 @@ function sameStageSet(
   );
 }
 
+interface ConfirmedTarget {
+  readonly serverId: string;
+  readonly productId: string;
+  readonly stageName: string;
+}
+
+function recordConfirms(
+  record: {
+    readonly id?: string | undefined;
+    readonly stageNames: readonly string[];
+  },
+  parentId: string | null | undefined,
+  target: ConfirmedTarget,
+): boolean {
+  return (
+    record.id === target.serverId &&
+    parentId === target.productId &&
+    record.stageNames.length === 1 &&
+    record.stageNames[0] === target.stageName
+  );
+}
+
 function sectionHasSingleton(
   section: PersistedStageRecords,
-  productId: string,
-  stageName: string,
+  target: ConfirmedTarget,
 ): boolean {
-  const matches = (stageNames: readonly string[]): boolean =>
-    stageNames.length === 1 && stageNames[0] === stageName;
   return (
-    section.items.some(
-      (item) => item.projectId === productId && matches(item.stageNames),
+    section.items.some((item) =>
+      recordConfirms(item, item.projectId, target),
     ) ||
-    section.risks.some(
-      (risk) => risk.projectId === productId && matches(risk.stageNames),
+    section.risks.some((risk) =>
+      recordConfirms(risk, risk.projectId, target),
     ) ||
-    section.decisions.some(
-      (decision) =>
-        decision.productId === productId && matches(decision.stageNames),
+    section.decisions.some((decision) =>
+      recordConfirms(decision, decision.productId, target),
     )
   );
 }
 
 export function createDraftStageMemory(): DraftStageMemory {
   const persisted = new Map<string, string>();
+  // Keyed by the draft row, so an unrelated record's save cannot confirm it.
   const pending = new Map<string, PendingStage>();
   return {
     recall(productId) {
       if (productId === null || productId === undefined || productId === "")
         return undefined;
-      const pendingStage = pending.get(productId);
-      if (pendingStage?.recallable) return pendingStage.stageName;
       return persisted.get(productId);
     },
     stageChangedSelections(selections) {
       for (const selection of selections) {
         const singleton = singletonOf(selection);
         if (singleton === null) continue;
-        pending.set(singleton.productId, {
+        // The latest choice for that row is the one a save can confirm.
+        pending.set(singleton.recordId, {
+          productId: singleton.productId,
           stageName: singleton.stageName,
-          recallable: true,
         });
       }
     },
-    noteSaveFailed() {
-      for (const [productId, stage] of pending) {
-        if (stage.recallable) {
-          pending.set(productId, { ...stage, recallable: false });
-        }
-      }
-    },
-    confirmPersisted(section) {
-      for (const [productId, stage] of pending) {
-        if (!sectionHasSingleton(section, productId, stage.stageName)) continue;
-        persisted.set(productId, stage.stageName);
-        pending.delete(productId);
+    confirmPersisted(section, identities = []) {
+      if (pending.size === 0) return;
+      const serverIdByClientId = new Map(
+        identities.map((identity) => [identity.clientId, identity.serverId]),
+      );
+      for (const [recordId, stage] of pending) {
+        const serverId = serverIdByClientId.get(recordId) ?? recordId;
+        const target: ConfirmedTarget = {
+          serverId,
+          productId: stage.productId,
+          stageName: stage.stageName,
+        };
+        if (!sectionHasSingleton(section, target)) continue;
+        persisted.set(stage.productId, stage.stageName);
+        pending.delete(recordId);
       }
     },
   };
@@ -195,9 +231,11 @@ export function changedStageSelections(
   }
 }
 
-interface StageSelectionRow extends SavedStageSelection {
+interface StageSelectionRow {
   // Draft-only rows may not carry a stored id until the save is echoed.
   readonly id?: string | undefined;
+  readonly productId: string | null | undefined;
+  readonly stageNames: readonly string[];
 }
 
 function changedSelections(
@@ -216,6 +254,13 @@ function changedSelections(
     ) {
       return [];
     }
-    return [{ productId: row.productId, stageNames: row.stageNames }];
+    if (row.id === undefined) return [];
+    return [
+      {
+        recordId: row.id,
+        productId: row.productId,
+        stageNames: row.stageNames,
+      },
+    ];
   });
 }
