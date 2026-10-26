@@ -5,6 +5,7 @@ import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import {
   buildLeadFormLoadedViewModel,
   type DraftPatch,
+  type DraftStageMemory,
   leadFormGenerationOf,
   type LeadFormLoadedContext,
   type LeadSubmitReadiness,
@@ -72,6 +73,8 @@ type PersistedSaveResult =
   import("../../../../report-sections/model/autosave/autosave-types").PersistedSaveResult;
 
 interface LeadFormEditorDraftHandle extends LeadFormDraftHandle {
+  // Open-draft stage memory: one instance per draft generation.
+  readonly stageMemory: DraftStageMemory;
   readonly abandonPersisted: (token: string) => void;
   readonly savePersisted: (token: string) => Promise<PersistedSaveResult>;
   readonly section: ReportSectionReadModel;
@@ -128,6 +131,7 @@ function buildEditorDraftHandle(
 ): LeadFormEditorDraftHandle {
   return {
     section,
+    stageMemory: draft.stageMemory,
     dirty: draft.dirty,
     version: draft.version,
     autosave: draft.autosave,

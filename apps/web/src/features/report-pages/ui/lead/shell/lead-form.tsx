@@ -1,5 +1,6 @@
 "use client";
 
+import { DraftStageMemoryProvider } from "../../../../report-sections";
 import { LeadFormEmptyState } from "./lead-form-empty-state";
 import { LeadFormLoadError } from "./lead-form-load-error";
 import { LeadFormLoaded } from "./lead-form-loaded";
@@ -62,7 +63,11 @@ function LeadFormEditor(
   if (editor.status === "loading") {
     return <LeadFormSkeleton mode={props.mode} />;
   }
-  return <LeadFormLoaded key={editor.generation} {...editor.view} />;
+  return (
+    <DraftStageMemoryProvider memory={editor.draft.stageMemory}>
+      <LeadFormLoaded key={editor.generation} {...editor.view} />
+    </DraftStageMemoryProvider>
+  );
 }
 
 export function LeadForm({ mode = "edit", ...props }: LeadFormProps) {

@@ -7,6 +7,7 @@ import { useDraftServerSync } from "../autosave/use-lead-form-server-sync";
 import { countLocalOnlyRows } from "../lead-section-draft-payload";
 import type { LeadFormGeneration } from "./lead-form-generation";
 import type { LeadFormWritePort } from "./lead-form-write-port";
+import { useStageMemoryApply } from "./use-draft-stage-memory";
 import {
   type useDraftPayload,
   useGenerationBoundApply,
@@ -56,6 +57,7 @@ export function useDraftSync({
     [generation],
   );
   return useDraftServerSync({
+    generation,
     receiptScope,
     writePort,
     serverSection,
@@ -111,11 +113,19 @@ export function useDraftOutcomes({
     acceptVersion,
     adoptServerSection: serverSync.adoptServerSection,
   });
-  const apply = useGenerationBoundApply(
+  const applyDraft = useGenerationBoundApply(
     generation,
     setDraftSection,
     outcomeCoordinator.isLocked,
   );
+  // Every record save enters the draft as a patch; remembering the changed
+  // stage selections at this single seam covers Item, Risk and Decision saves
+  // from any surface and keeps Cancel out of the memory.
+  const apply = useStageMemoryApply({
+    apply: applyDraft,
+    draftSection,
+    stageMemory: serverSync.stageMemory,
+  });
   const outcomes = useOutcomeActions(outcomeCoordinator);
   return { outcomeCoordinator, apply, outcomes };
 }
