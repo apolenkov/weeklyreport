@@ -195,10 +195,35 @@ export function templateArgs(
   ];
 }
 
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** A rendered document is a manifest only when its consumers can read it. */
+function isManifest(value: unknown): value is Manifest {
+  if (!isRecord(value)) return false;
+  const { kind, metadata } = value;
+  return (
+    typeof kind === "string" &&
+    isRecord(metadata) &&
+    typeof metadata.name === "string"
+  );
+}
+
 export function parseManifests(output: string): readonly Manifest[] {
-  return parseAllDocuments(output)
-    .map((document) => document.toJS() as Manifest | null)
-    .filter((document): document is Manifest => document !== null);
+  const manifests: Manifest[] = [];
+  for (const document of parseAllDocuments(output)) {
+    const value: unknown = document.toJS();
+    // Helm renders a comment-only document, such as a disabled template, as null.
+    if (value === null) continue;
+    if (!isManifest(value)) {
+      throw new Error(
+        "Helm rendered a document that is not a Kubernetes manifest: expected an object with string kind and metadata.name",
+      );
+    }
+    manifests.push(value);
+  }
+  return manifests;
 }
 
 export function renderExample(extra: readonly string[] = []): {
