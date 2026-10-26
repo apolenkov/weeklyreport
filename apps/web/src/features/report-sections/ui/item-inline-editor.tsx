@@ -89,24 +89,14 @@ function InlineEditPrimaryFields({
   return (
     <>
       <ItemDescriptionField {...form} week={week} />
-      {showNextStep && week === "current" ? (
+      {(showNextStep || Boolean(form.nextStepTextError)) &&
+      week === "current" ? (
         <div className="space-y-1">
           <ItemNextStepField
             {...form}
             nextStepTextareaRef={nextStepTextareaRef}
           />
         </div>
-      ) : null}
-      {!showNextStep && form.nextStepTextError ? (
-        <p
-          id="item-next-step"
-          role="alert"
-          tabIndex={-1}
-          className="text-xs text-[var(--color-destructive)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
-        >
-          {form.nextStepTextError} Cancel, then choose More actions → Update
-          status.
-        </p>
       ) : null}
       {!form.isActivityParent ? (
         <StageStep

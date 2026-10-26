@@ -8,7 +8,11 @@ export {
   buildMoveItemPatch,
   promoteContinuationPatch,
 } from "./model/lead-actions/lead-item-actions";
-export { buildSetItemStatusPatch } from "./model/lead-actions/lead-item-status-patch";
+export {
+  buildSetItemStatusPatch,
+  type ItemStatusInput,
+  itemStatusRiskText,
+} from "./model/lead-actions/lead-item-status-patch";
 export type { CrossAuthorRow } from "./model/lead-cross-author";
 export type { CrossAuthorContentRow } from "./model/lead-cross-author-content";
 export type {

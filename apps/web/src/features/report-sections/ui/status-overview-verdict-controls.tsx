@@ -1,6 +1,5 @@
 "use client";
 
-import { SAFE_TEXT_MAX_LENGTH } from "@weeklyreport/shared";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,17 +7,17 @@ import {
   DropdownMenuTrigger,
 } from "@weeklyreport/ui/components/ui/dropdown-menu";
 import { Ellipsis } from "lucide-react";
-import { type SubmitEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { StatusOverviewItem } from "../model/status-overview";
 import type { PlanVerdict } from "../model/status-overview-verdict";
 import {
   ICON_BUTTON_CLASS,
-  identityOf,
   MENU_ITEM_CLASS,
 } from "./status-overview-item-actions";
 import type { VerdictHandler } from "./status-overview-item-handlers";
 import { VerdictIcon } from "./status-overview-item-icons";
+import { ReasonRow } from "./status-overview-reason-row";
 
 const VERDICT_LABEL: Readonly<Record<PlanVerdict, string>> = {
   done: "Done",
@@ -53,85 +52,6 @@ export function VerdictStamp({ verdict }: { readonly verdict: PlanVerdict }) {
     >
       <VerdictIcon verdict={verdict} />
     </span>
-  );
-}
-
-function ReasonRow({
-  verdict,
-  item,
-  busy,
-  error,
-  onSubmit,
-  onCancel,
-}: {
-  readonly verdict: ReasonVerdict;
-  readonly item: StatusOverviewItem;
-  readonly busy: boolean;
-  readonly error: string | null;
-  readonly onSubmit: (reason: string) => void;
-  readonly onCancel: () => void;
-}) {
-  const [reason, setReason] = useState("");
-  const [missing, setMissing] = useState(false);
-  const input = useRef<HTMLInputElement>(null);
-  useEffect(() => input.current?.focus(), []);
-  const errorId = `verdict-error-${identityOf(item)}`;
-  const submit = (event: SubmitEvent) => {
-    event.preventDefault();
-    if (reason.trim() === "") {
-      setMissing(true);
-      return;
-    }
-    onSubmit(reason);
-  };
-  const message = missing ? "Add a one-line reason." : error;
-  return (
-    <form onSubmit={submit} className="flex min-w-0 flex-col gap-1">
-      <div className="flex min-w-0 flex-wrap items-center gap-1">
-        <input
-          ref={input}
-          type="text"
-          value={reason}
-          maxLength={SAFE_TEXT_MAX_LENGTH}
-          disabled={busy}
-          aria-label={`${VERDICT_LABEL[verdict]} reason — ${item.text}`}
-          aria-invalid={message !== null}
-          aria-describedby={message === null ? undefined : errorId}
-          placeholder={REASON_PROMPT[verdict]}
-          onChange={(event) => {
-            setReason(event.target.value);
-            setMissing(false);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") onCancel();
-          }}
-          className={`min-h-[var(--touch-target-min)] min-w-0 basis-full rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-card)] px-2 text-sm ${FOCUS_RING}`}
-        />
-        <button
-          type="submit"
-          disabled={busy}
-          className={`min-h-[var(--touch-target-min)] rounded-[var(--radius-sm)] px-2 text-sm font-semibold text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)] disabled:opacity-50 ${FOCUS_RING}`}
-        >
-          Save
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className={`min-h-[var(--touch-target-min)] rounded-[var(--radius-sm)] px-2 text-sm text-[var(--color-muted-foreground)] hover:bg-[var(--color-surface-hover)] ${FOCUS_RING}`}
-        >
-          Cancel
-        </button>
-      </div>
-      {message === null ? null : (
-        <p
-          id={errorId}
-          role="alert"
-          className="text-xs text-[var(--color-destructive)]"
-        >
-          {message}
-        </p>
-      )}
-    </form>
   );
 }
 
@@ -276,8 +196,8 @@ export function VerdictRail({
   if (asking !== null)
     return (
       <ReasonRow
-        verdict={asking}
-        item={item}
+        label={`${VERDICT_LABEL[asking]} reason — ${item.text}`}
+        placeholder={REASON_PROMPT[asking]}
         busy={busy}
         error={error}
         onSubmit={(reason) => void flow.record(asking, reason)}

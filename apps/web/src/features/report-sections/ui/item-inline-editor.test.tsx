@@ -104,13 +104,18 @@ describe("ItemInlineEditor", () => {
     expect(guidance).toHaveTextContent(
       "A completed item cannot have a next step.",
     );
-    expect(guidance).toHaveTextContent(
-      "Cancel, then choose More actions → Update status.",
+    expect(guidance).not.toHaveTextContent("Cancel, then choose");
+    const nextStep = screen.getByRole("textbox", { name: /Next step/ });
+    expect(nextStep).toHaveValue("Preserve this next-week plan");
+    expect(nextStep).toHaveFocus();
+    await user.clear(nextStep);
+    await user.click(screen.getByRole("button", { name: "Save update" }));
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "completed", nextStepText: null }),
     );
-    expect(guidance).toHaveFocus();
     expect(draftStore.getSnapshot()).toMatchObject({
       text: "Current result",
-      nextStepText: "Preserve this next-week plan",
+      nextStepText: "",
     });
   });
 

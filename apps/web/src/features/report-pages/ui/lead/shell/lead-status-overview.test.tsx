@@ -379,6 +379,56 @@ async function chooseUpdateProgress(
 }
 
 describe("LeadForm Overview", () => {
+  it("pauses from the status menu with two clicks, text and Enter", async () => {
+    const user = userEvent.setup();
+    render(
+      <Wrapper>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Status of Current work: In progress",
+      }),
+    );
+    await user.click(screen.getByRole("menuitem", { name: "Paused" }));
+    const reason = screen.getByRole("textbox", {
+      name: "Paused reason — Current work",
+    });
+    await pollUntil(() => expect(reason).toHaveFocus());
+    expect(screen.queryByRole("textbox", { name: /Description/ })).toBeNull();
+    await user.keyboard("Waiting for access{Enter}");
+    expect(
+      await screen.findByRole("button", {
+        name: "Status of Current work: Paused",
+      }),
+    ).toBeVisible();
+  });
+
+  it("clears a linked next step inline when choosing Done", async () => {
+    const user = userEvent.setup();
+    render(
+      <Wrapper legacyNextText="Verify production">
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Status of Current work: In progress",
+      }),
+    );
+    await user.click(screen.getByRole("menuitem", { name: "Done" }));
+    expect(screen.getByTestId("overview-status-next-step")).toBeVisible();
+    expect(screen.queryByRole("textbox", { name: /Description/ })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Clear" }));
+    expect(
+      await screen.findByRole("button", {
+        name: "Status of Current work: Done",
+      }),
+    ).toBeVisible();
+    expect(screen.queryByText("Verify production")).toBeNull();
+    expect(screen.queryByText(/Cancel, then choose/)).toBeNull();
+  });
   it("keeps an authoritative prior-only row informational with only the verdict rail", async () => {
     const predecessorItem: ReportSectionReadModel["items"][number] = {
       id: "a0000000-0000-4000-8000-000000000034",
@@ -668,15 +718,19 @@ describe("LeadForm Overview", () => {
     const editor = await screen.findByRole("form", {
       name: "Current week update for Payments",
     });
-    // A hidden legacy next-step commitment blocks Completed in the editor and
-    // points at More actions → Update status.
+    // A hidden next-step validation error reveals the field in place instead
+    // of sending the lead through a different editor.
     await user.click(within(editor).getByRole("button", { name: "Done" }));
     await user.click(
       within(editor).getByRole("button", { name: "Save update" }),
     );
     expect(await within(editor).findByRole("alert")).toHaveTextContent(
-      "More actions → Update status",
+      "A completed item cannot have a next step",
     );
+    expect(
+      within(editor).getByRole("textbox", { name: /Next step/ }),
+    ).toHaveValue("Continue next week");
+    expect(screen.queryByText(/Cancel, then choose/)).toBeNull();
     await user.click(within(editor).getByRole("button", { name: "Cancel" }));
     await user.click(screen.getByRole("button", { name: "Discard" }));
 
@@ -1946,7 +2000,7 @@ describe("LeadForm Overview", () => {
     ).toBeNull();
   });
 
-  it("sets a status that needs no extra input in place and opens the editor for a pause", async () => {
+  it("sets a simple status in place and asks inline for a pause", async () => {
     const user = userEvent.setup();
     const saveDraft = vi.fn();
     render(
@@ -1961,12 +2015,15 @@ describe("LeadForm Overview", () => {
       }),
     );
     await user.click(screen.getByRole("menuitem", { name: "Paused" }));
-    // A pause needs its reason: the canonical editor opens and nothing changes.
+    // A pause asks only for its reason and does not change the draft yet.
     expect(
-      await screen.findByRole("form", {
-        name: "Current week update for Payments",
+      await screen.findByRole("textbox", {
+        name: "Paused reason — Current work",
       }),
     ).toBeVisible();
+    expect(
+      screen.queryByRole("form", { name: "Current week update for Payments" }),
+    ).toBeNull();
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(
       await screen.findByRole("button", {

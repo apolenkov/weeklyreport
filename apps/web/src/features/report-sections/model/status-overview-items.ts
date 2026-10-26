@@ -1,5 +1,6 @@
 import type { ReportSectionReadModel } from "@weeklyreport/shared";
 
+import { itemStatusRiskText } from "./lead-actions/lead-item-status-patch";
 import type {
   StatusOverviewItem,
   StatusOverviewProjectionSource,
@@ -128,6 +129,21 @@ function verdictField(
   return verdict === null ? {} : { verdict };
 }
 
+function statusInputFields(
+  item: SectionItem,
+  source: StatusOverviewItem["source"],
+  nextStep: string | null,
+  input: StatusOverviewProjectionSource,
+) {
+  return {
+    nextStepText: source === "current" ? (item.nextStepText ?? null) : null,
+    statusRiskText:
+      source === "previous" || nextStep !== null
+        ? null
+        : itemStatusRiskText(input.currentSection, item),
+  };
+}
+
 function toOverviewItem(
   item: SectionItem,
   source: StatusOverviewItem["source"],
@@ -152,6 +168,7 @@ function toOverviewItem(
     tag: item.tag,
     stageNames: item.stageNames,
     pausedReason: item.pausedReason ?? null,
+    ...statusInputFields(item, source, nextStep, input),
     resolution,
     outcomeHistory: item.outcomeHistory ?? [],
     // Only the derived Next projection is a second rendering of the same

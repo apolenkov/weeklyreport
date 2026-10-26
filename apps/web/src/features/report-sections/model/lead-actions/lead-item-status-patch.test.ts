@@ -100,6 +100,51 @@ describe("buildSetItemStatusPatch", () => {
     ).not.toBeNull();
   });
 
+  it("accepts a safe inline pause reason and still rejects invisible text", () => {
+    expect(
+      buildSetItemStatusPatch(section({}), ITEM_ID, "paused", {
+        pausedReason: "Waiting",
+      }),
+    ).toMatchObject({
+      patch: {
+        workflowStatus: "paused",
+        pausedReason: "Waiting",
+        carriedOver: false,
+      },
+    });
+    expect(
+      buildSetItemStatusPatch(section({}), ITEM_ID, "paused", {
+        pausedReason: "\u200B",
+      }),
+    ).toBeNull();
+  });
+
+  it("clears a next step only after an explicit Done decision", () => {
+    expect(
+      buildSetItemStatusPatch(
+        section({ nextStepText: "Verify" }),
+        ITEM_ID,
+        "done",
+        { nextStepAction: "clear" },
+      ),
+    ).toMatchObject({
+      patch: {
+        workflowStatus: "done",
+        nextStepText: null,
+        pausedReason: null,
+        carriedOver: false,
+      },
+    });
+    expect(
+      buildSetItemStatusPatch(
+        section({ nextStepText: "Verify" }),
+        ITEM_ID,
+        "done",
+        { nextStepAction: "plan" },
+      ),
+    ).toBeNull();
+  });
+
   it("refuses a resolved item, a missing item and a submitted section", () => {
     expect(
       buildSetItemStatusPatch(

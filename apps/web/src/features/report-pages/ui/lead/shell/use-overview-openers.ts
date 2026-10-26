@@ -1,7 +1,4 @@
-import type {
-  ItemWorkflowStatus,
-  LeadStatusOverviewOutput,
-} from "@weeklyreport/shared";
+import type { LeadStatusOverviewOutput } from "@weeklyreport/shared";
 import type { SetStateAction } from "react";
 
 import type {
@@ -11,10 +8,7 @@ import type {
   StatusOverviewItem,
   StatusOverviewModel,
 } from "../../../../report-sections";
-import {
-  buildConfirmCarriedItemPatch,
-  buildSetItemStatusPatch,
-} from "../../../../report-sections";
+import { buildConfirmCarriedItemPatch } from "../../../../report-sections";
 import {
   createOverviewComposerState,
   findEditableItem,
@@ -24,6 +18,7 @@ import { buildPriorPlanSeed } from "./overview-editor-recovery";
 import { overviewMoveEditorItem } from "./overview-item-save";
 import { useEditorSettle } from "./use-editor-settle";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
+import { useOverviewStatusSave } from "./use-overview-status-save";
 
 type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
 
@@ -91,6 +86,7 @@ export function useOverviewEditOpeners({
   resetAttempt,
 }: OpenersArgs) {
   const { whenIdle } = useEditorSettle(editor);
+  const saveStatus = useOverviewStatusSave(editor);
   const openEditItem = (
     target: StatusOverviewEditTarget,
     week: "current" | "next",
@@ -145,21 +141,15 @@ export function useOverviewEditOpeners({
       if (patch) ready.draft.apply(patch);
     });
   };
-  // A status the draft can take directly is patched in place; one that needs
-  // more input (a pause reason, a next step to clear, a covering risk) opens
-  // the canonical editor on the same item instead.
   const setItemStatus = (
     item: StatusOverviewItem,
-    status: ItemWorkflowStatus,
-    focusKey?: string,
-  ): void => {
-    const { recordId, editTarget } = item;
-    if (!editor || isReadOnly || dialog || !recordId || !editTarget) return;
-    whenIdle(({ draft }) => {
-      const patch = buildSetItemStatusPatch(draft.section, recordId, status);
-      if (patch) draft.apply(patch);
-      else openEditItem(editTarget, editTarget.source, { focusKey });
-    });
+    status: Parameters<typeof saveStatus>[1],
+    _focusKey?: string,
+    input: Parameters<typeof saveStatus>[2] = {},
+  ): Promise<string | null> => {
+    if (!editor || isReadOnly || dialog || !item.recordId || !item.editTarget)
+      return Promise.resolve("This report is not editable right now.");
+    return saveStatus(item, status, input);
   };
   return { editItem, moveItem, confirmItem, setItemStatus };
 }

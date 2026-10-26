@@ -13,7 +13,9 @@ import { ItemBadges, ResolutionNote } from "./status-overview-item-metadata";
 import { ItemActionZone } from "./status-overview-item-overflow";
 import { OutcomeAudit } from "./status-overview-outcome-audit";
 import { TrackedWorkComments } from "./status-overview-record-comments";
+import { StatusInput } from "./status-overview-status-input";
 import { VerdictRail, VerdictStamp } from "./status-overview-verdict-controls";
+import { useOverviewStatusInput } from "./use-overview-status-input";
 
 const LONG_UPDATE_LENGTH = 120;
 
@@ -88,6 +90,7 @@ function TextDisclosure({
 export function StatusOverviewItemPreview(props: ActionProps) {
   const { item, onSetStatus, onConfirmItem, onVerdict } = props;
   const [expanded, setExpanded] = useState(false);
+  const statusFlow = useOverviewStatusInput(item, onSetStatus);
   const preview = useRef<HTMLDivElement>(null);
   const verdict = item.source === "previous" ? item.verdict : undefined;
   // The rail is replaced by the stamp once a verdict lands: move focus there.
@@ -107,7 +110,7 @@ export function StatusOverviewItemPreview(props: ActionProps) {
     >
       <StatusControl
         item={item}
-        onSetStatus={onSetStatus}
+        onSetStatus={onSetStatus ? statusFlow.choose : undefined}
         onConfirmItem={onConfirmItem}
       />
       <div className="min-w-0 flex-1 space-y-1.5">
@@ -117,6 +120,7 @@ export function StatusOverviewItemPreview(props: ActionProps) {
           onEditItem={props.onEditItem}
         />
         <ItemBadges item={item} />
+        <StatusInput item={item} flow={statusFlow} />
         {verdict === "pending" && onVerdict ? (
           <VerdictRail
             item={item}
