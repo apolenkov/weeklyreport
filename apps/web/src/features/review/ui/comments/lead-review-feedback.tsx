@@ -2,6 +2,7 @@
 
 import type { SectionReviewView } from "@weeklyreport/shared";
 
+import { isModifiedNavigation } from "../../../../shared/ui/feedback/modified-navigation";
 import { ReviewCommentList } from "../../../../shared/ui/feedback/review-comment-list";
 import {
   focusReviewRecord,
@@ -30,14 +31,7 @@ function FeedbackRecord({
         href={`#${anchor}`}
         data-testid="review-feedback-record-link"
         onClick={(event) => {
-          if (
-            event.button !== 0 ||
-            event.metaKey ||
-            event.ctrlKey ||
-            event.shiftKey ||
-            event.altKey
-          )
-            return;
+          if (isModifiedNavigation(event)) return;
           event.preventDefault();
           focusReviewRecord(anchor);
         }}

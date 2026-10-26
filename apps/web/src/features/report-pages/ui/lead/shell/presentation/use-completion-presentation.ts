@@ -24,7 +24,7 @@ export interface CompletionPresentation {
     readonly submitDisabled: boolean;
     readonly submitDisabledReason: string | undefined;
     readonly pendingReviewCount: number;
-    readonly onReviewPending: (() => void) | undefined;
+    readonly onReviewPending: () => void;
   };
   readonly headerActionsVisible: boolean;
   readonly readiness: LeadSubmitReadiness;

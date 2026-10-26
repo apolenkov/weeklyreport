@@ -118,6 +118,7 @@ export function StatusOverviewItemPreview(props: ActionProps) {
         item={item}
         onSetStatus={onSetStatus ? statusFlow.choose : undefined}
         onConfirmItem={onConfirmItem}
+        lockReason={statusFlow.lockReason}
       />
       <div className="min-w-0 flex-1 space-y-1.5">
         <PreviewText

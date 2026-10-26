@@ -1,8 +1,9 @@
 "use client";
 
-import { type MouseEvent, useId, useState } from "react";
+import { useId, useState } from "react";
 
 import { useIsOnline } from "../../../../../shared/lib/query/use-is-online";
+import { isModifiedNavigation } from "../../../../../shared/ui/feedback/modified-navigation";
 import {
   type LeadSubmitReadiness,
   pendingReviewLabel,
@@ -152,16 +153,6 @@ function AutomaticStatusChanges({
         ))}
       </div>
     </details>
-  );
-}
-
-function isModifiedNavigation(event: MouseEvent<HTMLAnchorElement>): boolean {
-  return (
-    event.button !== 0 ||
-    event.metaKey ||
-    event.ctrlKey ||
-    event.shiftKey ||
-    event.altKey
   );
 }
 

@@ -3,6 +3,7 @@
 import type { ItemWorkflowStatus } from "@weeklyreport/shared";
 import { useEffect, useRef, useState } from "react";
 
+import { statusInputKind } from "../model/item-status";
 import type { ItemStatusInput } from "../model/lead-actions/lead-item-status-patch";
 import type { StatusOverviewItem } from "../model/status-overview";
 import type { ActionProps } from "./status-overview-item-actions";
@@ -59,6 +60,15 @@ async function sendStatus(
     : handler(item, status, context.focusKey, context.input);
 }
 
+function statusLockReason(
+  asking: "paused" | "done" | null,
+  busy: boolean,
+): string | null {
+  if (asking !== null)
+    return "Save or cancel the open status input before choosing another status.";
+  return busy ? "Saving the status…" : null;
+}
+
 export function useOverviewStatusInput(
   item: StatusOverviewItem,
   onSetStatus: ActionProps["onSetStatus"],
@@ -97,10 +107,14 @@ export function useOverviewStatusInput(
       if (mounted.current) setBusy(false);
     }
   };
+  // The status menu stays closed to new choices while an input is open or a
+  // write is running; the reason is shown where the choices are.
+  const lockReason = statusLockReason(asking, busy);
   return {
     asking,
     busy,
     error,
+    lockReason,
     choose: (
       _item: StatusOverviewItem,
       status: ItemWorkflowStatus,
@@ -109,12 +123,9 @@ export function useOverviewStatusInput(
       if (running.current || item.statusRiskText || asking !== null) return;
       origin.current = focusKey;
       setError(null);
-      if (
-        status === "paused" ||
-        (status === "done" && item.nextStepText?.trim())
-      )
-        setAsking(status);
-      else void record(status);
+      const input = statusInputKind(item, status);
+      if (input === null) void record(status);
+      else setAsking(input);
     },
     pause: (pausedReason: string) => void record("paused", { pausedReason }),
     finish: () => void record("done", { nextStepAction: "clear" }),

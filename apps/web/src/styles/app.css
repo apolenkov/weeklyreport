@@ -11,7 +11,6 @@
   .lead-completion-layout {
     display: grid;
     grid-template-rows: minmax(0, 1fr) auto;
-    height: 100dvh;
     min-height: 0;
   }
 
@@ -80,10 +79,6 @@
   /* At high zoom and short visual viewports, use document flow rather than
      constraining the editor behind an on-screen keyboard. */
   @media (height < 32rem) {
-    .lead-completion-layout {
-      height: auto;
-    }
-
     .lead-completion-scrollport {
       overflow-y: visible;
     }
@@ -171,6 +166,47 @@
   .operational-paper-shell > main#main-content {
     background-color: transparent;
     background-image: none;
+  }
+}
+
+@layer components {
+  .app-viewport {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+  }
+
+  /* The completion layout scrolls inside its own scrollport. The nav bar and
+     the page therefore share one viewport-high column and the layout takes the
+     height the nav leaves; a layout as tall as the viewport would add the nav
+     height as document scroll and push the rail past the bottom edge. */
+  @media (height >= 32rem) {
+    .app-viewport:has(.lead-completion-layout) {
+      height: 100dvh;
+    }
+
+    .app-viewport:has(.lead-completion-layout) > .operational-paper-shell {
+      display: flex;
+      flex: 1 1 0;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .app-viewport:has(.lead-completion-layout) .lead-overview-route,
+    .app-viewport:has(.lead-completion-layout) .lead-overview-route-frame {
+      display: flex;
+      flex: 1 1 0;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .app-viewport:has(.lead-completion-layout) .lead-overview-route-frame {
+      width: 100%;
+    }
+
+    .app-viewport:has(.lead-completion-layout) .lead-completion-layout {
+      flex: 1 1 0;
+    }
   }
 }
 

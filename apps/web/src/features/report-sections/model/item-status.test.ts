@@ -7,6 +7,7 @@ import {
   itemStatusToWorkflow,
   type ItemWorkflowStatus,
   persistableItemStatusToWorkflow,
+  statusInputKind,
   workflowToItemStatus,
 } from "./item-status";
 
@@ -228,4 +229,27 @@ describe("persistableItemStatusToWorkflow", () => {
       itemStatusToWorkflow(status),
     );
   });
+});
+
+describe("statusInputKind", () => {
+  it("asks for a reason on Paused", () => {
+    expect(statusInputKind({}, "paused")).toBe("paused");
+  });
+
+  it("asks about the next step on Done only when the item has one", () => {
+    expect(statusInputKind({ nextStepText: "Verify production" }, "done")).toBe(
+      "done",
+    );
+    expect(statusInputKind({ nextStepText: "  " }, "done")).toBeNull();
+    expect(statusInputKind({}, "done")).toBeNull();
+  });
+
+  it.each(["planned", "in_progress", "postponed"] as const)(
+    "writes %s without input",
+    (status) => {
+      expect(
+        statusInputKind({ nextStepText: "Verify production" }, status),
+      ).toBeNull();
+    },
+  );
 });

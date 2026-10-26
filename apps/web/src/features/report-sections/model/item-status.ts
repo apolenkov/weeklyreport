@@ -101,3 +101,16 @@ export function deriveHeadItemStatus(
 ): ItemStatus {
   return applyRiskAlarmOverlay(deriveItemStatus(item), item, alarmRisks);
 }
+
+/**
+ * The input a status needs before it can be written: Paused asks for a reason,
+ * and Done on an item with a next step asks whether to clear that step.
+ */
+export function statusInputKind(
+  item: { readonly nextStepText?: string | null },
+  status: ItemWorkflowStatus,
+): "paused" | "done" | null {
+  if (status === "paused") return "paused";
+  if (status === "done" && item.nextStepText?.trim()) return "done";
+  return null;
+}

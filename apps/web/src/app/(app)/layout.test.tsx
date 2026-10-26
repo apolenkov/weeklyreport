@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { useSdlcTooltip } from "../../shared/ui/feedback/sdlc-tooltip";
 
-// Keep session state inert and omit navigation so the provider contract is
+// Keep session state inert and stub navigation so the provider contract is
 // exercised without unrelated application behavior.
 vi.mock("../../shared/lib/auth/session-provider", () => ({
   SessionProvider: ({ children }: { readonly children: React.ReactNode }) =>
@@ -30,7 +30,7 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock("../../shared/ui/navigation/nav-bar", () => ({
-  NavBar: () => null,
+  NavBar: () => <header data-testid="nav-bar" />,
 }));
 vi.mock("../../shared/hooks/browser/use-hydrated-client", () => ({
   useHydratedClient: () => true,
@@ -83,5 +83,20 @@ describe("AppGroupLayout tooltip provider", () => {
     expect(
       screen.getByRole("main").closest(".operational-paper-shell"),
     ).not.toBeNull();
+  });
+
+  it("holds the nav bar and the page in one viewport column", () => {
+    render(
+      <AppGroupLayout>
+        <main id="main-content" tabIndex={-1}>
+          Application content
+        </main>
+      </AppGroupLayout>,
+    );
+
+    const column = screen.getByRole("main").closest(".app-viewport");
+    expect(column).not.toBeNull();
+    expect(column).toContainElement(screen.getByTestId("nav-bar"));
+    expect(column).toContainElement(screen.getByRole("main"));
   });
 });

@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AutosaveSnapshot } from "../../../../report-sections/client";
 import { LeadCompletionActions } from "./lead-completion-actions";
 import { LeadStickyCompletionActions } from "./lead-sticky-completion-actions";
+import { focusCompletionIssue } from "./overview-completion-focus";
 
 const autosave: AutosaveSnapshot = {
   state: "pending",
@@ -23,6 +24,7 @@ describe("LeadCompletionActions", () => {
         <LeadCompletionActions
           autosave={{ ...autosave, state }}
           onSubmit={vi.fn()}
+          onReviewPending={vi.fn()}
           submitDisabled={false}
           label="Completion"
         />,
@@ -40,6 +42,7 @@ describe("LeadCompletionActions", () => {
         <LeadCompletionActions
           autosave={autosave}
           onSubmit={vi.fn()}
+          onReviewPending={() => focusCompletionIssue()}
           submitDisabled
           pendingReviewCount={1}
           label="Completion"
@@ -57,6 +60,7 @@ describe("LeadCompletionActions", () => {
       <LeadCompletionActions
         autosave={{ ...autosave, state: "error" }}
         onSubmit={vi.fn()}
+        onReviewPending={vi.fn()}
         submitDisabled={false}
         label="Completion"
       />,
@@ -75,6 +79,7 @@ describe("LeadCompletionActions", () => {
         const forceSave = vi.fn().mockResolvedValue(undefined);
         const props = {
           onSubmit: vi.fn(),
+          onReviewPending: vi.fn(),
           submitDisabled: false,
           label: "Completion",
         };
@@ -134,6 +139,7 @@ describe("LeadCompletionActions", () => {
     try {
       const props = {
         onSubmit: vi.fn(),
+        onReviewPending: vi.fn(),
         submitDisabled: true,
         submitDisabledReason: "Review carried work.",
         label: "Completion",
@@ -163,6 +169,7 @@ describe("LeadCompletionActions", () => {
     try {
       const props = {
         onSubmit: vi.fn(),
+        onReviewPending: vi.fn(),
         submitDisabled: false,
         label: "Completion",
       };
@@ -198,6 +205,7 @@ describe("LeadCompletionActions", () => {
   it("keeps Retry available and focused when the retry fails again", () => {
     const props = {
       onSubmit: vi.fn(),
+      onReviewPending: vi.fn(),
       submitDisabled: false,
       label: "Completion",
     };
@@ -234,6 +242,7 @@ describe("LeadCompletionActions", () => {
       <LeadCompletionActions
         autosave={autosave}
         onSubmit={vi.fn()}
+        onReviewPending={vi.fn()}
         submitDisabled
         submitDisabledReason="Review the carried work."
         label="Completion"
@@ -251,6 +260,7 @@ describe("LeadCompletionActions", () => {
     const props = {
       autosave,
       onSubmit,
+      onReviewPending: vi.fn(),
       submitDisabled: false,
     };
     const { rerender } = render(
@@ -294,6 +304,7 @@ describe("LeadCompletionActions", () => {
         actions={{
           autosave: { ...autosave, state: "error" },
           onSubmit: vi.fn(),
+          onReviewPending: vi.fn(),
           submitDisabled: false,
         }}
       />,
@@ -316,6 +327,7 @@ describe("LeadCompletionActions", () => {
         actions={{
           autosave,
           onSubmit: vi.fn(),
+          onReviewPending: vi.fn(),
           submitDisabled: false,
         }}
       />,

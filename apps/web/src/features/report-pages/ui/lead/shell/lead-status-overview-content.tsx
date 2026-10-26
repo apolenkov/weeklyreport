@@ -1,6 +1,5 @@
 "use client";
 
-import type { ItemWorkflowStatus } from "@weeklyreport/shared";
 import { useSearchParams } from "next/navigation";
 import type { ComponentProps } from "react";
 
@@ -43,11 +42,9 @@ interface OverviewDialogSlice {
     focusKey?: string,
   ) => void;
   readonly confirmItem: (item: StatusOverviewItem) => void;
-  readonly setItemStatus: (
-    item: StatusOverviewItem,
-    status: ItemWorkflowStatus,
-    focusKey?: string,
-  ) => void;
+  readonly setItemStatus: NonNullable<
+    ComponentProps<typeof StatusOverview>["onSetStatus"]
+  >;
 }
 
 function OverviewRefreshWarning({
