@@ -44,6 +44,10 @@ describe("initializeSentry", () => {
         environment: "test",
       }),
     );
+
+    const [initOptions] = vi.mocked(Sentry.init).mock.calls[0] ?? [];
+    expect(initOptions).not.toHaveProperty("beforeSendTransaction");
+    expect(initOptions?.ignoreSpans).toContainEqual(/.*/u);
   });
 
   it.each([
