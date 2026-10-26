@@ -77,6 +77,7 @@ only that section's editor.
 - **GIVEN** an editor belongs to one report section
 - **WHEN** another section becomes current with the same record stable ID
 - **THEN** the previous editor is not shown for the new section
+- **AND** returning to the original section does not reopen its editor or delete confirmation
 - **AND** an earlier completion cannot clear a different section's editor
 
 ### Requirement: Conflict reload messages reflect query completion
