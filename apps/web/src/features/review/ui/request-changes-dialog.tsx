@@ -44,7 +44,8 @@ interface ReasonFeedbackProps {
 }
 
 // Hint and error are separate nodes: a rejected request must not replace the
-// explanatory hint, and only the empty error node carries the live-region role.
+// explanatory hint, and only the error paragraph that renders when there is a
+// failure carries the live-region role.
 function ReasonFeedback({
   hintId,
   counterId,

@@ -109,7 +109,7 @@ describe("Request changes rejection through the public tRPC client", () => {
     );
     expect(await screen.findByRole("alert")).toHaveTextContent(message);
     expect(field).toHaveValue(reason);
-    // TASK-503.40 / C5125: a version conflict is not a bad reason value.
+    // A version conflict is not a bad reason value.
     expect(field).toBeValid();
     expect(field).toHaveAccessibleDescription(
       `The lead sees this note on the returned section. ${message} 17 / 2000`,

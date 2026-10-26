@@ -824,9 +824,9 @@ describe("RiskEditDialog discard guard", () => {
   });
 });
 
-// TASK-503.40 / C5135: two independently open risk editors (the bounded
-// component/story co-mount scope) must not share document-global ids, or one
-// dialog's labels and descriptions resolve into the other.
+// Two independently open risk editors (the bounded component/story co-mount
+// scope) must not share document-global ids, or one dialog's labels and
+// descriptions resolve into the other.
 describe("RiskEditDialog — co-mounted instances keep their own ids", () => {
   it("derives unique ids and resolves every label/description inside its dialog", () => {
     render(

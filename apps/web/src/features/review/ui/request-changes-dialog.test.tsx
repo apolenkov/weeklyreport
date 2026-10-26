@@ -69,7 +69,7 @@ describe("RequestChangesDialog", () => {
       "Enter a reason for the lead.",
     );
     expect(field).toBeInvalid();
-    // TASK-503.40 / C5125: the explanatory hint persists next to the error.
+    // The explanatory hint persists next to the error.
     expect(
       screen.getByText("The lead sees this note on the returned section."),
     ).toBeVisible();
@@ -114,8 +114,8 @@ describe("RequestChangesDialog", () => {
       "The section changed.",
     );
     expect(field).toHaveValue("Fix X");
-    // TASK-503.40 / C5125: a request/version rejection is not a bad field
-    // value, so the reason stays valid and the hint keeps its context.
+    // A request/version rejection is not a bad field value, so the reason
+    // stays valid and the hint keeps its context.
     expect(field).toBeValid();
     expect(
       screen.getByText("The lead sees this note on the returned section."),
