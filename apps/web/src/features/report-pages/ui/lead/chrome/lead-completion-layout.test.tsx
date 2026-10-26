@@ -94,4 +94,25 @@ describe("completion rail layout", () => {
       cssBlockAt(appCss, ".app-viewport:has(.lead-completion-layout) {"),
     ).toContain("height: 100dvh;");
   });
+
+  // Stylesheet contract for the two geometry cases jsdom cannot compute: a
+  // wrapped disabled reason/safe-area growing the rail, and a short viewport
+  // (high zoom or an on-screen keyboard) giving up the constrained scrollport.
+  // e2e/lead-form/rail-clearance.test.ts and the coordinator browser run own
+  // the actual geometry proof at 1280/375 and short heights.
+  it("keeps a tall rail scrollable and falls back to document flow below 32rem", () => {
+    const railRule = cssBlockAt(appCss, ".lead-completion-layout > aside {");
+    expect(railRule).toContain("max-height: 40dvh;");
+    expect(railRule).toContain("overflow-y: auto;");
+
+    // Focus scrolling stays below the sticky period toolbar and one rem clear
+    // of the rail; callers can override the toolbar offset variable.
+    expect(cssBlockAt(appCss, ".lead-completion-scrollport {")).toContain(
+      "scroll-padding-block: var(--sticky-toolbar-offset, 5rem) 1rem;",
+    );
+
+    const shortViewportRule = cssBlockAt(appCss, "@media (height < 32rem) {");
+    expect(shortViewportRule).toContain(".lead-completion-scrollport");
+    expect(shortViewportRule).toContain("overflow-y: visible;");
+  });
 });
