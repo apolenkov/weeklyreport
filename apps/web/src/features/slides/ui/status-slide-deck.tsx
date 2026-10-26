@@ -55,7 +55,7 @@ function isEditableTarget(target: EventTarget | null): boolean {
 // Arrow keys page the deck, except while a form control has focus or a
 // modifier is held: Ctrl/Meta/Alt/Shift+Arrow belongs to the browser and AT
 // (Find, word/selection movement, reading commands), so the deck leaves the
-// event unprevented and emits no index for it (C5189). On an empty deck
+// event unprevented and emits no index for it. On an empty deck
 // navigation is a no-op: no index (including -1) is emitted.
 function makeArrowKeyHandler(
   selectedIndex: number,

@@ -96,7 +96,7 @@ function ProductStatusMark({
   const presentation = SLIDE_PRODUCT_STATUS_PRESENTATION[status];
   const Icon = presentation.Icon;
   // role="img" takes its name from aria-label only; a second hidden copy of
-  // the label is a mechanism some AT can read twice (C5176).
+  // the label is a mechanism some AT can read twice.
   return (
     <span
       role="img"

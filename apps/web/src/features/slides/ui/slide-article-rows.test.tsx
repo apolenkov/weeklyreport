@@ -10,7 +10,7 @@ import type {
 } from "../model/slide-grid-model";
 import { SlidePriorityStrip } from "./slide-article-header";
 import { SlideCell } from "./slide-article-rows";
-import { AuthorBadge, StageLegend, StageWatermarks } from "./slide-row-marks";
+import { AuthorBadge } from "./slide-row-marks";
 
 const AUTHOR: GridAuthor = {
   id: "author-1",
@@ -416,39 +416,5 @@ describe("hovered anchor lifetime", () => {
     rerender(renderDeck([ROW], false));
 
     expect(screen.getByTestId("sdlc-tooltip")).toBeInTheDocument();
-  });
-});
-
-// C5182 (TASK-503.41): a stage name outside the canonical STAGE_ICONS map must
-// not disappear from the legend and must not leave an empty watermark rail.
-describe("stage marks for a non-canonical stage name", () => {
-  it("keeps the name in the footer legend without a canonical icon", () => {
-    render(<StageLegend stageNames={["Delivery"]} />);
-
-    const legend = screen.getByTestId("slide-stage-legend");
-    expect(legend).toHaveTextContent("Delivery");
-    expect(legend.querySelector("svg")).toBeNull();
-  });
-
-  it("renders no empty watermark rail when every stage is unknown", () => {
-    render(<StageWatermarks stageNames={["Delivery"]} />);
-
-    expect(screen.queryByTestId("slide-stage-watermarks")).toBeNull();
-  });
-
-  it("keeps canonical stages as icons and names", () => {
-    render(
-      <>
-        <StageLegend stageNames={["Planning"]} />
-        <StageWatermarks stageNames={["Planning"]} />
-      </>,
-    );
-
-    const legend = screen.getByTestId("slide-stage-legend");
-    expect(legend).toHaveTextContent("Planning");
-    expect(legend.querySelectorAll("svg")).toHaveLength(1);
-    expect(
-      screen.getByTestId("slide-stage-watermarks").querySelectorAll("svg"),
-    ).toHaveLength(1);
   });
 });

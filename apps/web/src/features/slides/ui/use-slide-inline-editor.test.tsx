@@ -519,8 +519,8 @@ describe("useSlideInlineEditor — conflict path", () => {
   });
 });
 
-// C5206 (TASK-503.41): a non-conflict save failure must not echo a technical
-// backend payload; it shows the curated mutation copy and logs the raw failure.
+// A non-conflict save failure must not echo a technical backend payload; it
+// shows the curated mutation copy and logs the raw failure.
 describe("useSlideInlineEditor — save failure copy", () => {
   const RAW_VALIDATION_PAYLOAD = JSON.stringify([
     {

@@ -113,9 +113,8 @@ describe("SlideProductCard status presentation", () => {
     },
   );
 
-  // C5176 (TASK-503.41): a role="img" mark with aria-label already owns the
-  // accessible name; a second hidden copy of the same label is a mechanism AT
-  // can read twice.
+  // A role="img" mark with aria-label already owns the accessible name; a
+  // second hidden copy of the same label is a mechanism AT can read twice.
   it.each(STATUS_CASES)(
     "names the $label mark once, without a hidden duplicate",
     ({ status, label }) => {
@@ -225,7 +224,7 @@ describe("SlideProductCard status presentation", () => {
     );
 
     // The status label is the mark's accessible name only: no visible status
-    // word sits beside the product name (C5176 removed the second copy).
+    // word sits beside the product name.
     expect(screen.getByRole("img", { name: "On Track" })).toBeInTheDocument();
     expect(screen.queryByText("On Track")).toBeNull();
     const title = screen.getByTitle(name);
