@@ -36,6 +36,9 @@ const NO_EFFECT = {
   shot: null,
 } as const;
 
+/** Reason kept in the finding when a hung press carries no textual cause. */
+const EMPTY_CAUSE_REASON = "press failed without a message";
+
 /** Another process (or a timed-out CLI call) can restart the browser: that drops the cookie session. */
 function signedOut(ctx: Ctx, url: string): boolean {
   const path = String(ctx.browser.evaluate("location.pathname"));
@@ -154,8 +157,7 @@ export function hung(
 ): StepRecord {
   // An empty first line must not erase the diagnostic: take the first non-blank line.
   const reason =
-    cause.split("\n").find((line) => line.trim() !== "") ??
-    "press failed without a message";
+    cause.split("\n").find((line) => line.trim() !== "") ?? EMPTY_CAUSE_REASON;
   add(
     ctx,
     { page: target.key, shot: null },
