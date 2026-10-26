@@ -3,7 +3,7 @@
 
 import { format } from "node:url";
 
-import { propagation } from "@opentelemetry/api";
+import { type Attributes, propagation } from "@opentelemetry/api";
 import {
   CompositePropagator,
   type ExportResult,
@@ -109,6 +109,19 @@ const isExportableAttributeValue = (value: unknown): boolean => {
   );
 };
 
+// Both span and link attribute maps accept the same AnyValue payload in
+// sdk-trace 3.x: links pass through cleanAttributes (Span.mjs addLink,
+// Tracer.mjs startSpan), so nested objects and null survive there too. Events
+// are already safe because addEvent applies cleanSimpleAttributes.
+const deleteUnexportableAttributes = (attributes: Attributes): void => {
+  for (const key of Object.keys(attributes)) {
+    const value: unknown = attributes[key];
+    if (!isExportableAttributeValue(value)) {
+      delete attributes[key];
+    }
+  }
+};
+
 class SpanAttributePrivacyExporter implements SpanExporter {
   constructor(private readonly exporter: SpanExporter) {}
 
@@ -119,10 +132,10 @@ class SpanAttributePrivacyExporter implements SpanExporter {
     // The batch processor has already ended and owns these spans; removing
     // unsafe values here is the last point before serialization.
     for (const span of spans) {
-      for (const key of Object.keys(span.attributes)) {
-        const value: unknown = span.attributes[key];
-        if (!isExportableAttributeValue(value)) {
-          delete span.attributes[key];
+      deleteUnexportableAttributes(span.attributes);
+      for (const link of span.links) {
+        if (link.attributes) {
+          deleteUnexportableAttributes(link.attributes);
         }
       }
     }
