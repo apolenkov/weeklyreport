@@ -25,6 +25,80 @@ interface RequestChangesDialogProps {
 const EMPTY_REASON_ERROR = "Enter a reason for the lead.";
 export const OVER_LIMIT_REASON_ERROR = `Shorten the reason to ${REVIEW_COMMENT_MAX_LENGTH} characters or fewer (excluding leading and trailing whitespace).`;
 
+// Only a rejected reason VALUE marks the field invalid; a version conflict or
+// transport failure is a request outcome, announced without calling the typed
+// reason bad. The explanatory hint stays described in both cases.
+type ReasonErrorKind = "field" | "request";
+
+interface ReasonError {
+  readonly kind: ReasonErrorKind;
+  readonly message: string;
+}
+
+interface ReasonFeedbackProps {
+  readonly hintId: string;
+  readonly counterId: string;
+  readonly errorId: string;
+  readonly reasonLength: number;
+  readonly error: ReasonError | null;
+}
+
+// Hint and error are separate nodes: a rejected request must not replace the
+// explanatory hint, and only the empty error node carries the live-region role.
+function ReasonFeedback({
+  hintId,
+  counterId,
+  errorId,
+  reasonLength,
+  error,
+}: ReasonFeedbackProps) {
+  return (
+    <div className="text-xs">
+      <div className="flex items-start justify-between gap-2">
+        <p id={hintId} className="text-[var(--color-muted-foreground)]">
+          The lead sees this note on the returned section.
+        </p>
+        <p
+          id={counterId}
+          className="shrink-0 text-[var(--color-muted-foreground)]"
+        >
+          {reasonLength} / {REVIEW_COMMENT_MAX_LENGTH}
+        </p>
+      </div>
+      {error ? (
+        <p
+          id={errorId}
+          role="alert"
+          className="mt-1 text-[var(--color-destructive)]"
+        >
+          {error.message}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function useRequestChangesVerdict(args: {
+  readonly onRequested: (result: ReviewVerdictResult) => void;
+  readonly onClose: () => void;
+  readonly onRequestError: (message: string) => void;
+}) {
+  const trpc = useTRPC();
+  return useMutation(
+    trpc.review.verdict.mutationOptions({
+      onSuccess: (result) => {
+        args.onRequested(result);
+        args.onClose();
+      },
+      onError: (err) => {
+        args.onRequestError(
+          mutationErrorMessage(err, "Failed to request changes."),
+        );
+      },
+    }),
+  );
+}
+
 function FormActions({
   isPending,
   onCancel,
@@ -65,7 +139,7 @@ function RequestChangesForm({
 }: {
   readonly id: string;
   readonly reason: string;
-  readonly error: string | null;
+  readonly error: ReasonError | null;
   readonly isPending: boolean;
   readonly subjectName: string | undefined;
   readonly onReasonChange: (next: string) => void;
@@ -75,6 +149,7 @@ function RequestChangesForm({
   const errorId = `${id}-error`;
   const hintId = `${id}-hint`;
   const counterId = `${id}-counter`;
+  const isFieldInvalid = error?.kind === "field";
   return (
     <form
       className="flex flex-col gap-3"
@@ -104,27 +179,20 @@ function RequestChangesForm({
         rows={4}
         value={reason}
         onChange={(event) => onReasonChange(event.target.value)}
-        aria-invalid={error ? "true" : "false"}
-        aria-describedby={`${error ? errorId : hintId} ${counterId}`}
+        aria-invalid={isFieldInvalid ? "true" : "false"}
+        aria-describedby={[hintId, error ? errorId : undefined, counterId]
+          .filter(Boolean)
+          .join(" ")}
         placeholder="What should the lead change?…"
         className="w-full resize-y rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)]"
       />
-      <div className="flex items-start justify-between gap-2 text-xs">
-        <p
-          id={error ? errorId : hintId}
-          role={error ? "alert" : undefined}
-          className={
-            error
-              ? "text-[var(--color-destructive)]"
-              : "text-[var(--color-muted-foreground)]"
-          }
-        >
-          {error ?? "The lead sees this note on the returned section."}
-        </p>
-        <p id={counterId} className="text-[var(--color-muted-foreground)]">
-          {Array.from(reason.trim()).length} / {REVIEW_COMMENT_MAX_LENGTH}
-        </p>
-      </div>
+      <ReasonFeedback
+        hintId={hintId}
+        counterId={counterId}
+        errorId={errorId}
+        reasonLength={Array.from(reason.trim()).length}
+        error={error}
+      />
       <FormActions isPending={isPending} onCancel={onCancel} />
     </form>
   );
@@ -139,23 +207,16 @@ export function RequestChangesDialog({
   onClose,
   onRequested,
 }: RequestChangesDialogProps) {
-  const trpc = useTRPC();
   const id = useId();
   const surfaceRef = useRef<HTMLDivElement>(null);
   const [reason, setReason] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<ReasonError | null>(null);
 
-  const mutation = useMutation(
-    trpc.review.verdict.mutationOptions({
-      onSuccess: (result) => {
-        onRequested(result);
-        onClose();
-      },
-      onError: (err) => {
-        setError(mutationErrorMessage(err, "Failed to request changes."));
-      },
-    }),
-  );
+  const mutation = useRequestChangesVerdict({
+    onRequested,
+    onClose,
+    onRequestError: (message) => setError({ kind: "request", message }),
+  });
   const isPending = mutation.isPending;
   const closeIfIdle = () => {
     if (!isPending) onClose();
@@ -178,7 +239,10 @@ export function RequestChangesDialog({
       const isOverLimit = command.error.issues.some(
         (issue) => issue.path[0] === "comment" && issue.code === "too_big",
       );
-      setError(isOverLimit ? OVER_LIMIT_REASON_ERROR : EMPTY_REASON_ERROR);
+      setError({
+        kind: "field",
+        message: isOverLimit ? OVER_LIMIT_REASON_ERROR : EMPTY_REASON_ERROR,
+      });
       return;
     }
     setError(null);

@@ -1,7 +1,7 @@
 // Stage selection is required for a product parent (empty = validation error);
 // options come from the lead's StageAssignment rows via stagesForProduct.
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { SAFE_TEXT_MAX_LENGTH } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
@@ -286,7 +286,7 @@ describe("RiskEditDialog — backdrop dismissal and focus", () => {
   it("moves document focus to the risk textarea on mount", () => {
     render(<RiskEditDialog {...a11yProps} onCancel={vi.fn()} />);
 
-    const textarea = document.getElementById("risk-text");
+    const textarea = screen.getByLabelText(/^Risk \*/i);
     expect(document.activeElement).toBe(textarea);
   });
 });
@@ -821,5 +821,72 @@ describe("RiskEditDialog discard guard", () => {
       "Discard changes?",
     );
     expect(onCancel).not.toHaveBeenCalled();
+  });
+});
+
+// TASK-503.40 / C5135: two independently open risk editors (the bounded
+// component/story co-mount scope) must not share document-global ids, or one
+// dialog's labels and descriptions resolve into the other.
+describe("RiskEditDialog — co-mounted instances keep their own ids", () => {
+  it("derives unique ids and resolves every label/description inside its dialog", () => {
+    render(
+      <>
+        <RiskEditDialog
+          open
+          risk={null}
+          products={products}
+          onSave={vi.fn()}
+          onCancel={() => undefined}
+          defaultProductId="p1"
+          stagesForProduct={() => ["Dev"]}
+        />
+        <RiskEditDialog
+          open
+          risk={null}
+          products={products}
+          onSave={vi.fn()}
+          onCancel={() => undefined}
+          defaultProductId="p1"
+          stagesForProduct={() => ["Dev"]}
+        />
+      </>,
+    );
+
+    const dialogs = screen.getAllByRole("dialog");
+    expect(dialogs).toHaveLength(2);
+
+    const ids = dialogs.flatMap((dialog) =>
+      Array.from(
+        dialog.querySelectorAll<HTMLElement>("[id]"),
+        (node) => node.id,
+      ),
+    );
+    expect(new Set(ids).size).toBe(ids.length);
+
+    for (const dialog of dialogs) {
+      for (const label of Array.from(
+        dialog.querySelectorAll<HTMLLabelElement>("label[for]"),
+      )) {
+        const target = document.getElementById(label.htmlFor);
+        expect(target).not.toBeNull();
+        expect(dialog.contains(target)).toBe(true);
+      }
+
+      const describedNodes = Array.from(
+        dialog.querySelectorAll<HTMLElement>("[aria-describedby]"),
+      );
+      expect(describedNodes.length).toBeGreaterThan(0);
+      for (const node of describedNodes) {
+        for (const token of (node.getAttribute("aria-describedby") ?? "")
+          .split(" ")
+          .filter(Boolean)) {
+          const target = document.getElementById(token);
+          expect(target).not.toBeNull();
+          expect(dialog.contains(target)).toBe(true);
+        }
+      }
+
+      expect(within(dialog).getByLabelText(/^Risk \*/i)).toBeInTheDocument();
+    }
   });
 });

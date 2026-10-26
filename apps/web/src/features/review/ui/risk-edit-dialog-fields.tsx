@@ -15,6 +15,9 @@ import type { RiskSeverity } from "./risk-edit-dialog-helpers";
 import { SEVERITY_CHOICES } from "./risk-severity-choices";
 
 interface RiskEditDialogFieldsProps {
+  // Dialog-scoped id prefix so two co-mounted editors never share labels,
+  // textarea names or the derived -error/-limit/-hint description ids.
+  readonly idPrefix: string;
   readonly text: string;
   readonly onTextChange: (value: string) => void;
   readonly textError: string | undefined;
@@ -49,6 +52,7 @@ const RISK_FOLLOW_UP_MIN_HEIGHT_PX = 50;
 
 type RiskProseColumnProps = Pick<
   RiskEditDialogFieldsProps,
+  | "idPrefix"
   | "text"
   | "onTextChange"
   | "textError"
@@ -68,7 +72,7 @@ function RiskProseColumn(props: RiskProseColumnProps) {
   return (
     <div className="flex flex-1 flex-col gap-4">
       <RecordTextareaField
-        id="risk-text"
+        id={`${props.idPrefix}-risk-text`}
         label="Risk"
         required
         value={props.text}
@@ -81,7 +85,7 @@ function RiskProseColumn(props: RiskProseColumnProps) {
         characterLimit={SAFE_TEXT_MAX_LENGTH}
       />
       <RecordTextareaField
-        id="risk-impact"
+        id={`${props.idPrefix}-risk-impact`}
         label="Impact"
         required
         value={props.impact}
@@ -93,7 +97,7 @@ function RiskProseColumn(props: RiskProseColumnProps) {
         characterLimit={SAFE_TEXT_MAX_LENGTH}
       />
       <RecordTextareaField
-        id="risk-mitigation"
+        id={`${props.idPrefix}-risk-mitigation`}
         label="Mitigation"
         required
         value={props.mitigation}
@@ -110,6 +114,7 @@ function RiskProseColumn(props: RiskProseColumnProps) {
 
 type RiskClassificationPanelProps = Pick<
   RiskEditDialogFieldsProps,
+  | "idPrefix"
   | "parent"
   | "parentError"
   | "products"
@@ -134,7 +139,7 @@ function RiskClassificationPanel(props: RiskClassificationPanelProps) {
 
       {/* Parent first (same order as the item dialog); activity hides stages. */}
       <ParentPicker
-        id="risk-product"
+        id={`${props.idPrefix}-risk-product`}
         value={props.parent}
         error={props.parentError}
         products={props.products}
@@ -144,7 +149,7 @@ function RiskClassificationPanel(props: RiskClassificationPanelProps) {
 
       {!props.isActivityParent && (
         <StageStep
-          id="risk-stage"
+          id={`${props.idPrefix}-risk-stage`}
           stageNames={props.stageNames}
           availableStages={props.availableStages}
           previewSeverity={props.severity}
