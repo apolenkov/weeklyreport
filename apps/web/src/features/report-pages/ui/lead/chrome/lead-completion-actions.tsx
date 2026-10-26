@@ -15,6 +15,7 @@ export interface LeadCompletionActionContract {
   /** Suggested continuations the lead has not confirmed yet. */
   readonly pendingReviewCount?: number | undefined;
   readonly onReviewPending?: (() => void) | undefined;
+  readonly reviewDisabled?: boolean | undefined;
 }
 
 interface LeadCompletionActionsProps extends LeadCompletionActionContract {
@@ -29,6 +30,7 @@ export function LeadCompletionActions({
   submitDisabledReason,
   pendingReviewCount = 0,
   onReviewPending,
+  reviewDisabled = false,
   label,
   compact = false,
 }: LeadCompletionActionsProps) {
@@ -52,6 +54,8 @@ export function LeadCompletionActions({
           type="button"
           data-testid="pending-review-count"
           onClick={onReviewPending ?? (() => focusCompletionIssue())}
+          disabled={reviewDisabled}
+          aria-describedby={reviewDisabled && reason ? reasonId : undefined}
           className="rounded-[var(--radius-pill)] px-3 text-sm font-semibold text-[var(--color-primary)] underline underline-offset-4 transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {pendingReviewLabel(pendingReviewCount)}
