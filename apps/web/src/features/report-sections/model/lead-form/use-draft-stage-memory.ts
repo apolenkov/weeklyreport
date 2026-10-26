@@ -11,19 +11,22 @@ import {
 import type { DraftPatch } from "./draft/lead-form-draft-patch";
 import type { LeadFormGeneration } from "./lead-form-generation";
 
-// One memory instance per open draft generation. Adjusting state during render
-// keyed on the generation keeps the reset out of an effect, while editor
-// remounts inside the same generation keep the instance.
-export function useDraftStageMemory(
+// One memory instance per open draft generation. The store is a mutable object,
+// so it is kept as a stable instance that is only replaced when the draft
+// changes: adjusting state during render keyed on the generation keeps that
+// reset out of an effect, while editor remounts inside the same generation keep
+// the instance.
+export function useLeadFormStageMemory(
   generation: LeadFormGeneration | null,
 ): DraftStageMemory {
-  const [memory, setMemory] = useState(() => createDraftStageMemory());
-  const [stateGeneration, setStateGeneration] = useState(generation);
-  if (stateGeneration !== generation) {
-    setStateGeneration(generation);
-    setMemory(createDraftStageMemory());
+  const [state, setState] = useState(() => ({
+    generation,
+    memory: createDraftStageMemory(),
+  }));
+  if (state.generation !== generation) {
+    setState({ generation, memory: createDraftStageMemory() });
   }
-  return memory;
+  return state.memory;
 }
 
 // Every record save enters the draft as a patch; remembering the changed stage

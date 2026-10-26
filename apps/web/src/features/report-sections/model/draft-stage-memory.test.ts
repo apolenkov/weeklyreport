@@ -12,6 +12,7 @@ const PRODUCT = "44444444-4444-4444-8444-444444444444";
 const OTHER_PRODUCT = "55555555-5555-4555-8555-555555555555";
 const ITEM = "66666666-6666-4666-8666-666666666666";
 const ITEM_STABLE = "77777777-7777-4777-8777-777777777777";
+const OTHER_ITEM = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const RISK = "88888888-8888-4888-8888-888888888888";
 const DECISION = "99999999-9999-4999-8999-999999999999";
 
@@ -30,23 +31,29 @@ function makeSection(
   });
 }
 
+function makeItemRow(id: string, stageNames: readonly string[]) {
+  return {
+    id,
+    stableId: id === ITEM ? ITEM_STABLE : `${id}-stable`,
+    projectId: PRODUCT,
+    activityId: null,
+    type: "current" as const,
+    text: "Ship the importer",
+    tag: "general",
+    workflowStatus: "in_progress" as const,
+    carriedOver: false,
+    stageNames,
+  };
+}
+
+function makeSectionWithItems(
+  items: readonly ReturnType<typeof makeItemRow>[],
+): ReportSectionReadModel {
+  return makeSection({ items: [...items] });
+}
+
 function makeSectionWithItem(stageNames: readonly string[]) {
-  return makeSection({
-    items: [
-      {
-        id: ITEM,
-        stableId: ITEM_STABLE,
-        projectId: PRODUCT,
-        activityId: null,
-        type: "current",
-        text: "Ship the importer",
-        tag: "general",
-        workflowStatus: "in_progress",
-        carriedOver: false,
-        stageNames,
-      },
-    ],
-  });
+  return makeSectionWithItems([makeItemRow(ITEM, stageNames)]);
 }
 
 function makeSectionWithRisk(stageNames: readonly string[]) {
@@ -145,93 +152,167 @@ function decisionPatch(stageNames: readonly string[]): DraftPatch {
   };
 }
 
-describe("draft stage memory — only a saved singleton becomes the default", () => {
-  it("recalls a singleton recorded by a local record save", () => {
+// Records an accepted local stage choice and confirms it with the persisted
+// section: the two steps the draft performs around a successful save.
+function remember(
+  memory: ReturnType<typeof createDraftStageMemory>,
+  recordId: string,
+  stageName: string,
+  section: ReportSectionReadModel = makeSectionWithItems([
+    makeItemRow(recordId, [stageName]),
+  ]),
+): void {
+  memory.stageChangedSelections([
+    { recordId, productId: PRODUCT, stageNames: [stageName] },
+  ]);
+  memory.confirmPersisted(section);
+}
+
+describe("draft stage memory — only a server-confirmed singleton is the default", () => {
+  it("does not recall a locally saved choice before the server confirms it", () => {
     const memory = createDraftStageMemory();
     memory.stageChangedSelections([
-      { productId: PRODUCT, stageNames: ["Development"] },
+      { recordId: ITEM, productId: PRODUCT, stageNames: ["Testing"] },
     ]);
 
+    expect(memory.recall(PRODUCT)).toBeUndefined();
+  });
+
+  it("recalls the singleton once that record's save is confirmed", () => {
+    const memory = createDraftStageMemory();
+    memory.stageChangedSelections([
+      { recordId: ITEM, productId: PRODUCT, stageNames: ["Testing"] },
+    ]);
+    memory.confirmPersisted(makeSectionWithItem(["Testing"]));
+
+    expect(memory.recall(PRODUCT)).toBe("Testing");
+  });
+
+  it("confirms a created record through the save's draft-to-server identity", () => {
+    const memory = createDraftStageMemory();
+    memory.stageChangedSelections([
+      { recordId: "draft-row-1", productId: PRODUCT, stageNames: ["Testing"] },
+    ]);
+    memory.confirmPersisted(makeSectionWithItem(["Testing"]), [
+      { clientId: "draft-row-1", serverId: ITEM },
+    ]);
+
+    expect(memory.recall(PRODUCT)).toBe("Testing");
+  });
+
+  it("does not confirm an abandoned choice through another record's save", () => {
+    const memory = createDraftStageMemory();
+    remember(memory, ITEM, "Development");
+    memory.stageChangedSelections([
+      { recordId: "draft-row-2", productId: PRODUCT, stageNames: ["Testing"] },
+    ]);
+
+    // The other record's accepted save persists its own singleton Testing; the
+    // abandoned draft row is not part of that save.
+    memory.confirmPersisted(
+      makeSectionWithItems([makeItemRow(OTHER_ITEM, ["Testing"])]),
+      [{ clientId: OTHER_ITEM, serverId: OTHER_ITEM }],
+    );
+
+    expect(memory.recall(PRODUCT)).toBe("Development");
+  });
+
+  it("does not confirm a record the server persisted without the stage", () => {
+    const memory = createDraftStageMemory();
+    memory.stageChangedSelections([
+      { recordId: ITEM, productId: PRODUCT, stageNames: ["Testing"] },
+    ]);
+    memory.confirmPersisted(makeSectionWithItem(["Development"]), [
+      { clientId: ITEM, serverId: ITEM },
+    ]);
+
+    expect(memory.recall(PRODUCT)).toBeUndefined();
+  });
+
+  it("keeps the persisted default after a failed save", () => {
+    const memory = createDraftStageMemory();
+    remember(memory, OTHER_ITEM, "Development");
+    memory.stageChangedSelections([
+      { recordId: ITEM, productId: PRODUCT, stageNames: ["Testing"] },
+    ]);
+
+    expect(memory.recall(PRODUCT)).toBe("Development");
+  });
+
+  it("replaces an earlier pending choice when the same record changes again", () => {
+    const memory = createDraftStageMemory();
+    memory.stageChangedSelections([
+      { recordId: ITEM, productId: PRODUCT, stageNames: ["Testing"] },
+    ]);
+    memory.stageChangedSelections([
+      { recordId: ITEM, productId: PRODUCT, stageNames: ["Development"] },
+    ]);
+
+    memory.confirmPersisted(makeSectionWithItem(["Testing"]));
+    expect(memory.recall(PRODUCT)).toBeUndefined();
+
+    memory.confirmPersisted(makeSectionWithItem(["Development"]));
     expect(memory.recall(PRODUCT)).toBe("Development");
   });
 
   it("ignores a deliberate multi-stage save and keeps the previous singleton", () => {
     const memory = createDraftStageMemory();
+    remember(memory, OTHER_ITEM, "Development");
     memory.stageChangedSelections([
-      { productId: PRODUCT, stageNames: ["Development"] },
+      {
+        recordId: ITEM,
+        productId: PRODUCT,
+        stageNames: ["Development", "Testing"],
+      },
     ]);
-    memory.stageChangedSelections([
-      { productId: PRODUCT, stageNames: ["Development", "Testing"] },
-    ]);
+    memory.confirmPersisted(
+      makeSectionWithItems([makeItemRow(ITEM, ["Development", "Testing"])]),
+    );
 
     expect(memory.recall(PRODUCT)).toBe("Development");
   });
 
-  it("keeps the previously persisted default after a failed save", () => {
+  it("does not invent a default from a multi-stage save without memory", () => {
     const memory = createDraftStageMemory();
     memory.stageChangedSelections([
-      { productId: PRODUCT, stageNames: ["Development"] },
+      {
+        recordId: ITEM,
+        productId: PRODUCT,
+        stageNames: ["Development", "Testing"],
+      },
     ]);
-    memory.confirmPersisted(makeSectionWithItem(["Development"]));
-    memory.stageChangedSelections([
-      { productId: PRODUCT, stageNames: ["Testing"] },
-    ]);
+    memory.confirmPersisted(
+      makeSectionWithItems([makeItemRow(ITEM, ["Development", "Testing"])]),
+    );
 
-    expect(memory.recall(PRODUCT)).toBe("Testing");
-    memory.noteSaveFailed();
-    expect(memory.recall(PRODUCT)).toBe("Development");
-  });
-
-  it("promotes a locally saved singleton once the draft persists it", () => {
-    const memory = createDraftStageMemory();
-    memory.stageChangedSelections([
-      { productId: PRODUCT, stageNames: ["Testing"] },
-    ]);
-    memory.confirmPersisted(makeSectionWithItem(["Testing"]));
-    memory.noteSaveFailed();
-
-    expect(memory.recall(PRODUCT)).toBe("Testing");
-  });
-
-  it("does not confirm a choice the persisted section does not contain", () => {
-    const memory = createDraftStageMemory();
-    memory.stageChangedSelections([
-      { productId: PRODUCT, stageNames: ["Testing"] },
-    ]);
-    memory.confirmPersisted(makeSectionWithItem(["Development"]));
-
-    expect(memory.recall(PRODUCT)).toBe("Testing");
-    memory.noteSaveFailed();
     expect(memory.recall(PRODUCT)).toBeUndefined();
   });
 
   it("confirms persisted risk and decision singletons through their parent field", () => {
-    const memory = createDraftStageMemory();
-    memory.stageChangedSelections([
-      { productId: PRODUCT, stageNames: ["Testing"] },
+    const riskMemory = createDraftStageMemory();
+    riskMemory.stageChangedSelections([
+      { recordId: RISK, productId: PRODUCT, stageNames: ["Testing"] },
     ]);
-    memory.confirmPersisted(makeSectionWithRisk(["Testing"]));
-    expect(memory.recall(PRODUCT)).toBe("Testing");
-    memory.noteSaveFailed();
-    expect(memory.recall(PRODUCT)).toBe("Testing");
+    riskMemory.confirmPersisted(makeSectionWithRisk(["Testing"]));
+    expect(riskMemory.recall(PRODUCT)).toBe("Testing");
 
-    const decisions = createDraftStageMemory();
-    decisions.stageChangedSelections([
-      { productId: PRODUCT, stageNames: ["Development"] },
+    const decisionMemory = createDraftStageMemory();
+    decisionMemory.stageChangedSelections([
+      { recordId: DECISION, productId: PRODUCT, stageNames: ["Development"] },
     ]);
-    decisions.confirmPersisted(makeSectionWithDecision(["Development"]));
-    expect(decisions.recall(PRODUCT)).toBe("Development");
+    decisionMemory.confirmPersisted(makeSectionWithDecision(["Development"]));
+    expect(decisionMemory.recall(PRODUCT)).toBe("Development");
   });
 
   it("scopes memory per product and ignores product-less saves", () => {
     const memory = createDraftStageMemory();
     memory.stageChangedSelections([
-      { productId: PRODUCT, stageNames: ["Development"] },
-      { productId: null, stageNames: ["Development"] },
-      { productId: "", stageNames: ["Development"] },
+      { recordId: ITEM, productId: PRODUCT, stageNames: ["Development"] },
+      { recordId: OTHER_ITEM, productId: null, stageNames: ["Development"] },
+      { recordId: RISK, productId: "", stageNames: ["Development"] },
     ]);
 
-    expect(memory.recall(PRODUCT)).toBe("Development");
+    expect(memory.recall(PRODUCT)).toBeUndefined();
     expect(memory.recall(OTHER_PRODUCT)).toBeUndefined();
     expect(memory.recall(null)).toBeUndefined();
     expect(memory.recall(undefined)).toBeUndefined();
@@ -239,13 +320,15 @@ describe("draft stage memory — only a saved singleton becomes the default", ()
 });
 
 describe("changedStageSelections — one diff feeds item, risk and decision saves", () => {
-  it("reports a changed item stage selection", () => {
+  it("reports a changed item stage selection for its draft record", () => {
     expect(
       changedStageSelections(
         makeSectionWithItem(["Development"]),
         weekItemsPatch(["Testing"]),
       ),
-    ).toEqual([{ productId: PRODUCT, stageNames: ["Testing"] }]);
+    ).toEqual([
+      { recordId: ITEM, productId: PRODUCT, stageNames: ["Testing"] },
+    ]);
   });
 
   it("ignores an item update that keeps the same stage set", () => {
@@ -269,7 +352,9 @@ describe("changedStageSelections — one diff feeds item, risk and decision save
   it("reports a newly created item", () => {
     expect(
       changedStageSelections(makeSection(), weekItemsPatch(["Testing"])),
-    ).toEqual([{ productId: PRODUCT, stageNames: ["Testing"] }]);
+    ).toEqual([
+      { recordId: ITEM, productId: PRODUCT, stageNames: ["Testing"] },
+    ]);
   });
 
   it("reports changed risk and decision stage selections", () => {
@@ -278,13 +363,21 @@ describe("changedStageSelections — one diff feeds item, risk and decision save
         makeSectionWithRisk(["Development"]),
         riskPatch(["Development", "Testing"]),
       ),
-    ).toEqual([{ productId: PRODUCT, stageNames: ["Development", "Testing"] }]);
+    ).toEqual([
+      {
+        recordId: RISK,
+        productId: PRODUCT,
+        stageNames: ["Development", "Testing"],
+      },
+    ]);
     expect(
       changedStageSelections(
         makeSectionWithDecision(["Development"]),
         decisionPatch(["Testing"]),
       ),
-    ).toEqual([{ productId: PRODUCT, stageNames: ["Testing"] }]);
+    ).toEqual([
+      { recordId: DECISION, productId: PRODUCT, stageNames: ["Testing"] },
+    ]);
   });
 
   it("reports nothing for patches that are not record saves or without a draft", () => {

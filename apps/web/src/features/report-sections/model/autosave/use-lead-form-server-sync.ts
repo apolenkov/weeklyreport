@@ -5,7 +5,6 @@ import {
   type Dispatch,
   type SetStateAction,
   useCallback,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -17,7 +16,7 @@ import {
   leadFormGenerationOf,
 } from "../lead-form/lead-form-generation";
 import type { LeadFormWritePort } from "../lead-form/lead-form-write-port";
-import { useDraftStageMemory } from "../lead-form/use-draft-stage-memory";
+import { useLeadFormStageMemory } from "../lead-form/use-draft-stage-memory";
 import { sectionToDraftPayload } from "../lead-section-draft-payload";
 import type { AutosaveSaveReceipt, DraftSaveContent } from "./autosave-types";
 import { encodeDraftSaveComparisonKey } from "./draft-save-comparison-key";
@@ -105,8 +104,17 @@ function useSaveEchoRecorder(args: SaveEchoRecorderArgs) {
       queuedPayload: DraftSaveContent | null,
       attemptToken?: string,
     ) => {
-      stageMemory.confirmPersisted(savedSection);
       const savedPayload = sectionToDraftPayload(savedSection);
+      // The save's row mapping is what ties a pending stage choice to its own
+      // record; the accepted section is the authority on what it now carries.
+      stageMemory.confirmPersisted(savedSection, [
+        ...savedRecordIdentityPairs(persistedPayload.items, savedPayload.items),
+        ...savedRecordIdentityPairs(persistedPayload.risks, savedPayload.risks),
+        ...savedRecordIdentityPairs(
+          persistedPayload.decisions,
+          savedPayload.decisions,
+        ),
+      ]);
       const serverDraftKey = encodeDraftSaveComparisonKey(savedPayload);
       ledger.record({ persistedPayload, savedSection, serverDraftKey });
       setLastSaveReceipt((current) => ({
@@ -182,7 +190,7 @@ export function useDraftServerSync({
   handleConflict,
 }: DraftServerSyncArgs) {
   // The open draft owns one stage memory; it is reset with the generation.
-  const stageMemory = useDraftStageMemory(generation);
+  const stageMemory = useLeadFormStageMemory(generation);
   const ledger = useSaveEchoLedger();
   const [lastSaveReceipt, setLastSaveReceipt] =
     useState<AutosaveSaveReceipt | null>(null);
@@ -216,13 +224,12 @@ export function useDraftServerSync({
     setDraftSection,
     handleConflict,
   });
-  // A failed persistence (including a 409 conflict) must not leave the failed
-  // choice as the default; a later successful save can still confirm it.
-  useEffect(() => {
-    if (autosave.state === "error") stageMemory.noteSaveFailed();
-  }, [autosave.state, stageMemory]);
+  // A failed persistence leaves the previous default in place: the local choice
+  // was only ever pending and `recall` never reads a pending choice.
   const adoptServerSection = useCallback(
     (section: ReportSectionReadModel) => {
+      // An adopted section carries no draft-save row mapping, so only records
+      // whose own id it already holds can confirm their pending choice.
       stageMemory.confirmPersisted(section);
       const savedKey = encodeDraftSaveComparisonKey(
         sectionToDraftPayload(section),
