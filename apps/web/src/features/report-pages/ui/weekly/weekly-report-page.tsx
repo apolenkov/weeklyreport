@@ -58,7 +58,7 @@ function PeriodLifecycleActions({
           periodStatus={page.periodStatus}
           onPublish={page.handlers.publish}
           onReopen={page.handlers.reopen}
-          isPending={page.mutationState.isPublishOrReopenPending}
+          isPending={page.mutationState.isLifecyclePending}
           canPublish={page.canPublishReport}
         />
       )}

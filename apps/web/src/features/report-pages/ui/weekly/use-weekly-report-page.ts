@@ -41,9 +41,10 @@ interface WeeklyReportPageHandlers {
 }
 
 interface WeeklyReportPageMutationState {
-  readonly isPublishOrReopenPending: boolean;
-  readonly isArchivePending: boolean;
-  readonly isRestorePending: boolean;
+  // One guard for every lifecycle write on this page: publish, reopen, archive
+  // and restore all transition the same period row, so any in-flight write
+  // must lock the rest.
+  readonly isLifecyclePending: boolean;
   readonly archiveLabel: string;
   readonly restoreLabel: string;
 }
@@ -170,9 +171,10 @@ function readyState({
       restore: () => mutations.restore(view.reportId),
     },
     mutationState: {
-      isPublishOrReopenPending: mutations.isPublishOrReopenPending,
-      isArchivePending: mutations.isArchivePending,
-      isRestorePending: mutations.isRestorePending,
+      isLifecyclePending:
+        mutations.isPublishOrReopenPending ||
+        mutations.isArchivePending ||
+        mutations.isRestorePending,
       archiveLabel: mutations.isArchivePending ? "Archiving…" : "Archive",
       restoreLabel: mutations.isRestorePending ? "Restoring…" : "Restore",
     },
