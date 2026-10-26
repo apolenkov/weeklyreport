@@ -16,12 +16,14 @@ export default function AppGroupLayout({ children }: AppGroupLayoutProps) {
     <SessionProvider>
       <OverviewInputProvider>
         <LeadReportAssistantStore>
-          <NavBar />
-          <Suspense fallback={null}>
-            <ProductFeedbackWidget />
-          </Suspense>
-          <div className="operational-paper-shell min-h-screen">
-            <SdlcTooltipProvider>{children}</SdlcTooltipProvider>
+          <div className="app-viewport">
+            <NavBar />
+            <Suspense fallback={null}>
+              <ProductFeedbackWidget />
+            </Suspense>
+            <div className="operational-paper-shell flex-1">
+              <SdlcTooltipProvider>{children}</SdlcTooltipProvider>
+            </div>
           </div>
         </LeadReportAssistantStore>
       </OverviewInputProvider>

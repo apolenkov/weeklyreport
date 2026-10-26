@@ -45,6 +45,7 @@ describe("LeadFormHeaderActions", () => {
       completionActions: {
         autosave,
         onSubmit: vi.fn(),
+        onReviewPending: vi.fn(),
         submitDisabled: true,
         submitDisabledReason: "Review a long carried item before submitting.",
       },
@@ -87,6 +88,7 @@ describe("LeadFormHeaderActions", () => {
         completionActions={{
           autosave,
           onSubmit: vi.fn(),
+          onReviewPending: vi.fn(),
           submitDisabled: false,
         }}
         completionSentinelRef={{ current: null }}
@@ -118,6 +120,7 @@ describe("LeadFormHeaderActions", () => {
         completionActions={{
           autosave,
           onSubmit: vi.fn(),
+          onReviewPending: vi.fn(),
           submitDisabled: false,
         }}
         completionSentinelRef={{ current: null }}
@@ -156,6 +159,7 @@ describe("LeadFormHeaderActions", () => {
         completionActions={{
           autosave,
           onSubmit: vi.fn(),
+          onReviewPending: vi.fn(),
           submitDisabled: false,
         }}
       />,
@@ -170,6 +174,7 @@ describe("LeadFormHeaderActions", () => {
         completionActions={{
           autosave: { ...autosave, state: "error" },
           onSubmit: vi.fn(),
+          onReviewPending: vi.fn(),
           submitDisabled: false,
         }}
       />,
@@ -190,6 +195,7 @@ describe("LeadFormHeaderActions", () => {
         completionActions={{
           autosave: { ...autosave, state: "error" },
           onSubmit: vi.fn(),
+          onReviewPending: vi.fn(),
           submitDisabled: false,
         }}
       />,
@@ -215,6 +221,7 @@ describe("LeadFormHeaderActions", () => {
           completionActions={{
             autosave,
             onSubmit: vi.fn(),
+            onReviewPending: vi.fn(),
             submitDisabled: false,
           }}
           completionSentinelRef={{ current: null }}
@@ -270,6 +277,7 @@ describe("LeadFormHeaderActions", () => {
           completionActions={{
             autosave: { ...autosave, state: "saving", isInFlight },
             onSubmit: vi.fn(),
+            onReviewPending: vi.fn(),
             submitDisabled: false,
           }}
           completionSentinelRef={{ current: null }}

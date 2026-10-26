@@ -93,6 +93,30 @@ interface Measured {
   readonly scrollportBottom?: number;
 }
 
+interface DocumentFit {
+  readonly scrollHeight: number;
+  readonly innerHeight: number;
+  readonly railBottom: number | null;
+}
+
+// The layout owns every scroll, so the document itself must not scroll: a
+// document taller than the viewport hides the rail below the fold on open.
+const documentFit = async (): Promise<DocumentFit> => {
+  const data = await command([
+    "eval",
+    `(() => {
+      document.scrollingElement.scrollTop = 0;
+      const rail = document.querySelector(${JSON.stringify(RAIL)});
+      return {
+        scrollHeight: document.scrollingElement.scrollHeight,
+        innerHeight: window.innerHeight,
+        railBottom: rail === null ? null : rail.getBoundingClientRect().bottom,
+      };
+    })()`,
+  ]);
+  return data.result as DocumentFit;
+};
+
 const probe = async (): Promise<Measured> => {
   const data = await command(["eval", PROBE]);
   return data.result as Measured;
@@ -125,6 +149,16 @@ for (const [width, height] of [
   void test(`the completion rail clears painted content at ${width}×${height}`, async () => {
     await openLeadReport();
     await command(["set", "viewport", String(width), String(height)]);
+    const opened = await documentFit();
+    assert.ok(
+      opened.scrollHeight <= opened.innerHeight,
+      `The document scrolls on open at ${width}×${height} (${opened.scrollHeight} > ${opened.innerHeight})`,
+    );
+    if (opened.railBottom !== null)
+      assert.ok(
+        opened.railBottom <= opened.innerHeight,
+        `The rail starts below the viewport at ${width}×${height}`,
+      );
     const measured = await settleAtBottom();
     assert.equal(
       measured.railPresent,
@@ -135,6 +169,15 @@ for (const [width, height] of [
       measured.atBottomPx,
       0,
       `Probe never reached the bottom at ${width}×${height}`,
+    );
+    const settled = await documentFit();
+    assert.ok(
+      settled.scrollHeight <= settled.innerHeight,
+      `The document scrolls with the rail shown at ${width}×${height} (${settled.scrollHeight} > ${settled.innerHeight})`,
+    );
+    assert.ok(
+      settled.railBottom !== null && settled.railBottom <= settled.innerHeight,
+      `The rail bottom is below the viewport at document scroll 0 (${width}×${height})`,
     );
     assert.deepEqual(
       measured.samples,

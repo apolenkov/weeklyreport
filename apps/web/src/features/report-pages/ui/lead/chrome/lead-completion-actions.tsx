@@ -5,7 +5,6 @@ import { useCallback, useId, useRef } from "react";
 import { SaveNowButton } from "../../../../../shared/ui/report-shell/save-now-button";
 import { pendingReviewLabel } from "../../../../report-sections";
 import type { AutosaveSnapshot } from "../../../../report-sections/client";
-import { focusCompletionIssue } from "./overview-completion-focus";
 
 export interface LeadCompletionActionContract {
   readonly autosave: AutosaveSnapshot;
@@ -14,7 +13,7 @@ export interface LeadCompletionActionContract {
   readonly submitDisabledReason?: string | undefined;
   /** Suggested continuations the lead has not confirmed yet. */
   readonly pendingReviewCount?: number | undefined;
-  readonly onReviewPending?: (() => void) | undefined;
+  readonly onReviewPending: () => void;
   readonly reviewDisabled?: boolean | undefined;
 }
 
@@ -64,7 +63,7 @@ export function LeadCompletionActions({
         <button
           type="button"
           data-testid="pending-review-count"
-          onClick={onReviewPending ?? (() => focusCompletionIssue())}
+          onClick={onReviewPending}
           disabled={reviewDisabled}
           aria-describedby={reviewDisabled && reason ? reasonId : undefined}
           className="rounded-[var(--radius-pill)] px-3 text-sm font-semibold text-[var(--color-primary)] underline underline-offset-4 transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] disabled:cursor-not-allowed disabled:opacity-50"

@@ -116,16 +116,34 @@ describe("Overview inline status input", () => {
     );
   });
 
-  it("keeps the typed pause reason until Save or Cancel when another status is selected", async () => {
+  it("keeps the typed pause reason and locks the other statuses until Save or Cancel", async () => {
     const user = userEvent.setup();
     const onSetStatus = vi.fn().mockResolvedValue(null);
     render(<StatusOverviewItemPreview item={item} onSetStatus={onSetStatus} />);
     await choose(user, "Paused");
     await waitFor(() => expect(screen.getByRole("textbox")).toHaveFocus());
     await user.keyboard("Waiting for access");
-    await choose(user, "Postponed");
-    expect(screen.getByRole("textbox")).toHaveValue("Waiting for access");
+    await user.click(
+      screen.getByRole("button", { name: /Status of Ship importer/ }),
+    );
+    const reason =
+      "Save or cancel the open status input before choosing another status.";
+    expect(screen.getByTestId("overview-status-lock-reason")).toHaveTextContent(
+      reason,
+    );
+    expect(screen.getByRole("menu")).toHaveAccessibleDescription(reason);
+    for (const entry of screen.getAllByRole("menuitem")) {
+      expect(entry).toHaveAttribute("aria-disabled", "true");
+      expect(entry).toHaveAccessibleDescription(reason);
+    }
+    await user.click(screen.getByRole("menuitem", { name: "Paused" }));
+    await user.click(screen.getByRole("menuitem", { name: "Postponed" }));
+    expect(screen.getByRole("menu")).toBeVisible();
     expect(onSetStatus).not.toHaveBeenCalled();
+    await user.keyboard("{Escape}");
+    await waitFor(() =>
+      expect(screen.getByRole("textbox")).toHaveValue("Waiting for access"),
+    );
     await user.click(screen.getByRole("button", { name: "Save" }));
     expect(onSetStatus).toHaveBeenCalledWith(
       item,
@@ -133,6 +151,26 @@ describe("Overview inline status input", () => {
       "edit:current:stable-1",
       { pausedReason: "Waiting for access" },
     );
+  });
+
+  it("returns focus to the status icon after Cancel even when the locked menu was opened", async () => {
+    const user = userEvent.setup();
+    const onSetStatus = vi.fn().mockResolvedValue(null);
+    render(<StatusOverviewItemPreview item={item} onSetStatus={onSetStatus} />);
+    await choose(user, "Paused");
+    await waitFor(() => expect(screen.getByRole("textbox")).toHaveFocus());
+    await user.click(
+      screen.getByRole("button", { name: /Status of Ship importer/ }),
+    );
+    await user.click(screen.getByRole("menuitem", { name: "Paused" }));
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /Status of Ship importer/ }),
+      ).toHaveFocus(),
+    );
+    expect(onSetStatus).not.toHaveBeenCalled();
   });
 
   it("allows carried confirmation under a risk and describes every menu choice", async () => {
