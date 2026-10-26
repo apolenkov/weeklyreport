@@ -13,8 +13,10 @@ builds outside CI; TASK-522 supersedes that part.
 - `secret-scan`: checksum-verified Gitleaks over the tree and the full Git
   history in every pipeline, with synthetic controls and a reviewed allowlist.
 - `dependency-scan`: one blocking audit of production and development
-  dependencies in every pipeline; `dependency-scan-dev` is removed. The one
-  unpatched advisory (braces, GHSA-vfj7-8cjw-p6xm) is accepted in writing.
+  dependencies in every pipeline; `dependency-scan-dev` is removed. The braces
+  advisory (GHSA-vfj7-8cjw-p6xm) was withdrawn on 2026-10-23, so it needs no
+  exception; the one remaining accepted advisory (zod through
+  `agentation-mcp`, GHSA-mrhx-c7xc-m3w5) is recorded in writing.
 - `mutation-period`: blocking Stryker+Vitest pilot of the period transition
   owner, break 70.
 - `production-build`: blocking `pnpm build` with an explicit build environment
@@ -30,7 +32,8 @@ None.
 ### Modified Capabilities
 
 - `ci-merge-gate`: new blocking routes; production build moves into CI.
-- `dependency-vulnerability-scanning`: records the braces acceptance.
+- `dependency-vulnerability-scanning`: records the accepted development-only
+  zod advisory the blocking audit relies on.
 
 ## Impact
 
