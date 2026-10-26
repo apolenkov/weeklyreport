@@ -212,13 +212,19 @@ function isManifest(value: unknown): value is Manifest {
 
 export function parseManifests(output: string): readonly Manifest[] {
   const manifests: Manifest[] = [];
-  for (const document of parseAllDocuments(output)) {
+  for (const [position, document] of parseAllDocuments(output).entries()) {
+    const number = position + 1;
+    if (document.errors.length > 0) {
+      throw new Error(
+        `Helm rendered document ${number} with YAML errors: ${document.errors[0]?.message ?? "unknown YAML error"}`,
+      );
+    }
     const value: unknown = document.toJS();
     // Helm renders a comment-only document, such as a disabled template, as null.
     if (value === null) continue;
     if (!isManifest(value)) {
       throw new Error(
-        "Helm rendered a document that is not a Kubernetes manifest: expected an object with string kind and metadata.name",
+        `Helm rendered document ${number} that is not a Kubernetes manifest: expected an object with string kind and metadata.name`,
       );
     }
     manifests.push(value);

@@ -35,13 +35,29 @@ describe("parseManifests manifest shape", () => {
     ["an array document", `- a\n- b\n---\n${DEPLOYMENT}`],
     ["a number document", `42\n---\n${DEPLOYMENT}`],
   ])("rejects %s instead of accepting it as a manifest", (_name, stdout) => {
-    expect(() => parseManifests(stdout)).toThrow(/manifest/i);
+    expect(() => parseManifests(stdout)).toThrow(
+      /document 1 that is not a Kubernetes manifest/i,
+    );
   });
 
   it.each([
     ["an object without kind", "metadata:\n  name: api\n"],
     ["an object without metadata.name", "kind: Deployment\nmetadata: {}\n"],
   ])("rejects %s", (_name, document) => {
-    expect(() => parseManifests(document)).toThrow(/manifest/i);
+    expect(() => parseManifests(document)).toThrow(
+      /document 1 that is not a Kubernetes manifest/i,
+    );
+  });
+
+  it.each([
+    ["a duplicate map key", "kind: A\nkind: B\nmetadata: { name: api }\n"],
+    [
+      "an unclosed flow sequence",
+      "bad: [\nkind: Deployment\nmetadata: { name: api }\n",
+    ],
+  ])("rejects %s reported by the YAML parser", (_name, stdout) => {
+    expect(() => parseManifests(stdout)).toThrow(
+      /document 1 with YAML errors/i,
+    );
   });
 });
