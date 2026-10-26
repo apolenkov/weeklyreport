@@ -94,22 +94,6 @@ overrides:
   deepmerge-ts: ">=8.0.2 <9"
 
 minimumReleaseAgeExclude:
-  - "@sentry/browser-utils@11.6.0 || 11.7.0"
-  - "@sentry/browser@11.6.0 || 11.7.0"
-  - "@sentry/bundler-plugins@11.6.0 || 11.7.0"
-  - "@sentry/core@11.6.0 || 11.7.0"
-  - "@sentry/feedback@11.6.0 || 11.7.0"
-  - "@sentry/nestjs@11.6.0 || 11.7.0"
-  - "@sentry/nextjs@11.6.0 || 11.7.0"
-  - "@sentry/node@11.6.0 || 11.7.0"
-  - "@sentry/opentelemetry@11.6.0 || 11.7.0"
-  - "@sentry/react@11.6.0 || 11.7.0"
-  - "@sentry/replay-canvas@11.6.0 || 11.7.0"
-  - "@sentry/replay@11.6.0 || 11.7.0"
-  - "@sentry/server-runtime-injection@11.6.0 || 11.7.0"
-  - "@sentry/server-utils@11.6.0 || 11.7.0"
-  - "@sentry/vercel-edge@11.6.0 || 11.7.0"
-  - "@sentry/cloudflare@11.6.0 || 11.7.0"
   - lefthook-darwin-arm64@2.2.1 || 2.2.2
   - lefthook-darwin-x64@2.2.1 || 2.2.2
   - lefthook-freebsd-arm64@2.2.1 || 2.2.2
