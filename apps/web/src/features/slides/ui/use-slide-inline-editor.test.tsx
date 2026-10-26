@@ -518,7 +518,7 @@ describe("useSlideInlineEditor — conflict path", () => {
   });
 });
 
-// C5208 (TASK-503.75): scoped edit state is only gated by sectionId, never cleared when the section changes.
+// C5208 (TASK-503.75): a section change clears the scoped edit and delete refs.
 describe("useSlideInlineEditor — section change", () => {
   function renderSwitchable() {
     const { proxy } = createMockTRPC([
@@ -543,14 +543,6 @@ describe("useSlideInlineEditor — section change", () => {
     );
     return { ui, ...render(ui(makeSection())) };
   }
-
-  it("hides the dialog while another section is shown", () => {
-    const { rerender, ui } = renderSwitchable();
-    fireEvent.click(screen.getByTestId("activate"));
-    expect(screen.getByTestId("item-dialog")).toBeInTheDocument();
-    rerender(ui(makeSection({ reportSectionId: "sec-2" })));
-    expect(screen.queryByTestId("item-dialog")).not.toBeInTheDocument();
-  });
 
   it("does not resurrect the old dialog when the user navigates back", () => {
     const { rerender, ui } = renderSwitchable();

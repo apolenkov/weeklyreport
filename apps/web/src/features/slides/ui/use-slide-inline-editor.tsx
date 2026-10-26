@@ -129,10 +129,8 @@ function useInlineEditCommands({
   const [inlineEdit, setInlineEdit] = useState<ScopedRecordRef>(null);
   const [pendingDeleteRef, setPendingDeleteRef] =
     useState<ScopedRecordRef>(null);
-  // The refs are scoped to the section that opened them; gating on the
-  // section id only hides a stale ref, so returning to that section
-  // resurrected the old dialog. Adjusting state during render keeps the
-  // reset out of an effect.
+  // Refs belong to the section that opened them; reset on section change.
+  // Adjusting state during render keeps the reset out of an effect.
   const sectionId = section?.reportSectionId ?? null;
   const [prevSectionId, setPrevSectionId] = useState(sectionId);
   if (sectionId !== prevSectionId) {
