@@ -1495,6 +1495,94 @@ describe("StatusOverview", () => {
         name: "Add next week update to Incident duty",
       }),
     ).not.toBeInTheDocument();
+    expect(
+      document.querySelectorAll("[data-overview-create-origin]"),
+    ).toHaveLength(0);
+  });
+
+  it("keeps the header Add and adds touch-reachable Current and Next creation to the mobile unit header", async () => {
+    const user = userEvent.setup();
+    const onAddItem = vi.fn();
+    render(<StatusOverview model={model} onAddItem={onAddItem} />);
+
+    const article = screen.getByRole("article", {
+      name: "Activity Incident duty",
+    });
+    expect(
+      within(article).getByRole("button", {
+        name: "Add item to Incident duty",
+      }),
+    ).toBeInTheDocument();
+    const mobileCreate = article.querySelector("[data-overview-mobile-create]");
+    if (!(mobileCreate instanceof HTMLElement))
+      throw new TypeError("Expected the mobile create controls");
+    expect(mobileCreate).toHaveClass("md:hidden");
+    const current = within(mobileCreate).getByRole("button", {
+      name: "Add current week update to Incident duty",
+    });
+    const next = within(mobileCreate).getByRole("button", {
+      name: "Add next week update to Incident duty",
+    });
+    for (const control of [current, next]) {
+      expect(control).not.toHaveClass("opacity-0");
+      expect(control).toHaveClass("min-h-[var(--touch-target-min)]");
+      expect(control).toHaveClass("min-w-[var(--touch-target-min)]");
+    }
+
+    await user.click(next);
+    expect(onAddItem).toHaveBeenLastCalledWith({
+      source: "next",
+      unitKind: "activity",
+      unitId: "activity-1",
+    });
+    await user.click(current);
+    expect(onAddItem).toHaveBeenLastCalledWith({
+      source: "current",
+      unitKind: "activity",
+      unitId: "activity-1",
+    });
+  });
+
+  it("offers contextual creation only inside Current and Next lanes", () => {
+    render(<StatusOverview model={model} onAddItem={vi.fn()} />);
+
+    const lane = (source: string): HTMLElement => {
+      const element = [
+        ...document.querySelectorAll<HTMLElement>(
+          "[data-overview-lineage-lane]",
+        ),
+      ].find((candidate) => candidate.dataset.overviewLineageLane === source);
+      if (!element) throw new Error(`Expected a ${source} lane`);
+      return element;
+    };
+    expect(
+      within(lane("current")).getByRole("button", {
+        name: "Add current week update to Incident duty",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(lane("next")).getByRole("button", {
+        name: "Add next week update to Incident duty",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      within(lane("previous")).queryByRole("button", {
+        name: /Add .* update to Incident duty/,
+      }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders no creation controls without an add handler", () => {
+    render(<StatusOverview model={model} />);
+
+    expect(
+      document.querySelectorAll("[data-overview-create-origin]"),
+    ).toHaveLength(0);
+    expect(
+      screen.queryByRole("button", {
+        name: /^Add (item|current week|next week)/,
+      }),
+    ).not.toBeInTheDocument();
   });
 
   it("keeps a historical Activity visible without the weekly fields editor", () => {
