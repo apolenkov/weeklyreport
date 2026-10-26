@@ -61,6 +61,61 @@ function item(overrides: {
 }
 
 describe("projectStatusOverview", () => {
+  it("projects the canonical covering risk explanation only on the live covered item", () => {
+    const source = item({
+      id: "risk-covered",
+      stableId: STABLE_CONTINUED,
+      projectId: CURRENT_PRODUCT,
+      type: "current",
+      text: "Covered work",
+    });
+    const section = makeReportSectionFixture({
+      projects: [
+        {
+          projectId: CURRENT_PRODUCT,
+          projectName: "Product",
+          trafficLight: "green",
+        },
+      ],
+      items: [
+        {
+          ...source,
+          stageNames: ["Development"],
+          nextStepText: "Next commitment",
+        },
+      ],
+      risks: [
+        {
+          id: "risk-1",
+          projectId: CURRENT_PRODUCT,
+          stageNames: ["Development"],
+          severity: "blocked",
+          risk: "Access unavailable",
+          impact: "Cannot ship",
+          mitigation: "Escalate",
+        },
+      ],
+    });
+    const model = projectStatusOverview(
+      {
+        current: {
+          reportId: section.reportId,
+          periodStart: new Date("2026-10-19"),
+          periodEnd: new Date("2026-10-25"),
+          section,
+        },
+        predecessor: { availability: "unavailable", reason: "no_predecessor" },
+      },
+      { currentItemsEditable: true },
+    );
+    expect(model.units[0]?.columns.currentWeek.items[0]).toMatchObject({
+      statusRiskText: "Access unavailable",
+      nextStepText: "Next commitment",
+    });
+    expect(
+      model.units[0]?.columns.nextWeek.items[0]?.statusRiskText,
+    ).toBeNull();
+  });
   it("projects products and activities as peers exactly once and appends historical parents", () => {
     const currentSection = makeReportSectionFixture({
       projects: [

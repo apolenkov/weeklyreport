@@ -6,8 +6,10 @@ import {
   DropdownMenuTrigger,
 } from "@weeklyreport/ui/components/ui/dropdown-menu";
 import { Check } from "lucide-react";
+import { useRef } from "react";
 
 import { itemStatusToWorkflow } from "../model/item-status";
+import type { ItemStatusInput } from "../model/lead-actions/lead-item-status-patch";
 import type {
   StatusOverviewEditTarget,
   StatusOverviewItem,
@@ -36,7 +38,8 @@ export interface ActionProps {
         item: StatusOverviewItem,
         status: ItemWorkflowStatus,
         focusKey?: string,
-      ) => void)
+        input?: ItemStatusInput,
+      ) => void | Promise<string | null>)
     | undefined;
   readonly onResolvePlan?:
     ((item: StatusOverviewItem, focusKey?: string) => void) | undefined;
@@ -68,7 +71,10 @@ function StatusMenuItems({
         <DropdownMenuItem
           key={choice.value}
           aria-current={current ? "true" : undefined}
-          onSelect={() => onChoose(status)}
+          disabled={Boolean(item.statusRiskText)}
+          onSelect={() => {
+            if (!item.statusRiskText) onChoose(status);
+          }}
           className={MENU_ITEM_CLASS}
         >
           <ProgressIcon status={status} />
@@ -90,6 +96,7 @@ export function StatusControl({
   onSetStatus,
   onConfirmItem,
 }: Pick<ActionProps, "item" | "onSetStatus" | "onConfirmItem">) {
+  const inlineChoice = useRef(false);
   const unplanned = item.continuity === "unplanned" ? " · Unplanned" : "";
   const label = `Status of ${item.text}: ${statusOverviewProgressLabel(item)}${unplanned}`;
   const carried = item.needsConfirmation === true;
@@ -116,11 +123,15 @@ export function StatusControl({
   const focusKey = `${carried ? "confirm" : "edit"}:${item.source}:${identityOf(item)}`;
   // Choosing the status a carried item already shows is the confirmation.
   const choose = (status: ItemWorkflowStatus) => {
+    if (item.statusRiskText) return;
     if (carried && status === item.workflowStatus && onConfirmItem) {
       onConfirmItem(item);
       return;
     }
-    onSetStatus(item, status, focusKey);
+    inlineChoice.current =
+      status === "paused" ||
+      (status === "done" && Boolean(item.nextStepText?.trim()));
+    void onSetStatus(item, status, focusKey);
   };
   return (
     <DropdownMenu>
@@ -137,7 +148,23 @@ export function StatusControl({
           {icon}
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start">
+      <DropdownMenuContent
+        align="start"
+        onCloseAutoFocus={(event) => {
+          if (inlineChoice.current) event.preventDefault();
+          inlineChoice.current = false;
+        }}
+        className="max-w-[min(24rem,calc(100vw-2rem))]"
+      >
+        {item.statusRiskText ? (
+          <p
+            data-testid="overview-status-risk-reason"
+            className="px-2 py-1 text-xs text-[var(--color-muted-foreground)] break-words"
+          >
+            Set by risk: {item.statusRiskText} — resolve it in Risks &amp;
+            Blockers
+          </p>
+        ) : null}
         <StatusMenuItems item={item} onChoose={choose} />
       </DropdownMenuContent>
     </DropdownMenu>

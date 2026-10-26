@@ -68,6 +68,8 @@ export interface StatusOverviewItem {
   readonly tag: string;
   readonly stageNames: readonly string[];
   readonly pausedReason: string | null;
+  readonly nextStepText?: string | null;
+  readonly statusRiskText?: string | null;
   /** Server-owned cancellation metadata. */
   readonly resolution: ItemResolution | null;
   /** Server-owned append-only outcome audit. */
