@@ -2,11 +2,7 @@
 
 ### Requirement: One stored progress vocabulary independent of week placement
 
-`ItemWorkflowStatus` MUST remain the single stored progress source: `planned | in_progress | paused | postponed | done`. Current and Next MUST accept the same vocabulary. Current `planned` means Not started. The system MUST NOT store `blocked` on an Item or persist a separate completion flag. `paused` MUST retain a nonblank `pausedReason`; every non-paused status MUST clear it. Paused and postponed work MUST NOT feed blocked or at-risk escalation. Week placement, progress, derived alarm, and carried confirmation are independent dimensions.
-
-For an eligible Current occurrence without a separate next commitment, `Move to next week` in the Lead Report Overview MUST be a placement-only postponement: saving moves that occurrence to Next, preserving stored progress and stable identity, clearing `carriedOver`, and leaving no duplicate Current occurrence. It MUST NOT synthesize `nextStepText`, set progress to `postponed`, or act as `Continue next week`. An existing explicit Next for the same `stableId` MUST prevent a duplicate move; the existing continuation/promotion path for an already stored `nextStepText` remains unchanged.
-
-At rollover, an explicit next-period commitment MUST become Current `planned`; a fallback continuation of Current `in_progress` MUST remain `in_progress`. Both MUST be marked carried and unconfirmed until the lead explicitly updates the target occurrence. No other progress status is automatically activated.
+Current and Next Items MUST share one stored progress vocabulary: `planned | in_progress | paused | postponed | done`, independent of placement, derived alarm, and carried confirmation. Current `planned` MUST mean Not started. Rollover MUST preserve explicit-commitment precedence and lead confirmation: an eligible commitment becomes Current `planned`; fallback Current `in_progress` stays `in_progress`; both remain carried and unconfirmed.
 
 #### Scenario: In-progress work moves to Next without changing progress
 
@@ -60,6 +56,34 @@ At rollover, an explicit next-period commitment MUST become Current `planned`; a
 - **THEN** the move cannot create or overwrite another Next occurrence
 - **AND** at rollover the eligible explicit commitment wins over fallback Current continuation, producing at most one target occurrence
 
-Code anchors at baseline `99d3651f2`: [move preserves progress and guards other placement](../../../../../apps/web/src/features/report-sections/model/lead-actions/lead-item-actions.ts#L21-L72), [move save regression](../../../../../apps/web/src/features/report-pages/ui/lead/shell/lead-status-overview.test.tsx#L1703-L1744), [existing next-step promotion boundary](../../../../../apps/web/src/features/report-pages/ui/lead/shell/overview-item-save.ts#L287-L300). This reconciles the move wording; it does not change rollover or the status enum.
+#### Scenario: stored progress cannot encode alarms or a separate completion flag
 
-Unchanged invariants: explicit Next wins W+1 rollover; without it unfinished Current continues; at most one active Next per `stableId`; Previous is read-only; `periodState` and lifecycle tuple remain atomic. The source-of-truth rollover and lifecycle contracts remain [carry-over-automation](../../../../specs/carry-over-automation/spec.md#L9-L76) and [period-dual-state](../../../../specs/period-dual-state/spec.md#L18-L33).
+- **WHEN** an Item is validated or persisted
+- **THEN** no stored `blocked` status or separate completion flag is accepted
+- **AND** paused progress requires a nonblank pause reason while every non-paused status clears it
+- **AND** no progress other than an eligible explicit commitment or fallback in-progress continuation is automatically activated at rollover
+
+## ADDED Requirements
+
+### Requirement: Move to next week MUST change placement without asserting continuation
+
+In Lead Report Overview, Save for Move to next week on an eligible Current item without a separate next commitment MUST move that occurrence to Next, preserving stored progress, text, and stable identity while clearing `carriedOver`. This action MUST remain distinct from Continue next week and MUST NOT create another occurrence for the same placement.
+
+#### Scenario: postponement changes placement only
+
+- **WHEN** the lead saves Move to next week for an eligible Current occurrence without a separate commitment
+- **THEN** that occurrence is Next and no longer Current
+- **AND** progress and text are preserved, `carriedOver` is cleared, and no `nextStepText` or Current result is synthesized
+- **AND** progress is not set to `postponed` merely because the action means postponement
+
+#### Scenario: cancelling a move leaves placement unchanged
+
+- **WHEN** the lead cancels the move editor under the existing discard rules
+- **THEN** no move is written and the occurrence remains Current
+- **AND** focus returns to the triggering item control
+
+#### Scenario: existing commitments keep their existing handling
+
+- **WHEN** a placement-only move would collide with an explicit Next of the same stable identity
+- **THEN** it cannot create or overwrite a second Next
+- **AND** the existing continuation/promotion branch for stored `nextStepText` and the separate Continue next week verdict remain unchanged
