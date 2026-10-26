@@ -117,7 +117,7 @@ describe("mobile lineage layout", () => {
       '[data-overview-lineage-lane="current"]',
     );
     expect(lane).toHaveTextContent("Current week");
-    expect(lane).toHaveClass("py-1.5", "md:py-3");
+    expect(lane).toHaveClass("py-1", "md:py-3");
     for (const period of Object.values(periods)) {
       expect(screen.queryByText(period)).not.toBeInTheDocument();
     }

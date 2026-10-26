@@ -111,7 +111,7 @@ function LineageRow({
             data-overview-lineage-lane={column.source}
             role="group"
             aria-labelledby={STATUS_OVERVIEW_COLUMN_HEADER_IDS[column.key]}
-            className="min-w-0 px-3 py-1.5 block border-t border-[var(--color-border-subtle)] first:border-t-0 md:px-4 md:py-3 md:min-h-24 md:flex-col md:border-t-0 md:border-l md:border-[var(--color-border-subtle)] md:flex"
+            className="min-w-0 px-3 py-1 block border-t border-[var(--color-border-subtle)] first:border-t-0 md:px-4 md:py-3 md:min-h-24 md:flex-col md:border-t-0 md:border-l md:border-[var(--color-border-subtle)] md:flex"
           >
             <MobileWeekLabel label={column.label} />
             {column.source === "previous" && row.previousParent ? (
