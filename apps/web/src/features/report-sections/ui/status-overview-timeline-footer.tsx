@@ -17,7 +17,7 @@ const CREATE_CONTROL =
 // node always stays in the accessibility tree; only sight is hidden. Mobile
 // creation lives in the unit header instead, because empty lanes stay collapsed.
 const CELL_CREATE_REVEAL =
-  "hidden md:inline-flex opacity-0 transition-opacity group-hover/lane:opacity-100 group-focus-within/lane:opacity-100 [@media(hover=none)]:opacity-100 motion-reduce:transition-none";
+  "hidden md:inline-flex opacity-0 transition-opacity group-hover/lane:opacity-100 group-focus-within/lane:opacity-100 [@media(hover:none)]:opacity-100 motion-reduce:transition-none";
 
 type CreateSource = "current" | "next";
 
@@ -61,6 +61,13 @@ export function UnitAddItemButton({
   );
 }
 
+// The mobile header shows three creation controls side by side (unit Add,
+// Current, Next). The two week controls carry visible labels so identical "+"
+// icons cannot be told apart only by their accessible names; wrapping keeps
+// them inside a 375px header instead of overflowing it.
+const MOBILE_CREATE_LABEL =
+  "whitespace-nowrap text-xs font-semibold leading-none";
+
 // Mobile overview collapses empty lanes, so the unit header owns always-visible
 // Current and Next creation for every unit, including an entirely empty one.
 export function UnitWeekCreateControls({
@@ -73,7 +80,7 @@ export function UnitWeekCreateControls({
   if (unit.historical) return null;
   return (
     <div
-      className="flex items-center gap-1 md:hidden"
+      className="flex flex-wrap items-center gap-1 md:hidden"
       data-overview-mobile-create={unit.key}
     >
       {(["current", "next"] as const).map((source) => (
@@ -86,9 +93,12 @@ export function UnitWeekCreateControls({
           data-overview-create-source={source}
           data-overview-focus={`add:${unit.key}:mobile:${source}`}
           onClick={() => onAddItem(createTarget(unit, source))}
-          className={`inline-flex ${CREATE_CONTROL}`}
+          className={`inline-flex gap-1 px-2 ${CREATE_CONTROL}`}
         >
           <Plus aria-hidden="true" className="size-4" />
+          <span className={MOBILE_CREATE_LABEL}>
+            {source === "current" ? "Current" : "Next"}
+          </span>
         </button>
       ))}
     </div>
