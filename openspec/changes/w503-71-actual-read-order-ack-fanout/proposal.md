@@ -22,7 +22,8 @@ the same shared helper. The display order is not a per-week difference.
 ## C5119 — no RED, measurement recorded
 
 `ReviewAcknowledgeBar` invalidates `review.acknowledgements` with a path filter
-that carries no report or group. Measured in jsdom (`measure-c5119.log`): with
+that carries no report or group. Measured in jsdom
+(`~/work/handoffs/task-503/wave14-71/D/measure-c5119.log`): with
 three groups of one report mounted, one acknowledgement in group A refetches the
 rosters of A, B and C (3 logical queries, 1 each after the initial load).
 Rejected subclaim stays rejected: inactive caches are marked stale, not
