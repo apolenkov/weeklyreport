@@ -25,10 +25,19 @@ No shared-schema, shared-UI-package, API, Prisma, or lifecycle changes are plann
 - [ ] 3.2 Add or reuse focused tests of [placement guards](../../../apps/web/src/features/report-sections/model/lead-actions/lead-item-actions.ts#L36-L72) and existing rollover owners: an explicit Next prevents a colliding move; explicit Next wins W+1; fallback Current continues only without it; repeated operations leave at most one active Next/target per `stableId`; Previous and published source remain unchanged. Verify existing next-step promotion and separate `Continue next week` behavior remain unchanged under the [progress delta](./specs/record-status-derivation/spec.md).
 - [ ] 3.3 Run focused changed-owner tests via `run-checks`, changed-file ESLint/Prettier, and web typecheck; update behavior notes to distinguish placement postponement from the stored `postponed` progress and continuation verdict. Verify no broader status-label unification or lifecycle write entered the diff.
 
-## 4. Integration acceptance and planning checks
+## 4. Web — package 1 contract reconciliation: inline status input
 
-- [ ] 4.1 Obtain independent review after all packages are integrated, mapping each modified requirement to tests and coordinator-owned browser evidence at 1280 and 375. Verify required pause reason, risk fields, stage ownership, Previous immutability, canonical auth, W+1 precedence/dedupe, and atomic period/lifecycle behavior remain unchanged; record any required guarded DB/E2E phase separately from unit evidence.
-- [ ] 4.2 On the integrated implementation SHA, the coordinator runs `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, and `pnpm spec:check` through the required `run-checks` semaphore; verify all exit 0 and record exact commands, SHA, and external logs. Also run `pnpm exec openspec validate lead-fast-entry --strict`. These gates are future implementation acceptance, not P6 results.
+- [ ] 4.1 Verify the integrated P1 implementation against the added inline Paused/Clear-and-Done requirement: labelled one-line reason receives focus; Enter saves a valid reason; invalid/invisible reason and Cancel emit no status change; Done with next step offers only Clear and mark done or Cancel, focuses confirmation, clears next step without creating Next, and returns focus on cancellation. Run the existing P1 focused status-flow tests through `run-checks` and attach their results to the requirement. Do not implement or plan Done plus a new Next item in this change.
+
+## 5. Web — package 2 contract reconciliation: autosave and rail
+
+- [ ] 5.1 Verify P2 completion actions against the four added/modified capability deltas: no permanent Save or global Add; error-only Retry reuses force-save; the same focused Retry survives in-flight states with `aria-busy=true`, a 1500 ms Saved flash, and repeated error. Verify successful removal focuses enabled Submit or the completion group only if Retry still owns focus. Run existing completion-action and save-control focused tests through `run-checks`; retain Save in explicit editor/inline submissions.
+- [ ] 5.2 Verify the rail is a relative sibling row of `lead-completion-scrollport`, not fixed and not inside scrolling content; safe area/tall rail and below-32rem document-flow fallback keep controls reachable. Run existing layout/visibility tests through `run-checks` and coordinator browser checks at 1280/375, keyboard focus, short height/high zoom, wrapped Submit reason, header handoff, and positive/zero review counts. Map evidence to all P2 trace rows in design; do not claim browser acceptance from DOM/CSS tests alone.
+
+## 6. Integration acceptance and planning checks
+
+- [ ] 6.1 Obtain independent review after all packages are integrated, mapping each modified requirement to tests and coordinator-owned browser evidence at 1280 and 375. Verify required pause reason, risk fields, stage ownership, Previous immutability, canonical auth, W+1 precedence/dedupe, and atomic period/lifecycle behavior remain unchanged; record any required guarded DB/E2E phase separately from unit evidence.
+- [ ] 6.2 On the integrated implementation SHA, the coordinator runs `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, and `pnpm spec:check` through the required `run-checks` semaphore; verify all exit 0 and record exact commands, SHA, and external logs. Also run `pnpm exec openspec validate lead-fast-entry --strict`. These gates are future implementation acceptance, not P6 results.
 
 ## P6 proposal verification scope
 
@@ -36,5 +45,5 @@ For this spec-only submission, run `pnpm exec prettier --check 'openspec/changes
 
 ## Workflow follow-up
 
-- After implementation acceptance, sync the four deltas, validate the resulting durable specs, and archive only this change; retain external evidence.
+- After implementation acceptance, sync the eight capability deltas, validate the resulting durable specs, and archive only this change; retain external evidence.
 - The coordinator owns integration/publication and TASK-707 closure. P6 does not close the parent task or push `wr707-spec`.

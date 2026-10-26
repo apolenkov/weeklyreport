@@ -65,6 +65,37 @@ Current and Next Items MUST share one stored progress vocabulary: `planned | in_
 
 ## ADDED Requirements
 
+### Requirement: Overview Paused and Clear-and-Done MUST resolve inline
+
+The editable Lead Report Overview status menu MUST resolve Paused in an inline one-line reason field with autofocus and Enter-to-save, without opening the full item editor. Done with a stored next step MUST offer inline `Clear and mark done` or Cancel, never a Plan action. Confirmation MUST clear that next step and mark the occurrence done through the canonical status-save path.
+
+#### Scenario: Paused focuses its reason and saves on Enter
+
+- **WHEN** the lead chooses Paused from an eligible item's status menu
+- **THEN** a labelled one-line reason field opens below the item and receives focus without opening the full editor
+- **AND** the status is not changed until a nonblank valid reason is submitted
+- **AND** Enter saves Paused with that reason through the canonical status-save path
+
+#### Scenario: blank or invisible pause reasons cannot write
+
+- **WHEN** the lead submits an empty, whitespace-only, or invisible pause reason
+- **THEN** validation explains the error beside the inline field and no status patch is emitted
+- **AND** the field remains available for correction under the existing `safeText` contract
+
+#### Scenario: Done clears the next step without offering Plan
+
+- **WHEN** the lead chooses Done for an eligible item with a stored next step
+- **THEN** an inline confirmation offers only `Clear and mark done` and Cancel, without opening the full editor
+- **AND** `Clear and mark done` receives focus and can be activated with Enter
+- **AND** confirming clears the next step and saves done without creating or planning a Next item
+- **AND** neither `Plan for next week` nor an instruction to cancel and reopen another editor is shown
+
+#### Scenario: cancelling inline status input leaves the item unchanged
+
+- **WHEN** the lead cancels the pause reason or Clear-and-Done confirmation, including with Escape
+- **THEN** no status change or next-step clearing is written
+- **AND** focus returns to the item's status control
+
 ### Requirement: Move to next week MUST change placement without asserting continuation
 
 In Lead Report Overview, Save for Move to next week on an eligible Current item without a separate next commitment MUST move that occurrence to Next, preserving stored progress, text, and stable identity while clearing `carriedOver`. This action MUST remain distinct from Continue next week and MUST NOT create another occurrence for the same placement.

@@ -10,6 +10,8 @@ Leads repeat stage selection and week switching, while contradictory Overview re
 - Keep the unit-header `+` and allow contextual Current/Next `+` controls on hover/focus and always on touch. Creating directly in Next starts as Planned.
 - Define `Move to next week` as moving the occurrence out of Current into Next without rewriting progress; keep `Continue next week` distinct.
 - Reconcile empty cells with the existing `—` and screen-reader text `No item in this period`.
+- Record P1's inline Paused reason (autofocus, Enter-to-save) and Clear-and-Done without Plan; Done plus a new Next item remains separate future work.
+- Reconcile P2: autosave with error-only Retry instead of permanent Save, focus-safe busy/Saved recovery, and a non-overlay completion rail beside the content scrollport.
 
 ## Capabilities
 
@@ -20,9 +22,13 @@ None.
 ### Modified Capabilities
 
 - `lead-status-overview`: contextual creation, one composer, accessible emptiness, and move semantics.
-- `record-status-derivation`: placement-only move versus continuation, preserving stored progress and rollover rules.
+- `record-status-derivation`: inline Paused/Clear-and-Done and placement-only move versus continuation, preserving progress and rollover rules.
 - `risk-stage-integrity`: draft/Product-scoped editable stage defaults in Item, Risk, and Decision creation.
 - `status-risk-unification`: preserve explicit risk-stage prefill and prohibit automatic all-stage coverage while permitting the agreed draft default.
+- `lead-completion-guidance`: separate content scrollport and non-overlay completion rail with safe-area/focus clearance.
+- `lead-plan-verdict`: pending-review count and submit blocker without a Save cluster.
+- `report-toolbar-layout`: Retry-only completion, canonical header/rail handoff, unchanged role/context separation.
+- `lead-report-controls-integrity`: recovery-only Retry, busy identity, Saved flash, and focus-safe removal.
 
 ## Impact
 
