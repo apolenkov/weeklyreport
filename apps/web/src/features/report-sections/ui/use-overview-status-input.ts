@@ -106,7 +106,7 @@ export function useOverviewStatusInput(
       status: ItemWorkflowStatus,
       focusKey?: string,
     ) => {
-      if (running.current || item.statusRiskText) return;
+      if (running.current || item.statusRiskText || asking !== null) return;
       origin.current = focusKey;
       setError(null);
       if (
@@ -117,8 +117,7 @@ export function useOverviewStatusInput(
       else void record(status);
     },
     pause: (pausedReason: string) => void record("paused", { pausedReason }),
-    finish: (nextStepAction: "clear" | "plan") =>
-      void record("done", { nextStepAction }),
+    finish: () => void record("done", { nextStepAction: "clear" }),
     cancel: () => {
       if (running.current) return;
       setAsking(null);

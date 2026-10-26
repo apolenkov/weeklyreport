@@ -94,39 +94,82 @@ describe("Overview inline status input", () => {
     expect(onSetStatus).not.toHaveBeenCalled();
   });
 
-  it.each([
-    ["Plan for next week", "plan"],
-    ["Clear", "clear"],
-  ] as const)(
-    "resolves Done with a next step using %s in three clicks",
-    async (label, action) => {
-      const user = userEvent.setup();
-      const onSetStatus = vi.fn().mockResolvedValue(null);
-      const committed = { ...item, nextStepText: "Verify production" };
-      render(
-        <StatusOverviewItemPreview
-          item={committed}
-          onSetStatus={onSetStatus}
-        />,
-      );
-      await choose(user, "Done");
-      expect(screen.getByText(/Mark done\. Next step/)).toBeVisible();
-      expect(
-        screen.getByText(
-          /current result stays in history and its status is unchanged/,
-        ),
-      ).toBeVisible();
-      expect(onSetStatus).not.toHaveBeenCalled();
-      await user.click(screen.getByRole("button", { name: label }));
-      expect(onSetStatus).toHaveBeenCalledWith(
-        committed,
-        "done",
-        "edit:current:stable-1",
-        { nextStepAction: action },
-      );
-      expect(screen.queryByText(/Cancel, then choose/)).toBeNull();
-    },
-  );
+  it("offers only clear-and-done or cancel, focusing the safe completion", async () => {
+    const user = userEvent.setup();
+    const onSetStatus = vi.fn().mockResolvedValue(null);
+    const committed = { ...item, nextStepText: "Verify production" };
+    render(
+      <StatusOverviewItemPreview item={committed} onSetStatus={onSetStatus} />,
+    );
+    await choose(user, "Done");
+    expect(
+      screen.queryByRole("button", { name: "Plan for next week" }),
+    ).toBeNull();
+    const clear = screen.getByRole("button", { name: "Clear and mark done" });
+    await waitFor(() => expect(clear).toHaveFocus());
+    await user.keyboard("{Enter}");
+    expect(onSetStatus).toHaveBeenCalledWith(
+      committed,
+      "done",
+      "edit:current:stable-1",
+      { nextStepAction: "clear" },
+    );
+  });
+
+  it("keeps the typed pause reason until Save or Cancel when another status is selected", async () => {
+    const user = userEvent.setup();
+    const onSetStatus = vi.fn().mockResolvedValue(null);
+    render(<StatusOverviewItemPreview item={item} onSetStatus={onSetStatus} />);
+    await choose(user, "Paused");
+    await waitFor(() => expect(screen.getByRole("textbox")).toHaveFocus());
+    await user.keyboard("Waiting for access");
+    await choose(user, "Postponed");
+    expect(screen.getByRole("textbox")).toHaveValue("Waiting for access");
+    expect(onSetStatus).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(onSetStatus).toHaveBeenCalledWith(
+      item,
+      "paused",
+      "edit:current:stable-1",
+      { pausedReason: "Waiting for access" },
+    );
+  });
+
+  it("allows carried confirmation under a risk and describes every menu choice", async () => {
+    const user = userEvent.setup();
+    const onConfirmItem = vi.fn();
+    const onSetStatus = vi.fn();
+    const covered = {
+      ...item,
+      needsConfirmation: true,
+      statusRiskText: "Access unavailable",
+    };
+    render(
+      <StatusOverviewItemPreview
+        item={covered}
+        onSetStatus={onSetStatus}
+        onConfirmItem={onConfirmItem}
+      />,
+    );
+    await user.click(
+      screen.getByRole("button", { name: /Status of Ship importer/ }),
+    );
+    expect(screen.getByRole("menu")).toHaveAccessibleDescription(
+      "Set by risk: Access unavailable — resolve it in Risks & Blockers",
+    );
+    const current = screen.getByRole("menuitem", { name: "In progress" });
+    expect(current).not.toHaveAttribute("aria-disabled", "true");
+    expect(current).toHaveAccessibleDescription(
+      "Set by risk: Access unavailable — resolve it in Risks & Blockers",
+    );
+    for (const entry of screen
+      .getAllByRole("menuitem")
+      .filter((entry) => entry !== current))
+      expect(entry).toHaveAttribute("aria-disabled", "true");
+    await user.click(current);
+    expect(onConfirmItem).toHaveBeenCalledExactlyOnceWith(covered);
+    expect(onSetStatus).not.toHaveBeenCalled();
+  });
 
   it.each(["paused", "clear"] as const)(
     "restores focus after a carried item is confirmed by %s",
@@ -152,7 +195,10 @@ describe("Overview inline status input", () => {
       if (action === "paused") {
         await waitFor(() => expect(screen.getByRole("textbox")).toHaveFocus());
         await user.keyboard("Waiting{Enter}");
-      } else await user.click(screen.getByRole("button", { name: "Clear" }));
+      } else
+        await user.click(
+          screen.getByRole("button", { name: "Clear and mark done" }),
+        );
       rerender(
         <StatusOverviewItemPreview
           item={{
@@ -183,13 +229,13 @@ describe("Overview inline status input", () => {
     );
     await choose(user, "Done");
     await user.click(
-      screen.getByRole("button", { name: "Plan for next week" }),
+      screen.getByRole("button", { name: "Clear and mark done" }),
     );
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Wait for autosave to finish.",
     );
     expect(
-      screen.getByRole("button", { name: "Plan for next week" }),
+      screen.getByRole("button", { name: "Clear and mark done" }),
     ).toBeEnabled();
   });
 

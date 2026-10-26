@@ -1076,11 +1076,11 @@ describe("StatusOverview", () => {
 
     await user.click(status);
     await user.click(screen.getByRole("menuitem", { name: "Paused" }));
-    expect(onSetStatus).toHaveBeenCalledWith(
-      expect.objectContaining({ recordId: "item-1" }),
-      "paused",
-      "edit:current:item-1",
-    );
+    expect(
+      screen.getByRole("textbox", { name: "Paused reason — Work item 1" }),
+    ).toBeVisible();
+    expect(onSetStatus).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(onEditItem).not.toHaveBeenCalled();
 
     await user.click(

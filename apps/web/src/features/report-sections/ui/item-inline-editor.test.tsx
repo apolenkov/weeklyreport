@@ -109,6 +109,11 @@ describe("ItemInlineEditor", () => {
     expect(nextStep).toHaveValue("Preserve this next-week plan");
     expect(nextStep).toHaveFocus();
     await user.clear(nextStep);
+    expect(nextStep).toBeInTheDocument();
+    expect(nextStep).toHaveFocus();
+    await user.type(nextStep, "Revised");
+    expect(nextStep).toHaveValue("Revised");
+    await user.clear(nextStep);
     await user.click(screen.getByRole("button", { name: "Save update" }));
     expect(onSave).toHaveBeenCalledWith(
       expect.objectContaining({ status: "completed", nextStepText: null }),

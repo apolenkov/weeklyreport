@@ -1,5 +1,3 @@
-import type { ItemWorkflowStatus } from "@weeklyreport/shared";
-
 import type { ReportHealthPulse } from "../model/report-health-pulse";
 import type {
   StatusOverviewCreateTarget,
@@ -9,7 +7,10 @@ import type {
 } from "../model/status-overview";
 import type { StatusOverviewActivityFieldsChange } from "./status-overview-activity-editor";
 import type { StatusOverviewEditorSlot } from "./status-overview-editor-slot";
-import type { VerdictHandler } from "./status-overview-item-handlers";
+import type {
+  SetStatusHandler,
+  VerdictHandler,
+} from "./status-overview-item-handlers";
 
 export interface StatusOverviewProps {
   readonly health?: ReportHealthPulse | undefined;
@@ -28,13 +29,7 @@ export interface StatusOverviewProps {
       ) => void)
     | undefined;
   readonly onConfirmItem?: ((item: StatusOverviewItem) => void) | undefined;
-  readonly onSetStatus?:
-    | ((
-        item: StatusOverviewItem,
-        status: ItemWorkflowStatus,
-        focusKey?: string,
-      ) => void)
-    | undefined;
+  readonly onSetStatus?: SetStatusHandler | undefined;
   readonly onResolvePlan?:
     ((item: StatusOverviewItem, focusKey?: string) => void) | undefined;
   readonly onRestorePlan?:

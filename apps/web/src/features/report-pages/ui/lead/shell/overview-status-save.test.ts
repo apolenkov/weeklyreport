@@ -27,23 +27,17 @@ const item = {
 } as StatusOverviewItem;
 function setup() {
   const apply = vi.fn<ReadyEditor["draft"]["apply"]>();
-  const promote = vi
-    .fn<ReadyEditor["outcomes"]["promote"]>()
-    .mockResolvedValue(
-      {} as Awaited<ReturnType<ReadyEditor["outcomes"]["promote"]>>,
-    );
   const section = makeReportSectionFixture({ items: [raw] });
   const editor = {
     view: { viewModel: { isReadOnly: false } },
     draft: { section, apply },
-    outcomes: { canExecute: true, promote },
   } as unknown as ReadyEditor;
-  return { editor, section, apply, promote };
+  return { editor, section, apply };
 }
 
 describe("saveOverviewStatus", () => {
   it("refuses a draft write after the report becomes read-only", async () => {
-    const { editor, apply, promote } = setup();
+    const { editor, apply } = setup();
     const locked = {
       ...editor,
       view: {
@@ -59,11 +53,9 @@ describe("saveOverviewStatus", () => {
       }),
     ).toMatch(/read-only/);
     expect(apply).not.toHaveBeenCalled();
-    expect(promote).not.toHaveBeenCalled();
   });
-
-  it("writes pause input directly, without an item editor", async () => {
-    const { editor, apply, promote } = setup();
+  it("writes pause input directly without an outcome command", async () => {
+    const { editor, apply } = setup();
     expect(
       await saveOverviewStatus(editor, {
         item,
@@ -79,53 +71,25 @@ describe("saveOverviewStatus", () => {
         carriedOver: false,
       },
     });
-    expect(promote).not.toHaveBeenCalled();
   });
-
-  it("uses the canonical promotion once and never creates another occurrence", async () => {
-    const { editor, promote, apply, section } = setup();
+  it("marks the same Current result done and clears only its continuation", async () => {
+    const { editor, apply, section } = setup();
     expect(
       await saveOverviewStatus(editor, {
         item,
         status: "done",
-        input: { nextStepAction: "plan" },
+        input: { nextStepAction: "clear" },
       }),
     ).toBeNull();
-    expect(promote).toHaveBeenCalledExactlyOnceWith(
-      { recordId, commandId: expect.any(String) as string, target: "next" },
-      stableId,
-    );
-    expect(apply).not.toHaveBeenCalled();
+    expect(apply.mock.calls[0]?.[0]).toMatchObject({
+      kind: "item-patch",
+      itemId: recordId,
+      patch: { workflowStatus: "done", nextStepText: null, carriedOver: false },
+    });
     expect(section.items).toEqual([raw]);
   });
-
-  it("does not overwrite a separate explicit Next of the same stableId", async () => {
-    const { editor, promote, apply, section } = setup();
-    const next = {
-      ...raw,
-      id: "other",
-      type: "next" as const,
-      text: "Explicit winner",
-      nextStepText: null,
-    };
-    const latest = {
-      ...editor,
-      draft: { ...editor.draft, section: { ...section, items: [raw, next] } },
-    };
-    expect(
-      await saveOverviewStatus(latest, {
-        item,
-        status: "done",
-        input: { nextStepAction: "plan" },
-      }),
-    ).toMatch(/already has a Next/);
-    expect(promote).not.toHaveBeenCalled();
-    expect(apply).not.toHaveBeenCalled();
-    expect(next.text).toBe("Explicit winner");
-  });
-
   it("refuses a status owned by a newly arrived covering risk", async () => {
-    const { editor, promote, apply, section } = setup();
+    const { editor, apply, section } = setup();
     const latest = {
       ...editor,
       draft: {
@@ -151,23 +115,9 @@ describe("saveOverviewStatus", () => {
       await saveOverviewStatus(latest, {
         item,
         status: "done",
-        input: { nextStepAction: "plan" },
+        input: { nextStepAction: "clear" },
       }),
     ).toMatch(/Set by risk: No access/);
-    expect(promote).not.toHaveBeenCalled();
-    expect(apply).not.toHaveBeenCalled();
-  });
-
-  it("keeps command failures as inline errors and makes no draft write", async () => {
-    const { editor, promote, apply } = setup();
-    promote.mockRejectedValue(new Error("Connection lost"));
-    expect(
-      await saveOverviewStatus(editor, {
-        item,
-        status: "done",
-        input: { nextStepAction: "plan" },
-      }),
-    ).toBe("Connection lost");
     expect(apply).not.toHaveBeenCalled();
   });
 });

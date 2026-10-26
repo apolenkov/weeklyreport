@@ -27,143 +27,23 @@ const item = {
   editTarget: { source: "current", recordId },
 } as StatusOverviewItem;
 function setup() {
-  const promote = vi
-    .fn<ReadyEditor["outcomes"]["promote"]>()
-    .mockRejectedValue(new Error("Connection lost"));
   const section = makeReportSectionFixture({ items: [raw] });
   const editor = {
     generation: "generation-1",
     view: { viewModel: { isReadOnly: false } },
     draft: { section, apply: vi.fn() },
-    outcomes: { canExecute: true, pending: false, promote },
+    outcomes: { pending: false },
   } as unknown as ReadyEditor;
   const hook = renderHook(
     (ready: ReadyEditor) => useOverviewStatusSave(ready),
     { initialProps: editor },
   );
-  return { editor, hook, promote };
+  return { editor, hook };
 }
 
-describe("inline promotion attempt identity", () => {
-  it("reuses commandId after failure and a physical-id remint", async () => {
-    const { editor, hook, promote } = setup();
-    await act(() =>
-      hook.result.current(item, "done", { nextStepAction: "plan" }),
-    );
-    const reminted = { ...raw, id: "reminted" };
-    hook.rerender({
-      ...editor,
-      draft: {
-        ...editor.draft,
-        section: { ...editor.draft.section, items: [reminted] },
-      },
-    });
-    await act(() =>
-      hook.result.current({ ...item, recordId: "reminted" }, "done", {
-        nextStepAction: "plan",
-      }),
-    );
-    expect(promote).toHaveBeenCalledTimes(2);
-    expect(promote.mock.calls[1]?.[0].commandId).toBe(
-      promote.mock.calls[0]?.[0].commandId,
-    );
-  });
-
-  it("replays the same command after a successful server update with a lost acknowledgement", async () => {
-    const { editor, hook, promote } = setup();
-    await act(() =>
-      hook.result.current(item, "done", { nextStepAction: "plan" }),
-    );
-    const promoted = {
-      ...raw,
-      id: "reminted",
-      type: "next" as const,
-      text: raw.nextStepText,
-      nextStepText: null,
-    };
-    hook.rerender({
-      ...editor,
-      draft: {
-        ...editor.draft,
-        section: { ...editor.draft.section, items: [promoted] },
-      },
-    });
-    promote.mockResolvedValue(
-      {} as Awaited<ReturnType<ReadyEditor["outcomes"]["promote"]>>,
-    );
-    await act(() =>
-      hook.result.current(item, "done", { nextStepAction: "plan" }),
-    );
-    expect(promote).toHaveBeenCalledTimes(2);
-    expect(promote.mock.calls[1]?.[0]).toEqual(promote.mock.calls[0]?.[0]);
-  });
-
-  it("does not reuse an uncertain command for changed input", async () => {
-    const { editor, hook, promote } = setup();
-    await act(() =>
-      hook.result.current(item, "done", { nextStepAction: "plan" }),
-    );
-    hook.rerender({
-      ...editor,
-      draft: {
-        ...editor.draft,
-        section: {
-          ...editor.draft.section,
-          items: [{ ...raw, nextStepText: "Different intention" }],
-        },
-      },
-    });
-    let failure: string | null = null;
-    await act(async () => {
-      failure = await hook.result.current(item, "done", {
-        nextStepAction: "plan",
-      });
-    });
-    expect(failure).toMatch(/previous plan attempt is unconfirmed/);
-    expect(promote).toHaveBeenCalledOnce();
-  });
-
-  it("refuses an ordinary status write when the report becomes read-only", async () => {
-    const { editor, hook, promote } = setup();
-    hook.rerender({
-      ...editor,
-      view: {
-        ...editor.view,
-        viewModel: { ...editor.view.viewModel, isReadOnly: true },
-      },
-    });
-    let failure: string | null = null;
-    await act(async () => {
-      failure = await hook.result.current(item, "paused", {
-        pausedReason: "Waiting",
-      });
-    });
-    expect(failure).toMatch(/read-only/);
-    expect(editor.draft.apply).not.toHaveBeenCalled();
-    expect(promote).not.toHaveBeenCalled();
-  });
-
-  it("does not execute queued input in a different generation", async () => {
-    const { editor, hook, promote } = setup();
-    hook.rerender({
-      ...editor,
-      outcomes: { ...editor.outcomes, pending: true },
-    });
-    const pending = hook.result.current(item, "paused", {
-      pausedReason: "Waiting",
-    });
-    hook.rerender({ ...editor, generation: "different" });
-    await expect(pending).resolves.toMatch(/context changed/);
-    expect(editor.draft.apply).not.toHaveBeenCalled();
-    expect(promote).not.toHaveBeenCalled();
-  });
-
-  it("drops the old command after A to B to A without an action in B", async () => {
-    const { editor, hook, promote } = setup();
-    await act(() =>
-      hook.result.current(item, "done", { nextStepAction: "plan" }),
-    );
-    hook.rerender({ ...editor, generation: "report-B" });
+describe("inline status save guards", () => {
+  it("finds the same stable item after a physical-id remint", async () => {
+    const { editor, hook } = setup();
     hook.rerender({
       ...editor,
       draft: {
@@ -175,51 +55,52 @@ describe("inline promotion attempt identity", () => {
       },
     });
     await act(() =>
-      hook.result.current({ ...item, recordId: "reminted" }, "done", {
-        nextStepAction: "plan",
-      }),
+      hook.result.current(item, "done", { nextStepAction: "clear" }),
     );
-    expect(promote.mock.calls[1]?.[0].commandId).not.toBe(
-      promote.mock.calls[0]?.[0].commandId,
-    );
-  });
-
-  it("does not cache a rejected preflight as an uncertain command", async () => {
-    const { editor, hook, promote } = setup();
-    hook.rerender({
-      ...editor,
-      outcomes: {
-        ...editor.outcomes,
-        canExecute: false,
-        blockedReason: "Wait for autosave",
+    expect(editor.draft.apply).toHaveBeenCalledWith({
+      kind: "item-patch",
+      itemId: "reminted",
+      patch: {
+        workflowStatus: "done",
+        nextStepText: null,
+        pausedReason: null,
+        carriedOver: false,
       },
     });
-    await act(() =>
-      hook.result.current(item, "done", { nextStepAction: "plan" }),
-    );
-    expect(promote).not.toHaveBeenCalled();
-    hook.rerender(editor);
-    let failure: string | null = null;
-    await act(async () => {
-      failure = await hook.result.current(item, "done", {
-        nextStepAction: "clear",
-      });
-    });
-    expect(failure).toBeNull();
-    expect(editor.draft.apply).toHaveBeenCalledOnce();
   });
-
-  it("starts a fresh attempt after the report generation changes", async () => {
-    const { editor, hook, promote } = setup();
-    await act(() =>
-      hook.result.current(item, "done", { nextStepAction: "plan" }),
-    );
-    hook.rerender({ ...editor, generation: "generation-2" });
-    await act(() =>
-      hook.result.current(item, "done", { nextStepAction: "plan" }),
-    );
-    expect(promote.mock.calls[1]?.[0].commandId).not.toBe(
-      promote.mock.calls[0]?.[0].commandId,
-    );
+  it("refuses a status write when the report becomes read-only", async () => {
+    const { editor, hook } = setup();
+    hook.rerender({
+      ...editor,
+      view: {
+        ...editor.view,
+        viewModel: { ...editor.view.viewModel, isReadOnly: true },
+      },
+    });
+    await expect(
+      hook.result.current(item, "paused", { pausedReason: "Waiting" }),
+    ).resolves.toMatch(/read-only/);
+    expect(editor.draft.apply).not.toHaveBeenCalled();
+  });
+  it("does not execute queued input in a different generation", async () => {
+    const { editor, hook } = setup();
+    hook.rerender({
+      ...editor,
+      outcomes: { ...editor.outcomes, pending: true },
+    });
+    const pending = hook.result.current(item, "paused", {
+      pausedReason: "Waiting",
+    });
+    hook.rerender({ ...editor, generation: "different" });
+    await expect(pending).resolves.toMatch(/context changed/);
+    expect(editor.draft.apply).not.toHaveBeenCalled();
+  });
+  it("fails closed without a generation instead of inventing a fallback", async () => {
+    const { editor, hook } = setup();
+    hook.rerender({ ...editor, generation: null });
+    await expect(
+      hook.result.current(item, "paused", { pausedReason: "Waiting" }),
+    ).resolves.toMatch(/no longer available/);
+    expect(editor.draft.apply).not.toHaveBeenCalled();
   });
 });

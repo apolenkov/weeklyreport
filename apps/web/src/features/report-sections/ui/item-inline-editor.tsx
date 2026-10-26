@@ -1,6 +1,6 @@
 "use client";
 
-import { type RefObject, useEffect, useRef } from "react";
+import { type RefObject, useEffect, useRef, useState } from "react";
 
 import type { ParentActivityOption } from "../model/record-parent";
 import type { ItemEditDialogProps } from "./item-edit-dialog";
@@ -86,10 +86,13 @@ function InlineEditPrimaryFields({
   readonly showNextStep: boolean;
   readonly nextStepTextareaRef: RefObject<HTMLTextAreaElement | null>;
 }) {
+  const [nextStepRevealed, setNextStepRevealed] = useState(false);
+  const hasNextStepError = Boolean(form.nextStepTextError);
+  if (hasNextStepError && !nextStepRevealed) setNextStepRevealed(true);
   return (
     <>
       <ItemDescriptionField {...form} week={week} />
-      {(showNextStep || Boolean(form.nextStepTextError)) &&
+      {(showNextStep || hasNextStepError || nextStepRevealed) &&
       week === "current" ? (
         <div className="space-y-1">
           <ItemNextStepField

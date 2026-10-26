@@ -13,14 +13,17 @@ export interface StatusInputFlow {
   readonly busy: boolean;
   readonly error: string | null;
   readonly pause: (reason: string) => void;
-  readonly finish: (action: "clear" | "plan") => void;
+  readonly finish: () => void;
   readonly cancel: () => void;
 }
 
 function CompletionChoice({ flow }: { readonly flow: StatusInputFlow }) {
   const firstAction = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    if (!flow.busy) firstAction.current?.focus();
+    if (flow.busy) return;
+    firstAction.current?.focus();
+    const frame = requestAnimationFrame(() => firstAction.current?.focus());
+    return () => cancelAnimationFrame(frame);
   }, [flow.busy]);
   return (
     <div
@@ -37,29 +40,16 @@ function CompletionChoice({ flow }: { readonly flow: StatusInputFlow }) {
         }
       }}
     >
-      <p className="text-sm">Mark done. Next step →</p>
-      <p className="break-words text-xs text-[var(--color-muted-foreground)]">
-        Clear marks this result done. Plan moves the next step to Next week
-        instead; the current result stays in history and its status is
-        unchanged.
-      </p>
+      <p className="text-sm">Mark done and clear the next step?</p>
       <div className="flex flex-wrap gap-1">
         <button
           ref={firstAction}
           type="button"
           disabled={flow.busy}
-          onClick={() => flow.finish("plan")}
+          onClick={flow.finish}
           className={ACTION_CLASS}
         >
-          Plan for next week
-        </button>
-        <button
-          type="button"
-          disabled={flow.busy}
-          onClick={() => flow.finish("clear")}
-          className={ACTION_CLASS}
-        >
-          Clear
+          Clear and mark done
         </button>
         <button
           type="button"

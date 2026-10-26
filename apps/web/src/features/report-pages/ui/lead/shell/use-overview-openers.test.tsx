@@ -46,6 +46,7 @@ function setup(pending: boolean) {
   const build = (isPending: boolean) =>
     ({
       status: "ready",
+      generation: "generation-1",
       view: { viewModel: { isReadOnly: false } },
       draft: { section, apply },
       outcomes: { pending: isPending },

@@ -60,6 +60,7 @@ function Wrapper({
   currentWorkflowStatus = "in_progress",
   nextWorkflowStatus = "planned",
   currentCarriedOver = false,
+  coveringRisk = false,
   predecessorItem,
 }: {
   readonly children: ReactNode;
@@ -87,6 +88,7 @@ function Wrapper({
   readonly nextWorkflowStatus?:
     "planned" | "in_progress" | "paused" | "postponed" | "done";
   readonly currentCarriedOver?: boolean | undefined;
+  readonly coveringRisk?: boolean;
   readonly predecessorItem?:
     ReportSectionReadModel["items"][number] | undefined;
 }) {
@@ -137,6 +139,19 @@ function Wrapper({
         ],
       },
     ],
+    risks: coveringRisk
+      ? [
+          {
+            id: "a0000000-0000-4000-8000-000000000099",
+            projectId: PROJECT_ID,
+            stageNames: ["Development"],
+            severity: "blocked",
+            risk: "Access unavailable",
+            impact: "Cannot ship",
+            mitigation: "Escalate",
+          },
+        ]
+      : [],
     activities: withActivity
       ? [
           {
@@ -379,6 +394,42 @@ async function chooseUpdateProgress(
 }
 
 describe("LeadForm Overview", () => {
+  it("confirms carried work under a covering risk without changing its status or opening an editor", async () => {
+    const user = userEvent.setup();
+    render(
+      <Wrapper coveringRisk currentCarriedOver>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+    await user.click(
+      await screen.findByRole("button", {
+        name: /Status of Current work: Continued/,
+      }),
+    );
+    expect(screen.getByRole("menu")).toHaveAccessibleDescription(
+      "Set by risk: Access unavailable — resolve it in Risks & Blockers",
+    );
+    expect(screen.getByRole("menuitem", { name: "Done" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+    await user.click(screen.getByRole("menuitem", { name: "In progress" }));
+    expect(
+      await screen.findByRole("button", {
+        name: "Status of Current work: In progress",
+      }),
+    ).toBeVisible();
+    expect(screen.queryByRole("textbox", { name: /Description/ })).toBeNull();
+    await user.click(
+      screen.getByRole("button", {
+        name: "Status of Current work: In progress",
+      }),
+    );
+    expect(
+      screen.getByRole("menuitem", { name: "In progress" }),
+    ).toHaveAttribute("aria-disabled", "true");
+  });
+
   it("pauses from the status menu with two clicks, text and Enter", async () => {
     const user = userEvent.setup();
     render(
@@ -420,7 +471,9 @@ describe("LeadForm Overview", () => {
     await user.click(screen.getByRole("menuitem", { name: "Done" }));
     expect(screen.getByTestId("overview-status-next-step")).toBeVisible();
     expect(screen.queryByRole("textbox", { name: /Description/ })).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Clear" }));
+    await user.click(
+      screen.getByRole("button", { name: "Clear and mark done" }),
+    );
     expect(
       await screen.findByRole("button", {
         name: "Status of Current work: Done",
