@@ -34,7 +34,7 @@ None.
 
 This submission changes planning artifacts only; application code and durable specs remain untouched. Future consumers are the Lead Report Overview, record editors, and the existing canonical draft-save path; no API, Prisma, dependency, authorization, or lifecycle change is proposed.
 
-Sources: [TASK-707](</home/user/work/backlog/backlog/tasks/task-707 - WR-форма-Lead-—-максимально-простой-быстрый-ввод-по-итогам-арены-26.10.md>), [owner decisions](/home/user/work/handoffs/wr-513/s26/lead-form/SPEC-decisions.md), and [arena synthesis, sections (в), (д), (е)](/home/user/work/handoffs/wr-513/s26/arena-lead-form/SVOD-fable.md). Verified code anchors and unresolved boundaries are in [design](./design.md); implementation packages 14–16 are in [tasks](./tasks.md).
+Sources: [TASK-707](</home/user/work/backlog/backlog/tasks/task-707 - WR-форма-Lead-—-максимально-простой-быстрый-ввод-по-итогам-арены-26.10.md>), [owner decisions](/home/user/work/handoffs/wr-513/s26/lead-form/SPEC-decisions.md), and [arena synthesis, sections (в), (д), (е)](/home/user/work/handoffs/wr-513/s26/arena-lead-form/SVOD-fable.md). Verified code anchors and the resolved package-14 boundaries are in [design](./design.md); implementation packages 14–16 are in [tasks](./tasks.md).
 
 ## Non-goals
 
