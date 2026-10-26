@@ -38,6 +38,7 @@ function FeedbackRecord({
             event.altKey
           )
             return;
+          event.preventDefault();
           focusReviewRecord(anchor);
         }}
         className="flex min-h-[var(--touch-target-min)] min-w-0 items-center break-words rounded-[var(--radius-sm)] text-sm font-medium text-[var(--color-status-at-risk-fg)] underline underline-offset-4 hover:text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] [overflow-wrap:anywhere]"

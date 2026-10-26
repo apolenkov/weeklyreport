@@ -47,7 +47,7 @@ function EmptyLane({
 }) {
   // R55: an empty lane stays a quiet muted cell — one em dash instead of a
   // "No item" caption that competes with real content; on mobile it folds
-  // into the single summary line below the row.
+  // into one summary per unit, after its lineage row list.
   return (
     <div
       data-overview-lineage-lane={column.source}
@@ -74,12 +74,15 @@ export function MobilePeriodsSummary({
   return (
     <div
       data-testid="overview-mobile-periods"
+      role="group"
       aria-label="Reporting periods"
       className="mx-3 mb-2 grid grid-cols-3 gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-muted)] px-2 py-1.5 md:hidden"
     >
       {STATUS_OVERVIEW_COLUMNS.map((column) => (
         <div key={column.key} className="min-w-0">
-          <span className="sr-only">{column.label}: </span>
+          <span className="block text-xs font-semibold text-[var(--color-muted-foreground)]">
+            {column.label}
+          </span>
           <p className="break-words text-xs text-[var(--color-muted-foreground)]">
             {periods[column.key] ?? PERIOD_UNAVAILABLE}
           </p>

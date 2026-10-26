@@ -248,6 +248,32 @@ describe("LeadReviewFeedback", () => {
     },
   );
 
+  it("cancels native anchor navigation when focusing an existing item", async () => {
+    render(
+      <>
+        <LeadReviewFeedback records={records} reviews={[]} />
+        <div id="review-record:item:i1" tabIndex={-1}>
+          Actual record
+        </div>
+      </>,
+    );
+    const link = screen.getByRole("link", { name: "Ship the API" });
+    expect(fireEvent.click(link)).toBe(false);
+    await waitFor(() =>
+      expect(document.getElementById("review-record:item:i1")).toHaveFocus(),
+    );
+  });
+
+  it("does nothing when the item anchor is absent", async () => {
+    render(<LeadReviewFeedback records={records} reviews={[]} />);
+    const link = screen.getByRole("link", { name: "Ship the API" });
+    const hash = window.location.hash;
+    link.focus();
+    expect(fireEvent.click(link)).toBe(false);
+    await waitFor(() => expect(link).toHaveFocus());
+    expect(window.location.hash).toBe(hash);
+  });
+
   it("preserves modified link navigation without moving focus", () => {
     render(
       <>
