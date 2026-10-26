@@ -128,6 +128,41 @@ describe("getOrgPublic", () => {
     expect(branchTagOfLastCapture()).toBe("decode");
   });
 
+  // TASK-503.88 / C3636 control for the public SSR reader: a whitespace-only
+  // brand in the org.getPublic payload is out of contract, so the root metadata
+  // and landing identity fall back to the generic identity. Bounded to this
+  // reader — it says nothing about the authenticated session identity or any
+  // rendered browser state.
+  it.each(["shortName", "fullName"] as const)(
+    "degrades and reports the decode branch on a whitespace-only %s",
+    async (field) => {
+      fetchMock.mockResolvedValue({
+        ok: true,
+        json: () =>
+          Promise.resolve([
+            {
+              result: {
+                data: {
+                  json: {
+                    ...ORG,
+                    ...(field === "shortName"
+                      ? { shortName: " \t\n " }
+                      : { fullName: " \t\n " }),
+                  },
+                },
+              },
+            },
+          ]),
+      });
+
+      await expect(getOrgPublic()).resolves.toEqual(
+        DEFAULT_ORGANIZATION_IDENTITY,
+      );
+      expect(consoleError).toHaveBeenCalledOnce();
+      expect(branchTagOfLastCapture()).toBe("decode");
+    },
+  );
+
   it("degrades and reports the transport branch when fetch throws", async () => {
     fetchMock.mockRejectedValue(new Error("ECONNREFUSED"));
 

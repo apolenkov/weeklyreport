@@ -105,4 +105,28 @@ describe("OrganizationService", () => {
     const svc = new OrganizationService(repo, logger);
     await expect(svc.getOrganization()).rejects.toThrow();
   });
+
+  // TASK-503.88 / C3636 control for the org.getPublic reader: the outbound
+  // public parse re-checks the stored brand, so a whitespace-only row surfaces
+  // as an error instead of being served as a blank identity. Bounded to this
+  // reader — the authenticated session identity is a separate consumer.
+  it.each(["shortName", "fullName"] as const)(
+    "rejects a whitespace-only stored %s from the public projection",
+    async (field) => {
+      const repo = makeRepo();
+      const blankBrand = " \t\n ";
+      (repo.getOrganization as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+        id: "singleton",
+        shortName: field === "shortName" ? blankBrand : "PEO",
+        fullName:
+          field === "fullName"
+            ? blankBrand
+            : "Product Engineering & Operations",
+        createdAt: new Date("2026-05-10T00:00:00Z"),
+        updatedAt: new Date("2026-05-10T00:00:00Z"),
+      });
+      const svc = new OrganizationService(repo, logger);
+      await expect(svc.getPublic()).rejects.toThrow();
+    },
+  );
 });
