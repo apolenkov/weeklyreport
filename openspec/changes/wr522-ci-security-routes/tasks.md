@@ -2,7 +2,7 @@
 
 - [x] 1. Spec deltas for `ci-merge-gate` and `dependency-vulnerability-scanning`.
 - [x] 2. `secret-scan` job, script, config and synthetic controls.
-- [x] 3. Single blocking `dependency-scan`; braces exception in `pnpm-workspace.yaml`.
+- [x] 3. Single blocking `dependency-scan`; the withdrawn braces exception is removed from `pnpm-workspace.yaml` and the remaining development-only zod exception is recorded in the spec.
 - [x] 4. `mutation-period` job, Stryker and Vitest mutation configs, contract test.
 - [x] 5. `production-build` job with explicit build environment and manifest.
 - [x] 6. ADR 0022; documentation.
