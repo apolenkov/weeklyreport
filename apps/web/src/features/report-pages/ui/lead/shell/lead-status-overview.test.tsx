@@ -62,6 +62,7 @@ function Wrapper({
   currentCarriedOver = false,
   coveringRisk = false,
   predecessorItem,
+  reviewerFeedback = false,
 }: {
   readonly children: ReactNode;
   readonly reportId?: string;
@@ -91,9 +92,23 @@ function Wrapper({
   readonly coveringRisk?: boolean;
   readonly predecessorItem?:
     ReportSectionReadModel["items"][number] | undefined;
+  readonly reviewerFeedback?: boolean;
 }) {
   const section = makeReportSectionFixture({
     reportId,
+    reviews: reviewerFeedback
+      ? [
+          {
+            reviewerId: "a0000000-0000-4000-8000-000000000099",
+            reviewerName: "Head",
+            verdict: "changes_requested",
+            judgedVersion: 1,
+            isCurrent: true,
+            comment: "Clarify the delivery outcome.",
+            createdAt: new Date("2026-08-31T00:00:00Z"),
+          },
+        ]
+      : [],
     ...(reportId === REPORT_ID
       ? {}
       : { reportSectionId: "a0000000-0000-4000-8000-000000000061" }),
@@ -170,6 +185,17 @@ function Wrapper({
         activityId: null,
         type: "current",
         text: "Current work",
+        comments: reviewerFeedback
+          ? [
+              {
+                id: "a0000000-0000-4000-8000-000000000098",
+                reviewerId: "a0000000-0000-4000-8000-000000000099",
+                reviewerName: "Head",
+                text: "Add the delivery result.",
+                createdAt: new Date("2026-08-31T00:00:00Z"),
+              },
+            ]
+          : [],
         tag: "delivery",
         workflowStatus: currentWorkflowStatus,
         pausedReason:
@@ -523,6 +549,29 @@ describe("LeadForm Overview", () => {
       }),
     ).toHaveFocus();
   });
+  it("puts changes-requested feedback first below the header and focuses the actual record", async () => {
+    const user = userEvent.setup();
+    render(
+      <Wrapper reviewerFeedback>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+    const feedback = await screen.findByTestId("lead-review-feedback");
+    expect(screen.getAllByTestId("lead-review-feedback")).toHaveLength(1);
+    expect(feedback.previousElementSibling).toHaveAttribute(
+      "data-layout-key",
+      "report-context-toolbar",
+    );
+    expect(feedback.nextElementSibling).toBe(
+      screen.getByTestId("status-overview"),
+    );
+    const link = within(feedback).getByRole("link", { name: "Current work" });
+    const preview = await itemPreview("Current work");
+    expect(link).toHaveAttribute("href", `#${preview.id}`);
+    await user.click(link);
+    expect(preview).toHaveFocus();
+  });
+
   it("keeps an authoritative prior-only row informational with only the verdict rail", async () => {
     const predecessorItem: ReportSectionReadModel["items"][number] = {
       id: "a0000000-0000-4000-8000-000000000034",

@@ -3,6 +3,10 @@
 import type { SectionReviewView } from "@weeklyreport/shared";
 
 import { ReviewCommentList } from "../../../../shared/ui/feedback/review-comment-list";
+import {
+  focusReviewRecord,
+  reviewRecordAnchor,
+} from "../../../../shared/ui/feedback/review-record-focus";
 import type { LeadReviewFeedbackRecord } from "../../../report-sections";
 
 const KIND_LABEL: Record<LeadReviewFeedbackRecord["kind"], string> = {
@@ -10,6 +14,40 @@ const KIND_LABEL: Record<LeadReviewFeedbackRecord["kind"], string> = {
   risk: "Risk",
   decision: "Decision",
 };
+
+function FeedbackRecord({
+  record,
+}: {
+  readonly record: LeadReviewFeedbackRecord;
+}) {
+  const anchor = reviewRecordAnchor(record.kind, record.id);
+  return (
+    <li className="flex flex-col gap-1.5">
+      <span className="text-xs font-bold uppercase tracking-[0.09em] text-[var(--color-muted-foreground)]">
+        {KIND_LABEL[record.kind]} &middot; {record.productName}
+      </span>
+      <a
+        href={`#${anchor}`}
+        data-testid="review-feedback-record-link"
+        onClick={(event) => {
+          if (
+            event.button !== 0 ||
+            event.metaKey ||
+            event.ctrlKey ||
+            event.shiftKey ||
+            event.altKey
+          )
+            return;
+          focusReviewRecord(anchor);
+        }}
+        className="flex min-h-[var(--touch-target-min)] min-w-0 items-center break-words rounded-[var(--radius-sm)] text-sm font-medium text-[var(--color-status-at-risk-fg)] underline underline-offset-4 hover:text-[var(--color-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] [overflow-wrap:anywhere]"
+      >
+        {record.text}
+      </a>
+      <ReviewCommentList comments={record.comments} />
+    </li>
+  );
+}
 
 // Lead-owned feedback is read-only: reviewers cannot compose/delete here, and
 // an empty record list self-suppresses so no blank panel appears.
@@ -70,18 +108,7 @@ export function LeadReviewFeedback({
       ))}
       <ul className="flex flex-col gap-3">
         {records.map((record) => (
-          <li
-            key={`${record.kind}-${record.id}`}
-            className="flex flex-col gap-1.5"
-          >
-            <span className="text-xs font-bold uppercase tracking-[0.09em] text-[var(--color-muted-foreground)]">
-              {KIND_LABEL[record.kind]} &middot; {record.productName}
-            </span>
-            <span className="min-w-0 break-words text-[13px] font-medium text-[var(--color-foreground)] [overflow-wrap:anywhere]">
-              {record.text}
-            </span>
-            <ReviewCommentList comments={record.comments} />
-          </li>
+          <FeedbackRecord key={`${record.kind}-${record.id}`} record={record} />
         ))}
       </ul>
     </section>

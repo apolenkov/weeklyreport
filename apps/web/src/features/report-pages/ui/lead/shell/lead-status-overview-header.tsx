@@ -5,6 +5,7 @@ import type { ComponentProps } from "react";
 import { leadPeriodLabel } from "../../../../report-sections";
 import { LeadFormHeaderActions } from "../chrome/lead-form-header-actions";
 import { LeadOverviewToolbarControls } from "../chrome/lead-form-toolbar-controls";
+import { LeadOverviewReviewFeedback } from "../chrome/lead-overview-review-feedback";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
 
 type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
@@ -55,6 +56,12 @@ export function ReadyOverviewHeader({
         onVisibilityChange={editor.view.data.onRecordVisibilityChange}
         targetReportId={editor.view.data.targetReportId}
       />
+      {editor.view.data.byPeriodData?.section ? (
+        <LeadOverviewReviewFeedback
+          section={editor.view.data.byPeriodData.section}
+          placement="priority"
+        />
+      ) : null}
     </>
   );
 }

@@ -118,7 +118,6 @@ export function StatusOverviewUnitRow({
           <PreviousUnavailableNotice column={unit.columns.previouslyPlanned} />
           <LineageRowList
             rows={rows}
-            periods={periods}
             expanded={expanded}
             editorSlot={editorSlot}
             handlers={handlers}

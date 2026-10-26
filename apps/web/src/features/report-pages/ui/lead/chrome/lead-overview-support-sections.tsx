@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReportSectionReadModel } from "@weeklyreport/shared";
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 
 import type { CrossAuthorEntry } from "../../../../period";
 import type {
@@ -9,12 +9,8 @@ import type {
   LeadFormLoadedViewModel,
   RiskEntry,
 } from "../../../../report-sections";
-import {
-  mapLeadReviewFeedback,
-  ownedStagesForProject,
-} from "../../../../report-sections";
+import { ownedStagesForProject } from "../../../../report-sections";
 import type { RecordVisibility } from "../../../../report-sections/client";
-import { LeadReviewFeedback } from "../../../../review";
 import { RisksAccordion } from "../bridges/lead-form-bridge-accordions";
 import {
   LeadFormSyncBridge,
@@ -25,6 +21,7 @@ import {
   type LeadFormDecisionsActions,
   LeadFormDecisionsSection,
 } from "./lead-form-decisions-section";
+import { LeadOverviewReviewFeedback } from "./lead-overview-review-feedback";
 
 export interface LeadOverviewSupportActions extends LeadFormDecisionsActions {
   readonly onProductsChange: (
@@ -63,10 +60,6 @@ export function LeadOverviewSupportSections({
   pendingInput,
 }: LeadOverviewSupportSectionsProps) {
   const supportReadOnly = viewModel.isReadOnly || pendingInput;
-  const reviewFeedback = useMemo(
-    () => mapLeadReviewFeedback(serverSection),
-    [serverSection],
-  );
   const stagesForProduct = useCallback<StagesForProduct>(
     (productId) => ownedStagesForProject(draftSection, productId),
     [draftSection],
@@ -84,10 +77,7 @@ export function LeadOverviewSupportSections({
       data-testid="lead-overview-support-sections"
       data-feedback-anchor="lead-overview-support-sections"
     >
-      <LeadReviewFeedback
-        records={reviewFeedback}
-        reviews={serverSection.reviews}
-      />
+      <LeadOverviewReviewFeedback section={serverSection} placement="support" />
       <LeadFormSyncBridge.Provider
         products={products}
         activities={activityOptions}

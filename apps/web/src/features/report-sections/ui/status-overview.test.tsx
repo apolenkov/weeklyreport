@@ -2,6 +2,7 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import { LeadReviewFeedback } from "../../review";
 import type { ReportHealthPulse } from "../model/report-health-pulse";
 import type { StatusOverviewModel } from "../model/status-overview";
 import { healthLocations } from "./report-health-pulse";
@@ -63,6 +64,66 @@ const model: StatusOverviewModel = {
 };
 
 describe("StatusOverview", () => {
+  it("reveals a hidden lineage row and focuses its commented item from reviewer feedback", async () => {
+    const user = userEvent.setup();
+    const comments = [
+      {
+        id: "note-1",
+        reviewerId: "head-1",
+        reviewerName: "Head",
+        text: "Clarify this update.",
+        createdAt: new Date("2026-09-05T08:00:00Z"),
+      },
+    ];
+    const unit = model.units[0];
+    if (!unit) throw new Error("Expected one unit");
+    render(
+      <>
+        <LeadReviewFeedback
+          records={[
+            {
+              id: "item-5",
+              kind: "item",
+              text: "Work item 5",
+              productName: unit.name,
+              comments,
+            },
+          ]}
+          reviews={[]}
+        />
+        <StatusOverview
+          model={{
+            ...model,
+            units: [
+              {
+                ...unit,
+                columns: {
+                  ...unit.columns,
+                  currentWeek: {
+                    availability: "available",
+                    items: [1, 2, 3, 4, 5].map((index) => ({
+                      ...overviewItem(index),
+                      comments: index === 5 ? comments : [],
+                    })),
+                  },
+                },
+              },
+            ],
+          }}
+        />
+      </>,
+    );
+    const target = document.getElementById("review-record:item:item-5");
+    expect(target?.closest("[hidden]")).not.toBeNull();
+    await user.click(screen.getByRole("link", { name: "Work item 5" }));
+    await vi.waitFor(() => expect(target).toHaveFocus());
+    expect(target?.closest("[hidden], [inert]")).toBeNull();
+    expect(screen.getByRole("button", { name: "Show less" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+  });
+
   it("names only the unplanned Current item as unplanned, without a badge", () => {
     render(<StatusOverview model={model} />);
     expect(screen.queryByText("Unplanned")).toBeNull();
@@ -872,16 +933,15 @@ describe("StatusOverview", () => {
 
     render(<StatusOverview model={readOnlyModel} />);
 
-    // R55: the empty lane is a quiet dash on desktop (sr-only name stays);
-    // on mobile it folds into the row's single collapse line instead of a
-    // labelled "No item" strip.
+    // Empty desktop lanes retain their accessible name; mobile uses one
+    // summary for the whole unit rather than a strip in each lineage row.
     const emptyLane = document.querySelector(
       '[data-overview-lineage-lane="next"]',
     );
     expect(emptyLane).toHaveClass("hidden", "md:flex");
     expect(emptyLane).toHaveTextContent("No item in this period");
     expect(emptyLane).not.toHaveTextContent("7–13 Sep 2026");
-    expect(screen.getByText("No item in Next week")).toBeInTheDocument();
+    expect(screen.getByText("No items in other periods")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add next step" })).toBeNull();
   });
 

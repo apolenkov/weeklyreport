@@ -14,27 +14,11 @@ import {
 } from "./status-overview-layout";
 
 const PERIOD_UNAVAILABLE = "Period unavailable";
-function MobileWeekLabel({
-  label,
-  period,
-}: {
-  readonly label: string;
-  readonly period: string | null | undefined;
-}) {
-  // `undefined` marks an empty cell: the label shares one line with "No item".
+function MobileWeekLabel({ label }: { readonly label: string }) {
   return (
-    <div
-      className={`flex items-baseline justify-between gap-2 md:hidden ${period === undefined ? "" : "mb-2"}`}
-    >
-      <p className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--color-foreground)]">
-        {label}
-      </p>
-      {period === undefined ? null : (
-        <p className="text-xs text-[var(--color-muted-foreground)]">
-          {period ?? PERIOD_UNAVAILABLE}
-        </p>
-      )}
-    </div>
+    <p className="text-xs font-semibold text-[var(--color-muted-foreground)] md:hidden">
+      {label}
+    </p>
   );
 }
 
@@ -88,16 +72,15 @@ export function MobilePeriodsSummary({
   // R15: one shared periods header per product on mobile instead of a strip
   // repeated inside every row cell.
   return (
-    <div className="mx-3 mb-2 rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-muted)] px-4 py-2 md:hidden">
+    <div
+      data-testid="overview-mobile-periods"
+      aria-label="Reporting periods"
+      className="mx-3 mb-2 grid grid-cols-3 gap-2 rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-muted)] px-2 py-1.5 md:hidden"
+    >
       {STATUS_OVERVIEW_COLUMNS.map((column) => (
-        <div
-          key={column.key}
-          className="flex items-baseline justify-between gap-2 py-0.5"
-        >
-          <p className="text-xs font-bold uppercase tracking-[0.08em] text-[var(--color-foreground)]">
-            {column.label}
-          </p>
-          <p className="text-xs text-[var(--color-muted-foreground)]">
+        <div key={column.key} className="min-w-0">
+          <span className="sr-only">{column.label}: </span>
+          <p className="break-words text-xs text-[var(--color-muted-foreground)]">
             {periods[column.key] ?? PERIOD_UNAVAILABLE}
           </p>
         </div>
@@ -108,20 +91,16 @@ export function MobilePeriodsSummary({
 
 function LineageRow({
   row,
-  periods,
   editorSlot,
   ...handlers
 }: {
   readonly row: StatusOverviewLineageRow;
-  readonly periods: StatusOverviewModel["periods"];
 } & Omit<ItemHandlers, "onAddItem">) {
   const editorBelongsToRow = editorBelongsToLineageRow(row, editorSlot);
-  const emptyColumns = STATUS_OVERVIEW_COLUMNS.filter(
-    (column) => !row[column.source],
-  );
   return (
     <div
-      className={`${TIMELINE_GRID} mx-3 my-3 overflow-hidden rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] bg-[var(--color-card)] md:m-0 md:rounded-none md:border-0 md:border-b md:items-stretch`}
+      data-testid="overview-lineage-row"
+      className={`${TIMELINE_GRID} mx-3 my-1.5 overflow-hidden rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] bg-[var(--color-card)] md:m-0 md:rounded-none md:border-0 md:border-b md:items-stretch`}
     >
       {STATUS_OVERVIEW_COLUMNS.map((column) => {
         const item = row[column.source];
@@ -132,12 +111,9 @@ function LineageRow({
             data-overview-lineage-lane={column.source}
             role="group"
             aria-labelledby={STATUS_OVERVIEW_COLUMN_HEADER_IDS[column.key]}
-            className={`${TIMELINE_CELL} block border-t border-[var(--color-border-subtle)] first:border-t-0 md:min-h-24 md:flex-col md:border-t-0 md:flex`}
+            className="min-w-0 px-3 py-1.5 block border-t border-[var(--color-border-subtle)] first:border-t-0 md:px-4 md:py-3 md:min-h-24 md:flex-col md:border-t-0 md:border-l md:border-[var(--color-border-subtle)] md:flex"
           >
-            <MobileWeekLabel
-              label={column.label}
-              period={periods[column.key]}
-            />
+            <MobileWeekLabel label={column.label} />
             {column.source === "previous" && row.previousParent ? (
               <p className="mb-1 break-words text-xs text-[var(--color-muted-foreground)]">
                 Previously in {row.previousParent}
@@ -147,14 +123,6 @@ function LineageRow({
           </div>
         );
       })}
-      {/* R15: one muted line replaces the per-empty-period strips on mobile. */}
-      {emptyColumns.length > 0 ? (
-        <p className="border-t border-[var(--color-border-subtle)] px-4 py-1.5 text-xs text-[var(--color-muted-foreground)] md:hidden">
-          {emptyColumns.length === 1
-            ? `No item in ${emptyColumns[0]?.label ?? "this period"}`
-            : "No items in other periods"}
-        </p>
-      ) : null}
       {editorBelongsToRow ? (
         <div className="min-w-0 border-t border-[var(--color-border-subtle)] bg-[var(--color-card)] px-4 py-3 md:col-span-3">
           {editorSlot?.content}
@@ -187,13 +155,11 @@ export function DesktopPeriodHeader({
 
 export function LineageRowList({
   rows,
-  periods,
   expanded,
   editorSlot,
   handlers,
 }: {
   readonly rows: readonly StatusOverviewLineageRow[];
-  readonly periods: StatusOverviewModel["periods"];
   readonly expanded: boolean;
   readonly editorSlot: ItemHandlers["editorSlot"];
   readonly handlers: Omit<ItemHandlers, "editorSlot">;
@@ -206,22 +172,29 @@ export function LineageRowList({
     );
   }
   return (
-    <ul className="min-w-0">
-      {rows.map((row, index) => (
-        <li
-          key={row.key}
-          hidden={index >= REPORT_PREVIEW_COUNT && !expanded}
-          inert={index >= REPORT_PREVIEW_COUNT && !expanded}
+    <>
+      <ul className="min-w-0">
+        {rows.map((row, index) => (
+          <li
+            key={row.key}
+            hidden={index >= REPORT_PREVIEW_COUNT && !expanded}
+            inert={index >= REPORT_PREVIEW_COUNT && !expanded}
+          >
+            <LineageRow row={row} editorSlot={editorSlot} {...handlers} />
+          </li>
+        ))}
+      </ul>
+      {rows.some((row) =>
+        STATUS_OVERVIEW_COLUMNS.some((column) => !row[column.source]),
+      ) ? (
+        <p
+          data-testid="overview-mobile-empty-periods"
+          className="mx-3 px-3 py-1 text-xs text-[var(--color-muted-foreground)] md:hidden"
         >
-          <LineageRow
-            row={row}
-            periods={periods}
-            editorSlot={editorSlot}
-            {...handlers}
-          />
-        </li>
-      ))}
-    </ul>
+          No items in other periods
+        </p>
+      ) : null}
+    </>
   );
 }
 

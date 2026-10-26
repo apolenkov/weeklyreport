@@ -1,5 +1,6 @@
 import { formatTimestampShort } from "../../../shared/lib/format/format-date";
 import { shortItemLabel } from "../../../shared/lib/format/short-label";
+import { reviewRecordAnchor } from "../../../shared/ui/feedback/review-record-focus";
 import { DeleteIcon, EditIcon } from "../../../shared/ui/icons/action-icons";
 import { LockBadge } from "../../../shared/ui/report-shell/lock-badge";
 import { MetaRow } from "../../../shared/ui/report-shell/meta-row";
@@ -88,7 +89,9 @@ export function DecisionCard(props: DecisionCardProps) {
 
   return (
     <div
-      className="rounded-lg p-4"
+      id={reviewRecordAnchor("decision", decision.id)}
+      tabIndex={-1}
+      className="rounded-lg p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
       style={{
         background: "var(--color-background)",
       }}
