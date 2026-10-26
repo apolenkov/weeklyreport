@@ -460,3 +460,91 @@ describe("FeedbackRecordCard workbench", () => {
     expect(shot).toHaveAttribute("height", "720");
   });
 });
+
+// TASK-503.89 characterization (wave12 C4718 / C4738): bounded observations at
+// admitted sizes, not native proof.
+describe("FeedbackRecordCard wave12 residual clauses", () => {
+  const entry = {
+    level: "error",
+    message: "same failure",
+    timestamp: "2026-09-04T10:05:00.000Z",
+  };
+  const fetchFail = {
+    method: "GET",
+    status: 500,
+    url: "https://example.com/api",
+    timestamp: "2026-09-04T10:05:00.000Z",
+  };
+  const withDiagnostics = (consoleCount: number): FeedbackCardItem => ({
+    ...agentationItem,
+    screenshotUrl: "https://example.com/shot.png",
+    diagnostics: {
+      console: Array.from({ length: consoleCount }, () => ({ ...entry })),
+      network: Array.from({ length: 20 }, () => ({ ...fetchFail })),
+    },
+  });
+  const card = (item: FeedbackCardItem) => (
+    <FeedbackRecordCard
+      item={item}
+      onChangeStatus={vi.fn()}
+      onEdit={vi.fn(() => Promise.resolve())}
+      onReply={vi.fn(() => Promise.resolve())}
+      onDismiss={vi.fn(() => Promise.resolve())}
+      onDelete={vi.fn(() => Promise.resolve())}
+    />
+  );
+  // A node is "unchanged" only when it is the same reference. The installed
+  // `toEqual` matcher compares DOM nodes with `isEqualNode`, so it would accept
+  // a rerender that replaced every row with a fresh but structurally equal
+  // node; `toBe` is the identity check the row-preservation claim needs.
+  const expectSameNodeReferences = (
+    actual: readonly Node[],
+    expected: readonly Node[],
+  ): void => {
+    expect(actual).toHaveLength(expected.length);
+    expected.forEach((node, index) => {
+      expect(actual[index], `row ${index}`).toBe(node);
+    });
+  };
+
+  it("C4718: keeps every admitted duplicate row and the unchanged DOM nodes across a rerender", () => {
+    const { rerender } = renderCard(withDiagnostics(49));
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
+    const before = screen.getAllByText(/same failure/);
+    expect(before).toHaveLength(49);
+    rerender(card(withDiagnostics(50)));
+    const after = screen.getAllByText(/same failure/);
+    expect(after).toHaveLength(50);
+    expect(screen.getAllByText(/example\.com\/api/)).toHaveLength(20);
+    expectSameNodeReferences(after.slice(0, 49), before);
+  });
+
+  it("C4718: rejects a fresh but structurally equal replaced row", () => {
+    // Negative control for the identity predicate above, using the regression
+    // it must catch: a fresh render of the same payload yields rows that are
+    // structurally equal (`isEqualNode`), yet no row is an original node.
+    const first = renderCard(withDiagnostics(49));
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
+    const original = screen.getAllByText(/same failure/);
+    expect(original).toHaveLength(49);
+    first.unmount();
+    renderCard(withDiagnostics(49));
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
+    const replacement = screen.getAllByText(/same failure/);
+    expect(replacement).toHaveLength(49);
+    expect(replacement[0]?.isEqualNode(original[0] ?? null)).toBe(true);
+    expect(() => expectSameNodeReferences(replacement, original)).toThrow();
+  });
+
+  it("C4738: every workflow trigger reports its open state", () => {
+    renderCard(agentationItem);
+    for (const name of ["Edit", "Reply", "Dismiss", "Delete"]) {
+      const trigger = screen.getByRole("button", { name });
+      expect(trigger, name).toHaveAttribute("aria-expanded", "false");
+      fireEvent.click(trigger);
+      expect(trigger, name).toHaveAttribute("aria-expanded", "true");
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+      expect(trigger, name).toHaveAttribute("aria-expanded", "false");
+    }
+  });
+});
