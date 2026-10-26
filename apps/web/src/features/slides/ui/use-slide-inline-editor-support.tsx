@@ -64,7 +64,7 @@ export function useSlideDraftSaveMutation({
         onError: (err: unknown) => {
           if (!isConflictError(err)) {
             // Keep the raw failure for diagnostics; the toast shows either the
-            // curated domain message or the safe generic copy (C5206).
+            // curated domain message or the safe generic copy.
             logClientError("slides.inlineEdit.save_failed", err, {
               component: "useSlideInlineEditor",
               procedure: "reports.saveDraft",

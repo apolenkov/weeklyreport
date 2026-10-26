@@ -588,8 +588,8 @@ describe("StatusSlideDeck — by-product grid article", () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
-  // C5189 (TASK-503.41): a modified arrow belongs to the browser/AT; the deck
-  // must not page on it and must leave the event unprevented.
+  // A modified arrow belongs to the browser/AT; the deck must not page on it
+  // and must leave the event unprevented.
   it.each([
     { ctrlKey: true },
     { metaKey: true },

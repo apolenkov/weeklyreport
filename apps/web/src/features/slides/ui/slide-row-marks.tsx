@@ -100,19 +100,14 @@ export function StageWatermarks({
 }: {
   readonly stageNames: readonly string[];
 }) {
-  // A stage outside the icon catalogue has no watermark to show; an
-  // unknown-only input must not leave an empty testid'd rail behind (C5182).
-  const renderable = stageNames.filter(
-    (stageName) => STAGE_ICONS[stageName] !== undefined,
-  );
-  if (renderable.length === 0) return null;
+  if (stageNames.length === 0) return null;
   return (
     <span
       aria-hidden="true"
       data-testid="slide-stage-watermarks"
       className="inline-flex min-w-0 max-w-full flex-wrap items-center justify-end gap-0.5 opacity-[0.28]"
     >
-      {renderable.map((stageName) => (
+      {stageNames.map((stageName) => (
         <StageWatermark key={stageName} stageName={stageName} />
       ))}
     </span>
@@ -133,12 +128,10 @@ export function StageLegend({
     >
       {stageNames.map((stageName) => {
         const Icon = STAGE_ICONS[stageName];
-        // The legend names every stage on the slide; only a catalogued stage
-        // has an icon, so an unknown name keeps its text and drops the icon
-        // instead of disappearing (C5182).
+        if (!Icon) return null;
         return (
           <span key={stageName} className="inline-flex items-center gap-1">
-            {Icon ? <Icon aria-hidden="true" className="h-4 w-4" /> : null}
+            <Icon aria-hidden="true" className="h-4 w-4" />
             {stageName}
           </span>
         );
