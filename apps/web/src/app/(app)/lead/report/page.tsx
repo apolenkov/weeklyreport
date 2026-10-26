@@ -16,9 +16,11 @@ export default async function LeadReportPage({ searchParams }: Props) {
     <main
       id="main-content"
       tabIndex={-1}
-      className="min-h-screen bg-[var(--color-background)]"
+      className={`${resolvedMode === "overview" ? "lead-overview-route" : "min-h-screen"} bg-[var(--color-background)]`}
     >
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <div
+        className={`mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 ${resolvedMode === "overview" ? "lead-overview-route-frame" : "py-6"}`}
+      >
         <Suspense fallback={<LeadFormSkeleton mode={resolvedMode} />}>
           <LeadForm redirectToCanonical mode={resolvedMode} />
         </Suspense>

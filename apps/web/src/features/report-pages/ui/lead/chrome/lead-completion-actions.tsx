@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { useCallback, useId, useRef } from "react";
 
 import { SaveNowButton } from "../../../../../shared/ui/report-shell/save-now-button";
 import { pendingReviewLabel } from "../../../../report-sections";
@@ -35,9 +35,18 @@ export function LeadCompletionActions({
   compact = false,
 }: LeadCompletionActionsProps) {
   const reasonId = useId();
+  const submitRef = useRef<HTMLButtonElement>(null);
+  const groupRef = useRef<HTMLDivElement>(null);
+  const focusSubmit = useCallback(() => {
+    const target = submitRef.current;
+    if (target && !target.disabled) target.focus();
+    else groupRef.current?.focus();
+  }, []);
   const reason = submitDisabled ? submitDisabledReason : undefined;
   return (
     <div
+      ref={groupRef}
+      tabIndex={-1}
       role="group"
       aria-label={label}
       className={`flex flex-wrap items-center justify-end gap-2 [&_button]:min-h-10 ${
@@ -46,9 +55,11 @@ export function LeadCompletionActions({
           : ""
       }`}
     >
-      {autosave.state === "error" ? (
-        <SaveNowButton autosave={autosave} />
-      ) : null}
+      <SaveNowButton
+        autosave={autosave}
+        retryOnly
+        onFocusedRetryHidden={focusSubmit}
+      />
       {pendingReviewCount > 0 ? (
         <button
           type="button"
@@ -62,6 +73,7 @@ export function LeadCompletionActions({
         </button>
       ) : null}
       <button
+        ref={submitRef}
         type="button"
         className="btn-press inline-flex h-[var(--toolbar-control-h)] min-h-10 items-center justify-center gap-1 rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-4 py-1.5 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
         onClick={onSubmit}

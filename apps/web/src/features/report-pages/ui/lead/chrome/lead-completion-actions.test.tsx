@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -65,6 +65,168 @@ describe("LeadCompletionActions", () => {
       screen.getByRole("button", { name: "Retry saving draft" }),
     );
     expect(autosave.forceSave).toHaveBeenCalledOnce();
+  });
+
+  it.each(["saving", "pending", "error"] as const)(
+    "retains focused Retry through in-flight %s and Saved, then focuses Submit",
+    async (state) => {
+      try {
+        const user = userEvent.setup();
+        const forceSave = vi.fn().mockResolvedValue(undefined);
+        const props = {
+          onSubmit: vi.fn(),
+          submitDisabled: false,
+          label: "Completion",
+        };
+        const { rerender } = render(
+          <LeadCompletionActions
+            {...props}
+            autosave={{ ...autosave, state: "error", forceSave }}
+          />,
+        );
+        const retry = screen.getByRole("button", {
+          name: "Retry saving draft",
+        });
+        await user.tab();
+        expect(retry).toHaveFocus();
+        await user.keyboard("{Enter}");
+        expect(forceSave).toHaveBeenCalledOnce();
+        vi.useFakeTimers();
+
+        rerender(
+          <LeadCompletionActions
+            {...props}
+            autosave={{ ...autosave, state, isInFlight: true, forceSave }}
+          />,
+        );
+        const saving = screen.getByRole("button", { name: "Saving draft" });
+        expect(saving).toBe(retry);
+        expect(saving).toHaveFocus();
+        expect(saving).toBeDisabled();
+        expect(saving).toHaveAttribute("aria-busy", "true");
+        expect(screen.getByTestId("save-now-spinner")).toBeVisible();
+        saving.click();
+        expect(forceSave).toHaveBeenCalledOnce();
+
+        rerender(
+          <LeadCompletionActions
+            {...props}
+            autosave={{ ...autosave, state: "saved", dirty: false, forceSave }}
+          />,
+        );
+        expect(screen.getByRole("button", { name: "Draft saved" })).toBe(retry);
+        expect(retry).toHaveFocus();
+        expect(retry).toHaveAttribute("aria-busy", "false");
+        expect(screen.getByTestId("save-now-check")).toBeVisible();
+        await act(() => vi.advanceTimersByTimeAsync(1499));
+        expect(screen.getByRole("button", { name: "Draft saved" })).toBe(retry);
+        await act(() => vi.advanceTimersByTimeAsync(1));
+        expect(screen.queryByRole("button", { name: /sav/i })).toBeNull();
+        expect(screen.getByRole("button", { name: "Submit" })).toHaveFocus();
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it("keeps keyboard focus in completion actions when Submit is blocked after Retry", async () => {
+    vi.useFakeTimers();
+    try {
+      const props = {
+        onSubmit: vi.fn(),
+        submitDisabled: true,
+        submitDisabledReason: "Review carried work.",
+        label: "Completion",
+      };
+      const { rerender } = render(
+        <LeadCompletionActions
+          {...props}
+          autosave={{ ...autosave, state: "error" }}
+        />,
+      );
+      screen.getByRole("button", { name: "Retry saving draft" }).focus();
+      rerender(
+        <LeadCompletionActions
+          {...props}
+          autosave={{ ...autosave, state: "saved" }}
+        />,
+      );
+      await act(() => vi.advanceTimersByTimeAsync(1500));
+      expect(screen.getByRole("group", { name: "Completion" })).toHaveFocus();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not steal focus when the user leaves Retry before its Saved flash ends", async () => {
+    vi.useFakeTimers();
+    try {
+      const props = {
+        onSubmit: vi.fn(),
+        submitDisabled: false,
+        label: "Completion",
+      };
+      const { rerender } = render(
+        <>
+          <input aria-label="Report note" />
+          <LeadCompletionActions
+            {...props}
+            autosave={{ ...autosave, state: "error" }}
+          />
+        </>,
+      );
+      screen.getByRole("button", { name: "Retry saving draft" }).focus();
+      rerender(
+        <>
+          <input aria-label="Report note" />
+          <LeadCompletionActions
+            {...props}
+            autosave={{ ...autosave, state: "saved" }}
+          />
+        </>,
+      );
+      const note = screen.getByRole("textbox", { name: "Report note" });
+      note.focus();
+      await act(() => vi.advanceTimersByTimeAsync(1500));
+      expect(screen.queryByRole("button", { name: /sav/i })).toBeNull();
+      expect(note).toHaveFocus();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps Retry available and focused when the retry fails again", () => {
+    const props = {
+      onSubmit: vi.fn(),
+      submitDisabled: false,
+      label: "Completion",
+    };
+    const { rerender } = render(
+      <LeadCompletionActions
+        {...props}
+        autosave={{ ...autosave, state: "error" }}
+      />,
+    );
+    const retry = screen.getByRole("button", { name: "Retry saving draft" });
+    retry.focus();
+    rerender(
+      <LeadCompletionActions
+        {...props}
+        autosave={{ ...autosave, state: "saving", isInFlight: true }}
+      />,
+    );
+    rerender(
+      <LeadCompletionActions
+        {...props}
+        autosave={{ ...autosave, state: "error" }}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Retry saving draft" })).toBe(
+      retry,
+    );
+    expect(retry).toHaveFocus();
+    expect(retry).toBeEnabled();
+    expect(retry).toHaveAttribute("aria-busy", "false");
   });
 
   it("shows the disabled reason next to Submit without relying on hover", () => {

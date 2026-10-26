@@ -26,6 +26,12 @@ async function renderPage(mode?: string | string[]) {
 }
 
 describe("LeadReportPage — URL mode", () => {
+  it("owns Overview layout explicitly without styling other report modes", async () => {
+    const form = await renderPage();
+    expect(form.closest("main")).toHaveClass("lead-overview-route");
+    expect(form.parentElement).toHaveClass("lead-overview-route-frame");
+  });
+
   it("defaults the bare route to Overview", async () => {
     expect(await renderPage()).toHaveAttribute("data-mode", "overview");
   });

@@ -231,20 +231,23 @@ describe("lead-form draft: autosave cadence", () => {
     ).toHaveBeenCalledTimes(1);
   });
 
-  it("Save now flushes immediately, before the debounce elapses", async () => {
+  it("Retry immediately resends a failed autosave without another debounce", async () => {
     const { captured } = await renderLoaded();
+    const saveDraft = expectDefined(captured["reports.saveDraft"]).mutationFn;
+    saveDraft.mockRejectedValueOnce(new Error("Network down"));
 
     clickEditableStageChip();
+    await act(() => vi.advanceTimersByTimeAsync(5000));
     await flush();
-    const saveButton = screen
-      .getAllByRole("button")
-      .find((b) => /Save draft now/i.test(b.getAttribute("aria-label") ?? ""));
-    if (!saveButton) throw new Error("no Save-now button rendered");
-    act(() => saveButton.click());
+    expect(saveDraft).toHaveBeenCalledTimes(1);
+    expect(toast.error).toHaveBeenCalledWith("Network down");
+    const retry = screen.getByRole("button", { name: "Retry saving draft" });
+    expect(retry).toBeEnabled();
+
+    act(() => retry.click());
     await flush();
-    expect(
-      expectDefined(captured["reports.saveDraft"]).mutationFn,
-    ).toHaveBeenCalledTimes(1);
+    expect(saveDraft).toHaveBeenCalledTimes(2);
+    expect(saveDraft.mock.calls[1]?.[0]).toEqual(saveDraft.mock.calls[0]?.[0]);
   });
 
   it("preserves edits typed during a same-save echo and autosaves them with its version", async () => {

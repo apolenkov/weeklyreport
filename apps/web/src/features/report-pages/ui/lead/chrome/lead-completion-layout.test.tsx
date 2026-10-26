@@ -1,20 +1,30 @@
-import { readFileSync } from "node:fs";
-
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { LeadCompletionLayout } from "./lead-completion-layout";
 import { LeadStickyCompletionActions } from "./lead-sticky-completion-actions";
 
-// CSS layout, not end padding, must reserve a row at every scroll position.
-const css = readFileSync("src/styles/app.css", "utf8");
-
 describe("completion rail layout", () => {
-  it("reserves a content scrollport and an intrinsic action row", () => {
-    expect(css).toContain("grid-template-rows: minmax(0, 1fr) auto");
-    expect(css).toContain('[data-testid="lead-completion-scrollport"]');
-    expect(css).toContain("overflow-y: auto");
+  it("renders actions outside the content scrollport", () => {
+    render(
+      <LeadCompletionLayout
+        actions={<aside aria-label="Completion">Actions</aside>}
+      >
+        <button>Report content</button>
+      </LeadCompletionLayout>,
+    );
+    const layout = screen.getByTestId("lead-completion-layout");
+    const scrollport = screen.getByTestId("lead-completion-scrollport");
+    expect(layout).toHaveClass("lead-completion-layout");
+    expect(scrollport).toHaveClass("lead-completion-scrollport");
+    expect(scrollport).toContainElement(
+      screen.getByRole("button", { name: "Report content" }),
+    );
+    expect(scrollport).not.toContainElement(screen.getByRole("complementary"));
+    expect(scrollport.nextElementSibling).toBe(
+      screen.getByRole("complementary"),
+    );
   });
-
   it("keeps the rail in normal layout instead of painting a fixed overlay", () => {
     render(
       <LeadStickyCompletionActions

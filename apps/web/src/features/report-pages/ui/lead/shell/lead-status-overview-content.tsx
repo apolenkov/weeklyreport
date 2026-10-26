@@ -11,6 +11,7 @@ import {
   StatusOverview,
   type StatusOverviewItem,
 } from "../../../../report-sections";
+import { LeadCompletionLayout } from "../chrome/lead-completion-layout";
 import { LeadFormDialogs } from "../chrome/lead-form-dialogs";
 import { LeadStickyCompletionActions } from "../chrome/lead-sticky-completion-actions";
 import { EditorAvailabilityNotice } from "./lead-editor-availability-notice";
@@ -259,52 +260,53 @@ export function LeadStatusOverviewContent({
   const detailsHref = useOverviewDetailsHref(readyEditor, targetReportId);
   return (
     <SdlcTooltipProvider>
-      <div data-testid="lead-completion-layout">
-        <div data-testid="lead-completion-scrollport">
-          <div
-            className="min-w-0 space-y-5"
-            data-testid="lead-status-overview-page"
-            data-layout-key="report-page"
-            data-layout-stability="position-width"
-          >
-            <OverviewHeader
-              editor={readyEditor}
-              pendingInput={pendingInput}
-              completion={completion}
-            />
-            <EditorAvailabilityNotice editor={editor} />
-            <OverviewRefreshWarning failed={refreshError} onRetry={onRefresh} />
-            {planPresentation.recovery}
-            <OverviewEditorNotices dialog={dialog} error={dialog.error} />
-            <StatusOverview
-              model={model}
-              health={projectReportHealthPulse(
-                model.units,
-                readyEditor?.draft.section ?? output.current.section,
-              )}
-              editorSlot={editorSlot}
-              {...overviewItemActions(canStartAction, dialog, plan)}
-              {...overviewDirectActions(canStartAction, dialog, verdict)}
-              detailsHref={detailsHref}
-              activityFieldsEditable={canEdit}
-              onActivityFieldsChange={onActivityFieldsChange}
-              onActivityFieldsPendingChange={onActivityFieldsPendingChange}
-              autosaveStatus={saveStatus}
-            />
-            <OverviewOpenWork
-              openWork={openWork}
-              model={model}
-              blocker={openWorkBlocker}
-              onOpen={plan.openWork}
-            />
-            <LeadOverviewDetails
-              editor={readyEditor}
-              pendingInput={pendingInput}
-            />
-          </div>
+      <LeadCompletionLayout
+        actions={
+          <OverviewSticky completion={completion} pending={pendingInput} />
+        }
+      >
+        <div
+          className="min-w-0 space-y-5"
+          data-testid="lead-status-overview-page"
+          data-layout-key="report-page"
+          data-layout-stability="position-width"
+        >
+          <OverviewHeader
+            editor={readyEditor}
+            pendingInput={pendingInput}
+            completion={completion}
+          />
+          <EditorAvailabilityNotice editor={editor} />
+          <OverviewRefreshWarning failed={refreshError} onRetry={onRefresh} />
+          {planPresentation.recovery}
+          <OverviewEditorNotices dialog={dialog} error={dialog.error} />
+          <StatusOverview
+            model={model}
+            health={projectReportHealthPulse(
+              model.units,
+              readyEditor?.draft.section ?? output.current.section,
+            )}
+            editorSlot={editorSlot}
+            {...overviewItemActions(canStartAction, dialog, plan)}
+            {...overviewDirectActions(canStartAction, dialog, verdict)}
+            detailsHref={detailsHref}
+            activityFieldsEditable={canEdit}
+            onActivityFieldsChange={onActivityFieldsChange}
+            onActivityFieldsPendingChange={onActivityFieldsPendingChange}
+            autosaveStatus={saveStatus}
+          />
+          <OverviewOpenWork
+            openWork={openWork}
+            model={model}
+            blocker={openWorkBlocker}
+            onOpen={plan.openWork}
+          />
+          <LeadOverviewDetails
+            editor={readyEditor}
+            pendingInput={pendingInput}
+          />
         </div>
-        <OverviewSticky completion={completion} pending={pendingInput} />
-      </div>
+      </LeadCompletionLayout>
       <OverviewDialogs editor={readyEditor} />
     </SdlcTooltipProvider>
   );

@@ -33,10 +33,6 @@ import {
 } from "../chrome/lead-form-header-actions";
 import { LeadFormPastPeriodBanner } from "../chrome/lead-form-past-period-banner";
 import { LeadFormToolbarControls } from "../chrome/lead-form-toolbar-controls";
-import {
-  LEAD_STICKY_COMPLETION_CLEARANCE_CLASS,
-  LeadStickyCompletionActions,
-} from "../chrome/lead-sticky-completion-actions";
 import { LeadSubmitReadinessSummary } from "../chrome/lead-submit-readiness-summary";
 import type { QuickAddKind } from "../chrome/quick-add-button";
 import {
@@ -50,9 +46,6 @@ type LeadFormLoadedActions = LeadFormEditSectionsActions &
   };
 type LeadFormLoadedWriteActions = LeadFormHeaderWriteActions &
   LeadFormDialogsWriteActions & { readonly handleSubmit: () => void };
-
-// The fixed completion rail owns the only conditional content clearance.
-// Route containers must not add a second always-on offset.
 
 // Declared data-loading seam — not the hook's raw return type.
 export interface LeadFormLoadedData {
@@ -226,6 +219,7 @@ export function LeadFormLoaded(props: LeadFormLoadedProps) {
     readiness: props.submitReadiness,
     isSlidesMode: props.isSlidesMode,
     isReadOnly: props.viewModel.isReadOnly,
+    canHandOffActions: false,
   });
   const byPeriod = props.data.byPeriodData;
   if (!byPeriod) return null;
@@ -233,7 +227,7 @@ export function LeadFormLoaded(props: LeadFormLoadedProps) {
   return (
     <SdlcTooltipProvider>
       <form
-        className={`space-y-5 ${completion.showStickyCompletion ? LEAD_STICKY_COMPLETION_CLEARANCE_CLASS : ""}`}
+        className="space-y-5"
         // C4872: Enter in a field must not submit natively and reload the page
         // with the unsaved draft; submission goes through the completion actions.
         onSubmit={(event) => event.preventDefault()}
@@ -253,9 +247,6 @@ export function LeadFormLoaded(props: LeadFormLoadedProps) {
           completion={completion}
           serverSection={byPeriod.section}
         />
-        {completion.showStickyCompletion && (
-          <LeadStickyCompletionActions actions={completion.completionActions} />
-        )}
       </form>
       <LeadFormDialogs
         viewModel={props.viewModel}
