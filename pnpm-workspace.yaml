@@ -173,7 +173,6 @@ minimumReleaseAgeExclude:
   - radix-ui@1.8.0 || 1.8.1
   - zod@4.6.6 || 4.6.7
   - "@testing-library/user-event@14.6.8"
-  - eslint-plugin-unicorn@78.0.0
   - lefthook-android-arm64@2.2.2
 
 audit:
