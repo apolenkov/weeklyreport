@@ -185,7 +185,7 @@ describe("PauseReasonDialog", () => {
     expect(onConfirm).toHaveBeenCalledWith("a".repeat(SAFE_TEXT_MAX_LENGTH));
   });
 
-  it("measures the limit on the trimmed value that is actually confirmed", () => {
+  it("measures the limit and counter on the trimmed value that is actually confirmed", () => {
     const onConfirm = vi.fn();
     render(
       <PauseReasonDialog
@@ -197,12 +197,23 @@ describe("PauseReasonDialog", () => {
     );
 
     // Raw input exceeds the limit only because of surrounding whitespace;
-    // the confirmed trimmed value fits, so Pause stays enabled.
-    fireEvent.change(screen.getByLabelText("Reason *"), {
+    // the confirmed trimmed value fits, so Pause stays enabled and the
+    // counter/invalid state follow that saved value instead of the draft.
+    const reason = screen.getByLabelText("Reason *");
+    fireEvent.change(reason, {
       target: { value: `  ${"b".repeat(SAFE_TEXT_MAX_LENGTH)}  ` },
     });
     const pause = screen.getByRole("button", { name: "Pause" });
     expect(pause).toBeEnabled();
+    expect(
+      screen.getByText(
+        new RegExp(
+          `${SAFE_TEXT_MAX_LENGTH} / ${SAFE_TEXT_MAX_LENGTH} characters`,
+        ),
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText(/over the limit/)).toBeNull();
+    expect(reason).toHaveAttribute("aria-invalid", "false");
     fireEvent.click(pause);
     expect(onConfirm).toHaveBeenCalledWith("b".repeat(SAFE_TEXT_MAX_LENGTH));
   });
