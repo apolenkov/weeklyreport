@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -78,6 +78,35 @@ describe("Overview inline status input", () => {
     expect(onSetStatus).not.toHaveBeenCalled();
   });
 
+  // Characterization: the integrated inline input already sends
+  // whitespace-only text through the shared safeText check and keeps the field
+  // correctable under the same contract.
+  it("keeps a whitespace-only pause reason for a corrected save", async () => {
+    const user = userEvent.setup();
+    const onSetStatus = vi.fn().mockResolvedValue(null);
+    render(<StatusOverviewItemPreview item={item} onSetStatus={onSetStatus} />);
+    await choose(user, "Paused");
+    const reason = screen.getByRole("textbox", {
+      name: "Paused reason — Ship importer",
+    });
+    await waitFor(() => expect(reason).toHaveFocus());
+    await user.keyboard("   {Enter}");
+    expect(screen.getByRole("alert")).toBeVisible();
+    expect(reason).toHaveAttribute("aria-invalid", "true");
+    expect(onSetStatus).not.toHaveBeenCalled();
+    await user.clear(reason);
+    await user.type(reason, "Waiting for access");
+    await user.keyboard("{Enter}");
+    await waitFor(() =>
+      expect(onSetStatus).toHaveBeenCalledWith(
+        item,
+        "paused",
+        "edit:current:stable-1",
+        { pausedReason: "Waiting for access" },
+      ),
+    );
+  });
+
   it("returns focus to the status icon on Escape without writing", async () => {
     const user = userEvent.setup();
     const onSetStatus = vi.fn();
@@ -94,18 +123,37 @@ describe("Overview inline status input", () => {
     expect(onSetStatus).not.toHaveBeenCalled();
   });
 
+  // Characterization: the integrated P1 already resolves Done with a stored
+  // next step inline; this pins the exact choice set and the no-editor,
+  // no-plan boundary of the reconciled requirement.
   it("offers only clear-and-done or cancel, focusing the safe completion", async () => {
     const user = userEvent.setup();
     const onSetStatus = vi.fn().mockResolvedValue(null);
+    const onEditItem = vi.fn();
+    const onPlanItem = vi.fn();
     const committed = { ...item, nextStepText: "Verify production" };
     render(
-      <StatusOverviewItemPreview item={committed} onSetStatus={onSetStatus} />,
+      <StatusOverviewItemPreview
+        item={committed}
+        onSetStatus={onSetStatus}
+        onEditItem={onEditItem}
+        onPlanItem={onPlanItem}
+      />,
     );
     await choose(user, "Done");
     expect(
       screen.queryByRole("button", { name: "Plan for next week" }),
     ).toBeNull();
-    const clear = screen.getByRole("button", { name: "Clear and mark done" });
+    expect(screen.queryByText(/Cancel, then choose/)).toBeNull();
+    const choice = screen.getByTestId("overview-status-next-step");
+    expect(
+      within(choice)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["Clear and mark done", "Cancel"]);
+    const clear = within(choice).getByRole("button", {
+      name: "Clear and mark done",
+    });
     await waitFor(() => expect(clear).toHaveFocus());
     await user.keyboard("{Enter}");
     expect(onSetStatus).toHaveBeenCalledWith(
@@ -114,6 +162,8 @@ describe("Overview inline status input", () => {
       "edit:current:stable-1",
       { nextStepAction: "clear" },
     );
+    expect(onEditItem).not.toHaveBeenCalled();
+    expect(onPlanItem).not.toHaveBeenCalled();
   });
 
   it("keeps the typed pause reason and locks the other statuses until Save or Cancel", async () => {
@@ -172,6 +222,41 @@ describe("Overview inline status input", () => {
     );
     expect(onSetStatus).not.toHaveBeenCalled();
   });
+
+  // Characterization: cancelling Clear-and-done, by its Cancel button or
+  // Escape, writes nothing and returns focus to the item's status control.
+  it.each(["Cancel", "Escape"] as const)(
+    "cancels the clear-and-done confirmation with %s without writing",
+    async (dismiss) => {
+      const user = userEvent.setup();
+      const onSetStatus = vi.fn();
+      render(
+        <StatusOverviewItemPreview
+          item={{ ...item, nextStepText: "Verify production" }}
+          onSetStatus={onSetStatus}
+        />,
+      );
+      await choose(user, "Done");
+      const choice = screen.getByTestId("overview-status-next-step");
+      await waitFor(() =>
+        expect(
+          within(choice).getByRole("button", { name: "Clear and mark done" }),
+        ).toHaveFocus(),
+      );
+      if (dismiss === "Escape") await user.keyboard("{Escape}");
+      else
+        await user.click(
+          within(choice).getByRole("button", { name: "Cancel" }),
+        );
+      expect(screen.queryByTestId("overview-status-next-step")).toBeNull();
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: /Status of Ship importer/ }),
+        ).toHaveFocus(),
+      );
+      expect(onSetStatus).not.toHaveBeenCalled();
+    },
+  );
 
   it("allows carried confirmation under a risk and describes every menu choice", async () => {
     const user = userEvent.setup();
