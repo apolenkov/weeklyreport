@@ -324,10 +324,9 @@ describe("LeadForm mutation wiring", () => {
       expectDefined(editableChip).click();
     });
     await screen.findByText(/Pending|Saving/i);
-    act(() => {
-      screen.getByRole("button", { name: "Save draft now" }).click();
+    await waitFor(() => expect(saveDraftEntry.mutationFn).toHaveBeenCalled(), {
+      timeout: 10_000,
     });
-    await waitFor(() => expect(saveDraftEntry.mutationFn).toHaveBeenCalled());
 
     // Drive a real submit: toolbar Submit → confirm dialog → confirm.
     act(() => {
@@ -349,7 +348,7 @@ describe("LeadForm mutation wiring", () => {
       version?: number;
     };
     expect(sent.version).toBe(5);
-  });
+  }, 15_000);
 
   it("no unset own stages → the submit-confirm shows no warning", async () => {
     const seeded = makeSection();

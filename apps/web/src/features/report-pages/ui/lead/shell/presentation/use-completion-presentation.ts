@@ -2,6 +2,10 @@
 
 import type { LeadSubmitReadiness } from "../../../../../report-sections";
 import type { AutosaveSnapshot } from "../../../../../report-sections/client";
+import {
+  firstPendingReviewFocus,
+  focusCompletionIssue,
+} from "../../chrome/overview-completion-focus";
 import { useHeaderActionsVisibility } from "../../chrome/use-header-actions-visibility";
 
 interface CompletionPresentationInput {
@@ -19,6 +23,7 @@ export interface CompletionPresentation {
     readonly submitDisabled: boolean;
     readonly submitDisabledReason: string | undefined;
     readonly pendingReviewCount: number;
+    readonly onReviewPending: (() => void) | undefined;
   };
   readonly headerActionsVisible: boolean;
   readonly readiness: LeadSubmitReadiness;
@@ -31,12 +36,18 @@ export function useCompletionPresentation(
   input: CompletionPresentationInput,
 ): CompletionPresentation {
   const { headerActionsVisible, sentinelRef } = useHeaderActionsVisibility();
+  const pendingFocus = firstPendingReviewFocus(input.readiness);
   const completionActions = {
     autosave: input.autosave,
     onSubmit: input.handleSubmit,
     submitDisabled: !input.readiness.canOpenConfirmation,
-    submitDisabledReason: input.readiness.blockingIssues[0]?.label,
-    pendingReviewCount: input.readiness.pendingReviewCount,
+    submitDisabledReason: input.readiness.submitPending
+      ? "Submitting report…"
+      : input.readiness.blockingIssues[0]?.label,
+    pendingReviewCount: input.isSlidesMode
+      ? 0
+      : input.readiness.pendingReviewCount,
+    onReviewPending: () => focusCompletionIssue(pendingFocus),
   };
   const showCompletionSurface = !input.isSlidesMode && !input.isReadOnly;
 

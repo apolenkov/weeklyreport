@@ -20,7 +20,7 @@ describe("autosaveReadinessCopy", () => {
       "Draft changes are saving.",
     );
     expect(autosaveReadinessCopy("error", false)).toBe(
-      "Draft save failed. Use Save to retry.",
+      "Draft save failed. Use Retry to save again.",
     );
     expect(autosaveReadinessCopy("idle", false)).toBe("Draft is saved.");
   });

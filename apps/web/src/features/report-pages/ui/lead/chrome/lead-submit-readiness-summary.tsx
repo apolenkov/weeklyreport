@@ -1,6 +1,6 @@
 "use client";
 
-import { type MouseEvent, useState } from "react";
+import { type MouseEvent, useId, useState } from "react";
 
 import { useIsOnline } from "../../../../../shared/lib/query/use-is-online";
 import {
@@ -8,11 +8,13 @@ import {
   pendingReviewLabel,
 } from "../../../../report-sections";
 import { autosaveReadinessCopy } from "./autosave-state-copy";
+import { focusCompletionIssue } from "./overview-completion-focus";
 
 interface LeadSubmitReadinessSummaryProps {
   readonly readiness: LeadSubmitReadiness;
   readonly onSubmit: () => void;
   readonly showSubmitAction?: boolean | undefined;
+  readonly showAutosaveStatus?: boolean | undefined;
 }
 
 type Promotion = LeadSubmitReadiness["willAutoPromote"][number];
@@ -38,10 +40,15 @@ function ReadinessHeader({
   readiness,
   onSubmit,
   showSubmitAction,
+  showAutosaveStatus = true,
 }: LeadSubmitReadinessSummaryProps) {
   // The same onlineManager signal useSaveStatus uses, so the paragraph cannot
   // claim a save is in flight while the status line reports it paused.
   const online = useIsOnline();
+  const reasonId = useId();
+  const reason = readiness.submitPending
+    ? "Submitting report…"
+    : readiness.blockingIssues[0]?.label;
   return (
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div>
@@ -54,25 +61,36 @@ function ReadinessHeader({
         <p className="mt-1 text-sm font-semibold" role="status">
           {readinessStatusCopy(readiness)}
         </p>
-        <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-          {autosaveReadinessCopy(readiness.autosaveState, online)}
-        </p>
+        {showAutosaveStatus ? (
+          <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
+            {autosaveReadinessCopy(readiness.autosaveState, online)}
+          </p>
+        ) : null}
       </div>
       {showSubmitAction ? (
-        <button
-          type="button"
-          aria-label="Submit report"
-          className="btn-press inline-flex min-h-10 max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-5 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={onSubmit}
-          disabled={!readiness.canOpenConfirmation}
-          title={
-            readiness.submitPending
-              ? "Submission in progress"
-              : readiness.blockingIssues[0]?.label
-          }
-        >
-          Submit
-        </button>
+        <div className="min-w-0 max-w-full sm:max-w-sm">
+          <button
+            type="button"
+            aria-label="Submit report"
+            className="btn-press inline-flex min-h-10 max-md:min-h-[var(--touch-target-min)] max-md:min-w-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-starbucks-accent)] bg-[var(--color-starbucks-accent)] px-5 py-2 font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary-foreground)] transition-colors hover:bg-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={onSubmit}
+            disabled={!readiness.canOpenConfirmation}
+            aria-describedby={
+              !readiness.canOpenConfirmation && reason ? reasonId : undefined
+            }
+          >
+            Submit
+          </button>
+          {!readiness.canOpenConfirmation && reason ? (
+            <p
+              id={reasonId}
+              data-testid="lead-summary-disabled-reason"
+              className="mt-2 break-words text-sm text-[var(--color-muted-foreground)]"
+            >
+              {reason}
+            </p>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );
@@ -137,37 +155,6 @@ function AutomaticStatusChanges({
   );
 }
 
-function findOverviewTarget(focus: string): HTMLElement | undefined {
-  return (
-    document.getElementById(focus) ??
-    Array.from(
-      document.querySelectorAll<HTMLElement>("[data-overview-focus]"),
-    ).find((element) => element.dataset.overviewFocus === focus)
-  );
-}
-
-function focusOverviewTarget(target: HTMLElement): void {
-  if (target.closest("[hidden], [inert]")) {
-    const unit = target.closest("article");
-    const expander = Array.from(
-      unit?.querySelectorAll<HTMLButtonElement>(
-        'button[aria-expanded="false"][aria-controls]',
-      ) ?? [],
-    ).find((button) => {
-      const controlledId = button.getAttribute("aria-controls");
-      return controlledId
-        ? document.getElementById(controlledId)?.contains(target)
-        : false;
-    });
-    if (expander) {
-      expander.click();
-      queueMicrotask(() => target.focus());
-      return;
-    }
-  }
-  target.focus();
-}
-
 function isModifiedNavigation(event: MouseEvent<HTMLAnchorElement>): boolean {
   return (
     event.button !== 0 ||
@@ -199,9 +186,7 @@ function BlockingIssues({
                   href={`#${focus}`}
                   onClick={(event) => {
                     if (isModifiedNavigation(event)) return;
-                    const target = findOverviewTarget(focus);
-                    if (!target) return;
-                    focusOverviewTarget(target);
+                    focusCompletionIssue(focus);
                   }}
                   className="rounded-[var(--radius-sm)] font-semibold text-[var(--color-primary)] underline underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
                 >
@@ -222,6 +207,7 @@ export function LeadSubmitReadinessSummary({
   readiness,
   onSubmit,
   showSubmitAction,
+  showAutosaveStatus = true,
 }: LeadSubmitReadinessSummaryProps) {
   return (
     <section
@@ -233,6 +219,7 @@ export function LeadSubmitReadinessSummary({
         readiness={readiness}
         onSubmit={onSubmit}
         showSubmitAction={showSubmitAction}
+        showAutosaveStatus={showAutosaveStatus}
       />
       <AutomaticStatusChanges items={readiness.willAutoPromote} />
       <BlockingIssues items={readiness.blockingIssues} />

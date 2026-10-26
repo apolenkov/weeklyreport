@@ -482,6 +482,41 @@ describe("LeadForm Overview", () => {
     expect(screen.queryByText("Verify production")).toBeNull();
     expect(screen.queryByText(/Cancel, then choose/)).toBeNull();
   });
+  it("keeps one Submit and one autosave indicator while preserving the end summary", async () => {
+    render(
+      <Wrapper>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+    await screen.findByTestId("lead-submit-readiness");
+    expect(
+      screen.getAllByRole("button", { name: /^Submit(?: report)?$/u }),
+    ).toHaveLength(1);
+    expect(screen.queryByText("Autosaved")).toBeNull();
+    expect(screen.queryByText("Draft is saved.")).toBeNull();
+    expect(
+      within(screen.getByTestId("status-overview")).getByRole("status"),
+    ).toHaveTextContent("Draft saved");
+    expect(
+      screen.getByTestId("lead-status-overview-page").parentElement
+        ?.parentElement,
+    ).toHaveAttribute("data-testid", "lead-completion-layout");
+  });
+
+  it("jumps from the pending-review action to the first carried work", async () => {
+    render(
+      <Wrapper currentCarriedOver>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+    const action = await screen.findByRole("button", { name: "1 to review" });
+    await userEvent.click(action);
+    expect(
+      screen.getByRole("button", {
+        name: "Status of Current work: Continued · not updated this week",
+      }),
+    ).toHaveFocus();
+  });
   it("keeps an authoritative prior-only row informational with only the verdict rail", async () => {
     const predecessorItem: ReportSectionReadModel["items"][number] = {
       id: "a0000000-0000-4000-8000-000000000034",

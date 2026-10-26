@@ -403,10 +403,9 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
       expectDefined(editableChip).click();
     });
     await screen.findByText(/Pending|Saving/i);
-    act(() => {
-      screen.getByRole("button", { name: "Save draft now" }).click();
+    await waitFor(() => expect(saveDraftEntry.mutationFn).toHaveBeenCalled(), {
+      timeout: 10_000,
     });
-    await waitFor(() => expect(saveDraftEntry.mutationFn).toHaveBeenCalled());
 
     const documentActions = screen.getByRole("group", {
       name: "Document actions",
@@ -431,7 +430,7 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
       sourceSectionId,
       version: 5,
     });
-  });
+  }, 15_000);
 
   it("renders exactly one shared ReportToolbar container (head-toolbar-parity pin)", async () => {
     // Parity pin: lead form and head shell both render the shared
@@ -698,9 +697,9 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
     const fillFromButton = within(documentActions).getByRole("button", {
       name: "Fill from most recent submitted period",
     });
-    const saveButton = within(documentActions).getByRole("button", {
-      name: "Save draft now",
-    });
+    expect(
+      within(documentActions).queryByRole("button", { name: "Save draft now" }),
+    ).toBeNull();
     const submitButton = within(documentActions).getByRole("button", {
       name: "Submit",
     });
@@ -709,7 +708,6 @@ describe("LeadForm mutation wiring — fill-from, toolbar & reopen", () => {
     const indexOf = (button: HTMLElement) => orderedButtons.indexOf(button);
 
     expect(indexOf(fillFromButton)).toBeLessThan(indexOf(submitButton));
-    expect(indexOf(saveButton)).toBeLessThan(indexOf(submitButton));
     expect(
       within(documentActions).queryByRole("button", { name: "+ Add" }),
     ).toBeNull();

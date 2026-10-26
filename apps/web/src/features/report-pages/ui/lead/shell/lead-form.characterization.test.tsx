@@ -199,7 +199,7 @@ afterEach(() => {
 });
 
 describe("lead-form draft: save-echo + optimistic lock", () => {
-  it("Save now flushes immediately, before the debounce elapses", async () => {
+  it("autosaves draft changes without a redundant Save control", async () => {
     const { Wrapper, captured } = buildHarness();
     expectDefined(captured["reports.saveDraft"]).mutationFn.mockResolvedValue({
       ...makeSection(),
@@ -213,16 +213,17 @@ describe("lead-form draft: save-echo + optimistic lock", () => {
     expect(await screen.findByText("Autosaved")).toBeInTheDocument();
 
     clickEditableStageChip();
-    const saveButtons = await screen.findAllByRole("button", {
-      name: /Save draft now/i,
-    });
-    act(() => saveButtons[0]?.click());
-    await waitFor(() =>
-      expect(
-        expectDefined(captured["reports.saveDraft"]).mutationFn,
-      ).toHaveBeenCalledTimes(1),
+    expect(
+      screen.queryByRole("button", { name: /Save draft now/i }),
+    ).toBeNull();
+    await waitFor(
+      () =>
+        expect(
+          expectDefined(captured["reports.saveDraft"]).mutationFn,
+        ).toHaveBeenCalledTimes(1),
+      { timeout: 10_000 },
     );
-  });
+  }, 15_000);
 
   it("a stale-version submit surfaces the reload prompt, not the raw error", async () => {
     const { Wrapper, captured } = buildHarness();

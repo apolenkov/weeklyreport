@@ -140,7 +140,7 @@ describe("LeadFormHeaderActions", () => {
       "true",
     );
 
-    // The Overview announces autosave in its own region, so the badge stays quiet.
+    // The Overview owns the only save indicator, so the header hides its badge.
     rerender(
       <LeadFormHeaderActions
         {...props}
@@ -153,7 +153,7 @@ describe("LeadFormHeaderActions", () => {
       />,
     );
     expect(screen.queryByRole("status")).toBeNull();
-    expect(screen.getByText("Save failed")).toBeInTheDocument();
+    expect(screen.queryByText("Save failed")).toBeNull();
   });
 
   describe("submitted lead reopen state", () => {
