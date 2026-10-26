@@ -2,6 +2,7 @@ import type { Dispatch, SetStateAction } from "react";
 
 import type {
   DecisionEntry,
+  DraftStageMemory,
   ParentActivityOption,
   Product,
   RecordParent,
@@ -9,6 +10,7 @@ import type {
 import {
   computeEffectiveStageNames,
   isZeroOwnedStageDeadEnd,
+  resolveInitialStageNames,
   resolveRecordParent,
 } from "../../report-sections";
 import {
@@ -65,6 +67,30 @@ export function initialDecisionParent(
     args.activities,
     args.products ?? [],
   );
+}
+
+// Create starts from the open draft's remembered stage for the seeded product;
+// edit restores the stored stages and never substitutes a default.
+export function resolveInitialDecisionStageNames(
+  args: UseDecisionEditDialogArgs,
+  parent: RecordParent,
+  stageMemory: DraftStageMemory | null,
+): string[] {
+  const productId = parent.kind === "product" ? parent.id : undefined;
+  return [
+    ...resolveInitialStageNames({
+      isCreate: args.decision === null,
+      storedStageNames: args.decision?.stageNames,
+      rememberedStageName:
+        args.decision === null && productId !== undefined
+          ? stageMemory?.recall(productId)
+          : undefined,
+      availableStages:
+        productId === undefined
+          ? []
+          : (args.stagesForProduct?.(productId) ?? []),
+    }),
+  ];
 }
 
 export function deriveDecisionDialogModel(

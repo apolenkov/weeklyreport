@@ -31,14 +31,6 @@ export function deriveFromPreChecked(
   return "at-risk";
 }
 
-export function computeInitialStageNames(
-  risk: RiskEntry | null,
-  initialStageNames: readonly string[] | undefined,
-): string[] {
-  if (risk?.stageNames) return [...risk.stageNames];
-  return initialStageNames ? [...initialStageNames] : [];
-}
-
 // Pre-flagged owned stages for a product parent (info strip only). Empty for
 // an activity parent, so the strip self-suppresses there.
 export function computePreCheckedStages(

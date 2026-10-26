@@ -9,10 +9,11 @@ import type {
 import {
   computeEffectiveStageNames,
   isZeroOwnedStageDeadEnd,
+  resolveInitialStageNames,
   resolveRecordParent,
+  useDraftStageMemory,
 } from "../../report-sections";
 import {
-  computeInitialStageNames,
   computePreCheckedStages,
   deriveFromPreChecked,
   resolveRiskParentName,
@@ -52,25 +53,40 @@ function useRiskEditSeeds(args: UseRiskEditParentStageArgs) {
   });
 
   // Product XOR activity; pill-raise activity beats default product seed.
-  const [parent, setParent] = useState<RecordParent>(() =>
-    resolveRecordParent(
-      risk ?? {},
-      {
-        productId: isCreate
-          ? args.defaultProductId || seedProduct?.id
-          : seedProduct?.id,
-        activityId: isCreate ? args.defaultActivityId : undefined,
-      },
-      activities,
-      products,
-    ),
+  const seedParent = resolveRecordParent(
+    risk ?? {},
+    {
+      productId: isCreate
+        ? args.defaultProductId || seedProduct?.id
+        : seedProduct?.id,
+      activityId: isCreate ? args.defaultActivityId : undefined,
+    },
+    activities,
+    products,
   );
+  const [parent, setParent] = useState<RecordParent>(seedParent);
 
-  // Empty on create — user marks stages; preCheckedStages is info only.
-  // Chip-raise initialStageNames pre-checks the clicked stage.
-  const [stageNames, setStageNames] = useState<string[]>(() =>
-    computeInitialStageNames(risk, args.initialStageNames),
-  );
+  // Edit restores saved stages; create starts from an explicit chip-raise
+  // prefill, the open draft's remembered stage for this product, or the sole
+  // owned stage. preCheckedStages stays info only.
+  const stageMemory = useDraftStageMemory();
+  const seedProductId =
+    seedParent.kind === "product" ? seedParent.id : undefined;
+  const [stageNames, setStageNames] = useState<string[]>(() => [
+    ...resolveInitialStageNames({
+      isCreate,
+      storedStageNames: risk?.stageNames,
+      explicitStageNames: args.initialStageNames,
+      rememberedStageName:
+        isCreate && seedProductId !== undefined
+          ? stageMemory?.recall(seedProductId)
+          : undefined,
+      availableStages:
+        seedProductId === undefined
+          ? []
+          : (stagesForProduct?.(seedProductId) ?? []),
+    }),
+  ]);
   const [parentError, setParentError] = useState<string | undefined>(undefined);
   const [stageError, setStageError] = useState<string | undefined>(undefined);
 

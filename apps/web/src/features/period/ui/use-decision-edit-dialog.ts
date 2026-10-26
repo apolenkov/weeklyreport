@@ -2,10 +2,12 @@ import { useRef, useState } from "react";
 
 import { useDialogFocus } from "../../../shared/hooks/dialogs/use-dialog-focus";
 import { useDiscardGuard } from "../../../shared/ui/dialogs/use-discard-guard";
+import { useDraftStageMemory } from "../../report-sections";
 import { resolveDecisionFormSeed } from "./decision-edit-dialog-helpers";
 import {
   deriveDecisionDialogModel,
   initialDecisionParent,
+  resolveInitialDecisionStageNames,
   type UseDecisionEditDialogArgs,
 } from "./decision-edit-dialog-model";
 import { runDecisionSave } from "./decision-edit-dialog-save";
@@ -23,7 +25,12 @@ export function useDecisionEditDialog(args: UseDecisionEditDialogArgs) {
   const textRef = useRef<HTMLTextAreaElement>(null);
   const impactRef = useRef<HTMLTextAreaElement>(null);
 
-  const seed = resolveDecisionFormSeed(decision, args.defaultOwner);
+  const stageMemory = useDraftStageMemory();
+  const seedParent = initialDecisionParent(args);
+  const seed = {
+    ...resolveDecisionFormSeed(decision, args.defaultOwner),
+    stageNames: resolveInitialDecisionStageNames(args, seedParent, stageMemory),
+  };
   const fields = useDecisionFormState(seed, () => initialDecisionParent(args));
   const snapshot = JSON.stringify([
     fields.text,
