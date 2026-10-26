@@ -23,6 +23,7 @@ interface RequestChangesDialogProps {
 }
 
 const EMPTY_REASON_ERROR = "Enter a reason for the lead.";
+export const OVER_LIMIT_REASON_ERROR = `Shorten the reason to ${REVIEW_COMMENT_MAX_LENGTH} characters or fewer (excluding leading and trailing whitespace).`;
 
 function FormActions({
   isPending,
@@ -177,11 +178,7 @@ export function RequestChangesDialog({
       const isOverLimit = command.error.issues.some(
         (issue) => issue.path[0] === "comment" && issue.code === "too_big",
       );
-      setError(
-        isOverLimit
-          ? `Shorten the reason to ${REVIEW_COMMENT_MAX_LENGTH} characters or fewer (excluding leading and trailing whitespace).`
-          : EMPTY_REASON_ERROR,
-      );
+      setError(isOverLimit ? OVER_LIMIT_REASON_ERROR : EMPTY_REASON_ERROR);
       return;
     }
     setError(null);

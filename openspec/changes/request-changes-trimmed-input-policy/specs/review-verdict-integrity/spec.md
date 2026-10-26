@@ -1,8 +1,15 @@
-## ADDED Requirements
+## MODIFIED Requirements
 
-### Requirement: Request changes preserves raw input under canonical length validation
+### Requirement: Request changes asks for the reason before mutating
 
-The Request changes dialog SHALL accept comments by their trimmed Unicode code-point length under the canonical review comment limit, without an additional raw UTF-16 cap or silent clipping. It SHALL retain the entire editable raw draft on local or server rejection. An over-limit submit SHALL show actionable inline feedback and SHALL NOT send a mutation.
+Both Request changes entry points (review panel and dashboard queue) MUST open a comment dialog and MUST send the mutation only on submit with valid text. The dialog MUST move focus into the field, show an inline error for empty input, disable submit while pending and keep the text if the server rejects the request.
+
+The dialog MUST accept a comment by its trimmed Unicode code-point length under the canonical review comment limit, without an additional raw UTF-16 cap or silent clipping, and MUST retain the entire editable raw draft on local or server rejection. An over-limit submit MUST show actionable inline feedback and MUST NOT send a mutation.
+
+#### Scenario: Empty submit
+
+- **WHEN** the Head submits the dialog with no text
+- **THEN** an inline error is shown and no mutation is sent
 
 #### Scenario: Padded valid reason exceeds the raw length limit
 
@@ -16,11 +23,14 @@ The Request changes dialog SHALL accept comments by their trimmed Unicode code-p
 - **THEN** the dialog accepts it without imposing a UTF-16 length cap
 - **AND** the counter and submitted comment agree with canonical validation
 
-#### Scenario: Over-limit rejection and correction
+#### Scenario: Over-limit rejection
 
 - **WHEN** a reviewer submits a reason exceeding the trimmed code-point limit
 - **THEN** the dialog remains open with the exact raw draft and an associated inline error explaining the limit and the need to shorten the reason
 - **AND** no mutation is sent
+
+#### Scenario: Correction after an over-limit rejection
+
 - **WHEN** the reviewer corrects the reason to a valid value
 - **THEN** the error clears and a subsequent submit sends one valid trimmed command
 
