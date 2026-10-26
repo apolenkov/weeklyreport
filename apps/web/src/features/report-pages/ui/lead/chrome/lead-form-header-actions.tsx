@@ -221,11 +221,10 @@ function HeaderActionToolbar({
   viewModel,
   writeActions,
   completionActions,
-  completionSentinelRef,
   showCompletionActions,
   isForeignSlidesDeck,
   isSubmitted,
-}: Omit<LeadFormHeaderActionsProps, "isSlidesMode">) {
+}: Omit<LeadFormHeaderActionsProps, "isSlidesMode" | "completionSentinelRef">) {
   const {
     canRequestReopen,
     hasPendingReopen,
@@ -258,11 +257,6 @@ function HeaderActionToolbar({
         />
       )}
       <div className="relative min-h-px min-w-px">
-        <div
-          ref={completionSentinelRef}
-          aria-hidden="true"
-          className="lead-completion-sentinel"
-        />
         {canEditDraft && showCompletionActions && (
           <LeadCompletionActions
             {...completionActions}
@@ -277,14 +271,20 @@ function HeaderActionToolbar({
 // Shared completion presentation so sticky handoff cannot fork action state.
 export function LeadFormHeaderActions({
   isSlidesMode,
+  completionSentinelRef,
   ...header
 }: LeadFormHeaderActionsProps) {
   return (
     <header
       data-layout-key="lead-report-header"
       data-layout-stability="position-size"
-      className="flex flex-wrap items-center justify-between gap-4"
+      className="relative flex flex-wrap items-start justify-between gap-4"
     >
+      <div
+        ref={completionSentinelRef}
+        aria-hidden="true"
+        className="lead-completion-sentinel"
+      />
       <div className="flex min-w-0 flex-wrap items-center gap-3">
         <ReportTitleBlock
           periodLabel={header.periodLabel}

@@ -214,6 +214,7 @@ function OverviewSticky({
       actions={{
         ...actions,
         submitDisabled: actions.submitDisabled || pending,
+        reviewDisabled: pending,
         submitDisabledReason: pending
           ? "Save or cancel the open update before submitting the report."
           : actions.submitDisabledReason,
