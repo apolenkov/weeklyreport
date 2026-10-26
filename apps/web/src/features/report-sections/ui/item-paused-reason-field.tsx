@@ -17,6 +17,9 @@ export function PausedReasonField({
   readonly error: string | undefined;
   readonly onChange: (next: string) => void;
 }) {
+  // Save persists the trimmed draft and validates that same value, so the
+  // counter must ignore surrounding whitespace instead of counting the draft.
+  const savedCharacterCount = Array.from(value.trim()).length;
   return (
     <RecordTextareaField
       id="item-paused-reason"
@@ -28,6 +31,7 @@ export function PausedReasonField({
       placeholder="Why is this paused? (e.g. waiting on a dependency)"
       minHeightPx={PAUSED_REASON_MIN_HEIGHT_PX}
       characterLimit={SAFE_TEXT_MAX_LENGTH}
+      characterCount={savedCharacterCount}
       fill={false}
     />
   );

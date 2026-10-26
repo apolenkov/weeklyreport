@@ -2,7 +2,7 @@
 
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { safeText } from "@weeklyreport/shared";
+import { SAFE_TEXT_MAX_LENGTH, safeText } from "@weeklyreport/shared";
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -677,6 +677,47 @@ describe("ItemEditDialog — shared next-step and pause boundaries", () => {
       }
     },
   );
+
+  it("counts the trimmed pause reason that Save persists", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn<(next: KanbanItem) => void>();
+    render(
+      <ItemEditDialog
+        open
+        item={null}
+        products={currentProducts}
+        week="current"
+        currentUserName="Synthetic lead"
+        defaultProductId={unicodeProductId}
+        stagesForProduct={() => ["Development"]}
+        onSave={onSave}
+        onCancel={vi.fn()}
+      />,
+    );
+    await user.type(screen.getByLabelText("Description *"), "Ship this update");
+    await user.click(screen.getByRole("button", { name: /Paused/ }));
+    const field = screen.getByRole("textbox", { name: /Pause reason/ });
+    await user.click(field);
+    // The raw draft exceeds the limit only through whitespace Save trims, so
+    // neither the counter nor aria-invalid may report an overflow.
+    await user.paste(`  ${"A".repeat(SAFE_TEXT_MAX_LENGTH)}  `);
+    expect(
+      screen.getByText(
+        new RegExp(
+          `${SAFE_TEXT_MAX_LENGTH} / ${SAFE_TEXT_MAX_LENGTH} characters`,
+        ),
+      ),
+    ).toBeVisible();
+    expect(screen.queryByText(/over the limit/)).toBeNull();
+    expect(field).toHaveAttribute("aria-invalid", "false");
+    await user.click(screen.getByRole("button", { name: "Save item" }));
+    expect(onSave).toHaveBeenCalledTimes(1);
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({
+      pausedReason: "A".repeat(SAFE_TEXT_MAX_LENGTH),
+      status: "paused",
+      productId: unicodeProductId,
+    });
+  });
 });
 
 it("validates an unresolved requested parent and recovers through the public picker", () => {

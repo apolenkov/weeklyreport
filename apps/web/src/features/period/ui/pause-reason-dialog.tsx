@@ -51,6 +51,9 @@ function PauseReasonDialogContent({
   // Blank still means "not entered yet"; only a typed invalid value is flagged
   // before confirm, while the item editor reports the required message on save.
   const visibleError = trimmed.length === 0 ? undefined : pauseReasonError;
+  // The counter must measure the value Pause actually confirms: whitespace the
+  // trim discards neither reaches the server nor counts against the limit.
+  const savedReasonCharacterCount = Array.from(trimmed).length;
 
   return (
     <DocumentBodyPortal>
@@ -63,6 +66,7 @@ function PauseReasonDialogContent({
         <PauseReasonPreview preview={preview} />
         <PauseReasonField
           reason={reason}
+          characterCount={savedReasonCharacterCount}
           onReasonChange={setReason}
           error={visibleError}
         />
@@ -98,10 +102,12 @@ function PauseReasonPreview({ preview }: { readonly preview: string }) {
 
 function PauseReasonField({
   reason,
+  characterCount,
   onReasonChange,
   error,
 }: {
   readonly reason: string;
+  readonly characterCount: number;
   readonly onReasonChange: (next: string) => void;
   readonly error?: string | undefined;
 }) {
@@ -117,6 +123,7 @@ function PauseReasonField({
         placeholder="Why is this paused? (e.g. waiting on a dependency)"
         minHeightPx={64}
         characterLimit={SAFE_TEXT_MAX_LENGTH}
+        characterCount={characterCount}
         fill={false}
       />
     </div>
