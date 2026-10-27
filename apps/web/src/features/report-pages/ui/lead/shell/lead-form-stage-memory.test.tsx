@@ -1,7 +1,7 @@
-// The open lead report owns one stage memory: switching the report view from
-// Overview to the editor remounts the form but must not forget the stage the
-// lead just saved, because the remembered default is a convenience of the open
-// draft, not of one editor instance.
+// The open lead report owns one stage memory: switching the report view between
+// Overview and Slides remounts the form but must not forget the stage the lead
+// just saved, because the remembered default is a convenience of the open draft,
+// not of one editor instance.
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
@@ -152,7 +152,7 @@ function makePageHarness(section = makeSection()): PageHarness {
   return { client, proxy };
 }
 
-function page(harness: PageHarness, mode: "overview" | "edit") {
+function page(harness: PageHarness, mode: "overview" | "slides") {
   return (
     <QueryClientProvider client={harness.client}>
       <TRPCProxyContext.Provider value={harness.proxy}>
@@ -180,7 +180,7 @@ function page(harness: PageHarness, mode: "overview" | "edit") {
 
 describe("lead report stage memory across view switches", () => {
   it(
-    "keeps the saved stage when Overview switches to the report editor",
+    "keeps the saved stage when Overview and Slides swap",
     { timeout: 30_000 },
     async () => {
       const user = userEvent.setup();
@@ -208,10 +208,19 @@ describe("lead report stage memory across view switches", () => {
         { timeout: 15_000 },
       );
 
-      rerender(page(harness, "edit"));
+      // Both are real route modes; each switch mounts the other view branch and
+      // unmounts the Overview that hosts the composer.
+      rerender(page(harness, "slides"));
+      await vi.waitFor(() =>
+        expect(
+          screen.queryByRole("button", { name: "Add item to Payments" }),
+        ).not.toBeInTheDocument(),
+      );
+
+      rerender(page(harness, "overview"));
 
       const addItem = expectDefined(
-        (await screen.findAllByRole("button", { name: /Add item/ }))[0],
+        await screen.findByRole("button", { name: "Add item to Payments" }),
       );
       await user.click(addItem);
       expect(

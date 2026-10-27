@@ -170,17 +170,26 @@ describe("ItemEditDialog — editable draft stage default", () => {
     ).not.toBeChecked();
   });
 
-  it("does not move the remembered stage when the lead cancels", () => {
+  it("does not let a cancelled edit become the remembered stage", () => {
     const memory = remembered("Development");
     const onCancel = vi.fn();
     render(
       <DraftStageMemoryProvider memory={memory}>
         <ItemEditDialog
           open
-          item={null}
+          item={{
+            id: "saved-item",
+            parent: { kind: "product", id: PRODUCT.id },
+            productId: PRODUCT.id,
+            productName: PRODUCT.name,
+            activityId: null,
+            text: "Ship the importer",
+            status: "in-progress",
+            author: "Test Lead",
+            stageNames: ["Development"],
+          }}
           products={[PRODUCT, SINGLE_PRODUCT]}
           week="current"
-          defaultProductId={PRODUCT.id}
           stagesForProduct={stagesForProduct}
           onSave={vi.fn()}
           onCancel={onCancel}
@@ -188,11 +197,22 @@ describe("ItemEditDialog — editable draft stage default", () => {
       </DraftStageMemoryProvider>,
     );
 
+    // The lead changes the record's stage to Testing alone and cancels.
+    fireEvent.click(screen.getByRole("checkbox", { name: "Development" }));
     fireEvent.click(screen.getByRole("checkbox", { name: "Testing" }));
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     fireEvent.click(screen.getByRole("button", { name: "Discard" }));
-
     expect(onCancel).toHaveBeenCalledOnce();
+
+    // Cancel records no pending choice: an accepted save of that record which
+    // carries Testing must not turn the discarded selection into the default.
+    memory.confirmPersisted({
+      items: [
+        { id: "saved-item", projectId: PRODUCT.id, stageNames: ["Testing"] },
+      ],
+      risks: [],
+      decisions: [],
+    });
     expect(memory.recall(PRODUCT.id)).toBe("Development");
   });
 
