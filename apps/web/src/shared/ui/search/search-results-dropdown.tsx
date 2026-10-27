@@ -1,8 +1,13 @@
 import type { SearchHit } from "@weeklyreport/shared";
-import type { ReactNode } from "react";
+import { type ReactNode, useEffect } from "react";
 
 import { formatDateWithYear } from "../../lib/format/format-date";
-import { renderSnippet, targetUrlFor, TYPE_BADGE } from "./search-input-utils";
+import {
+  renderSnippet,
+  searchOptionId,
+  targetUrlFor,
+  TYPE_BADGE,
+} from "./search-input-utils";
 
 export interface SearchResultsDropdownProps {
   readonly resultsId: string;
@@ -117,6 +122,9 @@ function SearchHitOption({
       type="button"
       role="option"
       aria-selected={isActive}
+      // The combobox owns the keyboard: Tab leaves the whole popup instead of
+      // walking its options, so the input stays the only stop.
+      tabIndex={-1}
       onMouseDown={(event) => event.preventDefault()}
       onMouseEnter={() => onHoverHit(index)}
       onClick={() => onSelectHit(target.url)}
@@ -131,6 +139,16 @@ function SearchHitOption({
   );
 }
 
+// The combobox keeps focus (aria-activedescendant), so the popup reveals its own
+// active option; "nearest" leaves hover and already-visible options still.
+function useRevealActiveOption(resultsId: string, activeIndex: number): void {
+  useEffect(() => {
+    document
+      .getElementById(searchOptionId(resultsId, activeIndex))
+      ?.scrollIntoView({ block: "nearest" });
+  }, [resultsId, activeIndex]);
+}
+
 export function SearchResultsDropdown({
   resultsId,
   hits,
@@ -143,6 +161,7 @@ export function SearchResultsDropdown({
   onSelectHit,
 }: SearchResultsDropdownProps) {
   const showEmpty = !isError && !isFetching && hits.length === 0;
+  useRevealActiveOption(resultsId, activeIndex);
 
   return (
     <div className="absolute z-[var(--layer-popover)] mt-1 max-h-[420px] w-full overflow-y-auto rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] shadow-lg">
@@ -166,7 +185,7 @@ export function SearchResultsDropdown({
           <SearchHitOption
             key={`${hit.type}-${hit.id}`}
             hit={hit}
-            optionId={`${resultsId}-option-${idx}`}
+            optionId={searchOptionId(resultsId, idx)}
             index={idx}
             isActive={idx === activeIndex}
             isViewer={isViewer}
