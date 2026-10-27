@@ -164,7 +164,10 @@ export function SearchResultsDropdown({
   useRevealActiveOption(resultsId, activeIndex);
 
   return (
-    <div className="absolute z-[var(--layer-popover)] mt-1 max-h-[420px] w-full overflow-y-auto rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] shadow-lg">
+    <div
+      tabIndex={-1}
+      className="absolute z-[var(--layer-popover)] mt-1 max-h-[420px] w-full overflow-y-auto rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-popover)] shadow-lg"
+    >
       {isFetching && <StatusRow loading>Searching…</StatusRow>}
 
       {isError && (

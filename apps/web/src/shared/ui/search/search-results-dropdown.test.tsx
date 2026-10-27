@@ -96,3 +96,13 @@ describe("SearchResultsDropdown — created date presentation", () => {
     expect(screen.getByText("Jul 5, 2026")).toBeInTheDocument();
   });
 });
+
+describe("SearchResultsDropdown — keyboard order", () => {
+  it("keeps the scrollable popup out of the Tab order", () => {
+    renderDropdown([makeHit()]);
+
+    const popup = screen.getByRole("listbox").parentElement;
+
+    expect(popup).toHaveAttribute("tabindex", "-1");
+  });
+});
