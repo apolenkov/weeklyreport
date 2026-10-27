@@ -108,6 +108,7 @@ case "$command" in
     while IFS= read -r ignore; do :; done
     ;;
   bud)
+    [ -e "$CI_PROJECT_DIR/image-digests.txt" ] && printf 'present\n' >> "$STUB_CONTEXT_LEAKS"
     previous=""
     for argument in "$@"; do
       [ "$previous" = "-f" ] && cp "$argument" "$STUB_FILES/$(basename "$argument")"
@@ -144,6 +145,7 @@ interface ScriptRun {
 interface BuildRun {
   readonly result: ScriptRun;
   readonly calls: readonly string[];
+  readonly contextLeaks: string;
   readonly project: string;
   readonly mirrored: string;
   readonly digests: string;
@@ -180,12 +182,15 @@ function runBuildScript(
   mkdirSync(mirrored);
   const calls = join(workspace, "calls.log");
   writeFileSync(calls, "");
+  const contextLeaks = join(workspace, "context-leaks.log");
+  writeFileSync(contextLeaks, "");
   const result = spawnSync("/bin/sh", ["-c", buildJob.script[0] ?? ""], {
     cwd: project,
     env: {
       PATH: `${bin}:${process.env.PATH ?? ""}`,
       CI_PROJECT_DIR: project,
       STUB_CALLS: calls,
+      STUB_CONTEXT_LEAKS: contextLeaks,
       STUB_FILES: mirrored,
       ...env,
     },
@@ -198,6 +203,7 @@ function runBuildScript(
       stderr: result.stderr,
     },
     calls: readFileSync(calls, "utf8").split("\n").filter(Boolean),
+    contextLeaks: readFileSync(contextLeaks, "utf8").trim(),
     project,
     mirrored,
     digests: join(project, "image-digests.txt"),
@@ -333,6 +339,16 @@ test("the build job fails before building when a base image escapes the mirror",
   assert.deepEqual(calls, []);
 });
 
+test("the build job fails closed instead of remapping a foreign registry", () => {
+  const { result, calls } = runBuildScript(BUILD_ENV, {
+    "deploy/postgres/Dockerfile.backup":
+      "FROM quay.io/buildah/stable:1.0 AS base\n",
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /not mirrored: quay\.io\/buildah\/stable:1\.0/u);
+  assert.deepEqual(calls, []);
+});
+
 test("the build job rewrites every base image through the internal mirror", () => {
   const { result, mirrored } = runBuildScript(BUILD_ENV);
   assert.equal(result.status, 0, result.stderr);
@@ -346,8 +362,14 @@ test("the build job rewrites every base image through the internal mirror", () =
 });
 
 test("the build job pushes four SHA-tagged images and records their digests", () => {
-  const { result, calls, project, digests } = runBuildScript(BUILD_ENV);
+  const { result, calls, contextLeaks, project, digests } =
+    runBuildScript(BUILD_ENV);
   assert.equal(result.status, 0, result.stderr);
+  assert.equal(
+    contextLeaks,
+    "",
+    "image-digests.txt must stay out of the build context while images build",
+  );
   assert.equal(callsFor(calls, "login").length, 1);
   assert.equal(callsFor(calls, "bud").length, 4);
   assert.equal(callsFor(calls, "push").length, 4);
