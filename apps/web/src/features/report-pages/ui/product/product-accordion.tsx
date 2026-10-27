@@ -111,7 +111,7 @@ export function ProductAccordion({
 
   useScrollIntoViewOnHighlight(
     rootRef,
-    highlighted,
+    isHighlightActive,
     scrollIntoViewOnHighlight,
     navigationEpoch,
   );
