@@ -18,10 +18,11 @@ IDP_CERT_PUBLIC_KEY=$(openssl x509 -in idp.crt -pubkey -noout) || { echo "Invali
 IDP_KEY_PUBLIC_KEY=$(openssl pkey -in idp.key -pubout) || { echo "Invalid idp.key: restore a valid matching IdP pair before retrying." >&2; exit 1; }
 [ "$IDP_CERT_PUBLIC_KEY" = "$IDP_KEY_PUBLIC_KEY" ] || { echo "Mismatched idp.crt and idp.key: restore a matching IdP pair before retrying." >&2; exit 1; }
 if [ ! -f secrets.env ]; then
-  # Publish atomically: an interrupted generation must not leave a partial
-  # secrets.env for the existence gate here to reuse.
+  # Publish atomically: the temporary file lives in the current directory
+  # (STATE_DIR, possibly relative), so an interrupted generation leaves no
+  # partial secrets.env for the existence gate here to reuse.
   umask 077
-  secrets_partial=$(mktemp "$STATE_DIR/secrets.env.XXXXXX")
+  secrets_partial=$(mktemp ./secrets.env.XXXXXX)
   trap 'rm -f "$secrets_partial"' EXIT
   cat > "$secrets_partial" <<ENV
 DB_PASSWORD=$(rnd 16)

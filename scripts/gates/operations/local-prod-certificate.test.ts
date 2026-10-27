@@ -71,6 +71,8 @@ interface SetupRunOptions {
   readonly interruptSecretsWrite?: boolean;
   // Runs setup again after the first run finishes.
   readonly rerun?: boolean;
+  // Invokes setup from the fixture root with a relative STATE_DIR.
+  readonly relativeStateDir?: boolean;
 }
 type PairState =
   | "valid"
@@ -180,14 +182,18 @@ case "$*" in *'apply -f -'*) cat >/dev/null ;; esac`,
 fi
 exec "$TEST_OPENSSL" "$@"`,
     );
+    const runDirectory =
+      options.relativeStateDir === true ? root : process.cwd();
+    const runStateDir = options.relativeStateDir === true ? "state" : state;
     const runOnce = (interruptSecretsWrite: boolean) =>
       spawnSync("/bin/bash", [resolve("deploy/local-prod/setup.sh")], {
+        cwd: runDirectory,
         encoding: "utf8",
         timeout: 15_000,
         env: {
           ...process.env,
           PATH: `${bin}:${process.env.PATH ?? ""}`,
-          STATE_DIR: state,
+          STATE_DIR: runStateDir,
           NS: "synthetic-local-prod",
           KUBECONFIG: "/dev/null",
           TEST_EVENTS: events,
@@ -271,6 +277,21 @@ test.each(["valid", "fresh"] as const)(
     if (pairState === "valid") assert.equal(unchanged, true);
   },
 );
+
+test("local-prod publishes fresh secrets under a relative STATE_DIR", () => {
+  const { result, mutated, publishedSecrets, publishedSecretsMode } = runSetup(
+    "fresh",
+    "",
+    null,
+    { relativeStateDir: true },
+  );
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(mutated, true);
+  assert.equal(publishedSecretsMode, 0o600);
+  const published = parseSecrets(publishedSecrets ?? "");
+  for (const name of requiredSecretNames)
+    assert.match(published[name] ?? "", secretShapes[name], name);
+});
 
 test.each(["req", "x509", "pkcs8"])(
   "local-prod propagates %s errors and stderr before Kubernetes",
