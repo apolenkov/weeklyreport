@@ -23,6 +23,7 @@ import {
 } from "../chrome/lead-form-item-sections";
 import {
   LeadFormSyncBridge,
+  type RiskPrefillRequest,
   type StagesForProduct,
 } from "./lead-form-sync-bridge";
 
@@ -45,6 +46,16 @@ export interface LeadFormBridgeAccordionsActions extends LeadFormItemSectionsAct
   ) => void;
   readonly addRisk: () => void;
 }
+
+interface RisksOpenSignalActions {
+  readonly risksAddSignal: number;
+  readonly riskPrefill: RiskPrefillRequest | null;
+}
+
+// A new add or prefill counter reveals the collapsed Risks section: both
+// channels open the same record dialog, so one signal covers them.
+export const risksOpenSignal = (actions: RisksOpenSignalActions): string =>
+  `${actions.risksAddSignal}:${actions.riskPrefill?.signal ?? 0}`;
 
 function ProductStatusAccordion({
   groupExpanded,
