@@ -225,6 +225,33 @@ describe("draft stage memory — only a server-confirmed singleton is the defaul
     expect(memory.recall(PRODUCT)).toBe("Development");
   });
 
+  it("keeps the server row's newer choice over its stale draft id", () => {
+    const memory = createDraftStageMemory();
+    const draftRowId = "draft-row-11";
+    // The row's in-flight choice stays under the draft id it was made on.
+    memory.stageChangedSelections([
+      { recordId: draftRowId, productId: PRODUCT, stageNames: ["Testing"] },
+    ]);
+    // A newer choice already lives under the row's server identity.
+    memory.stageChangedSelections([
+      { recordId: ITEM, productId: PRODUCT, stageNames: ["Development"] },
+    ]);
+
+    // The echo names the server id and confirms the newer Development; the
+    // stale draft-id entry is dropped, not carried over.
+    memory.confirmPersisted(makeSectionWithItem(["Development"]), [
+      { clientId: draftRowId, serverId: ITEM },
+    ]);
+    expect(memory.recall(PRODUCT)).toBe("Development");
+
+    // Had the stale Testing been re-keyed under the server row, this accepted
+    // echo for that row would confirm it; it must not.
+    memory.confirmPersisted(makeSectionWithItem(["Testing"]), [
+      { clientId: ITEM, serverId: ITEM },
+    ]);
+    expect(memory.recall(PRODUCT)).toBe("Development");
+  });
+
   it("does not confirm an abandoned choice through another record's save", () => {
     const memory = createDraftStageMemory();
     remember(memory, ITEM, "Development");
