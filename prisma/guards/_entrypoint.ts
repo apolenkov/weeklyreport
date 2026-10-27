@@ -6,17 +6,26 @@ import { fileURLToPath } from "node:url";
 // guard evaluates to false under it — silently turning a script into a no-op.
 // Node resolves the loaded module to its canonical path, while `process.argv[1]`
 // keeps the path as invoked: a symlink alias would compare unequal and skip the
-// script. Both sides are canonicalized, falling back to the absolute path when
-// the filesystem cannot resolve it, so the predicate stays total.
-const canonicalPath = (path: string): string => {
-  const absolute = resolve(path);
+// script. The loaded module always exists, so its canonical path is read
+// directly. An argv path that names nothing on disk cannot be the loaded
+// module, while another filesystem failure is a real error to surface.
+const canonicalModulePath = (moduleUrl: string): string =>
+  realpathSync(resolve(fileURLToPath(moduleUrl)));
+
+const canonicalArgvPath = (path: string): string | null => {
   try {
-    return realpathSync(absolute);
-  } catch {
-    return absolute;
+    return realpathSync(resolve(path));
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw error;
   }
 };
 
-export const isEntrypoint = (moduleUrl: string): boolean =>
-  process.argv[1] !== undefined &&
-  canonicalPath(process.argv[1]) === canonicalPath(fileURLToPath(moduleUrl));
+export const isEntrypoint = (moduleUrl: string): boolean => {
+  const argvPath = process.argv[1];
+  if (argvPath === undefined) return false;
+  const canonicalArgv = canonicalArgvPath(argvPath);
+  return (
+    canonicalArgv !== null && canonicalArgv === canonicalModulePath(moduleUrl)
+  );
+};

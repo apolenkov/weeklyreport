@@ -65,9 +65,18 @@ describe("isEntrypoint", () => {
     ).toBe(false);
   });
 
-  it("recognizes a missing script path named identically on both sides", () => {
-    const absentPath = join(fixtureDirectory, "absent.ts");
-    expect(isEntrypointFor(absentPath, absentPath)).toBe(true);
+  it("propagates a filesystem error other than ENOENT for the argv path", () => {
+    // A self-referential symlink makes realpath fail with ELOOP; only a
+    // missing file may be read as "not the entrypoint".
+    const loopPath = join(fixtureDirectory, "loop.ts");
+    symlinkSync("loop.ts", loopPath);
+    let thrown: unknown = null;
+    try {
+      isEntrypointFor(loopPath, scriptPath);
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toMatchObject({ code: "ELOOP" });
   });
 
   it("rejects an invocation without process.argv[1]", () => {
