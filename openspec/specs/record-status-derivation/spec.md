@@ -8,24 +8,7 @@ Derive item alarm state from covering risks while keeping progress status, block
 
 ### Requirement: An item's alarm status is a derived roll-up of its covering risks
 
-An item card's at-risk/blocked pill MUST be derived at render from the risk rows
-that cover the item, never set as a free workflow choice. The DISPLAYED alarm is
-the highest severity among the covering risks (precedence: blocked > at-risk).
-**Only an in-progress item is eligible for the derived alarm**, regardless of
-its Current or Next placement: a completed (`done`) item and an item whose
-progress is `planned` are NEVER floored — a covering risk
-pertains to in-flight work on the stage, not to finished or not-yet-started work,
-so a completed/planned item keeps its progress status even when a risk covers its
-product and stage. An eligible item is COVERED by a risk when both live in the
-same `ReportSection`, name the same product, and their SDLC stages overlap —
-where the risk's `stageNames` explicitly overlaps the item's stage. An empty
-`stageNames` is valid only for an activity-parented risk, which has no product
-stage to cover. Coverage is stage-grained, so one risk floors
-EVERY co-located in-progress item on that product/stage. With no covering risk
-the item shows its progress status
-(`in-progress` / `completed` / `planned`) and no alarm. The derivation reuses the
-stage-chip render-floor mechanism (`deriveEffectiveStageStatus`), applied to the
-item via a shared helper.
+An item card's at-risk/blocked pill MUST be derived at render from the risk rows that cover the item, never set as a free workflow choice; the displayed alarm is the highest covering severity (precedence: blocked > at-risk). **Only an in-progress item is eligible**, regardless of its Current or Next placement: a `done` or `planned` item is NEVER floored and keeps its progress status even when a risk covers its product and stage. An eligible item is COVERED when a risk lives in the same `ReportSection`, names the same product, and its `stageNames` explicitly overlaps the item's stage; empty `stageNames` is valid only for an activity-parented risk. Coverage is stage-grained, so one risk floors EVERY co-located in-progress item on that product/stage; with no covering risk the item shows its progress status (`in-progress` / `completed` / `planned`) and no alarm. The derivation reuses the stage-chip render-floor mechanism (`deriveEffectiveStageStatus`) via a shared helper.
 
 #### Scenario: a covering blocked risk shows a locked blocked pill
 
@@ -72,13 +55,7 @@ item via a shared helper.
 
 ### Requirement: A covered item's alarm is locked and directs the lead to the risk
 
-When a covering risk/blocker exists, the lead MUST NOT be able to clear or
-downgrade the item's alarm from the item card or the item edit dialog. The
-alarm-setting controls are removed or disabled and an inline message names the
-consequence — resolve the covering risk/blocker first. When the covering risk
-belongs to another author (a co-owned product), the alarm still renders but the
-message names the other author and the lead cannot delete foreign data, mirroring
-the stage-chip foreign handling in `status-risk-unification`.
+When a covering risk/blocker exists, the lead MUST NOT be able to clear or downgrade the item's alarm from the card or edit dialog: alarm controls are removed or disabled and an inline message says to resolve the covering risk/blocker first. When the covering risk belongs to another author (a co-owned product), the alarm still renders but the message names the other author and foreign data cannot be deleted, mirroring the stage-chip foreign handling in `status-risk-unification`.
 
 #### Scenario: the item dialog of a covered item offers no free alarm chip
 
@@ -135,14 +112,7 @@ No alarm MUST ever be stored on an item: the `ItemWorkflowStatus` enum carries p
 
 ### Requirement: The escalation roll-up does not double-count a blocked item and its blocker
 
-The escalation roll-up MUST NOT emit a blocked item and its covering blocker as
-two separate escalations for the same underlying problem. The builder is
-`buildEscalationsFromReadSections` in
-`packages/shared/src/schemas/report/report-escalations.ts`. Because a displayed
-item-blocked is now backed by a covering
-blocked-severity risk, the `blocked` and `unresolved_risk` escalations that a
-single blocker would otherwise produce MUST be reconciled to one signal per
-blocker, so the roll-up count does not inflate.
+The escalation roll-up MUST NOT emit a blocked item and its covering blocker as two separate escalations for the same underlying problem. The builder is `buildEscalationsFromReadSections` in `packages/shared/src/schemas/report/report-escalations.ts`. The `blocked` and `unresolved_risk` escalations a single blocker would otherwise produce MUST be reconciled to one signal per blocker, so the roll-up count does not inflate.
 
 #### Scenario: a blocked item and its covering blocker yield one escalation
 
@@ -159,7 +129,7 @@ blocker, so the roll-up count does not inflate.
 
 ### Requirement: The item dialog and quick-add surface the derived-alarm UX in full
 
-The item edit dialog and Overview editor MUST offer the same five progress states in Current and Next: Planned (labelled Not started in Current), In progress, Paused, Postponed, and Done. Editors and item cards MUST share one sentence-case label vocabulary (no icon prefixes, no "Completed" or "In Progress" spellings). Dismissing the dialog or the Overview inline editor (Escape, Cancel, backdrop) after changing ANY field, including status, stages or product, MUST ask "Discard changes?" first; an unchanged draft closes at once. The Overview plan-outcome composer (Plan this work / Resolve plan) follows the same rule for its text, parent and stages; choosing an outcome alone is not a change. An existing item's progress MUST remain visibly selected after changing week placement, and editing unrelated fields MUST preserve it and any required pause reason. Neither editor may offer an in-dialog "mark as blocked" affordance — the only path to a blocked item is creating a blocker in Risks & Blockers (the quick-add "Blocker" entry keeps creating a blocked-severity risk). The covered-status lock stays: when a covering risk floors the item, an inline message replaces the status chips, stating the status is set by the covering risk/blocker and to resolve it to change.
+The item edit dialog and Overview editor MUST offer the same five progress states in Current and Next: Planned (labelled Not started in Current), In progress, Paused, Postponed, and Done; the two editors and item cards MUST share one sentence-case label vocabulary (no icon prefixes, no "Completed" or "In Progress" spellings). Dismissing the dialog or the Overview inline editor (Escape, Cancel, backdrop) after changing ANY field, including status, stages or product, MUST ask "Discard changes?" first; an unchanged draft closes at once. The Overview plan-outcome composer (Plan this work / Resolve plan) follows the same rule for its text, parent and stages; choosing an outcome alone is not a change. An existing item's progress MUST remain visibly selected after changing week placement, and editing unrelated fields MUST preserve it and any required pause reason. Neither editor may offer an in-dialog "mark as blocked" affordance — the only path to a blocked item is creating a blocker in Risks & Blockers (the quick-add "Blocker" entry keeps creating a blocked-severity risk). The covered-status lock stays: when a covering risk floors the item, an inline message replaces the status chips, stating the status is set by the covering risk/blocker and to resolve it to change.
 
 #### Scenario: a covered item's dialog shows the locked message
 
@@ -189,15 +159,14 @@ The item edit dialog and Overview editor MUST offer the same five progress state
 
 ### Requirement: One stored progress vocabulary independent of week placement
 
-`ItemWorkflowStatus` MUST remain the single stored progress source: `planned | in_progress | paused | postponed | done`. Current and Next MUST accept the same vocabulary. Current `planned` means Not started. The system MUST NOT store `blocked` on an Item or persist a separate completion flag. `paused` MUST retain a nonblank `pausedReason`; every non-paused status MUST clear it. Paused and postponed work MUST NOT feed blocked or at-risk escalation. Week placement, progress, derived alarm, and carried confirmation are independent dimensions.
-
-At rollover, an explicit next-period commitment MUST become Current `planned`; a fallback continuation of Current `in_progress` MUST remain `in_progress`. Both MUST be marked carried and unconfirmed until the lead explicitly updates the target occurrence. No other progress status is automatically activated.
+Current and Next Items MUST share one stored progress vocabulary: `planned | in_progress | paused | postponed | done`, independent of placement, derived alarm, and carried confirmation. Current `planned` MUST mean Not started. Rollover MUST preserve explicit-commitment precedence and lead confirmation: an eligible commitment becomes Current `planned`; fallback Current `in_progress` stays `in_progress`; both remain carried and unconfirmed.
 
 #### Scenario: In-progress work moves to Next without changing progress
 
-- **WHEN** an authorized lead explicitly moves a Current `in_progress` item to Next
-- **THEN** validation, persistence, and projection accept Next `in_progress`
-- **AND** the move does not rewrite progress or create a duplicate
+- **WHEN** an authorized lead saves `Move to next week` for an eligible Current `in_progress` item without a separate next commitment
+- **THEN** validation, persistence, and projection accept the same occurrence as Next `in_progress`
+- **AND** it no longer occupies Current, retains its text and `stableId`, clears `carriedOver`, and creates no duplicate
+- **AND** `nextStepText` remains empty; the move does not record a Current result or choose a continuation verdict
 
 #### Scenario: next item accepts only its vocabulary
 
@@ -237,16 +206,23 @@ At rollover, an explicit next-period commitment MUST become Current `planned`; a
 - **WHEN** an item with a covering risk moves between Current and Next
 - **THEN** stored progress remains unchanged and the displayed alarm is derived again
 
+#### Scenario: an explicit Next prevents a duplicate placement
+
+- **GIVEN** a Current item and an explicit Next occurrence already share a `stableId`
+- **WHEN** a placement-only move to Next is requested
+- **THEN** the move cannot create or overwrite another Next occurrence
+- **AND** at rollover the eligible explicit commitment wins over fallback Current continuation, producing at most one target occurrence
+
+#### Scenario: stored progress cannot encode alarms or a separate completion flag
+
+- **WHEN** an Item is validated or persisted
+- **THEN** no stored `blocked` status or separate completion flag is accepted
+- **AND** paused progress requires a nonblank pause reason while every non-paused status clears it
+- **AND** no progress other than an eligible explicit commitment or fallback in-progress continuation is automatically activated at rollover
+
 ### Requirement: Pausing an item requires and records a reason
 
-When a lead pauses an item, the UI MUST require a non-blank reason before the
-pause takes effect, and the reason MUST be persisted with the item
-(`Item.pausedReason`) and surfaced on the item card. Both pause entry points —
-the quick "Pause" action on a current-week card and the "Paused" status choice
-in the item edit dialog — MUST enforce the reason. This is a hard invariant at
-every write boundary: a paused item MUST have a non-blank trimmed
-`pausedReason`, and every non-paused item MUST have `pausedReason = null` (or
-omit it before persistence). Leaving the paused status clears the reason.
+When a lead pauses an item, the UI MUST require a non-blank reason before the pause takes effect, and the reason MUST be persisted as `Item.pausedReason` and surfaced on the item card. Both pause entry points — the quick "Pause" action on a current-week card and the "Paused" status choice in the item edit dialog — MUST enforce the reason. At every write boundary a paused item MUST have a non-blank trimmed `pausedReason`, and every non-paused item MUST have `pausedReason = null` (or omit it before persistence); leaving the paused status clears the reason.
 
 #### Scenario: the quick pause action requires a reason
 
@@ -274,3 +250,57 @@ omit it before persistence). Leaving the paused status clears the reason.
 - **GIVEN** a paused item with a reason
 - **WHEN** the item moves to any non-paused status
 - **THEN** its pause reason is cleared
+
+### Requirement: Overview Paused and Clear-and-Done MUST resolve inline
+
+The editable Lead Report Overview status menu MUST resolve Paused in an inline one-line reason field with autofocus and Enter-to-save, without opening the full item editor. Done with a stored next step MUST offer inline `Clear and mark done` or Cancel, never a Plan action. Confirmation MUST clear that next step and mark the occurrence done through the canonical status-save path.
+
+#### Scenario: Paused focuses its reason and saves on Enter
+
+- **WHEN** the lead chooses Paused from an eligible item's status menu
+- **THEN** a labelled one-line reason field opens below the item and receives focus without opening the full editor
+- **AND** the status is not changed until a nonblank valid reason is submitted
+- **AND** Enter saves Paused with that reason through the canonical status-save path
+
+#### Scenario: blank or invisible pause reasons cannot write
+
+- **WHEN** the lead submits an empty, whitespace-only, or invisible pause reason
+- **THEN** validation explains the error beside the inline field and no status patch is emitted
+- **AND** the field remains available for correction under the existing `safeText` contract
+
+#### Scenario: Done clears the next step without offering Plan
+
+- **WHEN** the lead chooses Done for an eligible item with a stored next step
+- **THEN** an inline confirmation offers only `Clear and mark done` and Cancel, without opening the full editor
+- **AND** `Clear and mark done` receives focus and can be activated with Enter
+- **AND** confirming clears the next step and saves done without creating or planning a Next item
+- **AND** neither `Plan for next week` nor an instruction to cancel and reopen another editor is shown
+
+#### Scenario: cancelling inline status input leaves the item unchanged
+
+- **WHEN** the lead cancels the pause reason or Clear-and-Done confirmation, including with Escape
+- **THEN** no status change or next-step clearing is written
+- **AND** focus returns to the item's status control
+
+### Requirement: Move to next week MUST change placement without asserting continuation
+
+In Lead Report Overview, Save for Move to next week on an eligible Current item without a separate next commitment MUST move that occurrence to Next, preserving stored progress, text, and stable identity while clearing `carriedOver`. This action MUST remain distinct from Continue next week and MUST NOT create another occurrence for the same placement.
+
+#### Scenario: postponement changes placement only
+
+- **WHEN** the lead saves Move to next week for an eligible Current occurrence without a separate commitment
+- **THEN** that occurrence is Next and no longer Current
+- **AND** progress and text are preserved, `carriedOver` is cleared, and no `nextStepText` or Current result is synthesized
+- **AND** progress is not set to `postponed` merely because the action means postponement
+
+#### Scenario: cancelling a move leaves placement unchanged
+
+- **WHEN** the lead cancels the move editor under the existing discard rules
+- **THEN** no move is written and the occurrence remains Current
+- **AND** focus returns to the triggering item control
+
+#### Scenario: existing commitments keep their existing handling
+
+- **WHEN** a placement-only move would collide with an explicit Next of the same stable identity
+- **THEN** it cannot create or overwrite a second Next
+- **AND** the existing continuation/promotion branch for stored `nextStepText` and the separate Continue next week verdict remain unchanged
