@@ -5,6 +5,7 @@ import type {
 
 import {
   buildMoveItemPatch,
+  buildNextWeekPlanAcknowledgementPatch,
   markCompletePatch,
   pauseItemPatch,
 } from "../../lead-actions/lead-item-actions";
@@ -88,7 +89,11 @@ function applyItemCommand(
   command: ItemCommand,
 ): ReportSectionReadModel {
   if (command.kind === "move-item") {
-    const next = buildMoveItemPatch(section, command.itemId, command.target);
+    const next =
+      buildMoveItemPatch(section, command.itemId, command.target) ??
+      (command.target === "next"
+        ? buildNextWeekPlanAcknowledgementPatch(section, command.itemId)
+        : null);
     return next?.kind === "item-patch"
       ? patchDraftItem(section, next.itemId, next.patch)
       : section;

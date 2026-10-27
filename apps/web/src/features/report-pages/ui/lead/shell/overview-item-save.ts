@@ -272,7 +272,7 @@ export function overviewMoveEditorItem(
     readonly editTarget: NonNullable<Parameters<typeof findEditableItem>[1]>;
   },
   target: "current" | "next",
-): { readonly item?: KanbanItem; readonly promotion?: "current" | "next" } {
+): { readonly item?: KanbanItem; readonly promotion?: "current" } {
   const sourceRecord = editor.draft.section.items.find(
     (row) => row.id === item.editTarget.recordId,
   );

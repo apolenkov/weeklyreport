@@ -4,7 +4,11 @@ import { describe, expect, it } from "vitest";
 import { expectDefined } from "../../../../test-utils/expect-defined";
 import { makeReportSectionFixture } from "../../../../test-utils/report-section-fixtures";
 import { applyDraftPatch } from "../lead-form/draft/lead-form-draft-patch";
-import { buildMoveItemPatch, isSavedNextWeekPlan } from "./lead-item-actions";
+import {
+  buildMoveItemPatch,
+  buildNextWeekPlanAcknowledgementPatch,
+  isSavedNextWeekPlan,
+} from "./lead-item-actions";
 
 type LeadItem = ReportSectionReadModel["items"][number];
 
@@ -49,16 +53,20 @@ describe("buildMoveItemPatch with a saved next step", () => {
       nextStepText: "Preserve this commitment",
     };
     const original = section(source);
-    const patch = buildMoveItemPatch(original, source.id ?? "", "next");
 
-    // A saved next step already plans this occurrence for the next week, so
-    // Move acknowledges that plan instead of relocating the record.
-    expect(patch).toEqual({
+    // A placement move cannot keep the saved commitment, so it stays refused;
+    // the acknowledgement is the only action for this occurrence.
+    expect(buildMoveItemPatch(original, source.id ?? "", "next")).toBeNull();
+
+    const acknowledgment = expectDefined(
+      buildNextWeekPlanAcknowledgementPatch(original, source.id ?? ""),
+    );
+    expect(acknowledgment).toEqual({
       kind: "item-patch",
       itemId: source.id,
       patch: { carriedOver: false },
     });
-    const confirmed = applyDraftPatch(original, expectDefined(patch));
+    const confirmed = applyDraftPatch(original, acknowledgment);
     expect(confirmed.items).toHaveLength(1);
     expect(confirmed.items[0]).toMatchObject({
       id: source.id,
@@ -91,6 +99,31 @@ describe("buildMoveItemPatch with a saved next step", () => {
       nextStepText: "Carry this forward",
       carriedOver: false,
     });
+  });
+});
+
+describe("buildNextWeekPlanAcknowledgementPatch", () => {
+  it("returns no patch outside unfinished Current draft work", () => {
+    const committed = { ...currentItem(), nextStepText: "Follow up" };
+
+    expect(
+      buildNextWeekPlanAcknowledgementPatch(
+        section({ ...committed, type: "next" as const }),
+        committed.id ?? "",
+      ),
+    ).toBeNull();
+    expect(
+      buildNextWeekPlanAcknowledgementPatch(
+        section({ ...committed, nextStepText: null }),
+        committed.id ?? "",
+      ),
+    ).toBeNull();
+    expect(
+      buildNextWeekPlanAcknowledgementPatch(
+        section(committed, "submitted"),
+        committed.id ?? "",
+      ),
+    ).toBeNull();
   });
 });
 

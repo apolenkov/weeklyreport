@@ -7,6 +7,12 @@ type LeadItem = ReportSectionReadModel["items"][number];
 // Pure patches for lead form item actions — applied to the existing draft row
 // so stableId lineage (comment anchors, published-lock) survives.
 
+const itemPatch = (itemId: string, patch: Partial<LeadItem>): DraftPatch => ({
+  kind: "item-patch",
+  itemId,
+  patch,
+});
+
 export function markCompletePatch(): Partial<LeadItem> {
   // A completed item can no longer carry a next-period commitment, so clear it;
   // otherwise the whole draft save is rejected by the write schema.
@@ -41,9 +47,9 @@ const cannotMove = (item: LeadItem): boolean =>
   item.workflowStatus === "done" || item.resolution != null;
 
 // A saved next step already plans a Current occurrence for the next week. Move
-// then acknowledges that plan in place: the record keeps its placement and its
-// commitment, and the Next column keeps projecting both. Only unfinished,
-// unsaved-cancelled draft work may be acknowledged this way.
+// acknowledges that plan in place: the record keeps its placement and its
+// commitment, and the Next column keeps projecting both. Only unfinished
+// Current draft work that is not cancelled may be acknowledged this way.
 export function isSavedNextWeekPlan(
   section: ReportSectionReadModel,
   itemId: string,
@@ -85,16 +91,25 @@ export function buildMoveItemPatch(
   const item = section.items.find((candidate) => candidate.id === itemId);
   if (!item || item.type === target || cannotMove(item)) return null;
   if (hasOtherPlacement(section.items, item, target)) return null;
-  // Next is already planned by the stored commitment itself: acknowledging keeps
-  // the result and the next step on their Current occurrence instead of
-  // replacing the result with its continuation.
-  const patch =
-    target === "next" && hasSavedNextStep(item)
-      ? { carriedOver: false }
-      : target === "next"
-        ? moveToNextWeekPatch()
-        : moveToCurrentWeekPatch();
-  return { kind: "item-patch", itemId, patch };
+  // A saved next step plans the next week already: a placement move would have
+  // to drop that commitment, so only the acknowledgement below may act on it.
+  if (target === "next" && hasSavedNextStep(item)) return null;
+  return itemPatch(
+    itemId,
+    target === "next" ? moveToNextWeekPatch() : moveToCurrentWeekPatch(),
+  );
+}
+
+// A saved next step already plans this occurrence for the next week, so Move
+// acknowledges that plan instead of relocating the record: the result and the
+// commitment stay on the Current occurrence and only the carry marker clears.
+export function buildNextWeekPlanAcknowledgementPatch(
+  section: ReportSectionReadModel,
+  itemId: string,
+): DraftPatch | null {
+  return isSavedNextWeekPlan(section, itemId)
+    ? itemPatch(itemId, { carriedOver: false })
+    : null;
 }
 
 // The submit blocker (UNCONFIRMED_CARRIED_ITEM) and the review counter share
@@ -113,7 +128,7 @@ export function buildConfirmCarriedItemPatch(
   if (section.status !== "draft") return null;
   const item = section.items.find((candidate) => candidate.id === itemId);
   return item?.type === "current" && item.carriedOver
-    ? { kind: "item-patch", itemId, patch: { carriedOver: false } }
+    ? itemPatch(itemId, { carriedOver: false })
     : null;
 }
 
