@@ -80,6 +80,25 @@ describe("SearchInput", () => {
     expect(screen.getByRole("combobox")).toHaveAttribute("name", "search");
   });
 
+  it("names the all scope for reports and products", () => {
+    render(<SearchInput scope="all" placeholder="Any product or report…" />);
+
+    const input = screen.getByRole("combobox");
+    expect(input).toHaveAccessibleName("Search reports and products");
+    expect(input).toHaveAttribute("placeholder", "Any product or report…");
+  });
+
+  it.each(["mine", "published"] as const)(
+    "names the %s scope for reports",
+    (scope) => {
+      render(<SearchInput scope={scope} />);
+
+      expect(screen.getByRole("combobox")).toHaveAccessibleName(
+        "Search reports",
+      );
+    },
+  );
+
   it("references only a mounted popup across collapsed, expanded, and escaped states", () => {
     render(<SearchInput scope="all" />);
     const input = screen.getByRole("combobox");

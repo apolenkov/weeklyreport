@@ -6,7 +6,7 @@ import {
   type SearchController,
   useSearchController,
 } from "./search-input-controller";
-import type { SearchScope } from "./search-input-utils";
+import { type SearchScope, searchScopeLabel } from "./search-input-utils";
 import { SearchResultsDropdown } from "./search-results-dropdown";
 
 interface SearchInputProps {
@@ -82,6 +82,7 @@ interface SearchFieldProps {
   readonly resultsId: string;
   readonly expanded: boolean;
   readonly placeholder: string;
+  readonly label: string;
   readonly search: SearchViewState;
 }
 
@@ -90,6 +91,7 @@ function SearchField({
   resultsId,
   expanded,
   placeholder,
+  label,
   search,
 }: SearchFieldProps) {
   const { q, setQ, setOpen, hits, activeIndex, handleKeyDown, handleBlur } =
@@ -98,7 +100,7 @@ function SearchField({
   return (
     <>
       <label className="sr-only" htmlFor={inputId}>
-        Search Reports
+        {label}
       </label>
       <SearchCombobox
         inputId={inputId}
@@ -169,6 +171,7 @@ export function SearchInput({
         resultsId={resultsId}
         expanded={showResults}
         placeholder={placeholder ?? "Search…"}
+        label={searchScopeLabel(scope)}
         search={search}
       />
       {showResults && <SearchResults resultsId={resultsId} search={search} />}

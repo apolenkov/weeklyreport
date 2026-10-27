@@ -50,7 +50,7 @@ vi.mock("../../../shared/ui/search/search-input", () => ({
     readonly scope?: string;
   }) => (
     <input
-      aria-label="Search Reports"
+      aria-label="Search reports"
       placeholder={placeholder}
       data-scope={scope}
     />
@@ -392,7 +392,7 @@ describe("ReportsPage history archive toggle", () => {
     setRole("viewer");
     render(<ReportsPage />);
 
-    const search = screen.getByLabelText("Search Reports");
+    const search = screen.getByLabelText("Search reports");
     expect(search).toHaveAttribute("data-scope", "published");
     expect(search).toHaveAttribute("placeholder", "Search published reports…");
   });
