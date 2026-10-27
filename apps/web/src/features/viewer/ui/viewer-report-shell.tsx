@@ -52,7 +52,10 @@ interface ViewerChrome {
   readonly headerContextLabel: ReactNode;
   readonly exportPdf: ReactNode;
   readonly contextControls: ReactNode;
+  // Report display data only; the authority row is resolved from it.
   readonly isLoading: boolean;
+  // The export action additionally waits for the session role.
+  readonly documentActionsLoading: boolean;
 }
 
 function ViewerAuthoritySkeleton() {
@@ -95,7 +98,7 @@ function ViewerSlidesView({
           )}
         </div>
         <DocumentActionGroup>
-          {chrome.isLoading ? (
+          {chrome.documentActionsLoading ? (
             <Skeleton
               data-testid="viewer-document-action-skeleton"
               className="h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] rounded-[var(--radius-pill)]"
@@ -189,13 +192,32 @@ function deriveViewerDisplay(
   };
 }
 
+// The export control is gated by the session role, so the slides action slot
+// stays pending after the report data resolves until the session does. A
+// no-period response and a terminal display failure never carry that action, so
+// they leave the slot empty instead of reserving it.
+function isDocumentActionsPending(
+  displayed: WeeklyReportGetResponse | undefined,
+  reportIsLoading: boolean,
+  sessionIsLoading: boolean,
+): boolean {
+  if (reportIsLoading) {
+    return true;
+  }
+  return (
+    sessionIsLoading &&
+    displayed !== undefined &&
+    displayed.status !== "no-period"
+  );
+}
+
 export function ViewerReportShell({
   reportId,
   mode,
   authorId,
 }: ViewerReportShellProps) {
   const trpc = useTRPC();
-  const { user } = useSession();
+  const session = useSession();
 
   // Status recovery markers belong only to the entry URL. Strip them from every
   // in-shell navigation so a later failure cannot be mistaken for that race.
@@ -242,10 +264,15 @@ export function ViewerReportShell({
   const chrome: ViewerChrome = {
     ...deriveViewerDisplay(
       displayedQ.data,
-      user !== null && !isLead(user.role),
+      session.user !== null && !isLead(session.user.role),
       mode,
     ),
     isLoading: displayedQ.isLoading,
+    documentActionsLoading: isDocumentActionsPending(
+      displayedQ.data,
+      displayedQ.isLoading,
+      session.isLoading,
+    ),
     contextControls: (
       <ViewerShellControls
         reportId={reportId}

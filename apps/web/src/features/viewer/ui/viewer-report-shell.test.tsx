@@ -10,16 +10,20 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { makeQueryState } from "../../../test-utils/query-state";
 
-const { mockCurrentRole } = vi.hoisted(() => ({
+const { mockCurrentRole, mockSessionLoading } = vi.hoisted(() => ({
   mockCurrentRole: vi.fn<() => "admin" | "head" | "lead" | "viewer" | null>(
     () => "viewer",
   ),
+  mockSessionLoading: vi.fn<() => boolean>(() => false),
 }));
 
 vi.mock("../../../shared/lib/auth/session-provider", () => ({
   useSession: () => {
     const role = mockCurrentRole();
-    return { user: role === null ? null : { role } };
+    return {
+      user: role === null ? null : { role },
+      isLoading: mockSessionLoading(),
+    };
   },
 }));
 
@@ -151,6 +155,8 @@ const REPORT_ID = "test-report-001";
 afterEach(() => {
   mockCurrentRole.mockReset();
   mockCurrentRole.mockReturnValue("viewer");
+  mockSessionLoading.mockReset();
+  mockSessionLoading.mockReturnValue(false);
   mockPathname.mockReturnValue("/reports/test-report-001");
   mockSearchParams.mockReturnValue(new URLSearchParams());
   mockReplace.mockReset();
@@ -445,6 +451,77 @@ describe("ViewerReportShell — read-only toolbar parity", () => {
     expect(
       screen.getByTestId("viewer-period-navigation-skeleton"),
     ).toBeInTheDocument();
+  });
+
+  // The export control is gated by the session role, so the action slot is
+  // still unknown after the report data resolves until auth.me does.
+  it("reserves the document action while the session is pending after the report resolves", () => {
+    mockCurrentRole.mockReturnValue(null);
+    mockSessionLoading.mockReturnValue(true);
+
+    render(<ViewerReportShell reportId={REPORT_ID} mode="slides" />);
+
+    // Authority is derived from the report and must render without the session.
+    expect(screen.getByText("Published")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("viewer-authority-skeleton"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByTestId("viewer-document-action-skeleton"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Export PDF" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("swaps the session-pending document action for the resolved export control", () => {
+    mockCurrentRole.mockReturnValue(null);
+    mockSessionLoading.mockReturnValue(true);
+    const { rerender } = render(
+      <ViewerReportShell reportId={REPORT_ID} mode="slides" />,
+    );
+    expect(
+      screen.getByTestId("viewer-document-action-skeleton"),
+    ).toBeInTheDocument();
+
+    mockCurrentRole.mockReturnValue("viewer");
+    mockSessionLoading.mockReturnValue(false);
+    rerender(<ViewerReportShell reportId={REPORT_ID} mode="slides" />);
+
+    expect(screen.getByRole("button", { name: "Export PDF" })).toBeEnabled();
+    expect(
+      screen.queryByTestId("viewer-document-action-skeleton"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not reserve a document action for a resolved unauthenticated session", () => {
+    mockCurrentRole.mockReturnValue(null);
+    mockSessionLoading.mockReturnValue(false);
+
+    render(<ViewerReportShell reportId={REPORT_ID} mode="slides" />);
+
+    expect(
+      screen.queryByTestId("viewer-document-action-skeleton"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Export PDF" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not reserve a document action for a no-period response with a pending session", () => {
+    mockCurrentRole.mockReturnValue(null);
+    mockSessionLoading.mockReturnValue(true);
+    vi.mocked(useQuery).mockImplementation((options) =>
+      options.queryKey[0] === "weeklyReport.get"
+        ? makeQueryState({ data: { status: "no-period", report: null } })
+        : makeQueryState({ data: { entries: [] } }),
+    );
+
+    render(<ViewerReportShell reportId={REPORT_ID} mode="slides" />);
+
+    expect(
+      screen.queryByTestId("viewer-document-action-skeleton"),
+    ).not.toBeInTheDocument();
   });
 
   it("keeps loaded authority and document actions while history loads", () => {
