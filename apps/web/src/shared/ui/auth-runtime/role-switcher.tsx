@@ -173,10 +173,16 @@ function useDevRoleSwitcher() {
     return started;
   };
 
+  // The confirmation stays mounted and locked until the wipe settles, so the
+  // destructive in-flight state is visible instead of only the disabled trigger.
   const wipeAndReseedMut = useMutation(
     trpc.dev.wipeAndReseed.mutationOptions({
-      onSuccess: () => logoutThen("/"),
+      onSuccess: () => {
+        setResetVariant(null);
+        logoutThen("/");
+      },
       onError: (error) => {
+        setResetVariant(null);
         recoverFromFailure();
         toast.error(`Reseed failed: ${error.message}`);
       },
@@ -204,7 +210,6 @@ function useDevRoleSwitcher() {
     confirmReseed: () => {
       if (resetVariant === null) return;
       setPending(true);
-      setResetVariant(null);
       wipeAndReseedMut.mutate({ variant: resetVariant });
     },
     resetVariant,

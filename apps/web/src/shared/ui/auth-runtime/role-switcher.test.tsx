@@ -1,7 +1,14 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -329,6 +336,87 @@ describe("DevRoleSwitcher — logout honesty", () => {
     await waitFor(() => {
       expect(trigger).not.toBeDisabled();
       expect(trigger).toHaveFocus();
+    });
+  });
+
+  it("keeps the reset confirmation open and locked while the wipe is pending", async () => {
+    const reseed = {
+      onError: undefined as ((error: Error) => void) | undefined,
+      mutate: vi.fn(),
+    };
+    primeHooks("admin");
+    useMutationMock.mockImplementation(
+      (options: { readonly onError?: (error: Error) => void }) => {
+        reseed.onError = options.onError;
+        return { mutate: reseed.mutate };
+      },
+    );
+    const user = userEvent.setup();
+
+    render(<DevRoleSwitcher />);
+    const trigger = screen.getByTestId("dev-role-switcher-trigger");
+    await user.click(trigger);
+    await user.click(screen.getByTestId("dev-role-switcher-reseed-demo"));
+    await user.click(screen.getByRole("button", { name: /wipe \+ reseed/i }));
+
+    expect(reseed.mutate).toHaveBeenCalledExactlyOnceWith({ variant: "demo" });
+    const dialog = screen.getByRole("alertdialog");
+    expect(dialog).toHaveTextContent("Wipe and reseed the demo dataset");
+    const confirm = within(dialog).getByRole("button", {
+      name: /wipe \+ reseed/i,
+    });
+    const cancel = within(dialog).getByRole("button", { name: /^cancel$/i });
+    await waitFor(() => {
+      expect(confirm).toBeDisabled();
+      expect(confirm).toHaveAttribute("aria-busy", "true");
+    });
+    expect(cancel).toBeDisabled();
+    expect(trigger).toBeDisabled();
+    expect(dialog.contains(document.activeElement)).toBe(true);
+
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+    await user.click(cancel);
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+    await user.click(confirm);
+    expect(reseed.mutate).toHaveBeenCalledOnce();
+
+    act(() => expectDefined(reseed.onError)(new Error("reseed failed")));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("closes the reset confirmation and leaves through logout when the wipe succeeds", async () => {
+    const reseed = {
+      onSuccess: undefined as (() => void) | undefined,
+    };
+    primeHooks("admin");
+    useMutationMock.mockImplementation(
+      (options: { readonly onSuccess?: () => void }) => {
+        reseed.onSuccess = options.onSuccess;
+        return { mutate: vi.fn() };
+      },
+    );
+    fetchMock.mockResolvedValue({ ok: true });
+    const user = userEvent.setup();
+
+    render(<DevRoleSwitcher />);
+    await user.click(screen.getByTestId("dev-role-switcher-trigger"));
+    await user.click(screen.getByTestId("dev-role-switcher-reseed-demo"));
+    await user.click(screen.getByRole("button", { name: /wipe \+ reseed/i }));
+    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+
+    act(() => expectDefined(reseed.onSuccess)());
+
+    await waitFor(() =>
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+    );
+    await waitFor(() => expect(hrefAssign).toHaveBeenCalledWith("/"));
+    expect(fetchMock).toHaveBeenCalledWith("/auth/logout", {
+      method: "POST",
+      credentials: "include",
     });
   });
 
