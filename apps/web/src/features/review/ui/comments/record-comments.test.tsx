@@ -291,7 +291,7 @@ describe("RecordComments — mutation success", () => {
     expect(mutationCalls.comment).toHaveLength(0);
   });
 
-  // TASK-503.38 / C5107: the composer must validate and count the text it
+  // The composer must validate and count the text it
   // actually submits; surrounding whitespace is not part of the comment.
   it("validates and submits the trimmed draft value", async () => {
     renderComments();

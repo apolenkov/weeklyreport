@@ -26,7 +26,7 @@ Both Request changes entry points (review panel and dashboard queue) MUST open a
 
 ### Requirement: The reason dialog owns the section's next verdict write
 
-While the Request changes reason dialog is open for a section, that section's Approve and Request changes controls MUST be inactive: they MUST NOT arm or send a verdict, MUST expose the inactive state through `aria-disabled`, and MUST leave the section's verdict write to the dialog. The dialog's submit MUST be the only armed verdict write until it closes, after which the controls MUST return to their normal pending gating.
+While the Request changes reason dialog is open for a section, the review panel's section verdict control (`SectionVerdictControl`) MUST keep that section's Approve and Request changes buttons inactive: they MUST NOT arm or send a verdict, MUST expose the inactive state through `aria-disabled`, and MUST leave the section's verdict write to the dialog. The dialog's submit MUST be the only armed verdict write until it closes, after which the controls MUST return to their normal pending gating.
 
 #### Scenario: The reason dialog owns the verdict write
 

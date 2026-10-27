@@ -86,7 +86,7 @@ function VerdictActions({
   onRequestChanges,
 }: {
   readonly subjectName: string | undefined;
-  // Pending drives the "Saving…" copy; blocked also covers an open reason
+  // Pending drives the "Saving…" copy; disabled also covers an open reason
   // dialog, which owns the next verdict write even before it is pending.
   readonly pending: boolean;
   readonly disabled: boolean;
