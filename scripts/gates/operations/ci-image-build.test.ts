@@ -10,7 +10,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 
 import { afterEach, test } from "vitest";
 import { parse } from "yaml";
@@ -24,8 +24,13 @@ interface Rule {
 interface Job {
   readonly script: readonly string[];
   readonly rules: readonly Rule[];
+  readonly image?:
+    | string
+    | { readonly name?: string; readonly entrypoint?: readonly string[] };
   readonly variables?: Readonly<Record<string, string>>;
   readonly needs?: readonly (string | { readonly job: string })[];
+  readonly interruptible?: boolean;
+  readonly resource_group?: string;
 }
 
 const jobs = parse(readFileSync(resolve(".gitlab-ci.yml"), "utf8"), {
@@ -62,6 +67,11 @@ test("every CI script entry is a string GitLab can parse", () => {
   }
 });
 
+// The internal Docker Hub mirror every external base image is rewritten to.
+const BASE_REGISTRY = "mirror.example.org/all-pub-docker";
+// buildah 1.43.5: the version the new runner was probed with.
+const BUILDAH_IMAGE = `${BASE_REGISTRY}/buildah/stable:v1.43.5@sha256:87f219f5a7bf5d7bee870253c14a57751e85833cb2cc645216a20bbb66c68724`;
+
 const workspaces = new Set<string>();
 afterEach(() => {
   for (const root of workspaces) {
@@ -72,53 +82,209 @@ afterEach(() => {
 
 const fixtureToken = "job-token-fixture";
 const robotToken = "robot-fixture";
+const commitSha = "0123456789abcdef";
 
 const BUILD_ENV = {
-  CI_COMMIT_SHA: "0123456789abcdef",
+  CI_COMMIT_SHA: commitSha,
   CI_REGISTRY_IMAGE: "registry.example.com/group/project",
   CI_REGISTRY_USER: "gitlab-ci-token",
   CI_REGISTRY_PASSWORD: fixtureToken,
+  BASE_REGISTRY,
   WR_NEXT_PUBLIC_CLIENT_LOG_FORWARDING: "false",
   WR_NEXT_PUBLIC_WEB_VITALS: "false",
   WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED: "false",
   WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES: "admin",
-};
+} as const;
 
-const BUILDCTL_STUB = String.raw`#!/bin/sh
+// Stands in for the buildah CLI: records the invocation, captures the mirrored
+// Dockerfile passed to `bud`, drains the password from `login`, and answers
+// `push --digestfile` with a deterministic digest.
+const BUILDAH_STUB = String.raw`#!/bin/sh
 printf '%s\n' "$*" >> "$STUB_CALLS"
-while [ "$#" -gt 0 ]; do
-  [ "$1" = --metadata-file ] && meta="$2"
-  shift
-done
-printf '{"containerimage.digest": "sha256:%064d"}' 1 > "$meta"
+command="$1"
+shift
+case "$command" in
+  login)
+    while IFS= read -r ignore; do :; done
+    ;;
+  bud)
+    previous=""
+    for argument in "$@"; do
+      [ "$previous" = "-f" ] && cp "$argument" "$STUB_FILES/$(basename "$argument")"
+      previous="$argument"
+    done
+    ;;
+  push)
+    previous=""
+    for argument in "$@"; do
+      [ "$previous" = "--digestfile" ] && printf 'sha256:%064d\n' 1 > "$argument"
+      previous="$argument"
+    done
+    ;;
+esac
+exit 0
 `;
 
-function runBuildScript(env: Readonly<Record<string, string | undefined>>) {
-  const directory = mkdtempSync(join(tmpdir(), "ci-image-build-"));
-  workspaces.add(directory);
-  const bin = join(directory, "bin");
+// Repository Dockerfiles the job builds, relative to the project root.
+const DOCKERFILES = [
+  "Dockerfile.api",
+  "Dockerfile.web",
+  "deploy/postgres/Dockerfile.backup",
+] as const;
+
+const fileName = (path: string): string =>
+  path.slice(path.lastIndexOf("/") + 1);
+
+interface ScriptRun {
+  readonly status: number | null;
+  readonly stdout: string;
+  readonly stderr: string;
+}
+
+interface BuildRun {
+  readonly result: ScriptRun;
+  readonly calls: readonly string[];
+  readonly project: string;
+  readonly mirrored: string;
+  readonly digests: string;
+}
+
+function writeProjectDockerfiles(project: string): void {
+  for (const path of DOCKERFILES) {
+    const target = join(project, path);
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, readFileSync(resolve(path), "utf8"));
+  }
+}
+
+function runBuildScript(
+  env: Readonly<Record<string, string | undefined>>,
+  dockerfileOverrides: Readonly<Record<string, string>> = {},
+): BuildRun {
+  const workspace = mkdtempSync(join(tmpdir(), "ci-image-build-"));
+  workspaces.add(workspace);
+  const project = join(workspace, "project");
+  mkdirSync(project);
+  writeProjectDockerfiles(project);
+  for (const [path, content] of Object.entries(dockerfileOverrides)) {
+    const target = join(project, path);
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, content);
+  }
+  const bin = join(workspace, "bin");
   mkdirSync(bin);
-  const stub = join(bin, "buildctl-daemonless.sh");
-  writeFileSync(stub, BUILDCTL_STUB);
+  const stub = join(bin, "buildah");
+  writeFileSync(stub, BUILDAH_STUB);
   chmodSync(stub, 0o755);
-  const calls = join(directory, "calls.log");
+  const mirrored = join(workspace, "mirrored");
+  mkdirSync(mirrored);
+  const calls = join(workspace, "calls.log");
   writeFileSync(calls, "");
   const result = spawnSync("/bin/sh", ["-c", buildJob.script[0] ?? ""], {
-    cwd: directory,
+    cwd: project,
     env: {
       PATH: `${bin}:${process.env.PATH ?? ""}`,
-      CI_PROJECT_DIR: directory,
+      CI_PROJECT_DIR: project,
       STUB_CALLS: calls,
+      STUB_FILES: mirrored,
       ...env,
     },
     encoding: "utf8",
   });
   return {
-    result,
+    result: {
+      status: result.status,
+      stdout: result.stdout,
+      stderr: result.stderr,
+    },
     calls: readFileSync(calls, "utf8").split("\n").filter(Boolean),
-    digests: join(directory, "image-digests.txt"),
+    project,
+    mirrored,
+    digests: join(project, "image-digests.txt"),
   };
 }
+
+const argumentsOf = (call: string): readonly string[] => call.split(" ");
+
+const argumentAfter = (call: string, flag: string): string | undefined => {
+  const values = argumentsOf(call);
+  const index = values.indexOf(flag);
+  return index === -1 ? undefined : values[index + 1];
+};
+
+const callsFor = (
+  calls: readonly string[],
+  command: string,
+): readonly string[] => calls.filter((call) => call.startsWith(`${command} `));
+
+const isOutsideProject = (project: string, path: string): boolean =>
+  resolve(path) !== resolve(project) &&
+  !resolve(path).startsWith(`${resolve(project)}${sep}`);
+
+// Every external base image in a repository Dockerfile is a pinned
+// `tag@sha256` reference; the job must swap its registry for the mirror and
+// leave stage references alone.
+function assertMirroredDockerfile(
+  source: string,
+  mirrored: string,
+  path: string,
+): void {
+  const sourceRows = source.split("\n");
+  const mirroredRows = mirrored.split("\n");
+  assert.equal(mirroredRows.length, sourceRows.length, `${path}: line count`);
+  const externalImages: string[] = [];
+  for (const [index, line] of sourceRows.entries()) {
+    if (!line.startsWith("FROM ")) {
+      assert.equal(mirroredRows[index], line, `${path}: non-FROM line changed`);
+      continue;
+    }
+    const image = (/^FROM (\S+)/u.exec(line)?.[1] ?? "").trim();
+    assert.ok(image.length > 0, `${path}: unreadable FROM`);
+    if (!image.includes(":")) {
+      // A stage reference such as `FROM base AS installer`.
+      assert.equal(
+        mirroredRows[index],
+        line,
+        `${path}: stage reference changed`,
+      );
+      continue;
+    }
+    externalImages.push(image);
+    const expected = image.includes("/")
+      ? `${BASE_REGISTRY}/${image}`
+      : `${BASE_REGISTRY}/library/${image}`;
+    assert.ok(
+      mirroredRows[index]?.startsWith(`FROM ${expected}`),
+      `${path}: ${image} was not rewritten through the mirror`,
+    );
+  }
+  assert.ok(
+    externalImages.length > 0,
+    `${path} must pin an external base image`,
+  );
+}
+
+test("the build job runs on the pinned buildah image with an unprivileged store", () => {
+  const image = buildJob.image;
+  assert.equal(typeof image, "object");
+  assert.equal(
+    typeof image === "object" ? image.name : undefined,
+    BUILDAH_IMAGE,
+  );
+  assert.equal(buildJob.variables?.BUILDKITD_FLAGS, undefined);
+  assert.deepEqual(buildJob.variables, {
+    STORAGE_DRIVER: "vfs",
+    BUILDAH_ISOLATION: "chroot",
+    BASE_REGISTRY,
+  });
+  const script = buildJob.script.join("\n");
+  assert.match(script, /buildah bud /u);
+  assert.doesNotMatch(script, /buildctl|rootless/iu);
+  assert.doesNotMatch(
+    readFileSync(resolve(".gitlab-ci.yml"), "utf8"),
+    /buildkit/iu,
+  );
+});
 
 test("the build job fails before building when the registry cannot be resolved", () => {
   const { result, calls } = runBuildScript({
@@ -126,7 +292,17 @@ test("the build job fails before building when the registry cannot be resolved",
     CI_REGISTRY_IMAGE: undefined,
   });
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /IMAGE_REGISTRY/);
+  assert.match(result.stderr, /IMAGE_REGISTRY/u);
+  assert.deepEqual(calls, []);
+});
+
+test("the build job fails before building when registry credentials are missing", () => {
+  const { result, calls } = runBuildScript({
+    ...BUILD_ENV,
+    CI_REGISTRY_USER: undefined,
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /IMAGE_REGISTRY_USER/u);
   assert.deepEqual(calls, []);
 });
 
@@ -136,31 +312,88 @@ test("the build job fails before building when a web build value is missing", ()
     WR_NEXT_PUBLIC_WEB_VITALS: undefined,
   });
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /WR_NEXT_PUBLIC_WEB_VITALS/);
+  assert.match(result.stderr, /WR_NEXT_PUBLIC_WEB_VITALS/u);
   assert.deepEqual(calls, []);
 });
 
-test("the build job pushes four SHA-tagged images and records their digests", () => {
-  const { result, calls, digests } = runBuildScript(BUILD_ENV);
+test("the build job fails before building when a base image escapes the mirror", () => {
+  const baseVariable = "$" + "{BASE}";
+  const { result, calls } = runBuildScript(BUILD_ENV, {
+    "deploy/postgres/Dockerfile.backup": [
+      "ARG BASE=quay.io",
+      `FROM ${baseVariable}/buildah/stable:1.0 AS base`,
+      "",
+    ].join("\n"),
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(
+    result.stderr,
+    /not mirrored: \$\{BASE\}\/buildah\/stable:1\.0/u,
+  );
+  assert.deepEqual(calls, []);
+});
+
+test("the build job rewrites every base image through the internal mirror", () => {
+  const { result, mirrored } = runBuildScript(BUILD_ENV);
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(calls.length, 4);
-  const registry = "registry.example.com/group/project";
-  for (const name of ["api", "migrate", "web", "backup"]) {
-    assert.ok(
-      calls.some((call) =>
-        call.includes(`name=${registry}/${name}:0123456789abcdef,push=true`),
-      ),
-      `${name} was not pushed with the commit SHA tag`,
+  for (const path of DOCKERFILES) {
+    assertMirroredDockerfile(
+      readFileSync(resolve(path), "utf8"),
+      readFileSync(join(mirrored, fileName(path)), "utf8"),
+      path,
     );
   }
-  assert.ok(calls.some((call) => call.includes("target=migrator")));
-  const webBuild = calls.find((call) =>
-    call.includes(`name=${registry}/web:0123456789abcdef,push=true`),
+});
+
+test("the build job pushes four SHA-tagged images and records their digests", () => {
+  const { result, calls, project, digests } = runBuildScript(BUILD_ENV);
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(callsFor(calls, "login").length, 1);
+  assert.equal(callsFor(calls, "bud").length, 4);
+  assert.equal(callsFor(calls, "push").length, 4);
+  assert.equal(callsFor(calls, "rmi").length, 4);
+
+  const registry = "registry.example.com/group/project";
+  for (const name of ["api", "migrate", "web", "backup"]) {
+    const image = `${registry}/${name}:${commitSha}`;
+    const bud = callsFor(calls, "bud").find((call) =>
+      argumentsOf(call).includes(image),
+    );
+    assert.ok(bud, `${name} was not built with the commit SHA tag`);
+    const budArguments = argumentsOf(bud);
+    assert.ok(budArguments.includes("--layers"), `${name} must cache layers`);
+    const format = argumentAfter(bud, "--format");
+    assert.equal(format, "docker", `${name} must keep the Docker v2 manifest`);
+    const dockerfile = argumentAfter(bud, "-f");
+    assert.ok(
+      dockerfile !== undefined && isOutsideProject(project, dockerfile),
+      `${name} must build from a job-local mirrored Dockerfile`,
+    );
+    const push = callsFor(calls, "push").find(
+      (call) => call.includes(" --digestfile ") && call.includes(image),
+    );
+    assert.ok(push, `${name} was not pushed with the commit SHA tag`);
+    assert.ok(
+      push.includes(`docker://${image}`),
+      `${name} must push to the registry reference explicitly`,
+    );
+    assert.ok(
+      calls.includes(`rmi ${image}`),
+      `${name} was not removed after publication`,
+    );
+  }
+
+  const migrate = callsFor(calls, "bud").find((call) =>
+    call.includes(`/migrate:${commitSha}`),
   );
-  assert.ok(webBuild, "the web image must be built");
+  assert.ok(migrate?.includes("--target migrator"));
+  const web = callsFor(calls, "bud").find((call) =>
+    call.includes(`/web:${commitSha}`),
+  );
+  assert.ok(web, "the web image must be built");
   for (const argument of [
     "API_URL=http://api:3001",
-    `NEXT_PUBLIC_APP_VERSION=${BUILD_ENV.CI_COMMIT_SHA}`,
+    `NEXT_PUBLIC_APP_VERSION=${commitSha}`,
     "NEXT_PUBLIC_AUTH_STUB=false",
     "NEXT_PUBLIC_DEV_ROLE_SWITCHER=false",
     `NEXT_PUBLIC_CLIENT_LOG_FORWARDING=${BUILD_ENV.WR_NEXT_PUBLIC_CLIENT_LOG_FORWARDING}`,
@@ -168,16 +401,59 @@ test("the build job pushes four SHA-tagged images and records their digests", ()
     `NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED=${BUILD_ENV.WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED}`,
     `NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES=${BUILD_ENV.WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES}`,
   ]) {
-    assert.ok(webBuild.includes(`build-arg:${argument}`), argument);
+    assert.ok(web.includes(` --build-arg ${argument}`), argument);
   }
-  assert.equal(readFileSync(digests, "utf8").trim().split("\n").length, 4);
+  for (const name of ["api", "backup", "migrate"]) {
+    const call = callsFor(calls, "bud").find((candidate) =>
+      candidate.includes(`/${name}:${commitSha}`),
+    );
+    assert.ok(
+      call?.includes(` --build-arg BUILD_VERSION=${commitSha}`),
+      `${name} must receive the release identity`,
+    );
+  }
+
+  const recorded = readFileSync(digests, "utf8").trim().split("\n");
+  assert.equal(recorded.length, 4);
+  for (const name of ["api", "migrate", "web", "backup"]) {
+    assert.ok(
+      recorded.includes(
+        `${name}=${registry}/${name}@sha256:${"0".repeat(63)}1`,
+      ),
+      `${name} digest is missing from image-digests.txt`,
+    );
+  }
   assert.doesNotMatch(
     result.stdout + result.stderr,
     new RegExp(BUILD_ENV.CI_REGISTRY_PASSWORD),
   );
-  // The build context is the project dir (`--local context=.`), so registry
-  // credentials must never land inside it.
-  assert.equal(existsSync(join(dirname(digests), ".registry-auth")), false);
+});
+
+test("registry credentials stay outside the build context and are never printed", () => {
+  const { result, calls, project } = runBuildScript(BUILD_ENV);
+  assert.equal(result.status, 0, result.stderr);
+  const login = callsFor(calls, "login")[0];
+  assert.ok(login, "the job must log in to the registry");
+  assert.ok(login.includes(`--username ${BUILD_ENV.CI_REGISTRY_USER}`));
+  assert.match(login, /--password-stdin/u);
+  const authFile = argumentAfter(login, "--authfile");
+  assert.ok(authFile, "the login must name its auth file");
+  assert.ok(
+    isOutsideProject(project, authFile),
+    "the auth file must stay outside $CI_PROJECT_DIR",
+  );
+  assert.equal(existsSync(join(project, "auth.json")), false);
+  assert.equal(existsSync(join(project, ".docker")), false);
+  for (const call of calls) {
+    assert.equal(call.includes(BUILD_ENV.CI_REGISTRY_PASSWORD), false);
+  }
+  for (const path of DOCKERFILES) {
+    assert.equal(
+      readFileSync(join(project, path), "utf8"),
+      readFileSync(resolve(path), "utf8"),
+      `${path} must stay unchanged on disk`,
+    );
+  }
 });
 
 test("IMAGE_REGISTRY overrides the project registry", () => {
@@ -188,16 +464,17 @@ test("IMAGE_REGISTRY overrides the project registry", () => {
     IMAGE_REGISTRY_PASSWORD: robotToken,
   });
   assert.equal(result.status, 0, result.stderr);
+  const login = callsFor(calls, "login")[0];
   assert.ok(
-    calls.every((call) => call.includes("name=other.example.com/team/")),
+    login?.includes(" other.example.com"),
+    "login must use the override",
   );
-});
-
-test("the build job disables the OCI process sandbox for a confined runner", () => {
-  assert.equal(
-    buildJob.variables?.BUILDKITD_FLAGS,
-    "--oci-worker-no-process-sandbox",
+  assert.ok(
+    callsFor(calls, "push").every((call) =>
+      call.includes("other.example.com/team/"),
+    ),
   );
+  assert.doesNotMatch(result.stdout + result.stderr, new RegExp(robotToken));
 });
 
 test("merge requests only offer the build manually and never fail the pipeline", () => {
@@ -211,12 +488,12 @@ test("the deploy job exists only with a kubeconfig, manually, on the default bra
   const rules = deployJob.rules;
   const active = rules.filter((rule) => rule.when !== "never");
   assert.equal(active.length, 1);
-  assert.match(active[0]?.if ?? "", /\$KUBECONFIG/);
-  assert.match(active[0]?.if ?? "", /\$CI_DEFAULT_BRANCH/);
+  assert.match(active[0]?.if ?? "", /\$KUBECONFIG/u);
+  assert.match(active[0]?.if ?? "", /\$CI_DEFAULT_BRANCH/u);
   assert.equal(active[0]?.when, "manual");
   assert.equal(rules.at(-1)?.when, "never");
   // The install/upgrade command contract lives in deploy-production.test.ts.
-  assert.match(deployJob.script.join("\n"), /images\.tag=\$CI_COMMIT_SHA/);
+  assert.match(deployJob.script.join("\n"), /images\.tag=\$CI_COMMIT_SHA/u);
   // A deploy must wait for this pipeline's image build, when it has one.
   assert.deepEqual(deployJob.needs, [{ job: "build-images" }]);
 });

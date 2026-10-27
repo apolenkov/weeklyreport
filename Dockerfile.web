@@ -82,11 +82,15 @@ RUN ./node_modules/.bin/turbo build --filter=@weeklyreport/web
 # Stage 5: Production runner with Next.js standalone
 FROM node:26.12.1-alpine@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64c74f80497af48797 AS runner
 RUN apk add --no-cache libc6-compat
+# The runtime user keeps uid 1001. Busybox `adduser --system` would put it in
+# `nogroup`, so give it the dedicated `nodejs` group: the image build only
+# resolves a chown target whose group exists, and the copied tree then belongs
+# to `nextjs:nodejs` while the Next process keeps its uid and write access.
 RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs
+    adduser --system --uid 1001 --ingroup nodejs nextjs
 WORKDIR /app
-COPY --from=builder --chown=nextjs:nextjs /app/apps/web/.next/standalone ./
-COPY --from=builder --chown=nextjs:nextjs /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
 ARG NEXT_PUBLIC_APP_VERSION
 LABEL org.opencontainers.image.revision=${NEXT_PUBLIC_APP_VERSION}
 USER nextjs

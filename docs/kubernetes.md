@@ -247,7 +247,7 @@ VERIFIED):
 
 ## CI and delivery options
 
-- `build-images` (GitLab CI, rootless BuildKit, no Docker daemon) pushes `api`,
+- `build-images` (GitLab CI, buildah, no Docker daemon) pushes `api`,
   `migrate`, `web`, and `backup` tagged with the commit SHA to
   `$CI_REGISTRY_IMAGE` (override: `IMAGE_REGISTRY`, `IMAGE_REGISTRY_USER`,
   `IMAGE_REGISTRY_PASSWORD`) and records digests in the artifact
@@ -256,8 +256,8 @@ VERIFIED):
   `WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES` (and optionally
   `NEXT_PUBLIC_SENTRY_DSN`), which are compiled into the web image. It runs by
   itself on the default branch and tags once these variables exist; otherwise
-  it is manual. Whether the project runner permits rootless BuildKit is
-  NOT VERIFIED.
+  it is manual. A full run is NOT VERIFIED until its 4 GiB memory limit is
+  raised.
 - `deploy-production` is a manual job that exists only when a file-type
   `KUBECONFIG` variable is set; it also needs `HELM_VALUES_FILE` (file) and
   `HELM_NAMESPACE`. Run it only after `build-images` succeeded for the same

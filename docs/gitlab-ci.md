@@ -20,7 +20,7 @@ builds manually and do not deploy.
 | migrate-reset     | `pnpm db:migrate:reset` on demand: guarded reset followed by explicit full seed.                                                                                |
 | production-build  | `pnpm build` is required local acceptance evidence. Image builds use Dockerfiles directly and never consumed this job's artifacts.                              |
 | renovate          | Operator-triggered local container command below; no scheduled update job in CI.                                                                                |
-| build-images      | GitLab, unchanged four SHA-tagged api/migrate/web/backup images and `image-digests.txt` (30 days).                                                              |
+| build-images      | GitLab, buildah: four SHA-tagged api/migrate/web/backup images and `image-digests.txt` (30 days).                                                               |
 | deploy-production | GitLab, unchanged conditional manual production deployment.                                                                                                     |
 
 ## Local verification
@@ -92,11 +92,27 @@ a pre-push side effect. No GitLab project setting or schedule is changed here.
 ## Build and deployment
 
 Both retained jobs use `img-build`, `interruptible: false` and their existing
-resource groups. BuildKit stays rootless and daemonless with
-`BUILDKITD_FLAGS=--oci-worker-no-process-sandbox`. Registry and web build inputs
-remain fail-closed. The image job runs automatically on default-branch pushes
-when configured and otherwise remains manual and non-blocking. The four image
-outputs, digest artifact and production environment are unchanged.
+resource groups. `build-images` builds with the buildah CLI inside the pinned
+`mirror.example.org/all-pub-docker/buildah/stable:v1.43.5@sha256:…` image,
+with `STORAGE_DRIVER=vfs` and `BUILDAH_ISOLATION=chroot`: daemonless, without
+rootless BuildKit, Docker-in-Docker, a Docker socket or privileged job
+capabilities (TASK-709). Every external base image is pulled from the internal
+Docker Hub mirror `mirror.example.org/all-pub-docker`: the job rewrites the
+repository Dockerfiles' `FROM` lines into a job-local copy, so the Dockerfiles
+keep their pinned upstream `tag@sha256` references, and it fails before building
+when an external base image escapes the mirror. Builds use `--format docker`
+because the OCI manifest format drops `HEALTHCHECK`. Registry and web build
+inputs remain fail-closed; the registry credentials live in a job-local auth
+file outside the build context. The image job runs automatically on
+default-branch pushes when configured and otherwise remains manual and
+non-blocking. The four image outputs, digest artifact and production environment
+are unchanged.
+
+The runner currently caps the job container at 4 GiB of memory while the web
+build peaks at about 4.3 GB, so a full four-image run can stop on OOM until
+DevOps raises the limit; no build-side workaround (splitting, caching, swap) is
+added (TASK-709). Whether a full build passes on `main` is therefore NOT VERIFIED
+until that limit changes.
 
 `deploy-production` exists only when a file-type `KUBECONFIG` variable is set and
 needs the variables `HELM_VALUES_FILE` (file), `HELM_NAMESPACE` and
