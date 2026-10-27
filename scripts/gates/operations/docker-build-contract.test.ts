@@ -68,11 +68,13 @@ test("the production image receives one release identity", () => {
   }
 });
 
-test("production dependency layers retain a shared pnpm BuildKit cache", () => {
+test("production dependency layers retain a shared pnpm store mount", () => {
   const cacheMount =
     "--mount=type=cache,id=weeklyreport-pnpm-store-v11,target=/pnpm/store,sharing=locked";
   // API installs the full build graph once, the isolated migrator runtime once,
-  // and production dependencies once; each uses the same locked store.
+  // and production dependencies once; each uses the same locked store. buildah
+  // 1.43.5 accepts this RUN --mount form (probe job 3273130), so the image
+  // build keeps it and the vfs store still discards it between jobs.
   assert.equal(apiDockerfile.split(cacheMount).length - 1, 3);
   assert.equal(webDockerfile.split(cacheMount).length - 1, 1);
   for (const dockerfile of [apiDockerfile, webDockerfile]) {

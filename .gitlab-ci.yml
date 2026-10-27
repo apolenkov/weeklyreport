@@ -18,24 +18,33 @@ default:
     - img-build
   interruptible: true
 
-# Rootless BuildKit, daemonless: no Docker-in-Docker and no Docker socket.
+# buildah, daemonless: no Docker-in-Docker and no Docker socket. The job pulls
+# every external base image through the internal Docker Hub mirror, builds the
+# four images from the repository Dockerfiles and pushes commit-SHA tags.
 # The registry defaults to the project registry; IMAGE_REGISTRY* override it.
-# Runs by itself on the default branch once the web build
-# variables exist; until then (and on merge requests) it is manual and never
-# turns the pipeline red.
+# Runs by itself on the default branch once the web build variables exist;
+# until then (and on merge requests) it is manual and never turns the pipeline
+# red.
 build-images:
   stage: image
   image:
-    name: moby/buildkit:v0.34.0-rootless@sha256:65eca3c01cd1180c8f64565c4e3c5983af5145818b0e6fa863385d099eb73855
+    # buildah 1.43.5 is the version the new runner was probed with; pin it by
+    # digest and keep the versioned mirror tag readable in the reference.
+    name: mirror.example.org/all-pub-docker/buildah/stable:v1.43.5@sha256:87f219f5a7bf5d7bee870253c14a57751e85833cb2cc645216a20bbb66c68724
     entrypoint: [""]
   timeout: 45m
   interruptible: false
   resource_group: weeklyreport-ci-heavy-$CI_PIPELINE_IID
   variables:
-    # Job-side mitigation for a runner whose default seccomp/AppArmor profile
-    # denies rootless buildkitd its worker sandbox (mount proc: operation not
-    # permitted); the alternative is an unconfined runner profile.
-    BUILDKITD_FLAGS: --oci-worker-no-process-sandbox
+    # Unprivileged build: the job container provides no user namespace and no
+    # privileged mounts, so buildah runs with chroot isolation and its vfs
+    # image store.
+    STORAGE_DRIVER: vfs
+    BUILDAH_ISOLATION: chroot
+    # Internal mirror of Docker Hub for every external base image. Dockerfiles
+    # keep upstream references; the job rewrites their FROM lines at build time
+    # (see mirror_dockerfile) instead of forking the Dockerfiles.
+    BASE_REGISTRY: mirror.example.org/all-pub-docker
   rules:
     - if: '$CI_PIPELINE_SOURCE == "schedule"'
       when: never
@@ -67,41 +76,78 @@ build-images:
       : "${WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED:?WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED is not set}"
       : "${WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES:?WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES is not set}"
 
-      # Credentials live only in a job-local config.json and are never echoed.
-      # The config must stay outside $CI_PROJECT_DIR: every `--local context=.`
-      # build would otherwise ship it into the pruner stage's `COPY . .`.
-      export DOCKER_CONFIG="$(mktemp -d)"
-      auth="$(printf '%s:%s' "$REGISTRY_USER" "$REGISTRY_PASSWORD" | base64 | tr -d '\n')"
-      printf '{"auths":{"%s":{"auth":"%s"}}}' "${REGISTRY%%/*}" "$auth" > "$DOCKER_CONFIG/config.json"
+      WORK_DIR="$(mktemp -d)"
+      trap 'rm -rf "$WORK_DIR"' EXIT
 
-      : > image-digests.txt
-      # build_push NAME CONTEXT DOCKERFILE [buildctl options...]
-      build_push() {
-        name="$1"; context="$2"; dockerfile="$3"; shift 3
-        buildctl-daemonless.sh build \
-          --frontend dockerfile.v0 \
-          --local "context=$context" --local "dockerfile=$context" \
-          --opt "filename=$dockerfile" "$@" \
-          --output "type=image,name=$REGISTRY/$name:$CI_COMMIT_SHA,push=true" \
-          --metadata-file "$name.meta.json"
-        digest="$(sed -n 's/.*"containerimage.digest": *"\([^"]*\)".*/\1/p' "$name.meta.json")"
-        : "${digest:?no digest recorded for $name}"
-        printf '%s=%s/%s@%s\n' "$name" "$REGISTRY" "$name" "$digest" >> image-digests.txt
+      # mirror_dockerfile SOURCE TARGET
+      # Point every external FROM at the internal mirror, keeping the pinned
+      # tag@sha256 reference. In order: an explicit registry host is dropped, a
+      # Docker Hub official image gains its `library/` namespace, and a
+      # namespaced Docker Hub image keeps its namespace. A stage reference
+      # (`FROM base`) has no tag and is left alone. The check that follows fails
+      # the job if any external base image escaped the rewrite.
+      mirror_dockerfile() {
+        source_file="$1"
+        target_file="$2"
+        sed -E \
+          -e "s|^FROM [a-z0-9][a-z0-9._-]*\.[a-z0-9._-]+(:[0-9]+)?/([^[:space:]]*:[^[:space:]]+)|FROM $BASE_REGISTRY/\2|" \
+          -e "s|^FROM ([a-z0-9][a-z0-9._-]*):|FROM $BASE_REGISTRY/library/\1:|" \
+          -e "s|^FROM ([a-z0-9][a-z0-9._-]*/[^[:space:]:/]+:[^[:space:]]+)|FROM $BASE_REGISTRY/\1|" \
+          "$source_file" > "$target_file"
+        external="$(sed -nE 's|^FROM[[:space:]]+([^[:space:]]*:[^[:space:]]*).*|\1|p' "$target_file" | grep -Ev "^$BASE_REGISTRY/" || true)"
+        if [ -n "$external" ]; then
+          echo "base image is not mirrored: $external" >&2
+          exit 1
+        fi
       }
 
-      build_push api . Dockerfile.api --opt "build-arg:BUILD_VERSION=$CI_COMMIT_SHA"
-      build_push migrate . Dockerfile.api --opt target=migrator --opt "build-arg:BUILD_VERSION=$CI_COMMIT_SHA"
-      build_push web . Dockerfile.web \
-        --opt build-arg:API_URL=http://api:3001 \
-        --opt build-arg:NEXT_PUBLIC_AUTH_STUB=false \
-        --opt build-arg:NEXT_PUBLIC_DEV_ROLE_SWITCHER=false \
-        --opt "build-arg:NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN:-}" \
-        --opt "build-arg:NEXT_PUBLIC_APP_VERSION=$CI_COMMIT_SHA" \
-        --opt "build-arg:NEXT_PUBLIC_CLIENT_LOG_FORWARDING=$WR_NEXT_PUBLIC_CLIENT_LOG_FORWARDING" \
-        --opt "build-arg:NEXT_PUBLIC_WEB_VITALS=$WR_NEXT_PUBLIC_WEB_VITALS" \
-        --opt "build-arg:NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED=$WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED" \
-        --opt "build-arg:NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES=$WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES"
-      build_push backup deploy/postgres Dockerfile.backup --opt "build-arg:BUILD_VERSION=$CI_COMMIT_SHA"
+      mirror_dockerfile Dockerfile.api "$WORK_DIR/Dockerfile.api"
+      mirror_dockerfile Dockerfile.web "$WORK_DIR/Dockerfile.web"
+      mirror_dockerfile deploy/postgres/Dockerfile.backup "$WORK_DIR/Dockerfile.backup"
+
+      # Credentials live only in a job-local auth file and are never echoed.
+      # The file stays outside $CI_PROJECT_DIR: the build context is the project
+      # directory, so the pruner stage's `COPY . .` would otherwise ship it.
+      REGISTRY_HOST="${REGISTRY%%/*}"
+      export REGISTRY_AUTH_FILE="$WORK_DIR/auth.json"
+      printf '%s\n' "$REGISTRY_PASSWORD" | buildah login \
+        --authfile "$REGISTRY_AUTH_FILE" --username "$REGISTRY_USER" --password-stdin "$REGISTRY_HOST"
+
+      : > image-digests.txt
+
+      # build_push NAME CONTEXT DOCKERFILE [buildah bud options...]
+      build_push() {
+        name="$1"
+        context="$2"
+        dockerfile="$3"
+        shift 3
+        image="$REGISTRY/$name:$CI_COMMIT_SHA"
+        # --format docker keeps the Docker v2 manifest: the OCI format drops
+        # HEALTHCHECK. --layers caches the shared stages between the four builds.
+        buildah bud --layers --format docker -f "$dockerfile" -t "$image" "$@" "$context"
+        digest_file="$WORK_DIR/$name.digest"
+        buildah push --digestfile "$digest_file" "$image" "docker://$image"
+        digest="$(cat "$digest_file")"
+        : "${digest:?no digest recorded for $name}"
+        printf '%s=%s/%s@%s\n' "$name" "$REGISTRY" "$name" "$digest" >> image-digests.txt
+        # The vfs store copies whole layers; drop the published image and keep
+        # the build cache the next target reuses.
+        buildah rmi "$image"
+      }
+
+      build_push api . "$WORK_DIR/Dockerfile.api" --build-arg "BUILD_VERSION=$CI_COMMIT_SHA"
+      build_push migrate . "$WORK_DIR/Dockerfile.api" --target migrator --build-arg "BUILD_VERSION=$CI_COMMIT_SHA"
+      build_push web . "$WORK_DIR/Dockerfile.web" \
+        --build-arg API_URL=http://api:3001 \
+        --build-arg NEXT_PUBLIC_AUTH_STUB=false \
+        --build-arg NEXT_PUBLIC_DEV_ROLE_SWITCHER=false \
+        --build-arg "NEXT_PUBLIC_SENTRY_DSN=${NEXT_PUBLIC_SENTRY_DSN:-}" \
+        --build-arg "NEXT_PUBLIC_APP_VERSION=$CI_COMMIT_SHA" \
+        --build-arg "NEXT_PUBLIC_CLIENT_LOG_FORWARDING=$WR_NEXT_PUBLIC_CLIENT_LOG_FORWARDING" \
+        --build-arg "NEXT_PUBLIC_WEB_VITALS=$WR_NEXT_PUBLIC_WEB_VITALS" \
+        --build-arg "NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED=$WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED" \
+        --build-arg "NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES=$WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES"
+      build_push backup deploy/postgres "$WORK_DIR/Dockerfile.backup" --build-arg "BUILD_VERSION=$CI_COMMIT_SHA"
       cat image-digests.txt
 
 # Defined only when DevOps supplies a file-type KUBECONFIG variable. The values

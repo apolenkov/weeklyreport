@@ -81,7 +81,7 @@ const catalogTypesNodeMajor = (): Declaration => ({
   ),
 });
 
-// Node runs in the Dockerfiles; CI itself only runs BuildKit and Helm.
+// Node runs in the Dockerfiles; CI itself only runs buildah and Helm.
 const trixieImageDigests = (): readonly Declaration[] => {
   const matches = [
     ...read("Dockerfile.api").matchAll(
