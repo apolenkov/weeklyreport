@@ -9,6 +9,12 @@ export const DEBOUNCE_MS = 300;
 export const MIN_LEN = 2;
 export const MAX_LEN = 200;
 
+// Only the `all` scope reaches product hits; lead and viewer sessions exclude
+// them. The accessible name follows that reach instead of a fixed string.
+export function searchScopeLabel(scope: SearchScope): string {
+  return scope === "all" ? "Search reports and products" : "Search reports";
+}
+
 export function useDebouncedValue<T>(value: T, delayMs: number): T {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
