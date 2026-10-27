@@ -22,9 +22,9 @@ default:
 # every external base image through the internal Docker Hub mirror, builds the
 # four images from the repository Dockerfiles and pushes commit-SHA tags.
 # The registry defaults to the project registry; IMAGE_REGISTRY* override it.
-# Runs by itself on the default branch once the web build variables exist;
-# until then (and on merge requests) it is manual and never turns the pipeline
-# red.
+# Always manual: an operator starts it on the default branch, a tag or a merge
+# request, and it never turns the pipeline red (owner decision 2026-10-27,
+# TASK-727: keep CI minimal while the runners are unstable).
 build-images:
   stage: image
   image:
@@ -53,8 +53,6 @@ build-images:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       when: manual
       allow_failure: true
-    - if: "($CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH) && $WR_NEXT_PUBLIC_CLIENT_LOG_FORWARDING"
-      when: on_success
     - if: "$CI_COMMIT_TAG || $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH"
       when: manual
       allow_failure: true
