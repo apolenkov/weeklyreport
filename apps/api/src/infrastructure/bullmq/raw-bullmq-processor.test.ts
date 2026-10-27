@@ -74,6 +74,7 @@ vi.mock("bullmq", () => ({
 vi.mock("./bullmq-options", () => ({ getBullMQOptions: () => ({}) }));
 
 import { CLOSE_TIMEOUT_MS, shutdownApi } from "../../bootstrap/api-shutdown.js";
+import { createShutdownCoordinator } from "../../bootstrap/shutdown-coordinator.js";
 import { createAppLogger } from "../../lib/logger.js";
 import {
   BULLMQ_FAILED_HOOK_DRAIN_TIMEOUT_MS,
@@ -451,5 +452,72 @@ describe("RawBullMqProcessor", () => {
       "BullMQ failed-event hook did not settle before shutdown",
       { queueName: "pdf-export", pending: 1 },
     );
+  });
+
+  it.each([
+    { cause: "signal", hookMs: 1200, exitCode: 0 },
+    { cause: "fatal", hookMs: 1200, exitCode: 1 },
+  ] as const)(
+    "does not exit the $cause coordinator before a $hookMs ms failed-event hook ends",
+    async ({ cause, hookMs, exitCode }) => {
+      vi.useFakeTimers();
+      const processor = new HookGatedProcessor({} as never, {} as never, null);
+      processor.onModuleInit();
+      workerState.worker?.emit("failed", { data: {} }, new Error("boom"));
+      const events: string[] = [];
+      void processor.hook.promise.then(() => events.push("hook"));
+      setTimeout(() => processor.hook.resolve(), hookMs);
+      const coordinator = createShutdownCoordinator(
+        () =>
+          shutdownApi({
+            app: { close: () => processor.onModuleDestroy() },
+            logger: { info: vi.fn(), error: vi.fn() } as never,
+            shutdownRateLimitStore: () => Promise.resolve(),
+            shutdownOtel: () => Promise.resolve(),
+            shutdownSentry: () => Promise.resolve(),
+          }),
+        { exit: (code) => events.push(`exit:${code}`) },
+      );
+
+      coordinator.request(cause);
+      await vi.advanceTimersByTimeAsync(10_000);
+
+      expect(events).toEqual(["hook", `exit:${exitCode}`]);
+    },
+  );
+
+  it("logs a never-settling hook before the fatal coordinator exits", async () => {
+    vi.useFakeTimers();
+    const events: string[] = [];
+    const logger = {
+      info: vi.fn(),
+      error: vi.fn((message: string) => events.push(message)),
+    };
+    const processor = new HookGatedProcessor(
+      {} as never,
+      logger as never,
+      null,
+    );
+    processor.onModuleInit();
+    workerState.worker?.emit("failed", { data: {} }, new Error("boom"));
+    const coordinator = createShutdownCoordinator(
+      () =>
+        shutdownApi({
+          app: { close: () => processor.onModuleDestroy() },
+          logger: logger as never,
+          shutdownRateLimitStore: () => Promise.resolve(),
+          shutdownOtel: () => Promise.resolve(),
+          shutdownSentry: () => Promise.resolve(),
+        }),
+      { exit: (code) => events.push(`exit:${code}`) },
+    );
+
+    coordinator.request("fatal");
+    await vi.advanceTimersByTimeAsync(10_000);
+
+    expect(events).toEqual([
+      "BullMQ failed-event hook did not settle before shutdown",
+      "exit:1",
+    ]);
   });
 });
