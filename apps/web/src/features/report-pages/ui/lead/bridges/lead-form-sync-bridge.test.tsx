@@ -86,9 +86,14 @@ it("preserves both public pipeline edits in one React batch through the latest r
       loaded: { products, currentWeekItems: [], nextWeekItems: [] },
     });
     const signals = useLeadFormAddSignals();
-    const actions = buildDraftActions({ ...draft, ...quickAdd }, signals, {
-      products,
-    });
+    const actions = buildDraftActions(
+      { ...draft, ...quickAdd },
+      signals,
+      {
+        products,
+      },
+      section,
+    );
     return (
       <LeadFormSyncBridge.Provider
         products={products}
