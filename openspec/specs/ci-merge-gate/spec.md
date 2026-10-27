@@ -118,10 +118,9 @@ MUST fail before building when the resolved registry, user, or password is empty
 or any `WR_NEXT_PUBLIC_*` value `Dockerfile.web` requires is unset. It MUST keep
 registry credentials in a job-local auth file outside `$CI_PROJECT_DIR` and never
 print them. It MUST use no keyword newer than the instance's GitLab version
-(15.10). It MUST run automatically on default-branch push pipelines once the web
-build variables are configured, be manual and non-blocking before that, and be
-manual and non-blocking on merge requests. It MUST tag each pushed image with the
-commit SHA and publish the resulting digests as a job artifact.
+(15.10). It MUST be manual and non-blocking on default-branch, tag and
+merge-request pipelines. It MUST tag each pushed image with the commit SHA and
+publish the resulting digests as a job artifact.
 
 #### Scenario: Registry variables are missing
 
