@@ -57,7 +57,7 @@ function buildCollectionActions(draft: LeadFormDraftHandle) {
 
 function buildItemPatchActions(
   draft: LeadFormDraftHandle,
-  section: ReportSectionReadModel | undefined,
+  section: ReportSectionReadModel,
 ) {
   const patchItem = (
     itemId: string,
@@ -69,10 +69,10 @@ function buildItemPatchActions(
     onMoveToNextWeek: (itemId: string) => {
       // The toast follows the exact patch the command applies, so a refused move
       // never claims that a plan was acknowledged.
-      const acknowledgement =
-        section === undefined
-          ? null
-          : buildNextWeekPlanAcknowledgementPatch(section, itemId);
+      const acknowledgement = buildNextWeekPlanAcknowledgementPatch(
+        section,
+        itemId,
+      );
       draft.apply({ kind: "move-item", itemId, target: "next" });
       if (acknowledgement !== null)
         toast.success(NEXT_WEEK_PLAN_CONFIRMED_MESSAGE);
@@ -141,7 +141,7 @@ export function buildDraftActions(
   draft: LeadFormDraftHandle,
   addSignals: LeadFormAddSignals,
   viewModel: { readonly products: readonly Product[] },
-  section?: ReportSectionReadModel,
+  section: ReportSectionReadModel,
 ) {
   return {
     ...buildCollectionActions(draft),
