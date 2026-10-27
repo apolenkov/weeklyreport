@@ -108,11 +108,12 @@ default-branch pushes when configured and otherwise remains manual and
 non-blocking. The four image outputs, digest artifact and production environment
 are unchanged.
 
-The runner currently caps the job container at 4 GiB of memory while the web
-build peaks at about 4.3 GB, so a full four-image run can stop on OOM until
-DevOps raises the limit; no build-side workaround (splitting, caching, swap) is
-added (TASK-709). Whether a full build passes on `main` is therefore NOT VERIFIED
-until that limit changes.
+The runner currently caps the job container at 4 GiB of memory; the probe's web
+build reached that limit, so the memory the build actually needs is not measured
+(the probe's web job later failed on the chown group, not on memory), and a full
+four-image run can still stop on OOM until DevOps raises the limit. No build-side
+workaround (splitting, caching, swap) is added (TASK-709). Whether a full build
+passes on `main` is therefore NOT VERIFIED until that limit changes.
 
 `deploy-production` exists only when a file-type `KUBECONFIG` variable is set and
 needs the variables `HELM_VALUES_FILE` (file), `HELM_NAMESPACE` and

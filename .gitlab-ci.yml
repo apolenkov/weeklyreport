@@ -30,15 +30,17 @@ build-images:
   image:
     # buildah 1.43.5 is the version the new runner was probed with; pin it by
     # digest and keep the versioned mirror tag readable in the reference.
+    # TODO(TASK-709): confirm this digest is the build the probe pulled; the
+    # probe artifacts only record :latest@sha256:7ec323…, not this index.
     name: mirror.example.org/all-pub-docker/buildah/stable:v1.43.5@sha256:87f219f5a7bf5d7bee870253c14a57751e85833cb2cc645216a20bbb66c68724
     entrypoint: [""]
   timeout: 45m
   interruptible: false
   resource_group: weeklyreport-ci-heavy-$CI_PIPELINE_IID
   variables:
-    # Unprivileged build: the job container provides no user namespace and no
-    # privileged mounts, so buildah runs with chroot isolation and its vfs
-    # image store.
+    # Buildah runs unprivileged: the job container's user namespace does not map
+    # the /etc/subuid range, so a nested user namespace is unavailable; the vfs
+    # image store and chroot isolation build without privileged mounts.
     STORAGE_DRIVER: vfs
     BUILDAH_ISOLATION: chroot
     # Internal mirror of Docker Hub for every external base image. Dockerfiles
@@ -80,17 +82,16 @@ build-images:
       trap 'rm -rf "$WORK_DIR"' EXIT
 
       # mirror_dockerfile SOURCE TARGET
-      # Point every external FROM at the internal mirror, keeping the pinned
-      # tag@sha256 reference. In order: an explicit registry host is dropped, a
-      # Docker Hub official image gains its `library/` namespace, and a
-      # namespaced Docker Hub image keeps its namespace. A stage reference
-      # (`FROM base`) has no tag and is left alone. The check that follows fails
-      # the job if any external base image escaped the rewrite.
+      # Point each Docker Hub FROM at the internal mirror, keeping the pinned
+      # tag@sha256 reference: an official image gains its `library/` namespace
+      # and a namespaced image keeps its namespace. A stage reference (`FROM
+      # base`) has no tag and is left alone. An image from another registry is
+      # deliberately not remapped into the Docker Hub mirror; the check below
+      # fails the job instead.
       mirror_dockerfile() {
         source_file="$1"
         target_file="$2"
         sed -E \
-          -e "s|^FROM [a-z0-9][a-z0-9._-]*\.[a-z0-9._-]+(:[0-9]+)?/([^[:space:]]*:[^[:space:]]+)|FROM $BASE_REGISTRY/\2|" \
           -e "s|^FROM ([a-z0-9][a-z0-9._-]*):|FROM $BASE_REGISTRY/library/\1:|" \
           -e "s|^FROM ([a-z0-9][a-z0-9._-]*/[^[:space:]:/]+:[^[:space:]]+)|FROM $BASE_REGISTRY/\1|" \
           "$source_file" > "$target_file"
@@ -113,7 +114,11 @@ build-images:
       printf '%s\n' "$REGISTRY_PASSWORD" | buildah login \
         --authfile "$REGISTRY_AUTH_FILE" --username "$REGISTRY_USER" --password-stdin "$REGISTRY_HOST"
 
-      : > image-digests.txt
+      # The digest log is a job output, not a build input: creating it inside
+      # the build context would make the pruner stage's `COPY . .` miss its
+      # layer cache on every run. Keep it beside the credentials and publish it
+      # after the last build.
+      : > "$WORK_DIR/image-digests.txt"
 
       # build_push NAME CONTEXT DOCKERFILE [buildah bud options...]
       build_push() {
@@ -129,7 +134,7 @@ build-images:
         buildah push --digestfile "$digest_file" "$image" "docker://$image"
         digest="$(cat "$digest_file")"
         : "${digest:?no digest recorded for $name}"
-        printf '%s=%s/%s@%s\n' "$name" "$REGISTRY" "$name" "$digest" >> image-digests.txt
+        printf '%s=%s/%s@%s\n' "$name" "$REGISTRY" "$name" "$digest" >> "$WORK_DIR/image-digests.txt"
         # The vfs store copies whole layers; drop the published image and keep
         # the build cache the next target reuses.
         buildah rmi "$image"
@@ -148,6 +153,7 @@ build-images:
         --build-arg "NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED=$WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED" \
         --build-arg "NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES=$WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES"
       build_push backup deploy/postgres "$WORK_DIR/Dockerfile.backup" --build-arg "BUILD_VERSION=$CI_COMMIT_SHA"
+      cp "$WORK_DIR/image-digests.txt" image-digests.txt
       cat image-digests.txt
 
 # Defined only when DevOps supplies a file-type KUBECONFIG variable. The values
