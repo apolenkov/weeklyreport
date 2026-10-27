@@ -243,7 +243,7 @@ The register of earlier open work (paused and unscheduled work from earlier peri
 
 ### Requirement: Overview previews MUST preserve reading and secondary-action access
 
-Editable Current/Next previews MUST keep readable copy, a separate complete-editor action, a status interaction, and one applicable secondary-action disclosure. Read-only previews MUST expose no write action. Move MUST follow the placement-only contract in `record-status-derivation`, not reinterpret Continue next week.
+Editable Current/Next previews MUST keep readable copy, a separate complete-editor action, a status interaction, and one applicable secondary-action disclosure. Read-only previews MUST expose no write action. Move MUST follow the placement-or-acknowledgement contract in `record-status-derivation`, not reinterpret Continue next week.
 
 #### Scenario: the lead reads and edits a long update
 
@@ -265,3 +265,9 @@ Editable Current/Next previews MUST keep readable copy, a separate complete-edit
 - **WHEN** the lead selects Move to next week for an eligible Current item without a separate next commitment
 - **THEN** the canonical editor selects Next and retains description and progress without writing before Save
 - **AND** Save follows the placement-only move contract, not the separate Continue next week verdict
+
+#### Scenario: Move keeps a saved next step and never promotes
+
+- **WHEN** the lead selects Move to next week for an eligible Current item that already carries a saved next step
+- **THEN** no editor opens; the item stays Current with its description and the saved next step, and the Next lane keeps projecting that plan
+- **AND** the acknowledgement rides the ordinary draft save, the continuation-promotion command is not called, and focus returns to the More actions trigger
