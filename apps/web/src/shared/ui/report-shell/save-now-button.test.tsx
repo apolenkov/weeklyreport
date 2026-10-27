@@ -125,6 +125,18 @@ describe("SaveNowButton", () => {
     expect(screen.getByTestId("save-now-spinner")).toBeDefined();
   });
 
+  it("keeps the in-flight spinner stationary when reduced motion is requested", () => {
+    render(
+      <SaveNowButton
+        autosave={makeSnapshot({ state: "saving", isInFlight: true })}
+      />,
+    );
+    const spinner = screen.getByTestId("save-now-spinner");
+    // The reduced-motion variant must own the animation, not an inline style.
+    expect(spinner).toHaveClass("animate-spin", "motion-reduce:animate-none");
+    expect(spinner).not.toHaveAttribute("style");
+  });
+
   it("shows check icon for ~1500ms after success, then reverts to disc + 'Save draft now'", () => {
     const { rerender } = render(
       <SaveNowButton

@@ -196,6 +196,8 @@ function DiscIcon() {
   );
 }
 
+// The reduced-motion variant must own the rotation: an inline animation style
+// would beat the stylesheet rule that stops it.
 function SpinnerIcon() {
   return (
     <svg
@@ -205,9 +207,8 @@ function SpinnerIcon() {
       height="14"
       viewBox="0 0 12 12"
       fill="none"
-      style={{ animation: "saveBtnSpin 1s linear infinite" }}
+      className="animate-spin motion-reduce:animate-none"
     >
-      <style>{`@keyframes saveBtnSpin { to { transform: rotate(360deg); } } @media (prefers-reduced-motion: reduce) { [data-testid="save-now-spinner"] { animation: none; } }`}</style>
       <circle
         cx="6"
         cy="6"
