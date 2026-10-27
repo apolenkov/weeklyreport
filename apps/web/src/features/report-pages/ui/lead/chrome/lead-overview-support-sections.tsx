@@ -11,7 +11,10 @@ import type {
 } from "../../../../report-sections";
 import { ownedStagesForProject } from "../../../../report-sections";
 import type { RecordVisibility } from "../../../../report-sections/client";
-import { RisksAccordion } from "../bridges/lead-form-bridge-accordions";
+import {
+  RisksAccordion,
+  risksOpenSignal,
+} from "../bridges/lead-form-bridge-accordions";
 import {
   LeadFormSyncBridge,
   type RiskPrefillRequest,
@@ -64,7 +67,7 @@ export function LeadOverviewSupportSections({
     (productId) => ownedStagesForProject(draftSection, productId),
     [draftSection],
   );
-  const risksOpenSignal = `${actions.risksAddSignal}:${actions.riskPrefill?.signal ?? 0}`;
+  const risksSectionOpenSignal = risksOpenSignal(actions);
   const decisionsViewModel =
     pendingInput && !viewModel.isReadOnly
       ? { ...viewModel, isReadOnly: true }
@@ -97,7 +100,7 @@ export function LeadOverviewSupportSections({
       >
         <RisksAccordion
           groupExpanded={groupExpanded}
-          openSignal={risksOpenSignal}
+          openSignal={risksSectionOpenSignal}
           riskCount={risks.length}
           productCount={products.length}
           activityCount={activityOptions.length}

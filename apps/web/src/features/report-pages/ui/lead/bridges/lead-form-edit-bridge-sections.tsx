@@ -7,7 +7,10 @@ import type { CrossAuthorEntry } from "../../../../period";
 import type { LeadFormLoadedViewModel } from "../../../../report-sections";
 import type { RecordVisibility } from "../../../../report-sections/client";
 import type { LeadFormBridgeAccordionsActions } from "./lead-form-bridge-accordions";
-import { LeadFormBridgeAccordions } from "./lead-form-bridge-accordions";
+import {
+  LeadFormBridgeAccordions,
+  risksOpenSignal,
+} from "./lead-form-bridge-accordions";
 import {
   LeadFormSyncBridge,
   type RiskPrefillRequest,
@@ -50,9 +53,7 @@ export function LeadFormEditBridgeSections({
   stagesForProduct,
 }: LeadFormEditBridgeSectionsProps) {
   const { activityOptions, isReadOnly, ownRisks, products, risks } = viewModel;
-  // Parity with the Overview support sections: a new add or prefill signal
-  // reveals the collapsed Risks section.
-  const risksOpenSignal = `${actions.risksAddSignal}:${actions.riskPrefill?.signal ?? 0}`;
+  const risksSectionOpenSignal = risksOpenSignal(actions);
   return (
     <LeadFormSyncBridge.Provider
       products={products}
@@ -77,7 +78,7 @@ export function LeadFormEditBridgeSections({
         actions={actions}
         draftSection={draftSection}
         groupExpanded={groupExpanded}
-        risksOpenSignal={risksOpenSignal}
+        risksOpenSignal={risksSectionOpenSignal}
         unifiedView={unifiedView}
         stagesForProduct={stagesForProduct}
       />
