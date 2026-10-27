@@ -9,26 +9,20 @@ opening the canonical item editor from editable Current and Next cells.
 
 ### Requirement: Overview MUST edit and create current-period items through the canonical editor
 
-For an editable lead draft, Current week and Next week items MUST open the
-existing item editor without leaving Overview. Every editable Current and Next
-cell MUST also expose a contextual create action seeded to that reporting unit.
-Saving an edit or creation MUST update the one canonical lead draft and MUST use
-its existing `DraftPatch`, autosave, optimistic version, authorization, and
-lifecycle paths. Previously planned MUST remain immutable. Submitted, locked,
-historical, and foreign records MUST NOT expose an Overview write action.
+The editable Lead Report Overview MUST use the existing item editor and canonical draft-save path for Current/Next editing and creation. Contextual creation MUST follow the separate contextual-create requirement. Previously planned and ineligible sections MUST remain read-only.
 
 #### Scenario: A lead creates a Product update from Overview
 
-- **WHEN** the lead activates Add in an editable Product Current or Next cell
-- **THEN** the existing item editor opens on the same page with that Product and week selected
-- **AND** saving appends the item through the canonical week-items draft patch
+- **WHEN** the lead activates Add for an editable Product Current or Next period
+- **THEN** the existing editor opens on the same page with that Product and week selected
+- **AND** saving uses the existing `DraftPatch`, autosave, optimistic version, authorization, and lifecycle paths
 - **AND** the live Overview projection and autosave status reflect the change
 
 #### Scenario: A lead creates an Activity update from Overview
 
-- **WHEN** the lead activates Add in an editable Activity Current or Next cell
-- **THEN** the existing item editor opens with that Activity selected and no Product-stage requirement
-- **AND** saving follows the same canonical draft and autosave path
+- **WHEN** the lead activates Add for an editable Activity Current or Next period
+- **THEN** the same editor opens with that Activity selected and no Product-stage requirement
+- **AND** saving uses the canonical draft and autosave path
 
 #### Scenario: An Overview cell is not writable
 
@@ -60,17 +54,7 @@ Products.
 
 ### Requirement: Lead report MUST expose an addressable compact Overview
 
-The `/lead/report/:reportId` route MUST expose `Report` and `Slides` as
-addressable views. Report MUST use the Overview projection as its unified
-reading and authoring surface; Slides MUST retain the presentation surface.
-A lead opening the route without a valid mode MUST see Report. Report MUST
-retain the canonical report identity, autosave, Fill from, Save, Submit,
-period navigation, visibility, and mode controls, and each editable reporting
-unit's single `Add item` action in the unit header whenever available
-for the current section. These controls MUST call the existing editor draft
-and write actions; Overview MUST NOT introduce a second action implementation
-or persistence path. Removing the separate Edit mode MUST satisfy the full
-authoring parity requirement in `unified-report-authoring`.
+The `/lead/report/:reportId` route MUST expose addressable Report and Slides views, defaulting to Report Overview. Report MUST retain canonical document/context controls and one unit-header Add item action per eligible unit. Additional contextual create controls MUST reuse the same handlers, not another persistence path. Removing Edit mode MUST preserve `unified-report-authoring` parity.
 
 #### Scenario: A lead opens a report without a mode
 
@@ -81,19 +65,18 @@ authoring parity requirement in `unified-report-authoring`.
 #### Scenario: A lead opens an explicit edit link
 
 - **WHEN** the route contains `mode=edit`
-- **THEN** the route normalizes to the canonical Report URL
-- **AND** the existing editable controls, autosave, submit, and completion flows remain available in Report according to section eligibility
-- **AND** normalization does not write or duplicate report records
+- **THEN** the route normalizes to the canonical Report URL without writing or duplicating records
+- **AND** editable controls, autosave, submit, and completion remain available according to section eligibility
 
 #### Scenario: An editable lead opens the default route
 
 - **WHEN** the lead opens `/lead/report/:reportId` without a mode query
-- **THEN** Report is active and the canonical document/context actions render
-- **AND** Save, Submit, period, visibility, and mode actions use the canonical editor eligibility and handlers
+- **THEN** Report retains report identity, autosave, Fill from, Retry after autosave error, Submit, period navigation, visibility, mode controls, and the eligible unit-header Add item action
+- **AND** all actions use canonical editor eligibility and handlers
 
 #### Scenario: An Overview action opens a canonical dialog
 
-- **WHEN** the lead activates a unit `Add item`, Fill from, Submit, or reopen/revoke
+- **WHEN** the lead activates unit Add item, contextual creation, Fill from, Submit, or reopen/revoke
 - **THEN** the existing lead dialog host handles the action
 - **AND** no Overview-specific mutation endpoint or draft store is used
 
@@ -339,73 +322,46 @@ The `/lead/report/:reportId` Report Overview MUST keep the three temporal column
 
 ### Requirement: Empty temporal cells MUST state their emptiness in plain language
 
-The Lead Report route's Status Overview MUST render an empty temporal cell with
-the visible text `No item` and no write action in that cell. A decorative mark
-MUST NOT be the only explanation. New work MUST be created through the
-reporting unit's single `Add item` action, which is hidden for historical units
-and read-only views.
+Status Overview MUST show empty desktop cells as `—` plus sr-only `No item in this period`, with the dash hidden from assistive technology. On mobile, one plain-language line per unit MUST state that other periods are empty, without naming each empty period or repeating dates. Contextual creation for empty editable periods MUST remain reachable under the contextual-create requirement.
 
 #### Scenario: A temporal cell has no content
 
-- **WHEN** a Previously planned, Current week, or Next week cell has no item
-- **THEN** it shows `No item`
-- **AND** the cell exposes no add, edit, or next-step control
-- **AND** below the desktop breakpoint the cell collapses to one line pairing the column label with `No item`, without a period date
+- **WHEN** a Previously planned, Current week, or Next week desktop cell has no item
+- **THEN** it shows `—` visually and `No item in this period` to a screen reader
+- **AND** no edit or next-step control exists for an absent item
+- **AND** contextual Add is offered only for eligible Current/Next cells; historical and read-only views expose no write controls
+
+#### Scenario: Empty periods are compacted on mobile
+
+- **WHEN** a mobile reporting unit contains empty temporal cells
+- **THEN** one plain-language line states that other periods are empty, such as `No items in other periods`
+- **AND** individual empty lanes remain collapsed and do not repeat dates or name each empty period
+- **AND** Current and Next creation remains touch-reachable from the unit header, including when the whole unit is empty
+- **AND** Previously planned remains read-only
 
 ### Requirement: Overview editing MUST preserve context and use the timeline width
 
-The idle Status Overview MUST retain its compact unit and temporal reading
-grid. When an existing item editor or resolve/restore editor is mounted for one
-reporting unit, the complete Previous, Current, and Next lineage MUST remain
-visible and the exact matching editor MUST open below that lineage across the
-complete timeline width at multi-lane breakpoints. Other lineage rows and
-reporting units MUST remain rendered. Editor selection MUST continue to use
-canonical stable identity with the existing record-ID fallback and source
-boundary. The idle unit MUST NOT render a footer strip whose only content is
-the add affordance.
+Status Overview MUST keep its compact reading grid while one matching editor spans the timeline below its lineage at multi-lane widths. Selection MUST use stable identity with record-ID fallback and source. Header and contextual creation MUST share one unit composer region. Idle units MUST NOT render a footer solely for Add.
 
 #### Scenario: a linked Current item is edited
 
-- **WHEN** the lead activates `Update progress` (or `Edit details` in `More actions`) for a linked Current item
-- **THEN** exactly one matching editor spans the three timeline columns below the lineage
-- **AND** the Previous, Current, and Next cells remain visible while editing
-- **AND** unmatched lineage rows and reporting units remain rendered
-- **AND** closing the editor restores the idle cells and returns focus to the
-  same control that opened it
+- **WHEN** the lead activates Update progress or Edit details for a linked Current item
+- **THEN** exactly one matching editor spans the three timeline columns below its lineage
+- **AND** Previous, Current, Next, unmatched lineage rows, and other units remain visible
+- **AND** closing returns focus to the triggering control
 
 #### Scenario: an independent update is edited
 
 - **WHEN** the lead edits an unlinked Current or Next update
-- **THEN** the matching editor spans the timeline below its source row
-- **AND** the source context and sibling timeline cells remain visible
-- **AND** the update is matched by stable identity or record ID together with
-  its source
+- **THEN** its matching editor spans the timeline below the source row
+- **AND** sibling timeline cells stay visible and matching uses stable identity or record ID together with source
 
 #### Scenario: an update is created
 
-- **WHEN** the lead activates the unit `Add item` control (accessible name `Add item to <unit name>`) in the unit header
-- **THEN** the create composer spans the timeline in that unit's composer region
-- **AND** no duplicate composer is mounted
-- **AND** closing or acknowledging the create restores the idle composer region
-
-### Requirement: Overview previews MUST separate reading from editing
-
-Editable Current and Next previews MUST render readable update copy and expose a separate action for the complete item editor. In the clickable item preview its accessible name MUST be `Edit item: <update text>`. The status icon's accessible name MUST be `Status of <update text>: <status>`. Read-only copy MUST NOT expose a write action. Existing text disclosure, outcome actions and focus restoration MUST remain operable.
-
-Secondary actions (`Edit details`, `Update status`, and `Move to next week` / `Move to this week`) MUST be reachable through one disclosure (accessible name `More actions for <update text>`); the disclosure MUST NOT render when none of them applies. Moving a Current result to Next MUST keep the Current result and record the continuation in `nextStepText`, so both weeks remain visible in one lineage.
-
-#### Scenario: a Current result continues next week
-
-- **WHEN** the lead activates `Move to next week` in `More actions` for a Current result
-- **THEN** the editor keeps the item in Current and focuses its Next step
-- **AND** saving preserves the Current result and stores the continuation for Next
-
-#### Scenario: the lead reads and edits a long update
-
-- **WHEN** an editable long update is collapsed
-- **THEN** its copy remains readable with the existing full-text disclosure
-- **AND** activating the copy opens the canonical editor
-- **AND** activating `Edit details` in `More actions` opens the canonical editor
+- **WHEN** the lead activates the unit-header Add item control or contextual Current/Next creation
+- **THEN** exactly one composer spans the timeline in that unit's composer region
+- **AND** header Add item retains its accessible name `Add item to <unit name>` and Current default; contextual creation seeds its selected week
+- **AND** closing or acknowledging creation restores the idle composer region
 
 ### Requirement: Earlier open work MUST be collapsed by default
 
@@ -421,3 +377,53 @@ The register of earlier open work (paused and unscheduled work from earlier peri
 
 - **WHEN** no earlier open item exists
 - **THEN** the register renders nothing
+
+### Requirement: Overview contextual creation MUST seed Current or Next through one composer
+
+Editable Overview Current/Next cells MUST offer contextual `+` creation seeded to unit and week, visible on hover/focus and always on touch. When mobile empty lanes are collapsed, equivalent Current/Next controls MUST live in the unit header. These controls MUST supplement header Add item and share its composer. Direct Next creation MUST start with editable Planned progress.
+
+#### Scenario: Contextual creation is reachable without hover
+
+- **WHEN** the lead focuses an eligible Current/Next create control or uses a touch device
+- **THEN** that control is visible and operable without hover
+- **AND** its accessible name identifies creation, unit, and week
+- **AND** pointer hover reveals the same cell action on desktop
+
+#### Scenario: A new item is created directly in Next
+
+- **WHEN** the lead activates the Next contextual `+`
+- **THEN** one composer opens with that unit, Next, and Planned selected
+- **AND** the lead can change progress before saving
+- **AND** saving unchanged defaults emits one Next item with `workflowStatus=planned`, without rewriting an existing item's progress
+
+#### Scenario: An empty Next lane has a mobile creation target
+
+- **WHEN** empty lanes are collapsed on mobile, including an entirely empty unit
+- **THEN** the unit header contains always-visible touch controls for Current and Next creation, labelled with unit and week
+- **AND** Next creation is available without mounting a hidden-lane composer or first opening a Current composer
+- **AND** the general header Add item action remains and no Previous create action is offered
+
+### Requirement: Overview previews MUST preserve reading and secondary-action access
+
+Editable Current/Next previews MUST keep readable copy, a separate complete-editor action, a status interaction, and one applicable secondary-action disclosure. Read-only previews MUST expose no write action. Move MUST follow the placement-only contract in `record-status-derivation`, not reinterpret Continue next week.
+
+#### Scenario: the lead reads and edits a long update
+
+- **WHEN** an editable long update is collapsed
+- **THEN** its full-text disclosure remains operable and its copy remains readable
+- **AND** copy activation opens the editor with accessible name `Edit item: <update text>`
+- **AND** its status icon is named `Status of <update text>: <status>`
+- **AND** Edit details opens the same editor
+
+#### Scenario: secondary actions share one disclosure
+
+- **WHEN** Edit details, Update status, or an applicable Move action exists
+- **THEN** one disclosure named `More actions for <update text>` exposes those actions
+- **AND** it is absent when no secondary action applies
+- **AND** outcome actions, text disclosure, and focus restoration remain operable
+
+#### Scenario: a Current occurrence is postponed to Next
+
+- **WHEN** the lead selects Move to next week for an eligible Current item without a separate next commitment
+- **THEN** the canonical editor selects Next and retains description and progress without writing before Save
+- **AND** Save follows the placement-only move contract, not the separate Continue next week verdict

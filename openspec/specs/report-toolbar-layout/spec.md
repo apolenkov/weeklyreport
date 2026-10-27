@@ -53,83 +53,53 @@ At desktop width, the Lead report context toolbar MUST keep period/archive contr
 
 ### Requirement: The document-action row uses an accent hierarchy with a single forward primary
 
-The header line's document-action group MUST give at most one control the
-resting solid brand-accent fill — the forward commit when one is available — and
-MUST render the other document actions with a lesser accent (outline/ghost) so
-they do not compete with that primary. The bordered context-control bar MUST NOT
-give any control a solid brand-accent fill; its segmented toggles use a neutral
-active-selection fill, not the brand accent.
-
-1. When a forward commit is available (Submit for lead, Publish & lock
-   for head) it MUST be the only control with the resting solid brand-accent
-   fill; in states with no forward commit (submitted lead, published head) the
-   header action group has no resting solid primary.
-2. Reversal lifecycle actions (Request reopen, Revoke, Reopen) MUST NOT use the
-   resting solid brand-accent fill; they MUST take a neutral/outline treatment
-   so the accent colour signals only a forward, safe-to-commit action.
-3. The bordered context-control bar MUST NOT give any control a brand-accent
-   fill, including the segmented-toggle active state: the toggle active segment
-   uses the neutral foreground fill, so brand green is reserved for header-line
-   actions only.
-4. A transient in-flight busy treatment is exempt from the single-primary rule:
-   the Save control MAY show its accent busy state while saving (per
-   `lead-report-controls-integrity`) without becoming a second resting primary.
+Report document-action groups MUST reserve resting solid brand accent for at most one available forward commit. Other actions and reversal controls MUST use lesser neutral/outline treatment. Context controls MUST have no solid brand-accent fill. A rendered in-flight save/retry control MAY use transient accent busy styling without becoming another resting primary.
 
 #### Scenario: a published head period shows the reversal as non-accent
 
-- **WHEN** a head views a published period whose primary action is now Reopen
-- **THEN** the Reopen control is rendered with a neutral/outline treatment, not
-  the resting solid brand-accent fill
+- **WHEN** a head views a published period whose primary action is Reopen
+- **THEN** Reopen uses neutral/outline treatment rather than resting solid brand accent
 
 #### Scenario: a submitted lead section shows the reversal as non-accent
 
-- **WHEN** a lead has submitted their section and the commit becomes Request
-  Reopen
-- **THEN** the Request reopen control is rendered with a neutral/outline
-  treatment, not the resting solid brand-accent fill
+- **WHEN** a submitted lead section offers Request reopen
+- **THEN** it uses neutral/outline treatment rather than resting solid brand accent
 
 #### Scenario: the context bar uses no brand-accent fill
 
-- **WHEN** the bordered context-control bar renders its segmented toggles
-- **THEN** the active segment uses the neutral foreground fill, not the brand
-  accent
-- **AND** no control in the bar carries a solid brand-accent fill
+- **WHEN** the context bar renders segmented toggles
+- **THEN** its active segment uses neutral foreground fill
+- **AND** no context control uses solid brand accent
+
+#### Scenario: Retry is busy while Submit remains the forward commit
+
+- **WHEN** a visible completion Retry is saving
+- **THEN** its accent spinner treatment is temporary and full opacity
+- **AND** Submit remains the sole resting forward primary
 
 ### Requirement: Toolbar row composition adapts to role and period state without losing positional stability
 
-The report surface MUST adjust which controls render by role and period state
-while keeping the surviving controls in stable positions across the header action
-group and the context bar.
-
-1. For a lead read-only past period, the header action group MUST hide the real
-   mutating document actions (Save, Submit, Fill from, whose accessible names
-   are `Fill from most recent submitted period` and `Choose past report to fill
-from`); the
-   context-control bar MUST remain.
-2. When a lead submits, Save MUST be hidden and the forward commit slot MUST
-   switch to the reversal action without reordering the remaining controls.
-3. Viewer and the lead preview render through the shared report page; neither
-   header action group MUST contain any commit control (Save/Submit/Publish). For
-   the viewer specifically, the navigation it adds (e.g. Back to Archive) MUST
-   sit in the context-control bar, not the header action group. The lead preview
-   keeps its own outer header; its outer-header navigation is outside the shared
-   toolbar contract and remains in that outer header.
-4. Status indicators (submitted count, autosave time, publish precondition hint,
-   department label) MUST render on the header line as labels, NOT inside the
-   document-action group or the context bar.
+Report controls MUST adapt to role and lifecycle eligibility while surviving controls retain stable positions. Read-only Lead periods MUST hide mutating actions; submission MUST replace the forward slot with its reversal. Viewer and Lead preview MUST expose no commit control. Status indicators MUST remain header labels outside action/context groups. Lead save recovery MUST follow Retry-only completion rules.
 
 #### Scenario: a lead views a locked past period
 
 - **WHEN** a lead opens a read-only past period
-- **THEN** the header action group hides Save, Submit, and Fill from
-- **AND** the context bar still allows navigating periods
+- **THEN** Save/Retry, Submit, and Fill from are absent
+- **AND** the context bar still allows period navigation
 
 #### Scenario: a viewer opens a published report
 
-- **WHEN** a viewer opens a published report through the shared report page
-- **THEN** the header action group shows only the PDF export with no
-  Save/Submit/Publish
-- **AND** the submitted-count badge renders outside the header action group
+- **WHEN** a viewer opens a published report through the shared page
+- **THEN** its action group shows only PDF export without Save, Retry, Submit, or Publish
+- **AND** submitted-count status remains outside the action group
+- **AND** viewer Back to Archive navigation remains in the context bar
+
+#### Scenario: submission and preview retain their role boundaries
+
+- **WHEN** a lead submits or opens the read-only preview
+- **THEN** submission hides Retry and replaces Submit with the eligible reversal without reordering survivors
+- **AND** preview has no commit control and keeps its existing outer-header navigation outside the shared toolbar
+- **AND** autosave time, submitted count, publish preconditions, and department labels stay outside document/context action groups
 
 ### Requirement: All toolbar controls stay reachable at narrow viewport widths
 
@@ -163,51 +133,36 @@ than lose meaningful names to truncation.
 
 ### Requirement: Document actions render on the page header line; the toolbar holds the context-control bar
 
-The report surface MUST split its controls by one axis — operates on the report document vs changes which / how it is shown — placing the document actions on the page header line and the context controls in the single bordered toolbar bar below it. The Lead Save/Add/Submit cluster MAY hand off to the compact sticky action surface when its header leaves the viewport, as specified in `lead-completion-guidance`; both placements MUST share action state and handlers, and the context toolbar MUST NOT become a second action surface.
-
-1. A control that creates, persists, commits, or exports report content (Save,
-   Submit, Publish & lock, Fill from, PDF export, Archive) MUST
-   render on the page header line, in a right-aligned action group beside the
-   title/status block — NOT inside the bordered toolbar.
-2. A control that changes which report is shown or how it is presented (period
-   navigation, show-archived-periods filter, scope, view mode, and in slides
-   the density and fullscreen controls) MUST render in
-   the bordered toolbar bar, even when it persists a setting.
-3. The bordered toolbar MUST render exactly one row (the context-control bar);
-   it MUST NOT contain a document-action row.
-4. The head archive surfaces split by this axis: the show-archived-periods
-   filter is a context control (toolbar bar), while the published-period "Archive"
-   lifecycle button (accessible name `Move this report to the archive`) is a document action (header line).
+Report document actions MUST occupy the header action group and context controls one bordered toolbar row. Lead completion actions MAY hand off between the header and a separate non-overlay rail while sharing state and handlers. The rail MUST use Retry-only autosave recovery, not a permanent Save/Add cluster. The context toolbar MUST NOT become a second document-action surface.
 
 #### Scenario: the lead surface splits across the header and the toolbar
 
-- **WHEN** a lead opens their report for an editable period that has archived
-  periods in its history
-- **THEN** the header line's action group shows Fill from, Save, and the Submit commit
-- **AND** the bordered toolbar shows one row: period navigation, the
-  show-archived-periods filter, Report chat, the Mine/Everyone scope, and the
-  Report/Slides view mode; the Report overview has no collapse-all control
+- **WHEN** a lead opens an editable report with archived history
+- **THEN** the header offers Fill from and eligible completion actions, with Retry only during autosave recovery
+- **AND** the single context row holds period navigation, archived filter, Report chat, Mine/Everyone scope, and Report/Slides mode
+- **AND** Report Overview has no collapse-all control and no permanent manual Save
 
 #### Scenario: the lead slides surface shows density and fullscreen in the trailing slot
 
-- **WHEN** a lead opens their report in slides mode
-- **THEN** the bordered toolbar's trailing utility slot shows the Document/Presentation
-  density control and the fullscreen toggle
+- **WHEN** a lead opens Slides
+- **THEN** the context toolbar trailing slot shows Document/Presentation density and fullscreen
 
 #### Scenario: the head surface splits across the header and the toolbar
 
-- **WHEN** a head opens the review page for an open period
-- **THEN** the header line's action group shows the PDF export and the Publish &
-  lock commit
-- **AND** the bordered toolbar shows one row: period navigation, the
-  show-archived-periods filter, the Product/Leads scope, the Edit/Slides view
-  mode
+- **WHEN** a head opens review for an open period
+- **THEN** PDF export and Publish & lock occupy the header action group
+- **AND** period navigation, archived filter, Product/Leads scope, and Edit/Slides mode occupy the single context row
 
 #### Scenario: a published head period offers move-to-archive as a document action
 
-- **WHEN** a head views a published period that can be moved to the archive
-- **THEN** the Archive control (accessible name `Move this report to the archive`) renders in the header line's action group,
-  separate from the toolbar's show-archived-periods filter
+- **WHEN** a head views a period eligible for Move this report to the archive
+- **THEN** Archive remains a header document action separate from the context archive filter
+
+#### Scenario: document and presentation controls follow the same split
+
+- **WHEN** report controls are composed
+- **THEN** Submit, Publish & lock, Fill from, PDF export, Archive, and any eligible save/retry action stay outside the context bar
+- **AND** period, archived filter, scope, mode, density, and fullscreen stay in that bar even if a setting is persisted
 
 ### Requirement: The header action group and the context bar are accessible as labeled groups with a stable focus order
 
@@ -233,26 +188,18 @@ header actions before the context controls.
 
 ### Requirement: The lead document-action group holds no quick-add control
 
-The lead document-action group MUST contain only Fill from, Save, and the
-forward commit (Submit) or its reversal. Record creation MUST NOT use a header
-quick-add control: it happens through each editable cell's `Add item` footer
-(`lead-status-overview`) and the Risks & Blockers and Decisions sections. The
-header group MUST keep the same controls in Report and Slides modes so
-switching modes does not move them. On a read-only past period Save, Submit,
-and Fill from MUST be hidden.
+The Lead document-action group MUST contain Fill from and eligible Submit/reversal actions, plus Retry only for autosave recovery. Record creation MUST stay with reporting-unit/header or contextual Current/Next entry points and the Risks/Decisions sections, not a report-header quick-add. Report/Slides switching MUST retain action order; read-only past periods MUST hide mutating actions.
 
 #### Scenario: switching Report to Slides keeps the document actions
 
-- **WHEN** a lead toggles the view-mode control from Report to Slides on an
-  editable section
-- **THEN** the document-action group still shows Fill from, Save, and Submit in
-  the same order
-- **AND** no `+ Add item` control is present in the group
+- **WHEN** a lead switches Report to Slides on an editable section
+- **THEN** Fill from, any eligible Retry, and Submit keep their relative order and shared state
+- **AND** no report-header `+ Add item` control or permanent Save appears
 
 #### Scenario: a read-only past period hides the mutating actions
 
-- **WHEN** a lead opens a read-only past period
-- **THEN** Save, Submit, and Fill from are hidden
+- **WHEN** the lead opens a read-only past period
+- **THEN** Save/Retry, Submit, and Fill from are hidden
 
 ### Requirement: Report context controls preserve semantic clusters at every supported width
 
@@ -330,3 +277,18 @@ form destination. At wider widths, the existing horizontal header MAY remain.
 - **WHEN** a Lead opens Section Preview at 375 CSS pixels
 - **THEN** its header text and Back to form link fit without squeezing or overlap
 - **AND** Back to form remains a single-line, reachable link to the addressed form
+
+### Requirement: Lead completion handoff MUST share canonical action state
+
+Lead header and rail completion presentations MUST share canonical autosave, Submit, eligibility, and review state without duplicate handlers. Visibility handoff MUST use the latest header visibility observation; observer absence MUST leave header actions usable. Neither presentation MUST add a global quick-add control. Retry focus recovery MUST follow `lead-report-controls-integrity`.
+
+#### Scenario: Header visibility observations are coalesced
+
+- **WHEN** one observer batch includes multiple visibility changes for the header sentinel
+- **THEN** the last observation determines the active completion presentation
+- **AND** both presentations consume the same eligibility, review count, and canonical handlers
+
+#### Scenario: Header observation is unavailable
+
+- **WHEN** no header sentinel or IntersectionObserver is available
+- **THEN** header actions remain usable instead of disappearing
