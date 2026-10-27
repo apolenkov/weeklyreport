@@ -19,7 +19,7 @@ const REVIEWED_EXTERNAL_IMAGES = new Set([
   "node:26.12.1-trixie@sha256:a98e6fda54fdbb22d4238054cca9a2a113bcd1191c09193a535aae22f400aa8e",
   "pgvector/pgvector:0.8.7-pg15-bookworm@sha256:47af0b65960b14f1c6945aa4ccae37836c632e9a6fe0eea9160936e616e5b2e9",
   "postgres:16.15-alpine@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab",
-  "redis:8.10.2-alpine@sha256:3811787313eba226a2ef38658c6ccb91cd5e110edc89c37767de373120a0e5a0",
+  "redis:8.10.3-alpine@sha256:896f241f438ab6a210cfb24f573b84bea721a4cbe67f1b4fd07eb638b3b02a7b",
   "mirror.example.org/all-pub-docker/buildah/stable:v1.43.5@sha256:87f219f5a7bf5d7bee870253c14a57751e85833cb2cc645216a20bbb66c68724",
 ]);
 
@@ -158,7 +158,7 @@ test("external image policy rejects moving and mismatched references", () => {
     `redis:stable@sha256:${digest}`,
     `redis:7-alpine@sha256:${digest}`,
     `redis:${"$" + "{TAG}"}@sha256:${digest}`,
-    `redis:8.10.2-alpine@sha256:${digest}`,
+    `redis:8.10.3-alpine@sha256:${digest}`,
   ]) {
     assert.throws(() => assertReviewedExternalImage("probe", image));
   }
