@@ -28,12 +28,6 @@ function isStageSelected(selected: readonly string[], stage: string): boolean {
   return selected.includes(stage);
 }
 
-function toggleStage(selected: readonly string[], stage: string): string[] {
-  return isStageSelected(selected, stage)
-    ? selected.filter((item) => item !== stage)
-    : [...selected, stage];
-}
-
 function deriveStageScopePresentation(
   selected: readonly string[],
   previewSeverity: "at-risk" | "blocked" | undefined,
@@ -53,12 +47,23 @@ export function StageMultiSelect({
   onChange,
   previewSeverity,
 }: StageMultiSelectProps) {
-  const selected = value;
+  // A saved record can outlive the stages it names (an admin may reassign a
+  // product stage after the record was written). An unavailable name has no
+  // checkbox, so it is shown as a removable chip rather than dropped: the
+  // server stays the authority on ownership, and an untouched saved name still
+  // travels in the payload until the lead removes it.
+  const selected = value.filter((stage) => stages.includes(stage));
+  const unavailable = value.filter((stage) => !stages.includes(stage));
   const helperId = `${id}-hint`;
   const errorId = `${id}-error`;
 
   const isSelected = (stage: string) => isStageSelected(selected, stage);
-  const toggle = (stage: string) => onChange(toggleStage(selected, stage));
+  const toggle = (stage: string) =>
+    onChange(
+      isSelected(stage)
+        ? value.filter((item) => item !== stage)
+        : [...value, stage],
+    );
 
   const { bannerText } = deriveStageScopePresentation(
     selected,
@@ -76,6 +81,12 @@ export function StageMultiSelect({
       <StageHelperText id={helperId} />
       {bannerText && <StageScopeBanner text={bannerText} />}
       <StageChoices stages={stages} isSelected={isSelected} onToggle={toggle} />
+      {unavailable.length > 0 && (
+        <UnassignedStageChips
+          stages={unavailable}
+          onRemove={(stage) => onChange(value.filter((item) => item !== stage))}
+        />
+      )}
       {error && (
         <p
           id={errorId}
@@ -107,6 +118,39 @@ function StageScopeBanner({ text }: { readonly text: string }) {
     >
       <AlertTriangleIcon />
       <span>{text}</span>
+    </div>
+  );
+}
+
+// Saved names the lead can no longer assign: the record keeps them, so they are
+// visible and removable here instead of silently disappearing from the dialog.
+const UNASSIGNED_STAGE_CHIP_CLASS =
+  "inline-flex min-h-[var(--touch-target-min)] max-w-full items-center gap-2 rounded-[var(--radius-pill)] border border-dashed border-[var(--color-status-at-risk-border)] bg-[var(--color-status-at-risk-bg)] px-3 py-1 text-xs font-semibold text-[var(--color-status-at-risk-fg)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
+
+function UnassignedStageChips({
+  stages,
+  onRemove,
+}: {
+  readonly stages: readonly string[];
+  readonly onRemove: (stage: string) => void;
+}) {
+  return (
+    <div
+      data-testid="unassigned-stage-chips"
+      className="mt-2 flex flex-wrap gap-2"
+    >
+      {stages.map((stage) => (
+        <button
+          key={stage}
+          type="button"
+          aria-label={`Remove ${stage} — no longer assigned`}
+          className={UNASSIGNED_STAGE_CHIP_CLASS}
+          onClick={() => onRemove(stage)}
+        >
+          <span className="truncate">{`${stage} — no longer assigned`}</span>
+          <RemoveIcon />
+        </button>
+      ))}
     </div>
   );
 }
@@ -201,6 +245,25 @@ function AlertTriangleIcon() {
       <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
       <line x1="12" y1="9" x2="12" y2="13" />
       <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  );
+}
+
+function RemoveIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
     </svg>
   );
 }

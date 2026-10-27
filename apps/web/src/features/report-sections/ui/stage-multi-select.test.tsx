@@ -169,3 +169,134 @@ describe("StageMultiSelect", () => {
     expect(screen.queryByTestId("stage-scope-banner")).toBeNull();
   });
 });
+
+// A saved item, decision or risk can name a stage the lead no longer owns — an
+// admin may reassign the product stage after the record was written. No
+// checkbox can represent it, but the saved name stays visible as a removable
+// chip so the lead is not trapped; the server remains the ownership authority,
+// so an untouched saved name still travels in the onChange payload.
+describe("StageMultiSelect — saved stages outside the available list", () => {
+  const removeLegacyChip = () =>
+    screen.getByRole("button", {
+      name: "Remove Legacy — no longer assigned",
+    });
+
+  it("ignores an unavailable saved stage in the severity preview", () => {
+    render(
+      <StageMultiSelect
+        id="stages"
+        value={["Legacy"]}
+        stages={["Dev", "Testing"]}
+        onChange={vi.fn()}
+        previewSeverity="at-risk"
+      />,
+    );
+
+    expect(screen.queryByTestId("stage-scope-banner")).toBeNull();
+  });
+
+  it("shows a saved stage outside the available list as a removable chip", () => {
+    render(
+      <StageMultiSelect
+        id="stages"
+        value={["Testing", "Legacy"]}
+        stages={["Dev", "Testing"]}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Legacy — no longer assigned")).toBeInTheDocument();
+    expect(removeLegacyChip()).toBeInTheDocument();
+    // The unavailable name is never a selectable checkbox.
+    expect(screen.queryByRole("checkbox", { name: "Legacy" })).toBeNull();
+  });
+
+  it("removes only the leftover stage from the payload", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <StageMultiSelect
+        id="stages"
+        value={["Testing", "Legacy"]}
+        stages={["Dev", "Testing"]}
+        onChange={onChange}
+      />,
+    );
+
+    await user.click(removeLegacyChip());
+
+    expect(onChange).toHaveBeenCalledWith(["Testing"]);
+  });
+
+  it("keeps an untouched saved stage when an available stage is checked", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <StageMultiSelect
+        id="stages"
+        value={["Testing", "Legacy"]}
+        stages={["Dev", "Testing"]}
+        onChange={onChange}
+      />,
+    );
+
+    await user.click(screen.getByRole("checkbox", { name: "Dev" }));
+
+    expect(onChange).toHaveBeenCalledWith(["Testing", "Legacy", "Dev"]);
+  });
+
+  it("keeps an untouched saved stage when an available stage is unchecked", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <StageMultiSelect
+        id="stages"
+        value={["Dev", "Testing", "Legacy"]}
+        stages={["Dev", "Testing"]}
+        onChange={onChange}
+      />,
+    );
+
+    await user.click(screen.getByRole("checkbox", { name: "Testing" }));
+
+    expect(onChange).toHaveBeenCalledWith(["Dev", "Legacy"]);
+  });
+
+  it("keeps the leftover chip keyboard-removable when no stages are available", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(
+      <StageMultiSelect
+        id="stages"
+        value={["Legacy"]}
+        stages={[]}
+        onChange={onChange}
+      />,
+    );
+
+    expect(screen.getByText("Legacy — no longer assigned")).toBeInTheDocument();
+    expect(
+      screen.getByText("No assigned stages available."),
+    ).toBeInTheDocument();
+
+    removeLegacyChip().focus();
+    await user.keyboard(" ");
+
+    expect(onChange).toHaveBeenCalledWith([]);
+  });
+
+  it("renders no leftover chip when every saved stage is available", () => {
+    render(
+      <StageMultiSelect
+        id="stages"
+        value={["Dev"]}
+        stages={["Dev", "Testing"]}
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: /no longer assigned/ }),
+    ).toBeNull();
+  });
+});
