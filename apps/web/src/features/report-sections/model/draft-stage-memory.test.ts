@@ -200,6 +200,31 @@ describe("draft stage memory — only a server-confirmed singleton is the defaul
     expect(memory.recall(PRODUCT)).toBe("Testing");
   });
 
+  it("moves an in-flight edit of a created row to its server identity", () => {
+    const memory = createDraftStageMemory();
+    const draftRowId = "draft-row-7";
+    memory.stageChangedSelections([
+      { recordId: draftRowId, productId: PRODUCT, stageNames: ["Testing"] },
+    ]);
+    // The lead edits the same row again while the save that created it flies.
+    memory.stageChangedSelections([
+      { recordId: draftRowId, productId: PRODUCT, stageNames: ["Development"] },
+    ]);
+
+    // The first save echoes: the row now has a server id and persisted Testing,
+    // so the newer local choice stays pending.
+    memory.confirmPersisted(makeSectionWithItem(["Testing"]), [
+      { clientId: draftRowId, serverId: ITEM },
+    ]);
+    expect(memory.recall(PRODUCT)).toBeUndefined();
+
+    // The next save writes Development against the server row and confirms it.
+    memory.confirmPersisted(makeSectionWithItem(["Development"]), [
+      { clientId: ITEM, serverId: ITEM },
+    ]);
+    expect(memory.recall(PRODUCT)).toBe("Development");
+  });
+
   it("does not confirm an abandoned choice through another record's save", () => {
     const memory = createDraftStageMemory();
     remember(memory, ITEM, "Development");
@@ -253,6 +278,39 @@ describe("draft stage memory — only a server-confirmed singleton is the defaul
 
     memory.confirmPersisted(makeSectionWithItem(["Development"]));
     expect(memory.recall(PRODUCT)).toBe("Development");
+  });
+
+  it("drops a pending choice when the same row is widened to several stages", () => {
+    const memory = createDraftStageMemory();
+    memory.stageChangedSelections([
+      { recordId: ITEM, productId: PRODUCT, stageNames: ["Development"] },
+    ]);
+    // The lead deliberately widens the same row while that save is in flight.
+    memory.stageChangedSelections([
+      {
+        recordId: ITEM,
+        productId: PRODUCT,
+        stageNames: ["Development", "Testing"],
+      },
+    ]);
+
+    // The earlier singleton is no longer the row's choice, so the in-flight
+    // save must not confirm it.
+    memory.confirmPersisted(makeSectionWithItem(["Development"]));
+    expect(memory.recall(PRODUCT)).toBeUndefined();
+  });
+
+  it("drops a pending choice when the same row's stages are cleared", () => {
+    const memory = createDraftStageMemory();
+    memory.stageChangedSelections([
+      { recordId: ITEM, productId: PRODUCT, stageNames: ["Development"] },
+    ]);
+    memory.stageChangedSelections([
+      { recordId: ITEM, productId: PRODUCT, stageNames: [] },
+    ]);
+
+    memory.confirmPersisted(makeSectionWithItem(["Development"]));
+    expect(memory.recall(PRODUCT)).toBeUndefined();
   });
 
   it("ignores a deliberate multi-stage save and keeps the previous singleton", () => {
