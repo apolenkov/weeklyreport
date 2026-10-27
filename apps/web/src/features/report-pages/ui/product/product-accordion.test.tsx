@@ -643,6 +643,31 @@ describe("ProductAccordion — highlighted scroll motion", () => {
     },
   );
 
+  // The ring is gated on content, so an empty card cannot look selected;
+  // scrolling to it would land the user on a card that shows no selection.
+  it("does not scroll to a card that has no content to highlight", () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: false }));
+    const scrollIntoView = vi.fn();
+    const { container } = render(
+      <ProductAccordion
+        report={makeReport({ id: "empty-scroll-target" })}
+        instanceRootId="report-product-empty-scroll-target"
+        highlighted
+        scrollIntoViewOnHighlight
+      />,
+    );
+    const root = container.querySelector<HTMLElement>(
+      "#report-product-empty-scroll-target",
+    );
+    if (!root) throw new Error("Product accordion root was not rendered");
+    root.scrollIntoView = scrollIntoView;
+
+    vi.runAllTimers();
+
+    expect(scrollIntoView).not.toHaveBeenCalled();
+  });
+
   it("keeps a manual collapse until the next explicit navigation", () => {
     const { rerender } = render(
       <ProductAccordion
