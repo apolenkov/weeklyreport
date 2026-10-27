@@ -15,7 +15,9 @@ links to its trace in Tempo. The Sentry SDK MUST run with
 receiving spans. Transactions MUST NOT be sent to Bugsink (it stores errors
 only). The shared policy MUST drop them through a supported span filter, not a
 hook the SDK deprecates or removes, so a major upgrade cannot silently
-re-enable transaction sending.
+re-enable transaction sending. The filter matches a transaction whose root span
+name or op is non-empty; SDK-created roots carry both, so a root with neither
+field passes the filter.
 
 #### Scenario: An in-request error links to its Tempo trace
 
@@ -32,8 +34,9 @@ re-enable transaction sending.
 
 #### Scenario: No transactions reach Bugsink
 
-- **GIVEN** any Sentry runtime (api, Next server, Next edge, browser)
-- **WHEN** the SDK would emit a transaction event
+- **GIVEN** any Sentry runtime (api, Next server, Next edge, browser) and a
+  transaction whose root span has a non-empty name or op
+- **WHEN** the SDK would emit the transaction event
 - **THEN** the shared privacy policy matches the transaction root, the SDK
   drops the transaction before send, and Bugsink receives only errors
 
