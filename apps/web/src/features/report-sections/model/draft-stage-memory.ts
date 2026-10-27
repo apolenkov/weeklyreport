@@ -61,6 +61,25 @@ interface PendingStage {
   readonly stageName: string;
 }
 
+// The same pending choice, moved from the draft row the save was made for to
+// the server row that save created.
+interface PendingRekey {
+  readonly from: string;
+  readonly to: string;
+}
+
+interface PendingConfirmation {
+  readonly recordId: string;
+  readonly stage: PendingStage;
+}
+
+// What one accepted save does to the pending choices.
+interface PendingSettlement {
+  readonly confirmed: readonly PendingConfirmation[];
+  readonly dropped: readonly string[];
+  readonly rekeyed: readonly PendingRekey[];
+}
+
 function singletonOf(selection: SavedStageSelection): {
   readonly recordId: string;
   readonly productId: string;
@@ -123,6 +142,40 @@ function sectionHasSingleton(
   );
 }
 
+// Sorts the pending choices against one accepted save. A choice the server
+// stored is confirmed; a created row's choice moves from its draft id to the
+// server row the echo names, so the next save can confirm it; a choice already
+// re-keyed under that row is dropped. Anything else stays pending.
+function settlePendingChoices(
+  section: PersistedStageRecords,
+  pending: ReadonlyMap<string, PendingStage>,
+  serverIdByClientId: ReadonlyMap<string, string>,
+): PendingSettlement {
+  const confirmed: PendingConfirmation[] = [];
+  const dropped: string[] = [];
+  const rekeyed: PendingRekey[] = [];
+  for (const [recordId, stage] of pending) {
+    const serverId = serverIdByClientId.get(recordId);
+    const target: ConfirmedTarget = {
+      serverId: serverId ?? recordId,
+      productId: stage.productId,
+      stageName: stage.stageName,
+    };
+    if (sectionHasSingleton(section, target)) {
+      confirmed.push({ recordId, stage });
+      continue;
+    }
+    // Existing rows are already keyed by their server id.
+    if (serverId === undefined || serverId === recordId) continue;
+    if (pending.has(serverId)) {
+      dropped.push(recordId);
+      continue;
+    }
+    rekeyed.push({ from: recordId, to: serverId });
+  }
+  return { confirmed, dropped, rekeyed };
+}
+
 export function createDraftStageMemory(): DraftStageMemory {
   const persisted = new Map<string, string>();
   // Keyed by the draft row, so an unrelated record's save cannot confirm it.
@@ -136,7 +189,13 @@ export function createDraftStageMemory(): DraftStageMemory {
     stageChangedSelections(selections) {
       for (const selection of selections) {
         const singleton = singletonOf(selection);
-        if (singleton === null) continue;
+        if (singleton === null) {
+          // The row's latest choice cannot be remembered (several, no, or
+          // product-less stages), and an in-flight save of the previous
+          // singleton must not confirm a choice the lead has abandoned.
+          pending.delete(selection.recordId);
+          continue;
+        }
         // The latest choice for that row is the one a save can confirm.
         pending.set(singleton.recordId, {
           productId: singleton.productId,
@@ -146,19 +205,23 @@ export function createDraftStageMemory(): DraftStageMemory {
     },
     confirmPersisted(section, identities = []) {
       if (pending.size === 0) return;
-      const serverIdByClientId = new Map(
-        identities.map((identity) => [identity.clientId, identity.serverId]),
+      const settlement = settlePendingChoices(
+        section,
+        pending,
+        new Map(
+          identities.map((identity) => [identity.clientId, identity.serverId]),
+        ),
       );
-      for (const [recordId, stage] of pending) {
-        const serverId = serverIdByClientId.get(recordId) ?? recordId;
-        const target: ConfirmedTarget = {
-          serverId,
-          productId: stage.productId,
-          stageName: stage.stageName,
-        };
-        if (!sectionHasSingleton(section, target)) continue;
+      for (const { recordId, stage } of settlement.confirmed) {
         persisted.set(stage.productId, stage.stageName);
         pending.delete(recordId);
+      }
+      for (const recordId of settlement.dropped) pending.delete(recordId);
+      for (const { from, to } of settlement.rekeyed) {
+        const stage = pending.get(from);
+        if (stage === undefined) continue;
+        pending.delete(from);
+        pending.set(to, stage);
       }
     },
   };
