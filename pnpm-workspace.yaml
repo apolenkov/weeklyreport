@@ -58,6 +58,9 @@ overrides:
   # samlify 2.15.1's own parser must be 0.9.12+; every other consumer of
   # @xmldom/xmldom stays on 0.8 via the global override above.
   "samlify>@xmldom/xmldom": ">=0.9.12 <0.10"
+  # GHSA-6pq8-jhm2-2vcw: qs <=6.16.0 throws on stringify arrayFormat comma; the
+  # express 5 chain resolved 6.16.0, so the floor is the patched release.
+  qs: ">=6.16.1 <7"
   protobufjs: ">=8.8.1 <9"
   # Keep the Vite peer resolution identical across workspace test consumers.
   vite: "8.3.5"
