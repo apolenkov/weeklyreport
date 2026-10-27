@@ -236,7 +236,12 @@ function useLeadFormEditorWithData(
       draftSection: loaded.draftSection,
       autosave: draft.autosave,
       submitReadiness: draft.submitReadiness,
-      draftActions: buildDraftActions(draft, editing.addSignals, viewModel),
+      draftActions: buildDraftActions(
+        draft,
+        editing.addSignals,
+        viewModel,
+        loaded.draftSection,
+      ),
       writeActions: editing.writeActions,
       isSlidesMode,
       isSubmitted: editing.isSubmitted,

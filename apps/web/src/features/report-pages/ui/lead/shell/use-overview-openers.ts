@@ -1,5 +1,9 @@
-import type { LeadStatusOverviewOutput } from "@weeklyreport/shared";
+import type {
+  LeadStatusOverviewOutput,
+  ReportSectionReadModel,
+} from "@weeklyreport/shared";
 import type { SetStateAction } from "react";
+import { toast } from "sonner";
 
 import type {
   KanbanItem,
@@ -8,7 +12,12 @@ import type {
   StatusOverviewItem,
   StatusOverviewModel,
 } from "../../../../report-sections";
-import { buildConfirmCarriedItemPatch } from "../../../../report-sections";
+import {
+  buildConfirmCarriedItemPatch,
+  buildMoveItemPatch,
+  isSavedNextWeekPlan,
+} from "../../../../report-sections";
+import { NEXT_WEEK_PLAN_CONFIRMED_MESSAGE } from "../chrome/lead-form-draft-actions";
 import {
   createOverviewComposerState,
   findEditableItem,
@@ -77,6 +86,42 @@ function editDialogState(
   };
 }
 
+type WhenIdle = (action: (ready: ReadyEditor) => void) => void;
+
+// Move to next week on a Current occurrence whose saved next step already plans
+// that week only acknowledges the plan: the record, its result and its
+// commitment stay put, and the ordinary draft save carries the acknowledgement.
+function acknowledgeSavedNextWeekPlan(
+  whenIdle: WhenIdle,
+  section: ReportSectionReadModel,
+  item: StatusOverviewItem,
+  target: "current" | "next",
+): boolean {
+  const recordId = item.recordId;
+  if (target !== "next" || recordId === null) return false;
+  if (!isSavedNextWeekPlan(section, recordId)) return false;
+  whenIdle((ready) => {
+    const patch = buildMoveItemPatch(ready.draft.section, recordId, "next");
+    if (!patch) return;
+    ready.draft.apply(patch);
+    toast.success(NEXT_WEEK_PLAN_CONFIRMED_MESSAGE);
+  });
+  return true;
+}
+
+// A running outcome command locks the draft: apply right after it.
+function applyCarriedConfirmation(
+  whenIdle: WhenIdle,
+  item: StatusOverviewItem,
+): void {
+  const recordId = item.recordId;
+  if (!recordId) return;
+  whenIdle((ready) => {
+    const patch = buildConfirmCarriedItemPatch(ready.draft.section, recordId);
+    if (patch) ready.draft.apply(patch);
+  });
+}
+
 export function useOverviewEditOpeners({
   editor,
   dialog,
@@ -121,6 +166,10 @@ export function useOverviewEditOpeners({
     focusKey?: string,
   ): void => {
     if (!editor || isReadOnly || dialog || !item.editTarget) return;
+    if (
+      acknowledgeSavedNextWeekPlan(whenIdle, editor.draft.section, item, target)
+    )
+      return;
     const move = overviewMoveEditorItem(
       editor,
       { text: item.text, editTarget: item.editTarget },
@@ -133,13 +182,8 @@ export function useOverviewEditOpeners({
     });
   };
   const confirmItem = (item: StatusOverviewItem): void => {
-    const recordId = item.recordId;
-    if (!editor || isReadOnly || dialog || !recordId) return;
-    // A running outcome command locks the draft: apply right after it.
-    whenIdle((ready) => {
-      const patch = buildConfirmCarriedItemPatch(ready.draft.section, recordId);
-      if (patch) ready.draft.apply(patch);
-    });
+    if (!editor || isReadOnly || dialog) return;
+    applyCarriedConfirmation(whenIdle, item);
   };
   const setItemStatus = (
     item: StatusOverviewItem,

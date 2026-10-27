@@ -1,7 +1,12 @@
 import { act, renderHook } from "@testing-library/react";
 import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { reportSectionReadModelSchema } from "@weeklyreport/shared";
-import { describe, expect, it } from "vitest";
+import { toast } from "sonner";
+import { describe, expect, it, vi } from "vitest";
+
+vi.mock("sonner", () => ({
+  toast: { error: vi.fn(), info: vi.fn(), success: vi.fn() },
+}));
 
 import { makeReportSectionFixture } from "../../../../test-utils/report-section-fixtures";
 import { buildDraftActions } from "../../../report-pages/ui/lead/chrome/lead-form-draft-actions";
@@ -69,7 +74,15 @@ function renderDraft(
     });
     const handle = { ...draft, ...quickAdd };
     const signals = useLeadFormAddSignals();
-    return { ...handle, actions: buildDraftActions(handle, signals, loaded) };
+    return {
+      ...handle,
+      actions: buildDraftActions(
+        handle,
+        signals,
+        loaded,
+        handle.draft ?? section,
+      ),
+    };
   });
   return rendered;
 }
@@ -129,6 +142,48 @@ describe("useLeadFormDraft merge routing", () => {
       ).not.toThrow();
     },
   );
+
+  it("confirms a saved next-week plan in place instead of moving the record", () => {
+    const base = makeDraftMergeSection();
+    const section = reportSectionReadModelSchema.parse({
+      ...base,
+      items: base.items.map((item) =>
+        item.id === CURRENT_ITEM_ID
+          ? {
+              ...item,
+              type: "current",
+              workflowStatus: "in_progress",
+              pausedReason: null,
+              carriedOver: true,
+              nextStepText: "Finish the acceptance check",
+            }
+          : item,
+      ),
+    });
+    const { result } = renderDraft(LOADED, section);
+
+    act(() => {
+      result.current.actions.onMoveToNextWeek(CURRENT_ITEM_ID);
+    });
+
+    // The record keeps its week placement and its commitment; only the carry
+    // marker is acknowledged, so the result is not replaced by its next step.
+    expect(result.current.draft?.items[0]).toMatchObject({
+      id: CURRENT_ITEM_ID,
+      stableId: section.items[0]?.stableId,
+      type: "current",
+      text: "Current product item",
+      workflowStatus: "in_progress",
+      nextStepText: "Finish the acceptance check",
+      carriedOver: false,
+    });
+    expect(result.current.draft?.items).toHaveLength(section.items.length);
+    expect(result.current.dirty).toBe(true);
+    expect(() =>
+      reportSectionReadModelSchema.parse(result.current.draft),
+    ).not.toThrow();
+    expect(toast.success).toHaveBeenCalledWith("Already planned for next week");
+  });
 
   it.each(["move", "complete", "pause"] as const)(
     "keeps a resolved raw item unchanged through the public %s callback",

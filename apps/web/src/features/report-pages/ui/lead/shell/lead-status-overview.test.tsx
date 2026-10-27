@@ -2405,71 +2405,26 @@ describe("LeadForm Overview", () => {
     expect(saveDraft).not.toHaveBeenCalled();
   });
 
-  it("keeps a legacy next-week commitment linked to its Current result", async () => {
+  it("confirms a saved next-week plan in place and never promotes the result", async () => {
     const user = userEvent.setup();
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    const saveDraft = vi.fn();
-    const promotePlan = vi.fn(
-      (_input: unknown, current: ReportSectionReadModel) => {
-        const source = current.items.find(
-          (item) => item.text === "Current work",
-        );
-        if (!source?.stableId || !source.nextStepText)
-          throw new Error("Expected a linked next-week commitment");
-        const occurredAt = "2026-09-14T18:45:00.000Z";
-        const moved = {
-          ...source,
-          type: "next" as const,
-          text: source.nextStepText,
-          nextStepText: null,
-          carriedOver: false,
-          outcomeHistory: [
-            ...(source.outcomeHistory ?? []),
-            {
-              id: "a0000000-0000-4000-8000-000000000030",
-              stableId: source.stableId,
-              outcome: "plan_next" as const,
-              reason: null,
-              actorId: current.authorId,
-              actorName: current.authorName,
-              occurredAt,
-              beforeState: {
-                type: source.type,
-                workflowStatus: source.workflowStatus,
-                pausedReason: source.pausedReason ?? null,
-                nextStepText: source.nextStepText,
-                text: source.text,
-              },
-              afterState: {
-                type: "next" as const,
-                workflowStatus: source.workflowStatus,
-                pausedReason: source.pausedReason ?? null,
-                nextStepText: null,
-                text: source.nextStepText,
-              },
-              reversesEventId: null,
-            },
-          ],
+    const saveDraft = vi.fn(
+      (input: unknown, current: ReportSectionReadModel) => {
+        const draft = input as {
+          readonly version: number;
+          readonly items: ReportSectionReadModel["items"];
         };
         return Promise.resolve({
-          section: {
-            ...current,
-            version: current.version + 1,
-            items: current.items.map((item) =>
-              item.id === source.id ? moved : item,
-            ),
-          },
-          stableId: source.stableId,
-          replayed: false,
+          ...current,
+          version: draft.version + 1,
+          items: draft.items,
         });
       },
     );
+    const promotePlan = vi.fn();
     render(
       <Wrapper
-        client={client}
         legacyNextText="Legacy next-week plan"
+        currentCarriedOver
         promotePlan={promotePlan}
         saveDraft={saveDraft}
       >
@@ -2478,52 +2433,48 @@ describe("LeadForm Overview", () => {
     );
 
     await chooseMove(user, "Current work", "next week");
+
+    // Move on a saved plan confirms it in place: no editor, no promotion.
     expect(
-      screen.getByRole("form", { name: "Next week update for Payments" }),
-    ).toBeVisible();
-    expect(screen.getByRole("textbox", { name: /Description/ })).toHaveValue(
-      "Legacy next-week plan",
-    );
-    expect(screen.getByRole("textbox", { name: /Description/ })).toBeDisabled();
-    expect(screen.queryByRole("textbox", { name: /Next step/ })).toBeNull();
+      screen.queryByRole("form", { name: "Next week update for Payments" }),
+    ).toBeNull();
+    expect(toast.success).toHaveBeenCalledWith("Already planned for next week");
     expect(promotePlan).not.toHaveBeenCalled();
-    expect(saveDraft).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: "Save update" }));
-
-    await pollUntil(() => expect(promotePlan).toHaveBeenCalledOnce());
-    expect(promotePlan.mock.calls[0]?.[0]).toMatchObject({ target: "next" });
-    expect(saveDraft).not.toHaveBeenCalled();
-    await pollUntil(() =>
-      expect(
-        screen.queryByRole("form", { name: "Next week update for Payments" }),
-      ).not.toBeInTheDocument(),
+    // The acknowledgement rides the ordinary autosave (5 s debounce).
+    await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledOnce(), {
+      timeout: 12_000,
+    });
+    const request = saveDraft.mock.calls[0]?.[0] as {
+      readonly version: number;
+      readonly items: ReportSectionReadModel["items"];
+    };
+    const confirmedStableId = "a0000000-0000-4000-8000-000000000011";
+    const confirmed = request.items.find(
+      (item) => item.stableId === confirmedStableId,
     );
-
-    await act(async () => {
-      await client.refetchQueries({
-        queryKey: [["leadForm", "statusOverview"]],
-      });
+    // The occurrence and its commitment stay Current; only the carry marker is
+    // acknowledged, so the stored result is not replaced by its next step.
+    expect(confirmed).toMatchObject({
+      id: "a0000000-0000-4000-8000-000000000010",
+      stableId: confirmedStableId,
+      type: "current",
+      text: "Current work",
+      nextStepText: "Legacy next-week plan",
+      workflowStatus: "in_progress",
+      carriedOver: false,
     });
     expect(
-      await screen.findByRole("button", {
-        name: "Edit item: Legacy next-week plan",
-      }),
-    ).toBeInTheDocument();
-    const preview = screen
-      .getByRole("button", {
-        name: "Edit item: Legacy next-week plan",
-      })
-      .closest("[data-overview-item-preview]");
-    expect(
-      within(preview as HTMLElement).getByRole("button", {
-        name: "Status of Legacy next-week plan: In progress",
-      }),
-    ).toBeVisible();
-    await user.click(screen.getByText("History"));
-    expect(screen.getByText(/Moved to next week by Test Lead/)).toBeVisible();
-    expect(screen.getByText(/Previous: Current work/)).toBeVisible();
-  });
+      request.items.filter((item) => item.stableId === confirmedStableId),
+    ).toHaveLength(1);
+    await pollUntil(() =>
+      expect(document.activeElement).toHaveAttribute(
+        "data-overview-focus",
+        `more:current:${confirmedStableId}`,
+      ),
+    );
+    // The acknowledgement rides the debounced ordinary autosave.
+  }, 15_000);
 
   it.each([
     {
