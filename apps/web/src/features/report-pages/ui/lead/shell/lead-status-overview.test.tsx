@@ -392,7 +392,7 @@ async function itemPreview(text: string): Promise<HTMLElement> {
   });
 }
 
-async function chooseMove(
+async function openMoveMenu(
   user: ReturnType<typeof userEvent.setup>,
   text: string,
   destination: "this week" | "next week",
@@ -403,11 +403,17 @@ async function chooseMove(
       name: `More actions for ${text}`,
     }),
   );
-  await user.click(
-    await screen.findByRole("menuitem", {
-      name: `Move to ${destination}: ${text}`,
-    }),
-  );
+  return screen.findByRole("menuitem", {
+    name: `Move to ${destination}: ${text}`,
+  });
+}
+
+async function chooseMove(
+  user: ReturnType<typeof userEvent.setup>,
+  text: string,
+  destination: "this week" | "next week",
+) {
+  await user.click(await openMoveMenu(user, text, destination));
 }
 
 async function chooseUpdateProgress(
@@ -2432,41 +2438,56 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
 
-    await chooseMove(user, "Current work", "next week");
-
-    // Move on a saved plan confirms it in place: no editor, no promotion.
-    expect(
-      screen.queryByRole("form", { name: "Next week update for Payments" }),
-    ).toBeNull();
-    expect(toast.success).toHaveBeenCalledWith("Already planned for next week");
-    expect(promotePlan).not.toHaveBeenCalled();
-
-    // The acknowledgement rides the ordinary autosave (5 s debounce).
-    await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledOnce(), {
-      timeout: 12_000,
-    });
-    const request = saveDraft.mock.calls[0]?.[0] as {
-      readonly version: number;
-      readonly items: ReportSectionReadModel["items"];
-    };
-    const confirmedStableId = "a0000000-0000-4000-8000-000000000011";
-    const confirmed = request.items.find(
-      (item) => item.stableId === confirmedStableId,
+    // Open the row menu on the real clock; the acknowledgement only starts the
+    // autosave debounce, which is virtualized below instead of waited out.
+    const moveToNextWeek = await openMoveMenu(
+      user,
+      "Current work",
+      "next week",
     );
-    // The occurrence and its commitment stay Current; only the carry marker is
-    // acknowledged, so the stored result is not replaced by its next step.
-    expect(confirmed).toMatchObject({
-      id: "a0000000-0000-4000-8000-000000000010",
-      stableId: confirmedStableId,
-      type: "current",
-      text: "Current work",
-      nextStepText: "Legacy next-week plan",
-      workflowStatus: "in_progress",
-      carriedOver: false,
-    });
-    expect(
-      request.items.filter((item) => item.stableId === confirmedStableId),
-    ).toHaveLength(1);
+    const confirmedStableId = "a0000000-0000-4000-8000-000000000011";
+    vi.useFakeTimers();
+    try {
+      fireEvent.click(moveToNextWeek);
+
+      // Move on a saved plan confirms it in place: no editor, no promotion.
+      expect(
+        screen.queryByRole("form", { name: "Next week update for Payments" }),
+      ).toBeNull();
+      expect(toast.success).toHaveBeenCalledWith(
+        "Already planned for next week",
+      );
+      expect(promotePlan).not.toHaveBeenCalled();
+
+      // The acknowledgement rides the ordinary autosave: exactly one 5 s
+      // debounce, advanced here instead of waited out.
+      await act(() => vi.advanceTimersByTimeAsync(5000));
+      await act(() => vi.advanceTimersByTimeAsync(0));
+      expect(saveDraft).toHaveBeenCalledOnce();
+      const request = saveDraft.mock.calls[0]?.[0] as {
+        readonly version: number;
+        readonly items: ReportSectionReadModel["items"];
+      };
+      const confirmed = request.items.find(
+        (item) => item.stableId === confirmedStableId,
+      );
+      // The occurrence and its commitment stay Current; only the carry marker is
+      // acknowledged, so the stored result is not replaced by its next step.
+      expect(confirmed).toMatchObject({
+        id: "a0000000-0000-4000-8000-000000000010",
+        stableId: confirmedStableId,
+        type: "current",
+        text: "Current work",
+        nextStepText: "Legacy next-week plan",
+        workflowStatus: "in_progress",
+        carriedOver: false,
+      });
+      expect(
+        request.items.filter((item) => item.stableId === confirmedStableId),
+      ).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
     await pollUntil(() =>
       expect(document.activeElement).toHaveAttribute(
         "data-overview-focus",
