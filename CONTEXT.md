@@ -329,7 +329,7 @@ postponed. **Paused** = on hold, the lead intends to resume. **Postponed** =
 consciously pushed beyond this period; postponed work is NOT auto-carried —
 re-planning it is an explicit call. Neither paused nor postponed raises any
 alarm. A commitment entering its reporting period stays planned until its
-author confirms progress. (Model locked in the `record-status-derivation` spec.)
+author confirms progress. (Model locked in the `item-progress-lifecycle` spec.)
 _Avoid_: blocked as an item status (that is an Alarm, see below); "completed"
 as a separate flag (done-ness lives in the status); stage (a stage is the SDLC
 phase, not the progress state); "workflow status" as a separate term (this IS
