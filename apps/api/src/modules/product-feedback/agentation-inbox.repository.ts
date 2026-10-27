@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { normalizeFeedbackPath } from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { THREAD_MESSAGES_INCLUDE } from "./agentation.repository.helpers.js";
 import { projectAgentation } from "./agentation-inbox-projection.js";
 import { annotationScope } from "./agentation-scope.js";
 import {
@@ -53,7 +54,7 @@ export class AgentationInboxRepository {
         where,
         include: {
           session: true,
-          threadMessages: { orderBy: { timestamp: "asc" } },
+          ...THREAD_MESSAGES_INCLUDE,
         },
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         skip: (page - 1) * limit,
