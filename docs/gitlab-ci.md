@@ -103,10 +103,10 @@ keep their pinned upstream `tag@sha256` references, and it fails before building
 when an external base image escapes the mirror. Builds use `--format docker`
 because the OCI manifest format drops `HEALTHCHECK`. Registry and web build
 inputs remain fail-closed; the registry credentials live in a job-local auth
-file outside the build context. The image job runs automatically on
-default-branch pushes when configured and otherwise remains manual and
-non-blocking. The four image outputs, digest artifact and production environment
-are unchanged.
+file outside the build context. The image job is always manual and non-blocking
+on default-branch, tag and merge-request pipelines: an operator starts it and a
+schedule never runs it. The four image outputs, digest artifact and production
+environment are unchanged.
 
 The runner currently caps the job container at 4 GiB of memory; the probe's web
 build reached that limit, so the memory the build actually needs is not measured

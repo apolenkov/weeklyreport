@@ -15,6 +15,16 @@ import { dirname, join, resolve, sep } from "node:path";
 import { afterEach, test } from "vitest";
 import { parse } from "yaml";
 
+import {
+  BASE_REGISTRY,
+  BUILD_ENV,
+  BUILDAH_IMAGE,
+  BUILDAH_STUB,
+  commitSha,
+  DOCKERFILES,
+  robotToken,
+} from "./ci-image-build.fixture.ts";
+
 interface Rule {
   readonly if?: string;
   readonly when?: string;
@@ -67,11 +77,6 @@ test("every CI script entry is a string GitLab can parse", () => {
   }
 });
 
-// The internal Docker Hub mirror every external base image is rewritten to.
-const BASE_REGISTRY = "mirror.example.org/all-pub-docker";
-// buildah 1.43.5: the version the new runner was probed with.
-const BUILDAH_IMAGE = `${BASE_REGISTRY}/buildah/stable:v1.43.5@sha256:87f219f5a7bf5d7bee870253c14a57751e85833cb2cc645216a20bbb66c68724`;
-
 const workspaces = new Set<string>();
 afterEach(() => {
   for (const root of workspaces) {
@@ -79,59 +84,6 @@ afterEach(() => {
   }
   workspaces.clear();
 });
-
-const fixtureToken = "job-token-fixture";
-const robotToken = "robot-fixture";
-const commitSha = "0123456789abcdef";
-
-const BUILD_ENV = {
-  CI_COMMIT_SHA: commitSha,
-  CI_REGISTRY_IMAGE: "registry.example.com/group/project",
-  CI_REGISTRY_USER: "gitlab-ci-token",
-  CI_REGISTRY_PASSWORD: fixtureToken,
-  BASE_REGISTRY,
-  WR_NEXT_PUBLIC_CLIENT_LOG_FORWARDING: "false",
-  WR_NEXT_PUBLIC_WEB_VITALS: "false",
-  WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED: "false",
-  WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES: "admin",
-} as const;
-
-// Stands in for the buildah CLI: records the invocation, captures the mirrored
-// Dockerfile passed to `bud`, drains the password from `login`, and answers
-// `push --digestfile` with a deterministic digest.
-const BUILDAH_STUB = String.raw`#!/bin/sh
-printf '%s\n' "$*" >> "$STUB_CALLS"
-command="$1"
-shift
-case "$command" in
-  login)
-    while IFS= read -r ignore; do :; done
-    ;;
-  bud)
-    [ -e "$CI_PROJECT_DIR/image-digests.txt" ] && printf 'present\n' >> "$STUB_CONTEXT_LEAKS"
-    previous=""
-    for argument in "$@"; do
-      [ "$previous" = "-f" ] && cp "$argument" "$STUB_FILES/$(basename "$argument")"
-      previous="$argument"
-    done
-    ;;
-  push)
-    previous=""
-    for argument in "$@"; do
-      [ "$previous" = "--digestfile" ] && printf 'sha256:%064d\n' 1 > "$argument"
-      previous="$argument"
-    done
-    ;;
-esac
-exit 0
-`;
-
-// Repository Dockerfiles the job builds, relative to the project root.
-const DOCKERFILES = [
-  "Dockerfile.api",
-  "Dockerfile.web",
-  "deploy/postgres/Dockerfile.backup",
-] as const;
 
 const fileName = (path: string): string =>
   path.slice(path.lastIndexOf("/") + 1);
@@ -504,6 +456,37 @@ test("merge requests only offer the build manually and never fail the pipeline",
     candidate.if?.includes("merge_request_event"),
   );
   assert.deepEqual([rule?.when, rule?.allow_failure], ["manual", true]);
+});
+
+test("default-branch and tag builds are always manual and never automatic", () => {
+  // The heavy image build must never load the runners by itself: the owner
+  // removed the rule that started it once the web build values were set
+  // (TASK-727).
+  for (const rule of buildJob.rules) {
+    assert.notEqual(
+      rule.when,
+      "on_success",
+      `build-images must not run automatically: ${rule.if ?? "<match-all>"}`,
+    );
+    assert.doesNotMatch(
+      rule.if ?? "",
+      /\$WR_NEXT_PUBLIC_CLIENT_LOG_FORWARDING/u,
+      "the web build variable must not select a rule",
+    );
+  }
+  const defaultBranchRule = buildJob.rules.find((candidate) =>
+    candidate.if?.includes("$CI_DEFAULT_BRANCH"),
+  );
+  assert.ok(defaultBranchRule, "build-images needs a default-branch/tag rule");
+  assert.match(defaultBranchRule.if ?? "", /\$CI_COMMIT_TAG/u);
+  assert.deepEqual(
+    [defaultBranchRule.when, defaultBranchRule.allow_failure],
+    ["manual", true],
+  );
+  const scheduleRule = buildJob.rules.find((candidate) =>
+    candidate.if?.includes('"schedule"'),
+  );
+  assert.equal(scheduleRule?.when, "never");
 });
 
 test("the deploy job exists only with a kubeconfig, manually, on the default branch", () => {
