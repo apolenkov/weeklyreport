@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 
+import type { Prisma as PrismaTypes } from "@prisma/client";
 import {
   FEEDBACK_DISMISSAL_PREFIX,
   type FeedbackStatus,
@@ -10,6 +11,7 @@ import {
   assertThreadHasRoom,
   emit,
   lockVisibleAnnotation,
+  THREAD_MESSAGES_INCLUDE,
 } from "./agentation.repository.helpers.js";
 import { AgentationPrismaRepository } from "./agentation.repository.js";
 import {
@@ -28,8 +30,8 @@ import {
 const ANNOTATION_UPDATED_EVENT = "annotation.updated";
 const ANNOTATION_WITH_THREAD = {
   session: true,
-  threadMessages: { orderBy: { timestamp: "asc" } },
-} as const;
+  threadMessages: THREAD_MESSAGES_INCLUDE.threadMessages,
+} as const satisfies PrismaTypes.AgentationAnnotationInclude;
 
 export class AgentationInboxActions {
   constructor(private readonly prisma: PrismaService) {}
@@ -77,10 +79,7 @@ export class AgentationInboxActions {
     return this.prisma.$transaction(async (tx) => {
       const current = await tx.agentationAnnotation.findFirst({
         where: { id, ...annotationScope(access) },
-        include: {
-          session: true,
-          threadMessages: { orderBy: { timestamp: "asc" } },
-        },
+        include: ANNOTATION_WITH_THREAD,
       });
       if (!current) throw new FeedbackNotFoundError();
       const databaseStatus =
@@ -99,10 +98,7 @@ export class AgentationInboxActions {
           resolvedAt: terminal ? new Date() : null,
           resolvedBy: terminal ? "human" : null,
         },
-        include: {
-          session: true,
-          threadMessages: { orderBy: { timestamp: "asc" } },
-        },
+        include: ANNOTATION_WITH_THREAD,
       });
       await tx.agentationEvent.create({
         data: {
@@ -128,19 +124,13 @@ export class AgentationInboxActions {
     return this.prisma.$transaction(async (tx) => {
       const current = await tx.agentationAnnotation.findFirst({
         where: { id, authorUserId: access.userId, ...annotationScope(access) },
-        include: {
-          threadMessages: { orderBy: { timestamp: "asc" } },
-          session: true,
-        },
+        include: ANNOTATION_WITH_THREAD,
       });
       if (!current) throw new FeedbackNotFoundError();
       const changed = await tx.agentationAnnotation.update({
         where: { id },
         data: { comment },
-        include: {
-          threadMessages: { orderBy: { timestamp: "asc" } },
-          session: true,
-        },
+        include: ANNOTATION_WITH_THREAD,
       });
       await tx.agentationEvent.create({
         data: {
