@@ -9,15 +9,15 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { SessionContext } from "../../../shared/lib/auth/session-provider";
-import { TRPCProxyContext } from "../../../shared/lib/trpc/trpc-context";
-import { createMockTRPC } from "../../../test-utils/mock-trpc";
-import type { ProjectFixture } from "../../../test-utils/report-section-fixtures";
-import { LeadForm } from "./lead/shell/lead-form";
-import { makeLeadFormSectionFixture } from "./lead/shell/lead-form-test-fixtures";
-import { LeadReportAssistantStore } from "./lead-report-assistant-store";
+import { SessionContext } from "../../../../../shared/lib/auth/session-provider";
+import { TRPCProxyContext } from "../../../../../shared/lib/trpc/trpc-context";
+import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
+import type { ProjectFixture } from "../../../../../test-utils/report-section-fixtures";
+import { LeadReportAssistantStore } from "../../lead-report-assistant-store";
+import { LeadForm } from "./lead-form";
+import { makeLeadFormSectionFixture } from "./lead-form-test-fixtures";
 
 vi.mock("sonner", () => ({
   toast: { error: vi.fn(), success: vi.fn() },
@@ -174,10 +174,6 @@ async function openDecisionCreate(section: ReturnType<typeof sectionFixture>) {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
-});
-
-afterEach(() => {
   vi.clearAllMocks();
 });
 
