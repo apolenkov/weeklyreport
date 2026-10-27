@@ -50,6 +50,9 @@ export function LeadFormEditBridgeSections({
   stagesForProduct,
 }: LeadFormEditBridgeSectionsProps) {
   const { activityOptions, isReadOnly, ownRisks, products, risks } = viewModel;
+  // Parity with the Overview support sections: a new add or prefill signal
+  // reveals the collapsed Risks section.
+  const risksOpenSignal = `${actions.risksAddSignal}:${actions.riskPrefill?.signal ?? 0}`;
   return (
     <LeadFormSyncBridge.Provider
       products={products}
@@ -74,6 +77,7 @@ export function LeadFormEditBridgeSections({
         actions={actions}
         draftSection={draftSection}
         groupExpanded={groupExpanded}
+        risksOpenSignal={risksOpenSignal}
         unifiedView={unifiedView}
         stagesForProduct={stagesForProduct}
       />

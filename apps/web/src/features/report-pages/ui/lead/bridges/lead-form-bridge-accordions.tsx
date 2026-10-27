@@ -182,6 +182,7 @@ interface LeadFormBridgeAccordionsProps {
   readonly actions: LeadFormBridgeAccordionsActions;
   readonly draftSection: ReportSectionReadModel;
   readonly groupExpanded: boolean;
+  readonly risksOpenSignal: AccordionOpenSignal;
   readonly unifiedView: boolean;
   readonly stagesForProduct: StagesForProduct;
 }
@@ -191,6 +192,7 @@ export function LeadFormBridgeAccordions({
   actions,
   draftSection,
   groupExpanded,
+  risksOpenSignal,
   unifiedView,
   stagesForProduct,
 }: LeadFormBridgeAccordionsProps) {
@@ -225,6 +227,7 @@ export function LeadFormBridgeAccordions({
       />
       <RisksAccordion
         groupExpanded={groupExpanded}
+        openSignal={risksOpenSignal}
         riskCount={risks.length}
         productCount={products.length}
         activityCount={viewModel.activityOptions.length}
