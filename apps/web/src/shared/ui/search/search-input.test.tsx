@@ -1,5 +1,6 @@
 import type { QueryObserverResult } from "@tanstack/react-query";
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeQueryState } from "../../../test-utils/query-state";
@@ -51,6 +52,20 @@ const ITEM_ID = "11111111-1111-4111-8111-111111111111";
 const REPORT_ID = "22222222-2222-4222-8222-222222222222";
 const SECTION_ID = "33333333-3333-4333-8333-333333333333";
 const PROJECT_ID = "44444444-4444-4444-8444-444444444444";
+
+function itemHit(id: string, title: string) {
+  return {
+    type: "item" as const,
+    id,
+    title,
+    snippet: title,
+    rank: 0.9,
+    projectId: PROJECT_ID,
+    reportId: REPORT_ID,
+    reportSectionId: SECTION_ID,
+    createdAt: "2026-05-06T08:00:00.000Z",
+  };
+}
 
 describe("SearchInput", () => {
   beforeEach(() => {
@@ -357,7 +372,7 @@ describe("SearchInput", () => {
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
 
-  it("closes the dropdown when keyboard focus leaves the search container", () => {
+  it("treats search as one Tab stop and closes the popup when focus leaves", async () => {
     useQueryMock.mockReturnValue(
       makeQueryState({
         data: [
@@ -384,14 +399,60 @@ describe("SearchInput", () => {
     );
     const input = screen.getByRole("combobox");
     act(() => {
-      fireEvent.focus(input);
+      input.focus();
       fireEvent.change(input, { target: { value: "release" } });
       vi.advanceTimersByTime(350);
     });
 
     expect(screen.getByRole("listbox")).toBeInTheDocument();
-    fireEvent.blur(input, { relatedTarget: screen.getByRole("button") });
+    expect(input).toHaveFocus();
+
+    // jsdom does not move focus on Tab, so user-event performs the real
+    // traversal from the active element; switch off fake timers for that.
+    vi.useRealTimers();
+    const user = userEvent.setup();
+    await user.tab();
+
+    expect(screen.getByRole("button", { name: "Next control" })).toHaveFocus();
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it("reveals the active result during arrow navigation without moving focus", () => {
+    const scrollIntoView = vi
+      .spyOn(Element.prototype, "scrollIntoView")
+      .mockImplementation(() => undefined);
+    useQueryMock.mockReturnValue(
+      makeQueryState({
+        data: [
+          itemHit(ITEM_ID, "Release blocked"),
+          itemHit(REPORT_ID, "Release plan"),
+        ],
+      }),
+    );
+
+    render(<SearchInput scope="mine" />);
+    const input = screen.getByRole("combobox");
+    act(() => {
+      input.focus();
+      fireEvent.change(input, { target: { value: "release" } });
+      vi.advanceTimersByTime(350);
+    });
+    const options = screen.getAllByRole("option");
+    expect(options).toHaveLength(2);
+    const secondOption = options[1];
+    if (!secondOption) throw new Error("second search option not rendered");
+    scrollIntoView.mockClear();
+
+    act(() => {
+      fireEvent.keyDown(input, { key: "ArrowDown" });
+    });
+
+    expect(input).toHaveFocus();
+    expect(input).toHaveAttribute("aria-activedescendant", secondOption.id);
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest" });
+    expect(scrollIntoView.mock.contexts.at(-1)).toBe(secondOption);
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it('forwards scope="all" through to queryOptions', () => {
