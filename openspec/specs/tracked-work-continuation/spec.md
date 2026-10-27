@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Keep continuation and promotion of tracked work safe across weekly report projections while preserving results, comments and immutable published history. The linked-continuation Overview surface (Continue and Promote actions, drag handle) was rejected and removed; Status Overview authoring uses one canonical item editor with explicit week placement (see `lead-status-overview`). These requirements cover the retained command, history and legacy-data paths, which MUST NOT gain additional Status Overview entry points.
+Keep continuation and promotion of tracked work safe across weekly report projections while preserving results, comments and immutable published history. The linked-continuation Overview surface (Continue and Promote actions, drag handle) was rejected and removed; Status Overview authoring uses one canonical item editor with explicit week placement (see `lead-status-overview-actions`). These requirements cover the retained command, history and legacy-data paths, which MUST NOT gain additional Status Overview entry points.
 
 ## Requirements
 

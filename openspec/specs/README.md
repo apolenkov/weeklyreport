@@ -69,11 +69,13 @@ This index maps every durable capability to one canonical home. Product capabili
 - [lead-report-controls-integrity](./lead-report-controls-integrity/spec.md) — Lead report controls avoid no-ops, accidental dialogs, clipped popovers, stale busy states, and mismatched summary populations. `[roles: Lead]`
 - [unified-report-authoring](./unified-report-authoring/spec.md) — Lead report authoring keeps inline editing, lineage, recovery, and progress semantics coherent across sections. `[roles: Lead]`
 - [lead-report-health-pulse](./lead-report-health-pulse/spec.md) — A read-only, problem-first pulse opens contextual unit health without interrupting report authoring. `[roles: Lead]`
-- [lead-status-overview](./lead-status-overview/spec.md) — Lead Overview groups reporting units clearly and keeps editable Current and Next cells on the canonical item editor path. `[roles: Lead]`
+- [lead-status-overview](./lead-status-overview/spec.md) — Lead Overview groups reporting units clearly and keeps the reading grid, temporal sources and canonical health vocabulary coherent. `[roles: Lead]`
+- [lead-status-overview-actions](./lead-status-overview-actions/spec.md) — Lead Overview edits and creates Current and Next items through one canonical editor, composer and progress-interaction path. `[roles: Lead]`
 - [lead-product-accordion-identity](./lead-product-accordion-identity/spec.md) — Repeated lead-scope product accordions keep stable, instance-local accessible identity. `[roles: Lead]`
 - [lead-surface-name-resolution](./lead-surface-name-resolution/spec.md) — Lead cards resolve every report-known product name without placeholder fallback. `[roles: Lead]`
 - [record-dialog-layout](./record-dialog-layout/spec.md) — Item, risk, and decision editors share one consistent two-column layout. `[roles: Lead]`
-- [record-status-derivation](./record-status-derivation/spec.md) — Item alarms derive from covering risks while progress, blocker creation, pause reasons, and escalation counts remain coherent. `[roles: Lead, Head]`
+- [record-status-derivation](./record-status-derivation/spec.md) — Item alarms derive from covering risks while blocker creation, escalation counts and week-placement moves stay coherent. `[roles: Lead, Head]`
+- [item-progress-lifecycle](./item-progress-lifecycle/spec.md) — One stored item progress vocabulary governs pause reasons and inline Overview status resolution across week placements. `[roles: Lead, Head]`
 - [risk-stage-integrity](./risk-stage-integrity/spec.md) — Product-parented risks and report records carry concrete stages; activity-parented records carry none. `[roles: Lead, Head]`
 - [status-risk-unification](./status-risk-unification/spec.md) — Risk rows are the source of at-risk and blocked stage state, completeness floors, item alarms, and product escalation. `[roles: Lead, Head]`
 
