@@ -66,6 +66,7 @@ interface PendingStage {
 interface PendingRekey {
   readonly from: string;
   readonly to: string;
+  readonly stage: PendingStage;
 }
 
 interface PendingConfirmation {
@@ -143,9 +144,11 @@ function sectionHasSingleton(
 }
 
 // Sorts the pending choices against one accepted save. A choice the server
-// stored is confirmed; a created row's choice moves from its draft id to the
-// server row the echo names, so the next save can confirm it; a choice already
-// re-keyed under that row is dropped. Anything else stays pending.
+// stored is confirmed, and a created row's choice moves from its draft id to
+// the server row the echo names so the next save can confirm it. A stale entry
+// under the draft id is removed when a newer choice already sits under that
+// server row; that newer choice itself is left untouched. Anything else stays
+// pending.
 function settlePendingChoices(
   section: PersistedStageRecords,
   pending: ReadonlyMap<string, PendingStage>,
@@ -167,11 +170,13 @@ function settlePendingChoices(
     }
     // Existing rows are already keyed by their server id.
     if (serverId === undefined || serverId === recordId) continue;
+    // A newer choice already lives under the server row: remove only the stale
+    // draft-id entry.
     if (pending.has(serverId)) {
       dropped.push(recordId);
       continue;
     }
-    rekeyed.push({ from: recordId, to: serverId });
+    rekeyed.push({ from: recordId, to: serverId, stage });
   }
   return { confirmed, dropped, rekeyed };
 }
@@ -217,9 +222,9 @@ export function createDraftStageMemory(): DraftStageMemory {
         pending.delete(recordId);
       }
       for (const recordId of settlement.dropped) pending.delete(recordId);
-      for (const { from, to } of settlement.rekeyed) {
-        const stage = pending.get(from);
-        if (stage === undefined) continue;
+      // The settlement keeps the three groups disjoint, so a re-keyed choice is
+      // always still pending and travels with the re-key.
+      for (const { from, to, stage } of settlement.rekeyed) {
         pending.delete(from);
         pending.set(to, stage);
       }
