@@ -8,14 +8,14 @@
 
 ## 2. Saving motion
 
-- [ ] 2.1 Observe the actual pending-save Lead control under native reduce and no-preference modes; capture media match, computed animation properties, frame samples and full-page screenshots.
-- [ ] 2.2 After the scoped repair decision, fix the saving indicator at its owner and verify native stationary/animated controls without changing busy, disabled, success or retry behavior.
+- [x] 2.1 Observe the actual pending-save Lead control under native reduce and no-preference modes; capture media match, computed animation properties, frame samples and full-page screenshots. Evidence: ~/work/handoffs/wr-513/s26/max/rm23-RESULT.md §2.1 and ~/work/handoffs/wr-513/s26/max/rm23-evidence/.
+- [x] 2.2 After the scoped repair decision, fix the saving indicator at its owner and verify native stationary/animated controls without changing busy, disabled, success or retry behavior. Defect fixed in 4fe8f7693; evidence: ~/work/handoffs/wr-513/s26/max/rm23-RESULT.md §2.2.
 
 ## 3. Search keyboard behavior
 
-- [ ] 3.1 Reproduce native Tab traversal and ArrowDown across a long result popup through History or Admin Products; capture focus, active descendant, option/popup bounds, document scroll and navigation.
+- [x] 3.1 Reproduce native Tab traversal and ArrowDown across a long result popup through History or Admin Products; capture focus, active descendant, option/popup bounds, document scroll and navigation. Evidence: ~/work/handoffs/wr-513/s26/accept1/RESULT.md section B.
 - [x] 3.2 Keep keyboard ownership on the input and reveal the active option from the popup; the strengthened Tab and reveal component tests pass.
-- [ ] 3.3 Rerun the native Tab and ArrowDown cases against the repaired caller and record focus, bounds and navigation.
+- [x] 3.3 Rerun the native Tab and ArrowDown cases against the repaired caller and record focus, bounds and navigation. Evidence: ~/work/handoffs/wr-513/s26/accept1/RESULT2.md.
 
 ## 4. Integration acceptance
 
