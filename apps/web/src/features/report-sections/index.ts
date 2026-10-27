@@ -8,6 +8,7 @@ export {
   buildConfirmAllCarriedPatch,
   buildConfirmCarriedItemPatch,
   buildMoveItemPatch,
+  isSavedNextWeekPlan,
   promoteContinuationPatch,
 } from "./model/lead-actions/lead-item-actions";
 export {

@@ -284,10 +284,6 @@ describe("buildMoveItemPatch", () => {
     ],
     ["submitted", section(carriedItem(), "submitted")],
     ["foreign", section(carriedItem())],
-    [
-      "legacy commitment",
-      section({ ...carriedItem(), nextStepText: "Preserve this commitment" }),
-    ],
   ])("returns no patch for %s work", (kind, candidate) => {
     const itemId = kind === "foreign" ? crypto.randomUUID() : carriedItem().id;
     expect(buildMoveItemPatch(candidate, itemId ?? "", "next")).toBeNull();

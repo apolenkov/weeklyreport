@@ -2,6 +2,7 @@ import type {
   ReportSectionReadModel,
   TrafficLightStatus,
 } from "@weeklyreport/shared";
+import { toast } from "sonner";
 
 import type {
   DecisionEntry,
@@ -13,10 +14,17 @@ import type {
   DraftPatch,
   RiskPrefillRequest,
 } from "../../../../report-sections";
-import { promoteContinuationPatch } from "../../../../report-sections";
+import {
+  isSavedNextWeekPlan,
+  promoteContinuationPatch,
+} from "../../../../report-sections";
 import type { QuickAddItem } from "../../../../report-sections/client";
 import type { QuickAddKind } from "./quick-add-button";
 import type { LeadFormAddSignals } from "./use-lead-form-add-signals";
+
+// Move on an occurrence whose saved next step already plans the next week only
+// acknowledges that plan; it never replaces the result with its continuation.
+export const NEXT_WEEK_PLAN_CONFIRMED_MESSAGE = "Already planned for next week";
 
 // Declared draft-module seam — not the hook's raw return type.
 export interface LeadFormDraftHandle {
@@ -47,7 +55,10 @@ function buildCollectionActions(draft: LeadFormDraftHandle) {
   };
 }
 
-function buildItemPatchActions(draft: LeadFormDraftHandle) {
+function buildItemPatchActions(
+  draft: LeadFormDraftHandle,
+  section: ReportSectionReadModel | undefined,
+) {
   const patchItem = (
     itemId: string,
     patch: Partial<ReportSectionReadModel["items"][number]>,
@@ -55,8 +66,11 @@ function buildItemPatchActions(draft: LeadFormDraftHandle) {
   return {
     onMarkComplete: (itemId: string) =>
       draft.apply({ kind: "complete-item", itemId }),
-    onMoveToNextWeek: (itemId: string) =>
-      draft.apply({ kind: "move-item", itemId, target: "next" }),
+    onMoveToNextWeek: (itemId: string) => {
+      draft.apply({ kind: "move-item", itemId, target: "next" });
+      if (section !== undefined && isSavedNextWeekPlan(section, itemId))
+        toast.success(NEXT_WEEK_PLAN_CONFIRMED_MESSAGE);
+    },
     onMoveToCurrentWeek: (itemId: string) =>
       draft.apply({ kind: "move-item", itemId, target: "current" }),
     onPauseItem: (itemId: string, reason: string) =>
@@ -121,10 +135,11 @@ export function buildDraftActions(
   draft: LeadFormDraftHandle,
   addSignals: LeadFormAddSignals,
   viewModel: { readonly products: readonly Product[] },
+  section?: ReportSectionReadModel,
 ) {
   return {
     ...buildCollectionActions(draft),
-    ...buildItemPatchActions(draft),
+    ...buildItemPatchActions(draft, section),
     ...buildActivityActions(draft),
     onQuickAdd: buildQuickAddHandler(draft, addSignals, viewModel.products),
     quickAddItem: draft.pendingQuickAdd,

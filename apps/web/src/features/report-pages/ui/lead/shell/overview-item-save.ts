@@ -284,19 +284,5 @@ export function overviewMoveEditorItem(
       promotion: target,
     };
   }
-  if (
-    target === "next" &&
-    sourceRecord.type === "current" &&
-    sourceRecord.nextStepText?.trim()
-  ) {
-    return {
-      item: {
-        ...sourceItem,
-        text: sourceRecord.nextStepText,
-        nextStepText: null,
-      },
-      promotion: target,
-    };
-  }
   return {};
 }
