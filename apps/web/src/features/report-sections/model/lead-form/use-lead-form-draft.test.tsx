@@ -185,6 +185,49 @@ describe("useLeadFormDraft merge routing", () => {
     expect(toast.success).toHaveBeenCalledWith("Already planned for next week");
   });
 
+  it("does not announce a saved plan when the acknowledgement cannot apply", () => {
+    const base = makeDraftMergeSection();
+    const section = reportSectionReadModelSchema.parse({
+      ...base,
+      items: base.items.map((item) =>
+        item.id === CURRENT_ITEM_ID
+          ? {
+              ...item,
+              type: "current",
+              workflowStatus: "in_progress",
+              pausedReason: null,
+              nextStepText: "Finish the acceptance check",
+              resolution: {
+                kind: "wont_do",
+                eventId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab",
+                reason: "The dependency was retired",
+                actorId: AUTHOR_ID,
+                actorName: "Test Lead",
+                occurredAt: "2026-09-01T00:00:00.000Z",
+                previousState: {
+                  type: "current",
+                  workflowStatus: "in_progress",
+                  pausedReason: null,
+                  nextStepText: null,
+                  text: item.text,
+                },
+              },
+            }
+          : item,
+      ),
+    });
+    const { result } = renderDraft(LOADED, section);
+
+    act(() => {
+      result.current.actions.onMoveToNextWeek(CURRENT_ITEM_ID);
+    });
+
+    // The move is refused, so no acknowledgement is applied and no toast claims
+    // that the occurrence is already planned.
+    expect(result.current.dirty).toBe(false);
+    expect(toast.success).not.toHaveBeenCalled();
+  });
+
   it.each(["move", "complete", "pause"] as const)(
     "keeps a resolved raw item unchanged through the public %s callback",
     (command) => {

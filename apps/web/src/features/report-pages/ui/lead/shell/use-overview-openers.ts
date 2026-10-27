@@ -14,7 +14,7 @@ import type {
 } from "../../../../report-sections";
 import {
   buildConfirmCarriedItemPatch,
-  buildMoveItemPatch,
+  buildNextWeekPlanAcknowledgementPatch,
   isSavedNextWeekPlan,
 } from "../../../../report-sections";
 import { NEXT_WEEK_PLAN_CONFIRMED_MESSAGE } from "../chrome/lead-form-draft-actions";
@@ -57,7 +57,7 @@ function editDialogState(
     readonly week: "current" | "next";
     readonly item: KanbanItem;
     readonly dialogItem: KanbanItem;
-    readonly promotionTarget: "current" | "next" | undefined;
+    readonly promotionTarget: "current" | undefined;
   },
 ): OverviewItemDialogState {
   const sourceRecord = editor.draft.section.items.find(
@@ -88,6 +88,9 @@ function editDialogState(
 
 type WhenIdle = (action: (ready: ReadyEditor) => void) => void;
 
+const ACKNOWLEDGEMENT_UNAVAILABLE =
+  "This update can no longer be confirmed. Reload the report.";
+
 // Move to next week on a Current occurrence whose saved next step already plans
 // that week only acknowledges the plan: the record, its result and its
 // commitment stay put, and the ordinary draft save carries the acknowledgement.
@@ -101,8 +104,16 @@ function acknowledgeSavedNextWeekPlan(
   if (target !== "next" || recordId === null) return false;
   if (!isSavedNextWeekPlan(section, recordId)) return false;
   whenIdle((ready) => {
-    const patch = buildMoveItemPatch(ready.draft.section, recordId, "next");
-    if (!patch) return;
+    // The draft may have changed while an outcome command held the editor, so
+    // the acknowledgement is re-derived from the latest section.
+    const patch = buildNextWeekPlanAcknowledgementPatch(
+      ready.draft.section,
+      recordId,
+    );
+    if (patch === null) {
+      toast.error(ACKNOWLEDGEMENT_UNAVAILABLE);
+      return;
+    }
     ready.draft.apply(patch);
     toast.success(NEXT_WEEK_PLAN_CONFIRMED_MESSAGE);
   });
@@ -137,7 +148,7 @@ export function useOverviewEditOpeners({
     week: "current" | "next",
     options: {
       visibleItem?: KanbanItem | undefined;
-      promotionTarget?: "current" | "next" | undefined;
+      promotionTarget?: "current" | undefined;
       focusKey?: string | undefined;
     } = {},
   ): void => {

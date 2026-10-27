@@ -50,7 +50,7 @@ interface OverviewEditDialogState extends OverviewComposerState {
   readonly item: KanbanItem;
   readonly promotion?:
     | {
-        readonly target: "current" | "next";
+        readonly target: "current";
         readonly commandId: string;
         readonly sourceItem: KanbanItem;
         readonly pending: boolean;

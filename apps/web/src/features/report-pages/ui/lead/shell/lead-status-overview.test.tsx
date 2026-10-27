@@ -2473,8 +2473,42 @@ describe("LeadForm Overview", () => {
         `more:current:${confirmedStableId}`,
       ),
     );
-    // The acknowledgement rides the debounced ordinary autosave.
   }, 15_000);
+
+  it("refuses an editor week change that would drop a saved next-week plan", async () => {
+    const user = userEvent.setup();
+    const saveDraft = vi.fn();
+    const promotePlan = vi.fn();
+    render(
+      <Wrapper
+        legacyNextText="Legacy next-week plan"
+        promotePlan={promotePlan}
+        saveDraft={saveDraft}
+      >
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "Edit item: Current work" }),
+    );
+    // The canonical editor can still switch weeks; that Save is a placement
+    // move, which cannot keep the saved commitment and must be refused instead
+    // of silently acknowledging it from a "Next week" selection.
+    await user.click(screen.getByRole("radio", { name: "Next week" }));
+    await user.click(screen.getByRole("button", { name: "Save update" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "This item cannot be moved to the selected week. Your changes are still here.",
+    );
+    expect(saveDraft).not.toHaveBeenCalled();
+    expect(promotePlan).not.toHaveBeenCalled();
+    expect(
+      screen.queryByText(
+        "This update is no longer in the selected week. Your unsaved input is kept below.",
+      ),
+    ).toBeNull();
+  });
 
   it.each([
     {

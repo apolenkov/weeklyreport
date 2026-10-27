@@ -15,7 +15,7 @@ import type {
   RiskPrefillRequest,
 } from "../../../../report-sections";
 import {
-  isSavedNextWeekPlan,
+  buildNextWeekPlanAcknowledgementPatch,
   promoteContinuationPatch,
 } from "../../../../report-sections";
 import type { QuickAddItem } from "../../../../report-sections/client";
@@ -67,8 +67,14 @@ function buildItemPatchActions(
     onMarkComplete: (itemId: string) =>
       draft.apply({ kind: "complete-item", itemId }),
     onMoveToNextWeek: (itemId: string) => {
+      // The toast follows the exact patch the command applies, so a refused move
+      // never claims that a plan was acknowledged.
+      const acknowledgement =
+        section === undefined
+          ? null
+          : buildNextWeekPlanAcknowledgementPatch(section, itemId);
       draft.apply({ kind: "move-item", itemId, target: "next" });
-      if (section !== undefined && isSavedNextWeekPlan(section, itemId))
+      if (acknowledgement !== null)
         toast.success(NEXT_WEEK_PLAN_CONFIRMED_MESSAGE);
     },
     onMoveToCurrentWeek: (itemId: string) =>
