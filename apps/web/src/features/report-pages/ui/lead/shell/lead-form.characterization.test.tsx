@@ -359,6 +359,35 @@ describe("lead-form draft: local section add", () => {
       within(dialog).getByRole("button", { name: /Blocked/i }),
     ).toBeEnabled();
   });
+
+  it("expands the collapsed Risks section when its add signal advances", async () => {
+    const { Wrapper } = buildHarness();
+    render(
+      <Wrapper>
+        <LeadForm />
+      </Wrapper>,
+    );
+    expect(await screen.findByText("Autosaved")).toBeInTheDocument();
+
+    act(() =>
+      screen.getByRole("button", { name: "Collapse Risks & Blockers" }).click(),
+    );
+    expect(
+      screen.getByRole("button", { name: "Expand Risks & Blockers" }),
+    ).toHaveAttribute("aria-expanded", "false");
+
+    // The Add dialog already opens while the section is collapsed; the section
+    // must reveal it as the Overview counterpart does for the same signal.
+    act(() => screen.getByRole("button", { name: "+ Add risk" }).click());
+    await screen.findByRole("dialog", { name: /risk/i });
+    await waitFor(
+      () =>
+        expect(
+          screen.getByRole("button", { name: "Collapse Risks & Blockers" }),
+        ).toHaveAttribute("aria-expanded", "true"),
+      { timeout: 2000 },
+    );
+  });
 });
 
 describe("lead-form draft: submit gating + dialogs", () => {
