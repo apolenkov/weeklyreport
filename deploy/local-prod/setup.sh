@@ -18,8 +18,12 @@ IDP_CERT_PUBLIC_KEY=$(openssl x509 -in idp.crt -pubkey -noout) || { echo "Invali
 IDP_KEY_PUBLIC_KEY=$(openssl pkey -in idp.key -pubout) || { echo "Invalid idp.key: restore a valid matching IdP pair before retrying." >&2; exit 1; }
 [ "$IDP_CERT_PUBLIC_KEY" = "$IDP_KEY_PUBLIC_KEY" ] || { echo "Mismatched idp.crt and idp.key: restore a matching IdP pair before retrying." >&2; exit 1; }
 if [ ! -f secrets.env ]; then
+  # Publish atomically: an interrupted generation must not leave a partial
+  # secrets.env for the existence gate here to reuse.
   umask 077
-  cat > secrets.env <<ENV
+  secrets_partial=$(mktemp "$STATE_DIR/secrets.env.XXXXXX")
+  trap 'rm -f "$secrets_partial"' EXIT
+  cat > "$secrets_partial" <<ENV
 DB_PASSWORD=$(rnd 16)
 AUTH_JWT_SECRET=$(rnd 32)
 PDF_EXPORT_JWT_SECRET=$(rnd 32)
@@ -30,6 +34,9 @@ PW_HEAD=Wr-head-$(rnd 4)
 PW_VIEWER=Wr-viewer-$(rnd 4)
 PW_ADMIN=Wr-admin-$(rnd 4)
 ENV
+  chmod 600 "$secrets_partial"
+  mv "$secrets_partial" secrets.env
+  trap - EXIT
 fi
 set -a; . ./secrets.env; set +a
 for required_secret in DB_PASSWORD AUTH_JWT_SECRET PDF_EXPORT_JWT_SECRET AI_PROVIDER_CONFIG_ENCRYPTION_KEY KC_ADMIN_PASSWORD PW_LEAD1 PW_HEAD PW_VIEWER PW_ADMIN; do

@@ -7,19 +7,71 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { join, resolve } from "node:path";
 
 import { test } from "vitest";
 
-const openssl = realpathSync(
-  execFileSync("/bin/bash", ["-c", "command -v openssl"], {
-    encoding: "utf8",
-  }).trim(),
-);
+function resolveCommand(name: string) {
+  return realpathSync(
+    execFileSync("/bin/bash", ["-c", `command -v ${name}`], {
+      encoding: "utf8",
+    }).trim(),
+  );
+}
+
+const openssl = resolveCommand("openssl");
+const cat = resolveCommand("cat");
 const secretMarker = "synthetic-secret-not-for-diagnostics";
 const failureMarker = "synthetic-openssl-preparation-failure";
+const requiredSecretNames = [
+  "DB_PASSWORD",
+  "AUTH_JWT_SECRET",
+  "PDF_EXPORT_JWT_SECRET",
+  "AI_PROVIDER_CONFIG_ENCRYPTION_KEY",
+  "KC_ADMIN_PASSWORD",
+  "PW_LEAD1",
+  "PW_HEAD",
+  "PW_VIEWER",
+  "PW_ADMIN",
+] as const;
+// Values the setup script generates with `openssl rand -hex`; a truncated
+// secret cannot match its complete shape.
+const secretShapes: Readonly<
+  Record<(typeof requiredSecretNames)[number], RegExp>
+> = {
+  DB_PASSWORD: /^[0-9a-f]{32}$/u,
+  AUTH_JWT_SECRET: /^[0-9a-f]{64}$/u,
+  PDF_EXPORT_JWT_SECRET: /^[0-9a-f]{64}$/u,
+  AI_PROVIDER_CONFIG_ENCRYPTION_KEY: /^[0-9a-f]{64}$/u,
+  KC_ADMIN_PASSWORD: /^[0-9a-f]{24}$/u,
+  PW_LEAD1: /^Wr-lead1-[0-9a-f]{8}$/u,
+  PW_HEAD: /^Wr-head-[0-9a-f]{8}$/u,
+  PW_VIEWER: /^Wr-viewer-[0-9a-f]{8}$/u,
+  PW_ADMIN: /^Wr-admin-[0-9a-f]{8}$/u,
+};
+
+function parseSecrets(contents: string) {
+  return Object.fromEntries(
+    contents
+      .split("\n")
+      .filter((line) => line.includes("="))
+      .map((line) => {
+        const separator = line.indexOf("=");
+        return [line.slice(0, separator), line.slice(separator + 1)];
+      }),
+  );
+}
+
+interface SetupRunOptions {
+  // Holds the writer mid-heredoc: only a prefix of the last value reaches the
+  // file, then the process exits as interrupted.
+  readonly interruptSecretsWrite?: boolean;
+  // Runs setup again after the first run finishes.
+  readonly rerun?: boolean;
+}
 type PairState =
   | "valid"
   | "fresh"
@@ -29,34 +81,30 @@ type PairState =
   | "corrupt-key"
   | "mismatched";
 
-function runSetup(pairState: PairState, failure = "", secrets?: string) {
+function runSetup(
+  pairState: PairState,
+  failure = "",
+  secrets?: string | null,
+  options: SetupRunOptions = {},
+) {
   mkdirSync(resolve("output"), { recursive: true });
   const root = mkdtempSync(resolve("output/local-prod-certificate-"));
   const state = join(root, "state"),
     bin = join(root, "bin"),
     events = join(root, "events"),
+    secretsPath = join(state, "secrets.env"),
     key = join(state, "idp.key"),
     cert = join(state, "idp.crt");
   try {
     for (const path of [state, bin]) mkdirSync(path);
-    writeFileSync(
-      join(state, "secrets.env"),
-      secrets ??
-        [
-          "DB_PASSWORD",
-          "AUTH_JWT_SECRET",
-          "PDF_EXPORT_JWT_SECRET",
-          "AI_PROVIDER_CONFIG_ENCRYPTION_KEY",
-          "KC_ADMIN_PASSWORD",
-          "PW_LEAD1",
-          "PW_HEAD",
-          "PW_VIEWER",
-          "PW_ADMIN",
-        ]
-          .map((name) => `${name}=${secretMarker}\n`)
-          .join(""),
-      { mode: 0o600 },
-    );
+    const initialSecrets =
+      secrets === undefined
+        ? requiredSecretNames
+            .map((name) => `${name}=${secretMarker}\n`)
+            .join("")
+        : secrets;
+    if (initialSecrets !== null)
+      writeFileSync(secretsPath, initialSecrets, { mode: 0o600 });
     if (pairState !== "fresh") {
       execFileSync(
         openssl,
@@ -111,6 +159,15 @@ function runSetup(pairState: PairState, failure = "", secrets?: string) {
       );
     stub("envsubst", "cat");
     stub(
+      "cat",
+      `if [ "\${TEST_INTERRUPT_SECRETS_WRITE:-}" = "1" ]; then
+  data=$("$TEST_CAT")
+  printf '%s' "\${data%????}"
+  exit 137
+fi
+exec "$TEST_CAT" "$@"`,
+    );
+    stub(
       "kubectl",
       String.raw`printf 'mutation\n' >> "$TEST_EVENTS"
 case "$*" in *'apply -f -'*) cat >/dev/null ;; esac`,
@@ -123,10 +180,8 @@ case "$*" in *'apply -f -'*) cat >/dev/null ;; esac`,
 fi
 exec "$TEST_OPENSSL" "$@"`,
     );
-    const result = spawnSync(
-      "/bin/bash",
-      [resolve("deploy/local-prod/setup.sh")],
-      {
+    const runOnce = (interruptSecretsWrite: boolean) =>
+      spawnSync("/bin/bash", [resolve("deploy/local-prod/setup.sh")], {
         encoding: "utf8",
         timeout: 15_000,
         env: {
@@ -139,9 +194,20 @@ exec "$TEST_OPENSSL" "$@"`,
           TEST_OPENSSL: openssl,
           TEST_OPENSSL_FAILURE: failure,
           TEST_FAILURE_MARKER: failureMarker,
+          TEST_CAT: cat,
+          ...(interruptSecretsWrite
+            ? { TEST_INTERRUPT_SECRETS_WRITE: "1" }
+            : {}),
         },
-      },
-    );
+      });
+    const result = runOnce(options.interruptSecretsWrite === true);
+    const secretsAfterFirstRun = existsSync(secretsPath)
+      ? readFileSync(secretsPath, "utf8")
+      : null;
+    const rerun = options.rerun === true ? runOnce(false) : null;
+    const publishedSecrets = existsSync(secretsPath)
+      ? readFileSync(secretsPath, "utf8")
+      : null;
     const afterKey = existsSync(key) ? readFileSync(key, "utf8") : null;
     const afterCert = existsSync(cert) ? readFileSync(cert, "utf8") : null;
     const matching =
@@ -155,7 +221,12 @@ exec "$TEST_OPENSSL" "$@"`,
         });
     return {
       result,
+      rerun,
       matching,
+      secretsAfterFirstRun,
+      publishedSecrets,
+      publishedSecretsMode:
+        publishedSecrets === null ? null : statSync(secretsPath).mode & 0o777,
       unchanged: beforeKey === afterKey && beforeCert === afterCert,
       mutated: existsSync(events),
       certificateExported:
@@ -214,10 +285,9 @@ test.each(["req", "x509", "pkcs8"])(
   },
 );
 
-// C0057 (scoped refusal controls only): a pre-existing empty or key-truncated
-// secrets.env is refused before Kubernetes. These fixtures do not interrupt the
-// real writer, so a cut inside the last value with every key present stays
-// unproven and C0057 remains needs-evidence.
+// A pre-existing empty or key-truncated secrets.env is refused before
+// Kubernetes. These fixtures seed the file directly and do not exercise the
+// writer.
 test.each(["", "DB_PASSWORD=ab", "DB_PASSWORD=ab\nAUTH_JWT_SECRET="])(
   "local-prod refuses an interrupted secrets.env %j before Kubernetes",
   (secrets) => {
@@ -227,3 +297,31 @@ test.each(["", "DB_PASSWORD=ab", "DB_PASSWORD=ab\nAUTH_JWT_SECRET="])(
     assert.match(result.stderr, /Missing required secret/u);
   },
 );
+
+test("local-prod repairs a secrets.env interrupted mid-write on the next run", () => {
+  const {
+    result,
+    rerun,
+    mutated,
+    secretsAfterFirstRun,
+    publishedSecrets,
+    publishedSecretsMode,
+  } = runSetup("valid", "", null, { interruptSecretsWrite: true, rerun: true });
+  assert.notEqual(
+    result.status,
+    0,
+    "the interrupted writer must abort its run",
+  );
+  assert.equal(
+    secretsAfterFirstRun,
+    null,
+    "the interrupted writer left a partial secrets.env",
+  );
+  assert.ok(rerun, "the fixture must run setup again after the interruption");
+  assert.equal(rerun.status, 0, rerun.stderr);
+  assert.equal(mutated, true);
+  assert.equal(publishedSecretsMode, 0o600);
+  const published = parseSecrets(publishedSecrets ?? "");
+  for (const name of requiredSecretNames)
+    assert.match(published[name] ?? "", secretShapes[name], name);
+});
