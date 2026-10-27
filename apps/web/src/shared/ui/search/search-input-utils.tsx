@@ -15,6 +15,12 @@ export function searchScopeLabel(scope: SearchScope): string {
   return scope === "all" ? "Search reports and products" : "Search reports";
 }
 
+// One option-id contract: the input's active descendant and the popup's reveal
+// effect must address the same result node.
+export function searchOptionId(resultsId: string, index: number): string {
+  return `${resultsId}-option-${index}`;
+}
+
 export function useDebouncedValue<T>(value: T, delayMs: number): T {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {

@@ -6,7 +6,11 @@ import {
   type SearchController,
   useSearchController,
 } from "./search-input-controller";
-import { type SearchScope, searchScopeLabel } from "./search-input-utils";
+import {
+  searchOptionId,
+  type SearchScope,
+  searchScopeLabel,
+} from "./search-input-utils";
 import { SearchResultsDropdown } from "./search-results-dropdown";
 
 interface SearchInputProps {
@@ -107,7 +111,7 @@ function SearchField({
         resultsId={resultsId}
         activeOptionId={
           expanded && hits[activeIndex]
-            ? `${resultsId}-option-${activeIndex}`
+            ? searchOptionId(resultsId, activeIndex)
             : undefined
         }
         expanded={expanded}
