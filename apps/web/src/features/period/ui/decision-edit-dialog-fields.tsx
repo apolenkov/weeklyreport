@@ -212,7 +212,11 @@ function DecisionClassificationColumn({
           availableStages={availableStages}
           isDeadEnd={isDeadEnd}
           error={stageError}
-          deadEndNotice={`No stages assigned on ${headerProductName} — contact admin.`}
+          deadEndNotice={
+            headerProductName
+              ? `No stages assigned on ${headerProductName} — contact admin.`
+              : "No stages assigned — contact admin."
+          }
           onChange={(next) => onStageChange([...next])}
         />
       )}
