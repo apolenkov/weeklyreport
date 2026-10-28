@@ -61,15 +61,16 @@ Helm is consumed by deployment CI from checkout, not by the application image.
 Do not exclude a needed manifest, source file or build-time fixture to reduce
 context size. See `Dockerfile.api`, `Dockerfile.web` and `turbo.json`.
 
-## GitLab outputs
+## GitLab and image outputs
 
-| Output                                     | Declared consumer/storage                               | Declared retention                     |
-| ------------------------------------------ | ------------------------------------------------------- | -------------------------------------- |
-| `image-digests.txt`                        | Build-images evidence for API/migrate/web/backup images | 30 days                                |
-| Container images tagged by `CI_COMMIT_SHA` | GitLab registry, then manual Helm deployment            | External registry policy is unverified |
+| Output                                | Declared consumer/storage                                 | Declared retention                     |
+| ------------------------------------- | --------------------------------------------------------- | -------------------------------------- |
+| Container images tagged by commit SHA | Built locally via `pnpm images:build`, pushed to registry | External registry policy is unverified |
+| Manual Helm deployment                | GitLab CI `deploy-production`, consumes pre-pushed images | Cluster deployment history             |
 
-These declarations in `.gitlab-ci.yml` are not evidence of a successful pipeline
-or deployment. A GREEN CI claim requires the pipeline's exact tested SHA.
+Image builds are executed on the operator workstation (`pnpm images:build`) and
+pushed directly to the registry before deployment (TASK-709); GitLab CI does not
+build images or upload image digests. A GREEN CI claim requires the pipeline's exact tested SHA.
 Follow the task's current decision about intermediate CI; one final corporate
 CI remains required for the full completion program. The local operator-triggered Renovate
 command is documented in `docs/gitlab-ci.md`; token provisioning and actual
