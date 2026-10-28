@@ -192,7 +192,10 @@ export function PeriodsSubTab({
       <UnifiedActivityViewToggle
         checked={draft.unifiedActivityView}
         onCheckedChange={(checked) =>
-          updateDraft({ ...draft, unifiedActivityView: checked })
+          updateDraft((current) => ({
+            ...current,
+            unifiedActivityView: checked,
+          }))
         }
       />
 

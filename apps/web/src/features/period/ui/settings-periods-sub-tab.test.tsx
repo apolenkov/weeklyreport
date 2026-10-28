@@ -227,6 +227,29 @@ describe("PeriodsSubTab — disabled reopen-window validity", () => {
       unifiedActivityView: true,
     });
   });
+
+  it("keeps a numeric edit when the unified activity view toggle changes right after it", async () => {
+    const user = userEvent.setup();
+    render(<PeriodsSubTab serverSettings={SETTINGS} />);
+
+    act(() => {
+      fireEvent.change(screen.getByLabelText("Default deadline days"), {
+        target: { value: "9" },
+      });
+      fireEvent.click(
+        screen.getByRole("checkbox", { name: /unified activity view/i }),
+      );
+    });
+    await user.click(
+      screen.getByRole("button", { name: "Save period policy" }),
+    );
+
+    expect(mutate).toHaveBeenCalledTimes(1);
+    expect(mutate.mock.calls[0]?.[0]).toMatchObject({
+      defaultDeadlineDays: 9,
+      unifiedActivityView: true,
+    });
+  });
 });
 
 describe("Period Policy active validity", () => {
