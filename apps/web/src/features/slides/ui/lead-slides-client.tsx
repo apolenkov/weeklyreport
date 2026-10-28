@@ -111,6 +111,7 @@ function useLeadSlidesDeck({
   visibilityHydrated,
   density,
   showDensityControl,
+  deckRef,
 }: {
   readonly initialReportId: string | null;
   readonly foreignContent: readonly CrossAuthorContentRow[] | undefined;
@@ -119,6 +120,7 @@ function useLeadSlidesDeck({
   readonly visibilityHydrated: boolean;
   readonly density: SlideDensity;
   readonly showDensityControl: boolean;
+  readonly deckRef: RefObject<HTMLElement | null>;
 }) {
   const leadSlides = useLeadSlidesData({
     initialReportId,
@@ -132,6 +134,7 @@ function useLeadSlidesDeck({
     formData: leadSlides.formData,
     canInlineEdit: leadSlides.canInlineEdit,
     refetchSection: leadSlides.refetchSection,
+    restoreFocusFallbackRef: deckRef,
   });
   const slides = useMemo(
     () => slidesForDensity(leadSlides.slides, density),
@@ -190,6 +193,7 @@ export function LeadSlidesClient({
     visibilityHydrated,
     density: activeDensity,
     showDensityControl,
+    deckRef: externalDeckRef ?? internalDeckRef,
   });
 
   if (deck.placeholder !== null) {

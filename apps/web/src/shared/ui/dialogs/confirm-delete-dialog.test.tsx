@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { type RefObject, useState } from "react";
+import { type RefObject, useRef, useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog";
@@ -508,6 +508,50 @@ describe("ConfirmDeleteDialog — shared confirmation contracts (TASK-503.43)", 
       const opener = await openFromOpenerThenEscape();
 
       await waitFor(() => expect(opener).toHaveFocus());
+    });
+
+    // Removed-opener path (Slides inline delete): the confirmed delete removes the
+    // row that opened the dialog, so the explicit and previous targets are both
+    // gone at close. The restore container takes focus instead of <body>.
+    it("falls back to the restore container when the opener is removed before the dialog closes", async () => {
+      function RemovedOpenerHarness() {
+        const [open, setOpen] = useState(false);
+        const [rowPresent, setRowPresent] = useState(true);
+        const containerRef = useRef<HTMLDivElement>(null);
+        return (
+          <div ref={containerRef} tabIndex={-1} data-testid="deck">
+            {rowPresent && (
+              <button
+                type="button"
+                data-testid="opener"
+                onClick={() => setOpen(true)}
+              >
+                Open
+              </button>
+            )}
+            <ConfirmDeleteDialog
+              {...defaultProps}
+              open={open}
+              restoreFocusFallbackRef={containerRef}
+              onConfirm={() => {
+                setRowPresent(false);
+                setOpen(false);
+              }}
+              onCancel={() => setOpen(false)}
+            />
+          </div>
+        );
+      }
+      render(<RemovedOpenerHarness />);
+      const opener = screen.getByTestId("opener");
+      opener.focus();
+      fireEvent.click(opener);
+      await waitFor(() => expect(opener).not.toHaveFocus());
+
+      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+
+      await waitFor(() => expect(screen.queryByTestId("opener")).toBeNull());
+      await waitFor(() => expect(screen.getByTestId("deck")).toHaveFocus());
     });
   });
 });
