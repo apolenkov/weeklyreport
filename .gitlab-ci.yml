@@ -25,6 +25,8 @@ default:
 # from CI variables; no cluster credential lives in the repository.
 # Upfront check verifies all 4 images (api, migrate, web, backup) tagged with
 # $CI_COMMIT_SHA exist in the registry before any Helm command is executed.
+# The registry is read from deploy/images/release.env, the file pnpm images:build
+# reads, and passed to Helm as images.registry; CI variables do not override it.
 # A missing release is installed (only when Helm itself reports release-not-found)
 # and an existing deployed one is upgraded; a history error, a history with no
 # readable revision and any other state stop the job before a mutation. Neither
@@ -50,12 +52,20 @@ deploy-production:
     - ': "${HELM_KUBE_CONTEXT:?HELM_KUBE_CONTEXT is not set}"'
     - |
       set -eu
-      REGISTRY="${IMAGE_REGISTRY:-${CI_REGISTRY_IMAGE:-registry.example.com:5005/example/weeklyreport}}"
-      REGISTRY_USER="${IMAGE_REGISTRY_USER:-${CI_REGISTRY_USER:-gitlab-ci-token}}"
+      RELEASE_ENV=deploy/images/release.env
+      if [ ! -f "$RELEASE_ENV" ]; then
+        echo "ERROR: $RELEASE_ENV is missing; the release registry is not configured." >&2
+        exit 1
+      fi
+      . "./$RELEASE_ENV"
+      : "${IMAGE_REGISTRY:?$RELEASE_ENV does not set IMAGE_REGISTRY}"
+      : "${CI_SERVER_URL:?CI_SERVER_URL is not set}"
+      REGISTRY_USER="${IMAGE_REGISTRY_USER:-${CI_REGISTRY_USER:-}}"
       REGISTRY_PASSWORD="${IMAGE_REGISTRY_PASSWORD:-${CI_REGISTRY_PASSWORD:-${CI_JOB_TOKEN:-}}}"
-      REGISTRY_HOST="${REGISTRY%%/*}"
-      REPO_PATH="${REGISTRY#*/}"
-      AUTH_SERVER="${CI_SERVER_URL:-https://${REGISTRY_HOST%%:*}}"
+      : "${REGISTRY_USER:?registry user is not set (IMAGE_REGISTRY_USER or CI_REGISTRY_USER)}"
+      : "${REGISTRY_PASSWORD:?registry password is not set (IMAGE_REGISTRY_PASSWORD, CI_REGISTRY_PASSWORD or CI_JOB_TOKEN)}"
+      REGISTRY_HOST="${IMAGE_REGISTRY%%/*}"
+      REPO_PATH="${IMAGE_REGISTRY#*/}"
 
       ACCEPT_HEADER="Accept: application/vnd.docker.distribution.manifest.v2+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.oci.image.index.v1+json"
 
@@ -64,36 +74,26 @@ deploy-production:
         manifest_url="https://$REGISTRY_HOST/v2/$REPO_PATH/$img/manifests/$CI_COMMIT_SHA"
         echo "Checking manifest for $img: $manifest_url"
 
-        jwt_auth=""
-        if [ -n "$REGISTRY_USER" ] && [ -n "$REGISTRY_PASSWORD" ]; then
-          jwt_auth="-u $REGISTRY_USER:$REGISTRY_PASSWORD"
-        fi
-
-        # shellcheck disable=SC2086
-        token_response="$(curl -fsSL ${jwt_auth} \
-          "$AUTH_SERVER/jwt/auth?service=container_registry&scope=repository:$REPO_PATH/$img:pull" || true)"
+        token_response="$(curl -fsSL -u "$REGISTRY_USER:$REGISTRY_PASSWORD" \
+          "$CI_SERVER_URL/jwt/auth?service=container_registry&scope=repository:$REPO_PATH/$img:pull" || true)"
 
         token="$(printf '%s' "$token_response" | sed -n 's/.*"token"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
         if [ -z "$token" ]; then
           token="$(printf '%s' "$token_response" | sed -n 's/.*"access_token"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
         fi
 
-        bearer_header=""
+        set -- -s -o /dev/null -w '%{http_code}' -H "$ACCEPT_HEADER"
         if [ -n "$token" ]; then
-          bearer_header="Authorization: Bearer $token"
+          set -- "$@" -H "Authorization: Bearer $token"
         fi
-
-        http_code="$(curl -s -o /dev/null -w "%{http_code}" \
-          ${bearer_header:+-H "$bearer_header"} \
-          -H "$ACCEPT_HEADER" \
-          "$manifest_url" || true)"
+        http_code="$(curl "$@" "$manifest_url" || true)"
 
         if [ "$http_code" != "200" ]; then
-          echo "ERROR: Image $REGISTRY/$img:$CI_COMMIT_SHA is missing from registry (HTTP $http_code)." >&2
+          echo "ERROR: Image $IMAGE_REGISTRY/$img:$CI_COMMIT_SHA is missing from registry (HTTP $http_code)." >&2
           echo "Please build and push all release images locally using 'pnpm images:build' before deploying." >&2
           exit 1
         fi
-        echo "Image $REGISTRY/$img:$CI_COMMIT_SHA verified."
+        echo "Image $IMAGE_REGISTRY/$img:$CI_COMMIT_SHA verified."
       done
 
       set -- --kube-context "$HELM_KUBE_CONTEXT" --namespace "$HELM_NAMESPACE"
@@ -118,9 +118,9 @@ deploy-production:
       known="$(helm list "$@" --filter '^weeklyreport$' -q)"
       deployed="$(helm list "$@" --filter '^weeklyreport$' --deployed -q)"
       if [ "$state" = absent ] && [ -z "$known" ] && [ -z "$deployed" ]; then
-        helm install weeklyreport deploy/helm/weeklyreport "$@" -f "$HELM_VALUES_FILE" --set "images.tag=$CI_COMMIT_SHA" --wait=watcher --timeout 10m
+        helm install weeklyreport deploy/helm/weeklyreport "$@" -f "$HELM_VALUES_FILE" --set "images.tag=$CI_COMMIT_SHA" --set "images.registry=$IMAGE_REGISTRY" --wait=watcher --timeout 10m
       elif [ "$state" = existing ] && [ "$known" = weeklyreport ] && [ "$deployed" = weeklyreport ]; then
-        helm upgrade weeklyreport deploy/helm/weeklyreport "$@" -f "$HELM_VALUES_FILE" --set "images.tag=$CI_COMMIT_SHA" --wait=watcher --timeout 10m
+        helm upgrade weeklyreport deploy/helm/weeklyreport "$@" -f "$HELM_VALUES_FILE" --set "images.tag=$CI_COMMIT_SHA" --set "images.registry=$IMAGE_REGISTRY" --wait=watcher --timeout 10m
       else
         echo "release weeklyreport is not confirmed as absent or deployed (history=$state known='$known' deployed='$deployed'); refusing to mutate" >&2
         cat "$stderr_file" >&2
