@@ -37,7 +37,7 @@
     "test": "turbo run test && vitest run --config vitest.prisma.config.ts && pnpm test:cleanliness && pnpm test:operations && pnpm test:eslint-suppressions && pnpm test:e2e-setup",
     "test:eslint-suppressions": "vitest run --testTimeout=30000 scripts/gates/eslint-suppressions.test.ts",
     "test:cleanliness": "vitest run scripts/gates/repository-cleanliness.test.ts",
-    "test:operations": "vitest run --testTimeout=30000 scripts/gates/production-dist-policy.test.ts scripts/gates/operations && node --import tsx --test scripts/gates/production-deps-prune.fixture.test.ts scripts/gates/prepare-hooks.fixture.test.ts",
+    "test:operations": "vitest run --testTimeout=30000 scripts/build-images.test.ts scripts/gates/production-dist-policy.test.ts scripts/gates/operations && node --import tsx --test scripts/gates/production-deps-prune.fixture.test.ts scripts/gates/prepare-hooks.fixture.test.ts",
     "test:coverage": "REQUIRED_INTEGRATION_DEPS=true pnpm --filter @weeklyreport/api test:coverage && pnpm --filter @weeklyreport/web test:coverage",
     "db:bootstrap:local": "node --import tsx prisma/operations/bootstrap-local.ts",
     "db:seed:profile": "tsx prisma/seeds/profiles/seed-profile.ts",
