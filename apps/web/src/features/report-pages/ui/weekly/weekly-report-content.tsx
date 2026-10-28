@@ -178,10 +178,12 @@ function ReportSectionsSurface({
         reviewMode={toolbar.reviewMode}
       />
 
-      {/* Anti-empty-state when submitted-only is hiding draft content. */}
-      {submittedOnly && accordion.draftCount > 0 ? (
+      {/* Anti-empty-state when submitted-only is hiding draft content.
+          The live region stays mounted across filter switches while review is enabled,
+          so AT announces draft arrivals upon filter toggle. */}
+      {reviewEnabled ? (
         <DraftHiddenSignal
-          count={accordion.draftCount}
+          count={submittedOnly ? accordion.draftCount : 0}
           onShowAll={() => toolbar.onFilterChange("all")}
         />
       ) : null}
