@@ -117,6 +117,11 @@ export function ItemNextStepField({
   );
 }
 
+// Only a whole-string integer is a rank; partial parses such as "2foo" are not.
+function parsePriorityRank(raw: string): number | null {
+  return /^-?\d+$/.test(raw) ? Number(raw) : null;
+}
+
 export function ItemPriorityRankField({
   priorityRank,
   onPriorityRankChange,
@@ -139,8 +144,7 @@ export function ItemPriorityRankField({
         className="select-chevron w-full max-md:min-h-[var(--touch-target-min)] rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-card)] py-2.5 pl-3 text-base md:text-sm text-[var(--color-foreground)] focus:border-[var(--color-starbucks-accent)] focus:shadow-[0_0_0_3px_var(--color-ring)] focus:outline-none"
         value={priorityRank ?? ""}
         onChange={(e) => {
-          const v = e.target.value;
-          onPriorityRankChange(v === "" ? null : Number.parseInt(v, 10));
+          onPriorityRankChange(parsePriorityRank(e.target.value));
         }}
       >
         <option value="">— none —</option>
