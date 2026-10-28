@@ -2,11 +2,14 @@ import type { Prisma } from "@prisma/client";
 import {
   feedbackDiagnosticsSchema,
   feedbackScreenshotRegionSchema,
+  feedbackStatusSchema,
+  feedbackTypeSchema,
   normalizeFeedbackPath,
 } from "@weeklyreport/shared";
 
 import {
   type FeedbackAccess,
+  FeedbackInvalidStatusError,
   type FeedbackQuery,
   type FeedbackRecord,
   WEEKLY_REPORT_FEEDBACK_PRODUCT,
@@ -16,13 +19,35 @@ export type FeedbackRow = Prisma.ProductFeedbackGetPayload<{
   include: { annotations: true };
 }>;
 
+// `type` and `status` are plain String columns; a legacy or manually edited row
+// may hold a value outside the shared enums, so it is rejected, not cast.
+function storedType(row: FeedbackRow): FeedbackRecord["type"] {
+  const parsed = feedbackTypeSchema.safeParse(row.type);
+  if (!parsed.success) {
+    throw new FeedbackInvalidStatusError(
+      `Stored feedback ${row.id} has an unknown type.`,
+    );
+  }
+  return parsed.data;
+}
+
+function storedStatus(row: FeedbackRow): FeedbackRecord["status"] {
+  const parsed = feedbackStatusSchema.safeParse(row.status);
+  if (!parsed.success) {
+    throw new FeedbackInvalidStatusError(
+      `Stored feedback ${row.id} has an unknown status.`,
+    );
+  }
+  return parsed.data;
+}
+
 export function mapFeedback(row: FeedbackRow): FeedbackRecord {
   return {
     id: row.id,
     projectName: WEEKLY_REPORT_FEEDBACK_PRODUCT,
-    type: row.type as FeedbackRecord["type"],
+    type: storedType(row),
     message: row.message,
-    status: row.status as FeedbackRecord["status"],
+    status: storedStatus(row),
     url: row.url,
     urlPattern: row.urlPattern,
     authorName: row.authorName,
