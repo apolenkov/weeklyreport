@@ -59,18 +59,13 @@ function parseCliArgs(args: readonly string[]): BuildOptions {
 }
 
 function printHelpAndExit(): never {
-  console.log(`
-Usage: pnpm images:build [options]
-
-Builds api, migrate, web, backup images via docker buildx and pushes to registry.
-
+  console.log(`Usage: pnpm images:build [options]
 Options:
   --no-push            Build images locally without pushing to remote registry
   --push               Push images after build (default: true)
   --registry <url>     Override target registry prefix
   --target, --only     Comma-separated list of targets to build (api, migrate, web, backup)
-  -h, --help           Show this help message
-`);
+  -h, --help           Show this help message`);
   process.exit(0);
 }
 
@@ -85,6 +80,7 @@ function findCommand(name: string): string {
 const GIT_BIN = findCommand("git");
 const DOCKER_BIN = findCommand("docker");
 const GITLAB_MAIN = "gitlab/main";
+const WEB_ENV_FILE = "deploy/images/web-public.env";
 
 function execGit(args: readonly string[]): string {
   try {
@@ -108,95 +104,91 @@ function checkGitPreconditions(): string {
 
   const headSha = execGit(["rev-parse", "HEAD"]);
   const mainSha = execGit(["rev-parse", GITLAB_MAIN]);
-  const isMatch = headSha === mainSha;
-  let isRelated = false;
-  try {
-    execGit(["merge-base", "--is-ancestor", "HEAD", GITLAB_MAIN]);
-    isRelated = true;
-  } catch {
+  let isRelated = headSha === mainSha;
+  if (!isRelated) {
     try {
-      execGit(["merge-base", "--is-ancestor", GITLAB_MAIN, "HEAD"]);
+      execGit(["merge-base", "--is-ancestor", "HEAD", GITLAB_MAIN]);
       isRelated = true;
     } catch {
-      // not related
+      try {
+        execGit(["merge-base", "--is-ancestor", GITLAB_MAIN, "HEAD"]);
+        isRelated = true;
+      } catch {
+        // not related
+      }
     }
   }
 
-  if (!isMatch && !isRelated) {
+  if (!isRelated) {
     throw new Error(
-      `HEAD (${headSha}) is not on ${GITLAB_MAIN} branch lineage (${mainSha}). Only commits based on ${GITLAB_MAIN} can be built and tagged for deployment.`,
+      `HEAD (${headSha}) is not on ${GITLAB_MAIN} lineage (${mainSha}).`,
     );
   }
   return headSha;
 }
 
-function checkEnvironmentPreconditions(): void {
-  const requiredEnvVars = [
+function loadWebPublicEnv(): Record<string, string> {
+  const envPath = resolve(WEB_ENV_FILE);
+  if (!existsSync(envPath)) {
+    throw new Error(`Missing web build config file: ${WEB_ENV_FILE}.`);
+  }
+  const lines = readFileSync(envPath, "utf8").split("\n");
+  const parsed: Record<string, string> = {};
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const splitIndex = trimmed.indexOf("=");
+    if (splitIndex > 0) {
+      parsed[trimmed.slice(0, splitIndex).trim()] = trimmed
+        .slice(splitIndex + 1)
+        .trim();
+    }
+  }
+
+  const requiredKeys = [
     "WR_NEXT_PUBLIC_CLIENT_LOG_FORWARDING",
     "WR_NEXT_PUBLIC_WEB_VITALS",
     "WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED",
     "WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES",
-  ] as const;
+  ];
 
-  for (const envVar of requiredEnvVars) {
-    if (!process.env[envVar]) {
+  for (const key of requiredKeys) {
+    const resolved = process.env[key] || parsed[key];
+    if (!resolved) {
       throw new Error(
-        `Missing required environment variable: ${envVar}. Refusing to build web image.`,
+        `Missing web config: ${key} (not in env or ${WEB_ENV_FILE}).`,
       );
     }
+    parsed[key] = resolved;
   }
+  return parsed;
 }
 
 function checkDockerAuth(registryHost: string): void {
-  const homeDirectory = process.env.HOME ?? "";
-  const dockerConfigPath = process.env.DOCKER_CONFIG
+  const homeDir = process.env.HOME ?? "";
+  const configPath = process.env.DOCKER_CONFIG
     ? resolve(process.env.DOCKER_CONFIG, "config.json")
-    : resolve(homeDirectory, ".docker", "config.json");
+    : resolve(homeDir, ".docker", "config.json");
 
-  if (!existsSync(dockerConfigPath)) {
-    throw new Error(
-      `Docker config not found at ${dockerConfigPath}. Please run 'docker login ${registryHost}' first.`,
-    );
+  if (!existsSync(configPath)) {
+    throw new Error(`Docker config not found at ${configPath}.`);
   }
 
   try {
-    const config = JSON.parse(readFileSync(dockerConfigPath, "utf8")) as {
+    const config = JSON.parse(readFileSync(configPath, "utf8")) as {
       readonly auths?: Readonly<Record<string, unknown>>;
     };
     const hasAuth = Object.keys(config.auths ?? {}).some(
       (host) => host === registryHost || host.startsWith(`${registryHost}/`),
     );
     if (!hasAuth) {
-      throw new Error(
-        `No authentication found for registry host '${registryHost}' in ${dockerConfigPath}. Please run 'docker login ${registryHost}' first.`,
-      );
+      throw new Error(`No auth for '${registryHost}' in ${configPath}.`);
     }
   } catch (error) {
-    if (error instanceof Error && error.message.includes("No authentication")) {
+    if (error instanceof Error && error.message.includes("No auth"))
       throw error;
-    }
-    throw new Error(`Failed to read Docker config at ${dockerConfigPath}`);
+    throw new Error(`Failed to read Docker config at ${configPath}`);
   }
-}
-
-function checkPreconditions(push: boolean): {
-  readonly commitSha: string;
-  readonly registry: string;
-} {
-  const commitSha = checkGitPreconditions();
-  checkEnvironmentPreconditions();
-
-  const registry =
-    process.env.IMAGE_REGISTRY ||
-    process.env.CI_REGISTRY_IMAGE ||
-    "registry.example.com:5005/example/weeklyreport";
-
-  if (push) {
-    const registryHost = registry.split("/")[0] ?? "";
-    checkDockerAuth(registryHost);
-  }
-
-  return { commitSha, registry };
 }
 
 interface ImageTarget {
@@ -207,7 +199,10 @@ interface ImageTarget {
   readonly buildArgs: readonly string[];
 }
 
-function getImageTargets(commitSha: string): readonly ImageTarget[] {
+function getImageTargets(
+  commitSha: string,
+  webEnv: Record<string, string>,
+): readonly ImageTarget[] {
   return [
     {
       name: "api",
@@ -232,10 +227,10 @@ function getImageTargets(commitSha: string): readonly ImageTarget[] {
         "NEXT_PUBLIC_DEV_ROLE_SWITCHER=false",
         `NEXT_PUBLIC_SENTRY_DSN=${process.env.NEXT_PUBLIC_SENTRY_DSN || ""}`,
         `NEXT_PUBLIC_APP_VERSION=${commitSha}`,
-        `NEXT_PUBLIC_CLIENT_LOG_FORWARDING=${process.env.WR_NEXT_PUBLIC_CLIENT_LOG_FORWARDING ?? ""}`,
-        `NEXT_PUBLIC_WEB_VITALS=${process.env.WR_NEXT_PUBLIC_WEB_VITALS ?? ""}`,
-        `NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED=${process.env.WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED ?? ""}`,
-        `NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES=${process.env.WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES ?? ""}`,
+        `NEXT_PUBLIC_CLIENT_LOG_FORWARDING=${webEnv.WR_NEXT_PUBLIC_CLIENT_LOG_FORWARDING ?? ""}`,
+        `NEXT_PUBLIC_WEB_VITALS=${webEnv.WR_NEXT_PUBLIC_WEB_VITALS ?? ""}`,
+        `NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED=${webEnv.WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED ?? ""}`,
+        `NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES=${webEnv.WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES ?? ""}`,
       ],
     },
     {
@@ -258,9 +253,7 @@ function buildTarget(
 
   const args = ["buildx", "build", "-f", target.dockerfile, "-t", fullImageTag];
   if (target.target) args.push("--target", target.target);
-  for (const buildArg of target.buildArgs) {
-    args.push("--build-arg", buildArg);
-  }
+  for (const buildArg of target.buildArgs) args.push("--build-arg", buildArg);
   args.push(push ? "--push" : "--load");
   args.push(target.context);
 
@@ -268,25 +261,30 @@ function buildTarget(
   try {
     execFileSync(DOCKER_BIN, args, { stdio: "inherit" });
   } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `docker buildx build failed for ${target.name}: ${message}`,
-    );
+    const msg = error instanceof Error ? error.message : String(error);
+    throw new Error(`docker buildx build failed for ${target.name}: ${msg}`);
   }
-
   console.log(`Successfully built ${fullImageTag}`);
 }
 
 export function main(): void {
   const options = parseCliArgs(process.argv.slice(2));
-  const { commitSha, registry } = checkPreconditions(options.push);
-  const targetRegistry = options.registry || registry;
+  const commitSha = checkGitPreconditions();
 
-  console.log(`Target registry: ${targetRegistry}`);
-  console.log(`Commit SHA:      ${commitSha}`);
-  console.log(`Push enabled:    ${String(options.push)}`);
+  const registry =
+    options.registry ||
+    process.env.IMAGE_REGISTRY ||
+    process.env.CI_REGISTRY_IMAGE ||
+    "registry.example.com:5005/example/weeklyreport";
 
-  const allTargets = getImageTargets(commitSha);
+  if (options.push) {
+    checkDockerAuth(registry.split("/")[0] ?? "");
+  }
+
+  const needsWeb = !options.targets || options.targets.includes("web");
+  const webEnv = needsWeb ? loadWebPublicEnv() : {};
+
+  const allTargets = getImageTargets(commitSha, webEnv);
   const targetsToBuild = options.targets
     ? allTargets.filter((candidate) =>
         options.targets?.includes(candidate.name),
@@ -294,15 +292,12 @@ export function main(): void {
     : allTargets;
 
   if (targetsToBuild.length === 0) {
-    throw new Error(
-      `No valid targets selected to build. Available: ${allTargets.map((candidate) => candidate.name).join(", ")}`,
-    );
+    throw new Error(`No valid targets selected to build.`);
   }
 
   for (const target of targetsToBuild) {
-    buildTarget(target, targetRegistry, commitSha, options.push);
+    buildTarget(target, registry, commitSha, options.push);
   }
-
   console.log("\nAll requested images built successfully.");
 }
 

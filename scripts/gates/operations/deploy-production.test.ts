@@ -51,10 +51,6 @@ const SHA = "0123456789abcdef";
 const SHARED = `--kube-context ${CONTEXT} --namespace ${NAMESPACE}`;
 const CHART_ARGS = `deploy/helm/weeklyreport ${SHARED} -f VALUES --set images.tag=${SHA} --wait=watcher --timeout 10m`;
 
-// Records every call. `history` answers from STUB_HISTORY (absent by default:
-// Helm's release-not-found error; present, unreadable, denied, similar), `list`
-// from STUB_KNOWN (all states) or STUB_DEPLOYED (--deployed); any subcommand a
-// deploy must never run exits 99.
 const HELM_STUB = String.raw`#!/bin/sh
 printf '%s\n' "$*" >> "$STUB_CALLS"
 case "$1" in
@@ -105,17 +101,58 @@ case "$1" in
 esac
 `;
 
+// Validates that curl calls use JWT auth and OCI/Docker index Accept header
 const CURL_STUB = `#!/bin/sh
-if [ -n "$STUB_CURL_FAIL_IMAGE" ]; then
-  case "$*" in
-    *"$STUB_CURL_FAIL_IMAGE"*)
-      printf '404'
-      exit 0
-      ;;
-  esac
-fi
-printf '200'
-exit 0
+case "$*" in
+  *"/jwt/auth"*)
+    case "$*" in
+      *" -u "*) ;;
+      *)
+        echo "401 Unauthorized" >&2
+        exit 22
+        ;;
+    esac
+    printf '{"token":"jwt-test-token"}'
+    exit 0
+    ;;
+  *"/manifests/"*)
+    case "$*" in
+      *"Authorization: Bearer jwt-test-token"*) ;;
+      *)
+        printf '401'
+        exit 0
+        ;;
+    esac
+    case "$*" in
+      *"application/vnd.oci.image.index.v1+json"*) ;;
+      *)
+        printf '404'
+        exit 0
+        ;;
+    esac
+    case "$*" in
+      *"application/vnd.docker.distribution.manifest.list.v2+json"*) ;;
+      *)
+        printf '404'
+        exit 0
+        ;;
+    esac
+    if [ -n "$STUB_CURL_FAIL_IMAGE" ]; then
+      case "$*" in
+        *"$STUB_CURL_FAIL_IMAGE"*)
+          printf '404'
+          exit 0
+          ;;
+      esac
+    fi
+    printf '200'
+    exit 0
+    ;;
+  *)
+    printf '200'
+    exit 0
+    ;;
+esac
 `;
 
 function runDeploy(env: Readonly<Record<string, string | undefined>> = {}) {
@@ -145,6 +182,7 @@ function runDeploy(env: Readonly<Record<string, string | undefined>> = {}) {
         HELM_NAMESPACE: NAMESPACE,
         HELM_KUBE_CONTEXT: CONTEXT,
         CI_COMMIT_SHA: SHA,
+        CI_JOB_TOKEN: "job-token-fixture",
         ...env,
       },
       encoding: "utf8",
@@ -154,7 +192,6 @@ function runDeploy(env: Readonly<Record<string, string | undefined>> = {}) {
   return {
     result,
     calls: recorded,
-    // Discovery is read-only; anything else would change the release.
     mutations: recorded.filter(
       (call) => !call.startsWith("list ") && !call.startsWith("history "),
     ),
@@ -259,7 +296,6 @@ test("a history failure explains itself without exposing the values file", () =>
 test("a failed first install leaves the release for diagnosis", () => {
   const { result, calls } = runDeploy({ STUB_INSTALL_FAIL: "1" });
   assert.notEqual(result.status, 0);
-  // Only discovery and the install itself: no uninstall, rollback or retry.
   assert.deepEqual(
     calls.map((call) => call.split(" ")[0]),
     ["history", "list", "list", "install"],
