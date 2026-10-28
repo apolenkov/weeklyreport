@@ -36,7 +36,7 @@ export function MobileNav({
         <Menu size={16} aria-hidden="true" />
       </SheetTrigger>
       <SheetContent side="right" className="w-72 p-0">
-        <SheetHeader className="border-b border-[var(--color-border)] p-4">
+        <SheetHeader className="border-b border-[var(--color-border)]">
           <SheetTitle>Menu</SheetTitle>
         </SheetHeader>
         <MobileNavLinks
