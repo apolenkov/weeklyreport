@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   fireEvent,
   render,
   screen,
@@ -20,14 +21,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { RecordComments } from "./record-comments";
 
-const mutationCalls = vi.hoisted(() => ({
+const mutationCalls = {
   comment: [] as unknown[],
   deleteComment: [] as unknown[],
   commentError: null as Error | null,
   deleteError: null as Error | null,
   deletePending: null as Promise<unknown> | null,
   commentPending: null as Promise<unknown> | null,
-}));
+};
 
 vi.mock("../../../../shared/lib/query/cache-keys", () => ({
   invalidateReview: vi.fn(),
@@ -472,6 +473,45 @@ describe("RecordComments — mutation success", () => {
           text: "Ready to publish.",
         },
       ]);
+    });
+  });
+
+  it("fires the comment mutation once for two same-tick submits", async () => {
+    let resolveComment!: () => void;
+    const commentPending = new Promise<void>((resolve) => {
+      resolveComment = resolve;
+    });
+    mutationCalls.commentPending = commentPending;
+    renderComments();
+
+    const draft = screen.getByRole("textbox", {
+      name: "Add a review comment",
+    });
+    fireEvent.change(draft, { target: { value: "Same-tick test comment" } });
+
+    const submit = screen.getByRole("button", { name: "Comment" });
+    const form = submit.closest("form");
+    expect(form).not.toBeNull();
+    if (form) {
+      act(() => {
+        form.requestSubmit();
+        form.requestSubmit();
+      });
+    }
+
+    await waitFor(() => {
+      expect(mutationCalls.comment.length).toBeGreaterThanOrEqual(1);
+    });
+    expect(mutationCalls.comment).toEqual([
+      {
+        itemId: "11111111-1111-4111-8111-111111111111",
+        text: "Same-tick test comment",
+      },
+    ]);
+
+    resolveComment();
+    await waitFor(() => {
+      expect(draft).toHaveValue("");
     });
   });
 
