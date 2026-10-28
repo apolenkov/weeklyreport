@@ -847,4 +847,24 @@ describe("ItemEditDialog — reported status-dependent validation", () => {
       }
     },
   );
+
+  it("disables save button and indicates pending state when isPending is true", () => {
+    render(
+      <ItemEditDialog
+        open={true}
+        isPending={true}
+        item={null}
+        products={products}
+        week="current"
+        defaultProductId="p1"
+        stagesForProduct={() => ["Dev"]}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    const saveButton = screen.getByRole("button", { name: "Saving…" });
+    expect(saveButton).toBeDisabled();
+    expect(saveButton).toHaveAttribute("aria-busy", "true");
+  });
 });

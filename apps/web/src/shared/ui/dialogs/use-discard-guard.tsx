@@ -29,6 +29,7 @@ export function useDiscardGuard(
         confirmLabel="Discard"
         cancelLabel="Keep editing"
         variant="destructive"
+        isPending={isPending}
       />
     ),
   };

@@ -190,6 +190,7 @@ function RiskDialogSurface({
         onSave={dialog.handleSave}
         onDelete={onDelete}
         saveDisabled={dialog.isDeadEnd}
+        savePending={isPending}
       />
     </DialogSurface>
   );

@@ -125,6 +125,7 @@ function DecisionEditDialogContent({
           onSave={dialog.handleSave}
           onDelete={onDelete}
           saveDisabled={dialog.isDeadEnd}
+          savePending={isPending}
         />
       </DecisionDialogShell>
       {dialog.discardDialog}
