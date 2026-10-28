@@ -27,15 +27,15 @@ function HeaderIdentity({
   readonly statusDot: string;
 }) {
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-3 pr-3">
-      <div
+    <span className="flex min-w-0 flex-1 items-center gap-3 pr-3">
+      <span
         className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold"
         style={{ background: config.avatarBg, color: config.avatarText }}
       >
         {report.initials}
-      </div>
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <div className="flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2.5">
+      </span>
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <span className="flex min-w-0 flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-2.5">
           <span className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.015em] [overflow-wrap:anywhere]">
             {report.name}
           </span>
@@ -50,12 +50,12 @@ function HeaderIdentity({
             />
             {statusLabel}
           </span>
-        </div>
+        </span>
         <span className="text-[12.5px] text-[var(--color-muted-foreground)] [overflow-wrap:anywhere]">
           {report.leads}
         </span>
-      </div>
-    </div>
+      </span>
+    </span>
   );
 }
 
