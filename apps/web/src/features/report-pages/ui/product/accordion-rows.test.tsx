@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { render, screen } from "@testing-library/react";
-import type { ItemOutcomeEvent, ItemResolution } from "@weeklyreport/shared";
+import type { ItemOutcomeEvent } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import type {
@@ -76,8 +76,14 @@ describe("ItemRow", () => {
         actorId: "00000000-0000-4000-8000-000000000003",
         actorName: "Lead Two",
         occurredAt: "2026-10-20T10:15:00Z",
-        previousState: { status: "in-progress" },
-      } as ItemResolution,
+        previousState: {
+          type: "current",
+          workflowStatus: "in_progress",
+          pausedReason: null,
+          nextStepText: null,
+          text: "Retire the legacy export",
+        },
+      },
       outcomeHistory: [
         {
           id: "00000000-0000-4000-8000-000000000004",
