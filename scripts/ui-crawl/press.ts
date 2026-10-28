@@ -258,8 +258,11 @@ export function finishPress(
       action: "error",
       reason: result.reason ?? "stale select",
     };
-  if (result.status === "obstructed") {
-    const reason = "covered by another element";
+  if (result.status === "invisible" || result.status === "obstructed") {
+    const reason =
+      result.status === "invisible"
+        ? "control is invisible or unreachable"
+        : "covered by another element";
     add(
       ctx,
       { page: target.key, shot: null },

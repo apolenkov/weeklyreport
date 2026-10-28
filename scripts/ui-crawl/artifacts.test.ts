@@ -301,6 +301,29 @@ describe("crawler screenshot evidence", () => {
       ctx.findings.some((f) => f.detail.includes("CAPTURE unavailable")),
     ).toBe(true);
   });
+
+  it.each(["stale", "obstructed", "invisible"] as const)(
+    "reports an error for status %s in finishPress",
+    (status) => {
+      const ctx = testContext();
+      const step = finishPress(
+        ctx,
+        {
+          key: "/fixture",
+          url: "http://127.0.0.1:50123/fixture",
+          shotBase: "fixture",
+        },
+        control,
+        status === "stale"
+          ? { ...press, status, reason: "select option missing" }
+          : { ...press, status },
+      );
+      expect(step.action).toBe("error");
+      if (status === "invisible") {
+        expect(step.reason).toBe("control is invisible or unreachable");
+      }
+    },
+  );
   it.each([
     ["quick", crawlPages],
     ["full", crawlFullPages],

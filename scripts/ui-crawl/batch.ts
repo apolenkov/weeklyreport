@@ -12,13 +12,14 @@ import {
   SIGNATURE_ONLY,
 } from "./probe.ts";
 import { SELECT_ASSIGNMENT } from "./select-script.ts";
+import { VISIBILITY_SCRIPT } from "./visibility.ts";
 
 export type PressLog = Readonly<{ kind: string; detail: string }>;
 
 export type PressResult = Readonly<{
   /** Index into the submitted list. */
   n: number;
-  status: "ok" | "gone" | "obstructed" | "stale";
+  status: "ok" | "gone" | "obstructed" | "stale" | "invisible";
   reason?: string;
   before: string;
   after: string;
@@ -195,11 +196,7 @@ function batchScript(
   };
   const initialFailure = keep();
   if (initialFailure) return initialFailure;
-  const covered = (el) => {
-    const r = el.getBoundingClientRect();
-    const top = document.elementFromPoint(Math.max(0, Math.min(innerWidth - 1, r.x + r.width / 2)), Math.max(0, Math.min(innerHeight - 1, r.y + r.height / 2)));
-    return !!top && top !== el && !el.contains(top) && !top.contains(el) && top.closest('label')?.control !== el;
-  };
+  const { isVisibleAndReachable, covered } = ${VISIBILITY_SCRIPT};
   let waitedOut = false;
   for (let n = 0; n < items.length; n++) {
     let el = document.querySelector(items[n].selector);
@@ -217,6 +214,7 @@ function batchScript(
       alternative = assignment.value;
     }
     el.scrollIntoView?.({block: 'nearest'});
+    if (!isVisibleAndReachable(el)) { results.push({...base, status: 'invisible'}); const failure = keep(); if (failure) return failure; continue; }
     if (items[n].alternative === undefined && covered(el)) { results.push({...base, status: 'obstructed'}); const failure = keep(); if (failure) return failure; continue; }
     S.logs = []; S.longTasks = []; S.longObserver?.takeRecords();
     const before = state();

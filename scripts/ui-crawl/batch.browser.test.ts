@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { repress } from "./batch.ts";
+import { pressBatch, repress } from "./batch.ts";
 import { browserFixture } from "./browser.fixture.ts";
 import { PAGE_PROBE, type PageProbe, SIGNATURE_ONLY } from "./probe.ts";
 
@@ -98,6 +98,71 @@ describe.runIf(process.env.CRAWL_BROWSER_TESTS === "1")(
       repress(fixture.browser, { ...control, name: "" });
 
       expect(fixture.browser.evaluate("window.clickCount")).toBe(0);
+    }, 30_000);
+
+    it.each([
+      [
+        "zero-area",
+        "document.querySelector('#toggle').style.width='0px';document.querySelector('#toggle').style.height='0px';document.querySelector('#toggle').style.padding='0px';document.querySelector('#toggle').style.border='none';document.querySelector('#toggle').textContent=''",
+      ],
+      [
+        "clipped overflow",
+        'document.body.innerHTML=\'<div style="overflow:hidden;width:0px;height:0px;"><button id="toggle" onclick="window.clickCount=(window.clickCount||0)+1">Toggle</button></div>\'',
+      ],
+      [
+        "translated offscreen",
+        "document.querySelector('#toggle').style.transform='translate(-9999px, -9999px)'",
+      ],
+      [
+        "scale(0)",
+        "document.querySelector('#toggle').style.transform='scale(0)'",
+      ],
+    ])(
+      "does not press %s control and reports invisible status",
+      (_label, setup) => {
+        fixture.browser.evaluate("window.clickCount=0;true");
+        fixture.browser.evaluate(`${setup};true`);
+        const outcome = pressBatch(
+          fixture.browser,
+          [
+            {
+              selector: "#toggle",
+              tag: "button",
+              role: "button",
+              name: "Toggle",
+              type: null,
+              href: null,
+              disabled: false,
+              bounds: { x: 0, y: 0, width: 0, height: 0 },
+              clipped: false,
+              obstructedBy: null,
+              selected: false,
+              alternatives: [],
+            },
+          ],
+          { budgetMs: 1000, maxQuietMs: 100, mode: "quick" },
+        );
+        expect(fixture.browser.evaluate("window.clickCount")).toBe(0);
+        expect(outcome.results[0]?.status).toBe("invisible");
+      },
+      30_000,
+    );
+
+    it("does not treat an opacity:0 overlay as obstructing", () => {
+      fixture.browser.evaluate("window.clickCount=0;true");
+      fixture.browser.evaluate(
+        "document.body.insertAdjacentHTML('beforeend','<div id=\"overlay\" style=\"position:fixed;inset:0;z-index:9999;opacity:0;background:black\"></div>');true",
+      );
+      const probe = fixture.browser.evaluate(PAGE_PROBE) as PageProbe;
+      const control = probe.controls[0];
+      if (!control) throw new Error("Missing fixture control");
+      const outcome = pressBatch(fixture.browser, [control], {
+        budgetMs: 1000,
+        maxQuietMs: 100,
+        mode: "quick",
+      });
+      expect(outcome.results[0]?.status).toBe("ok");
+      expect(fixture.browser.evaluate("window.clickCount")).toBe(1);
     }, 30_000);
   },
 );
