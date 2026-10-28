@@ -37,9 +37,6 @@ function requireJob(name: string): Job {
 
 const deployJob = requireJob("deploy-production");
 
-// The `yaml` package accepts a bare `- : "text"` list item as a one-key
-// mapping, but GitLab's parser rejects the whole file; every script entry
-// must therefore be a string or a `!reference` array.
 test("every CI script entry is a string GitLab can parse", () => {
   for (const [name, job] of Object.entries(jobs)) {
     for (const key of ["before_script", "script", "after_script"]) {
@@ -63,9 +60,7 @@ test("the deploy job exists only with a kubeconfig, manually, on the default bra
   assert.match(active[0]?.if ?? "", /\$CI_DEFAULT_BRANCH/u);
   assert.equal(active[0]?.when, "manual");
   assert.equal(rules.at(-1)?.when, "never");
-  // The install/upgrade command contract lives in deploy-production.test.ts.
   assert.match(deployJob.script.join("\n"), /images\.tag=\$CI_COMMIT_SHA/u);
-  // Deployment does not depend on a CI image-build job because images are built locally on Mac.
   assert.equal(deployJob.needs, undefined);
 });
 
@@ -118,10 +113,16 @@ test("CI contains only deployment jobs", () => {
   );
 });
 
-test("deploy-production verifies all 4 images exist before running helm", () => {
+test("deploy-production verifies all 4 images exist via JWT auth and complete Accept header before running helm", () => {
   const script = deployJob.script.join("\n");
   assert.match(script, /for img in api migrate web backup/u);
-  assert.match(script, /curl -s -o \/dev\/null/u);
+  assert.match(script, /\/jwt\/auth\?service=container_registry/u);
+  assert.match(script, /Authorization: Bearer \$token/u);
+  assert.match(script, /application\/vnd\.oci\.image\.index\.v1\+json/u);
+  assert.match(
+    script,
+    /application\/vnd\.docker\.distribution\.manifest\.list\.v2\+json/u,
+  );
   assert.match(script, /manifests\/\$CI_COMMIT_SHA/u);
   assert.match(
     script,

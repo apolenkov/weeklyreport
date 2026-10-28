@@ -51,24 +51,43 @@ deploy-production:
     - |
       set -eu
       REGISTRY="${IMAGE_REGISTRY:-${CI_REGISTRY_IMAGE:-gitlab.example.org:5005/acme/weeklyreport}}"
-      REGISTRY_USER="${IMAGE_REGISTRY_USER:-${CI_REGISTRY_USER:-}}"
+      REGISTRY_USER="${IMAGE_REGISTRY_USER:-${CI_REGISTRY_USER:-gitlab-ci-token}}"
       REGISTRY_PASSWORD="${IMAGE_REGISTRY_PASSWORD:-${CI_REGISTRY_PASSWORD:-${CI_JOB_TOKEN:-}}}"
       REGISTRY_HOST="${REGISTRY%%/*}"
       REPO_PATH="${REGISTRY#*/}"
+      AUTH_SERVER="${CI_SERVER_URL:-https://${REGISTRY_HOST%%:*}}"
+
+      ACCEPT_HEADER="Accept: application/vnd.docker.distribution.manifest.v2+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.oci.image.index.v1+json"
 
       # Verify upfront that all 4 required images exist in the registry with tag $CI_COMMIT_SHA
-      AUTH_ARG=""
-      if [ -n "$REGISTRY_USER" ] && [ -n "$REGISTRY_PASSWORD" ]; then
-        AUTH_ARG="-u $REGISTRY_USER:$REGISTRY_PASSWORD"
-      fi
-
       for img in api migrate web backup; do
         manifest_url="https://$REGISTRY_HOST/v2/$REPO_PATH/$img/manifests/$CI_COMMIT_SHA"
         echo "Checking manifest for $img: $manifest_url"
+
+        jwt_auth=""
+        if [ -n "$REGISTRY_USER" ] && [ -n "$REGISTRY_PASSWORD" ]; then
+          jwt_auth="-u $REGISTRY_USER:$REGISTRY_PASSWORD"
+        fi
+
         # shellcheck disable=SC2086
-        http_code="$(curl -s -o /dev/null -w "%{http_code}" ${AUTH_ARG} \
-          -H "Accept: application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json" \
+        token_response="$(curl -fsSL ${jwt_auth} \
+          "$AUTH_SERVER/jwt/auth?service=container_registry&scope=repository:$REPO_PATH/$img:pull" || true)"
+
+        token="$(printf '%s' "$token_response" | sed -n 's/.*"token"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
+        if [ -z "$token" ]; then
+          token="$(printf '%s' "$token_response" | sed -n 's/.*"access_token"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')"
+        fi
+
+        bearer_header=""
+        if [ -n "$token" ]; then
+          bearer_header="Authorization: Bearer $token"
+        fi
+
+        http_code="$(curl -s -o /dev/null -w "%{http_code}" \
+          ${bearer_header:+-H "$bearer_header"} \
+          -H "$ACCEPT_HEADER" \
           "$manifest_url" || true)"
+
         if [ "$http_code" != "200" ]; then
           echo "ERROR: Image $REGISTRY/$img:$CI_COMMIT_SHA is missing from registry (HTTP $http_code)." >&2
           echo "Please build and push all release images locally using 'pnpm images:build' before deploying." >&2
