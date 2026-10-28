@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReportSectionReadModel } from "@weeklyreport/shared";
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import { useState } from "react";
 
 import {
@@ -34,6 +34,8 @@ interface UseSlideInlineEditorArgs {
   readonly formData: MappedLeadForm | null;
   readonly canInlineEdit: boolean;
   readonly refetchSection: () => Promise<unknown>;
+  // Stable container that takes focus when a delete removes its opener (C5246).
+  readonly restoreFocusFallbackRef?: RefObject<HTMLElement | null> | undefined;
 }
 
 interface SlideInlineEditor {
@@ -228,6 +230,7 @@ export function useSlideInlineEditor(
         onRequestDelete={commands.onRequestDelete}
         onConfirmDelete={commands.onConfirmDelete}
         onCancelDelete={commands.onCancelDelete}
+        restoreFocusFallbackRef={args.restoreFocusFallbackRef}
       />
     ),
   };

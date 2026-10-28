@@ -12,6 +12,8 @@ interface DialogFocusOptions {
   readonly initialFocusRef?: React.RefObject<HTMLElement | null> | undefined;
   readonly restoreFocusRef?: React.RefObject<HTMLElement | null> | undefined;
   readonly restoreFocusToPrevious: boolean;
+  readonly restoreFocusFallbackRef?:
+    React.RefObject<HTMLElement | null> | undefined;
   readonly onOpenAutoFocus?:
     ((event: DialogAutoFocusEvent) => void) | undefined;
   readonly onCloseAutoFocus?:
@@ -26,6 +28,7 @@ export function useDialogFocus({
   initialFocusRef,
   restoreFocusRef,
   restoreFocusToPrevious,
+  restoreFocusFallbackRef,
   onOpenAutoFocus,
   onCloseAutoFocus,
 }: DialogFocusOptions) {
@@ -43,14 +46,17 @@ export function useDialogFocus({
     onCloseAutoFocus?.(event);
     if (event.defaultPrevented) return;
     // A trigger can be gone by the time the dialog closes (its row was
-    // removed): fall back to the opener, and when both are gone leave focus
-    // where it is instead of inventing a destination.
+    // removed): fall back to the opener, then to the caller's container. With
+    // no container left, focus stays where it is instead of inventing a target.
     const explicit = restoreFocusRef?.current;
-    const target = explicit?.isConnected
+    const opener = explicit?.isConnected
       ? explicit
       : restoreFocusToPrevious
         ? previousFocusRef.current
         : null;
+    const target = opener?.isConnected
+      ? opener
+      : restoreFocusFallbackRef?.current;
     if (!target?.isConnected) return;
     event.preventDefault();
     target.focus();

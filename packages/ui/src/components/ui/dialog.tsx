@@ -55,6 +55,8 @@ type DialogContentProps = React.ComponentProps<
   readonly initialFocusRef?: React.RefObject<HTMLElement | null> | undefined;
   readonly restoreFocusRef?: React.RefObject<HTMLElement | null> | undefined;
   readonly restoreFocusToPrevious?: boolean | undefined;
+  readonly restoreFocusFallbackRef?:
+    React.RefObject<HTMLElement | null> | undefined;
   readonly portalContainer?: HTMLElement | null | undefined;
 };
 
@@ -70,6 +72,7 @@ function DialogContent({
   initialFocusRef,
   restoreFocusRef,
   restoreFocusToPrevious = false,
+  restoreFocusFallbackRef,
   portalContainer,
   onOpenAutoFocus,
   onCloseAutoFocus,
@@ -79,6 +82,7 @@ function DialogContent({
     initialFocusRef,
     restoreFocusRef,
     restoreFocusToPrevious,
+    restoreFocusFallbackRef,
     onOpenAutoFocus,
     onCloseAutoFocus,
   });
