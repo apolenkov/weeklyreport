@@ -726,4 +726,33 @@ describe("SearchInput", () => {
     expect(flexContainer?.className).toContain("items-center");
     expect(flexContainer?.className).toContain("justify-between");
   });
+
+  it("restores focus to search combobox when Retry ('Try again') is activated", () => {
+    const refetchMock = vi.fn();
+    useQueryMock.mockReturnValue(
+      makeQueryState({
+        data: undefined,
+        error: new Error("search failed"),
+        refetch: refetchMock,
+      }),
+    );
+
+    render(<SearchInput scope="mine" />);
+    const input = screen.getByRole("combobox");
+    act(() => {
+      fireEvent.change(input, { target: { value: "test" } });
+      fireEvent.focus(input);
+    });
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+
+    const retryButton = screen.getByRole("button", { name: "Try again" });
+    expect(retryButton).toBeInTheDocument();
+
+    fireEvent.click(retryButton);
+
+    expect(refetchMock).toHaveBeenCalled();
+    expect(document.activeElement).toBe(input);
+  });
 });

@@ -33,4 +33,33 @@ describe("FillFromDropdownPanel counts", () => {
       screen.getByText(/1 product · 0 items · 1 risk/),
     ).toBeInTheDocument();
   });
+
+  it("applies vertical bounding styles to the panel container", () => {
+    const period = {
+      id: "p1",
+      label: "W1",
+      productCount: 1,
+      itemCount: 0,
+      riskCount: 1,
+    } as unknown as ReportPeriod;
+    render(
+      <FillFromDropdownPanel
+        open
+        id="fill-bounded"
+        pos={{ top: 116, left: 16, width: 340, maxHeight: 168 }}
+        panelRef={createRef()}
+        pastPeriods={[period]}
+        filteredPeriods={[period]}
+        previousPeriodId={undefined}
+        archivedHidden={false}
+        search=""
+        onSearchChange={vi.fn()}
+        onSelect={vi.fn()}
+      />,
+    );
+    const panel = screen.getByRole("region", { name: "Past reports" });
+    expect(panel.style.top).toBe("116px");
+    expect(panel.style.maxHeight).toBe("168px");
+    expect(panel.className).toContain("flex-col");
+  });
 });

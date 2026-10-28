@@ -3,6 +3,7 @@ import type { RefObject } from "react";
 import { countLabel } from "../../../shared/lib/format/pluralize";
 import { DocumentBodyPortal } from "../../../shared/ui/dialogs/document-body-portal";
 import type { ReportPeriod } from "../../report-sections";
+import type { AnchoredPanelCoordinates } from "../model/use-anchored-panel-position";
 
 function SearchIcon() {
   return (
@@ -98,7 +99,7 @@ function PeriodRowButton({
 interface FillFromDropdownPanelProps {
   readonly open: boolean;
   readonly id: string;
-  readonly pos: { top: number; left: number; width: number } | null;
+  readonly pos: AnchoredPanelCoordinates | null;
   readonly panelRef: RefObject<HTMLDivElement | null>;
   readonly pastPeriods: readonly ReportPeriod[];
   readonly filteredPeriods: readonly ReportPeriod[];
@@ -132,13 +133,19 @@ export function FillFromDropdownPanel({
         ref={panelRef}
         role="region"
         aria-label="Past reports"
-        className="fixed z-50 rounded-xl border border-[var(--color-muted)] bg-[var(--color-popover)] p-3 shadow-lg"
-        style={{ top: pos.top, left: pos.left, width: pos.width }}
+        className="fixed z-50 flex flex-col rounded-xl border border-[var(--color-muted)] bg-[var(--color-popover)] p-3 shadow-lg"
+        style={{
+          top: pos.top,
+          bottom: pos.bottom,
+          left: pos.left,
+          width: pos.width,
+          maxHeight: pos.maxHeight,
+        }}
       >
         {pastPeriods.length > 0 && (
           <PeriodSearchInput value={search} onChange={onSearchChange} />
         )}
-        <div className="max-h-[200px] space-y-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 space-y-1 overflow-y-auto">
           {pastPeriods.length === 0 ? (
             <p className="px-2 py-3 text-center text-[13px] text-[var(--color-muted-foreground)]">
               {archivedHidden
