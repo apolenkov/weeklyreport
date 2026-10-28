@@ -32,12 +32,47 @@ describe("SubmissionFilterToggle — compact touch floor (responsive-compact-lay
 });
 
 describe("DraftHiddenSignal — compact touch floor (responsive-compact-layout)", () => {
+  it("keeps polite live-region mounted when count is 0 and updates text upon rerender", () => {
+    const onShowAll = vi.fn();
+    const { rerender } = render(
+      <DraftHiddenSignal count={0} onShowAll={onShowAll} />,
+    );
+
+    const liveRegion = screen.getByRole("status");
+    expect(liveRegion).toBeInTheDocument();
+    expect(liveRegion).toHaveAttribute("aria-live", "polite");
+    expect(liveRegion).toHaveTextContent("");
+    expect(
+      screen.queryByRole("button", {
+        name: "Show all sections including drafts",
+      }),
+    ).not.toBeInTheDocument();
+
+    rerender(<DraftHiddenSignal count={3} onShowAll={onShowAll} />);
+
+    expect(screen.getByRole("status")).toBe(liveRegion);
+    expect(liveRegion).toHaveTextContent(
+      "3 sections in draft, hidden by the Submitted filter.",
+    );
+    // Button is rendered outside the live region to prevent duplicate AT announcements
+    expect(liveRegion).not.toContainElement(
+      screen.getByRole("button", {
+        name: "Show all sections including drafts",
+      }),
+    );
+    expect(
+      screen.getByRole("button", {
+        name: "Show all sections including drafts",
+      }),
+    ).toBeInTheDocument();
+  });
+
   it("announces via role='status' with aria-live='polite' and contextual button label", () => {
     const onShowAll = vi.fn();
     render(<DraftHiddenSignal count={3} onShowAll={onShowAll} />);
 
+    expect(screen.getByTestId("draft-hidden-signal")).toBeInTheDocument();
     const notice = screen.getByRole("status");
-    expect(notice).toHaveAttribute("data-testid", "draft-hidden-signal");
     expect(notice).toHaveAttribute("aria-live", "polite");
     expect(notice).toHaveTextContent(
       "3 sections in draft, hidden by the Submitted filter.",
