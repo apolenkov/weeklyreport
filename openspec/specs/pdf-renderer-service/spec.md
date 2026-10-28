@@ -195,7 +195,7 @@ initial safety bound, not measured capacity evidence.
 ### Requirement: The renderer service is internal-only and immutably pinned
 
 The production `gotenberg` service MUST be declared in the Helm chart with an
-immutable image reference — `gotenberg/gotenberg:8.37.0-chromium` pinned by
+immutable image reference — `gotenberg/gotenberg:8.39.0-chromium` pinned by
 the multi-platform manifest-list sha256 digest — MUST NOT publish a host
 port or a public ingress route, and MUST be reachable only by the API over
 the internal network. The API MUST locate it through validated fail-closed
