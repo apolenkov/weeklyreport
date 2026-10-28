@@ -116,6 +116,7 @@ function ItemEditDialogContent(props: ItemEditDialogContentProps) {
           onSaveAndAddAnother={fields.handleSaveAndAddAnother}
           onDelete={onDelete}
           saveDisabled={fields.isDeadEnd}
+          savePending={props.isPending}
         />
       </DialogSurface>
       {discardDialog}

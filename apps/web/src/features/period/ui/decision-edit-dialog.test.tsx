@@ -937,4 +937,21 @@ describe("DecisionEditDialog — discard guard on non-text fields", () => {
     );
     expect(onCancel).not.toHaveBeenCalled();
   });
+
+  it("disables save button and indicates pending state when isPending is true", () => {
+    render(
+      <DecisionEditDialog
+        open={true}
+        isPending={true}
+        decision={null}
+        products={products}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    const saveButton = screen.getByRole("button", { name: "Saving…" });
+    expect(saveButton).toBeDisabled();
+    expect(saveButton).toHaveAttribute("aria-busy", "true");
+  });
 });

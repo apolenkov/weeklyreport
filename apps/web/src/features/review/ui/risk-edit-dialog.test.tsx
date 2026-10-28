@@ -889,4 +889,22 @@ describe("RiskEditDialog — co-mounted instances keep their own ids", () => {
       expect(within(dialog).getByLabelText(/^Risk \*/i)).toBeInTheDocument();
     }
   });
+
+  it("disables save button and indicates pending state when isPending is true", () => {
+    render(
+      <RiskEditDialog
+        open={true}
+        isPending={true}
+        risk={null}
+        products={products}
+        stagesForProduct={() => ["Dev"]}
+        onSave={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+
+    const saveButton = screen.getByRole("button", { name: "Saving…" });
+    expect(saveButton).toBeDisabled();
+    expect(saveButton).toHaveAttribute("aria-busy", "true");
+  });
 });

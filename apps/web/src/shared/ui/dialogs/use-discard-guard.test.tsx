@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -55,5 +55,24 @@ describe("useDiscardGuard", () => {
     await userEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(onDiscard).not.toHaveBeenCalled();
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+  });
+
+  it("disables discard confirmation buttons when isPending becomes true while open", () => {
+    const onDiscard = vi.fn();
+    const { rerender } = render(
+      <Harness isDirty isPending={false} onDiscard={onDiscard} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Close" }));
+
+    // Discard confirmation dialog is open
+    const discardBtn = screen.getByRole("button", { name: "Discard" });
+    const cancelBtn = screen.getByRole("button", { name: "Keep editing" });
+    expect(discardBtn).not.toBeDisabled();
+    expect(cancelBtn).not.toBeDisabled();
+
+    // Pending save starts while discard dialog is already visible
+    rerender(<Harness isDirty isPending={true} onDiscard={onDiscard} />);
+    expect(discardBtn).toBeDisabled();
+    expect(cancelBtn).toBeDisabled();
   });
 });
