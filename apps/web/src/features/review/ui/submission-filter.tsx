@@ -50,6 +50,8 @@ export function DraftHiddenSignal({
   const noun = count === 1 ? "section" : "sections";
   return (
     <div
+      role="status"
+      aria-live="polite"
       data-testid="draft-hidden-signal"
       className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] px-4 py-3"
     >
@@ -58,6 +60,7 @@ export function DraftHiddenSignal({
       </span>
       <button
         type="button"
+        aria-label="Show all sections including drafts"
         onClick={onShowAll}
         className="btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-3 py-1 text-[12px] font-semibold text-[var(--color-foreground)] transition-colors hover:border-[var(--color-starbucks-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2"
       >

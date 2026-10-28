@@ -32,6 +32,23 @@ describe("SubmissionFilterToggle — compact touch floor (responsive-compact-lay
 });
 
 describe("DraftHiddenSignal — compact touch floor (responsive-compact-layout)", () => {
+  it("announces via role='status' with aria-live='polite' and contextual button label", () => {
+    const onShowAll = vi.fn();
+    render(<DraftHiddenSignal count={3} onShowAll={onShowAll} />);
+
+    const notice = screen.getByRole("status");
+    expect(notice).toHaveAttribute("data-testid", "draft-hidden-signal");
+    expect(notice).toHaveAttribute("aria-live", "polite");
+    expect(notice).toHaveTextContent(
+      "3 sections in draft, hidden by the Submitted filter.",
+    );
+
+    const button = screen.getByRole("button", {
+      name: "Show all sections including drafts",
+    });
+    expect(button).toBeInTheDocument();
+  });
+
   it("names the hidden count and floors 'Show all' at the touch target below md", () => {
     const onShowAll = vi.fn();
     render(<DraftHiddenSignal count={2} onShowAll={onShowAll} />);
@@ -40,7 +57,9 @@ describe("DraftHiddenSignal — compact touch floor (responsive-compact-layout)"
       screen.getByText("2 sections in draft, hidden by the Submitted filter."),
     ).toBeInTheDocument();
 
-    const showAll = screen.getByRole("button", { name: "Show all" });
+    const showAll = screen.getByRole("button", {
+      name: "Show all sections including drafts",
+    });
     expect(showAll.className).toContain(
       "max-md:min-h-[var(--touch-target-min)]",
     );
