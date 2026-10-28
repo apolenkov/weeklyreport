@@ -46,9 +46,9 @@ the acceptance authority; no custom replacement gate substitutes for them.
 ## Current hosting and CI boundary
 
 The only configured remote is the private GitLab project ([ADR 0019](adr/0019-gitlab-is-the-only-remote-and-ci-runs-lint-and-test-only.md)).
-`.gitlab-ci.yml` runs the lint/test lanes described in `docs/gitlab-ci.md`;
-the production build is a blocking `production-build` lane; PDF export and
-browser acceptance are not CI lanes. Repository files
+`.gitlab-ci.yml` holds only the manual `build-images` and `deploy-production`
+jobs described in `docs/gitlab-ci.md`; checks run in the Lefthook pre-push
+(`pnpm check:push`) and `pnpm build` is local acceptance evidence. Repository files
 do not prove that `main` is protected or that any platform security setting is
 enabled. Those external settings are **unverified** until an authorized
 read-back confirms them.
