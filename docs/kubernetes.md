@@ -43,8 +43,10 @@ release per namespace**; a second one would collide on object names.
   (the Ingress controller pods). The edge walks `X-Forwarded-For` from the
   right past these and forwards exactly one client address, which the api's
   `trust proxy: 1` relies on. If a load balancer adds another hop, include it.
-- Images from the CI job `build-images`, referenced by `images.registry`
-  (repository prefix) and `images.tag` (the commit SHA). The registry is
+- Images built by `pnpm images:build` (see [gitlab-ci.md](gitlab-ci.md)),
+  referenced by `images.registry` (repository prefix, set from
+  `deploy/images/release.env` by `deploy-production`) and `images.tag` (the
+  commit SHA). The registry is
   private, so create a `kubernetes.io/dockerconfigjson` Secret in the
   namespace and name it in `images.pullSecret`; the chart never creates
   registry credentials.
@@ -143,7 +145,7 @@ the tester kit), or, on an existing volume, run `CREATE ROLE weeklyreport …`,
 ```sh
 SHA=$(git rev-parse HEAD); STATE=<dir outside Git>
 # 1. images (one at a time): wr/api, wr/migrate, wr/web, wr/backup tagged $SHA,
-#    same targets and build args as the CI job build-images
+#    same targets and build args as scripts/build-images.ts
 # 2. dependencies: generates secrets/IdP key into $STATE, Secrets, Keycloak, Mailpit
 STATE_DIR=$STATE deploy/local-prod/setup.sh
 # 3. chart (copy the example outside Git first; the cert comes from setup.sh).
@@ -211,7 +213,7 @@ PROD (ЗАМЕНИТЬ В ПРОДЕ) have no usable stand value.
 
 | Value                                                                         | Stand                                                  | REPLACE IN PROD (ЗАМЕНИТЬ В ПРОДЕ)                                                                                                                     |
 | ----------------------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `images.registry`, `images.pullSecret`                                        | `wr`, none                                             | The registry written by `build-images`, plus a `dockerconfigjson` Secret                                                                               |
+| `images.registry`, `images.pullSecret`                                        | `wr`, none                                             | The registry from `deploy/images/release.env`, plus a `dockerconfigjson` Secret                                                                        |
 | `edge.ingress.host`, Ingress class, TLS                                       | `localhost`, port-forward                              | Real host, the cluster Ingress controller, a TLS Secret or cert-manager                                                                                |
 | `edge.trustedProxies`                                                         | `127.0.0.1/32`                                         | The Ingress controller pod CIDR (and any load balancer hop)                                                                                            |
 | `edge.cspReportUri`                                                           | placeholder                                            | Real CSP report collector or an agreed sink                                                                                                            |
@@ -250,22 +252,16 @@ VERIFIED):
 
 ## CI and delivery options
 
-- `build-images` (GitLab CI, buildah, no Docker daemon) pushes `api`,
-  `migrate`, `web`, and `backup` tagged with the commit SHA to
-  `$CI_REGISTRY_IMAGE` (override: `IMAGE_REGISTRY`, `IMAGE_REGISTRY_USER`,
-  `IMAGE_REGISTRY_PASSWORD`) and records digests in the artifact
-  `image-digests.txt`. It needs `WR_NEXT_PUBLIC_CLIENT_LOG_FORWARDING`,
-  `WR_NEXT_PUBLIC_WEB_VITALS`, `WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED`,
-  `WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES` (and optionally
-  `NEXT_PUBLIC_SENTRY_DSN`), which are compiled into the web image. It runs by
-  itself on the default branch and tags once these variables exist; otherwise
-  it is manual. A full run is NOT VERIFIED until its 4 GiB memory limit is
-  raised.
+- `pnpm images:build` (Mac with OrbStack, see [gitlab-ci.md](gitlab-ci.md))
+  pushes `api`, `migrate`, `web`, and `backup` tagged with the commit SHA to
+  the registry in `deploy/images/release.env`, for the platform in the same file
+  (`linux/amd64`). It needs the `WR_NEXT_PUBLIC_*` values in
+  `deploy/images/web-public.env` (or the environment), and optionally
+  `NEXT_PUBLIC_SENTRY_DSN`, which are compiled into the web image.
 - `deploy-production` is a manual job that exists only when a file-type
   `KUBECONFIG` variable is set; it also needs `HELM_VALUES_FILE` (file) and
-  `HELM_NAMESPACE`. Run it only after `build-images` succeeded for the same
-  commit SHA: GitLab counts a failed manual allow-failure job as satisfied, so
-  read the job result before deploying.
+  `HELM_NAMESPACE`. It checks the four images for the same SHA before any Helm
+  call, so run it only after `pnpm images:build` pushed that SHA.
 - Alternative: the GitLab agent for Kubernetes is enabled on the instance and
   can replace the `KUBECONFIG` job. No agent configuration is part of this change.
 
