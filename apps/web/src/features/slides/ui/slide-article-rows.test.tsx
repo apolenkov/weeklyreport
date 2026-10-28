@@ -295,6 +295,31 @@ describe("SlideCell row hover", () => {
     expect(badge).toHaveTextContent("Unknown author");
   });
 
+  it("exposes empty cell with role='img' and aria-label for AT (C5197)", () => {
+    render(
+      <SdlcTooltipProvider>
+        <SlideCell
+          rows={[]}
+          authorsById={authorsById}
+          showStages={false}
+          label="Risks"
+        />
+      </SdlcTooltipProvider>,
+    );
+
+    const placeholder = screen.getByRole("img", { name: "No Risks" });
+    expect(placeholder).toBeInTheDocument();
+    expect(placeholder).toHaveAttribute("aria-label", "No Risks");
+    expect(placeholder.querySelector(".max-sm\\:hidden")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    expect(placeholder.querySelector(".sm\\:hidden")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+  });
+
   it.each(["Current work", "Next focus", "Risks", "Decisions"])(
     "keeps %s prose in the left lane and persistent marks in the right rail",
     (label) => {

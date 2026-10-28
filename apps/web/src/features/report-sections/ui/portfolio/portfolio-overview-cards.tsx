@@ -93,6 +93,7 @@ export function LeadOverviewCard({
       onClick={() => onNavigate(lead.id)}
     >
       <span
+        aria-hidden="true"
         className={STATUS_BADGE_CLASS}
         style={statusBadgeStyle(lead.worstStatus)}
       >
@@ -171,6 +172,7 @@ export function ProductOverviewCard({
       }}
     >
       <span
+        aria-hidden="true"
         className={STATUS_BADGE_CLASS}
         style={isEmpty ? EMPTY_BADGE_STYLE : statusBadgeStyle(product.status)}
       >

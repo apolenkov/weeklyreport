@@ -231,6 +231,7 @@ export function SlideCell({
   if (rows.length === 0) {
     return (
       <span
+        role="img"
         aria-label={`No ${label}`}
         className="text-[13px] text-[var(--color-muted-foreground)]"
       >
