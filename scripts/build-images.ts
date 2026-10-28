@@ -2,10 +2,20 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-interface BuildOptions {
+import {
+  assertPlatformInIndex,
+  buildxArgs,
+  getImageTargets,
+  type ImageTarget,
+  parseEnvFile,
+  readReleaseConfig,
+  RELEASE_ENV_FILE,
+  type ReleaseConfig,
+} from "./build-images-plan.ts";
+
+export interface BuildOptions {
   readonly push: boolean;
   readonly targets?: readonly string[] | undefined;
-  readonly registry?: string | undefined;
 }
 
 function parseOptionValue(
@@ -20,9 +30,8 @@ function parseOptionValue(
   return value;
 }
 
-function parseCliArgs(args: readonly string[]): BuildOptions {
+export function parseCliArgs(args: readonly string[]): BuildOptions {
   let push = true;
-  let registry: string | undefined;
   const targets: string[] = [];
 
   let index = 0;
@@ -41,11 +50,8 @@ function parseCliArgs(args: readonly string[]): BuildOptions {
       case "--help":
         printHelpAndExit();
         break;
-      case "--registry":
-        registry = parseOptionValue(args, index++, argument);
-        break;
-      case "--target":
-      case "--only": {
+      case "--only":
+      case "--target": {
         const value = parseOptionValue(args, index++, argument);
         targets.push(...value.split(",").map((name) => name.trim()));
         break;
@@ -55,15 +61,15 @@ function parseCliArgs(args: readonly string[]): BuildOptions {
     }
   }
 
-  return { push, targets: targets.length > 0 ? targets : undefined, registry };
+  return { push, targets: targets.length > 0 ? targets : undefined };
 }
 
 function printHelpAndExit(): never {
   console.log(`Usage: pnpm images:build [options]
+Registry and platform come only from deploy/images/release.env.
 Options:
   --no-push            Build images locally without pushing to remote registry
   --push               Push images after build (default: true)
-  --registry <url>     Override target registry prefix
   --target, --only     Comma-separated list of targets to build (api, migrate, web, backup)
   -h, --help           Show this help message`);
   process.exit(0);
@@ -127,23 +133,22 @@ function checkGitPreconditions(): string {
   return headSha;
 }
 
+function loadReleaseConfig(): ReleaseConfig {
+  const envPath = resolve(RELEASE_ENV_FILE);
+  if (!existsSync(envPath)) {
+    throw new Error(
+      `Missing release config: ${RELEASE_ENV_FILE}. Refusing to build without a registry and platform.`,
+    );
+  }
+  return readReleaseConfig(readFileSync(envPath, "utf8"));
+}
+
 function loadWebPublicEnv(): Record<string, string> {
   const envPath = resolve(WEB_ENV_FILE);
   if (!existsSync(envPath)) {
     throw new Error(`Missing web build config file: ${WEB_ENV_FILE}.`);
   }
-  const lines = readFileSync(envPath, "utf8").split("\n");
-  const parsed: Record<string, string> = {};
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const splitIndex = trimmed.indexOf("=");
-    if (splitIndex > 0) {
-      parsed[trimmed.slice(0, splitIndex).trim()] = trimmed
-        .slice(splitIndex + 1)
-        .trim();
-    }
-  }
+  const parsed = parseEnvFile(readFileSync(envPath, "utf8"));
 
   const requiredKeys = [
     "WR_NEXT_PUBLIC_CLIENT_LOG_FORWARDING",
@@ -191,72 +196,16 @@ function checkDockerAuth(registryHost: string): void {
   }
 }
 
-interface ImageTarget {
-  readonly name: string;
-  readonly context: string;
-  readonly dockerfile: string;
-  readonly target?: string | undefined;
-  readonly buildArgs: readonly string[];
-}
-
-function getImageTargets(
-  commitSha: string,
-  webEnv: Record<string, string>,
-): readonly ImageTarget[] {
-  return [
-    {
-      name: "api",
-      context: ".",
-      dockerfile: "Dockerfile.api",
-      buildArgs: [`BUILD_VERSION=${commitSha}`],
-    },
-    {
-      name: "migrate",
-      context: ".",
-      dockerfile: "Dockerfile.api",
-      target: "migrator",
-      buildArgs: [`BUILD_VERSION=${commitSha}`],
-    },
-    {
-      name: "web",
-      context: ".",
-      dockerfile: "Dockerfile.web",
-      buildArgs: [
-        "API_URL=http://api:3001",
-        "NEXT_PUBLIC_AUTH_STUB=false",
-        "NEXT_PUBLIC_DEV_ROLE_SWITCHER=false",
-        `NEXT_PUBLIC_SENTRY_DSN=${process.env.NEXT_PUBLIC_SENTRY_DSN || ""}`,
-        `NEXT_PUBLIC_APP_VERSION=${commitSha}`,
-        `NEXT_PUBLIC_CLIENT_LOG_FORWARDING=${webEnv.WR_NEXT_PUBLIC_CLIENT_LOG_FORWARDING ?? ""}`,
-        `NEXT_PUBLIC_WEB_VITALS=${webEnv.WR_NEXT_PUBLIC_WEB_VITALS ?? ""}`,
-        `NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED=${webEnv.WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_ENABLED ?? ""}`,
-        `NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES=${webEnv.WR_NEXT_PUBLIC_PRODUCT_FEEDBACK_INBOX_ROLES ?? ""}`,
-      ],
-    },
-    {
-      name: "backup",
-      context: "deploy/postgres",
-      dockerfile: "deploy/postgres/Dockerfile.backup",
-      buildArgs: [`BUILD_VERSION=${commitSha}`],
-    },
-  ];
-}
-
 function buildTarget(
   target: ImageTarget,
-  registry: string,
+  release: ReleaseConfig,
   commitSha: string,
   push: boolean,
 ): void {
-  const fullImageTag = `${registry}/${target.name}:${commitSha}`;
+  const fullImageTag = `${release.registry}/${target.name}:${commitSha}`;
   console.log(`\n=== Building ${target.name} -> ${fullImageTag} ===`);
 
-  const args = ["buildx", "build", "-f", target.dockerfile, "-t", fullImageTag];
-  if (target.target) args.push("--target", target.target);
-  for (const buildArg of target.buildArgs) args.push("--build-arg", buildArg);
-  args.push(push ? "--push" : "--load");
-  args.push(target.context);
-
+  const args = buildxArgs(target, fullImageTag, release.platform, push);
   console.log(`Running: ${DOCKER_BIN} ${args.join(" ")}`);
   try {
     execFileSync(DOCKER_BIN, args, { stdio: "inherit" });
@@ -264,21 +213,25 @@ function buildTarget(
     const msg = error instanceof Error ? error.message : String(error);
     throw new Error(`docker buildx build failed for ${target.name}: ${msg}`);
   }
+
+  if (push) {
+    const index = execFileSync(
+      DOCKER_BIN,
+      ["buildx", "imagetools", "inspect", "--raw", fullImageTag],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+    );
+    assertPlatformInIndex(index, fullImageTag, release.platform);
+  }
   console.log(`Successfully built ${fullImageTag}`);
 }
 
 export function main(): void {
   const options = parseCliArgs(process.argv.slice(2));
+  const release = loadReleaseConfig();
   const commitSha = checkGitPreconditions();
 
-  const registry =
-    options.registry ||
-    process.env.IMAGE_REGISTRY ||
-    process.env.CI_REGISTRY_IMAGE ||
-    "gitlab.example.org:5005/acme/weeklyreport";
-
   if (options.push) {
-    checkDockerAuth(registry.split("/")[0] ?? "");
+    checkDockerAuth(release.registry.split("/")[0] ?? "");
   }
 
   const needsWeb = !options.targets || options.targets.includes("web");
@@ -296,7 +249,7 @@ export function main(): void {
   }
 
   for (const target of targetsToBuild) {
-    buildTarget(target, registry, commitSha, options.push);
+    buildTarget(target, release, commitSha, options.push);
   }
   console.log("\nAll requested images built successfully.");
 }
