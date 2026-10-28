@@ -47,13 +47,14 @@ async function fetchProgress(
 
   const progress = new Map<string, ReportProgress>();
   const leadIds = leads.map((lead) => lead.id);
+  const sectionsByReport = Map.groupBy(
+    liveSections,
+    (section) => section.reportId,
+  );
   for (const reportId of liveIds) {
     progress.set(
       reportId,
-      computeReportProgress(
-        leadIds,
-        liveSections.filter((section) => section.reportId === reportId),
-      ),
+      computeReportProgress(leadIds, sectionsByReport.get(reportId) ?? []),
     );
   }
   for (const row of publishedRows) {
