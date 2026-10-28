@@ -9,7 +9,7 @@
 ## 2. Saving motion
 
 - [x] 2.1 Observe the actual pending-save Lead control under native reduce and no-preference modes; capture media match, computed animation properties, frame samples and full-page screenshots. Evidence: ~/work/handoffs/wr-513/s26/max/rm23-RESULT.md §2.1 and ~/work/handoffs/wr-513/s26/max/rm23-evidence/.
-- [x] 2.2 After the scoped repair decision, fix the saving indicator at its owner and verify native stationary/animated controls without changing busy, disabled, success or retry behavior. Defect fixed in 4fe8f7693; evidence: ~/work/handoffs/wr-513/s26/max/rm23-RESULT.md §2.2.
+- [x] 2.2 After the scoped repair decision, fix the saving indicator at its owner and verify native stationary/animated controls without changing busy, disabled, success or retry behavior. Defect fixed in 7125b033e; evidence: ~/work/handoffs/wr-513/s26/max/rm23-RESULT.md §2.2.
 
 ## 3. Search keyboard behavior
 
@@ -19,8 +19,8 @@
 
 ## 4. Integration acceptance
 
-- [ ] 4.1 Obtain independent review of the exact implementation tree and pass the six repository gates on the reviewed tree through the coordinated lane.
-- [ ] 4.2 Deliver through normal hooks and atomic push when authorized; record main SHA and actual CI separately, with remaining TASK-503.23 clauses preserved for Root disposition.
+- [x] 4.1 Obtain independent review of the exact implementation tree and pass the six repository gates on the reviewed tree through the coordinated lane. Independent review: ~/work/handoffs/wr-513/s26/max/rev23-RESULT.md (APPROVE WITH CHANGES, P1/P2 none). The coordinated push lane ran `check:push` on every delivery commit and passed format:check, lint, typecheck, test, spec:check, audit:dependencies and scan:secrets — ~/work/handoffs/wr-513/s26/int2/b1-push.log (caf20a0a8), t23b-push.log (898a06700), e513b-push.log (7125b033e), rm23-push.log (eeb33c994). `pnpm build` is not part of the pre-push lane and has no recorded receipt on these SHAs.
+- [x] 4.2 Deliver through normal hooks and atomic push when authorized; record main SHA and actual CI separately, with remaining TASK-503.23 clauses preserved for Root disposition. Delivered to main: 898a06700 (search popup out of the Tab order), 7125b033e (stationary saving under reduced motion) and eeb33c994 (evidence record). CI on main is not awaited by the owner's 2026-10-11 decision, so no actual CI result is recorded. Durable evidence: ~/work/handoffs/wr-513/s26/accept1/RESULT.md section B, accept1/RESULT2.md and max/rm23-RESULT.md; the remaining clauses (C5220/C5339/C5352/C0007) stay in the wave card for Root disposition.
 
 ## Workflow follow-up
 
