@@ -4,7 +4,7 @@ import {
   REVIEW_COMMENT_MAX_LENGTH,
   reviewCommentInputSchema,
 } from "@weeklyreport/shared";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { invalidateReview } from "../../../../shared/lib/query/cache-keys";
@@ -115,6 +115,29 @@ function useRecordCommentMutations(
   };
 }
 
+function deriveCommentValidation(
+  anchor: RecordCommentAnchor,
+  draft: string,
+  validationAttempted: boolean,
+) {
+  const submittedText = draft.trim();
+  const validationResult = reviewCommentInputSchema.safeParse({
+    ...anchor,
+    text: submittedText,
+  });
+  const validationError = commentValidationError(
+    draft,
+    submittedText,
+    validationResult.success,
+    validationAttempted,
+  );
+  return {
+    submittedText,
+    isValid: validationResult.success,
+    validationError,
+  };
+}
+
 export function useRecordCommentState(
   anchor: RecordCommentAnchor,
   onMutated: () => void,
@@ -126,15 +149,23 @@ export function useRecordCommentState(
     useState<RecordCommentView | null>(null);
   const id = anchorId(anchor);
   const feedbackId = `record-comment-feedback-${id ?? "unknown"}`;
+  // Synchronous guard against rapid same-tick double-submission before React
+  // re-renders the mutation's pending state.
+  const inFlightRef = useRef(false);
+  const resetInFlight = () => {
+    inFlightRef.current = false;
+  };
   const { submitComment, isCommentPending, deleteComment, isDeletePending } =
     useRecordCommentMutations(anchor, {
       onCommentAdded: () => {
+        resetInFlight();
         setDraft("");
         setValidationAttempted(false);
         setFeedback({ message: "Comment added.", tone: "success" });
       },
       onMutated,
       onCommentError: (err) => {
+        resetInFlight();
         const message = reviewErrorMessage(err, "Failed to add comment");
         setFeedback({ message, tone: "error" });
         toast.error(message);
@@ -152,26 +183,22 @@ export function useRecordCommentState(
   // The composer validates the text it submits: surrounding whitespace is not
   // part of the comment, so the counter and the schema bounds apply to the
   // trimmed value instead of a payload that differs from the validated draft.
-  const submittedText = draft.trim();
-  const validationResult = reviewCommentInputSchema.safeParse({
-    ...anchor,
-    text: submittedText,
-  });
-  const validationError = commentValidationError(
+  const { submittedText, isValid, validationError } = deriveCommentValidation(
+    anchor,
     draft,
-    submittedText,
-    validationResult.success,
     validationAttempted,
   );
-  const submitDisabled = !validationResult.success || isCommentPending;
+  const submitDisabled = !isValid || isCommentPending;
 
   const submitDraft = () => {
+    if (inFlightRef.current) return;
     setValidationAttempted(true);
     const currentResult = reviewCommentInputSchema.safeParse({
       ...anchor,
       text: submittedText,
     });
     if (!currentResult.success || isCommentPending) return;
+    inFlightRef.current = true;
     submitComment(currentResult.data.text);
   };
 
