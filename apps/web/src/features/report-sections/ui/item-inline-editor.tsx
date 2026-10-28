@@ -10,7 +10,6 @@ import {
   InlineEditPrimaryFields,
 } from "./item-inline-editor-subfields";
 import { useFocusCancelWhenLocked } from "./use-focus-cancel-when-locked";
-import { useInlineEditUnloadGuard } from "./use-inline-edit-unload-guard";
 import { useItemEditDialog } from "./use-item-edit-dialog";
 
 const EMPTY_ACTIVITIES: readonly ParentActivityOption[] = [];
@@ -238,7 +237,6 @@ export function ItemInlineEditor({
   onWeekChange,
   ...props
 }: ItemInlineEditorProps) {
-  useInlineEditUnloadGuard();
   const nextStepTextareaRef = useFocusNextStep(focusNextStep, props.week);
   const activities = props.activities ?? EMPTY_ACTIVITIES;
   const { dialogSurfaceRef, discardDialog, ...dialogForm } = useItemEditDialog({

@@ -4,6 +4,7 @@ import { useDraftStageMemory } from "./draft-stage-memory-context";
 import { deriveItemEditFields } from "./item-edit-dialog-derive";
 import { collectItemStatusErrors } from "./item-edit-dialog-helpers";
 import type { ItemEditDraftStore } from "./item-edit-draft-store";
+import { useInlineEditUnloadGuard } from "./use-inline-edit-unload-guard";
 import { useItemEditFormState } from "./use-item-edit-form-state";
 import { useItemEditSave } from "./use-item-edit-save";
 
@@ -122,6 +123,9 @@ export function useItemEditDialog(args: UseItemEditDialogArgs) {
     stageMemory: stageMemory ?? undefined,
     stagesForProduct: args.stagesForProduct,
   });
+  // Only the inline composer can strand unsaved input on a page it leaves, and
+  // a pristine composer has nothing to lose, so it prompts only while dirty.
+  useInlineEditUnloadGuard(args.presentation === "inline" && formState.dirty);
 
   const derived = deriveItemEditFields({
     isCreate: formState.isCreate,
