@@ -209,7 +209,8 @@ export function SlideLegend({
             className={SLIDE_AUTHOR_BADGE_CLASS}
             style={{ background: authorSlotBackground(author) }}
           >
-            {author.initials}
+            <span aria-hidden="true">{author.initials}</span>
+            <span className="sr-only">{author.name}</span>
           </span>
           <span className="min-w-0 break-words">
             {shortNameFromName(author.name)}
