@@ -19,6 +19,10 @@ interface OverviewComposerState {
   readonly draftStore: ItemEditDraftStore;
   readonly editorAtOpen: ReadyEditor;
   readonly submission: OverviewItemSubmission | null;
+  // Advances when Save and add another resets the composer. The editor keys on
+  // it so it remounts with the fresh draft store instead of keeping the saved
+  // row's text and losing the focus-on-mount behaviour.
+  readonly seq: number;
 }
 
 interface OverviewItemSubmission {
@@ -80,6 +84,7 @@ export function createOverviewComposerState(
     week: target.source,
     editorAtOpen: editor,
     submission: null,
+    seq: 0,
     draftStore: createItemEditDraftStore({
       item,
       products: view.products,
@@ -163,7 +168,7 @@ function OverviewItemDialog({
       key={
         dialog.mode === "edit"
           ? `edit:${dialog.week}:${dialog.target.recordId}`
-          : `create:${dialog.week}:${dialog.target.unitKind}:${dialog.target.unitId}`
+          : `create:${dialog.week}:${dialog.target.unitKind}:${dialog.target.unitId}:${dialog.seq}`
       }
       item={dialog.mode === "edit" ? dialog.item : null}
       draftStore={dialog.draftStore}

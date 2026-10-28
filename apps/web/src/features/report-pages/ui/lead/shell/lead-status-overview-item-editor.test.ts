@@ -138,46 +138,4 @@ describe("createOverviewComposerState — draft stage default", () => {
 
     expect(state.draftStore.getSnapshot().stageNames).toEqual([]);
   });
-
-  it("resets dialog to a fresh composer for the same target on addAnother acknowledgment", () => {
-    const editor = readyEditor(rememberedStageMemory("Testing"));
-    const initialState = createOverviewComposerState(
-      editor,
-      CREATE_TARGET,
-      null,
-    );
-    const dialog: Parameters<
-      typeof import("./overview-item-submission").driveOverviewSubmission
-    >[0]["dialog"] = {
-      ...initialState,
-      mode: "create",
-      target: CREATE_TARGET,
-      submission: {
-        attempt: 1,
-        token: "sub-token",
-        receiptScope: "scope",
-        item: {
-          id: "item-created",
-          parent: { kind: "product", id: PROJECT_ID },
-          productId: PROJECT_ID,
-          productName: "Payments",
-          activityId: null,
-          text: "First batch item",
-          status: "in-progress",
-          author: "Test Lead",
-          stageNames: ["Testing"],
-        },
-        inputSnapshot: initialState.draftStore.getSnapshot(),
-        lastSavedAtBefore: null,
-        draftVersionBefore: 0,
-        saveReceiptSequenceBefore: 0,
-        saveArmed: true,
-        activityObserved: true,
-        restore: null,
-        addAnother: true,
-      },
-    };
-
-    expect(dialog.submission?.addAnother).toBe(true);
-  });
 });

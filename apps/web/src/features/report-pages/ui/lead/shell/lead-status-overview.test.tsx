@@ -1649,6 +1649,57 @@ describe("LeadForm Overview", () => {
     ).toHaveFocus();
   });
 
+  it("Save and add another clears the composer fields and returns focus to the description", async () => {
+    const user = userEvent.setup();
+    const serverItemId = "a0000000-0000-4000-8000-000000000040";
+    const serverStableId = "a0000000-0000-4000-8000-000000000041";
+    const saveDraft = vi.fn(
+      (input: unknown, current: ReportSectionReadModel) => {
+        const draft = input as {
+          readonly version: number;
+          readonly items: ReportSectionReadModel["items"];
+        };
+        return Promise.resolve({
+          ...current,
+          version: draft.version + 1,
+          items: draft.items.map((item) =>
+            item.stableId === undefined
+              ? { ...item, id: serverItemId, stableId: serverStableId }
+              : item,
+          ),
+        });
+      },
+    );
+    render(
+      <Wrapper saveDraft={saveDraft}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Add item to Payments",
+      }),
+    );
+    await user.type(
+      screen.getByLabelText(/Description \*/i),
+      "First batch item",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Save and add another" }),
+    );
+
+    await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
+    await vi.waitFor(
+      () => expect(screen.getByLabelText(/Description \*/i)).toHaveValue(""),
+      { timeout: 2000 },
+    );
+    expect(
+      screen.getByRole("form", { name: "Current week update for Payments" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/Description \*/i)).toHaveFocus();
+  });
+
   it("creates a Next item from the Next cell with Planned progress and restores the cell focus", async () => {
     const user = userEvent.setup();
     const serverItemId = "a0000000-0000-4000-8000-000000000030";
