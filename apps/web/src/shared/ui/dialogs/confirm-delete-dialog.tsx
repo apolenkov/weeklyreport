@@ -26,6 +26,9 @@ interface ConfirmDeleteDialogProps {
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
   readonly triggerRef?: RefObject<HTMLElement | null> | undefined;
+  // Used on close only when the trigger and the previously focused element are
+  // both gone (C5246); a stable container keeps focus off <body>.
+  readonly restoreFocusFallbackRef?: RefObject<HTMLElement | null> | undefined;
 }
 
 // Initial focus lands on Cancel (least-destructive action) so a reflexive Enter
@@ -96,6 +99,7 @@ function ConfirmDeleteContent({
   onConfirm,
   onCancel,
   triggerRef,
+  restoreFocusFallbackRef,
 }: ConfirmDeleteContentProps) {
   const cancelRef = useRef<HTMLButtonElement | null>(null);
   const panelRef = usePendingFocusPark(isPending);
@@ -113,6 +117,7 @@ function ConfirmDeleteContent({
       initialFocusRef={isPending ? undefined : cancelRef}
       restoreFocusRef={triggerRef}
       restoreFocusToPrevious={true}
+      restoreFocusFallbackRef={restoreFocusFallbackRef}
       role="alertdialog"
       aria-modal="true"
       onEscapeKeyDown={preventWhilePending}

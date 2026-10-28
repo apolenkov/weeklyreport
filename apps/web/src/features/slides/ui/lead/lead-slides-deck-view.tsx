@@ -97,7 +97,11 @@ export function LeadSlidesDeckView({
     ) : undefined;
 
   return (
-    <div ref={deckRef} className={deckSurfaceClass(fullscreen.isFullscreen)}>
+    <div
+      ref={deckRef}
+      tabIndex={-1}
+      className={deckSurfaceClass(fullscreen.isFullscreen)}
+    >
       <StatusSlideDeck
         slides={deck.slides}
         selectedIndex={selectedIndex}

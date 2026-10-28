@@ -1,5 +1,7 @@
 "use client";
 
+import type { RefObject } from "react";
+
 import { ConfirmDeleteDialog } from "../../../shared/ui/dialogs/confirm-delete-dialog";
 import { DecisionEditDialog } from "../../period";
 import type {
@@ -47,6 +49,7 @@ interface SlideInlineEditorDialogsProps {
   readonly onRequestDelete: () => void;
   readonly onConfirmDelete: () => void;
   readonly onCancelDelete: () => void;
+  readonly restoreFocusFallbackRef?: RefObject<HTMLElement | null> | undefined;
 }
 
 export function getActiveItemRecord(
@@ -118,6 +121,7 @@ export function SlideInlineEditorDialogs(props: SlideInlineEditorDialogsProps) {
         subtitle={pendingDeleteRecord?.deleteSubtitle}
         onConfirm={props.onConfirmDelete}
         onCancel={props.onCancelDelete}
+        restoreFocusFallbackRef={props.restoreFocusFallbackRef}
       />
     </>
   );
