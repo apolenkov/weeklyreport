@@ -8,6 +8,35 @@
 --     psql -U weeklyreport -d weeklyreport_production -v ON_ERROR_STOP=1 < provision-users.sql
 
 BEGIN;
+SET TRANSACTION ISOLATION LEVEL READ COMMITTED;
+-- Lock before the guard reads, so no concurrent writer changes the checked rows.
+-- NOWAIT fails the run instead of queueing behind another writer.
+LOCK TABLE "ReportingGroup", "User" IN SHARE ROW EXCLUSIVE MODE NOWAIT;
+
+-- Dataset-shape guard. The upsert below matches users by e-mail only, so a row
+-- with a foreign samlId or an unknown e-mail must stop the run before any write.
+-- The realm template admits exactly these four users, so a matching stand passes.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM "User" u
+    WHERE NOT EXISTS (
+      SELECT 1 FROM (VALUES
+        ('lead1@weeklyreport.local', 'lead1@weeklyreport.local'),
+        ('head@weeklyreport.local', 'head@weeklyreport.local'),
+        ('viewer@weeklyreport.local', 'viewer@weeklyreport.local'),
+        ('admin@weeklyreport.local', 'admin@weeklyreport.local')
+      ) AS fixture(email, "samlId")
+      WHERE fixture.email = u.email AND fixture."samlId" = u."samlId"
+    )
+  ) OR EXISTS (
+    SELECT 1 FROM "ReportingGroup" WHERE id <> '00000000-0000-4000-8000-0000000000a1'
+  ) THEN
+    RAISE EXCEPTION 'provision-users refused: User or ReportingGroup rows are outside the local fixture set'
+      USING ERRCODE = 'check_violation';
+  END IF;
+END
+$$;
 
 INSERT INTO "ReportingGroup" (id, name, "updatedAt")
 SELECT '00000000-0000-4000-8000-0000000000a1', 'Local stand', now()

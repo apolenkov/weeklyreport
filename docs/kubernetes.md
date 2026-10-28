@@ -179,8 +179,11 @@ kubectl -n wr-local-prod exec -i statefulset/postgres -- \
 
 The script applies the group, user upserts and head assignment in one
 transaction. With `ON_ERROR_STOP=1`, a SQL error exits nonzero and rolls back
-all changes from that run, including earlier statements. Resolve the conflicting
-identity or constraint before retrying. A successful sequential replay keeps
+all changes from that run, including earlier statements. The script also refuses
+before any write when a `User` row is outside the four fixture e-mail and
+`samlId` pairs, or a `ReportingGroup` other than the fixture group exists; it
+does not tell a local stand from production by database name. Resolve the
+conflicting identity or constraint before retrying. A successful sequential replay keeps
 the fixture identities and avoids duplicates; an existing non-null group head
 is retained.
 
