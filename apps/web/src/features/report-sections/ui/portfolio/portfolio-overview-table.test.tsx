@@ -82,6 +82,53 @@ describe("PortfolioOverviewTable — a11y regression", () => {
     );
     expect(ariaHiddenUpTheTree).not.toContain("true");
   });
+
+  it("marks decorative status badges aria-hidden in Lead and Product cards (C5026)", () => {
+    const { container, rerender } = render(
+      <PortfolioOverviewTable
+        products={[
+          makeProduct({
+            status: "blocked",
+            statusLabel: "Blocked",
+          }),
+        ]}
+        onNavigate={NOOP_NAVIGATE}
+      />,
+    );
+
+    const productBadge = container.querySelector("button .rounded-full");
+    expect(productBadge).not.toBeNull();
+    expect(productBadge).toHaveAttribute("aria-hidden", "true");
+
+    const productButton = screen.getByRole("button", {
+      name: /Product AlphaBlocked2 current · 1 next/i,
+    });
+    expect(productButton).toBeInTheDocument();
+    expect(productButton.textContent).not.toContain("✕ Product Alpha");
+
+    rerender(
+      <PortfolioOverviewTable
+        scope="lead"
+        leads={[
+          makeLeadRow({
+            id: "L1",
+            name: "Иванова Анна Петровна",
+            worstStatus: "blocked",
+          }),
+        ]}
+        onNavigate={NOOP_NAVIGATE}
+      />,
+    );
+
+    const leadBadge = container.querySelector("button .rounded-full");
+    expect(leadBadge).not.toBeNull();
+    expect(leadBadge).toHaveAttribute("aria-hidden", "true");
+
+    const leadButton = screen.getByRole("button", {
+      name: /Иванова А\.П\.Blocked2 current · 1 next/i,
+    });
+    expect(leadButton).toBeInTheDocument();
+  });
 });
 
 // The overview band follows the report scope (by-product vs by-lead).
