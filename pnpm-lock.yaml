@@ -425,7 +425,7 @@ importers:
         specifier: 3.0.0
         version: 3.0.0(@opentelemetry/api@1.10.0)
       '@opentelemetry/semantic-conventions':
-        specifier: ^1.44.0
+        specifier: ^1.43.0
         version: 1.44.0
       '@prisma/adapter-pg':
         specifier: ^7.10.1
@@ -440,10 +440,10 @@ importers:
         specifier: 0.16.1
         version: 0.16.1
       '@sentry/nestjs':
-        specifier: ^11.10.0
+        specifier: ^11.9.0
         version: 11.10.0(@nestjs/common@12.3.2(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@10.2.2))(@nestjs/core@12.3.2)(rollup@4.63.1)(webpack@5.110.1(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.32))
       '@sentry/opentelemetry':
-        specifier: ^11.10.0
+        specifier: ^11.9.0
         version: 11.10.0(@opentelemetry/api@1.10.0)
       '@trpc/server':
         specifier: 'catalog:'
@@ -467,7 +467,7 @@ importers:
         specifier: ^5.3.0
         version: 5.3.0(supports-color@10.2.2)
       express-rate-limit:
-        specifier: ^8.7.2
+        specifier: ^8.7.1
         version: 8.7.2(express@5.3.0(supports-color@10.2.2))(supports-color@10.2.2)
       helmet:
         specifier: ^8.3.0
@@ -482,10 +482,10 @@ importers:
         specifier: 'catalog:'
         version: 3.7.2
       nestjs-cls:
-        specifier: ^7.0.1
-        version: 7.0.1(@nestjs/common@12.3.2(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@10.2.2))(@nestjs/core@12.3.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
+        specifier: ^7.0.2
+        version: 7.0.2(@nestjs/common@12.3.2(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@10.2.2))(@nestjs/core@12.3.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       nodemailer:
-        specifier: ^10.3.1
+        specifier: ^10.2.1
         version: 10.3.1
       passport:
         specifier: ^0.7.0
@@ -494,8 +494,8 @@ importers:
         specifier: ^8.23.1
         version: 8.23.1
       rate-limit-redis:
-        specifier: ^6.0.1
-        version: 6.0.1(express-rate-limit@8.7.2(express@5.3.0(supports-color@10.2.2))(supports-color@10.2.2))
+        specifier: ^6.0.2
+        version: 6.0.2(express-rate-limit@8.7.2(express@5.3.0(supports-color@10.2.2))(supports-color@10.2.2))
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -7011,8 +7011,8 @@ packages:
   neo-async@2.6.2:
     resolution: {integrity: sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==}
 
-  nestjs-cls@7.0.1:
-    resolution: {integrity: sha512-O8i0uguCpzhRlRc0LhdLdfgJQGxVYERHGeIXIryqRKiAXd8ZnNprvMThA4P068n0gqSIaWVJdxv+IoFca/4aqg==}
+  nestjs-cls@7.0.2:
+    resolution: {integrity: sha512-rfG5z6MZ5fQNfjIhTS+9+SPXPRfvY2a52QfzSvrcBDvVuyLK6Ss8cCRBQ+OJEvnZtG3YmYGZAAYoZBWZpJ5L7w==}
     engines: {node: '>=22'}
     peerDependencies:
       '@nestjs/common': '>= 10 < 13'
@@ -7419,8 +7419,8 @@ packages:
     resolution: {integrity: sha512-hek2mFQpPuI4E1BBKrSto+BU3e3x4xuarsbiwr3+lf7p44juvFMV0XFWQAP3xUyqXA4RrXLIoaSUGbSt056ZMw==}
     engines: {node: '>= 0.6'}
 
-  rate-limit-redis@6.0.1:
-    resolution: {integrity: sha512-qys7ulbh5X4Bohfjm6BXFWBiyzK6r5eGdFghPWZfJwggnDFTDwCIRq1u7tmN50vLTp4Kbe1h/ZAuBOn/hVpjtQ==}
+  rate-limit-redis@6.0.2:
+    resolution: {integrity: sha512-EpUHNriVypMSM/DyaSaweK496XMgTj+FgDXzqoxZIFuLZPfDPOpGhAZS4eDgJmseOaR1nlJNhBJd1oifDAj5qg==}
     engines: {node: '>= 16'}
     peerDependencies:
       express-rate-limit: '>= 8.6.0'
@@ -14927,7 +14927,7 @@ snapshots:
   neo-async@2.6.2:
     optional: true
 
-  nestjs-cls@7.0.1(@nestjs/common@12.3.2(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@10.2.2))(@nestjs/core@12.3.2)(reflect-metadata@0.2.2)(rxjs@7.8.2):
+  nestjs-cls@7.0.2(@nestjs/common@12.3.2(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@10.2.2))(@nestjs/core@12.3.2)(reflect-metadata@0.2.2)(rxjs@7.8.2):
     dependencies:
       '@nestjs/common': 12.3.2(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@10.2.2)
       '@nestjs/core': 12.3.2(@nestjs/common@12.3.2(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@10.2.2))(@nestjs/platform-express@12.3.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -15468,7 +15468,7 @@ snapshots:
 
   range-parser@1.3.0: {}
 
-  rate-limit-redis@6.0.1(express-rate-limit@8.7.2(express@5.3.0(supports-color@10.2.2))(supports-color@10.2.2)):
+  rate-limit-redis@6.0.2(express-rate-limit@8.7.2(express@5.3.0(supports-color@10.2.2))(supports-color@10.2.2)):
     dependencies:
       express-rate-limit: 8.7.2(express@5.3.0(supports-color@10.2.2))(supports-color@10.2.2)
 
