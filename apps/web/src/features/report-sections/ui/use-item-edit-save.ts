@@ -36,6 +36,7 @@ interface UseItemEditSaveArgs {
   readonly setStageNames: Dispatch<SetStateAction<string[]>>;
   readonly setErrors: Dispatch<SetStateAction<ItemEditErrors>>;
   readonly onSave: (next: KanbanItem) => void;
+  readonly onSaveAndAddAnother?: ((next: KanbanItem) => void) | undefined;
 }
 
 interface TrimmedSaveText {
@@ -112,7 +113,7 @@ export function useItemEditSave(args: UseItemEditSaveArgs) {
     }));
   }
 
-  function handleSave() {
+  function executeSave(deliver: (next: KanbanItem) => void) {
     // Dead-end: never save empty stageNames or show the unsatisfiable stage error.
     if (args.isDeadEnd) return;
     const text: TrimmedSaveText = {
@@ -152,15 +153,33 @@ export function useItemEditSave(args: UseItemEditSaveArgs) {
       }
       return;
     }
-    args.onSave(payload);
+    deliver(payload);
   }
+
+  function handleSave() {
+    executeSave(args.onSave);
+  }
+
+  const onSaveAndAddAnother = args.onSaveAndAddAnother;
+  const handleSaveAndAddAnother = onSaveAndAddAnother
+    ? () => executeSave(onSaveAndAddAnother)
+    : undefined;
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
-      handleSave();
+      if (e.shiftKey && handleSaveAndAddAnother) {
+        handleSaveAndAddAnother();
+      } else {
+        handleSave();
+      }
     }
   }
 
-  return { setParentAndStages, handleSave, handleKeyDown };
+  return {
+    setParentAndStages,
+    handleSave,
+    handleSaveAndAddAnother,
+    handleKeyDown,
+  };
 }

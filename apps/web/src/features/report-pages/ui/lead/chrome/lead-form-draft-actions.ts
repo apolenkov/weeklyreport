@@ -34,7 +34,10 @@ export interface LeadFormDraftHandle {
   ) => void;
   readonly quickAdd: (week: "current" | "next") => void;
   readonly pendingQuickAdd: QuickAddItem | null;
-  readonly quickAddSave: (item: KanbanItem) => void;
+  readonly quickAddSave: (
+    item: KanbanItem,
+    options?: { readonly addAnother?: boolean },
+  ) => void;
   readonly clearQuickAdd: () => void;
   readonly pendingRiskPrefill: RiskPrefillRequest | null;
 }
@@ -150,6 +153,8 @@ export function buildDraftActions(
     onQuickAdd: buildQuickAddHandler(draft, addSignals, viewModel.products),
     quickAddItem: draft.pendingQuickAdd,
     onQuickAddSave: draft.quickAddSave,
+    onQuickAddSaveAndAddAnother: (item: KanbanItem) =>
+      draft.quickAddSave(item, { addAnother: true }),
     onQuickAddCancel: draft.clearQuickAdd,
     riskPrefill: draft.pendingRiskPrefill,
     ...addSignals,

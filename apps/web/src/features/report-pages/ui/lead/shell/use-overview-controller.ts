@@ -108,6 +108,7 @@ export function useOverviewController({
       dialog.recoveryReason ? null : dialog.dialog,
       {
         onSave: dialog.save,
+        onSaveAndAddAnother: dialog.saveAndAddAnother,
         onCancel: dialog.close,
         onWeekChange: dialog.changeWeek,
       },

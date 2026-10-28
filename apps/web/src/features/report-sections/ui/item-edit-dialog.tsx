@@ -34,6 +34,7 @@ export interface ItemEditDialogProps {
   // Covering risk floors status chips to a locked message (alarm is risk-derived).
   readonly risks?: readonly RiskEntry[] | undefined;
   readonly onSave: (next: KanbanItem) => void;
+  readonly onSaveAndAddAnother?: ((next: KanbanItem) => void) | undefined;
   readonly onCancel: () => void;
   readonly onDelete?: (() => void) | undefined;
 }
@@ -112,6 +113,7 @@ function ItemEditDialogContent(props: ItemEditDialogContentProps) {
           saveLabel="Save item"
           onCancel={requestClose}
           onSave={handleSave}
+          onSaveAndAddAnother={fields.handleSaveAndAddAnother}
           onDelete={onDelete}
           saveDisabled={fields.isDeadEnd}
         />

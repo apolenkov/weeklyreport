@@ -25,6 +25,8 @@ import { SubmitConfirmDialog } from "./submit-confirm-dialog";
 export interface LeadFormDialogsQuickAdd {
   readonly quickAddItem: QuickAddItem | null;
   readonly onQuickAddSave: (item: KanbanItem) => void;
+  readonly onQuickAddSaveAndAddAnother?:
+    ((item: KanbanItem) => void) | undefined;
   readonly onQuickAddCancel: () => void;
   readonly risksAddSignal: number;
   readonly decisionsAddSignal: number;
@@ -95,6 +97,7 @@ function QuickAddItemDialog({
       ownPeriodRanks={ownPeriodRanks}
       risks={risks}
       onSave={quickAdd.onQuickAddSave}
+      onSaveAndAddAnother={quickAdd.onQuickAddSaveAndAddAnother}
       onCancel={quickAdd.onQuickAddCancel}
     />
   );

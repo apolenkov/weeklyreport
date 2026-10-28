@@ -58,13 +58,20 @@ export function useLeadFormQuickAdd({
   const quickAdd = useQuickAddState(generation);
   const riskPrefill = useRiskPrefillState(generation);
   const quickAddSave = useCallback(
-    (item: LeadFormLoadedContext["currentWeekItems"][number]) => {
+    (
+      item: LeadFormLoadedContext["currentWeekItems"][number],
+      options?: { readonly addAnother?: boolean },
+    ) => {
       if (!quickAdd.pending) return;
       const week = quickAdd.pending.week;
       const base =
         week === "next" ? loaded.nextWeekItems : loaded.currentWeekItems;
       apply({ kind: "week-items", week, items: [...base, item] });
-      quickAdd.clear();
+      if (options?.addAnother) {
+        quickAdd.open(week);
+      } else {
+        quickAdd.clear();
+      }
     },
     [apply, loaded, quickAdd],
   );

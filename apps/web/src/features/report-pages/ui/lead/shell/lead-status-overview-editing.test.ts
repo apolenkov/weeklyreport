@@ -145,4 +145,20 @@ describe("status overview editing bridge", () => {
       "/lead/report/report-1?mode=edit#report-details",
     );
   });
+
+  it("buildStatusOverviewCreatePatch appends item and preserves target week for Save and add another", () => {
+    const current = [productItem("current-1", "First item")];
+    const second = productItem("current-2", "Second batch item");
+    const patch = buildStatusOverviewCreatePatch(
+      { source: "current", unitKind: "product", unitId: "product-1" },
+      current,
+      [],
+      second,
+    );
+    expect(patch).toEqual({
+      kind: "week-items",
+      week: "current",
+      items: [current[0], second],
+    });
+  });
 });

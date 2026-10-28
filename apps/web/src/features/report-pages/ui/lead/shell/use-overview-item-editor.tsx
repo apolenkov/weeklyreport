@@ -65,21 +65,21 @@ export function useOverviewItemEditor(
   const { editItem, moveItem, confirmItem, setItemStatus } =
     useOverviewEditOpeners(openers);
   const { addItem, planItem } = useOverviewCreateOpeners(openers);
-  const save = (updatedItem: KanbanItem): void => {
-    saveOverviewItem(
-      {
-        editor,
-        dialog,
-        isReadOnly,
-        recoveryReason,
-        setDialog,
-        setError,
-        startedAttempt,
-        promotionAttempt,
-      },
-      updatedItem,
-    );
+  const saveContext = {
+    editor,
+    dialog,
+    isReadOnly,
+    recoveryReason,
+    setDialog,
+    setError,
+    startedAttempt,
+    promotionAttempt,
   };
+  const saveAndAddAnother =
+    dialog?.mode === "create"
+      ? (updatedItem: KanbanItem): void =>
+          saveOverviewItem(saveContext, updatedItem, { addAnother: true })
+      : undefined;
   return {
     dialog,
     error: error ?? overviewSaveFailure(editor, dialog),
@@ -94,7 +94,9 @@ export function useOverviewItemEditor(
       setDialog((current) =>
         current?.submission === null ? { ...current, week } : current,
       ),
-    save,
+    save: (updatedItem: KanbanItem) =>
+      saveOverviewItem(saveContext, updatedItem),
+    saveAndAddAnother,
     close: () => {
       closeOverviewDialog({ editor, dialog, recoveryReason, setDialog });
       startedAttempt.current = null;
@@ -109,10 +111,12 @@ export function buildOverviewEditorSlot(
   editing: OverviewItemDialogState | null,
   {
     onSave,
+    onSaveAndAddAnother,
     onCancel,
     onWeekChange,
   }: {
     onSave: (item: KanbanItem) => void;
+    onSaveAndAddAnother?: ((item: KanbanItem) => void) | undefined;
     onCancel: () => void;
     onWeekChange: (week: "current" | "next") => void;
   },
@@ -146,6 +150,7 @@ export function buildOverviewEditorSlot(
               editor.draft.autosave.state === "saving"))
         }
         onSave={onSave}
+        onSaveAndAddAnother={onSaveAndAddAnother}
         onCancel={onCancel}
         onWeekChange={onWeekChange}
       />

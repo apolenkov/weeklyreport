@@ -39,6 +39,7 @@ interface OverviewItemSubmission {
   readonly saveReceiptSequenceBefore: number;
   readonly saveArmed: boolean;
   readonly activityObserved: boolean;
+  readonly addAnother?: boolean | undefined;
   // The edited row as it was before the first Save applied it, so abandoning a
   // failed save can put the board back. Null when there is no row to restore.
   readonly restore: DraftPatch | null;
@@ -142,6 +143,7 @@ function OverviewItemDialog({
   editor,
   dialog,
   onSave,
+  onSaveAndAddAnother,
   onCancel,
   onWeekChange,
   saveDisabled = false,
@@ -149,6 +151,7 @@ function OverviewItemDialog({
   readonly editor: ReadyEditor;
   readonly dialog: OverviewItemDialogState;
   readonly onSave: (item: KanbanItem) => void;
+  readonly onSaveAndAddAnother?: ((item: KanbanItem) => void) | undefined;
   readonly onCancel: () => void;
   readonly onWeekChange?: ((week: "current" | "next") => void) | undefined;
   readonly saveDisabled?: boolean | undefined;
@@ -190,6 +193,7 @@ function OverviewItemDialog({
       ownPeriodRanks={viewModel.ownPeriodRanks}
       risks={viewModel.ownRisks}
       onSave={onSave}
+      onSaveAndAddAnother={onSaveAndAddAnother}
       onCancel={onCancel}
     />
   );
@@ -201,6 +205,7 @@ export function OverviewEditorDialog({
   isReadOnly,
   saveDisabled,
   onSave,
+  onSaveAndAddAnother,
   onCancel,
   onWeekChange,
 }: {
@@ -209,6 +214,7 @@ export function OverviewEditorDialog({
   readonly isReadOnly: boolean;
   readonly saveDisabled: boolean;
   readonly onSave: (item: KanbanItem) => void;
+  readonly onSaveAndAddAnother?: ((item: KanbanItem) => void) | undefined;
   readonly onCancel: () => void;
   readonly onWeekChange: (week: "current" | "next") => void;
 }) {
@@ -223,6 +229,7 @@ export function OverviewEditorDialog({
       dialog={dialog}
       saveDisabled={saveDisabled}
       onSave={onSave}
+      onSaveAndAddAnother={onSaveAndAddAnother}
       onCancel={onCancel}
       onWeekChange={onWeekChange}
     />

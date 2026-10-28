@@ -25,6 +25,7 @@ function setup(
   overrides: Partial<Parameters<typeof useItemEditDialog>[0]> = {},
 ) {
   const onSave = vi.fn();
+  const onSaveAndAddAnother = vi.fn();
   const onCancel = vi.fn();
   const { result } = renderHook(() =>
     useItemEditDialog({
@@ -33,11 +34,12 @@ function setup(
       activities: [],
       week: "current",
       onSave,
+      onSaveAndAddAnother,
       onCancel,
       ...overrides,
     }),
   );
-  return { result, onSave, onCancel };
+  return { result, onSave, onSaveAndAddAnother, onCancel };
 }
 
 describe("useItemEditDialog — characterization", () => {
@@ -178,5 +180,101 @@ describe("useItemEditDialog — characterization", () => {
     expect(saved.parent).toEqual({ kind: "activity", id: "a1" });
     expect(saved.productId).toBeNull();
     expect(saved.text).toBe("Triage the queue");
+  });
+
+  it("handleSaveAndAddAnother surfaces validation errors and never calls onSaveAndAddAnother", () => {
+    const { result, onSaveAndAddAnother } = setup({
+      defaultProductId: "p1",
+      stagesForProduct: () => ["Testing"],
+    });
+
+    act(() => {
+      result.current.handleSaveAndAddAnother?.();
+    });
+
+    expect(onSaveAndAddAnother).not.toHaveBeenCalled();
+    expect(result.current.textError).toBe("Description is required");
+  });
+
+  it("handleSaveAndAddAnother calls onSaveAndAddAnother with payload on success", () => {
+    const { result, onSaveAndAddAnother } = setup({
+      defaultProductId: "p1",
+      stagesForProduct: () => ["Testing"],
+    });
+
+    act(() => {
+      result.current.onTextChange("Batch item 1");
+    });
+    act(() => {
+      result.current.onStageChange(["Testing"]);
+    });
+    act(() => {
+      result.current.handleSaveAndAddAnother?.();
+    });
+
+    expect(onSaveAndAddAnother).toHaveBeenCalledTimes(1);
+    const saved = onSaveAndAddAnother.mock.calls[0]?.[0] as KanbanItem;
+    expect(saved.productId).toBe("p1");
+    expect(saved.text).toBe("Batch item 1");
+  });
+
+  it("handleKeyDown with Ctrl+Shift+Enter triggers handleSaveAndAddAnother in create mode", () => {
+    const { result, onSaveAndAddAnother, onSave } = setup({
+      defaultProductId: "p1",
+      stagesForProduct: () => ["Testing"],
+    });
+
+    act(() => {
+      result.current.onTextChange("Batch item with shortcut");
+    });
+    act(() => {
+      result.current.onStageChange(["Testing"]);
+    });
+
+    const fakeEvent = {
+      key: "Enter",
+      ctrlKey: true,
+      shiftKey: true,
+      preventDefault: vi.fn(),
+    } as unknown as React.KeyboardEvent;
+
+    act(() => {
+      result.current.handleKeyDown(fakeEvent);
+    });
+
+    expect(fakeEvent.preventDefault).toHaveBeenCalled();
+    expect(onSaveAndAddAnother).toHaveBeenCalledTimes(1);
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("handleKeyDown with Ctrl+Shift+Enter does not trigger handleSaveAndAddAnother in edit mode", () => {
+    const item: KanbanItem = {
+      id: "item-1",
+      parent: { kind: "product", id: "p1" },
+      productId: "p1",
+      productName: "DevOps Tools",
+      activityId: null,
+      text: "Existing text",
+      status: "in-progress",
+      author: "Someone",
+      stageNames: ["Testing"],
+    };
+    const { result, onSaveAndAddAnother } = setup({
+      item,
+      stagesForProduct: () => ["Testing"],
+    });
+
+    const fakeEvent = {
+      key: "Enter",
+      ctrlKey: true,
+      shiftKey: true,
+      preventDefault: vi.fn(),
+    } as unknown as React.KeyboardEvent;
+
+    act(() => {
+      result.current.handleKeyDown(fakeEvent);
+    });
+
+    expect(onSaveAndAddAnother).not.toHaveBeenCalled();
   });
 });

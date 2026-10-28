@@ -449,6 +449,63 @@ describe("ItemInlineEditor", () => {
     );
     expect(screen.getByRole("textbox", { name: /Next step/ })).toHaveFocus();
   });
+  it("renders Save and add another button in create mode and calls onSaveAndAddAnother on click", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    const onSaveAndAddAnother = vi.fn();
+    render(
+      <ItemInlineEditor
+        {...base}
+        item={null}
+        onSave={onSave}
+        onSaveAndAddAnother={onSaveAndAddAnother}
+      />,
+    );
+
+    const btn = screen.getByRole("button", { name: "Save and add another" });
+    expect(btn).toBeInTheDocument();
+    expect(btn).not.toBeDisabled();
+
+    await user.type(
+      screen.getByRole("textbox", { name: /Description/ }),
+      "First batch item",
+    );
+    await user.click(btn);
+
+    expect(onSaveAndAddAnother).toHaveBeenCalledTimes(1);
+    expect(onSaveAndAddAnother).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "First batch item" }),
+    );
+    expect(onSave).not.toHaveBeenCalled();
+  });
+
+  it("does not render Save and add another button in edit mode", () => {
+    const onSave = vi.fn();
+    const onSaveAndAddAnother = vi.fn();
+    const existingItem: KanbanItem = {
+      id: "item-1",
+      parent: { kind: "product", id: "product" },
+      productId: "product",
+      productName: "Lead project",
+      activityId: null,
+      text: "Existing text",
+      status: "in-progress",
+      author: "Lead",
+      stageNames: ["Development"],
+    };
+    render(
+      <ItemInlineEditor
+        {...base}
+        item={existingItem}
+        onSave={onSave}
+        onSaveAndAddAnother={onSaveAndAddAnother}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: "Save and add another" }),
+    ).toBeNull();
+  });
 });
 
 describe("ItemInlineEditor discard guard", () => {

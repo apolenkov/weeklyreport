@@ -1,6 +1,9 @@
 import type { SetStateAction } from "react";
 
-import { type OverviewItemDialogState } from "./lead-status-overview-item-editor";
+import {
+  createOverviewComposerState,
+  type OverviewItemDialogState,
+} from "./lead-status-overview-item-editor";
 import { overviewSubmissionIsAcknowledged } from "./overview-editor-recovery";
 import { abandonedSaveRestorePatch } from "./overview-save-restore";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
@@ -125,9 +128,17 @@ export function driveOverviewSubmission({
     overviewSubmissionIsAcknowledged(editor, dialog);
   if (acknowledged) {
     startedAttempt.current = null;
-    setDialog((current) =>
-      current?.submission?.attempt === submission.attempt ? null : current,
-    );
+    setDialog((current) => {
+      if (current?.submission?.attempt !== submission.attempt) return current;
+      if (submission.addAnother && current.mode === "create") {
+        return {
+          ...createOverviewComposerState(editor, current.target, null),
+          mode: "create",
+          target: current.target,
+        };
+      }
+      return null;
+    });
   }
 }
 

@@ -185,11 +185,19 @@ function applyDraftChange(
   return null;
 }
 
+interface SaveOptions {
+  readonly addAnother?: boolean | undefined;
+}
+
 function armDraftSave(
   context: SaveContext,
   editor: ReadyEditor,
   dialog: OverviewItemDialogState,
-  { item, restore }: { item: KanbanItem; restore: DraftPatch | null },
+  payload: {
+    item: KanbanItem;
+    restore: DraftPatch | null;
+    options?: SaveOptions | undefined;
+  },
 ): void {
   context.setError(null);
   context.setDialog({
@@ -198,14 +206,15 @@ function armDraftSave(
       attempt: (dialog.submission?.attempt ?? 0) + 1,
       token: crypto.randomUUID(),
       receiptScope: editor.draft.receiptScope,
-      item,
-      restore,
+      item: payload.item,
+      restore: payload.restore,
       inputSnapshot: dialog.draftStore.getSnapshot(),
       lastSavedAtBefore: editor.draft.autosave.lastSavedAt,
       draftVersionBefore: editor.draft.version,
       saveReceiptSequenceBefore: editor.draft.lastSaveReceipt?.sequence ?? 0,
       saveArmed: false,
       activityObserved: false,
+      addAnother: payload.options?.addAnother,
     },
   });
 }
@@ -214,8 +223,9 @@ function submitDraftUpdate(
   context: SaveContext,
   editor: ReadyEditor,
   dialog: OverviewItemDialogState,
-  updatedItem: KanbanItem,
+  submission: { item: KanbanItem; options?: SaveOptions | undefined },
 ): void {
+  const updatedItem = submission.item;
   const retrying =
     dialog.submission !== null &&
     overviewSubmittedItemIsCurrent(editor, dialog) &&
@@ -232,12 +242,17 @@ function submitDraftUpdate(
     context.setError(error);
     return;
   }
-  armDraftSave(context, editor, dialog, { item: submittedItem, restore });
+  armDraftSave(context, editor, dialog, {
+    item: submittedItem,
+    restore,
+    options: submission.options,
+  });
 }
 
 export function saveOverviewItem(
   context: SaveContext,
   updatedItem: KanbanItem,
+  options?: SaveOptions,
 ): void {
   const { dialog, editor } = context;
   if (!editor || !dialog || context.isReadOnly) return;
@@ -262,7 +277,7 @@ export function saveOverviewItem(
     context.setError(null);
     return;
   }
-  submitDraftUpdate(context, editor, dialog, updatedItem);
+  submitDraftUpdate(context, editor, dialog, { item: updatedItem, options });
 }
 
 export function overviewMoveEditorItem(
