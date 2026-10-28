@@ -4,6 +4,7 @@ interface RecordDialogFooterProps {
   readonly saveLabel: string;
   readonly onCancel: () => void;
   readonly onSave: () => void;
+  readonly onSaveAndAddAnother?: (() => void) | undefined;
   readonly onDelete?: (() => void) | undefined;
   readonly saveDisabled?: boolean | undefined;
   readonly savePending?: boolean | undefined;
@@ -14,6 +15,7 @@ export function RecordDialogFooter({
   saveLabel,
   onCancel,
   onSave,
+  onSaveAndAddAnother,
   onDelete,
   saveDisabled = false,
   savePending = false,
@@ -45,6 +47,16 @@ export function RecordDialogFooter({
       >
         Cancel
       </button>
+      {onSaveAndAddAnother ? (
+        <button
+          type="button"
+          onClick={onSaveAndAddAnother}
+          disabled={saveDisabled || savePending}
+          className="btn-press inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] bg-transparent px-4 py-2 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] disabled:cursor-not-allowed disabled:opacity-50 md:min-h-[40px]"
+        >
+          Save and add another
+        </button>
+      ) : null}
       <button
         type="button"
         onClick={onSave}

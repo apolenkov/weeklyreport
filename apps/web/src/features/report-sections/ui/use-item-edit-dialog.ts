@@ -22,6 +22,7 @@ interface UseItemEditDialogArgs {
   readonly ownPeriodRanks?: readonly number[] | undefined;
   readonly risks?: readonly RiskEntry[] | undefined;
   readonly onSave: (next: KanbanItem) => void;
+  readonly onSaveAndAddAnother?: ((next: KanbanItem) => void) | undefined;
   readonly onCancel: () => void;
   readonly isPending?: boolean | undefined;
 }
@@ -97,6 +98,7 @@ function buildItemEditHandle(
       formState.setErrors((prev) => ({ ...prev, pausedReason: undefined }));
     },
     handleSave: save.handleSave,
+    handleSaveAndAddAnother: save.handleSaveAndAddAnother,
     handleKeyDown: save.handleKeyDown,
   };
 }
@@ -156,6 +158,9 @@ export function useItemEditDialog(args: UseItemEditDialogArgs) {
     setStageNames: formState.setStageNames,
     setErrors: formState.setErrors,
     onSave: args.onSave,
+    onSaveAndAddAnother: formState.isCreate
+      ? args.onSaveAndAddAnother
+      : undefined,
   });
 
   return buildItemEditHandle(formState, derived, save);

@@ -1,19 +1,14 @@
 "use client";
 
-import { type RefObject, useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
 import type { ParentActivityOption } from "../model/record-parent";
 import type { ItemEditDialogProps } from "./item-edit-dialog";
-import {
-  ItemDescriptionField,
-  ItemNextStepField,
-  ItemPriorityRankField,
-  ItemStatusFields,
-} from "./item-edit-dialog-fields";
 import type { ItemEditDraftStore } from "./item-edit-draft-store";
-import { choicesForWeek } from "./item-status-choices";
-import { ParentPicker } from "./parent-picker";
-import { StageStep } from "./stage-step";
+import {
+  InlineEditDetails,
+  InlineEditPrimaryFields,
+} from "./item-inline-editor-subfields";
 import { useFocusCancelWhenLocked } from "./use-focus-cancel-when-locked";
 import { useInlineEditUnloadGuard } from "./use-inline-edit-unload-guard";
 import { useItemEditDialog } from "./use-item-edit-dialog";
@@ -23,15 +18,6 @@ const EMPTY_ACTIVITIES: readonly ParentActivityOption[] = [];
 function overviewWeekLabel(week: "current" | "next"): string {
   return week === "current" ? "Current week" : "Next week";
 }
-
-type InlineForm = Omit<
-  ReturnType<typeof useItemEditDialog>,
-  | "dialogSurfaceRef"
-  | "handleKeyDown"
-  | "handleSave"
-  | "requestClose"
-  | "discardDialog"
->;
 
 function ActiveWeekFieldset({
   week: activeWeek,
@@ -75,90 +61,14 @@ function ActiveWeekFieldset({
   );
 }
 
-function InlineEditPrimaryFields({
-  form,
-  week,
-  showNextStep,
-  nextStepTextareaRef,
-}: {
-  readonly form: InlineForm;
-  readonly week: "current" | "next";
-  readonly showNextStep: boolean;
-  readonly nextStepTextareaRef: RefObject<HTMLTextAreaElement | null>;
-}) {
-  const [nextStepRevealed, setNextStepRevealed] = useState(false);
-  const hasNextStepError = Boolean(form.nextStepTextError);
-  if (hasNextStepError && !nextStepRevealed) setNextStepRevealed(true);
-  return (
-    <>
-      <ItemDescriptionField {...form} week={week} />
-      {(showNextStep || hasNextStepError || nextStepRevealed) &&
-      week === "current" ? (
-        <div className="space-y-1">
-          <ItemNextStepField
-            {...form}
-            nextStepTextareaRef={nextStepTextareaRef}
-          />
-        </div>
-      ) : null}
-      {!form.isActivityParent ? (
-        <StageStep
-          id="item-stage"
-          stageNames={form.stageNames}
-          availableStages={form.availableStages}
-          isDeadEnd={form.isDeadEnd}
-          error={form.stageError}
-          deadEndNotice={`No stages assigned on ${form.parentName}. Contact your administrator.`}
-          onChange={(next) => form.onStageChange([...next])}
-        />
-      ) : null}
-      <div>
-        <ItemStatusFields {...form} choices={choicesForWeek(week)} />
-      </div>
-    </>
-  );
-}
-
-function InlineEditDetails({
-  form,
-  products,
-  activities,
-  showPriority,
-  disabled,
-}: {
-  readonly form: InlineForm;
-  readonly products: ItemEditDialogProps["products"];
-  readonly activities: readonly ParentActivityOption[];
-  readonly showPriority: boolean;
-  readonly disabled: boolean;
-}) {
-  return (
-    <fieldset disabled={disabled} className="min-w-0 border-0 p-0">
-      <details>
-        <summary className="min-h-[var(--touch-target-min)] cursor-pointer py-3 text-xs font-semibold text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]">
-          Edit details
-        </summary>
-        <div className="space-y-3 pt-2">
-          <ParentPicker
-            id="item-product"
-            value={form.parent}
-            products={products}
-            activities={activities}
-            onChange={form.onParentChange}
-          />
-          {showPriority ? <ItemPriorityRankField {...form} /> : null}
-        </div>
-      </details>
-    </fieldset>
-  );
-}
-
 function InlineEditActions({
   saveBlocked,
   onCancel,
+  onSaveAndAddAnother,
 }: {
   readonly saveBlocked: boolean;
   readonly onCancel: () => void;
+  readonly onSaveAndAddAnother?: (() => void) | undefined;
 }) {
   const cancelRef = useFocusCancelWhenLocked(saveBlocked);
   return (
@@ -170,6 +80,16 @@ function InlineEditActions({
       >
         Save update
       </button>
+      {onSaveAndAddAnother ? (
+        <button
+          type="button"
+          onClick={onSaveAndAddAnother}
+          disabled={saveBlocked}
+          className="min-h-[var(--touch-target-min)] rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-transparent px-3 text-sm font-semibold text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] disabled:opacity-50"
+        >
+          Save and add another
+        </button>
+      ) : null}
       <button
         ref={cancelRef}
         type="button"
@@ -195,8 +115,10 @@ type ItemInlineEditorProps = Omit<ItemEditDialogProps, "open" | "onDelete"> & {
 
 function InlineEditHint({
   confirmationOnly,
+  hasAddAnother,
 }: {
   readonly confirmationOnly: boolean;
+  readonly hasAddAnother: boolean;
 }) {
   return (
     <p
@@ -204,7 +126,9 @@ function InlineEditHint({
     >
       {confirmationOnly
         ? "No changes are made until you save."
-        : "Ctrl/⌘ + Enter to save"}
+        : hasAddAnother
+          ? "Ctrl/⌘ + Enter to save · Ctrl/⌘ + Shift + Enter to save and add another"
+          : "Ctrl/⌘ + Enter to save"}
     </p>
   );
 }
@@ -215,6 +139,94 @@ function useFocusNextStep(focusNextStep: boolean, week: "current" | "next") {
     if (focusNextStep && week === "current") ref.current?.focus();
   }, [focusNextStep, week]);
   return ref;
+}
+
+type DialogForm = Omit<
+  ReturnType<typeof useItemEditDialog>,
+  "dialogSurfaceRef" | "discardDialog"
+>;
+
+interface InlineFormViewProps {
+  readonly form: DialogForm;
+  readonly week: "current" | "next";
+  readonly products: ItemEditDialogProps["products"];
+  readonly activities: readonly ParentActivityOption[];
+  readonly showNextStep: boolean;
+  readonly showPriority: boolean;
+  readonly confirmationOnly: boolean;
+  readonly saveDisabled: boolean;
+  readonly onWeekChange?: ((week: "current" | "next") => void) | undefined;
+  readonly weekChangeDisabled?: boolean | undefined;
+  readonly nextStepTextareaRef: ReturnType<typeof useFocusNextStep>;
+}
+
+function InlineFormView({
+  form,
+  week,
+  products,
+  activities,
+  showNextStep,
+  showPriority,
+  confirmationOnly,
+  saveDisabled,
+  onWeekChange,
+  weekChangeDisabled,
+  nextStepTextareaRef,
+}: InlineFormViewProps) {
+  return (
+    <form
+      aria-label={`${overviewWeekLabel(week)} update for ${form.parentName}`}
+      noValidate
+      onSubmit={(event) => {
+        event.preventDefault();
+        form.handleSave();
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          event.stopPropagation();
+          form.requestClose();
+        } else form.handleKeyDown(event);
+      }}
+      className="min-w-0 space-y-3"
+    >
+      <p className="break-words text-xs font-semibold text-[var(--color-muted-foreground)]">
+        {form.parentName} · {overviewWeekLabel(week)}
+      </p>
+      <fieldset
+        disabled={confirmationOnly}
+        className="min-w-0 space-y-3 border-0 p-0"
+      >
+        <ActiveWeekFieldset
+          week={week}
+          onWeekChange={onWeekChange}
+          disabled={weekChangeDisabled ?? false}
+        />
+        <InlineEditPrimaryFields
+          form={form}
+          week={week}
+          showNextStep={showNextStep}
+          nextStepTextareaRef={nextStepTextareaRef}
+        />
+      </fieldset>
+      <InlineEditDetails
+        form={form}
+        products={products}
+        activities={activities}
+        showPriority={showPriority}
+        disabled={confirmationOnly}
+      />
+      <InlineEditActions
+        saveBlocked={form.isDeadEnd || saveDisabled}
+        onCancel={form.requestClose}
+        onSaveAndAddAnother={form.handleSaveAndAddAnother}
+      />
+      <InlineEditHint
+        confirmationOnly={confirmationOnly}
+        hasAddAnother={form.handleSaveAndAddAnother !== undefined}
+      />
+    </form>
+  );
 }
 
 export function ItemInlineEditor({
@@ -228,71 +240,37 @@ export function ItemInlineEditor({
 }: ItemInlineEditorProps) {
   useInlineEditUnloadGuard();
   const nextStepTextareaRef = useFocusNextStep(focusNextStep, props.week);
-  const {
-    dialogSurfaceRef,
-    handleKeyDown,
-    handleSave,
-    requestClose,
-    discardDialog,
-    ...form
-  } = useItemEditDialog({
+  const activities = props.activities ?? EMPTY_ACTIVITIES;
+  const { dialogSurfaceRef, discardDialog, ...dialogForm } = useItemEditDialog({
     ...props,
-    activities: props.activities ?? EMPTY_ACTIVITIES,
+    activities,
     presentation: "inline",
     onSave: (item) => {
       if (!saveDisabled) props.onSave(item);
     },
+    onSaveAndAddAnother: props.onSaveAndAddAnother
+      ? (item) => {
+          if (!saveDisabled && props.onSaveAndAddAnother) {
+            props.onSaveAndAddAnother(item);
+          }
+        }
+      : undefined,
   });
   return (
     <div ref={dialogSurfaceRef} className="min-w-0">
-      <form
-        aria-label={`${overviewWeekLabel(props.week)} update for ${form.parentName}`}
-        noValidate
-        onSubmit={(event) => {
-          event.preventDefault();
-          handleSave();
-        }}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") {
-            event.preventDefault();
-            event.stopPropagation();
-            requestClose();
-          } else handleKeyDown(event);
-        }}
-        className="min-w-0 space-y-3"
-      >
-        <p className="break-words text-xs font-semibold text-[var(--color-muted-foreground)]">
-          {form.parentName} · {overviewWeekLabel(props.week)}
-        </p>
-        <fieldset
-          disabled={confirmationOnly}
-          className="min-w-0 space-y-3 border-0 p-0"
-        >
-          <ActiveWeekFieldset
-            week={props.week}
-            onWeekChange={onWeekChange}
-            disabled={props.weekChangeDisabled ?? false}
-          />
-          <InlineEditPrimaryFields
-            form={form}
-            week={props.week}
-            showNextStep={showNextStep}
-            nextStepTextareaRef={nextStepTextareaRef}
-          />
-        </fieldset>
-        <InlineEditDetails
-          form={form}
-          products={props.products}
-          activities={props.activities ?? EMPTY_ACTIVITIES}
-          showPriority={showPriority}
-          disabled={confirmationOnly}
-        />
-        <InlineEditActions
-          saveBlocked={form.isDeadEnd || saveDisabled}
-          onCancel={requestClose}
-        />
-        <InlineEditHint confirmationOnly={confirmationOnly} />
-      </form>
+      <InlineFormView
+        form={dialogForm}
+        week={props.week}
+        products={props.products}
+        activities={activities}
+        showNextStep={showNextStep}
+        showPriority={showPriority}
+        confirmationOnly={confirmationOnly}
+        saveDisabled={saveDisabled}
+        onWeekChange={onWeekChange}
+        weekChangeDisabled={props.weekChangeDisabled}
+        nextStepTextareaRef={nextStepTextareaRef}
+      />
       {discardDialog}
     </div>
   );
