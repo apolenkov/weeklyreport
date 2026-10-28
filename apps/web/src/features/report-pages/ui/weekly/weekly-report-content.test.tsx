@@ -2,7 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { ReviewModel } from "../../../review";
 import {
@@ -104,5 +104,30 @@ describe("ReportContent — Sections heading", () => {
     expect(liveRegion).toHaveTextContent(
       "2 sections in draft, hidden by the Submitted filter.",
     );
+  });
+
+  it("keeps the two toolbar toggles in one non-wrapping row when review is enabled", () => {
+    render(
+      <ReportContent
+        {...baseProps}
+        periodStatus="open"
+        reviewEnabled
+        canReviewAny
+        reviewModel={{
+          ...HEAD_REVIEW_MODEL,
+          context: {
+            currentUserId: "head-1",
+            isAdmin: false,
+            onMutated: vi.fn(),
+          },
+        }}
+      />,
+    );
+
+    const sectionFilter = screen.getByRole("group", { name: "Section filter" });
+    const controlsRow = sectionFilter.parentElement;
+    expect(controlsRow).toHaveClass("flex-nowrap");
+    expect(controlsRow).toHaveClass("overflow-x-auto");
+    expect(controlsRow).not.toHaveClass("flex-wrap");
   });
 });
