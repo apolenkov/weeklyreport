@@ -2,7 +2,11 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type { SlideGridModel } from "../model/slide-grid-model";
-import { SlideGridHeader, SlidePriorityStrip } from "./slide-article-header";
+import {
+  SlideGridHeader,
+  SlideLegend,
+  SlidePriorityStrip,
+} from "./slide-article-header";
 
 const offTrackGrid: SlideGridModel = {
   authors: [],
@@ -81,5 +85,30 @@ describe("SlidePriorityStrip", () => {
     expect(body).toBeInTheDocument();
     expect(body).not.toHaveClass("line-clamp-3");
     expect(body).toHaveClass("sm:line-clamp-3");
+  });
+});
+
+describe("SlideLegend", () => {
+  it("hides initials from assistive technology and provides screen-reader full name", () => {
+    const authors = [
+      {
+        id: "u1",
+        name: "Ivan Ivanov",
+        initials: "II",
+        role: "Lead",
+        colorIndex: 0,
+        isOwner: false,
+      },
+    ];
+    render(<SlideLegend authors={authors} />);
+
+    const legend = screen.getByTestId("slide-legend");
+    expect(legend).toBeInTheDocument();
+
+    const initials = screen.getByText("II");
+    expect(initials).toHaveAttribute("aria-hidden", "true");
+
+    const srName = screen.getByText("Ivan Ivanov", { selector: ".sr-only" });
+    expect(srName).toBeInTheDocument();
   });
 });
