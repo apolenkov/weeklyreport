@@ -93,20 +93,43 @@ a pre-push side effect. No GitLab project setting or schedule is changed here.
 ## Build and deployment
 
 Images are built locally on Mac via OrbStack Docker buildx using `pnpm images:build`
-(TASK-709). The command verifies that the git tree is clean, HEAD is on or in
-`gitlab/main`, required web build parameters (`WR_NEXT_PUBLIC_*`) are set, and the
-target registry is authenticated. It builds all 4 images (`api`, `migrate`, `web`, `backup`),
-tags them with the full commit SHA, and pushes them to the repository image registry.
-Option `--no-push` is available for local testing without registry publication.
+(TASK-709). The release coordinates live in one committed file,
+`deploy/images/release.env`:
+
+- `IMAGE_REGISTRY` (currently `gitlab.example.org:5005/acme/weeklyreport`), and
+- `IMAGE_PLATFORM` (`linux/amd64`).
+
+Nothing overrides them: no environment variable, CI variable or CLI option
+changes the registry, and there is no literal fallback. A missing file or an
+empty value makes `images:build` (and `deploy-production`) refuse before any
+git, Docker, registry or Helm call. `linux/amd64` is a decision recorded here,
+not a documented cluster fact: the cluster architecture is not in the
+repository, so the owner confirms it before a release.
+
+The command verifies that the git tree is clean, HEAD is on or in `gitlab/main`,
+required web build parameters (`WR_NEXT_PUBLIC_*`, from `deploy/images/web-public.env`
+or the environment) are set, and the registry is authenticated. It builds all 4
+images (`api`, `migrate`, `web`, `backup`) with `--platform` set to `IMAGE_PLATFORM`,
+tags them with the full commit SHA, and pushes them. After each push it reads the
+registry index (`docker buildx imagetools inspect --raw`) and fails unless the
+index lists `IMAGE_PLATFORM`.
+
+Options: `--target`/`--only` selects images (comma-separated); `--no-push` builds
+and loads locally without registry publication, for local testing.
 In Lefthook pre-push, `images:build` triggers only when `WR_IMAGES_ON_PUSH=1` is explicitly set.
 
 `deploy-production` runs in GitLab CI using `alpine/helm` on `img-build` runners with
 `interruptible: false` and `resource_group: weeklyreport-production-deploy`.
 It exists only when a file-type `KUBECONFIG` variable is set and needs the variables
 `HELM_VALUES_FILE` (file), `HELM_NAMESPACE` and `HELM_KUBE_CONTEXT`.
-Before executing any Helm command, `deploy-production` queries the registry v2 manifests
-API for all 4 images (`api`, `migrate`, `web`, `backup`) tagged with `$CI_COMMIT_SHA`. If any
+Before executing any Helm command, `deploy-production` reads `IMAGE_REGISTRY` from the
+same `deploy/images/release.env` and queries the registry v2 manifests API for all 4
+images (`api`, `migrate`, `web`, `backup`) tagged with `$CI_COMMIT_SHA`. If any
 manifest is missing (HTTP != 200), it fails immediately with an informative message.
+Registry credentials come from `IMAGE_REGISTRY_USER`/`IMAGE_REGISTRY_PASSWORD` or the
+`CI_REGISTRY_*`/`CI_JOB_TOKEN` variables; the job refuses when either is empty.
+Helm receives `--set images.registry=` with the same value, so the checked and the
+installed image paths cannot differ. The platform is checked at build time only.
 Once verified, Helm inspects the release: only Helm's own release-not-found error
 counts as absent release -> `helm install --wait=watcher`; a deployed release ->
 `helm upgrade --wait=watcher`. A history error, inconsistent state or unreadable revision

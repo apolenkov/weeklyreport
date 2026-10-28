@@ -14,9 +14,9 @@
 - [x] 5. Verification and delivery
   - [x] 5.1 Test `pnpm images:build --no-push` locally for targets.
   - [x] 5.2 Run verification gates (format, lint, typecheck, test, build, spec:check).
-- [ ] 6. Third review round (TASK-709 NO-GO, release coordinates and platform)
-  - [ ] 6.1 Add committed `deploy/images/release.env` with `IMAGE_REGISTRY` and `IMAGE_PLATFORM`; remove env, CLI and literal registry fallbacks from `scripts/build-images.ts`.
-  - [ ] 6.2 Build CLI: `--platform`, post-push index platform check, refusal before git/Docker when config is missing; colocated tests in `scripts/build-images.test.ts`, run by `test:operations`.
-  - [ ] 6.3 `deploy-production`: read the same file, refuse without registry or credentials, `curl -u "$REGISTRY_USER:$REGISTRY_PASSWORD"` quoted, `--set images.registry`; gate tests for refusal and registry equality.
-  - [ ] 6.4 Update `docs/gitlab-ci.md` and `docs/kubernetes.md` (release file, no env override, platform decision).
+- [x] 6. Third review round (TASK-709 NO-GO, release coordinates and platform)
+  - [x] 6.1 Add committed `deploy/images/release.env` with `IMAGE_REGISTRY` and `IMAGE_PLATFORM`; remove env, CLI and literal registry fallbacks from `scripts/build-images.ts`.
+  - [x] 6.2 Build CLI: `--platform`, post-push index platform check, refusal before git/Docker when config is missing; colocated tests in `scripts/build-images.test.ts`, run by `test:operations`.
+  - [x] 6.3 `deploy-production`: read the same file, refuse without registry or credentials, `curl -u "$REGISTRY_USER:$REGISTRY_PASSWORD"` quoted, `--set images.registry`; gate tests for refusal and registry equality.
+  - [x] 6.4 Update `docs/gitlab-ci.md` and `docs/kubernetes.md` (release file, no env override, platform decision).
   - [ ] 6.5 Run the six gates on the final SHA.
