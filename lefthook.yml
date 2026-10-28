@@ -31,3 +31,9 @@ pre-push:
         if [ -n "$CI" ] || env | grep -q '^AGENT_'; then exit 0; fi;
         unset $(git rev-parse --local-env-vars);
         pnpm check:push
+    - name: build-images
+      run: >-
+        if [ "${WR_IMAGES_ON_PUSH:-0}" = "1" ]; then
+          unset $(git rev-parse --local-env-vars);
+          pnpm images:build;
+        fi

@@ -1,10 +1,11 @@
 # GitLab CI
 
-Owner decision 2026-10-20, confirmed 2026-10-21 (TASK-622): GitLab only builds
-images and deploys. Checks run locally. Pipelines are limited to same-project
-merge requests and default-branch pushes; schedules, tags, web/API starts and
-ordinary branch pushes do not create pipelines. Merge requests offer image
-builds manually and do not deploy.
+Owner decision 2026-10-20, confirmed 2026-10-21 (TASK-622): checks run locally;
+CI deploys. Owner decision 2026-10-28 (TASK-709): images are built locally on
+Mac (`pnpm images:build` via OrbStack Docker buildx) and pushed to the registry
+before deployment. Pipelines are limited to same-project merge requests and
+default-branch pushes; schedules, tags, web/API starts and ordinary branch pushes
+do not create pipelines.
 
 ## Job destinations
 
@@ -20,8 +21,8 @@ builds manually and do not deploy.
 | migrate-reset     | `pnpm db:migrate:reset` on demand: guarded reset followed by explicit full seed.                                                                                |
 | production-build  | `pnpm build` is required local acceptance evidence. Image builds use Dockerfiles directly and never consumed this job's artifacts.                              |
 | renovate          | Operator-triggered local container command below; no scheduled update job in CI.                                                                                |
-| build-images      | GitLab, buildah: four SHA-tagged api/migrate/web/backup images and `image-digests.txt` (30 days).                                                               |
-| deploy-production | GitLab, unchanged conditional manual production deployment.                                                                                                     |
+| build-images      | Local workstation (Mac with OrbStack): `pnpm images:build` builds and pushes `api`, `migrate`, `web`, `backup` tagged with commit SHA.                          |
+| deploy-production | GitLab, conditional manual production deployment; verifies image existence in registry before mutating the cluster.                                             |
 
 ## Local verification
 
@@ -91,40 +92,25 @@ a pre-push side effect. No GitLab project setting or schedule is changed here.
 
 ## Build and deployment
 
-Both retained jobs use `img-build`, `interruptible: false` and their existing
-resource groups. `build-images` builds with the buildah CLI inside the pinned
-`mirror.example.org/all-pub-docker/buildah/stable:v1.43.5@sha256:…` image,
-with `STORAGE_DRIVER=vfs` and `BUILDAH_ISOLATION=chroot`: daemonless, without
-rootless BuildKit, Docker-in-Docker, a Docker socket or privileged job
-capabilities (TASK-709). Every external base image is pulled from the internal
-Docker Hub mirror `mirror.example.org/all-pub-docker`: the job rewrites the
-repository Dockerfiles' `FROM` lines into a job-local copy, so the Dockerfiles
-keep their pinned upstream `tag@sha256` references, and it fails before building
-when an external base image escapes the mirror. Builds use `--format docker`
-because the OCI manifest format drops `HEALTHCHECK`. Registry and web build
-inputs remain fail-closed; the registry credentials live in a job-local auth
-file outside the build context. The image job is always manual and non-blocking
-on default-branch, tag and merge-request pipelines: an operator starts it and a
-schedule never runs it. The four image outputs, digest artifact and production
-environment are unchanged.
+Images are built locally on Mac via OrbStack Docker buildx using `pnpm images:build`
+(TASK-709). The command verifies that the git tree is clean, HEAD is on or in
+`gitlab/main`, required web build parameters (`WR_NEXT_PUBLIC_*`) are set, and the
+target registry is authenticated. It builds all 4 images (`api`, `migrate`, `web`, `backup`),
+tags them with the full commit SHA, and pushes them to the repository image registry.
+Option `--no-push` is available for local testing without registry publication.
+In Lefthook pre-push, `images:build` triggers only when `WR_IMAGES_ON_PUSH=1` is explicitly set.
 
-The runner currently caps the job container at 4 GiB of memory; the probe's web
-build reached that limit, so the memory the build actually needs is not measured
-(the probe's web job later failed on the chown group, not on memory), and a full
-four-image run can still stop on OOM until DevOps raises the limit. No build-side
-workaround (splitting, caching, swap) is added (TASK-709). Whether a full build
-passes on `main` is therefore NOT VERIFIED until that limit changes.
-
-`deploy-production` exists only when a file-type `KUBECONFIG` variable is set and
-needs the variables `HELM_VALUES_FILE` (file), `HELM_NAMESPACE` and
-`HELM_KUBE_CONTEXT`; it fails before any Helm call if one is missing. It looks the
-release up in that context and namespace: only Helm's own release-not-found error
-from `helm history` counts as no release → `helm install --wait=watcher`; a
-`deployed` release → `helm upgrade --wait=watcher` (never `--install`). A history
-error, a successful history with no readable revision, an inconsistent answer or a
-release in another state stops the job. There is no automatic rollback: a failed
-install keeps the release and its volume claims, and an upgrade is fixed forward
-because CI cannot prove schema compatibility. See `docs/kubernetes.md`.
+`deploy-production` runs in GitLab CI using `alpine/helm` on `img-build` runners with
+`interruptible: false` and `resource_group: weeklyreport-production-deploy`.
+It exists only when a file-type `KUBECONFIG` variable is set and needs the variables
+`HELM_VALUES_FILE` (file), `HELM_NAMESPACE` and `HELM_KUBE_CONTEXT`.
+Before executing any Helm command, `deploy-production` queries the registry v2 manifests
+API for all 4 images (`api`, `migrate`, `web`, `backup`) tagged with `$CI_COMMIT_SHA`. If any
+manifest is missing (HTTP != 200), it fails immediately with an informative message.
+Once verified, Helm inspects the release: only Helm's own release-not-found error
+counts as absent release -> `helm install --wait=watcher`; a deployed release ->
+`helm upgrade --wait=watcher`. A history error, inconsistent state or unreadable revision
+stops the job. There is no automatic rollback.
 
 PDF export, browser acceptance and deployment read-back remain separate
 required evidence. Successful image publication proves none of those checks.

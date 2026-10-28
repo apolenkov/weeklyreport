@@ -20,7 +20,6 @@ const REVIEWED_EXTERNAL_IMAGES = new Set([
   "pgvector/pgvector:0.8.7-pg15-bookworm@sha256:47af0b65960b14f1c6945aa4ccae37836c632e9a6fe0eea9160936e616e5b2e9",
   "postgres:16.15-alpine@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab",
   "redis:8.10.3-alpine@sha256:896f241f438ab6a210cfb24f573b84bea721a4cbe67f1b4fd07eb638b3b02a7b",
-  "mirror.example.org/all-pub-docker/buildah/stable:v1.43.5@sha256:87f219f5a7bf5d7bee870253c14a57751e85833cb2cc645216a20bbb66c68724",
 ]);
 
 function assertReviewedExternalImage(path: string, image: string): void {
@@ -164,7 +163,7 @@ test("external image policy rejects moving and mismatched references", () => {
   }
 });
 
-test("GitLab CI builds images only in the gated build-images job", () => {
+test("GitLab CI does not build container images", () => {
   const jobs = parse(read(".gitlab-ci.yml"), { maxAliasCount: 50 }) as Record<
     string,
     { readonly script?: readonly unknown[] } | undefined
@@ -175,13 +174,18 @@ test("GitLab CI builds images only in the gated build-images job", () => {
       /docker/iu,
       `.gitlab-ci.yml:${name} must not be a Docker lane`,
     );
+    assert.notEqual(
+      name,
+      "build-images",
+      `.gitlab-ci.yml must not contain build-images job (images built locally on Mac)`,
+    );
     const builds = JSON.stringify(jobs[name]?.script ?? []).includes(
       "buildah bud",
     );
     assert.equal(
       builds,
-      name === "build-images",
-      `.gitlab-ci.yml:${name}: only build-images may run buildah`,
+      false,
+      `.gitlab-ci.yml:${name}: CI must not run buildah`,
     );
   }
   assert.doesNotMatch(read(".gitlab-ci.yml"), /docker build/u);

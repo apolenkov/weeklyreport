@@ -44,6 +44,7 @@
     "db:seed:verify": "tsx prisma/seeds/profiles/seed-profile-proof.ts",
     "db:reset:hard": "pnpm --filter @weeklyreport/api exec tsx ../../prisma/operations/reset-hard.ts",
     "logs": "tail -f apps/api/.logs/app.log",
+    "images:build": "tsx scripts/build-images.ts",
     "logs:errors": "tail -f apps/api/.logs/app.log | grep -E '\"level\":\"(error|warn)\"'",
     "prepare": "git rev-parse --is-inside-work-tree >/dev/null 2>&1 || exit 0; if [ \"$(git rev-parse --path-format=absolute --git-dir)\" != \"$(git rev-parse --path-format=absolute --git-common-dir)\" ]; then echo \"Skipping Lefthook installation in linked worktree; shared hooks are managed by the main checkout.\"; exit 0; fi; lefthook install",
     "check:push": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm spec:check && pnpm audit:dependencies && pnpm scan:secrets",

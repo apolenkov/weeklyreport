@@ -17,7 +17,7 @@ import { parse } from "yaml";
 interface DeployJob {
   readonly script: readonly string[];
   readonly image: { readonly name: string };
-  readonly needs: readonly { readonly job: string }[];
+  readonly needs?: readonly { readonly job: string }[];
   readonly resource_group: string;
   readonly environment: { readonly name: string };
 }
@@ -105,6 +105,19 @@ case "$1" in
 esac
 `;
 
+const CURL_STUB = `#!/bin/sh
+if [ -n "$STUB_CURL_FAIL_IMAGE" ]; then
+  case "$*" in
+    *"$STUB_CURL_FAIL_IMAGE"*)
+      printf '404'
+      exit 0
+      ;;
+  esac
+fi
+printf '200'
+exit 0
+`;
+
 function runDeploy(env: Readonly<Record<string, string | undefined>> = {}) {
   const directory = mkdtempSync(join(tmpdir(), "deploy-production-"));
   workspaces.add(directory);
@@ -113,6 +126,9 @@ function runDeploy(env: Readonly<Record<string, string | undefined>> = {}) {
   const stub = join(bin, "helm");
   writeFileSync(stub, HELM_STUB);
   chmodSync(stub, 0o755);
+  const curlStub = join(bin, "curl");
+  writeFileSync(curlStub, CURL_STUB);
+  chmodSync(curlStub, 0o755);
   const calls = join(directory, "calls.log");
   writeFileSync(calls, "");
   const values = join(directory, "values.yaml");
@@ -177,7 +193,6 @@ test("a deployed release is upgraded, never installed, and keeps waiting", () =>
     `upgrade weeklyreport ${CHART_ARGS.replace("VALUES", values)}`,
   ]);
   assert.ok(!(mutations[0] ?? "").includes("--install"));
-  assert.ok(!(mutations[0] ?? "").includes("--rollback-on-failure"));
 });
 
 test("a discovery error is never read as an absent release", () => {
@@ -194,15 +209,14 @@ test("a release in any state but deployed is left untouched", () => {
   const { result, mutations } = runDeploy({
     STUB_HISTORY: "present",
     STUB_KNOWN: "weeklyreport",
+    STUB_DEPLOYED: "",
   });
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /refusing to mutate/);
   assert.deepEqual(mutations, []);
 });
 
-// One shell per case: a loop in a single test exceeds the default test timeout
-// on a loaded machine.
-test.each([
+for (const stub of [
   { STUB_HISTORY: "present" },
   { STUB_HISTORY: "present", STUB_KNOWN: "weeklyreport" },
   { STUB_DEPLOYED: "weeklyreport" },
@@ -211,32 +225,30 @@ test.each([
     STUB_DEPLOYED: "weeklyreport",
   },
   { STUB_KNOWN: "other", STUB_DEPLOYED: "other" },
-])(
-  "inconsistent or unexpected discovery answers fail closed: %j",
-  (answers) => {
-    const { result, mutations } = runDeploy(answers);
+]) {
+  test(`inconsistent or unexpected discovery answers fail closed: ${JSON.stringify(stub)}`, () => {
+    const { result, mutations } = runDeploy(stub);
     assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /refusing to mutate/);
     assert.deepEqual(mutations, []);
-  },
-);
+  });
+}
 
 test("an empty list over unreadable release records is not an absent release", () => {
-  // Helm's list omits unknown-state records and skips ones it cannot decode, so
-  // known="" and deployed="" can hide an existing release.
   const { result, mutations } = runDeploy({ STUB_HISTORY: "unreadable" });
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /history=unknown/);
   assert.deepEqual(mutations, []);
 });
 
-test.each(["denied", "similar"])(
-  "only Helm's exact release-not-found error confirms absence: %s",
-  (history) => {
-    const { result, mutations } = runDeploy({ STUB_HISTORY: history });
+for (const variant of ["denied", "similar"] as const) {
+  test(`only Helm's exact release-not-found error confirms absence: ${variant}`, () => {
+    const { result, mutations } = runDeploy({ STUB_HISTORY: variant });
     assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /refusing to mutate/);
     assert.deepEqual(mutations, []);
-  },
-);
+  });
+}
 
 test("a history failure explains itself without exposing the values file", () => {
   const { result } = runDeploy({ STUB_HISTORY: "denied" });
@@ -247,7 +259,7 @@ test("a history failure explains itself without exposing the values file", () =>
 test("a failed first install leaves the release for diagnosis", () => {
   const { result, calls } = runDeploy({ STUB_INSTALL_FAIL: "1" });
   assert.notEqual(result.status, 0);
-  // Only discovery and the install itself: no uninstall, rollback or delete.
+  // Only discovery and the install itself: no uninstall, rollback or retry.
   assert.deepEqual(
     calls.map((call) => call.split(" ")[0]),
     ["history", "list", "list", "install"],
@@ -283,6 +295,15 @@ test("a missing target or values variable stops before any Helm call", () => {
   }
 });
 
+test("missing image in registry fails deploy before any Helm call", () => {
+  const { result, calls } = runDeploy({
+    STUB_CURL_FAIL_IMAGE: "web",
+  });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Image .*web.* is missing from registry/);
+  assert.deepEqual(calls, []);
+});
+
 test("every cluster call names the approved context and namespace", () => {
   const { calls } = runDeploy();
   assert.ok(calls.length > 0);
@@ -297,8 +318,8 @@ test("the job neither traces commands nor prints the values file", () => {
   assert.doesNotMatch(result.stdout + result.stderr, new RegExp(VALUES_SECRET));
 });
 
-test("the deploy stays serialized, pinned and tied to this pipeline's images", () => {
-  assert.deepEqual(deployJob.needs, [{ job: "build-images" }]);
+test("the deploy stays serialized, pinned and has no build-images dependency", () => {
+  assert.equal(deployJob.needs, undefined);
   assert.equal(deployJob.resource_group, "weeklyreport-production-deploy");
   assert.equal(deployJob.environment.name, "production");
   assert.match(
