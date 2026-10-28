@@ -90,7 +90,7 @@ overrides:
   # These are transitive through Prisma, Next.js, and the CSS toolchain.
   find-my-way: ">=9.10.0 <10"
   sharp: ">=0.35.5 <0.36"
-  postcss: ">=8.5.31 <9"
+  postcss: ">=8.5.32 <9"
   # Prisma pins valibot exactly, so the safe current range is enforced here.
   valibot: ">=1.5.0 <2"
   # Prisma 7.10 pins a recursion-vulnerable 7.x; require the cycle-safe major.
