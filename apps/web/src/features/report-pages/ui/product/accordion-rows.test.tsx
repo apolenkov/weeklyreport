@@ -1,11 +1,15 @@
 import "@testing-library/jest-dom/vitest";
 
 import { render, screen } from "@testing-library/react";
+import type { ItemOutcomeEvent, ItemResolution } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
-import type { WeeklyReportRisk } from "../../../report-sections";
+import type {
+  WeeklyReportItem,
+  WeeklyReportRisk,
+} from "../../../report-sections";
 import { RankMark } from "./accordion-row-primitives";
-import { RiskRow } from "./accordion-rows";
+import { ItemRow, RiskRow } from "./accordion-rows";
 
 const risk: WeeklyReportRisk = {
   id: "risk-1",
@@ -53,5 +57,47 @@ describe("RiskRow", () => {
     expect(screen.getByText("Users cannot log in")).toBeInTheDocument();
     expect(screen.getByText("Mitigation")).toBeInTheDocument();
     expect(screen.getByText("Fixing timeout")).toBeInTheDocument();
+  });
+});
+
+describe("ItemRow", () => {
+  it("keeps the Won't do actor and time when the outcome history omits the resolution event", () => {
+    const item: WeeklyReportItem = {
+      id: "item-1",
+      stageLead: "Lead One",
+      stage: "Development",
+      owner: "Lead One",
+      text: "Retire the legacy export",
+      status: "in-progress",
+      resolution: {
+        kind: "wont_do",
+        eventId: "00000000-0000-4000-8000-000000000002",
+        reason: "Replaced by the new export",
+        actorId: "00000000-0000-4000-8000-000000000003",
+        actorName: "Lead Two",
+        occurredAt: "2026-10-20T10:15:00Z",
+        previousState: { status: "in-progress" },
+      } as ItemResolution,
+      outcomeHistory: [
+        {
+          id: "00000000-0000-4000-8000-000000000004",
+          stableId: "00000000-0000-4000-8000-000000000005",
+          outcome: "plan_next",
+          reason: null,
+          actorId: "00000000-0000-4000-8000-000000000006",
+          actorName: "Lead One",
+          occurredAt: "2026-10-19T09:00:00Z",
+        } as ItemOutcomeEvent,
+      ],
+    };
+
+    render(<ItemRow item={item} />);
+
+    expect(
+      screen.getByText(/Planned next step by Lead One/),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Marked Won't do by Lead Two · 2026-10-20 10:15 UTC/),
+    ).toBeInTheDocument();
   });
 });
