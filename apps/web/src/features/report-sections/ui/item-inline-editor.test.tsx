@@ -252,8 +252,16 @@ describe("ItemInlineEditor", () => {
       expect.objectContaining({ status: "planned", pausedReason: null }),
     );
   });
-  it("guards browser unload only while the composer is mounted", () => {
+  it("guards browser unload only while the composer holds unsaved input", async () => {
+    const user = userEvent.setup();
     const { unmount } = render(<ItemInlineEditor {...base} onSave={vi.fn()} />);
+    const pristine = new Event("beforeunload", { cancelable: true });
+    window.dispatchEvent(pristine);
+    expect(pristine.defaultPrevented).toBe(false);
+    await user.type(
+      screen.getByRole("textbox", { name: /Description/ }),
+      "Unsaved result",
+    );
     const pending = new Event("beforeunload", { cancelable: true });
     window.dispatchEvent(pending);
     expect(pending.defaultPrevented).toBe(true);
