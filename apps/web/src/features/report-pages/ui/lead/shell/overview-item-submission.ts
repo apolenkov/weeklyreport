@@ -135,6 +135,7 @@ export function driveOverviewSubmission({
           ...createOverviewComposerState(editor, current.target, null),
           mode: "create",
           target: current.target,
+          seq: current.seq + 1,
         };
       }
       return null;
