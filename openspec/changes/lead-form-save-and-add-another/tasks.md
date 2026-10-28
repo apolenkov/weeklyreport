@@ -11,9 +11,9 @@
 
 - [x] 2.1 Add failing integration tests for `useOverviewItemEditor` and `overview-item-submission.ts` covering success, reset to same unit/week, and focus return. Done in `lead-status-overview.test.tsx` ("Save and add another clears the composer fields and returns focus to the description"); it failed before the composer remount fix. Retention on save error is open in 2.3.
 - [x] 2.2 Wire `addAnother` flag in `overview-item-save.ts` and `overview-item-submission.ts` to reset the composer with fresh draft state and focus for the same unit/week on acknowledgment. The reset advances `seq`, and the Overview editor keys on it so it remounts with the fresh draft store.
-- [ ] 2.3 Verify error scenarios (validation failure and persistence failure) retain user input without closing or resetting the editor. Not yet covered by a test.
+- [x] 2.3 Verify error scenarios (validation failure and persistence failure) retain user input without closing or resetting the editor. Covered by tests in `lead-status-overview.test.tsx` and browser verification.
 
 ## 3. Verification and Gates
 
 - [x] 3.1 Run tests for modified components and verify RED -> GREEN transition.
-- [ ] 3.2 Run repo gates: format:check, lint, typecheck, test, build, spec:check.
+- [x] 3.2 Run repo gates: format:check, lint, typecheck, test, build, spec:check.

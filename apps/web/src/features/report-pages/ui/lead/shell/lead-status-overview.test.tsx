@@ -1700,6 +1700,67 @@ describe("LeadForm Overview", () => {
     expect(screen.getByLabelText(/Description \*/i)).toHaveFocus();
   });
 
+  it("Save and add another validation failure retains input and keeps editor open", async () => {
+    const user = userEvent.setup();
+    const saveDraft = vi.fn();
+    render(
+      <Wrapper saveDraft={saveDraft}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Add item to Payments",
+      }),
+    );
+    // Description left empty; click Save and add another
+    await user.click(
+      screen.getByRole("button", { name: "Save and add another" }),
+    );
+
+    expect(saveDraft).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("form", { name: "Current week update for Payments" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Description is required")).toBeInTheDocument();
+  });
+
+  it("Save and add another persistence failure retains input and keeps editor open", async () => {
+    const user = userEvent.setup();
+    const saveDraft = vi.fn(() =>
+      Promise.reject(new Error("network unavailable")),
+    );
+    render(
+      <Wrapper saveDraft={saveDraft}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Add item to Payments",
+      }),
+    );
+    const description = screen.getByLabelText(/Description \*/i);
+    await user.type(description, "Persistent failure item");
+    await user.click(
+      screen.getByRole("button", { name: "Save and add another" }),
+    );
+
+    expect(
+      await screen.findByText(
+        "Save failed. Your update is still here; try saving again.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("form", { name: "Current week update for Payments" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/Description \*/i)).toHaveValue(
+      "Persistent failure item",
+    );
+  });
+
   it("creates a Next item from the Next cell with Planned progress and restores the cell focus", async () => {
     const user = userEvent.setup();
     const serverItemId = "a0000000-0000-4000-8000-000000000030";
