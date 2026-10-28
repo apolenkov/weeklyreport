@@ -33,21 +33,24 @@ function ItemOutcomeDetails({ item }: { readonly item: WeeklyReportItem }) {
   const events = item.outcomeHistory ?? [];
   const resolution = item.resolution;
   if (events.length === 0 && resolution == null) return null;
+  // The resolution keeps its own audit line whenever history omits its event.
+  const resolutionListed =
+    resolution != null &&
+    events.some((event) => event.id === resolution.eventId);
   return (
     <details className="mt-1.5 text-xs text-[var(--color-muted-foreground)]">
       <summary className="cursor-pointer font-medium text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]">
         Outcome history
       </summary>
       <ul className="mt-1 space-y-1">
-        {events.length > 0 ? (
-          events.map((event) => (
-            <li key={event.id} className="[overflow-wrap:anywhere]">
-              {OUTCOME_LABELS[event.outcome]} by {event.actorName} ·{" "}
-              {auditTimestamp(event.occurredAt)}
-              {event.reason ? ` · ${event.reason}` : ""}
-            </li>
-          ))
-        ) : resolution ? (
+        {events.map((event) => (
+          <li key={event.id} className="[overflow-wrap:anywhere]">
+            {OUTCOME_LABELS[event.outcome]} by {event.actorName} ·{" "}
+            {auditTimestamp(event.occurredAt)}
+            {event.reason ? ` · ${event.reason}` : ""}
+          </li>
+        ))}
+        {resolution != null && !resolutionListed ? (
           <li className="[overflow-wrap:anywhere]">
             Marked Won&apos;t do by {resolution.actorName} ·{" "}
             {auditTimestamp(resolution.occurredAt)}
