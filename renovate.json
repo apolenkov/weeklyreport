@@ -60,9 +60,9 @@
       "allowedVersions": "<7"
     },
     {
-      "description": "2026-10-26 re-reviewed bullmq 6.4.2: terminal-job-removal still reproduces the compiled removeJob-2.js byte-for-byte (sha256 f2acb16fda20ccac200abd5289a8910e48870d454c1577b19bd375ab809bb4b6, name removeJob keys 2), and the Node Redis path only gained a CLIENT INFO helper (6.4.0 adds opt-in realtime relay messaging; 6.4.1/6.4.2 are dependency security patches). The optional relay peers pg/redis/bullmq-otel (unchanged since 6.3.16) pull no production dependency into the lock. Re-review that script before accepting the next bump (TASK-513).",
+      "description": "2026-10-28 re-reviewed bullmq 6.5.0: terminal-job-removal still reproduces the compiled removeJob-2.js byte-for-byte (sha256 f2acb16fda20ccac200abd5289a8910e48870d454c1577b19bd375ab809bb4b6, name removeJob keys 2). 6.5.0 only enforces the node: protocol for built-in module imports (engines.node >=14.18.0, satisfied by Node 26.12.1); the realtime relay and its optional peers pg/redis/bullmq-otel are unchanged. Re-review that script before accepting the next bump (TASK-513).",
       "matchPackageNames": ["bullmq"],
-      "allowedVersions": "6.4.2"
+      "allowedVersions": "6.5.0"
     },
     {
       "description": "TASK-513 G2 recheck 2026-10-25: jsdom 30.1.3 (resolving @asamuzakjp/dom-selector 10.0.5, newer than the 10.0.3 seen on 2026-10-18) still breaks 8 web tests in 6 files that assert toHaveStyle with CSS custom properties (4316/4324 pass, 8 fail) while 30.1.2 keeps the identical tree green; e.g. src/features/slides/ui/slide-article-rows.test.tsx:378, src/features/report-sections/ui/item-card.test.tsx:61, src/features/report-pages/ui/product/product-accordion.test.tsx:343, src/features/report-sections/ui/portfolio/portfolio-overview-table.test.tsx:174, src/features/slides/ui/status-slide-deck.test.tsx:305, src/features/report-pages/ui/product/accordion-rows.test.tsx:28. Evidence: ~/work/handoffs/wr-513/g2/03-web-tests-jsdom-30.1.3.log. Recheck when dom-selector resolves CSS custom properties in computed styles.",
