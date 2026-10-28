@@ -22,7 +22,7 @@ WeeklyReport keeps verification adjacent to the product: unit tests live beside
 their modules, and API database integration tests live under `apps/api/src`.
 Browser and acceptance checks are performed against the running application;
 they are not a separate product surface. The guarded disposable database is
-used only for local and CI verification.
+used only for local verification.
 
 Browser acceptance drives a real browser session against the running app: each
 check names its expected observable consequence before acting and confirms it
