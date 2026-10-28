@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { type RefObject, useId, useRef } from "react";
 
 import {
   type SearchController,
@@ -20,6 +20,7 @@ interface SearchInputProps {
 }
 
 interface SearchComboboxProps {
+  readonly inputRef: RefObject<HTMLInputElement | null>;
   readonly inputId: string;
   readonly resultsId: string;
   readonly activeOptionId: string | undefined;
@@ -33,6 +34,7 @@ interface SearchComboboxProps {
 }
 
 function SearchCombobox({
+  inputRef,
   inputId,
   resultsId,
   activeOptionId,
@@ -46,6 +48,7 @@ function SearchCombobox({
 }: SearchComboboxProps) {
   return (
     <input
+      ref={inputRef}
       id={inputId}
       name="search"
       type="search"
@@ -82,6 +85,7 @@ function useSearchFieldIds() {
 type SearchViewState = Omit<SearchController, "containerRef">;
 
 interface SearchFieldProps {
+  readonly inputRef: RefObject<HTMLInputElement | null>;
   readonly inputId: string;
   readonly resultsId: string;
   readonly expanded: boolean;
@@ -91,6 +95,7 @@ interface SearchFieldProps {
 }
 
 function SearchField({
+  inputRef,
   inputId,
   resultsId,
   expanded,
@@ -107,6 +112,7 @@ function SearchField({
         {label}
       </label>
       <SearchCombobox
+        inputRef={inputRef}
         inputId={inputId}
         resultsId={resultsId}
         activeOptionId={
@@ -129,16 +135,17 @@ function SearchField({
 function SearchResults({
   resultsId,
   search,
+  onRetry,
 }: {
   readonly resultsId: string;
   readonly search: SearchViewState;
+  readonly onRetry: () => void;
 }) {
   const {
     hits,
     activeIndex,
     isError,
     isFetching,
-    retry,
     isViewer,
     setActiveIndex,
     navigateTo,
@@ -151,7 +158,7 @@ function SearchResults({
       activeIndex={activeIndex}
       isError={isError}
       isFetching={isFetching}
-      onRetry={retry}
+      onRetry={onRetry}
       isViewer={isViewer}
       onHoverHit={setActiveIndex}
       onSelectHit={navigateTo}
@@ -164,13 +171,20 @@ export function SearchInput({
   placeholder,
   className,
 }: SearchInputProps) {
+  const inputRef = useRef<HTMLInputElement>(null);
   const { inputId, resultsId } = useSearchFieldIds();
   const { containerRef, ...search } = useSearchController(scope);
   const showResults = search.open && search.enabled;
 
+  const handleRetry = () => {
+    inputRef.current?.focus();
+    search.retry();
+  };
+
   return (
     <div ref={containerRef} className={`relative ${className ?? ""}`}>
       <SearchField
+        inputRef={inputRef}
         inputId={inputId}
         resultsId={resultsId}
         expanded={showResults}
@@ -178,7 +192,13 @@ export function SearchInput({
         label={searchScopeLabel(scope)}
         search={search}
       />
-      {showResults && <SearchResults resultsId={resultsId} search={search} />}
+      {showResults && (
+        <SearchResults
+          resultsId={resultsId}
+          search={search}
+          onRetry={handleRetry}
+        />
+      )}
     </div>
   );
 }

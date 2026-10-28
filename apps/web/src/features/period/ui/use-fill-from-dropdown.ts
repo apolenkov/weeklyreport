@@ -11,7 +11,9 @@ import {
 const PANEL_WIDTH_PX = 340;
 
 const fillPanelPosition = (rect: DOMRect) =>
-  rightAlignedClampedPosition(rect, window.innerWidth, PANEL_WIDTH_PX);
+  rightAlignedClampedPosition(rect, window.innerWidth, PANEL_WIDTH_PX, {
+    viewportHeight: window.innerHeight,
+  });
 
 function useCloseOnEscape(open: boolean, close: () => void) {
   useEffect(() => {
