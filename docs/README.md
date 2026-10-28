@@ -10,7 +10,7 @@ not belong in this directory.
 | `exemplary-code-standard.md` | Current code-quality and maintainability standard.                                                     |
 | `onboarding.md`              | New-contributor guide: setup, development, testing, workflows.                                         |
 | `environment.md`             | Environment precedence and safe contracts for dev, tests, local dependencies, production Helm, and CI. |
-| `gitlab-ci.md`               | GitLab CI lint/test lanes and the gated image build and deploy jobs: job map, database topology.       |
+| `gitlab-ci.md`               | Manual GitLab image build and deploy jobs; where former CI checks run locally.                         |
 | `kubernetes.md`              | Kubernetes delivery: Helm chart install, upgrade, secrets, rollback limits, backup, recovery.          |
 | `operations.md`              | Production runbook: first deploy, health triage, backups and restore, secret rotation, rollback.       |
 | `sdlc.md`                    | Lifecycle control map and fail-closed prerequisites for the first production point.                    |
