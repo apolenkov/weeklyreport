@@ -25,25 +25,46 @@ interface ReportToolbarProps {
 
 const SCROLL_OFFSET_VAR = "--sticky-toolbar-offset";
 const SCROLL_OFFSET_GAP_PX = 16;
+const STICKY_MEDIA_QUERY = "(min-width: 48rem)";
 
 // Keeps anchored/focused targets below the real sticky toolbar height (app.css
-// falls back to 5rem until this measures).
+// falls back to 5rem until this measures). Only active on viewports where
+// sticky positioning applies (md and above / >= 48rem).
 function useStickyScrollOffset(active: boolean) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = ref.current;
     if (!active || !el) return;
     const root = document.documentElement;
-    const update = () =>
-      root.style.setProperty(
-        SCROLL_OFFSET_VAR,
-        `${el.offsetHeight + SCROLL_OFFSET_GAP_PX}px`,
-      );
+    const isSticky = () =>
+      typeof window !== "undefined" && typeof window.matchMedia === "function"
+        ? window.matchMedia(STICKY_MEDIA_QUERY).matches
+        : true;
+    const update = () => {
+      if (isSticky()) {
+        root.style.setProperty(
+          SCROLL_OFFSET_VAR,
+          `${el.offsetHeight + SCROLL_OFFSET_GAP_PX}px`,
+        );
+      } else {
+        root.style.removeProperty(SCROLL_OFFSET_VAR);
+      }
+    };
     update();
     const observer = new ResizeObserver(update);
     observer.observe(el);
+
+    const mql =
+      typeof window !== "undefined" && typeof window.matchMedia === "function"
+        ? window.matchMedia(STICKY_MEDIA_QUERY)
+        : null;
+    mql?.addEventListener("change", update);
+    window.addEventListener("resize", update);
+
     return () => {
       observer.disconnect();
+      mql?.removeEventListener("change", update);
+      window.removeEventListener("resize", update);
       root.style.removeProperty(SCROLL_OFFSET_VAR);
     };
   }, [active]);

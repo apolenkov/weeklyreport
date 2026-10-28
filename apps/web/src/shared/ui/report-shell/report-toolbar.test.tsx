@@ -113,6 +113,71 @@ describe("DocumentActionGroup", () => {
     height.mockRestore();
     vi.unstubAllGlobals();
   });
+
+  it("does not set --sticky-toolbar-offset on narrow viewports (< 48rem) and updates on resize (C5311)", () => {
+    let notify: () => void = () => undefined;
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(cb: () => void) {
+          notify = cb;
+        }
+        observe = () => undefined;
+        disconnect = () => undefined;
+      },
+    );
+    let matchMediaMatches = false;
+    const mediaListeners: ((e: { matches: boolean }) => void)[] = [];
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: matchMediaMatches,
+      media: query,
+      addEventListener: (
+        _ev: string,
+        cb: (e: { matches: boolean }) => void,
+      ) => {
+        mediaListeners.push(cb);
+      },
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+    }));
+
+    const height = vi
+      .spyOn(HTMLElement.prototype, "offsetHeight", "get")
+      .mockReturnValue(108);
+    const root = document.documentElement;
+
+    // Render at mobile (< 48rem / 375px)
+    const { unmount } = render(
+      <ReportToolbar sticky contextControls={<span>Ctx</span>} />,
+    );
+    // At mobile width, sticky toolbar is disabled in CSS, so offset variable must NOT be set
+    expect(root.style.getPropertyValue("--sticky-toolbar-offset")).toBe("");
+
+    // Resize to desktop (>= 48rem)
+    matchMediaMatches = true;
+    for (const listener of mediaListeners) {
+      listener({ matches: true });
+    }
+    notify();
+
+    expect(root.style.getPropertyValue("--sticky-toolbar-offset")).toBe(
+      "124px",
+    );
+
+    // Resize back to mobile (< 48rem)
+    matchMediaMatches = false;
+    for (const listener of mediaListeners) {
+      listener({ matches: false });
+    }
+    notify();
+
+    expect(root.style.getPropertyValue("--sticky-toolbar-offset")).toBe("");
+
+    unmount();
+    height.mockRestore();
+    vi.unstubAllGlobals();
+  });
 });
 
 describe("ReportToolbarCenterLabel (R19)", () => {

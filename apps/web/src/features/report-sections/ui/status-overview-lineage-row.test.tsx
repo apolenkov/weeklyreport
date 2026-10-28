@@ -442,4 +442,15 @@ describe("contextual creation in timeline lanes", () => {
       }),
     ).not.toBeInTheDocument();
   });
+
+  it("omits leading left border on the first timeline cell at md breakpoint (C3013)", () => {
+    const { container } = render(<Rows rows={[row(1)]} />);
+    const lanes = container.querySelectorAll("[data-overview-lineage-lane]");
+    expect(lanes).toHaveLength(3);
+    // First column: Previously planned (previous) is an EmptyLane in this row
+    expect(lanes[0]).toHaveClass("first:md:border-l-0");
+    // Second and third columns: Current (populated) and Next (empty) keep md:border-l
+    expect(lanes[1]).toHaveClass("md:border-l");
+    expect(lanes[2]).toHaveClass("md:border-l");
+  });
 });

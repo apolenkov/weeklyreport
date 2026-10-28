@@ -15,4 +15,4 @@ export const STATUS_OVERVIEW_COLUMNS = [
 
 export const TIMELINE_GRID = "md:grid md:grid-cols-3";
 export const TIMELINE_CELL =
-  "min-w-0 px-4 py-3 md:border-l md:border-[var(--color-border-subtle)]";
+  "min-w-0 px-4 py-3 first:md:border-l-0 md:border-l md:border-[var(--color-border-subtle)]";
