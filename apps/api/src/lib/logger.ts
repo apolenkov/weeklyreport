@@ -165,6 +165,29 @@ function logStreamFor(logDir: string): WriteStream {
   return stream;
 }
 
+// A log call must not throw into business code. A refused write moves the entry
+// to the other standard stream; only when both refuse is there nowhere left to
+// write, and the call still returns.
+function writeStandardStream(
+  preferred: NodeJS.WritableStream,
+  fallback: NodeJS.WritableStream,
+  line: string,
+): void {
+  try {
+    preferred.write(line);
+  } catch (error) {
+    writeQuietly(fallback, `[logger] write failed: ${String(error)}\n${line}`);
+  }
+}
+
+function writeQuietly(stream: NodeJS.WritableStream, text: string): void {
+  try {
+    stream.write(text);
+  } catch {
+    // Both standard streams refused; no channel is left to report through.
+  }
+}
+
 export interface LoggerOptions {
   readonly minLevel?: LogLevel | undefined;
   // Omit to disable file logging.
@@ -296,26 +319,33 @@ class AppLoggerImpl implements AppLogger {
     const formatted = serializeEntry(entry);
 
     if (level === "error") {
-      process.stderr.write(`${formatted}\n`);
+      writeStandardStream(process.stderr, process.stdout, `${formatted}\n`);
     } else {
-      process.stdout.write(`${formatted}\n`);
+      writeStandardStream(process.stdout, process.stderr, `${formatted}\n`);
     }
 
     // Fire-and-forget; a failed write surfaces through flush().
     this.fileSink()?.write(`${formatted}\n`);
 
     // Forward to OTel log provider (no-op when provider not registered).
-    logs.getLogger("weeklyreport-api").emit({
-      body: message,
-      severityNumber: LEVEL_SEVERITY[level],
-      severityText: level,
-      attributes: {
-        ...stripReservedContext(mergedContext),
-        correlationId: entry.correlationId,
-        ...(entry.traceId ? { traceId: entry.traceId } : {}),
-        ...(entry.spanId ? { spanId: entry.spanId } : {}),
-      },
-    });
+    try {
+      logs.getLogger("weeklyreport-api").emit({
+        body: message,
+        severityNumber: LEVEL_SEVERITY[level],
+        severityText: level,
+        attributes: {
+          ...stripReservedContext(mergedContext),
+          correlationId: entry.correlationId,
+          ...(entry.traceId ? { traceId: entry.traceId } : {}),
+          ...(entry.spanId ? { spanId: entry.spanId } : {}),
+        },
+      });
+    } catch (error) {
+      writeQuietly(
+        process.stderr,
+        `[logger] otel emit failed: ${String(error)}\n`,
+      );
+    }
   }
 }
 
