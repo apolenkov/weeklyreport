@@ -77,4 +77,15 @@ describe("HistoryToolbar loading reserve", () => {
       expect(onArchiveChange).toHaveBeenCalledWith(true);
     },
   );
+
+  it("applies focus-within ring styling to the Archive toggle pill label", () => {
+    renderToolbar("lead");
+    const checkbox = screen.getByRole("checkbox", {
+      name: "Show archived reports",
+    });
+    const label = checkbox.closest("label");
+    expect(label).not.toBeNull();
+    expect(label?.className).toContain("focus-within:ring-2");
+    expect(label?.className).toContain("focus-within:ring-[var(--color-ring)]");
+  });
 });
