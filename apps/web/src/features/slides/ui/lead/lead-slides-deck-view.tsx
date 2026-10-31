@@ -118,7 +118,9 @@ export function LeadSlidesDeckView({
       <PortalTargetProvider target={portalTarget}>
         {deck.dialogs}
       </PortalTargetProvider>
-      <div ref={setPortalTarget} className="contents" />
+      {/* `visible` lets dialogs stay painted when the host hides the deck with
+          `invisible` to hold an open editor; it is a no-op otherwise. */}
+      <div ref={setPortalTarget} className="visible contents" />
     </div>
   );
 }
