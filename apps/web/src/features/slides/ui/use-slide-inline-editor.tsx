@@ -41,8 +41,6 @@ interface UseSlideInlineEditorArgs {
 interface SlideInlineEditor {
   readonly onRowActivate?: ((ref: GridRowEditableRef) => void) | undefined;
   readonly dialogs: ReactNode;
-  // An edit dialog or delete confirmation is open, so its draft is unsaved.
-  readonly hasOpenDialog: boolean;
 }
 
 type ActiveRecord = { readonly ref: GridRowEditableRef } | null;
@@ -214,9 +212,6 @@ export function useSlideInlineEditor(
   const commands = useInlineEditCommands(args);
   return {
     onRowActivate: commands.onRowActivate,
-    hasOpenDialog:
-      commands.inlineEditRecord !== null ||
-      commands.pendingDeleteRecord !== null,
     dialogs: (
       <SlideInlineEditorDialogs
         isPending={commands.isPending}
