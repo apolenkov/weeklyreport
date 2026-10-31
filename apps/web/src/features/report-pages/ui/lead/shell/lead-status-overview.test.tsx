@@ -1714,7 +1714,11 @@ describe("LeadForm Overview", () => {
         name: "Add item to Payments",
       }),
     );
-    // Description left empty; click Save and add another
+    // Non-empty input that fails client validation: one character over the
+    // 500-character description limit. The composer must keep it verbatim.
+    const overLimit = "a".repeat(501);
+    await user.click(screen.getByLabelText(/Description \*/i));
+    await user.paste(overLimit);
     await user.click(
       screen.getByRole("button", { name: "Save and add another" }),
     );
@@ -1723,7 +1727,10 @@ describe("LeadForm Overview", () => {
     expect(
       screen.getByRole("form", { name: "Current week update for Payments" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Description is required")).toBeInTheDocument();
+    expect(
+      screen.getByText("Description must be 500 characters or fewer."),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText(/Description \*/i)).toHaveValue(overLimit);
   });
 
   it("Save and add another persistence failure retains input and keeps editor open", async () => {
