@@ -4,8 +4,8 @@
 
 An open Slides inline editor (edit dialog or delete confirmation) MUST NOT be
 closed, and its typed values MUST NOT be discarded, because the lead form leaves
-Slides mode (for example browser Back removing `?mode=slides`). The lead form MUST
-keep the editor's deck mounted but hidden until the editor closes by Save, Delete,
+Slides mode (for example browser Back removing `?mode=slides`, which shows the Overview). The Lead
+page MUST keep the editor's deck mounted but hidden until the editor closes by Save, Delete,
 Cancel or a section change. With no editor open, leaving Slides mode MUST unmount
 the deck.
 
@@ -14,7 +14,7 @@ the deck.
 - **GIVEN** a lead has the Slides risk editor open with unsaved typed text
 - **WHEN** the URL leaves Slides mode through browser Back
 - **THEN** the editor dialog remains open with the typed text
-- **AND** the Report view renders behind it
+- **AND** the Overview renders behind it
 
 #### Scenario: Cancelling after leaving Slides ends the hold
 
