@@ -16,14 +16,16 @@ export function buildLeadLoadHarness(
   } = {},
 ) {
   const section = makeReportSectionFixture();
-  const activeQuery = vi.fn(opts.activeQueryFn ?? (() => section));
+  const activeQuery = vi.fn(
+    opts.activeQueryFn ?? (() => makeReportSectionFixture()),
+  );
   const historyQuery = vi.fn(
     opts.historyQueryFn ?? (() => ({ items: [], nextCursor: null })),
   );
   const sectionQuery = vi.fn(
     opts.byPeriodQueryFn ??
       (() => ({
-        section,
+        section: makeReportSectionFixture(),
         readOnly: false,
         canRequestReopen: false,
         publishedLineage: { itemStableIds: [], decisionStableIds: [] },
@@ -47,15 +49,15 @@ export function buildLeadLoadHarness(
     },
     {
       path: ["leadForm", "statusOverview"],
-      query: {
+      query: () => ({
         current: {
           reportId: section.reportId,
           periodStart: new Date("2026-08-31T00:00:00.000Z"),
           periodEnd: new Date("2026-09-06T00:00:00.000Z"),
-          section,
+          section: makeReportSectionFixture(),
         },
         predecessor: { availability: "unavailable", reason: "no_predecessor" },
-      },
+      }),
     },
     {
       path: ["leadForm", "openWork"],
