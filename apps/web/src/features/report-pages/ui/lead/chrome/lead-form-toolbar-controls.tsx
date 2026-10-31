@@ -19,6 +19,12 @@ import {
 } from "../../../../slides";
 import { LeadReportAssistant } from "../../lead-report-assistant";
 import { CollapseIcon } from "./lead-form-icons";
+import {
+  LEAD_TOOLBAR_CONTROLS_SLOT_CLASS,
+  LEAD_TOOLBAR_PERIOD_CLUSTER_CLASS,
+  LEAD_TOOLBAR_PERIOD_SLOT_CLASS,
+  LEAD_TOOLBAR_ROW_CLASS,
+} from "./lead-form-toolbar-layout";
 import { LeadReportViewModeToggle } from "./lead-report-view-mode-toggle";
 import { RecordVisibilityToggle } from "./visibility/record-visibility-toggle";
 
@@ -63,11 +69,7 @@ export const canShowLeadReportAssistant = (
 // longer fit beside the period cluster; this row keeps both clusters wrapping
 // (and inside the card) until lg.
 function ToolbarClusterRow({ children }: { readonly children: ReactNode }) {
-  return (
-    <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 lg:flex-nowrap">
-      {children}
-    </div>
-  );
+  return <div className={LEAD_TOOLBAR_ROW_CLASS}>{children}</div>;
 }
 
 export function LeadFormToolbarControls({
@@ -95,7 +97,7 @@ export function LeadFormToolbarControls({
       layoutKey="report-context-toolbar"
       contextControls={
         <ToolbarClusterRow>
-          <div className="flex min-w-0 basis-full items-center lg:basis-auto lg:shrink-0">
+          <div className={LEAD_TOOLBAR_PERIOD_SLOT_CLASS}>
             <ToolbarPeriodCluster
               viewModel={viewModel}
               leadSubmittedAt={leadSubmittedAt}
@@ -103,7 +105,7 @@ export function LeadFormToolbarControls({
               onShowArchivePeriodsChange={onShowArchivePeriodsChange}
             />
           </div>
-          <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 lg:ml-auto lg:basis-0 lg:grow lg:justify-end">
+          <div className={LEAD_TOOLBAR_CONTROLS_SLOT_CLASS}>
             {canShowLeadReportAssistant(user?.role) && <LeadReportAssistant />}
             <ToolbarViewCluster
               toolbarVisibility={toolbarVisibility}
@@ -149,7 +151,7 @@ export function LeadOverviewToolbarControls({
       layoutKey="report-context-toolbar"
       contextControls={
         <ToolbarClusterRow>
-          <div className="flex min-w-0 basis-full items-center lg:basis-auto lg:shrink-0">
+          <div className={LEAD_TOOLBAR_PERIOD_SLOT_CLASS}>
             <ToolbarPeriodCluster
               viewModel={viewModel}
               leadSubmittedAt={leadSubmittedAt}
@@ -157,7 +159,7 @@ export function LeadOverviewToolbarControls({
               onShowArchivePeriodsChange={onShowArchivePeriodsChange}
             />
           </div>
-          <div className="flex min-w-0 basis-full flex-wrap items-center gap-1.5 lg:ml-auto lg:basis-0 lg:grow lg:justify-end">
+          <div className={LEAD_TOOLBAR_CONTROLS_SLOT_CLASS}>
             {canShowLeadReportAssistant(user?.role) && <LeadReportAssistant />}
             <RecordVisibilityToggle
               value={toolbarVisibility}
@@ -197,7 +199,7 @@ export function ToolbarPeriodCluster({
   return (
     <div
       data-testid="toolbar-period-cluster"
-      className="flex min-w-0 flex-1 flex-nowrap items-center gap-1.5 lg:flex-none"
+      className={LEAD_TOOLBAR_PERIOD_CLUSTER_CLASS}
     >
       <div className="min-w-0 flex-1 md:flex-none">
         <PeriodNavigator

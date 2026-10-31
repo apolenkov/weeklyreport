@@ -1,6 +1,16 @@
 import { Skeleton } from "@weeklyreport/ui/components/ui/skeleton";
 
+import {
+  REPORT_TOOLBAR_FRAME_STICKY_CLASS,
+  REPORT_TOOLBAR_ROW_CLASS,
+} from "../../../../../shared/ui/report-shell/report-toolbar";
 import { SlideSkeleton } from "../../../../slides";
+import {
+  LEAD_TOOLBAR_CONTROLS_SLOT_CLASS,
+  LEAD_TOOLBAR_PERIOD_CLUSTER_CLASS,
+  LEAD_TOOLBAR_PERIOD_SLOT_CLASS,
+  LEAD_TOOLBAR_ROW_CLASS,
+} from "../chrome/lead-form-toolbar-layout";
 
 const EDIT_SECTION_PLACEHOLDERS = [
   { id: "product-status", rows: 3 },
@@ -11,6 +21,8 @@ const EDIT_SECTION_PLACEHOLDERS = [
   { id: "decisions", rows: 2 },
 ] as const;
 
+// Mirrors ReportTitleBlock: breadcrumb row (min-h-6), h1 (text-2xl), and the
+// subtitle after gap-1 plus mt-1. Sizes track the loaded text rows.
 function HeaderSkeleton({ isSlidesMode }: { readonly isSlidesMode: boolean }) {
   const documentActionsWrapClass = isSlidesMode ? "" : "max-[641px]:basis-full";
   return (
@@ -18,12 +30,13 @@ function HeaderSkeleton({ isSlidesMode }: { readonly isSlidesMode: boolean }) {
       data-testid="lead-skeleton-header"
       data-layout-key="lead-report-header"
       data-layout-stability="position-size"
-      className="flex flex-wrap items-center justify-between gap-4"
+      className="relative flex flex-wrap items-start justify-between gap-4"
     >
       <div className="flex min-w-0 flex-wrap items-center gap-3">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-32" />
-          <Skeleton className="h-4 w-56" />
+        <div className="flex min-w-0 flex-col gap-1">
+          <Skeleton className="h-6 w-56" />
+          <Skeleton className="h-8 w-[6.5rem]" />
+          <Skeleton className="mt-1 h-5 w-[14.5rem]" />
         </div>
         {!isSlidesMode ? (
           <Skeleton className="h-6 w-24 rounded-[var(--radius-pill)]" />
@@ -41,37 +54,48 @@ function HeaderSkeleton({ isSlidesMode }: { readonly isSlidesMode: boolean }) {
   );
 }
 
+// Same frame, row and cluster classes as the loaded ReportToolbar, so the
+// period and controls clusters wrap at the same widths as the loaded page.
+// Placeholder widths follow the loaded controls (desktop labels from lg up).
 function ContextToolbarSkeleton({ isSlidesMode = false } = {}) {
   return (
     <div
       data-testid="lead-skeleton-context-toolbar"
       data-layout-key="report-context-toolbar"
       data-layout-stability="position-size"
-      className="flex min-w-0 flex-wrap items-center justify-start gap-1.5 rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-surface-hover)] px-2 py-1.5 md:sticky md:top-0 md:z-20 md:shadow-md"
+      className={`${REPORT_TOOLBAR_FRAME_STICKY_CLASS} ${REPORT_TOOLBAR_ROW_CLASS} justify-start`}
     >
-      <div data-testid="lead-skeleton-period-cluster" className="contents">
-        <div className="flex min-w-0 max-w-full basis-full items-center gap-1.5 md:basis-auto">
-          <Skeleton className="h-[var(--toolbar-control-h)] w-10 rounded-[var(--radius-pill)]" />
-          <Skeleton className="h-[var(--toolbar-control-h)] w-56 max-w-[55vw] rounded-lg" />
-          <Skeleton className="h-[var(--toolbar-control-h)] w-10 rounded-[var(--radius-pill)]" />
-        </div>
-        <Skeleton className="h-5 w-px" />
-        <Skeleton className="h-[var(--toolbar-control-h)] w-10 rounded-[var(--radius-pill)]" />
-      </div>
-      <div className="grow" aria-hidden="true" />
-      <div data-testid="lead-skeleton-view-cluster" className="contents">
-        <Skeleton className="h-[var(--toolbar-control-h)] w-28 rounded-[var(--radius-pill)]" />
-        <Skeleton className="h-[var(--toolbar-control-h)] w-20 rounded-[var(--radius-pill)]" />
-        <Skeleton className="h-[var(--toolbar-control-h)] w-20 rounded-[var(--radius-pill)]" />
-        {isSlidesMode ? (
+      <div className={LEAD_TOOLBAR_ROW_CLASS}>
+        <div className={LEAD_TOOLBAR_PERIOD_SLOT_CLASS}>
           <div
-            data-testid="lead-skeleton-density-control"
-            className="inline-flex rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] p-1"
+            data-testid="lead-skeleton-period-cluster"
+            className={LEAD_TOOLBAR_PERIOD_CLUSTER_CLASS}
           >
-            <Skeleton className="h-[var(--toolbar-control-h)] w-44 rounded-[var(--radius-pill)]" />
+            <div className="flex min-w-0 flex-1 items-center gap-1.5 md:flex-none">
+              <Skeleton className="h-[var(--toolbar-control-h)] w-10 rounded-[var(--radius-pill)] md:w-[5.75rem]" />
+              <Skeleton className="h-[var(--toolbar-control-h)] min-w-0 flex-1 rounded-lg md:w-[15.5rem] md:flex-none" />
+              <Skeleton className="h-[var(--toolbar-control-h)] w-10 rounded-[var(--radius-pill)] md:w-[4.5rem]" />
+            </div>
+            <Skeleton className="h-5 w-px" />
+            <Skeleton className="h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] rounded-[var(--radius-pill)]" />
           </div>
-        ) : null}
-        <Skeleton className="h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] rounded-[var(--radius-pill)]" />
+        </div>
+        <div className={LEAD_TOOLBAR_CONTROLS_SLOT_CLASS}>
+          <Skeleton className="h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] rounded-[var(--radius-pill)]" />
+          <div data-testid="lead-skeleton-view-cluster" className="contents">
+            <Skeleton className="h-[var(--toolbar-control-h)] w-16 rounded-[var(--radius-pill)] lg:w-48" />
+            <Skeleton className="h-[var(--toolbar-control-h)] w-16 rounded-[var(--radius-pill)] lg:w-40" />
+          </div>
+          {isSlidesMode ? (
+            <div
+              data-testid="lead-skeleton-density-control"
+              className="inline-flex rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-[var(--color-card)] p-1"
+            >
+              <Skeleton className="h-[var(--toolbar-control-h)] w-44 rounded-[var(--radius-pill)]" />
+            </div>
+          ) : null}
+          <Skeleton className="h-[var(--toolbar-control-h)] w-[var(--toolbar-control-h)] rounded-[var(--radius-pill)]" />
+        </div>
       </div>
     </div>
   );
