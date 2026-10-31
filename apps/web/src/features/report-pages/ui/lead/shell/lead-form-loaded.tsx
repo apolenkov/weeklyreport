@@ -88,6 +88,8 @@ interface LeadFormPresentationState {
   readonly density: SlideDensity;
   readonly onDensityChange: (density: SlideDensity) => void;
   readonly slidesFullscreen: FullscreenHandle;
+  readonly slidesEditorOpen: boolean;
+  readonly onSlidesEditorOpenChange: (open: boolean) => void;
 }
 
 function LoadedChrome({
@@ -155,8 +157,11 @@ function LoadedReportContent({
   readonly serverSection: ReportSectionReadModel;
 }) {
   const { data, viewModel, draftActions } = props;
-  if (props.isSlidesMode) {
-    return (
+  // An open Slides editor keeps its deck mounted (held) after Slides mode is
+  // left, e.g. by browser Back, so typed input is not discarded. The deck stays
+  // the first child in both modes so React does not remount it.
+  const deck =
+    props.isSlidesMode || presentation.slidesEditorOpen ? (
       <LeadSlidesClient
         initialReportId={data.targetReportId || props.pinnedReportId || null}
         foreignContent={data.foreignContent}
@@ -168,27 +173,33 @@ function LoadedReportContent({
         visibilityHydrated={data.visibilityHydrated}
         density={presentation.density}
         onDensityChange={presentation.onDensityChange}
+        held={!props.isSlidesMode}
+        onEditorOpenChange={presentation.onSlidesEditorOpenChange}
       />
-    );
-  }
+    ) : null;
   return (
     <>
-      <LeadFormEditSections
-        viewModel={viewModel}
-        actions={draftActions}
-        draftSection={props.draftSection}
-        serverSection={serverSection}
-        groupExpanded={presentation.groupExpanded}
-        unifiedView={data.unifiedView}
-        recordVisibility={data.recordVisibility}
-        visibilityHydrated={data.visibilityHydrated}
-        crossAuthorEntries={data.crossAuthors}
-      />
-      {completion.showCompletionSurface && (
-        <LeadSubmitReadinessSummary
-          readiness={completion.readiness}
-          onSubmit={props.writeActions.handleSubmit}
-        />
+      {deck}
+      {props.isSlidesMode ? null : (
+        <>
+          <LeadFormEditSections
+            viewModel={viewModel}
+            actions={draftActions}
+            draftSection={props.draftSection}
+            serverSection={serverSection}
+            groupExpanded={presentation.groupExpanded}
+            unifiedView={data.unifiedView}
+            recordVisibility={data.recordVisibility}
+            visibilityHydrated={data.visibilityHydrated}
+            crossAuthorEntries={data.crossAuthors}
+          />
+          {completion.showCompletionSurface && (
+            <LeadSubmitReadinessSummary
+              readiness={completion.readiness}
+              onSubmit={props.writeActions.handleSubmit}
+            />
+          )}
+        </>
       )}
     </>
   );
@@ -199,6 +210,7 @@ export function LeadFormLoaded(props: LeadFormLoadedProps) {
   const fullscreenToggleRef = useRef<HTMLButtonElement>(null);
   const [density, onDensityChange] = useState<SlideDensity>("document");
   const [groupExpanded, setGroupExpanded] = useState(true);
+  const [slidesEditorOpen, onSlidesEditorOpenChange] = useState(false);
   const slidesFullscreen = useFullscreen(
     deckRef,
     fullscreenToggleRef,
@@ -212,6 +224,8 @@ export function LeadFormLoaded(props: LeadFormLoadedProps) {
     density,
     onDensityChange,
     slidesFullscreen,
+    slidesEditorOpen,
+    onSlidesEditorOpenChange,
   };
   const completion = useCompletionPresentation({
     autosave: props.autosave,
