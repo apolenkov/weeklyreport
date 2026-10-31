@@ -17,6 +17,11 @@ import {
   STATUS_LABELS,
   TYPE_LABELS,
 } from "./feedback-record-card";
+import {
+  adjacentRecordId,
+  FEEDBACK_LIST_HEADING_ID,
+  focusAfterRemoval,
+} from "./feedback-removal-focus";
 
 async function runAction(
   action: () => Promise<void>,
@@ -104,7 +109,43 @@ function FeedbackScopeNote({ inbox }: { readonly inbox: Inbox }) {
   );
 }
 
+function recordWorkflowActions(inbox: Inbox) {
+  return {
+    onEdit: (id: string, comment: string) =>
+      runAction(
+        () => inbox.editOriginal(id, comment),
+        "Feedback updated.",
+        "Feedback could not be updated.",
+      ),
+    onReply: (id: string, content: string) =>
+      runAction(
+        () => inbox.reply(id, content),
+        "Reply added.",
+        "Reply could not be added.",
+      ),
+    onDismiss: async (id: string, reason: string) => {
+      const adjacent = adjacentRecordId(inbox.items, id);
+      await runAction(
+        () => inbox.dismiss(id, reason),
+        "Feedback dismissed.",
+        "Feedback could not be dismissed.",
+      );
+      focusAfterRemoval([id, adjacent]);
+    },
+    onDelete: async (id: string) => {
+      const adjacent = adjacentRecordId(inbox.items, id);
+      await runAction(
+        () => inbox.deleteFeedback(id),
+        "Feedback deleted.",
+        "Feedback could not be deleted.",
+      );
+      focusAfterRemoval([adjacent]);
+    },
+  };
+}
+
 function FeedbackInboxBody({ inbox }: { readonly inbox: Inbox }) {
+  const recordActions = recordWorkflowActions(inbox);
   const changeStatus = async (id: string, status: FeedbackStatus) => {
     try {
       await inbox.changeStatus(id, status);
@@ -150,34 +191,7 @@ function FeedbackInboxBody({ inbox }: { readonly inbox: Inbox }) {
               item={feedback}
               key={feedback.id}
               onChangeStatus={(id, status) => void changeStatus(id, status)}
-              onEdit={(id, comment) =>
-                runAction(
-                  () => inbox.editOriginal(id, comment),
-                  "Feedback updated.",
-                  "Feedback could not be updated.",
-                )
-              }
-              onReply={(id, content) =>
-                runAction(
-                  () => inbox.reply(id, content),
-                  "Reply added.",
-                  "Reply could not be added.",
-                )
-              }
-              onDismiss={(id, reason) =>
-                runAction(
-                  () => inbox.dismiss(id, reason),
-                  "Feedback dismissed.",
-                  "Feedback could not be dismissed.",
-                )
-              }
-              onDelete={(id) =>
-                runAction(
-                  () => inbox.deleteFeedback(id),
-                  "Feedback deleted.",
-                  "Feedback could not be deleted.",
-                )
-              }
+              {...recordActions}
             />
           ))}
         </div>
@@ -208,7 +222,11 @@ export function ProductFeedbackPage() {
           <MessageSquareText aria-hidden="true" className="size-5" />
         </div>
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-primary)]">
+          <h1
+            id={FEEDBACK_LIST_HEADING_ID}
+            tabIndex={-1}
+            className="text-2xl font-semibold tracking-tight text-[var(--color-primary)]"
+          >
             Feedback
           </h1>
           <p className="mt-1 max-w-[65ch] text-sm text-[var(--color-muted-foreground)]">
