@@ -6,9 +6,9 @@
 
 ## 2. Web
 
-- [ ] 2.1 RED: page test for Dismiss and Delete (next, previous, only record) focus targets.
-- [ ] 2.2 GREEN: Details toggle id, heading id/tabIndex, removal-focus helper wired in the page handlers.
+- [x] 2.1 RED: page test for Dismiss and Delete (next, previous, only record) focus targets.
+- [x] 2.2 GREEN: Details toggle id, heading id/tabIndex, removal-focus helper wired in the page handlers.
 
 ## 3. Verification
 
-- [ ] 3.1 Focused vitest, prettier, eslint and web typecheck on changed files.
+- [x] 3.1 Focused vitest, prettier, eslint and web typecheck on changed files.

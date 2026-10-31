@@ -3,8 +3,7 @@
 ## Why
 
 Round-3 acceptance (C5152) reproduced the head deck changing the slide under the
-reader without any action. With eight slides and the eighth-from-left card
-selected, a refetch that reorders the review-sorted slides (a risk removed from
+reader without any action. With eight slides and the sixth selected (index 5), a refetch that reorders the review-sorted slides (a risk removed from
 another lead's section) kept the same index, so a different lead's slide became
 current and its heading changed. The head deck stores the selected position, not
 the selected slide, while the existing "clamp an out-of-range selected index"
