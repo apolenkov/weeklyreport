@@ -425,7 +425,7 @@ importers:
         specifier: 3.0.0
         version: 3.0.0(@opentelemetry/api@1.10.0)
       '@opentelemetry/semantic-conventions':
-        specifier: ^1.43.0
+        specifier: ^1.44.0
         version: 1.44.0
       '@prisma/adapter-pg':
         specifier: ^7.10.1
@@ -440,10 +440,10 @@ importers:
         specifier: 0.16.1
         version: 0.16.1
       '@sentry/nestjs':
-        specifier: ^11.9.0
+        specifier: ^11.10.0
         version: 11.10.0(@nestjs/common@12.3.2(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@10.2.2))(@nestjs/core@12.3.2)(rollup@4.63.1)(webpack@5.110.1(esbuild@0.28.2)(lightningcss@1.33.0)(postcss@8.5.32))
       '@sentry/opentelemetry':
-        specifier: ^11.9.0
+        specifier: ^11.10.0
         version: 11.10.0(@opentelemetry/api@1.10.0)
       '@trpc/server':
         specifier: 'catalog:'
@@ -467,7 +467,7 @@ importers:
         specifier: ^5.3.0
         version: 5.3.0(supports-color@10.2.2)
       express-rate-limit:
-        specifier: ^8.7.1
+        specifier: ^8.7.2
         version: 8.7.2(express@5.3.0(supports-color@10.2.2))(supports-color@10.2.2)
       helmet:
         specifier: ^8.3.0
@@ -485,7 +485,7 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2(@nestjs/common@12.3.2(reflect-metadata@0.2.2)(rxjs@7.8.2)(supports-color@10.2.2))(@nestjs/core@12.3.2)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       nodemailer:
-        specifier: ^10.2.1
+        specifier: ^10.3.1
         version: 10.3.1
       passport:
         specifier: ^0.7.0
