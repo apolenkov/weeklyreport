@@ -1081,6 +1081,8 @@ void test("report chat questions, clarification, retry and sources stay read-onl
     options: [
       { label: LEAD_FORM_FIXTURE.productName, token: "e2e-resolution-token" },
     ],
+    total: 1,
+    truncated: false,
   });
   await askQuestion();
   await waitText(
