@@ -1,7 +1,4 @@
-import type {
-  PeriodStatus,
-  ReportSectionReadModel,
-} from "@weeklyreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 
 import type {
   LeadOverviewRow,
@@ -31,7 +28,6 @@ import { isSubmittedSection } from "./weekly-report-page-helpers";
 export interface ReportContentProps {
   readonly hasAnyContent: boolean;
   readonly submissionCount: number;
-  readonly periodStatus: PeriodStatus;
   readonly periodLabel: string;
   readonly scope: "product" | "lead";
   // Lead sections for Project Activities; same submitted-only filter as the
@@ -207,7 +203,7 @@ function ReportSectionsSurface({
 // Empty-state keys off FULL content (head-report-visibility), never the
 // submitted count; otherwise review surfaces + submitted-only-filtered accordion.
 export function ReportContent(props: ReportContentProps) {
-  if (!props.hasAnyContent && props.periodStatus !== "published") {
+  if (!props.hasAnyContent) {
     return (
       <ReportEmptyState
         periodLabel={props.periodLabel}

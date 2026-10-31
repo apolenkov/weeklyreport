@@ -21,7 +21,6 @@ const HEAD_REVIEW_MODEL: ReviewModel = {
 const baseProps: ReportContentProps = {
   hasAnyContent: true,
   submissionCount: 3,
-  periodStatus: "published",
   periodLabel: "Jun 8–14, 2026",
   scope: "product",
   activitySections: [],
@@ -66,7 +65,6 @@ describe("ReportContent — Sections heading", () => {
     const { rerender } = render(
       <ReportContent
         {...baseProps}
-        periodStatus="open"
         reviewEnabled
         submittedOnly={false}
         submissionFilter="all"
@@ -87,7 +85,6 @@ describe("ReportContent — Sections heading", () => {
     rerender(
       <ReportContent
         {...baseProps}
-        periodStatus="open"
         reviewEnabled
         submittedOnly={true}
         submissionFilter="submitted"
@@ -110,7 +107,6 @@ describe("ReportContent — Sections heading", () => {
     render(
       <ReportContent
         {...baseProps}
-        periodStatus="open"
         reviewEnabled
         canReviewAny
         reviewModel={{
@@ -129,5 +125,36 @@ describe("ReportContent — Sections heading", () => {
     expect(controlsRow).toHaveClass("flex-nowrap");
     expect(controlsRow).toHaveClass("overflow-x-auto");
     expect(controlsRow).not.toHaveClass("flex-wrap");
+  });
+});
+
+describe("ReportContent — no-content empty state (C5019)", () => {
+  // Read-model shape of a report whose sections have no content.
+  const NO_CONTENT_PROPS: ReportContentProps = {
+    ...baseProps,
+    hasAnyContent: false,
+    submissionCount: 3,
+    accordion: {
+      products: [],
+      leadGroups: [],
+      hasAnyContent: false,
+      draftCount: 0,
+    },
+  };
+
+  it("shows the no-content empty state when no section has content", () => {
+    render(<ReportContent {...NO_CONTENT_PROPS} />);
+
+    expect(screen.getByTestId("empty-report-state")).toBeInTheDocument();
+    expect(
+      screen.getByText("No report content for Jun 8–14, 2026"),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Portfolio Overview")).not.toBeInTheDocument();
+  });
+
+  it("keeps the Portfolio Overview when sections have content", () => {
+    render(<ReportContent {...baseProps} />);
+
+    expect(screen.queryByTestId("empty-report-state")).not.toBeInTheDocument();
   });
 });

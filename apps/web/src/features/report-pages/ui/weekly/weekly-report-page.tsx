@@ -192,7 +192,6 @@ function WeeklyReportBody({
     <ReportContent
       hasAnyContent={page.hasAnyContent}
       submissionCount={page.submitted}
-      periodStatus={page.periodStatus}
       periodLabel={page.periodLabel}
       scope={scope}
       activitySections={page.activitySections}
