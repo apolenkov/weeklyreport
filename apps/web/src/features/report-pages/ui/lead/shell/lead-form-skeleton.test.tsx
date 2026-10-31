@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   REPORT_TOOLBAR_FRAME_STICKY_CLASS,
   REPORT_TOOLBAR_ROW_CLASS,
-} from "../../../../../shared/ui/report-shell/report-toolbar";
+} from "../../../../../shared/ui/report-shell/report-toolbar-layout";
 import { LeadFormEditSections } from "../chrome/lead-form-edit-sections";
 import {
   LEAD_TOOLBAR_CONTROLS_SLOT_CLASS,
