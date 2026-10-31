@@ -70,6 +70,28 @@ log() {
   echo "[backup] $(date -u +%Y-%m-%dT%H:%M:%SZ) $*"
 }
 
+# This script is PID 1 in the backup container. The kernel gives PID 1 no default
+# action for SIGTERM, so without a handler kubelet waits out the grace period and
+# SIGKILLs a dump mid-write. Children therefore run in the background and are
+# awaited, which lets the trap run at once: stop the child, remove the partial
+# this run created, and exit with the conventional signal status.
+child_pid=""
+current_partial=""
+stop_on_signal() {
+  if [ -n "$child_pid" ]; then
+    kill -TERM "$child_pid" 2>/dev/null || true
+    wait "$child_pid" 2>/dev/null || true
+    child_pid=""
+  fi
+  if [ -n "$current_partial" ]; then
+    rm -f "$current_partial"
+  fi
+  log "stopped by signal; exit $1"
+  exit "$1"
+}
+trap 'stop_on_signal 143' TERM
+trap 'stop_on_signal 130' INT
+
 mkdir -p "$BACKUP_DIR"
 
 # One writer per backup directory for the whole process: the CronJob, a manual
@@ -100,11 +122,17 @@ dump_once() {
     return 1
   fi
   target="${BACKUP_DIR}/weeklyreport-${stamp}-${partial##*.}.dump"
+  current_partial="$partial"
 
   # -Fc (custom format) so restores can be selective and parallel; the dump
   # lands in its own private partial and is renamed only on success, so a crashed or
   # truncated run can never be mistaken for a restorable backup.
-  if pg_dump --format=custom --compress=6 --file="$partial" 2>&1; then
+  pg_dump --format=custom --compress=6 --file="$partial" 2>&1 &
+  child_pid=$!
+  wait "$child_pid"
+  dump_status=$?
+  child_pid=""
+  if [ "$dump_status" -eq 0 ]; then
     # mv -n can return success after skipping an existing destination.
     if mv -n "$partial" "$target" && [ ! -e "$partial" ]; then
       log "wrote $(basename "$target") ($(wc -c < "$target") bytes)"
@@ -136,5 +164,9 @@ fi
 while true; do
   dump_once
   # sleep must not inherit the lock: an orphaned sleep would hold it a whole interval.
-  sleep "$backup_interval_seconds" 9>&-
+  # It runs in the background so a TERM is handled without waiting out the interval.
+  sleep "$backup_interval_seconds" 9>&- &
+  child_pid=$!
+  wait "$child_pid"
+  child_pid=""
 done

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import {
   chmodSync,
   mkdirSync,
@@ -50,9 +50,9 @@ interface BackupCommandStubs {
   readonly timeoutMs?: number;
 }
 
-const runBackup = (
+const createBackupFixture = (
   overrides: NodeJS.ProcessEnv,
-  commandStubs: BackupCommandStubs = {},
+  commandStubs: BackupCommandStubs,
 ) => {
   const directory = mkdtempSync(join(tmpdir(), "backup-loop-"));
   fixtureRoots.add(directory);
@@ -72,23 +72,42 @@ const runBackup = (
   for (const [name, body] of Object.entries(commandStubs.additional ?? {})) {
     writeCommandStub(bin, probeLog, name, body);
   }
+  const environment = (
+    extraEnv: NodeJS.ProcessEnv = {},
+  ): NodeJS.ProcessEnv => ({
+    ...process.env,
+    PATH: `${bin}:${path}`,
+    PGHOST: "postgres",
+    PGUSER: "backup",
+    PGPASSWORD: fixtureCredential,
+    PGDATABASE: "weeklyreport",
+    BACKUP_DIR: join(directory, "backups"),
+    BACKUP_INTERVAL_SECONDS: "3600",
+    BACKUP_RETENTION_DAYS: "14",
+    ...overrides,
+    ...extraEnv,
+  });
+  return {
+    directory,
+    environment,
+    probeLog,
+    timeoutMs: commandStubs.timeoutMs ?? 500,
+  };
+};
+
+const runBackup = (
+  overrides: NodeJS.ProcessEnv,
+  commandStubs: BackupCommandStubs = {},
+) => {
+  const { directory, environment, probeLog, timeoutMs } = createBackupFixture(
+    overrides,
+    commandStubs,
+  );
   const runAgain = (extraEnv: NodeJS.ProcessEnv = {}) =>
     spawnSync("/bin/sh", [backupScript], {
-      env: {
-        ...process.env,
-        PATH: `${bin}:${path}`,
-        PGHOST: "postgres",
-        PGUSER: "backup",
-        PGPASSWORD: fixtureCredential,
-        PGDATABASE: "weeklyreport",
-        BACKUP_DIR: join(directory, "backups"),
-        BACKUP_INTERVAL_SECONDS: "3600",
-        BACKUP_RETENTION_DAYS: "14",
-        ...overrides,
-        ...extraEnv,
-      },
+      env: environment(extraEnv),
       encoding: "utf8",
-      timeout: commandStubs.timeoutMs ?? 500,
+      timeout: timeoutMs,
     });
   const result = runAgain();
   let calls = "";
@@ -447,3 +466,120 @@ test("the writer lock is taken before the dump and outlives retention", () => {
   );
   assert.ok(statSync(lock).isFile());
 });
+
+const readProbe = (probeLog: string): string => {
+  try {
+    return readFileSync(probeLog, "utf8");
+  } catch {
+    return "";
+  }
+};
+
+const waitForProbe = async (probeLog: string, name: string): Promise<void> => {
+  const deadline = Date.now() + 5_000;
+  while (!readProbe(probeLog).split("\n").includes(name)) {
+    assert.ok(Date.now() < deadline, `${name} was never called`);
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 20));
+  }
+};
+
+// Runs the script as the process-group leader, the way a signal reaches PID 1.
+// SIGTERM goes to the script alone; the group is killed afterwards so a RED run
+// cannot leave a stub `sleep` behind.
+const sendTermAfterProbe = async (
+  overrides: NodeJS.ProcessEnv,
+  commandStubs: BackupCommandStubs,
+  waitFor: string,
+) => {
+  const { directory, environment, probeLog } = createBackupFixture(
+    overrides,
+    commandStubs,
+  );
+  const child = spawn("/bin/sh", [backupScript], {
+    env: environment(),
+    detached: true,
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  let stderr = "";
+  child.stderr.on("data", (chunk: Buffer) => {
+    stderr += chunk.toString("utf8");
+  });
+  const exited = new Promise<{
+    code: number | null;
+    signal: NodeJS.Signals | null;
+  }>((resolveExit, rejectExit) => {
+    child.once("error", rejectExit);
+    child.once("exit", (code, signal) => {
+      resolveExit({ code, signal });
+    });
+  });
+  let deadline: NodeJS.Timeout | undefined;
+  const expired = new Promise<never>((_, rejectExpired) => {
+    deadline = setTimeout(() => {
+      rejectExpired(new Error("backup did not exit within 5 s of SIGTERM"));
+    }, 5_000);
+  });
+  try {
+    await waitForProbe(probeLog, waitFor);
+    child.kill("SIGTERM");
+    const outcome = await Promise.race([exited, expired]);
+    return {
+      ...outcome,
+      backups: join(directory, "backups"),
+      probeLog,
+      stderr,
+    };
+  } finally {
+    clearTimeout(deadline);
+    try {
+      process.kill(-(child.pid ?? 0), "SIGKILL");
+    } catch {
+      // The group has already exited.
+    }
+  }
+};
+
+const blockingDump = `for argument in "$@"; do
+  case "$argument" in
+    --file=*) output_file="$(printf '%s' "$argument" | sed 's/^--file=//')"; : > "$output_file" ;;
+  esac
+done
+exec /bin/sleep 60`;
+
+test("SIGTERM during a dump exits 143 promptly and removes its partial", async () => {
+  for (const mode of [oneShot, {}]) {
+    const outcome = await sendTermAfterProbe(
+      mode,
+      { pgDump: blockingDump, sleep: "exit 99" },
+      "pg_dump",
+    );
+    assert.equal(
+      outcome.signal,
+      null,
+      `terminated by ${String(outcome.signal)}`,
+    );
+    assert.equal(outcome.code, 143, outcome.stderr);
+    assert.deepEqual(backupEntries(outcome.backups), []);
+  }
+}, 30_000);
+
+test("SIGTERM during the standalone interval exits 143 and keeps the published dump", async () => {
+  const outcome = await sendTermAfterProbe(
+    {},
+    {
+      pgDump: dumpStub(0),
+      sleep: "exec /bin/sleep 60",
+      timeoutMs: 10_000,
+    },
+    "sleep",
+  );
+  assert.equal(outcome.signal, null, `terminated by ${String(outcome.signal)}`);
+  assert.equal(outcome.code, 143, outcome.stderr);
+  const pgDumpCalls = readProbe(outcome.probeLog)
+    .split("\n")
+    .filter((line) => line === "pg_dump").length;
+  assert.equal(pgDumpCalls, 1, "a second pass started after SIGTERM");
+  const files = backupEntries(outcome.backups);
+  assert.equal(files.length, 1);
+  assert.match(files[0] ?? "", /^weeklyreport-.*\.dump$/);
+}, 30_000);
