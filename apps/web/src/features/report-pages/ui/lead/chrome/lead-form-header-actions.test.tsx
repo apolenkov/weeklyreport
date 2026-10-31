@@ -73,6 +73,43 @@ describe("LeadFormHeaderActions", () => {
     expect(screen.queryByRole("button", { name: "Submit" })).toBeNull();
   });
 
+  it.each([
+    { isSubmitted: true, isReadOnly: false, badge: "Submitted" },
+    { isSubmitted: false, isReadOnly: true, badge: "Read-only" },
+  ])(
+    "shows $badge instead of Unsaved update when an open update outlives a locked section",
+    ({ isSubmitted, isReadOnly, badge }) => {
+      render(
+        <LeadFormHeaderActions
+          viewModel={{ ...viewModel, isReadOnly }}
+          writeActions={{
+            fillFromPending: false,
+            handleFillFrom: vi.fn(),
+            reopenPending: false,
+            openReopenDialog: vi.fn(),
+            revokePending: false,
+            handleRevoke: vi.fn(),
+          }}
+          completionActions={{
+            autosave,
+            onSubmit: vi.fn(),
+            onReviewPending: vi.fn(),
+            submitDisabled: false,
+          }}
+          completionSentinelRef={{ current: null }}
+          showCompletionActions
+          isSlidesMode={false}
+          isSubmitted={isSubmitted}
+          isForeignSlidesDeck={false}
+          pendingInput
+        />,
+      );
+
+      expect(screen.getByText(badge)).toBeInTheDocument();
+      expect(screen.queryByText("Unsaved update")).toBeNull();
+    },
+  );
+
   it("hides every mutation affordance on a foreign slides deck", () => {
     const { rerender } = render(
       <LeadFormHeaderActions

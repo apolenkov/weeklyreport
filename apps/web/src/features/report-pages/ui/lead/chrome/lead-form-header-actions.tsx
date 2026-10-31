@@ -194,13 +194,6 @@ function HeaderStatusBadge({
   readonly autosave: HeaderAutosave;
 }) {
   if (!announceAutosave && !isSubmitted && !isReadOnly) return null;
-  if (pendingInput) {
-    return (
-      <span className="text-xs font-medium text-[var(--color-muted-foreground)]">
-        Unsaved update
-      </span>
-    );
-  }
   // Light-teal success badge reads as progress, not a locked signal.
   if (isSubmitted) {
     return (
@@ -214,6 +207,14 @@ function HeaderStatusBadge({
     return (
       <span className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-muted)] px-2.5 py-1 text-xs font-semibold text-[var(--color-muted-foreground)]">
         Read-only
+      </span>
+    );
+  }
+  // A locked section outranks an open update: its badge must not read as editable.
+  if (pendingInput) {
+    return (
+      <span className="text-xs font-medium text-[var(--color-muted-foreground)]">
+        Unsaved update
       </span>
     );
   }
