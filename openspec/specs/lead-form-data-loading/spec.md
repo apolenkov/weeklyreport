@@ -133,11 +133,13 @@ policy MUST continue to report the failure.
 ### Requirement: Required Lead reads expose recoverable terminal outcomes
 
 The Lead form MUST distinguish pending reads from settled failures of the active
-period, by-period section and personal history. A required-read failure MUST show
-persistent recovery without exposing stale editable controls. Retry MUST request
-the failed required reads and MUST NOT refetch successful independent reads.
-Repeated Retry while its request is pending MUST reuse that operation. A retry
-for an earlier report MUST NOT change the recovery state of the current report.
+period, by-period section, personal history, view settings and cross-author
+reads. The view-settings and cross-author reads MUST NOT start before the section
+fetch is enabled. A required-read failure MUST show persistent recovery without
+exposing stale editable controls. Retry MUST request the failed required reads
+and MUST NOT refetch successful independent reads. Repeated Retry while its
+request is pending MUST reuse that operation. A retry for an earlier report MUST
+NOT change the recovery state of the current report.
 
 #### Scenario: A supporting required read fails
 
@@ -158,6 +160,12 @@ for an earlier report MUST NOT change the recovery state of the current report.
 - **GIVEN** report A has a pending retry
 - **WHEN** the lead navigates to report B and A's request later settles
 - **THEN** B's read and recovery state is unaffected by A's completion
+
+#### Scenario: A companion read fails
+
+- **GIVEN** the view-settings or cross-author query fails after the section loaded
+- **WHEN** the error settles
+- **THEN** the Lead editor shows the shared load error with Retry instead of default view settings or an empty cross-author list
 
 ### Requirement: Missing active periods are terminal empty results
 

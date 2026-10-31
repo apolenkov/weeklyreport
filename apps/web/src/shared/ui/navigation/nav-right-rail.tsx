@@ -16,8 +16,9 @@ function shouldRenderDevRoleSwitcher() {
   return webEnv.devRoleSwitcher();
 }
 
-// Skeleton placeholders hold the header width while the session loads, so the
-// rail keeps zero CLS from first paint through auth hydration.
+// Skeleton placeholders hold the toolbar height while the session loads. At
+// 640-1023px the loaded rail is narrower (one slot, not three); the header
+// absorbs that without layout shift (measured CLS 0), so the width is not held.
 function RightRailSkeleton() {
   return (
     <>
