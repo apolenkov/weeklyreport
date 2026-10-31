@@ -70,7 +70,6 @@ export function LeadSlidesDeckView({
   density,
   showDensityControl,
   onDensityChange,
-  held = false,
   selectedIndex,
   onSelect,
 }: {
@@ -81,8 +80,6 @@ export function LeadSlidesDeckView({
   readonly density: SlideDensity;
   readonly showDensityControl: boolean;
   readonly onDensityChange: (next: SlideDensity) => void;
-  // Held: the host left Slides mode with an editor open; only its dialogs render.
-  readonly held?: boolean;
   readonly selectedIndex: number;
   readonly onSelect: (next: number) => void;
 }) {
@@ -103,24 +100,20 @@ export function LeadSlidesDeckView({
     <div
       ref={deckRef}
       tabIndex={-1}
-      className={held ? "contents" : deckSurfaceClass(fullscreen.isFullscreen)}
+      className={deckSurfaceClass(fullscreen.isFullscreen)}
     >
-      {held ? null : (
-        <>
-          <StatusSlideDeck
-            slides={deck.slides}
-            selectedIndex={selectedIndex}
-            onSelect={onSelect}
-            mode="lead"
-            onRowActivate={deck.onRowActivate}
-            toolbar={deckToolbar}
-          />
-          <DeckFullscreenOverlay
-            isFullscreen={fullscreen.isFullscreen}
-            onToggle={fullscreen.onToggle}
-          />
-        </>
-      )}
+      <StatusSlideDeck
+        slides={deck.slides}
+        selectedIndex={selectedIndex}
+        onSelect={onSelect}
+        mode="lead"
+        onRowActivate={deck.onRowActivate}
+        toolbar={deckToolbar}
+      />
+      <DeckFullscreenOverlay
+        isFullscreen={fullscreen.isFullscreen}
+        onToggle={fullscreen.onToggle}
+      />
       {/* Dialogs must portal inside the fullscreened element to stay visible. */}
       <PortalTargetProvider target={portalTarget}>
         {deck.dialogs}

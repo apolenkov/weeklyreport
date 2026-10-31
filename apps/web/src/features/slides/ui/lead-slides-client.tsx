@@ -3,7 +3,6 @@
 import {
   type ReactElement,
   type RefObject,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -34,11 +33,6 @@ interface LeadSlidesClientBaseProps {
   // Lead-form threads one useRecordVisibility instance for Mine vs Everyone; default Mine-only.
   readonly visibilityMode?: "mine" | "everyone";
   readonly visibilityHydrated?: boolean;
-  // Reports whether an inline editor dialog is open, so the host can keep the
-  // deck mounted (held) after it leaves Slides mode instead of discarding it.
-  readonly onEditorOpenChange?: (open: boolean) => void;
-  // Held decks render only their editor dialogs, not the slides themselves.
-  readonly held?: boolean;
 }
 
 type LeadSlidesClientProps =
@@ -149,7 +143,6 @@ function useLeadSlidesDeck({
 
   return {
     slides,
-    hasOpenDialog: inlineEditor.hasOpenDialog,
     dialogs: inlineEditor.dialogs,
     onRowActivate: inlineEditor.onRowActivate,
     showFullscreenControls: !leadSlides.inReportMode,
@@ -177,8 +170,6 @@ export function LeadSlidesClient({
   visibilityHydrated = false,
   density,
   onDensityChange,
-  onEditorOpenChange,
-  held = false,
 }: LeadSlidesClientProps) {
   const [rawSelectedIndex, setSelectedIndex] = useState(0);
   const [internalDensity, setInternalDensity] =
@@ -205,13 +196,8 @@ export function LeadSlidesClient({
     deckRef: externalDeckRef ?? internalDeckRef,
   });
 
-  const editorOpen = deck.hasOpenDialog;
-  useEffect(() => {
-    onEditorOpenChange?.(editorOpen);
-  }, [editorOpen, onEditorOpenChange]);
-
   if (deck.placeholder !== null) {
-    return held ? null : deck.placeholder;
+    return deck.placeholder;
   }
 
   return (
@@ -223,7 +209,6 @@ export function LeadSlidesClient({
       density={activeDensity}
       showDensityControl={showDensityControl}
       onDensityChange={handleDensityChange}
-      held={held}
       selectedIndex={clampSelectedIndex(rawSelectedIndex, deck.slides.length)}
       onSelect={setSelectedIndex}
     />
