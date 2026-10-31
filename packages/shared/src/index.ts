@@ -162,6 +162,7 @@ export {
   adminSnapshotSchema,
   adminUpdatePeriodManualResultSchema,
   adminUpdatePeriodManualSchema,
+  adminUserInputSchema,
   adminUserSchema,
   AI_PROVIDER_TEST_QUEUE_NAME,
   appSettingsSchema,
