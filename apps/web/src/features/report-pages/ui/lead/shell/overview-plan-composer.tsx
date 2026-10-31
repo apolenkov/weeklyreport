@@ -104,7 +104,7 @@ function ComposerActions({
 }
 
 export function OverviewPlanComposer(props: ComposerProps) {
-  useInlineEditUnloadGuard();
+  useInlineEditUnloadGuard(isPlanInputEdited(props.state));
   const firstChoice = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     firstChoice.current?.focus();
