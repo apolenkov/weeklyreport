@@ -2,7 +2,7 @@
 
 ## 1. Specification
 
-- [ ] 1.1 Validate with `pnpm exec openspec validate w503-r3-ifrole-loading-indicator --strict`.
+- [x] 1.1 Validate with `pnpm exec openspec validate w503-r3-ifrole-loading-indicator --strict`.
 
 ## 2. Web
 
