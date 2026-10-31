@@ -91,3 +91,31 @@ section query succeeds. A failed read MUST display the reload failure message.
 - **WHEN** the subsequent section read fails
 - **THEN** the reload failure message is shown without claiming the latest
   version was loaded
+
+### Requirement: An open slide editor survives leaving Slides mode
+
+An open Slides inline editor (edit dialog or delete confirmation) MUST NOT be
+closed, and its typed values MUST NOT be discarded, because the lead form leaves
+Slides mode (for example browser Back removing `?mode=slides`, which shows the Overview). The Lead
+page MUST keep the editor's deck mounted but hidden until the editor closes by Save, Delete,
+Cancel or a section change. With no editor open, leaving Slides mode MUST unmount
+the deck.
+
+#### Scenario: Back from Slides keeps the typed risk edit
+
+- **GIVEN** a lead has the Slides risk editor open with unsaved typed text
+- **WHEN** the URL leaves Slides mode through browser Back
+- **THEN** the editor dialog remains open with the typed text
+- **AND** the Overview renders behind it
+
+#### Scenario: Cancelling after leaving Slides ends the hold
+
+- **GIVEN** the editor was kept open after leaving Slides mode
+- **WHEN** the lead cancels the dialog
+- **THEN** the dialog closes and no Slides deck remains mounted
+
+#### Scenario: Leaving Slides without an editor unmounts the deck
+
+- **GIVEN** no Slides editor is open
+- **WHEN** the URL leaves Slides mode
+- **THEN** the Slides deck is not rendered
