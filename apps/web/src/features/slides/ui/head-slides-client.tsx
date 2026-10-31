@@ -7,8 +7,12 @@ import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-erro
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { buildActivitySlideModel } from "../model/activity-slide-model";
 import { buildProductScopedSlides } from "../model/product-scoped-slides";
+import type { SectionSlideModel } from "../model/section-slide-contracts";
 import { buildSectionSlideModel } from "../model/section-slide-model";
-import { sortSlidesForReview } from "../model/section-slide-pagination";
+import {
+  slideArticleKey,
+  sortSlidesForReview,
+} from "../model/section-slide-pagination";
 import { slidesForDensity } from "../model/slide-density-pagination";
 import { SlideEmptyState } from "./slide-empty-state";
 import { SlideSkeleton } from "./slide-skeleton";
@@ -168,8 +172,16 @@ function slideDeckFallback(
   return null;
 }
 
-function clampSelectedIndex(raw: number, slideCount: number): number {
-  return raw >= 0 && raw < slideCount ? raw : 0;
+// The selected slide is remembered by key, so a refetch that reorders, adds or
+// removes other slides keeps it; an absent key renders the first slide.
+function selectedSlideIndex(
+  slides: readonly SectionSlideModel[],
+  selectedKey: string | null,
+): number {
+  const index = slides.findIndex(
+    (slide) => slideArticleKey(slide) === selectedKey,
+  );
+  return index === -1 ? 0 : index;
 }
 
 export function HeadSlidesClient({
@@ -181,7 +193,7 @@ export function HeadSlidesClient({
   isFullscreen,
   onToggle,
 }: HeadSlidesClientProps = {}) {
-  const [rawSelectedIndex, setSelectedIndex] = useState(0);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   const {
     weeklyQ,
@@ -195,8 +207,7 @@ export function HeadSlidesClient({
     enableActivity,
   });
 
-  // Clamp both stale upper bounds and defensive negative selections at render.
-  const selectedIndex = clampSelectedIndex(rawSelectedIndex, slides.length);
+  const selectedIndex = selectedSlideIndex(slides, selectedKey);
 
   const fallback = slideDeckFallback(
     {
@@ -218,7 +229,10 @@ export function HeadSlidesClient({
     <StatusSlideDeck
       slides={slides}
       selectedIndex={selectedIndex}
-      onSelect={setSelectedIndex}
+      onSelect={(index) => {
+        const slide = slides[index];
+        setSelectedKey(slide === undefined ? null : slideArticleKey(slide));
+      }}
       mode="head"
       deckRef={deckRef}
       fullscreenToggleRef={fullscreenToggleRef}

@@ -21,3 +21,9 @@ export function sortSlidesForReview(
       : left.ownerName.localeCompare(right.ownerName);
   });
 }
+
+// Stable identity of one rendered slide page: the React key of its article and
+// the head deck's remembered selection.
+export function slideArticleKey(slide: SectionSlideModel): string {
+  return `${slide.id}:${String(slide.pageIndex ?? 0)}`;
+}

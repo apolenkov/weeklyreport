@@ -5,6 +5,7 @@ import { type ReactNode, type RefObject, useRef } from "react";
 
 import { useFullscreen } from "../../../shared/hooks/browser/use-fullscreen";
 import type { SectionSlideModel } from "../model/section-slide-contracts";
+import { slideArticleKey } from "../model/section-slide-pagination";
 import {
   DeckFullscreenOverlay,
   DeckToolbarControls,
@@ -29,10 +30,6 @@ interface StatusSlideDeckProps {
   readonly onToggle?: (() => void) | undefined;
   readonly heroControls?: ReactNode | undefined;
   readonly onRowActivate?: SlideRowActivateHandler | undefined;
-}
-
-function slideArticleKey(slide: SectionSlideModel): string {
-  return `${slide.id}:${String(slide.pageIndex ?? 0)}`;
 }
 
 function selectedSlide(
