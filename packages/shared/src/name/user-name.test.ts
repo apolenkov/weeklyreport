@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { adminUserSchema } from "../schemas/admin/report-admin.schema.js";
+import { adminUserSchema } from "../schemas/admin/admin-user.schema.js";
 import {
   composeName,
   initials,

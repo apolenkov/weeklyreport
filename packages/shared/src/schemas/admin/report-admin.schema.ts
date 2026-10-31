@@ -21,7 +21,6 @@ import {
 } from "./reminder-recovery.schema.js";
 
 export { normalizeEmail } from "./admin-snapshot-integrity.js";
-export { adminUserInputSchema, adminUserSchema } from "./admin-user.schema.js";
 export type {
   AdminReminderExecution,
   AdminReminderRule,

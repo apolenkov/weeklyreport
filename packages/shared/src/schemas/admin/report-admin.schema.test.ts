@@ -1,12 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { publishedReportSnapshotSchema } from "../report/report.schema.js";
+import { adminUserInputSchema, adminUserSchema } from "./admin-user.schema.js";
 import {
   adminReportPeriodSchema,
   adminSnapshotRestoreSchema,
   adminSnapshotSchema,
-  adminUserInputSchema,
-  adminUserSchema,
   pdfRecoveryCursorSchema,
   pdfRecoveryJobListSchema,
   pdfRecoveryJobSchema,

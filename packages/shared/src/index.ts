@@ -23,6 +23,10 @@ export * from "./organization/default-reporting-group.js";
 export * from "./period/reopen-window.js";
 export * from "./schemas/admin/action-log.schema.js";
 export {
+  adminUserInputSchema,
+  adminUserSchema,
+} from "./schemas/admin/admin-user.schema.js";
+export {
   type ReminderDispatchResult,
   reminderDispatchResultSchema,
 } from "./schemas/admin/reminder-dispatch.schema.js";
@@ -162,8 +166,6 @@ export {
   adminSnapshotSchema,
   adminUpdatePeriodManualResultSchema,
   adminUpdatePeriodManualSchema,
-  adminUserInputSchema,
-  adminUserSchema,
   AI_PROVIDER_TEST_QUEUE_NAME,
   appSettingsSchema,
   appSettingsUpdateSchema,
