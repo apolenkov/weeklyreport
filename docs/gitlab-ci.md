@@ -45,8 +45,9 @@ uncommitted local files, dependencies and build caches. Full reachable Git
 history and the synthetic HEAD/history controls remain required.
 Run `pnpm check:push` and `pnpm build`, recording the source SHA, command, exit
 status and logs in the external handoff evidence directory. The hook clears Git-local repository variables before checks so temporary Git
-fixtures cannot mutate the calling worktree. Existing CI/agent
-hook skips remain unchanged; a skipped hook is **NOT VERIFIED**. Agents must run
+fixtures cannot mutate the calling worktree. Existing CI
+hook skips remain unchanged; `AGENT_*` variables no longer skip the check
+(only `WR_SKIP_PUSH_CHECKS=1` does), and a skipped hook is **NOT VERIFIED**. Agents must run
 `pnpm check:push` explicitly before publishing.
 
 On the owner's shared host, use `run-checks <worktree> 'pnpm check:push'` so the
