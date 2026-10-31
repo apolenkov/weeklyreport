@@ -1,4 +1,4 @@
-import { adminUserSchema } from "@weeklyreport/shared";
+import { adminUserInputSchema } from "@weeklyreport/shared";
 import { z } from "zod";
 
 import type {
@@ -24,7 +24,7 @@ export interface AdminUsersDeps {
 export function createAdminUsersProcedures(deps: AdminUsersDeps) {
   return {
     saveUser: adminProcedure
-      .input(adminUserSchema)
+      .input(adminUserInputSchema)
       .use(captureMutationAuditInputMiddleware)
       .mutation(({ input, ctx }) =>
         withDomainErrorMapping(() =>
