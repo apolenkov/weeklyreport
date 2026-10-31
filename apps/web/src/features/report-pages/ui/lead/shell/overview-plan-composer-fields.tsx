@@ -1,6 +1,6 @@
 "use client";
 
-import { type RefObject, useEffect, useId, useRef } from "react";
+import { type RefObject, useEffect, useId, useRef, useState } from "react";
 
 import {
   computeEffectiveStageNames,
@@ -48,12 +48,18 @@ function OutcomeDetails({
 }: Pick<ComposerProps, "state" | "onChange">) {
   const id = useId();
   const { fields, editorAtOpen } = state;
+  // Opened once for an unresolved parent; afterwards only the user's own
+  // toggling changes it, so choosing a Parent never collapses the section.
+  const [open, setOpen] = useState(fields.parent.kind === "unresolved");
   const stages =
     fields.parent.kind === "product"
       ? ownedStagesForProject(editorAtOpen.draft.section, fields.parent.id)
       : [];
   return (
-    <details open={fields.parent.kind === "unresolved"}>
+    <details
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+    >
       <summary
         className={`${BUTTON} cursor-pointer py-3 text-[var(--color-primary)]`}
       >

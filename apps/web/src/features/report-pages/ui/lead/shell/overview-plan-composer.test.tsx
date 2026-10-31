@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
@@ -86,6 +86,121 @@ function unloadPrevented(): boolean {
   window.dispatchEvent(event);
   return event.defaultPrevented;
 }
+
+const PRODUCT_ID = "product-1";
+
+const productEditor = {
+  ...editor,
+  draft: {
+    section: {
+      projects: [
+        {
+          projectId: PRODUCT_ID,
+          ownedStages: [{ stageName: "Development" }],
+        },
+      ],
+      activities: [],
+      items: [],
+    } as unknown as ReportSectionReadModel,
+  },
+  view: {
+    viewModel: {
+      products: [{ id: PRODUCT_ID, name: "CRM" }],
+      activityOptions: [],
+    },
+  },
+} as unknown as ReadyEditor;
+
+function openedWithOutcome(state: OverviewPlanState): OverviewPlanState {
+  return { ...state, fields: { ...state.fields, outcome: "done" } };
+}
+
+function parentSection(): HTMLDetailsElement {
+  const details = screen.getByText("Parent and stages").closest("details");
+  if (!details) throw new Error("Parent and stages section is missing");
+  return details;
+}
+
+describe("OverviewPlanComposer parent section", () => {
+  const unresolvedState = () =>
+    openedWithOutcome(
+      createOverviewPlanState(productEditor, model, item, {
+        raw,
+        source: { kind: "current", recordId: "item-1" },
+        mode: "resolve",
+      }),
+    );
+
+  const chosenProductState = (): OverviewPlanState => {
+    const state = unresolvedState();
+    return {
+      ...state,
+      fields: {
+        ...state.fields,
+        parent: { kind: "product", id: PRODUCT_ID },
+        stageNames: ["Development"],
+      },
+    };
+  };
+
+  it("opens the section when the parent is unresolved at mount", () => {
+    render(<OverviewPlanComposer {...composerProps(unresolvedState())} />);
+
+    expect(parentSection().open).toBe(true);
+  });
+
+  it("keeps the section open and shows stages after choosing a Parent", () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <OverviewPlanComposer
+        {...composerProps(unresolvedState(), { onChange })}
+      />,
+    );
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Product" }), {
+      target: { value: `product:${PRODUCT_ID}` },
+    });
+    expect(onChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        parent: { kind: "product", id: PRODUCT_ID },
+      }),
+    );
+
+    rerender(
+      <OverviewPlanComposer
+        {...composerProps(chosenProductState(), { onChange })}
+      />,
+    );
+
+    const details = parentSection();
+    expect(details.open).toBe(true);
+    expect(
+      within(details).getByRole("group", { name: "SDLC Stages" }),
+    ).toBeInTheDocument();
+  });
+
+  it("stays collapsed when the lead collapses it and then chooses a Parent", () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <OverviewPlanComposer
+        {...composerProps(unresolvedState(), { onChange })}
+      />,
+    );
+
+    const details = parentSection();
+    details.open = false;
+    fireEvent(details, new Event("toggle"));
+    expect(details.open).toBe(false);
+
+    rerender(
+      <OverviewPlanComposer
+        {...composerProps(chosenProductState(), { onChange })}
+      />,
+    );
+
+    expect(parentSection().open).toBe(false);
+  });
+});
 
 describe("OverviewPlanComposer unload guard", () => {
   it("does not prompt on unload while the composer is pristine", () => {
