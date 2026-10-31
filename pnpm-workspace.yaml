@@ -95,6 +95,12 @@ overrides:
   valibot: ">=1.5.0 <2"
   # Prisma 7.10 pins a recursion-vulnerable 7.x; require the cycle-safe major.
   deepmerge-ts: ">=8.0.2 <9"
+  # GHSA-g3hv-75wg-m249: glob CLI command injection. Sentry 11.10 still pins
+  # glob 13 through @sentry/bundler-plugins; floor at the patched 14 line, cap below 15.
+  "@sentry/bundler-plugins>glob": ">=14.0.2 <15"
+  # GHSA-3g3m-2fjr-6pw4: minimatch ReDoS. Reached only via glob; floor at the
+  # patched 11 line, cap below 12.
+  "glob>minimatch": ">=11.0.1 <12"
 
 minimumReleaseAgeExclude:
   - lefthook-darwin-arm64@2.2.2
