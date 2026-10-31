@@ -125,11 +125,11 @@ function ArticleSkeleton() {
 export function SlideSkeleton({
   mode = "head",
   announce = true,
-  toolbar = mode === "head" ? "fullscreen" : "density",
+  toolbar,
 }: {
   readonly mode?: "lead" | "head";
   readonly announce?: boolean;
-  readonly toolbar?: "density" | "fullscreen" | "none" | undefined;
+  readonly toolbar: "density" | "fullscreen" | "none";
 }) {
   return (
     <div

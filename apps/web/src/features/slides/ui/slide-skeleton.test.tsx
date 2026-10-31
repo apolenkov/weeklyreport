@@ -7,8 +7,8 @@ import { SlideSkeleton } from "./slide-skeleton";
 
 describe("SlideSkeleton", () => {
   it.each([
-    ["head", undefined, "fullscreen"],
-    ["lead", undefined, "density"],
+    ["head", "fullscreen", "fullscreen"],
+    ["lead", "density", "density"],
     ["head", "none", null],
     ["lead", "none", null],
     ["lead", "fullscreen", "fullscreen"],
@@ -23,14 +23,14 @@ describe("SlideSkeleton", () => {
   });
 
   it("exposes the loading status region with busy state and label", () => {
-    render(<SlideSkeleton />);
+    render(<SlideSkeleton mode="head" toolbar="fullscreen" />);
 
     const status = screen.getByRole("status", { name: "Loading slides" });
     expect(status).toHaveAttribute("aria-busy", "true");
   });
 
   it("mirrors the mobile canvas while retaining desktop column headers", () => {
-    render(<SlideSkeleton />);
+    render(<SlideSkeleton mode="head" toolbar="fullscreen" />);
 
     expect(screen.getByTestId("slide-skeleton-scroll-owner")).toHaveClass(
       "min-w-0",
@@ -65,7 +65,9 @@ describe("SlideSkeleton", () => {
   });
 
   it("renders the head selector in the full-width skeleton layout", () => {
-    const { container } = render(<SlideSkeleton mode="head" />);
+    const { container } = render(
+      <SlideSkeleton mode="head" toolbar="fullscreen" />,
+    );
 
     expect(screen.getByTestId("slide-skeleton-head-carousel")).toBeVisible();
     expect(screen.queryByTestId("slide-skeleton-lead-carousel")).toBeNull();
@@ -81,14 +83,14 @@ describe("SlideSkeleton", () => {
   });
 
   it("renders lead carousel controls instead of head selector cards", () => {
-    render(<SlideSkeleton mode="lead" />);
+    render(<SlideSkeleton mode="lead" toolbar="density" />);
 
     expect(screen.getByTestId("slide-skeleton-lead-carousel")).toBeVisible();
     expect(screen.queryByTestId("slide-skeleton-head-carousel")).toBeNull();
   });
 
   it("can be composed without adding a nested status region", () => {
-    render(<SlideSkeleton announce={false} />);
+    render(<SlideSkeleton announce={false} toolbar="fullscreen" />);
 
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     expect(screen.getByTestId("slide-skeleton")).not.toHaveAttribute(
