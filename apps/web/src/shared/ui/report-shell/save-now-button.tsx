@@ -23,6 +23,9 @@ export interface SaveNowButtonState {
 interface SaveNowButtonProps {
   autosave: SaveNowButtonState;
   readonly retryOnly?: boolean;
+  // The caller owns a conflicting write (e.g. an open update's own Save), so a
+  // generic save would exit silently.
+  readonly disabled?: boolean;
   readonly onFocusedRetryHidden?: () => void;
 }
 
@@ -107,6 +110,7 @@ function useSavedFlash(
 export function SaveNowButton({
   autosave,
   retryOnly = false,
+  disabled = false,
   onFocusedRetryHidden,
 }: SaveNowButtonProps) {
   const { state, isInFlight, forceSave } = autosave;
@@ -144,7 +148,8 @@ export function SaveNowButton({
   }
 
   const isSaving = isInFlight;
-  const isEnabled = (state === "pending" || state === "error") && !isSaving;
+  const isEnabled =
+    (state === "pending" || state === "error") && !isSaving && !disabled;
 
   function handleClick() {
     if (!isEnabled) return;

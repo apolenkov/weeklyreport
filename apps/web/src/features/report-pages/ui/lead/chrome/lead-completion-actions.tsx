@@ -15,6 +15,7 @@ export interface LeadCompletionActionContract {
   readonly pendingReviewCount?: number | undefined;
   readonly onReviewPending: () => void;
   readonly reviewDisabled?: boolean | undefined;
+  readonly saveDisabled?: boolean | undefined;
 }
 
 interface LeadCompletionActionsProps extends LeadCompletionActionContract {
@@ -30,6 +31,7 @@ export function LeadCompletionActions({
   pendingReviewCount = 0,
   onReviewPending,
   reviewDisabled = false,
+  saveDisabled = false,
   label,
   compact = false,
 }: LeadCompletionActionsProps) {
@@ -57,6 +59,7 @@ export function LeadCompletionActions({
       <SaveNowButton
         autosave={autosave}
         retryOnly
+        disabled={saveDisabled}
         onFocusedRetryHidden={focusSubmit}
       />
       {pendingReviewCount > 0 ? (
