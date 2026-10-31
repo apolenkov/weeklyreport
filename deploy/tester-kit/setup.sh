@@ -14,27 +14,45 @@ chmod 700 "$STATE_DIR"
 cd "$STATE_DIR"
 
 rnd() { openssl rand -hex "$1"; }
+# Stops the run with a non-zero exit before any kubectl call. Secret values are never printed.
+fail() { echo "ERROR: $*" >&2; exit 1; }
 
-# Generate secrets and certificates if not present
-[ -f idp.key ] || {
+# Generate secrets and certificates if not present. openssl errors stay on stderr.
+# Files are written under temporary names and renamed only on success, so a failed run
+# never leaves a half-written key pair or secrets.env behind.
+if [ ! -f idp.key ] || [ ! -f idp.crt ]; then
   echo "Generating SAML IdP certificate..."
-  openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -subj /CN=weeklyreport -keyout idp.key -out idp.crt 2>/dev/null
-}
+  openssl req -x509 -newkey rsa:2048 -nodes -days 3650 -subj /CN=weeklyreport -keyout idp.key.tmp -out idp.crt.tmp \
+    || { rm -f idp.key.tmp idp.crt.tmp; fail "could not generate the SAML IdP certificate"; }
+  mv -f idp.key.tmp idp.key
+  mv -f idp.crt.tmp idp.crt
+fi
 
 if [ ! -f secrets.env ]; then
   echo "Generating secrets..."
   umask 077
-  cat > secrets.env <<ENV
-DB_PASSWORD=$(rnd 16)
-AUTH_JWT_SECRET=$(rnd 32)
-PDF_EXPORT_JWT_SECRET=$(rnd 32)
-AI_PROVIDER_CONFIG_ENCRYPTION_KEY=$(rnd 32)
-KC_ADMIN_PASSWORD=$(rnd 12)
-PW_LEAD1=Wr-lead1-$(rnd 4)
-PW_HEAD=Wr-head-$(rnd 4)
-PW_VIEWER=Wr-viewer-$(rnd 4)
-PW_ADMIN=Wr-admin-$(rnd 4)
+  # Every value is computed before the file is written; a failed rand call stops here.
+  DB_PASSWORD=$(rnd 16) || fail "could not generate DB_PASSWORD"
+  AUTH_JWT_SECRET=$(rnd 32) || fail "could not generate AUTH_JWT_SECRET"
+  PDF_EXPORT_JWT_SECRET=$(rnd 32) || fail "could not generate PDF_EXPORT_JWT_SECRET"
+  AI_PROVIDER_CONFIG_ENCRYPTION_KEY=$(rnd 32) || fail "could not generate AI_PROVIDER_CONFIG_ENCRYPTION_KEY"
+  KC_ADMIN_PASSWORD=$(rnd 12) || fail "could not generate KC_ADMIN_PASSWORD"
+  PW_LEAD1="Wr-lead1-$(rnd 4)" || fail "could not generate PW_LEAD1"
+  PW_HEAD="Wr-head-$(rnd 4)" || fail "could not generate PW_HEAD"
+  PW_VIEWER="Wr-viewer-$(rnd 4)" || fail "could not generate PW_VIEWER"
+  PW_ADMIN="Wr-admin-$(rnd 4)" || fail "could not generate PW_ADMIN"
+  cat > secrets.env.tmp <<ENV
+DB_PASSWORD=$DB_PASSWORD
+AUTH_JWT_SECRET=$AUTH_JWT_SECRET
+PDF_EXPORT_JWT_SECRET=$PDF_EXPORT_JWT_SECRET
+AI_PROVIDER_CONFIG_ENCRYPTION_KEY=$AI_PROVIDER_CONFIG_ENCRYPTION_KEY
+KC_ADMIN_PASSWORD=$KC_ADMIN_PASSWORD
+PW_LEAD1=$PW_LEAD1
+PW_HEAD=$PW_HEAD
+PW_VIEWER=$PW_VIEWER
+PW_ADMIN=$PW_ADMIN
 ENV
+  mv -f secrets.env.tmp secrets.env
   echo "✓ Secrets created at $STATE_DIR/secrets.env"
 fi
 
@@ -47,8 +65,9 @@ done
 export APP_ORIGIN KC_ORIGIN
 
 # Generate IDP cert for Kubernetes Secret
-export IDP_CERT_B64=$(openssl x509 -in idp.crt -outform der | base64 | tr -d '\n')
-export IDP_KEY_B64=$(openssl pkcs8 -topk8 -nocrypt -in idp.key -outform der | base64 | tr -d '\n')
+IDP_CERT_B64=$(openssl x509 -in idp.crt -outform der | base64 | tr -d '\n') || fail "could not encode the IdP certificate"
+IDP_KEY_B64=$(openssl pkcs8 -topk8 -nocrypt -in idp.key -outform der | base64 | tr -d '\n') || fail "could not encode the IdP key"
+export IDP_CERT_B64 IDP_KEY_B64
 envsubst < "$HERE/realm.template.json" > realm.json
 printf '%s' "$IDP_CERT_B64" > idp-cert.b64
 # Login theme with role buttons; the passwords come from secrets.env, outside Git.
