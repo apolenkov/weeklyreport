@@ -44,7 +44,7 @@ import { AlertBar } from "./alert-bar";
 
 function mockRole(role: Role | null) {
   if (role === null) {
-    useQueryMock.mockReturnValue({ data: null });
+    useQueryMock.mockReturnValue({ data: null, isPending: false });
     return;
   }
   useQueryMock.mockReturnValue({
@@ -54,6 +54,7 @@ function mockRole(role: Role | null) {
       email: "test@weeklyreport.local",
       role,
     },
+    isPending: false,
   });
 }
 
@@ -297,6 +298,52 @@ describe("AlertBar — role gating", () => {
 
     expect(container).toBeEmptyDOMElement();
   });
+});
+
+describe("AlertBar — auth.me loading placeholder", () => {
+  const PLACEHOLDER = "Checking reminder settings…";
+
+  function mockPending(): void {
+    useQueryMock.mockReturnValue({ data: undefined, isPending: true });
+  }
+
+  it("shows the reminder-settings placeholder for admin while auth.me is pending", () => {
+    mockPending();
+
+    render(<AlertBar {...baseProps} />);
+
+    expect(screen.getByRole("status")).toHaveTextContent(PLACEHOLDER);
+    expect(
+      screen.queryByRole("link", { name: /configure reminders/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("replaces the placeholder with the link once admin is loaded", () => {
+    mockRole("admin");
+
+    render(<AlertBar {...baseProps} />);
+
+    expect(
+      screen.getByRole("link", { name: /configure reminders/i }),
+    ).toBeVisible();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.queryByText(PLACEHOLDER)).not.toBeInTheDocument();
+  });
+
+  it.each(["head", "lead"] as const)(
+    "shows neither the link nor the placeholder for %s once loaded",
+    (role) => {
+      mockRole(role);
+
+      render(<AlertBar {...baseProps} />);
+
+      expect(
+        screen.queryByRole("link", { name: /configure reminders/i }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+      expect(screen.queryByText(PLACEHOLDER)).not.toBeInTheDocument();
+    },
+  );
 });
 
 describe("AlertBar — pending label accuracy", () => {

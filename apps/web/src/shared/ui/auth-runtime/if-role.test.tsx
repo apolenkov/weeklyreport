@@ -24,7 +24,7 @@ import { IfRole } from "./if-role";
 
 function mockMe(role: string | null) {
   if (role === null) {
-    useQueryMock.mockReturnValue({ data: null });
+    useQueryMock.mockReturnValue({ data: null, isPending: false });
     return;
   }
   useQueryMock.mockReturnValue({
@@ -34,6 +34,7 @@ function mockMe(role: string | null) {
       email: "test@weeklyreport.local",
       role,
     },
+    isPending: false,
   });
 }
 
@@ -43,7 +44,7 @@ describe("IfRole — role-guard wrapper", () => {
   });
 
   it("renders nothing while auth.me is still loading (no data yet)", () => {
-    useQueryMock.mockReturnValue({ data: undefined });
+    useQueryMock.mockReturnValue({ data: undefined, isPending: true });
 
     render(
       <IfRole forRole="admin">
@@ -51,6 +52,74 @@ describe("IfRole — role-guard wrapper", () => {
       </IfRole>,
     );
 
+    expect(screen.queryByTestId("gated")).not.toBeInTheDocument();
+  });
+
+  it("renders the loadingFallback while auth.me is pending", () => {
+    useQueryMock.mockReturnValue({ data: undefined, isPending: true });
+
+    render(
+      <IfRole
+        forRole="admin"
+        loadingFallback={<span data-testid="placeholder">loading</span>}
+      >
+        <span data-testid="gated">visible</span>
+      </IfRole>,
+    );
+
+    expect(screen.getByTestId("placeholder")).toBeVisible();
+    expect(screen.queryByTestId("gated")).not.toBeInTheDocument();
+  });
+
+  it("does not render the loadingFallback once auth.me has loaded", () => {
+    mockMe("admin");
+
+    render(
+      <IfRole
+        forRole="admin"
+        loadingFallback={<span data-testid="placeholder">loading</span>}
+      >
+        <span data-testid="gated">visible</span>
+      </IfRole>,
+    );
+
+    expect(screen.getByTestId("gated")).toBeVisible();
+    expect(screen.queryByTestId("placeholder")).not.toBeInTheDocument();
+  });
+
+  it("does not render the loadingFallback when the role gate excludes a loaded session", () => {
+    mockMe("head");
+
+    render(
+      <IfRole
+        forRole="admin"
+        loadingFallback={<span data-testid="placeholder">loading</span>}
+      >
+        <span data-testid="gated">visible</span>
+      </IfRole>,
+    );
+
+    expect(screen.queryByTestId("gated")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("placeholder")).not.toBeInTheDocument();
+  });
+
+  it("does not render the loadingFallback when auth.me errored", () => {
+    useQueryMock.mockReturnValue({
+      data: undefined,
+      isPending: false,
+      isError: true,
+    });
+
+    render(
+      <IfRole
+        forRole="admin"
+        loadingFallback={<span data-testid="placeholder">loading</span>}
+      >
+        <span data-testid="gated">visible</span>
+      </IfRole>,
+    );
+
+    expect(screen.queryByTestId("placeholder")).not.toBeInTheDocument();
     expect(screen.queryByTestId("gated")).not.toBeInTheDocument();
   });
 

@@ -95,7 +95,17 @@ function toastDispatchOutcome({
 
 function ConfigureRemindersLink() {
   return (
-    <IfRole forRole="admin">
+    <IfRole
+      forRole="admin"
+      loadingFallback={
+        <span
+          role="status"
+          className="text-xs text-[var(--color-muted-foreground)]"
+        >
+          Checking reminder settings…
+        </span>
+      }
+    >
       <Link
         href={`${ADMIN_ROUTE}?tab=reminders`}
         className="text-xs font-semibold text-[var(--color-starbucks-accent)] underline-offset-4 hover:underline"
