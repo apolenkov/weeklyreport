@@ -3,7 +3,7 @@
 import "@testing-library/jest-dom/vitest";
 
 import { QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import type {
   ActivityLiveResponse,
   WeeklyReportReadModel,
@@ -103,6 +103,36 @@ describe("head slide period identity with real query enablement", () => {
     expect(live).toHaveBeenCalledOnce();
     expect(deck).toHaveAttribute("data-count", "0");
     expect(deck).not.toHaveTextContent("Current");
+  });
+
+  it("shows the skeleton while stale live activity from another period refetches", async () => {
+    const live = vi.fn(() => new Promise<never>(() => undefined));
+    const { proxy } = createMockTRPC([
+      {
+        path: ["weeklyReport", "get"],
+        query: { status: "active", ...emptyReport() },
+      },
+      { path: ["activity", "live"], query: live },
+    ]);
+    const client = makeQueryClient();
+    client.setQueryData(
+      proxy.activity.live.queryKey(),
+      activity(OTHER_REPORT),
+      {
+        updatedAt: 0,
+      },
+    );
+    render(
+      <QueryClientProvider client={client}>
+        <TRPCProxyContext.Provider value={proxy}>
+          <HeadSlidesClient reportId={SELECTED_REPORT} />
+        </TRPCProxyContext.Provider>
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => expect(live).toHaveBeenCalledOnce());
+    expect(screen.getByTestId("slide-skeleton")).toBeInTheDocument();
+    expect(screen.queryByTestId("deck")).toBeNull();
   });
 
   it.each(["open", "reopened"] as const)(
