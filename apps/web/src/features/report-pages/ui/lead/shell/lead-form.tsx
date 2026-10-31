@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import {
   DraftStageMemoryProvider,
   DraftStageMemoryScopeProvider,
@@ -39,9 +41,11 @@ function LeadFormUnavailable() {
 function LeadFormEditor(
   props: Omit<LeadFormProps, "mode"> & {
     readonly mode: "edit" | "slides";
+    readonly onSlidesEditorOpenChange: (open: boolean) => void;
   },
 ) {
-  const editor = useLeadFormEditor(props);
+  const { onSlidesEditorOpenChange, ...input } = props;
+  const editor = useLeadFormEditor(input);
   if (editor.status === "no-active") {
     return (
       <LeadFormEmptyState
@@ -68,7 +72,11 @@ function LeadFormEditor(
   }
   return (
     <DraftStageMemoryProvider memory={editor.draft.stageMemory}>
-      <LeadFormLoaded key={editor.generation} {...editor.view} />
+      <LeadFormLoaded
+        key={editor.generation}
+        {...editor.view}
+        onSlidesEditorOpenChange={onSlidesEditorOpenChange}
+      />
     </DraftStageMemoryProvider>
   );
 }
@@ -76,13 +84,29 @@ function LeadFormEditor(
 // The stage-memory scope lives above the view switch: Overview and the editor
 // are different branches, but a view switch must not forget the open draft's
 // remembered stage. Keying on the report starts another report empty.
+//
+// Browser Back from Slides gives mode "overview". An open Slides editor holds
+// unsaved typed input, so its branch stays mounted (invisible, as Slides mode)
+// until the editor closes; with none open, the branch unmounts as before. The
+// editor branch keeps one slot in the fragment so React reuses it across the
+// switch, and `invisible` rather than `hidden` keeps the editor's portaled
+// dialogs, which live inside the deck, painted.
 export function LeadForm({ mode = "edit", ...props }: LeadFormProps) {
+  const [slidesEditorOpen, setSlidesEditorOpen] = useState(false);
+  const overview = mode === "overview";
   return (
     <DraftStageMemoryScopeProvider key={props.reportId ?? "current-report"}>
-      {mode === "overview" ? (
-        <LeadStatusOverview {...props} />
-      ) : (
-        <LeadFormEditor {...props} mode={mode} />
+      {overview && <LeadStatusOverview {...props} />}
+      {(!overview || slidesEditorOpen) && (
+        <div
+          className={overview ? "invisible h-0 overflow-hidden" : "contents"}
+        >
+          <LeadFormEditor
+            {...props}
+            mode={overview ? "slides" : mode}
+            onSlidesEditorOpenChange={setSlidesEditorOpen}
+          />
+        </div>
       )}
     </DraftStageMemoryScopeProvider>
   );

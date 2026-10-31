@@ -78,6 +78,8 @@ export interface LeadFormLoadedProps {
   readonly showArchivePeriods: boolean;
   readonly onShowArchivePeriodsChange: (next: boolean) => void;
   readonly unsetOwnStageCount: number;
+  // Lets the host keep an open Slides editor mounted after Slides mode is left.
+  readonly onSlidesEditorOpenChange?: (open: boolean) => void;
 }
 
 interface LeadFormPresentationState {
@@ -168,6 +170,7 @@ function LoadedReportContent({
         visibilityHydrated={data.visibilityHydrated}
         density={presentation.density}
         onDensityChange={presentation.onDensityChange}
+        onEditorOpenChange={props.onSlidesEditorOpenChange}
       />
     );
   }

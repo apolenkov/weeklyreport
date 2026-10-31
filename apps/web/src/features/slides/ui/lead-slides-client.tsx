@@ -3,6 +3,7 @@
 import {
   type ReactElement,
   type RefObject,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -33,6 +34,9 @@ interface LeadSlidesClientBaseProps {
   // Lead-form threads one useRecordVisibility instance for Mine vs Everyone; default Mine-only.
   readonly visibilityMode?: "mine" | "everyone";
   readonly visibilityHydrated?: boolean;
+  // Reports whether an inline editor dialog is open, so the host can keep the
+  // deck mounted after it leaves Slides mode instead of discarding the draft.
+  readonly onEditorOpenChange?: ((open: boolean) => void) | undefined;
 }
 
 type LeadSlidesClientProps =
@@ -143,6 +147,7 @@ function useLeadSlidesDeck({
 
   return {
     slides,
+    hasOpenDialog: inlineEditor.hasOpenDialog,
     dialogs: inlineEditor.dialogs,
     onRowActivate: inlineEditor.onRowActivate,
     showFullscreenControls: !leadSlides.inReportMode,
@@ -170,6 +175,7 @@ export function LeadSlidesClient({
   visibilityHydrated = false,
   density,
   onDensityChange,
+  onEditorOpenChange,
 }: LeadSlidesClientProps) {
   const [rawSelectedIndex, setSelectedIndex] = useState(0);
   const [internalDensity, setInternalDensity] =
@@ -195,6 +201,14 @@ export function LeadSlidesClient({
     showDensityControl,
     deckRef: externalDeckRef ?? internalDeckRef,
   });
+
+  const editorOpen = deck.hasOpenDialog;
+  useEffect(() => {
+    onEditorOpenChange?.(editorOpen);
+    // An unmounted deck has no editor; without this a stale "open" flag would
+    // make the host hold a fresh, closed editor.
+    return () => onEditorOpenChange?.(false);
+  }, [editorOpen, onEditorOpenChange]);
 
   if (deck.placeholder !== null) {
     return deck.placeholder;
