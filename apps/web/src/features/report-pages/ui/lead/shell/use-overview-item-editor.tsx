@@ -20,6 +20,7 @@ import {
 } from "./overview-item-submission";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
 import { useOverviewFocusReturn } from "./use-overview-focus-return";
+import { useOverviewMovedFocus } from "./use-overview-moved-focus";
 import {
   useOverviewCreateOpeners,
   useOverviewEditOpeners,
@@ -40,6 +41,7 @@ export function useOverviewItemEditor(
   const startedAttempt = useRef<number | null>(null);
   const promotionAttempt = useRef<string | null>(null);
   const rememberFocus = useOverviewFocusReturn(dialog !== null);
+  const focusMoved = useOverviewMovedFocus();
 
   useEffect(() => {
     driveOverviewSubmission({
@@ -58,6 +60,7 @@ export function useOverviewItemEditor(
     isReadOnly,
     setDialog,
     rememberFocus,
+    focusMoved,
     resetAttempt: () => {
       startedAttempt.current = null;
     },

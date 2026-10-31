@@ -46,12 +46,22 @@ function setup(
 ) {
   const apply = vi.fn<ReadyEditor["draft"]["apply"]>();
   const setDialog = vi.fn();
+  const focusMoved = vi.fn();
   const build = (isPending: boolean) =>
     ({
       status: "ready",
       generation: "generation-1",
-      view: { viewModel: { isReadOnly: false } },
-      draft: { section: draftSection, apply },
+      view: {
+        viewModel: {
+          isReadOnly: false,
+          ownCurrentWeekItems: [{ id: RECORD_ID, text: "Ship the importer" }],
+          ownNextWeekItems: [],
+          currentUser: { name: "Lead" },
+          products: [],
+          activityOptions: [],
+        },
+      },
+      draft: { section: draftSection, apply, stageMemory: undefined },
       outcomes: { pending: isPending },
     }) as unknown as ReadyEditor;
   const args = (editor: ReadyEditor): OpenersArgs =>
@@ -61,6 +71,7 @@ function setup(
       dialog: null,
       setDialog,
       rememberFocus: vi.fn(),
+      focusMoved,
       resetAttempt: vi.fn(),
     }) as unknown as OpenersArgs;
   const hook = renderHook(
@@ -71,6 +82,7 @@ function setup(
     hook,
     apply,
     setDialog,
+    focusMoved,
     settle: () => act(() => hook.rerender(build(false))),
   };
 }
@@ -119,7 +131,7 @@ describe("useOverviewEditOpeners while an outcome command runs", () => {
   });
 
   it("moves an eligible item directly to next week without opening the editor", () => {
-    const { hook, apply, setDialog } = setup(false);
+    const { hook, apply, setDialog, focusMoved } = setup(false);
 
     hook.result.current.moveItem(item, "next");
 
@@ -133,6 +145,8 @@ describe("useOverviewEditOpeners while an outcome command runs", () => {
       },
     });
     expect(setDialog).not.toHaveBeenCalled();
+    // The item leaves Current, so focus is handed to its Next-lane control.
+    expect(focusMoved).toHaveBeenCalledExactlyOnceWith(item.stableId);
   });
 
   it("queues the direct move behind a running outcome command", async () => {
@@ -158,18 +172,22 @@ describe("useOverviewEditOpeners while an outcome command runs", () => {
         },
       ],
     } as ReportSectionReadModel;
-    const { hook, apply } = setup(false, withNext);
+    const { hook, apply, setDialog, focusMoved } = setup(false, withNext);
 
     hook.result.current.moveItem(item, "next");
 
+    // Collision with an explicit Next keeps the canonical editor path.
     expect(apply).not.toHaveBeenCalled();
+    expect(focusMoved).not.toHaveBeenCalled();
+    expect(setDialog).toHaveBeenCalledOnce();
   });
 
   it("does not move directly to this week", () => {
-    const { hook, apply } = setup(false);
+    const { hook, apply, setDialog } = setup(false);
 
     hook.result.current.moveItem(item, "current");
 
     expect(apply).not.toHaveBeenCalled();
+    expect(setDialog).toHaveBeenCalledOnce();
   });
 });
