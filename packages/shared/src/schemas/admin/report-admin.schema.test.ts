@@ -4,9 +4,9 @@ import { publishedReportSnapshotSchema } from "../report/report.schema.js";
 import {
   adminReportPeriodSchema,
   adminSnapshotRestoreSchema,
+  adminSnapshotSchema,
   adminUserInputSchema,
   adminUserSchema,
-  adminSnapshotSchema,
   pdfRecoveryCursorSchema,
   pdfRecoveryJobListSchema,
   pdfRecoveryJobSchema,
@@ -1086,7 +1086,7 @@ describe("adminUserInputSchema — safe text on write", () => {
   it("rejects a whitespace-only position", () => {
     const result = adminUserInputSchema.safeParse({
       ...user("lead"),
-      position: "   ",
+      position: " ".repeat(3),
     });
     expect(result.success).toBe(false);
   });
@@ -1127,7 +1127,7 @@ describe("adminUserSchema — read contract does not tighten stored values", () 
     const result = adminUserSchema.safeParse({
       ...user("lead"),
       middleName: "Иван\u0000",
-      position: "   ",
+      position: " ".repeat(3),
     });
     expect(result.success).toBe(true);
   });
