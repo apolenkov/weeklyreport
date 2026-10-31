@@ -77,7 +77,7 @@ const runSetup = (failAt: FailAt, existingIdp: boolean) => {
     writeFileSync(join(stateDir, "idp.crt"), "fixture-cert\n");
   }
 
-  const result = spawnSync("bash", [setupScript], {
+  const result = spawnSync("/bin/bash", [setupScript], {
     encoding: "utf8",
     env: {
       PATH: `${bin}:/usr/bin:/bin`,
