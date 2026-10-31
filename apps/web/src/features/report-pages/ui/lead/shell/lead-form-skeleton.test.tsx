@@ -3,7 +3,17 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import {
+  REPORT_TOOLBAR_FRAME_STICKY_CLASS,
+  REPORT_TOOLBAR_ROW_CLASS,
+} from "../../../../../shared/ui/report-shell/report-toolbar";
 import { LeadFormEditSections } from "../chrome/lead-form-edit-sections";
+import {
+  LEAD_TOOLBAR_CONTROLS_SLOT_CLASS,
+  LEAD_TOOLBAR_PERIOD_CLUSTER_CLASS,
+  LEAD_TOOLBAR_PERIOD_SLOT_CLASS,
+  LEAD_TOOLBAR_ROW_CLASS,
+} from "../chrome/lead-form-toolbar-layout";
 import { LeadFormSkeleton } from "./lead-form-skeleton";
 
 vi.mock("../../../../report-sections", () => ({
@@ -150,6 +160,28 @@ describe("LeadFormSkeleton", () => {
     const actions = screen.getByTestId("lead-skeleton-document-actions");
     expect(actions).not.toHaveClass("max-[641px]:basis-full");
     expect(actions.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(3);
+  });
+
+  it("shares the loaded toolbar frame, row and cluster classes", () => {
+    render(<LeadFormSkeleton />);
+
+    const toolbar = screen.getByTestId("lead-skeleton-context-toolbar");
+    expect(toolbar).toHaveClass(
+      ...REPORT_TOOLBAR_FRAME_STICKY_CLASS.split(" "),
+      ...REPORT_TOOLBAR_ROW_CLASS.split(" "),
+    );
+    expect(toolbar.firstElementChild).toHaveClass(
+      ...LEAD_TOOLBAR_ROW_CLASS.split(" "),
+    );
+    expect(
+      screen.getByTestId("lead-skeleton-period-cluster").parentElement,
+    ).toHaveClass(...LEAD_TOOLBAR_PERIOD_SLOT_CLASS.split(" "));
+    expect(screen.getByTestId("lead-skeleton-period-cluster")).toHaveClass(
+      ...LEAD_TOOLBAR_PERIOD_CLUSTER_CLASS.split(" "),
+    );
+    expect(
+      screen.getByTestId("lead-skeleton-view-cluster").parentElement,
+    ).toHaveClass(...LEAD_TOOLBAR_CONTROLS_SLOT_CLASS.split(" "));
   });
 
   it("pairs the loaded edit body with the skeleton layout contract", () => {

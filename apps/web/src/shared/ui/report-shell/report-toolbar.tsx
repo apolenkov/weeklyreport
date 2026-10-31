@@ -7,11 +7,11 @@ const REPORT_TOOLBAR_FRAME_CLASS = `${REPORT_TOOLBAR_FRAME_BASE_CLASS} bg-[var(-
 
 // Sticky opt-in: opaque surface (no /70), shadow, z-20 under NavBar dropdowns
 // (z-30). Both variants share the same frame dimensions and border.
-const REPORT_TOOLBAR_FRAME_STICKY_CLASS = `${REPORT_TOOLBAR_FRAME_BASE_CLASS} bg-[var(--color-surface-hover)] md:sticky md:top-0 md:z-20 md:shadow-md`;
+export const REPORT_TOOLBAR_FRAME_STICKY_CLASS = `${REPORT_TOOLBAR_FRAME_BASE_CLASS} bg-[var(--color-surface-hover)] md:sticky md:top-0 md:z-20 md:shadow-md`;
 
 // Context controls wrap at narrow widths so every action remains visible and
 // keyboard-reachable without creating a second horizontal scroll surface.
-const REPORT_TOOLBAR_ROW_CLASS =
+export const REPORT_TOOLBAR_ROW_CLASS =
   "flex min-w-0 flex-wrap items-center gap-1.5 md:flex-nowrap";
 
 interface ReportToolbarProps {
