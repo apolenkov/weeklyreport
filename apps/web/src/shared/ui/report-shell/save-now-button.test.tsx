@@ -1,4 +1,5 @@
 import { act, render, screen } from "@testing-library/react";
+import { useLayoutEffect } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../icons/action-icons", () => ({
@@ -8,6 +9,26 @@ vi.mock("../icons/action-icons", () => ({
 }));
 
 import { SaveNowButton, type SaveNowButtonState } from "./save-now-button";
+
+// Records the button label of every commit the parent drives. A layout effect
+// runs in the same commit after DOM mutations and before passive effects, so it
+// sees what that commit puts on screen.
+function CommittedLabels({
+  state,
+  frames,
+}: {
+  readonly state: SaveNowButtonState["state"];
+  readonly frames: string[];
+}) {
+  useLayoutEffect(() => {
+    frames.push(
+      document.querySelector("button")?.getAttribute("aria-label") ?? "",
+    );
+  });
+  return (
+    <SaveNowButton autosave={makeSnapshot({ state, isInFlight: false })} />
+  );
+}
 
 type SnapshotFixture = SaveNowButtonState & {
   readonly lastSavedAt: Date | null;
@@ -403,5 +424,21 @@ describe("SaveNowButton", () => {
     expect(btn.disabled).toBe(true);
     btn.click();
     expect(forceSave).not.toHaveBeenCalled();
+  });
+
+  it("commits Retry, not the Saved flash, when a save fails right after success", () => {
+    const frames: string[] = [];
+    const { rerender } = render(
+      <CommittedLabels state="pending" frames={frames} />,
+    );
+    rerender(<CommittedLabels state="saved" frames={frames} />);
+    expect(screen.getByRole("button", { name: "Draft saved" })).toBeDefined();
+
+    rerender(<CommittedLabels state="error" frames={frames} />);
+
+    expect(frames.at(-1)).toBe("Retry saving draft");
+    expect(screen.getByRole("button", { name: "Retry saving draft" })).toBe(
+      screen.getByRole("button"),
+    );
   });
 });
