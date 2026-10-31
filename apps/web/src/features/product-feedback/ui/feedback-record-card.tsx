@@ -14,6 +14,7 @@ import { useState } from "react";
 import type { FeedbackCaptureItem } from "./feedback-capture-evidence";
 import { FeedbackRecordDetails } from "./feedback-record-details";
 import { FeedbackRecordWorkflows } from "./feedback-record-workflows";
+import { detailsToggleId } from "./feedback-removal-focus";
 
 export const STATUS_LABELS: Readonly<Record<FeedbackStatus, string>> = {
   open: "New",
@@ -163,6 +164,7 @@ function CardActionBar({
     <div className="mt-4 flex flex-wrap gap-2 border-t border-[var(--color-border)] pt-4">
       <button
         aria-controls={`feedback-details-${item.id}`}
+        id={detailsToggleId(item.id)}
         className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-[var(--color-border)] px-3 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
         onClick={() => setDetailsOpen((current) => !current)}
         type="button"
