@@ -73,6 +73,14 @@ function useHeadSlideDeck({ reportId, scope, enableActivity }: SlideDeckArgs) {
     },
   );
 
+  // Live activity is keyed without a period, so cached rows of another report
+  // can sit in the cache while the selected period's activity refetches.
+  const activityMismatch =
+    needsActivityFallback &&
+    activityQ.data !== undefined &&
+    weeklyQ.data.status === "active" &&
+    activityQ.data.reportId !== weeklyQ.data.reportId;
+
   const documentSlides = useMemo(() => {
     if (!weeklyQ.data || weeklyQ.data.status === "no-period") return [];
     if (weeklyQ.data.leadSections.length > 0) {
@@ -98,7 +106,13 @@ function useHeadSlideDeck({ reportId, scope, enableActivity }: SlideDeckArgs) {
     [documentSlides],
   );
 
-  return { weeklyQ, activityQ, needsActivityFallback, slides };
+  return {
+    weeklyQ,
+    activityQ,
+    needsActivityFallback,
+    activityMismatch,
+    slides,
+  };
 }
 
 interface SlideDeckState {
@@ -169,12 +183,17 @@ export function HeadSlidesClient({
 }: HeadSlidesClientProps = {}) {
   const [rawSelectedIndex, setSelectedIndex] = useState(0);
 
-  const { weeklyQ, activityQ, needsActivityFallback, slides } =
-    useHeadSlideDeck({
-      reportId,
-      scope,
-      enableActivity,
-    });
+  const {
+    weeklyQ,
+    activityQ,
+    needsActivityFallback,
+    activityMismatch,
+    slides,
+  } = useHeadSlideDeck({
+    reportId,
+    scope,
+    enableActivity,
+  });
 
   // Clamp both stale upper bounds and defensive negative selections at render.
   const selectedIndex = clampSelectedIndex(rawSelectedIndex, slides.length);
@@ -185,7 +204,8 @@ export function HeadSlidesClient({
       isWeeklyError: weeklyQ.isError,
       hasPeriod: !!weeklyQ.data && weeklyQ.data.status !== "no-period",
       needsActivityFallback,
-      isActivityLoading: activityQ.isLoading,
+      isActivityLoading:
+        activityQ.isLoading || (activityMismatch && activityQ.isFetching),
       isActivityError: activityQ.isError,
     },
     isFullscreen !== undefined && onToggle !== undefined
