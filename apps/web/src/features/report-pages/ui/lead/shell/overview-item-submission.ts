@@ -38,22 +38,26 @@ function driveDiscard(
         }
       : current,
   );
-  void editor.draft.savePersisted(discard.token).then((result) => {
-    setDialog((current) => {
-      if (
-        current?.submission?.discard?.token !== discard.token ||
-        current.generation !== dialog.generation
-      )
-        return current;
-      return result.status === "accepted"
-        ? null
-        : {
-            ...current,
-            submission: {
-              ...current.submission,
-              discard: { ...discard, armed: true, failed: true },
-            },
-          };
+  // This effect runs before the autosave hook re-stamps the restored payload,
+  // so the save is deferred until the restore patch has reached the engine.
+  queueMicrotask(() => {
+    void editor.draft.savePersisted(discard.token).then((result) => {
+      setDialog((current) => {
+        if (
+          current?.submission?.discard?.token !== discard.token ||
+          current.generation !== dialog.generation
+        )
+          return current;
+        return result.status === "accepted"
+          ? null
+          : {
+              ...current,
+              submission: {
+                ...current.submission,
+                discard: { ...discard, armed: true, failed: true },
+              },
+            };
+      });
     });
   });
 }

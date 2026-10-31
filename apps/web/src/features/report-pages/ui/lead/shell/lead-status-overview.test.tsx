@@ -2044,6 +2044,45 @@ describe("LeadForm Overview", () => {
     expect(saveDraft).toHaveBeenCalledTimes(2);
   });
 
+  it("sends the restored item text, not the abandoned text, when a failed edit is discarded", async () => {
+    const user = userEvent.setup();
+    const saveDraft = vi.fn(
+      (input: unknown, current: ReportSectionReadModel) => {
+        if (saveDraft.mock.calls.length === 1)
+          return Promise.reject(new Error("failed before commit"));
+        const draft = input as { items: ReportSectionReadModel["items"] };
+        return Promise.resolve({
+          ...current,
+          version: current.version + 1,
+          items: draft.items,
+        });
+      },
+    );
+    render(
+      <Wrapper saveDraft={saveDraft}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Edit item: Current work" }),
+    );
+    const description = screen.getByRole("textbox", { name: /Description/ });
+    await user.clear(description);
+    await user.type(description, "Detached failed text");
+    await user.click(screen.getByRole("button", { name: "Save update" }));
+    await screen.findByText(
+      "Save failed. Your update is still here; try saving again.",
+    );
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Discard" }));
+    await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledTimes(2), {
+      timeout: 1000,
+    });
+    const restoredTexts = JSON.stringify(saveDraft.mock.calls[1]?.[0]);
+    expect(restoredTexts).toContain("Current work");
+    expect(restoredTexts).not.toContain("Detached failed text");
+  });
+
   it("retains detached edit recovery when the restorative write also fails", async () => {
     const user = userEvent.setup();
     const saveDraft = vi.fn(() =>
