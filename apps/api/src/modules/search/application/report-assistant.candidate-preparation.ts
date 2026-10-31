@@ -162,7 +162,12 @@ export const prepareReportAssistantCandidates = async ({
       kind: "terminal",
       outcome:
         resolved.kind === "clarification_required"
-          ? { kind: resolved.kind, options: [...resolved.options] }
+          ? {
+              kind: resolved.kind,
+              options: [...resolved.options],
+              total: resolved.total,
+              truncated: resolved.truncated,
+            }
           : resolved,
       trace: { ...trace, candidateCount: 0 },
     };

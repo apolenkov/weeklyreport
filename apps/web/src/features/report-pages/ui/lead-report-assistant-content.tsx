@@ -115,9 +115,13 @@ function AssistantOutcomeMessage({
 
 function ClarificationOptions({
   options,
+  total,
+  truncated,
   onSelect,
 }: {
   readonly options: readonly ClarificationOption[];
+  readonly total: number;
+  readonly truncated: boolean;
   readonly onSelect: (option: ClarificationOption) => void;
 }) {
   return (
@@ -139,6 +143,12 @@ function ClarificationOptions({
           </Button>
         ))}
       </div>
+      {truncated && (
+        <p className="text-sm text-[var(--color-muted-foreground)]">
+          Showing {options.length} of {total} matches. Refine your question to
+          narrow them down.
+        </p>
+      )}
     </div>
   );
 }
@@ -225,6 +235,8 @@ export function LeadReportAssistantContent({
     return (
       <ClarificationOptions
         options={outcome.options}
+        total={outcome.total}
+        truncated={outcome.truncated}
         onSelect={onClarification}
       />
     );

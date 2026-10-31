@@ -42,12 +42,16 @@ type ResolvedEntityReferences = Readonly<{
   periodIds: readonly string[];
 }>;
 
+/** Clarification options plus the full candidate count before the option limit. */
+export type ClarificationSet = Readonly<{
+  options: readonly ClarificationOption[];
+  total: number;
+  truncated: boolean;
+}>;
+
 export type EntityResolutionOutcome =
   | Readonly<{ kind: "resolved"; references: ResolvedEntityReferences }>
-  | Readonly<{
-      kind: "clarification_required";
-      options: readonly ClarificationOption[];
-    }>
+  | Readonly<{ kind: "clarification_required" } & ClarificationSet>
   | Readonly<{ kind: "no_results" }>;
 
 export type ResolveSearchPlanInput = Readonly<{
@@ -62,18 +66,12 @@ export type ResolveSearchPlanInput = Readonly<{
 
 export type SearchPlanResolutionOutcome =
   | Readonly<{ kind: "resolved"; plan: ResolvedSearchPlan }>
-  | Readonly<{
-      kind: "clarification_required";
-      options: readonly ClarificationOption[];
-    }>
+  | Readonly<{ kind: "clarification_required" } & ClarificationSet>
   | Readonly<{ kind: "no_results" }>;
 
 export type SingleReferenceOutcome =
   | Readonly<{ kind: "resolved"; id: string }>
-  | Readonly<{
-      kind: "clarification_required";
-      options: readonly ClarificationOption[];
-    }>
+  | Readonly<{ kind: "clarification_required" } & ClarificationSet>
   | Readonly<{ kind: "no_results" }>;
 
 export type ReferenceSlot = Readonly<{
