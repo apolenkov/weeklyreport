@@ -161,7 +161,7 @@ describe("WeeklyReportPage visibility states", () => {
     },
   );
 
-  it("keeps the normal layout for an empty published report", async () => {
+  it("shows the empty state for a published report without content", async () => {
     renderWeeklyReportPage({
       ...makeWeeklyReportData("published", {
         portfolioOverview: [],
@@ -170,7 +170,12 @@ describe("WeeklyReportPage visibility states", () => {
       submissionCount: 0,
     });
     await screen.findByRole("button", { name: /reopen period/i });
-    expect(screen.queryByTestId("empty-report-state")).not.toBeInTheDocument();
+    const emptyState = await screen.findByTestId("empty-report-state");
+    expect(emptyState).toHaveTextContent(/no report content for week 16/i);
+    expect(emptyState).toHaveTextContent(
+      "No sections have been submitted for this period.",
+    );
+    expect(screen.queryByText("Portfolio Overview")).not.toBeInTheDocument();
   });
 
   it("hides draft content until Show all and keeps publishing gated", async () => {
