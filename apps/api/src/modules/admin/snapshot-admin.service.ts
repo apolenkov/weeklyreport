@@ -2,6 +2,7 @@ import {
   type AdminSnapshot,
   adminSnapshotSchema,
   type AdminUser,
+  adminUserInputSchema,
   adminUserSchema,
   type AppSettings,
   appSettingsSchema,
@@ -42,7 +43,7 @@ export class SnapshotAdminService {
   }
 
   async upsertUser(user: AdminUser, actorId: string): Promise<AdminSnapshot> {
-    const parsedUser = adminUserSchema.parse(user);
+    const parsedUser = adminUserInputSchema.parse(user);
     if (parsedUser.id === actorId && parsedUser.role !== "admin") {
       throw new AdminSelfLockoutError(SELF_LOCKOUT_MESSAGE);
     }

@@ -4,6 +4,8 @@ import { publishedReportSnapshotSchema } from "../report/report.schema.js";
 import {
   adminReportPeriodSchema,
   adminSnapshotRestoreSchema,
+  adminUserInputSchema,
+  adminUserSchema,
   adminSnapshotSchema,
   pdfRecoveryCursorSchema,
   pdfRecoveryJobListSchema,
@@ -1066,5 +1068,67 @@ describe("PDF export recovery contracts", () => {
         outcome: "queue-not-failed",
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("adminUserInputSchema — safe text on write", () => {
+  it.each(["name", "lastName", "firstName"] as const)(
+    "rejects an invisible-only %s",
+    (field) => {
+      const result = adminUserInputSchema.safeParse({
+        ...user("lead"),
+        [field]: "\u200B",
+      });
+      expect(result.success).toBe(false);
+    },
+  );
+
+  it("rejects a whitespace-only position", () => {
+    const result = adminUserInputSchema.safeParse({
+      ...user("lead"),
+      position: "   ",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a null byte in middleName", () => {
+    const result = adminUserInputSchema.safeParse({
+      ...user("lead"),
+      middleName: "Иван\u0000",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("keeps nullable middleName and position optional", () => {
+    const result = adminUserInputSchema.safeParse({
+      ...user("lead"),
+      middleName: null,
+      position: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("keeps visible multilingual text verbatim", () => {
+    const result = adminUserInputSchema.parse({
+      ...user("lead"),
+      name: "Петров Алексей Иванович",
+      lastName: "Петров",
+      firstName: "Алексей",
+      middleName: "Иванович",
+      position: "Тимлид 👩‍💻",
+    });
+    expect(result.position).toBe("Тимлид 👩‍💻");
+    expect(result.name).toBe("Петров Алексей Иванович");
+  });
+});
+
+describe("adminUserSchema — read contract does not tighten stored values", () => {
+  it("parses a stored user with whitespace-only position and a null byte in middleName", () => {
+    const result = adminUserSchema.safeParse({
+      ...user("lead"),
+      middleName: "Иван\u0000",
+      position: "   ",
+    });
+    expect(result.success).toBe(true);
   });
 });
