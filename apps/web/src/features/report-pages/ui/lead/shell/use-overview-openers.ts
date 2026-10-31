@@ -14,6 +14,7 @@ import type {
 } from "../../../../report-sections";
 import {
   buildConfirmCarriedItemPatch,
+  buildMoveItemPatch,
   buildNextWeekPlanAcknowledgementPatch,
   isSavedNextWeekPlan,
 } from "../../../../report-sections";
@@ -90,6 +91,9 @@ type WhenIdle = (action: (ready: ReadyEditor) => void) => void;
 
 const ACKNOWLEDGEMENT_UNAVAILABLE =
   "This update can no longer be confirmed. Reload the report.";
+const MOVE_UNAVAILABLE =
+  "This update can no longer be moved. Reload the report.";
+const MOVED_TO_NEXT_WEEK_MESSAGE = "Moved to next week";
 
 // Move to next week on a Current occurrence whose saved next step already plans
 // that week only acknowledges the plan: the record, its result and its
@@ -116,6 +120,31 @@ function acknowledgeSavedNextWeekPlan(
     }
     ready.draft.apply(patch);
     toast.success(NEXT_WEEK_PLAN_CONFIRMED_MESSAGE);
+  });
+  return true;
+}
+
+// Moving a Current occurrence to Next needs no input: apply the placement patch
+// through the ordinary draft save. Null patches (a saved next step, a Next of
+// the same stableId, a finished item) keep the canonical editor path.
+function applyDirectMoveToNext(
+  whenIdle: WhenIdle,
+  section: ReportSectionReadModel,
+  item: StatusOverviewItem,
+  target: "current" | "next",
+): boolean {
+  const recordId = item.recordId;
+  if (target !== "next" || recordId === null) return false;
+  if (buildMoveItemPatch(section, recordId, target) === null) return false;
+  whenIdle((ready) => {
+    // The draft may have changed while an outcome command held the editor.
+    const patch = buildMoveItemPatch(ready.draft.section, recordId, target);
+    if (patch === null) {
+      toast.error(MOVE_UNAVAILABLE);
+      return;
+    }
+    ready.draft.apply(patch);
+    toast.success(MOVED_TO_NEXT_WEEK_MESSAGE);
   });
   return true;
 }
@@ -180,6 +209,8 @@ export function useOverviewEditOpeners({
     if (
       acknowledgeSavedNextWeekPlan(whenIdle, editor.draft.section, item, target)
     )
+      return;
+    if (applyDirectMoveToNext(whenIdle, editor.draft.section, item, target))
       return;
     const move = overviewMoveEditorItem(
       editor,

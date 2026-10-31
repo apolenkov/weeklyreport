@@ -40,7 +40,10 @@ const item = {
   editTarget: { source: "current", recordId: RECORD_ID },
 } as unknown as StatusOverviewItem;
 
-function setup(pending: boolean) {
+function setup(
+  pending: boolean,
+  draftSection: ReportSectionReadModel = section,
+) {
   const apply = vi.fn<ReadyEditor["draft"]["apply"]>();
   const setDialog = vi.fn();
   const build = (isPending: boolean) =>
@@ -48,7 +51,7 @@ function setup(pending: boolean) {
       status: "ready",
       generation: "generation-1",
       view: { viewModel: { isReadOnly: false } },
-      draft: { section, apply },
+      draft: { section: draftSection, apply },
       outcomes: { pending: isPending },
     }) as unknown as ReadyEditor;
   const args = (editor: ReadyEditor): OpenersArgs =>
@@ -113,5 +116,60 @@ describe("useOverviewEditOpeners while an outcome command runs", () => {
 
     settle();
     await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
+  });
+
+  it("moves an eligible item directly to next week without opening the editor", () => {
+    const { hook, apply, setDialog } = setup(false);
+
+    hook.result.current.moveItem(item, "next");
+
+    expect(apply).toHaveBeenCalledOnce();
+    expect(apply.mock.calls[0]?.[0]).toMatchObject({
+      kind: "item-patch",
+      itemId: RECORD_ID,
+      patch: {
+        type: "next",
+        carriedOver: false,
+      },
+    });
+    expect(setDialog).not.toHaveBeenCalled();
+  });
+
+  it("queues the direct move behind a running outcome command", async () => {
+    const { hook, apply, settle } = setup(true);
+
+    hook.result.current.moveItem(item, "next");
+    expect(apply).not.toHaveBeenCalled();
+
+    settle();
+    await vi.waitFor(() => expect(apply).toHaveBeenCalledOnce());
+  });
+
+  it("does not move directly when the lineage already has a Next occurrence", () => {
+    const [current] = section.items;
+    const withNext = {
+      ...section,
+      items: [
+        ...section.items,
+        {
+          ...current,
+          id: "80000000-0000-4000-8000-000000000006",
+          type: "next" as const,
+        },
+      ],
+    } as ReportSectionReadModel;
+    const { hook, apply } = setup(false, withNext);
+
+    hook.result.current.moveItem(item, "next");
+
+    expect(apply).not.toHaveBeenCalled();
+  });
+
+  it("does not move directly to this week", () => {
+    const { hook, apply } = setup(false);
+
+    hook.result.current.moveItem(item, "current");
+
+    expect(apply).not.toHaveBeenCalled();
   });
 });
