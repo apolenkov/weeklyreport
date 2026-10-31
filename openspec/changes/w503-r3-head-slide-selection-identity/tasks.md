@@ -6,9 +6,9 @@
 
 ## 2. Web
 
-- [ ] 2.1 RED: head deck test inserting a slide before the selected one keeps the selected owner.
-- [ ] 2.2 GREEN: store the selected slide key in `HeadSlidesClient`; export `slideArticleKey`.
+- [x] 2.1 RED: head deck test inserting a slide before the selected one keeps the selected owner.
+- [x] 2.2 GREEN: store the selected slide key in `HeadSlidesClient`; export `slideArticleKey`.
 
 ## 3. Verification
 
-- [ ] 3.1 Focused vitest (head deck, carousel), prettier, eslint and web typecheck.
+- [x] 3.1 Focused vitest (head deck, carousel), prettier, eslint and web typecheck.
