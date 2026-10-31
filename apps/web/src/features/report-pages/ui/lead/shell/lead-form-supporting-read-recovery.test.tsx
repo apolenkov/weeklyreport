@@ -120,6 +120,48 @@ it("keeps report B's retry pending when report A's earlier retry settles", async
   );
 });
 
+it.each(["viewSettings", "crossAuthors"] as const)(
+  "fails closed when %s cannot be read and recovers through the shared retry",
+  async (source) => {
+    let attempts = 0;
+    const failThenRecover = () =>
+      ++attempts === 1
+        ? Promise.reject(new Error(`${source} unavailable`))
+        : source === "viewSettings"
+          ? { unifiedActivityView: false }
+          : [];
+    const { Wrapper, activeQuery, viewSettingsQuery, crossAuthorsQuery } =
+      buildLeadLoadHarness(
+        source === "viewSettings"
+          ? { viewSettingsQueryFn: failThenRecover }
+          : { crossAuthorsQueryFn: failThenRecover },
+      );
+    const { result } = renderHook(
+      () =>
+        useLeadFormData({
+          reportId: "10000000-0000-4000-8000-000000000001",
+          isSlidesMode: false,
+        }),
+      { wrapper: Wrapper },
+    );
+    await waitFor(() => expect(result.current.readState.status).toBe("error"));
+    const state = result.current.readState;
+    if (state.status !== "error") throw new Error("Expected a failed read");
+    act(() => {
+      void state.retry();
+    });
+    await waitFor(() => expect(result.current.readState.status).toBe("ready"));
+    expect(attempts).toBe(2);
+    expect(activeQuery).toHaveBeenCalledTimes(1);
+    expect(viewSettingsQuery).toHaveBeenCalledTimes(
+      source === "viewSettings" ? 2 : 1,
+    );
+    expect(crossAuthorsQuery).toHaveBeenCalledTimes(
+      source === "crossAuthors" ? 2 : 1,
+    );
+  },
+);
+
 describe.each(["edit", "slides", "overview"] as const)(
   "Lead %s required reads",
   (mode) => {

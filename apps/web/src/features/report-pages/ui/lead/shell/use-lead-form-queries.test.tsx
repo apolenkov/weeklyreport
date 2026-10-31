@@ -103,6 +103,51 @@ function makeByPeriodResult() {
   };
 }
 
+describe("useLeadFormReports with the section fetch disabled", () => {
+  it("sends no viewSettings or crossAuthors request", async () => {
+    const viewSettings = vi.fn(() => ({ unifiedActivityView: false }));
+    const crossAuthors = vi.fn(() => []);
+    const getActive = vi.fn(() => ({
+      reportId: REPORT_ID,
+      reportSectionId: SECTION_ID,
+      authorName: "Test Lead",
+    }));
+    const { proxy } = createMockTRPC([
+      { path: ["reports", "getActive"], query: getActive },
+      { path: ["reports", "myHistory"], query: { items: [] } },
+      { path: ["leadForm", "byPeriod"], queryByInput: () => undefined },
+      { path: ["leadForm", "viewSettings"], query: viewSettings },
+      { path: ["leadForm", "crossAuthors"], queryByInput: crossAuthors },
+    ]);
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const { result } = renderHook(
+      () =>
+        useLeadFormReports({
+          pinnedReportId: undefined,
+          sectionFetchEnabled: false,
+        }),
+      {
+        wrapper: ({ children }: { readonly children: ReactNode }) => (
+          <QueryClientProvider client={queryClient}>
+            <TRPCProxyContext.Provider value={proxy}>
+              {children}
+            </TRPCProxyContext.Provider>
+          </QueryClientProvider>
+        ),
+      },
+    );
+
+    await waitFor(() => expect(getActive).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(result.current.view.targetReportId).toBe(REPORT_ID),
+    );
+    expect(viewSettings).not.toHaveBeenCalled();
+    expect(crossAuthors).not.toHaveBeenCalled();
+  });
+});
+
 describe("useLeadFormReports refetchSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();

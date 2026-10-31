@@ -113,12 +113,15 @@ function useLeadFormReportQueries({
   const refetchSection = () =>
     byPeriodQ.refetch({ throwOnError: true }).then(() => undefined);
   const historyQ = useQuery(trpc.reports.myHistory.queryOptions({ limit: 50 }));
-  const viewSettingsQ = useQuery(trpc.leadForm.viewSettings.queryOptions());
+  const viewSettingsQ = useQuery({
+    ...trpc.leadForm.viewSettings.queryOptions(),
+    enabled: sectionFetchEnabled,
+  });
   const crossAuthorsQ = useQuery({
     ...trpc.leadForm.crossAuthors.queryOptions({
       reportId: targetReportId ?? "",
     }),
-    enabled: targetReportId !== null,
+    enabled: targetReportId !== null && sectionFetchEnabled,
   });
   const sectionUnavailable =
     byPeriodQ.isError && isLeadFormUnavailableError(byPeriodQ.error);
@@ -130,6 +133,7 @@ function useLeadFormReportQueries({
     active: activeQ,
     section: byPeriodQ,
     history: historyQ,
+    companions: [viewSettingsQ, crossAuthorsQ],
   });
 
   return {

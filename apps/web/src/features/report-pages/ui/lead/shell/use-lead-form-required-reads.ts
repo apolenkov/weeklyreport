@@ -36,6 +36,7 @@ export function useLeadFormRequiredReads({
   active,
   section,
   history,
+  companions,
 }: {
   readonly scope: string | null;
   readonly enabled: boolean;
@@ -44,6 +45,8 @@ export function useLeadFormRequiredReads({
   readonly active: RequiredRead;
   readonly section: RequiredRead;
   readonly history: RequiredRead;
+  // Read-only inputs to the form: a failed one must not fall back to a default.
+  readonly companions: readonly RequiredRead[];
 }): LeadFormRequiredReadState {
   const [retryAttempt, setRetryAttempt] = useState<RetryAttempt | null>(null);
   const inFlight = useRef<{
@@ -51,9 +54,10 @@ export function useLeadFormRequiredReads({
     readonly promise: Promise<unknown>;
   } | null>(null);
   const retrying = retryAttempt !== null && retryAttempt.scope === scope;
-  const failedReads = (
-    sectionUnavailable ? [active, history] : [active, section, history]
-  ).filter((query) => query.isError);
+  const failedReads = [
+    ...(sectionUnavailable ? [active, history] : [active, section, history]),
+    ...companions,
+  ].filter((query) => query.isError);
   const retry = () => {
     if (inFlight.current?.attempt.scope === scope)
       return inFlight.current.promise;

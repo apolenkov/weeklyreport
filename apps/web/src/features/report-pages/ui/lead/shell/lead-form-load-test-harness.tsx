@@ -13,6 +13,8 @@ export function buildLeadLoadHarness(
     byPeriodQueryFn?: (input: unknown) => unknown;
     activeQueryFn?: () => unknown;
     historyQueryFn?: () => unknown;
+    viewSettingsQueryFn?: () => unknown;
+    crossAuthorsQueryFn?: () => unknown;
   } = {},
 ) {
   const section = makeReportSectionFixture();
@@ -22,6 +24,10 @@ export function buildLeadLoadHarness(
   const historyQuery = vi.fn(
     opts.historyQueryFn ?? (() => ({ items: [], nextCursor: null })),
   );
+  const viewSettingsQuery = vi.fn(
+    opts.viewSettingsQueryFn ?? (() => ({ unifiedActivityView: false })),
+  );
+  const crossAuthorsQuery = vi.fn(opts.crossAuthorsQueryFn ?? (() => []));
   const sectionQuery = vi.fn(
     opts.byPeriodQueryFn ??
       (() => ({
@@ -65,7 +71,7 @@ export function buildLeadLoadHarness(
     },
     {
       path: ["leadForm", "viewSettings"],
-      query: { unifiedActivityView: false },
+      query: viewSettingsQuery,
     },
     { path: ["leadForm", "revoke"], mutation: true },
     { path: ["leadForm", "fillFrom"], mutation: true },
@@ -74,7 +80,7 @@ export function buildLeadLoadHarness(
     { path: ["leadForm", "restorePlan"], mutation: true },
     { path: ["leadForm", "promotePlan"], mutation: true },
     { path: ["leadForm", "assistant"], mutation: true },
-    { path: ["leadForm", "crossAuthors"], query: [] },
+    { path: ["leadForm", "crossAuthors"], query: crossAuthorsQuery },
     { path: ["leadForm", "crossAuthorContent"], query: [] },
   ]);
   const queryClient = new QueryClient({
@@ -112,5 +118,7 @@ export function buildLeadLoadHarness(
     activeQuery,
     historyQuery,
     sectionQuery,
+    viewSettingsQuery,
+    crossAuthorsQuery,
   };
 }
