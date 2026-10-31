@@ -11,7 +11,7 @@
 --     SELECT round(total_exec_time::numeric, 1) AS total_ms,
 --            calls,
 --            round(mean_exec_time::numeric, 2) AS mean_ms,
---            round((100 * total_exec_time / sum(total_exec_time) over ())::numeric, 1) AS pct,
+--            round((100 * total_exec_time / NULLIF(sum(total_exec_time) over (), 0))::numeric, 1) AS pct,
 --            substring(query, 1, 100) AS query
 --     FROM pg_stat_statements
 --     WHERE query NOT LIKE '%pg_stat_statements%'
