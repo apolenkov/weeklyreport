@@ -43,6 +43,8 @@ deck inside `LeadFormLoaded` would not help: it is gone with its parent branch.
 
 - Holding for the duration of the open dialog is acceptable UX: the dialog is
   modal and the user finishes or cancels it explicitly.
-- A changed section closes the editor via the existing isolation rule; a changed
-  report remounts the whole `LeadForm` scope (keyed by report id) and resets the
-  flag.
+- A changed section closes the editor via the existing isolation rule. The flag
+  lives in `LeadForm`, above the report-keyed stage-memory provider, so a report
+  change does not reset it directly: the old deck's cleanup reports `false`, and the
+  held branch unmounts. For one commit a fresh held editor for the new report may
+  mount and issue its reads; that is wasted work, not a correctness problem.
