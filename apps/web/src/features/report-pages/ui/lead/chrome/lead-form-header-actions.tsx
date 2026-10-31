@@ -20,6 +20,10 @@ import {
   type LeadCompletionActionContract,
   LeadCompletionActions,
 } from "./lead-completion-actions";
+import {
+  LEAD_HEADER_ROW_CLASS,
+  LEAD_HEADER_TITLE_CLASS,
+} from "./lead-form-header-layout";
 import { OfflineSaveNotice } from "./offline-save-notice";
 
 export interface LeadFormHeaderWriteActions {
@@ -283,9 +287,9 @@ export function LeadFormHeaderActions({
     <header
       data-layout-key="lead-report-header"
       data-layout-stability="position-size"
-      className="relative flex flex-wrap items-start justify-between gap-4"
+      className={LEAD_HEADER_ROW_CLASS}
     >
-      <div className="flex min-w-0 flex-wrap items-center gap-3">
+      <div className={LEAD_HEADER_TITLE_CLASS}>
         <ReportTitleBlock
           periodLabel={header.periodLabel}
           isReadOnly={header.viewModel.isReadOnly}

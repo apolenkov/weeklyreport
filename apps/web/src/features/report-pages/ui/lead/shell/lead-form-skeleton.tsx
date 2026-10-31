@@ -6,6 +6,11 @@ import {
 } from "../../../../../shared/ui/report-shell/report-toolbar-layout";
 import { SlideSkeleton } from "../../../../slides";
 import {
+  LEAD_HEADER_ACTIONS_BELOW_TITLE_CLASS,
+  LEAD_HEADER_ROW_CLASS,
+  LEAD_HEADER_TITLE_CLASS,
+} from "../chrome/lead-form-header-layout";
+import {
   LEAD_TOOLBAR_CONTROLS_SLOT_CLASS,
   LEAD_TOOLBAR_PERIOD_CLUSTER_CLASS,
   LEAD_TOOLBAR_PERIOD_SLOT_CLASS,
@@ -24,15 +29,14 @@ const EDIT_SECTION_PLACEHOLDERS = [
 // Mirrors ReportTitleBlock: breadcrumb row (min-h-6), h1 (text-2xl), and the
 // subtitle after gap-1 plus mt-1. Sizes track the loaded text rows.
 function HeaderSkeleton({ isSlidesMode }: { readonly isSlidesMode: boolean }) {
-  const documentActionsWrapClass = isSlidesMode ? "" : "max-[641px]:basis-full";
   return (
     <header
       data-testid="lead-skeleton-header"
       data-layout-key="lead-report-header"
       data-layout-stability="position-size"
-      className="relative flex flex-wrap items-start justify-between gap-4"
+      className={LEAD_HEADER_ROW_CLASS}
     >
-      <div className="flex min-w-0 flex-wrap items-center gap-3">
+      <div className={LEAD_HEADER_TITLE_CLASS}>
         <div className="flex min-w-0 flex-col gap-1">
           <Skeleton className="h-6 w-56" />
           <Skeleton className="h-8 w-[6.5rem]" />
@@ -44,7 +48,7 @@ function HeaderSkeleton({ isSlidesMode }: { readonly isSlidesMode: boolean }) {
       </div>
       <div
         data-testid="lead-skeleton-document-actions"
-        className={`flex min-w-0 flex-wrap items-center justify-end gap-1.5 ${documentActionsWrapClass}`}
+        className={`flex min-w-0 flex-wrap items-center justify-end gap-1.5 ${LEAD_HEADER_ACTIONS_BELOW_TITLE_CLASS}`}
       >
         <Skeleton className="h-[var(--toolbar-control-h)] w-10 rounded-[var(--radius-pill)]" />
         <Skeleton className="h-[var(--toolbar-control-h)] w-10 rounded-[var(--radius-pill)]" />

@@ -9,6 +9,11 @@ import {
 } from "../../../../../shared/ui/report-shell/report-toolbar-layout";
 import { LeadFormEditSections } from "../chrome/lead-form-edit-sections";
 import {
+  LEAD_HEADER_ACTIONS_BELOW_TITLE_CLASS,
+  LEAD_HEADER_ROW_CLASS,
+  LEAD_HEADER_TITLE_CLASS,
+} from "../chrome/lead-form-header-layout";
+import {
   LEAD_TOOLBAR_CONTROLS_SLOT_CLASS,
   LEAD_TOOLBAR_PERIOD_CLUSTER_CLASS,
   LEAD_TOOLBAR_PERIOD_SLOT_CLASS,
@@ -148,18 +153,30 @@ describe("LeadFormSkeleton", () => {
       .getByTestId("lead-skeleton-document-actions")
       .querySelectorAll('[data-slot="skeleton"]');
     expect(screen.getByTestId("lead-skeleton-document-actions")).toHaveClass(
-      "max-[641px]:basis-full",
+      ...LEAD_HEADER_ACTIONS_BELOW_TITLE_CLASS.split(" "),
     );
     expect(actions).toHaveLength(3);
     expect(actions[2]).toHaveClass("w-36");
   });
 
-  it("does not reserve the edit-only document-action wrap in slides mode", () => {
+  it("wraps the slides document-action placeholders below the title like the loaded header", () => {
     render(<LeadFormSkeleton mode="slides" />);
 
     const actions = screen.getByTestId("lead-skeleton-document-actions");
-    expect(actions).not.toHaveClass("max-[641px]:basis-full");
+    expect(actions).toHaveClass(
+      ...LEAD_HEADER_ACTIONS_BELOW_TITLE_CLASS.split(" "),
+    );
     expect(actions.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(3);
+  });
+
+  it("shares the loaded header row and title classes", () => {
+    render(<LeadFormSkeleton />);
+
+    const header = screen.getByTestId("lead-skeleton-header");
+    expect(header).toHaveClass(...LEAD_HEADER_ROW_CLASS.split(" "));
+    expect(header.firstElementChild).toHaveClass(
+      ...LEAD_HEADER_TITLE_CLASS.split(" "),
+    );
   });
 
   it("shares the loaded toolbar frame, row and cluster classes", () => {
