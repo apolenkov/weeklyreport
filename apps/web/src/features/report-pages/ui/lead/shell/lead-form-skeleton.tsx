@@ -3,7 +3,7 @@ import { Skeleton } from "@weeklyreport/ui/components/ui/skeleton";
 import {
   REPORT_TOOLBAR_FRAME_STICKY_CLASS,
   REPORT_TOOLBAR_ROW_CLASS,
-} from "../../../../../shared/ui/report-shell/report-toolbar";
+} from "../../../../../shared/ui/report-shell/report-toolbar-layout";
 import { SlideSkeleton } from "../../../../slides";
 import {
   LEAD_TOOLBAR_CONTROLS_SLOT_CLASS,
