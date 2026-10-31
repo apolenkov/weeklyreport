@@ -25,10 +25,11 @@ pre-push:
   jobs:
     # CI builds and deploys; local checks own verification.
     # Existing CI/agent skips are not evidence that checks passed.
+    # Explicit skip only via WR_SKIP_PUSH_CHECKS=1; AGENT_* no longer skips check:push (owner decision 2026-10-31).
     # Git fixture subprocesses must resolve their own repositories.
     - name: check
       run: >-
-        if [ -n "$CI" ] || env | grep -q '^AGENT_'; then exit 0; fi;
+        if [ -n "$CI" ] || [ "$WR_SKIP_PUSH_CHECKS" = "1" ]; then exit 0; fi;
         unset $(git rev-parse --local-env-vars);
         pnpm check:push
     - name: build-images
