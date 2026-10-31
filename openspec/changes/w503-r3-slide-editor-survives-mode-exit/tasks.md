@@ -6,9 +6,9 @@
 
 ## 2. Web
 
-- [ ] 2.1 RED: lead form test opens a Slides editor, types, leaves Slides mode and expects the dialog and text to remain; Cancel then unmounts the deck; no editor unmounts at once.
-- [ ] 2.2 GREEN: `hasOpenDialog` from `useSlideInlineEditor`, `onEditorOpenChange` on `LeadSlidesClient`, hold in `LeadFormLoaded`.
+- [x] 2.1 RED: `LeadForm` test opens a Slides editor, types, switches `mode` from `slides` to `overview` and expects the same dialog node and text with the Overview rendered; Cancel then unmounts the branch; no editor unmounts it at once.
+- [x] 2.2 GREEN: `hasOpenDialog` from `useSlideInlineEditor`, `onEditorOpenChange` on `LeadSlidesClient`, hold in `LeadForm` above the mode switch.
 
 ## 3. Verification
 
-- [ ] 3.1 Focused vitest, prettier, eslint and web typecheck.
+- [x] 3.1 Focused vitest, prettier, eslint and web typecheck.
