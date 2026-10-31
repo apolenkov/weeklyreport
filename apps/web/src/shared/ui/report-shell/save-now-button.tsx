@@ -26,8 +26,10 @@ interface SaveNowButtonProps {
   readonly onFocusedRetryHidden?: () => void;
 }
 
-// In-flight presentation takes precedence, followed by the saved flash, error,
-// and the idle/pending Save presentation.
+// In-flight presentation takes precedence, then error, then the saved flash,
+// then the idle/pending Save presentation. The flash is cleared in a passive
+// effect, so the commit that carries a failed save still has showSaved set;
+// ranking error first keeps that commit from presenting a green check.
 function deriveSaveView(
   state: SaveState,
   isSaving: boolean,
@@ -39,14 +41,14 @@ function deriveSaveView(
       label: "Saving",
       icon: <SpinnerIcon />,
     };
-  if (showSaved)
-    return { ariaLabel: "Draft saved", label: "Saved", icon: <CheckIcon /> };
   if (state === "error")
     return {
       ariaLabel: "Retry saving draft",
       label: "Retry",
       icon: <AlertIcon />,
     };
+  if (showSaved)
+    return { ariaLabel: "Draft saved", label: "Saved", icon: <CheckIcon /> };
   return { ariaLabel: "Save draft now", label: "Save", icon: <DiscIcon /> };
 }
 
