@@ -2124,6 +2124,59 @@ describe("LeadForm Overview", () => {
     expect(saveDraft).toHaveBeenCalledTimes(2);
   });
 
+  it("disables the sticky Retry while a failed Save update is still open", async () => {
+    let notify: IntersectionObserverCallback = (_entries, _observer) =>
+      undefined;
+    class Observer {
+      constructor(callback: IntersectionObserverCallback) {
+        notify = callback;
+      }
+      observe = vi.fn();
+      disconnect = vi.fn();
+      unobserve = vi.fn();
+      takeRecords = () => [];
+      root = null;
+      rootMargin = "0px";
+      thresholds = [0];
+    }
+    vi.stubGlobal("IntersectionObserver", Observer);
+    try {
+      const user = userEvent.setup();
+      const saveDraft = vi.fn(() =>
+        Promise.reject(new Error("network unavailable")),
+      );
+      render(
+        <Wrapper saveDraft={saveDraft}>
+          <LeadForm reportId={REPORT_ID} mode="overview" />
+        </Wrapper>,
+      );
+      await user.click(
+        await screen.findByRole("button", { name: "Edit item: Current work" }),
+      );
+      await user.type(screen.getByLabelText(/Description \*/i), " unsaved");
+      await user.click(screen.getByRole("button", { name: "Save update" }));
+      await screen.findByText(
+        "Save failed. Your update is still here; try saving again.",
+      );
+      act(() =>
+        notify(
+          [{ isIntersecting: false } as IntersectionObserverEntry],
+          {} as IntersectionObserver,
+        ),
+      );
+      const sticky = await screen.findByRole("group", {
+        name: "Sticky completion actions",
+      });
+      // The persisted-save barrier ignores a generic forceSave, so a live
+      // Retry here would do nothing; Save update in the editor is the retry.
+      expect(
+        within(sticky).getByRole("button", { name: "Retry saving draft" }),
+      ).toBeDisabled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("retains detached create recovery when its restorative write fails", async () => {
     const user = userEvent.setup();
     const saveDraft = vi.fn(() =>
