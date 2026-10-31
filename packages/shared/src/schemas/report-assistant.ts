@@ -66,6 +66,8 @@ export const reportAssistantOutcomeSchema = z.discriminatedUnion("kind", [
     .object({
       kind: z.literal("clarification_required"),
       options: z.array(clarificationOptionSchema).min(1),
+      total: z.number().int().nonnegative(),
+      truncated: z.boolean(),
     })
     .strict(),
   z.object({ kind: z.literal("no_results") }).strict(),

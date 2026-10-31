@@ -359,12 +359,49 @@ describe("LeadReportAssistant", () => {
     ).toHaveAttribute("data-size", "touch");
   });
 
+  it("states how many clarification matches are shown when the list is truncated", async () => {
+    const mutation = renderAssistant();
+    mutation.mutationFn.mockResolvedValueOnce({
+      kind: "clarification_required",
+      options: [{ label: "CRM Portal", token: "token-crm" }],
+      total: 21,
+      truncated: true,
+    });
+    await openAssistant();
+    submitQuestion("What changed in CRM?");
+
+    expect(
+      await screen.findByText(
+        "Showing 1 of 21 matches. Refine your question to narrow them down.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("shows no truncation message when every clarification match is listed", async () => {
+    const mutation = renderAssistant();
+    mutation.mutationFn.mockResolvedValueOnce({
+      kind: "clarification_required",
+      options: [{ label: "CRM Portal", token: "token-crm" }],
+      total: 1,
+      truncated: false,
+    });
+    await openAssistant();
+    submitQuestion("What changed in CRM?");
+
+    expect(
+      await screen.findByRole("button", { name: "CRM Portal" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Showing .* matches/)).not.toBeInTheDocument();
+  });
+
   it("resubmits the original question plus the selected clarification token", async () => {
     const mutation = renderAssistant();
     mutation.mutationFn
       .mockResolvedValueOnce({
         kind: "clarification_required",
         options: [{ label: "CRM Portal", token: "token-crm" }],
+        total: 1,
+        truncated: false,
       })
       .mockResolvedValueOnce(successOutcome)
       .mockResolvedValueOnce(successOutcome);
@@ -573,6 +610,8 @@ describe("LeadReportAssistant", () => {
       .mockResolvedValueOnce({
         kind: "clarification_required",
         options: [{ label: "CRM Portal", token: "token-crm" }],
+        total: 1,
+        truncated: false,
       })
       .mockRejectedValueOnce(new Error("network"))
       .mockResolvedValueOnce(successOutcome);
@@ -599,6 +638,8 @@ describe("LeadReportAssistant", () => {
       .mockResolvedValueOnce({
         kind: "clarification_required",
         options: [{ label: "CRM Portal", token: "token-crm" }],
+        total: 1,
+        truncated: false,
       })
       .mockResolvedValueOnce({ kind: "provider_unavailable" })
       .mockResolvedValueOnce(successOutcome);

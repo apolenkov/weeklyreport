@@ -1,9 +1,12 @@
-import type { ClarificationOption, SearchPlan } from "@weeklyreport/shared";
+import type { SearchPlan } from "@weeklyreport/shared";
 
 import { filterCandidates } from "../domain/candidate-filter.js";
 import { projectSectionCandidates } from "../domain/candidate-projector.js";
 import { resolveSearchPlanEntities } from "../domain/entity-resolver.plan.js";
-import type { ResolveSearchPlanInput } from "../domain/entity-resolver.types.js";
+import type {
+  ClarificationSet,
+  ResolveSearchPlanInput,
+} from "../domain/entity-resolver.types.js";
 import type { SelectableReportSource } from "../domain/period-source-selection.js";
 import { selectPeriodSources } from "../domain/period-source-selection.js";
 import type {
@@ -32,10 +35,7 @@ export type CandidateResolution =
       plan: ResolvedSearchPlan;
       candidates: readonly SearchCandidate[];
     }>
-  | Readonly<{
-      kind: "clarification_required";
-      options: readonly ClarificationOption[];
-    }>
+  | Readonly<{ kind: "clarification_required" } & ClarificationSet>
   | Readonly<{ kind: "no_results" }>
   | Readonly<{ kind: "result_set_too_large" }>;
 

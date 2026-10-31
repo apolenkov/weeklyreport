@@ -1,5 +1,3 @@
-import type { ClarificationOption } from "@weeklyreport/shared";
-
 import {
   type AliasKind,
   buildEntityAliasIndex,
@@ -9,6 +7,7 @@ import {
 import type {
   AccessibleEntity,
   AccessibleEntityCatalog,
+  ClarificationSet,
   ClarificationTokenCodec,
   ClarificationTokenDescriptor,
   ReferenceSlot,
@@ -92,15 +91,15 @@ const sortEntities = (
       ) || left.id.localeCompare(right.id),
   );
 
-const createClarificationOptions = (
+const createClarification = (
   entities: readonly AccessibleEntity[],
   slot: ReferenceSlot,
   actorId: string,
   tokenCodec: ClarificationTokenCodec,
-): readonly ClarificationOption[] =>
-  sortEntities(entities)
-    .slice(0, MAX_CLARIFICATION_OPTIONS)
-    .map((entity) => ({
+): ClarificationSet => {
+  const sorted = sortEntities(entities);
+  return {
+    options: sorted.slice(0, MAX_CLARIFICATION_OPTIONS).map((entity) => ({
       label: entity.label,
       token: tokenCodec.encode({
         actorId,
@@ -108,7 +107,11 @@ const createClarificationOptions = (
         entityId: entity.id,
         reference: slot.reference,
       }),
-    }));
+    })),
+    total: sorted.length,
+    truncated: sorted.length > MAX_CLARIFICATION_OPTIONS,
+  };
+};
 
 export const addToken = (
   index: ReadonlyMap<string, readonly ClarificationTokenDescriptor[]>,
@@ -160,6 +163,6 @@ export const resolveReference = (
   }
   return {
     kind: "clarification_required",
-    options: createClarificationOptions(entities, slot, actorId, tokenCodec),
+    ...createClarification(entities, slot, actorId, tokenCodec),
   };
 };
