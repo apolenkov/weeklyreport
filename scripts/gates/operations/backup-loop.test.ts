@@ -14,13 +14,13 @@ import { join } from "node:path";
 import { afterEach, test } from "vitest";
 
 import {
-  backupEntries,
   type BackupCommandStubs,
+  backupEntries,
   backupHealthScript,
   backupScript,
   createBackupFixture,
-  fixtureRoots,
   finiteDump,
+  fixtureRoots,
   oneShot,
   removeFixtureRoots,
   runBackup,
@@ -328,7 +328,7 @@ const readProbe = (probeLog: string): string => {
 };
 
 const waitForProbe = async (probeLog: string, name: string): Promise<void> => {
-  const deadline = Date.now() + 5_000;
+  const deadline = Date.now() + 5000;
   while (!readProbe(probeLog).split("\n").includes(name)) {
     assert.ok(Date.now() < deadline, `${name} was never called`);
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 20));
@@ -369,7 +369,7 @@ const sendTermAfterProbe = async (
   const expired = new Promise<never>((_, rejectExpired) => {
     deadline = setTimeout(() => {
       rejectExpired(new Error("backup did not exit within 5 s of SIGTERM"));
-    }, 5_000);
+    }, 5000);
   });
   try {
     await waitForProbe(probeLog, waitFor);
