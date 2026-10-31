@@ -153,7 +153,9 @@ standalone loop, holds an exclusive lock on `/backups/.backup-writer.lock` for
 its whole run. A second writer on the same directory does not wait: it logs
 `another backup writer holds …` and exits with status 75 before reserving a
 file, dumping or pruning. The kernel releases the lock when the holder and any `pg_dump` it started
-exit, including a killed or timed-out run, so a stale lock needs no cleanup. Never
+exit, including a killed or timed-out run, so a stale lock needs no cleanup. Once a
+run holds the lock, it removes any `weeklyreport-*.partial*` file left by an earlier
+killed or crashed pass before it dumps. Never
 delete the lock file. Commands run by hand in the pod or on the node do not take
 this lock and must not write to the volume while a backup writer is active.
 

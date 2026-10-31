@@ -106,6 +106,16 @@ if ! flock -n 9; then
   exit 75
 fi
 
+# Holding the lock excludes every live writer, so a partial left in the directory
+# was abandoned by a killed or crashed pass and is safe to remove before any dump.
+swept=0
+for abandoned in "${BACKUP_DIR}"/weeklyreport-*.partial*; do
+  [ -f "$abandoned" ] || continue
+  rm -f "$abandoned"
+  swept=$((swept + 1))
+done
+log "swept ${swept} abandoned partial file(s) under the writer lock"
+
 if [ "$run_once" = true ]; then
   retry_note=""
   log "started: one run, keeping ${backup_retention_days} days, into ${BACKUP_DIR}"
