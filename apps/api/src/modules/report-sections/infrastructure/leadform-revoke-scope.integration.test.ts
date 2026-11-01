@@ -8,7 +8,10 @@ import {
   seedTestData,
   TEST_IDS,
 } from "../../../test-utils/prisma-test-helper";
-import { LeadFormConstraintError } from "../domain/lead-form-shared.js";
+import {
+  LeadFormConstraintError,
+  LeadFormDomainError,
+} from "../domain/lead-form-shared.js";
 import { LeadFormPrismaRepository } from "./lead-form.prisma-repository";
 
 // BOLA: group-A scope must not read/write group-B section on the same report.
@@ -143,5 +146,72 @@ describe("lead-form revoke scope (integration)", () => {
         orderBy: { id: "asc" },
       }),
     ).resolves.toEqual([{ status: "submitted" }, { status: "submitted" }]);
+  });
+
+  it("rejects a single revoke of an out-of-scope section as not found", async () => {
+    const before = await prisma.reportSection.findUnique({
+      where: { id: SECTION_B },
+    });
+
+    const rejection = repo.revokeSectionSubmission(
+      SECTION_B,
+      testData.head.id,
+      SCOPE_A,
+    );
+    await expect(rejection).rejects.toBeInstanceOf(LeadFormDomainError);
+    await expect(rejection).rejects.toThrow(
+      "The target section no longer exists.",
+    );
+
+    const after = await prisma.reportSection.findUnique({
+      where: { id: SECTION_B },
+    });
+    expect(expectDefined(after).status).toBe("submitted");
+    expect(after).toEqual(before);
+  });
+
+  it("revokes an in-scope section through the single path", async () => {
+    await expect(
+      repo.revokeSectionSubmission(
+        testData.section.id,
+        testData.head.id,
+        SCOPE_A,
+      ),
+    ).resolves.toBeUndefined();
+
+    const sectionA = await prisma.reportSection.findUnique({
+      where: { id: testData.section.id },
+    });
+    const sectionB = await prisma.reportSection.findUnique({
+      where: { id: SECTION_B },
+    });
+    expect(expectDefined(sectionA).status).toBe("draft");
+    expect(expectDefined(sectionB).status).toBe("submitted");
+  });
+
+  it("revokes any section with an admin scope", async () => {
+    await expect(
+      repo.revokeSectionSubmission(SECTION_B, testData.head.id, {}),
+    ).resolves.toBeUndefined();
+
+    const sectionB = await prisma.reportSection.findUnique({
+      where: { id: SECTION_B },
+    });
+    expect(expectDefined(sectionB).status).toBe("draft");
+  });
+
+  it("classifies an in-scope section that is not submitted as a constraint, not as missing", async () => {
+    await prisma.reportSection.update({
+      where: { id: testData.section.id },
+      data: { status: "draft" },
+    });
+
+    const rejection = repo.revokeSectionSubmission(
+      testData.section.id,
+      testData.head.id,
+      SCOPE_A,
+    );
+    await expect(rejection).rejects.toBeInstanceOf(LeadFormConstraintError);
+    await expect(rejection).rejects.not.toBeInstanceOf(LeadFormDomainError);
   });
 });
