@@ -26,6 +26,8 @@ This index maps every durable capability to one canonical home. Product capabili
 #### Draft
 
 - [authenticated-product-feedback](./authenticated-product-feedback/spec.md) — Authenticated users capture contextual or page-level feedback while server-owned identity, role scope, diagnostics, inbox actions, and annotation deep links stay protected. `[roles: Lead, Head, Viewer, Admin]`
+- [feedback-capture-and-lifecycle](./feedback-capture-and-lifecycle/spec.md) — Defines bounded role-scoped feedback capture, inbox triage, explicit lifecycle actions, safe dismissal, durable admin deletion and focus handling after removal. `[roles: Lead, Head, Viewer, Admin]`
+- [agentation-integration](./agentation-integration/spec.md) — Defines how the Agentation toolbar, submission confirmation, event stream and thread ordering behave over the PostgreSQL-backed feedback adapter. `[roles: Lead, Head, Viewer, Admin]`
 - [dialog-listbox-a11y](./dialog-listbox-a11y/spec.md) — Dialogs, period listboxes, popups, and expanders share correct focus, close, and ARIA behavior. `[roles: Lead, Head, Viewer, Admin]`
 - [shared-confirm-delete-dialog](./shared-confirm-delete-dialog/spec.md) — The shared confirm-delete dialog confirms once while pending, keeps focus inside the panel, describes its consequence and ignores a disconnected trigger. `[roles: Lead, Head, Admin]`
 - [list-empty-state-fidelity](./list-empty-state-fidelity/spec.md) — Filtered-list counts and empty states derive from the same rows the user can see. `[roles: Lead, Head, Viewer, Admin]`
