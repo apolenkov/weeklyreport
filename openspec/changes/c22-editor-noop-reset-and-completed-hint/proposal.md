@@ -38,9 +38,10 @@ None.
 
 ## Impact
 
-`status-overview-activity-fields.tsx` (`reset`) and `item-inline-editor.tsx`
-(fallback paragraph), with regression tests beside both. No server, schema,
-full-dialog or autosave change.
+`status-overview-activity-fields.tsx` (`reset`) and the basic Overview editor
+(`item-inline-editor-subfields.tsx` reveals the next-step field on a plan error;
+`item-inline-editor.tsx` focuses it), with regression tests beside both. No
+server, schema, full-dialog or autosave change.
 
 ## Open items kept out of this change (no admitted producer)
 
@@ -52,9 +53,8 @@ full-dialog or autosave change.
   guard, were not traced; there is no producer, so no test is authored.
 - **Legacy next-step text.** A stored next step that is invisible-only or over the
   length limit puts the shared message (for example "Text must contain visible
-  characters", which has no full stop) into the alert, so it reads as a run-on
-  sentence before the routing hint and names a field the basic editor hides.
-  Fixing the shared message belongs with the invisible-text work (TASK-503.107),
+  characters", which has no full stop) into the alert, so it reads without a
+  closing full stop even though the field it names is now revealed. Fixing the shared message belongs with the invisible-text work (TASK-503.107),
   not here.
 - **C5011.** `ParentPicker` disables a single-option select whose value is a
   stale id, but no ordinary flow produces a resolved parent outside the current
@@ -66,11 +66,11 @@ full-dialog or autosave change.
 
 ## Non-goals
 
-- Blocking the Completed chip in the basic editor, or mounting the next-step
-  field there.
+- Blocking the Completed chip in the basic editor, or showing the next-step
+  field there before a plan error asks for it.
 - Changing the full item dialog, which already shows the field and its error.
 - Rewording the validation message. It is shown as the form produces it,
-  including "Resume it or clear the plan."; Resume works inline, while clearing
-  the plan needs the full dialog named by the routing hint.
+  including "Resume it or clear the plan."; Resume works inline, and the
+  revealed next-step field lets the lead clear the plan in place.
 - Any claim about assistive-technology speech or real-browser focus; those need
   a native window.
