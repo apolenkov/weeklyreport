@@ -84,6 +84,18 @@ export const TONE_SR_LABEL: Record<GridTone, string | null> = {
   postponed: "Postponed",
 };
 
+// A stage can repeat (e.g. Testing twice), so the key adds the occurrence index.
+function keyedStages(
+  stageNames: readonly string[],
+): readonly { readonly key: string; readonly stageName: string }[] {
+  const seen = new Map<string, number>();
+  return stageNames.map((stageName) => {
+    const occurrence = seen.get(stageName) ?? 0;
+    seen.set(stageName, occurrence + 1);
+    return { key: `${stageName}:${String(occurrence)}`, stageName };
+  });
+}
+
 function StageWatermark({ stageName }: { readonly stageName: string }) {
   const tooltip = useHoverTooltip(stageName);
   const Icon = STAGE_ICONS[stageName];
@@ -107,8 +119,8 @@ export function StageWatermarks({
       data-testid="slide-stage-watermarks"
       className="inline-flex min-w-0 max-w-full flex-wrap items-center justify-end gap-0.5 opacity-[0.28]"
     >
-      {stageNames.map((stageName) => (
-        <StageWatermark key={stageName} stageName={stageName} />
+      {keyedStages(stageNames).map(({ key, stageName }) => (
+        <StageWatermark key={key} stageName={stageName} />
       ))}
     </span>
   );
@@ -126,11 +138,11 @@ export function StageLegend({
       data-testid="slide-stage-legend"
       className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--color-muted-foreground)]"
     >
-      {stageNames.map((stageName) => {
+      {keyedStages(stageNames).map(({ key, stageName }) => {
         const Icon = STAGE_ICONS[stageName];
         if (!Icon) return null;
         return (
-          <span key={stageName} className="inline-flex items-center gap-1">
+          <span key={key} className="inline-flex items-center gap-1">
             <Icon aria-hidden="true" className="h-4 w-4" />
             {stageName}
           </span>
