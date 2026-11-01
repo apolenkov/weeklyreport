@@ -10,8 +10,9 @@ import type { TrpcContext } from "./trpc.context.js";
 import { deriveCauseInfo } from "./trpc.logging.js";
 
 // Best-effort target from common id keys; productId precedes groupId (product
-// is the attached/detached entity). The recursive walk collects every identity
-// present; the first key found in this order is the primary target.
+// is the attached/detached entity). The bounded recursive walk collects the
+// identities present (depth- and count-capped, see MAX_AUDIT_*); the first key
+// found in this order is the primary target.
 const TARGET_ID_KEYS = [
   "sectionId",
   "reportId",
@@ -36,45 +37,106 @@ const TARGET_ID_KEYS = [
 // TARGET_ID_KEYS so the two can never drift.
 const TARGET_ID_KEY_SET = new Set<string>(TARGET_ID_KEYS);
 
+// Bounds for the walk: a bulk payload must not inflate a single audit event,
+// and the walk must stay bounded in depth and linear in the objects it visits,
+// so a self-referencing input cannot exhaust the stack before
+// recordMutationAudit's try/catch and drop the mutation outcome that an audit
+// failure must not touch.
+const MAX_AUDIT_TARGETS = 20;
+const MAX_AUDIT_WALK_DEPTH = 8;
+
+interface TargetAccumulator {
+  readonly targets: Set<string>;
+  truncated: boolean;
+}
+
+// Only the target cap stops the whole walk; a depth skip and a repeated object
+// prune their own branch only, so the remaining branches stay walkable.
+function walkStopped(acc: TargetAccumulator): boolean {
+  return acc.truncated && acc.targets.size >= MAX_AUDIT_TARGETS;
+}
+
+function noteTarget(acc: TargetAccumulator, id: string): void {
+  if (acc.targets.has(id)) return;
+  if (acc.targets.size >= MAX_AUDIT_TARGETS) {
+    // The 21st unique identity: the cap is reached, stop the walk.
+    acc.truncated = true;
+    return;
+  }
+  acc.targets.add(id);
+}
+
+// Every id-key value on one object, in TARGET_ID_KEYS order.
+function collectIdKeys(
+  record: Record<string, unknown>,
+  acc: TargetAccumulator,
+): void {
+  for (const key of TARGET_ID_KEYS) {
+    if (walkStopped(acc)) return;
+    const candidate = record[key];
+    if (typeof candidate === "string" && candidate.length > 0) {
+      noteTarget(acc, candidate);
+    }
+  }
+}
+
 // Collects every id-key value on one object, then recurses into the non-id
 // children (nested objects and array elements).
 function collectFromRecord(
   record: Record<string, unknown>,
-  targets: string[],
+  depth: number,
+  seen: WeakSet<object>,
+  acc: TargetAccumulator,
 ): void {
-  for (const key of TARGET_ID_KEYS) {
-    const candidate = record[key];
-    if (typeof candidate === "string" && candidate.length > 0) {
-      targets.push(candidate);
-    }
-  }
+  collectIdKeys(record, acc);
   for (const [key, child] of Object.entries(record)) {
+    if (walkStopped(acc)) return;
     if (!TARGET_ID_KEY_SET.has(key)) {
-      collectAuditTargets(child, targets);
+      collectAuditTargets(child, depth + 1, seen, acc);
     }
   }
 }
 
-// Depth-first walk collecting every value stored under a target id key, at any
-// depth and in every array element. Order follows TARGET_ID_KEYS precedence at
-// each object, so the first element is the primary target.
-function collectAuditTargets(value: unknown, targets: string[]): void {
+// Depth-first walk collecting every value stored under a target id key, up to
+// MAX_AUDIT_WALK_DEPTH levels and at most MAX_AUDIT_TARGETS distinct ids.
+// Order follows TARGET_ID_KEYS precedence at each object, so the first element
+// is the primary target.
+function collectAuditTargets(
+  value: unknown,
+  depth: number,
+  seen: WeakSet<object>,
+  acc: TargetAccumulator,
+): void {
   if (value === null || typeof value !== "object") return;
+  if (depth > MAX_AUDIT_WALK_DEPTH) {
+    // Pruned branch beyond the depth cap: an identity may still live in the
+    // skipped subtree, so the skip counts as truncation.
+    acc.truncated = true;
+    return;
+  }
+  if (seen.has(value)) return; // repeated object: pruned, not truncation
+  seen.add(value);
   if (Array.isArray(value)) {
     for (const element of value) {
-      collectAuditTargets(element, targets);
+      if (walkStopped(acc)) return;
+      collectAuditTargets(element, depth + 1, seen, acc);
     }
     return;
   }
-  collectFromRecord(value as Record<string, unknown>, targets);
+  collectFromRecord(value as Record<string, unknown>, depth, seen, acc);
 }
 
-// All identities named by the mutation input, deduplicated in discovery order.
-// An empty result means the input named no known identity key.
-function extractAuditTargets(decodedInput: unknown): readonly string[] {
-  const targets: string[] = [];
-  collectAuditTargets(decodedInput, targets);
-  return [...new Set(targets)];
+// Identities named by the mutation input, deduplicated in discovery order,
+// bounded to MAX_AUDIT_TARGETS at MAX_AUDIT_WALK_DEPTH levels. `truncated` is
+// true when any identity or branch was left out. An empty result means the
+// input named no known identity key.
+function extractAuditTargets(decodedInput: unknown): {
+  readonly targets: readonly string[];
+  readonly truncated: boolean;
+} {
+  const acc: TargetAccumulator = { targets: new Set(), truncated: false };
+  collectAuditTargets(decodedInput, 0, new WeakSet<object>(), acc);
+  return { targets: [...acc.targets], truncated: acc.truncated };
 }
 
 interface UserActionLogEntry {
@@ -188,7 +250,7 @@ export async function recordMutationAudit(
   ctx: MutationAuditContext,
   record: MutationAuditRecord,
 ): Promise<void> {
-  const targets = extractAuditTargets(record.decodedInput);
+  const { targets, truncated } = extractAuditTargets(record.decodedInput);
   const target = targets[0];
   const userId = ctx.session?.userId ?? ANONYMOUS_USER_ID;
   const role = ctx.session?.role ?? null;
@@ -203,6 +265,7 @@ export async function recordMutationAudit(
       procedure: record.procedure,
       ...(target === undefined ? {} : { target }),
       ...(targets.length > 0 ? { targets } : {}),
+      ...(truncated ? { truncated: true } : {}),
       status: record.status,
       duration: record.durationMs,
       ...(reason === null ? {} : { reason }),

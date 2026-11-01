@@ -238,6 +238,26 @@ describe("audit.mutation", () => {
     expect(expectDefined(entries[0]).context).not.toHaveProperty("target");
   });
 
+  it("emits truncated on the mutation envelope only when the target walk was cut off", () => {
+    const { logger, entries } = makeCapturingLogger();
+
+    createAuditLogger(logger).mutation({
+      ...mutationInput,
+      targets: ["section-1", "section-2"],
+      truncated: true,
+      status: "success",
+    });
+    createAuditLogger(logger).mutation({
+      ...mutationInput,
+      targets: ["section-1"],
+      status: "success",
+    });
+
+    expect(entries).toHaveLength(2);
+    expect(entries[0]?.context).toMatchObject({ truncated: true });
+    expect(entries[1]?.context).not.toHaveProperty("truncated");
+  });
+
   it("logs a failed mutation at warn with its reason", () => {
     const { logger, entries } = makeCapturingLogger();
 

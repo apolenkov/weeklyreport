@@ -3,7 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AppLogger } from "../../lib/logger.js";
 import { httpRequestDurationSeconds } from "../metrics/metrics.registry.js";
-import { recordTrpcFailure, type TrpcCallIdentity } from "./trpc.logging.js";
+import {
+  logInputBreadcrumb,
+  recordTrpcFailure,
+  type TrpcCallIdentity,
+} from "./trpc.logging.js";
 
 const IDENTITY: TrpcCallIdentity = {
   procedure: "reports.list",
@@ -77,5 +81,79 @@ describe("recordTrpcFailure status_code label — infrastructure codes", () => {
     ["GATEWAY_TIMEOUT", "504"],
   ])("labels %s as %s", (code, expected) => {
     expect(observedStatusCode(code)).toBe(expected);
+  });
+});
+
+// describeShape runs on every request before the log level is even checked,
+// so a deep or wide payload must not grow the debug line (or the stack).
+// It is exercised through the public breadcrumb with a debug spy.
+describe("describeShape bounds through logInputBreadcrumb", () => {
+  async function captureInputShape(
+    value: unknown,
+  ): Promise<{ calls: number; shape: string | undefined }> {
+    const debug =
+      vi.fn<(message: string, context?: Record<string, unknown>) => void>();
+    const logger: AppLogger = {
+      debug,
+      info: () => undefined,
+      warn: () => undefined,
+      error: () => undefined,
+      child: () => logger,
+    };
+
+    await logInputBreadcrumb(logger, "p", "mutation", () =>
+      Promise.resolve(value),
+    );
+
+    const meta = debug.mock.calls[0]?.[1];
+    return {
+      calls: debug.mock.calls.length,
+      shape: meta?.inputShape as string | undefined,
+    };
+  }
+
+  it("caps nested-array depth and marks the shape with …", async () => {
+    let deep: unknown = 1;
+    for (let level = 0; level < 200; level += 1) deep = [deep];
+
+    const { shape } = await captureInputShape(deep);
+
+    expect(shape).toBeDefined();
+    expect(shape).toContain("…");
+    expect((shape ?? "").split("array[1]<").length - 1).toBeLessThanOrEqual(5);
+  });
+
+  it("caps the key list at 50 and counts the rest", async () => {
+    const wide: Record<string, number> = {};
+    for (let i = 0; i < 1000; i += 1) {
+      wide[`k${String(i).padStart(3, "0")}`] = i;
+    }
+
+    const { shape } = await captureInputShape(wide);
+
+    expect(shape).toBeDefined();
+    expect(shape).toContain("object{k000,");
+    expect(shape).not.toContain("k050");
+    expect(shape?.endsWith(",+950 more}")).toBe(true);
+  });
+
+  it("reports a self-referencing array once as [circular] instead of throwing", async () => {
+    const self: unknown[] = [];
+    self.push(self);
+
+    const { calls, shape } = await captureInputShape(self);
+
+    expect(calls).toBe(1);
+    expect(shape).toContain("[circular]");
+  });
+
+  it("keeps the existing format for small shapes", async () => {
+    expect((await captureInputShape({ b: 1, a: [{ c: 1 }] })).shape).toBe(
+      "object{a,b}",
+    );
+    expect((await captureInputShape([])).shape).toBe("array[0]");
+    expect((await captureInputShape([{ id: 1 }, { id: 2 }])).shape).toBe(
+      "array[2]<object{id}>",
+    );
   });
 });
