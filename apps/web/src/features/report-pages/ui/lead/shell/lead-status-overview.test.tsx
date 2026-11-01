@@ -464,13 +464,28 @@ async function chooseDirectMoveToNext(
   }
 }
 
+// The item title opens the inline text editor; the canonical editor is
+// reached through the overflow menu's Edit details entry.
+async function openItemEditor(
+  user: ReturnType<typeof userEvent.setup>,
+  text: string,
+) {
+  const preview = await itemPreview(text);
+  await user.click(
+    await within(preview).findByRole("button", {
+      name: `More actions for ${text}`,
+    }),
+  );
+  await user.click(
+    await screen.findByRole("menuitem", { name: `Edit details: ${text}` }),
+  );
+}
+
 async function chooseUpdateProgress(
   user: ReturnType<typeof userEvent.setup>,
   text: string,
 ) {
-  await user.click(
-    await screen.findByRole("button", { name: `Edit item: ${text}` }),
-  );
+  await openItemEditor(user, text);
 }
 
 describe("LeadForm Overview", () => {
@@ -906,12 +921,7 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
 
-    const preview = await itemPreview("Current work");
-    await user.click(
-      await within(preview).findByRole("button", {
-        name: "Edit item: Current work",
-      }),
-    );
+    await openItemEditor(user, "Current work");
     const editor = await screen.findByRole("form", {
       name: "Current week update for Payments",
     });
@@ -1035,11 +1045,7 @@ describe("LeadForm Overview", () => {
         <LeadForm reportId={REPORT_ID} mode="overview" />
       </Wrapper>,
     );
-    await user.click(
-      await screen.findByRole("button", {
-        name: "Edit item: Current work",
-      }),
-    );
+    await openItemEditor(user, "Current work");
     const text = screen.getByRole("textbox", { name: /Description/ });
     await user.clear(text);
     await user.type(text, "Keep my work during a network error");
@@ -1073,11 +1079,7 @@ describe("LeadForm Overview", () => {
           <LeadForm reportId={REPORT_ID} mode="overview" />
         </Wrapper>,
       );
-      await user.click(
-        await screen.findByRole("button", {
-          name: "Edit item: Current work",
-        }),
-      );
+      await openItemEditor(user, "Current work");
       const text = screen.getByRole("textbox", { name: /Description/ });
       await user.clear(text);
       await user.type(text, "My unsaved result");
@@ -1163,11 +1165,7 @@ describe("LeadForm Overview", () => {
         <LeadForm reportId={REPORT_ID} mode="overview" />
       </Wrapper>,
     );
-    await user.click(
-      await screen.findByRole("button", {
-        name: "Edit item: Current work",
-      }),
-    );
+    await openItemEditor(user, "Current work");
     const description = screen.getByRole("textbox", { name: /Description/ });
     await user.clear(description);
     await user.type(description, "Keep my submitted update");
@@ -1215,11 +1213,7 @@ describe("LeadForm Overview", () => {
           <LeadForm reportId={REPORT_ID} mode="overview" />
         </Wrapper>,
       );
-      await user.click(
-        await screen.findByRole("button", {
-          name: "Edit item: Current work",
-        }),
-      );
+      await openItemEditor(user, "Current work");
       const description = screen.getByRole("textbox", { name: /Description/ });
       await user.clear(description);
       await user.type(description, "Retained retry value");
@@ -1470,11 +1464,7 @@ describe("LeadForm Overview", () => {
         </Wrapper>,
       );
 
-      await user.click(
-        await screen.findByRole("button", {
-          name: `Edit item: ${initial}`,
-        }),
-      );
+      await openItemEditor(user, initial);
       expect(screen.queryByTestId("lead-submit-readiness")).toBeNull();
       expect(
         screen.getByText(
@@ -1490,7 +1480,7 @@ describe("LeadForm Overview", () => {
       expect(await screen.findByText(updated)).toBeInTheDocument();
       expect(
         await screen.findByRole("button", {
-          name: `Edit item: ${updated}`,
+          name: `More actions for ${updated}`,
         }),
       ).toHaveFocus();
       expect(await screen.findByTestId("lead-submit-readiness")).toBeVisible();
@@ -1531,9 +1521,7 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
 
-    await user.click(
-      await screen.findByRole("button", { name: "Edit item: Current work" }),
-    );
+    await openItemEditor(user, "Current work");
     const editor = await screen.findByRole("form", {
       name: "Current week update for Payments",
     });
@@ -1972,16 +1960,12 @@ describe("LeadForm Overview", () => {
         <LeadForm reportId={REPORT_ID} mode="overview" />
       </Wrapper>,
     );
-    await user.click(
-      await screen.findByRole("button", {
-        name: "Edit item: Current work",
-      }),
-    );
+    await openItemEditor(user, "Current work");
     await user.type(screen.getByLabelText(/Description \*/i), " unsaved");
     await user.keyboard("{Escape}");
     await user.click(screen.getByRole("button", { name: "Discard" }));
     expect(
-      screen.getByRole("button", { name: "Edit item: Current work" }),
+      screen.getByRole("button", { name: "More actions for Current work" }),
     ).toHaveFocus();
     expect(
       within(screen.getByTestId("status-overview")).getByRole("status"),
@@ -2012,9 +1996,7 @@ describe("LeadForm Overview", () => {
         <LeadForm reportId={REPORT_ID} mode="overview" />
       </Wrapper>,
     );
-    await user.click(
-      await screen.findByRole("button", { name: "Edit item: Current work" }),
-    );
+    await openItemEditor(user, "Current work");
     const description = screen.getByRole("textbox", { name: /Description/ });
     await user.clear(description);
     await user.type(description, "Detached failed text");
@@ -2063,9 +2045,7 @@ describe("LeadForm Overview", () => {
         <LeadForm reportId={REPORT_ID} mode="overview" />
       </Wrapper>,
     );
-    await user.click(
-      await screen.findByRole("button", { name: "Edit item: Current work" }),
-    );
+    await openItemEditor(user, "Current work");
     const description = screen.getByRole("textbox", { name: /Description/ });
     await user.clear(description);
     await user.type(description, "Detached failed text");
@@ -2093,11 +2073,7 @@ describe("LeadForm Overview", () => {
         <LeadForm reportId={REPORT_ID} mode="overview" />
       </Wrapper>,
     );
-    await user.click(
-      await screen.findByRole("button", {
-        name: "Edit item: Current work",
-      }),
-    );
+    await openItemEditor(user, "Current work");
     const description = screen.getByRole("textbox", { name: /Description/ });
     await user.clear(description);
     await user.type(description, "Never saved text");
@@ -2150,9 +2126,7 @@ describe("LeadForm Overview", () => {
           <LeadForm reportId={REPORT_ID} mode="overview" />
         </Wrapper>,
       );
-      await user.click(
-        await screen.findByRole("button", { name: "Edit item: Current work" }),
-      );
+      await openItemEditor(user, "Current work");
       await user.type(screen.getByLabelText(/Description \*/i), " unsaved");
       await user.click(screen.getByRole("button", { name: "Save update" }));
       await screen.findByText(
@@ -2219,11 +2193,7 @@ describe("LeadForm Overview", () => {
         <LeadForm reportId={REPORT_ID} mode="overview" />
       </Wrapper>,
     );
-    await user.click(
-      await screen.findByRole("button", {
-        name: "Edit item: Current work",
-      }),
-    );
+    await openItemEditor(user, "Current work");
     // "Edit details" is also the row's menu label; scope to the editor form.
     const editor = screen.getByRole("form", {
       name: "Current week update for Payments",
@@ -2246,7 +2216,9 @@ describe("LeadForm Overview", () => {
       screen.queryByRole("region", { name: "Unsaved update recovery" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Edit item: Current work" }),
+      screen.getByRole("button", {
+        name: "More actions for Current work",
+      }),
     ).toHaveFocus();
   });
 
@@ -2273,11 +2245,7 @@ describe("LeadForm Overview", () => {
         <LeadForm reportId={REPORT_ID} mode="overview" />
       </Wrapper>,
     );
-    await user.click(
-      await screen.findByRole("button", {
-        name: "Edit item: Current work",
-      }),
-    );
+    await openItemEditor(user, "Current work");
     const editor = screen.getByRole("form", {
       name: "Current week update for Payments",
     });
@@ -2447,7 +2415,7 @@ describe("LeadForm Overview", () => {
     ).toHaveFocus();
   });
 
-  it("returns focus to the item text after cancelling the editor", async () => {
+  it("returns focus to the item actions after cancelling the editor", async () => {
     const user = userEvent.setup();
     const saveDraft = vi.fn();
     const resolvePlan = vi.fn(() => Promise.resolve({}));
@@ -2457,17 +2425,14 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
 
-    const opener = await screen.findByRole("button", {
-      name: "Edit item: Next work",
-    });
-    await user.click(opener);
+    await openItemEditor(user, "Next work");
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(saveDraft).not.toHaveBeenCalled();
     expect(resolvePlan).not.toHaveBeenCalled();
     expect(
       await screen.findByRole("button", {
-        name: "Edit item: Next work",
+        name: "More actions for Next work",
       }),
     ).toHaveFocus();
   });
@@ -2501,9 +2466,7 @@ describe("LeadForm Overview", () => {
       "data-overview-focus",
       "confirm:current:a0000000-0000-4000-8000-000000000011",
     );
-    await user.click(
-      screen.getByRole("button", { name: "Edit item: Current work" }),
-    );
+    await openItemEditor(user, "Current work");
     const editor = screen.getByRole("form", {
       name: "Current week update for Payments",
     });
@@ -2530,9 +2493,11 @@ describe("LeadForm Overview", () => {
         }),
       ).toBeNull(),
     );
-    // Focus returns to the text control that opened the editor.
+    // Focus returns to the overflow control that opened the editor.
     expect(
-      await screen.findByRole("button", { name: "Edit item: Current work" }),
+      await screen.findByRole("button", {
+        name: "More actions for Current work",
+      }),
     ).toHaveFocus();
   });
 
@@ -2566,11 +2531,7 @@ describe("LeadForm Overview", () => {
         name: "Status of Current work: Planned · not updated this week",
       }),
     ).toBeVisible();
-    await user.click(
-      screen.getByRole("button", {
-        name: "Edit item: Current work",
-      }),
-    );
+    await openItemEditor(user, "Current work");
     await user.click(screen.getByRole("button", { name: "In progress" }));
     await user.click(screen.getByRole("button", { name: "Save update" }));
 
@@ -2670,10 +2631,7 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
 
-    const progress = await screen.findByRole("button", {
-      name: "Edit item: Current work",
-    });
-    await user.click(progress);
+    await openItemEditor(user, "Current work");
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(saveDraft).not.toHaveBeenCalled();
@@ -2685,7 +2643,7 @@ describe("LeadForm Overview", () => {
     ).toBeVisible();
     expect(
       await screen.findByRole("button", {
-        name: "Edit item: Current work",
+        name: "More actions for Current work",
       }),
     ).toHaveFocus();
   });
@@ -2809,9 +2767,7 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
 
-    await user.click(
-      await screen.findByRole("button", { name: "Edit item: Current work" }),
-    );
+    await openItemEditor(user, "Current work");
     // The canonical editor can still switch weeks; that Save is a placement
     // move, which cannot keep the saved commitment and must be refused instead
     // of silently acknowledging it from a "Next week" selection.
@@ -2837,11 +2793,7 @@ describe("LeadForm Overview", () => {
       initial: "Current work",
       target: "next" as const,
       open: async (user: ReturnType<typeof userEvent.setup>) => {
-        await user.click(
-          await screen.findByRole("button", {
-            name: "Edit item: Current work",
-          }),
-        );
+        await openItemEditor(user, "Current work");
         await user.click(screen.getByRole("radio", { name: "Next week" }));
       },
     },
@@ -2935,9 +2887,7 @@ describe("LeadForm Overview", () => {
 
       // The moved row now lives in the Next lane; its editor shows the same
       // status as selected.
-      await user.click(
-        await screen.findByRole("button", { name: "Edit item: Current work" }),
-      );
+      await openItemEditor(user, "Current work");
       expect(screen.getByRole("radio", { name: "Next week" })).toBeChecked();
       expect(screen.getByRole("button", { name: statusLabel })).toHaveAttribute(
         "aria-pressed",
@@ -3097,9 +3047,7 @@ it("does not acknowledge a later parent-and-stage edit from an earlier in-flight
       <LeadForm reportId={REPORT_ID} mode="overview" />
     </Wrapper>,
   );
-  await user.click(
-    await screen.findByRole("button", { name: "Edit item: Current work" }),
-  );
+  await openItemEditor(user, "Current work");
   const first = screen.getByRole("textbox", { name: /Description/ });
   await user.clear(first);
   await user.type(first, "Earlier submitted text");
@@ -3111,11 +3059,7 @@ it("does not acknowledge a later parent-and-stage edit from an earlier in-flight
       await screen.findByRole("alertdialog", { name: "Discard changes?" }),
     ).getByRole("button", { name: "Discard" }),
   );
-  await user.click(
-    await screen.findByRole("button", {
-      name: "Edit item: Earlier submitted text",
-    }),
-  );
+  await openItemEditor(user, "Earlier submitted text");
   const latest = screen.getByRole("textbox", { name: /Description/ });
   await user.clear(latest);
   await user.type(latest, "Latest parent and stage");
@@ -3186,9 +3130,7 @@ it("keeps lost-ACK discard recovery after a real CAS conflict and never compensa
       <LeadForm reportId={REPORT_ID} mode="overview" />
     </Wrapper>,
   );
-  await user.click(
-    await screen.findByRole("button", { name: "Edit item: Current work" }),
-  );
+  await openItemEditor(user, "Current work");
   const description = screen.getByRole("textbox", { name: /Description/ });
   await user.clear(description);
   await user.type(description, "Committed but unacknowledged");

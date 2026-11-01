@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -142,13 +142,41 @@ function renderOverviewWithFailingSave() {
 // TASK-503.21 / C4929: changeWeek ignores every call while a submission exists,
 // including after a failed save, yet the failed-save dialog keeps the week
 // radios enabled. A clickable control must not be a silent no-op.
+// The item title opens the inline text editor; the canonical editor is
+// reached through the overflow menu's Edit details entry.
+async function openItemEditor(
+  user: ReturnType<typeof userEvent.setup>,
+  text: string,
+) {
+  const preview = await vi.waitFor(
+    () => {
+      const preview =
+        screen
+          .queryAllByText(text)
+          .map((element) =>
+            element.closest<HTMLElement>("[data-overview-item-preview]"),
+          )
+          .find((element) => element !== null) ?? null;
+      if (!preview) throw new Error(`Expected an item preview for "${text}"`);
+      return preview;
+    },
+    { timeout: 5000 },
+  );
+  await user.click(
+    await within(preview).findByRole("button", {
+      name: `More actions for ${text}`,
+    }),
+  );
+  await user.click(
+    await screen.findByRole("menuitem", { name: `Edit details: ${text}` }),
+  );
+}
+
 describe("Overview editor — Active week after a failed save", () => {
   it("never leaves an enabled Active week radio that ignores a click", async () => {
     const user = userEvent.setup();
     renderOverviewWithFailingSave();
-    await user.click(
-      await screen.findByRole("button", { name: "Edit item: Current work" }),
-    );
+    await openItemEditor(user, "Current work");
     const description = screen.getByRole("textbox", { name: /Description/ });
     await user.clear(description);
     await user.type(description, "Keep my failed update");

@@ -76,6 +76,30 @@ function ActivityFieldsForm({
   );
 }
 
+function UnitGroupHeader({
+  groupId,
+  label,
+  count,
+}: {
+  readonly groupId: string;
+  readonly label: string;
+  readonly count: number;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 bg-[var(--color-surface-muted)] px-4 py-2">
+      <h3
+        id={groupId}
+        className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-primary)]"
+      >
+        {label}
+      </h3>
+      <span className="text-xs tabular-nums text-[var(--color-muted-foreground)]">
+        {count}
+      </span>
+    </div>
+  );
+}
+
 export function UnitGroup({
   group,
   idPrefix,
@@ -99,17 +123,11 @@ export function UnitGroup({
       aria-labelledby={groupId}
       className="border-t border-[var(--color-border-subtle)] first:border-t-0"
     >
-      <div className="flex items-center justify-between gap-3 bg-[var(--color-surface-muted)] px-4 py-2">
-        <h3
-          id={groupId}
-          className="font-[family-name:var(--font-sans)] text-base font-semibold tracking-[-0.01em] text-[var(--color-primary)]"
-        >
-          {group.label}
-        </h3>
-        <span className="text-xs tabular-nums text-[var(--color-muted-foreground)]">
-          {units.length}
-        </span>
-      </div>
+      <UnitGroupHeader
+        groupId={groupId}
+        label={group.label}
+        count={units.length}
+      />
       {units.map((unit, index) => (
         <div key={unit.key} className="min-w-0">
           <StatusOverviewUnitRow
@@ -125,6 +143,7 @@ export function UnitGroup({
             onToggle={() => onToggle(unit.key)}
             panelId={`${idPrefix}-${group.kind}-${String(index)}`}
             onEditItem={overview.onEditItem}
+            onEditItemText={overview.onEditItemText}
             onAddItem={onAddItem}
             onPlanItem={overview.onPlanItem}
             onMoveItem={overview.onMoveItem}

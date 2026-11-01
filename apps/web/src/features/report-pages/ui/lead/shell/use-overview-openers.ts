@@ -10,6 +10,7 @@ import type {
 } from "../../../../report-sections";
 import { buildConfirmCarriedItemPatch } from "../../../../report-sections";
 import {
+  buildStatusOverviewItemPatch,
   createOverviewComposerState,
   findEditableItem,
   type OverviewItemDialogState,
@@ -77,6 +78,35 @@ function editDialogState(
         }
       : {}),
   };
+}
+
+// The inline text editor commits only the description: the week-items patch
+// rebuilds the item with its stored progress, placement and stableId, and —
+// like a canonical dialog save of the same item — clears the carry marker of
+// a still-unconfirmed Current item. A no-op or blank commit writes nothing.
+function applyItemTextEdit(
+  whenIdle: WhenIdle,
+  target: StatusOverviewEditTarget,
+  text: string,
+): void {
+  if (target.focusNextStep === true) return;
+  whenIdle((ready) => {
+    const draftItem = findEditableItem(ready, target);
+    if (!draftItem) return;
+    const { viewModel } = ready.view;
+    const patch = buildStatusOverviewItemPatch(
+      target,
+      viewModel.ownCurrentWeekItems,
+      viewModel.ownNextWeekItems,
+      { ...draftItem, text },
+    );
+    if (draftItem.text !== text && patch) ready.draft.apply(patch);
+    const confirm = buildConfirmCarriedItemPatch(
+      ready.draft.section,
+      draftItem.id,
+    );
+    if (confirm) ready.draft.apply(confirm);
+  });
 }
 
 // A running outcome command locks the draft: apply right after it.
@@ -178,7 +208,12 @@ export function useOverviewEditOpeners({
       return Promise.resolve("This report is not editable right now.");
     return saveStatus(item, status, input);
   };
-  return { editItem, moveItem, confirmItem, setItemStatus };
+  const editItemText = (item: StatusOverviewItem, text: string): void => {
+    const target = item.editTarget;
+    if (!editor || isReadOnly || dialog || !target) return;
+    applyItemTextEdit(whenIdle, target, text);
+  };
+  return { editItem, editItemText, moveItem, confirmItem, setItemStatus };
 }
 
 export function useOverviewCreateOpeners({

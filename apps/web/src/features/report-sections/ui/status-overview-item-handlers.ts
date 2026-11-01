@@ -28,6 +28,9 @@ export interface ItemHandlers {
   readonly editorSlot?: StatusOverviewEditorSlot | undefined;
   readonly onEditItem?:
     ((target: StatusOverviewEditTarget) => void) | undefined;
+  /** Commits the inline in-place text edit of one editable item. */
+  readonly onEditItemText?:
+    ((item: StatusOverviewItem, text: string) => void) | undefined;
   readonly onAddItem?:
     ((target: StatusOverviewCreateTarget) => void) | undefined;
   readonly onPlanItem?: ((item: StatusOverviewItem) => void) | undefined;

@@ -65,7 +65,7 @@ export function useOverviewItemEditor(
       startedAttempt.current = null;
     },
   };
-  const { editItem, moveItem, confirmItem, setItemStatus } =
+  const { editItem, editItemText, moveItem, confirmItem, setItemStatus } =
     useOverviewEditOpeners(openers);
   const { addItem, planItem } = useOverviewCreateOpeners(openers);
   const saveContext = {
@@ -88,6 +88,7 @@ export function useOverviewItemEditor(
     error: error ?? overviewSaveFailure(editor, dialog),
     recoveryReason,
     editItem,
+    editItemText,
     addItem,
     planItem,
     moveItem,
