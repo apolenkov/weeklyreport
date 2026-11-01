@@ -20,8 +20,13 @@ const DRAG_HANDLE_LABEL = "Drag to move to another week";
 // chip, not to the handle itself.
 const DRAG_HANDLE_CLASS = `${OVERLAY_BUTTON_CLASS} cursor-grab active:cursor-grabbing`;
 
-// The grip, the action cluster and the verdict stamp float as one chip over
-// the card's top-right corner, so the text keeps the card's full width.
+// The grip, the action cluster and the verdict stamp float as one chip
+// entirely above the card's top edge (in the lane's top padding), so the
+// chip never covers the text and a click on the text always reaches it.
+// The transparent bridge (::before) spans the gap between the chip and the
+// card, so the pointer keeps the card hovered while it crosses to the chip;
+// on touch the chip is static, so the bridge would stray below the card and
+// is only added where hover exists.
 // Hidden by opacity and pointer-events only — never display or visibility —
 // the controls stay in the accessibility tree and the Tab order. The chip
 // reveals on hover, on focus within the card, while a menu is open, and
@@ -30,7 +35,7 @@ const DRAG_HANDLE_CLASS = `${OVERLAY_BUTTON_CLASS} cursor-grab active:cursor-gra
 const OVERLAY_CHIP_CLASS =
   "flex items-center gap-0.5 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-card)] p-0.5 shadow-sm";
 const OVERLAY_FLOAT_CLASS =
-  "absolute right-0 top-0 [@media(hover:none)]:order-last [@media(hover:none)]:mt-1 [@media(hover:none)]:static [@media(hover:none)]:w-full";
+  "absolute bottom-full right-0 z-10 mb-0.5 [@media(hover:hover)]:before:absolute [@media(hover:hover)]:before:inset-x-0 [@media(hover:hover)]:before:-bottom-1 [@media(hover:hover)]:before:h-1 [@media(hover:none)]:order-last [@media(hover:none)]:mt-1 [@media(hover:none)]:static [@media(hover:none)]:w-full";
 const OVERLAY_REVEAL_CLASS =
   "pointer-events-none opacity-0 transition-[opacity] group-hover/item:pointer-events-auto group-hover/item:opacity-100 group-focus-within/item:pointer-events-auto group-focus-within/item:opacity-100 has-[[data-state=open]]:pointer-events-auto has-[[data-state=open]]:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100 motion-reduce:transition-none";
 
