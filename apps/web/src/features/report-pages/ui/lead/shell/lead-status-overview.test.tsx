@@ -2390,6 +2390,76 @@ describe("LeadForm Overview", () => {
     ).toHaveLength(1);
   });
 
+  // A move is an ordinary draft change: when another tab saved the section
+  // first, the autosave is refused and the Overview must show the saved
+  // placement again instead of keeping the move this tab never persisted.
+  it("reloads the saved placement when a move autosave hits a stale-tab conflict", async () => {
+    const user = userEvent.setup();
+    const conflict = new TRPCClientError("stale version");
+    Object.defineProperty(conflict, "data", {
+      value: { httpStatus: 409, code: "CONFLICT" },
+      configurable: true,
+    });
+    // The other tab changed the content too: a version-only bump would look
+    // unchanged to the draft and keep the local move.
+    const saveDraft = vi.fn(
+      (_input: unknown, current: ReportSectionReadModel) => {
+        Object.defineProperty(conflict, "serverSection", {
+          configurable: true,
+          value: {
+            ...current,
+            version: current.version + 1,
+            items: current.items.map((item) =>
+              item.text === "Current work"
+                ? { ...item, text: "Saved in the other tab" }
+                : item,
+            ),
+          },
+        });
+        return Promise.reject(conflict);
+      },
+    );
+    render(
+      <Wrapper saveDraft={saveDraft}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    const moveItem = await openMoveMenu(user, "Current work", "next week");
+    vi.useFakeTimers();
+    try {
+      fireEvent.click(moveItem);
+      await act(() => vi.advanceTimersByTimeAsync(0));
+      await act(() => vi.advanceTimersByTimeAsync(5000));
+      await act(() => vi.advanceTimersByTimeAsync(0));
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(saveDraft).toHaveBeenCalledOnce();
+
+    await pollUntil(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        "This section was changed elsewhere. Reloaded the latest version — re-apply your changes and save again.",
+      ),
+    );
+    // The lanes render twice (mobile and desktop copies); the server text
+    // must sit in a Current lane and nowhere in Next.
+    const laneSelector = {
+      current: '[data-overview-lineage-lane="current"]',
+      next: '[data-overview-lineage-lane="next"]',
+    } as const;
+    const lanesHolding = (source: keyof typeof laneSelector) =>
+      Array.from(
+        document.querySelectorAll<HTMLElement>(laneSelector[source]),
+      ).filter(
+        (lane) => within(lane).queryByText("Saved in the other tab") !== null,
+      );
+    await pollUntil(() => {
+      expect(lanesHolding("current").length).toBeGreaterThan(0);
+      expect(lanesHolding("next")).toHaveLength(0);
+    });
+  });
+
   // A genuine Next item moves directly, so the editor Move only remains on
   // the legacy derived plan — the promotion path still exercised below.
   it("returns focus to a visible same-item control after cancelling a Move", async () => {
