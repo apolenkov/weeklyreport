@@ -215,6 +215,183 @@ describe("saveSnapshot — period order", () => {
     });
     expect(transaction).not.toHaveBeenCalled();
   });
+
+  it("rejects an inverted published row and snapshot envelope before opening a transaction", async () => {
+    const transaction = vi.fn();
+    const prisma = { $transaction: transaction } as unknown as PrismaService;
+    const periodStart = new Date("2026-08-30T00:00:00.000Z");
+    const periodEnd = new Date("2026-08-24T00:00:00.000Z");
+    const publishedAt = new Date("2026-08-30T10:00:00.000Z");
+    const invertedSnapshot = {
+      users: [],
+      groups: [],
+      projects: [],
+      periods: [
+        {
+          id: REPORT_ID,
+          periodStart,
+          periodEnd,
+          deadline: null,
+          status: "published",
+          periodState: "published",
+          periodStatus: "published",
+          archived: false,
+          weekLabel: null,
+          autoPublished: false,
+          autoArchived: false,
+          publishedAt,
+          publishedById: null,
+          reopenedAt: null,
+          publishedSnapshot: {
+            reportId: REPORT_ID,
+            periodStart,
+            periodEnd,
+            deadline: null,
+            status: "published",
+            publishedAt,
+            publishedById: null,
+            publishedByName: null,
+            portfolioOverview: {
+              status: "green",
+              totals: { green: 0, yellow: 0, red: 0 },
+            },
+            sections: [],
+          },
+        },
+      ],
+      reminderRules: [],
+      reminderExecutions: [],
+      policies: [],
+    };
+
+    let error: unknown;
+    try {
+      await saveSnapshot(prisma, undefined, invertedSnapshot as never);
+    } catch (error_) {
+      error = error_;
+    }
+    expect(error).toBeInstanceOf(ZodError);
+    if (!(error instanceof ZodError)) {
+      throw new Error("Expected snapshot validation to throw ZodError");
+    }
+    expect(error.issues.length).toBeGreaterThan(0);
+    expect(
+      error.issues.every(
+        (issue) =>
+          issue.message === "Period end must not be before period start.",
+      ),
+    ).toBe(true);
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
+  it("rejects a reopened row whose retained publication envelope is inverted", async () => {
+    const transaction = vi.fn();
+    const prisma = { $transaction: transaction } as unknown as PrismaService;
+    const periodStart = new Date("2026-08-24T00:00:00.000Z");
+    const periodEnd = new Date("2026-08-30T00:00:00.000Z");
+    const publishedAt = new Date("2026-08-30T10:00:00.000Z");
+    const reopenedAt = new Date("2026-08-31T09:00:00.000Z");
+    const invertedEnvelope = {
+      reportId: REPORT_ID,
+      periodStart: periodEnd,
+      periodEnd: periodStart,
+      deadline: null,
+      status: "published",
+      publishedAt,
+      publishedById: null,
+      publishedByName: null,
+      portfolioOverview: {
+        status: "green",
+        totals: { green: 0, yellow: 0, red: 0 },
+      },
+      sections: [],
+    };
+    const reopenedSnapshot = {
+      users: [],
+      groups: [],
+      projects: [],
+      periods: [
+        {
+          id: REPORT_ID,
+          periodStart,
+          periodEnd,
+          deadline: null,
+          status: "published",
+          periodState: "open",
+          periodStatus: "reopened",
+          archived: false,
+          weekLabel: null,
+          autoPublished: false,
+          autoArchived: false,
+          publishedAt,
+          publishedById: null,
+          reopenedAt,
+          publishedSnapshot: invertedEnvelope,
+        },
+      ],
+      reminderRules: [],
+      reminderExecutions: [],
+      policies: [],
+    };
+
+    let error: unknown;
+    try {
+      await saveSnapshot(prisma, undefined, reopenedSnapshot as never);
+    } catch (error_) {
+      error = error_;
+    }
+    expect(error).toBeInstanceOf(ZodError);
+    if (!(error instanceof ZodError)) {
+      throw new Error("Expected snapshot validation to throw ZodError");
+    }
+    expect(error.issues.length).toBeGreaterThan(0);
+    expect(
+      error.issues.every(
+        (issue) =>
+          issue.message === "Period end must not be before period start.",
+      ),
+    ).toBe(true);
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
+  it("lets a one-day period reach the restore transaction", async () => {
+    const day = new Date("2026-08-24T00:00:00.000Z");
+    const failure = new Error("restore transaction reached");
+    const transaction = vi.fn().mockRejectedValue(failure);
+    const prisma = { $transaction: transaction } as unknown as PrismaService;
+    const oneDaySnapshot = {
+      users: [],
+      groups: [],
+      projects: [],
+      periods: [
+        {
+          id: REPORT_ID,
+          periodStart: day,
+          periodEnd: day,
+          deadline: null,
+          status: "draft",
+          periodState: "open",
+          periodStatus: "open",
+          archived: false,
+          weekLabel: null,
+          autoPublished: false,
+          autoArchived: false,
+          publishedAt: null,
+          publishedById: null,
+          reopenedAt: null,
+          publishedSnapshot: null,
+        },
+      ],
+      reminderRules: [],
+      reminderExecutions: [],
+      policies: [],
+    };
+
+    await expect(
+      saveSnapshot(prisma, undefined, oneDaySnapshot as never),
+    ).rejects.toBe(failure);
+    expect(transaction).toHaveBeenCalledOnce();
+  });
 });
 
 describe("saveSnapshot — deterministic pre-transaction validation", () => {

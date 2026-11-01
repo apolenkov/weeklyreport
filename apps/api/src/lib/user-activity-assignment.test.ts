@@ -164,6 +164,52 @@ describe("user assignment integrity", () => {
 });
 
 describe("Head reporting-group membership", () => {
+  it.each(["viewer", "lead"] as const)(
+    "rejects a %s as the head of a reporting group",
+    async (role) => {
+      const tx = {
+        $queryRaw: vi.fn().mockResolvedValue([{ id: USER_ID }]),
+        user: {
+          findUnique: vi.fn().mockResolvedValue({
+            role,
+            reportingGroupId: GROUP_A,
+          }),
+        },
+      } as unknown as Prisma.TransactionClient;
+
+      await expect(
+        lockAndAssertGroupHead(tx, USER_ID, GROUP_A),
+      ).rejects.toBeInstanceOf(AdminUserActivityAssignmentConflictError);
+    },
+  );
+
+  it("rejects a group head that does not exist", async () => {
+    const tx = {
+      $queryRaw: vi.fn().mockResolvedValue([]),
+      user: { findUnique: vi.fn() },
+    } as unknown as Prisma.TransactionClient;
+
+    await expect(
+      lockAndAssertGroupHead(tx, USER_ID, GROUP_A),
+    ).rejects.toBeInstanceOf(AdminUserActivityAssignmentConflictError);
+    expect(tx.user.findUnique).not.toHaveBeenCalled();
+  });
+
+  it.each(["viewer", "lead"] as const)(
+    "rejects a %s change for a user who still heads a group",
+    async (role) => {
+      const tx = fakeTx([], [], [{ id: GROUP_A }]);
+
+      await expect(
+        lockUserAndAssertActivityAssignments(tx, {
+          userId: USER_ID,
+          role,
+          reportingGroupId: GROUP_A,
+        }),
+      ).rejects.toBeInstanceOf(AdminUserActivityAssignmentConflictError);
+    },
+  );
+
   it.each([
     { role: "head", reportingGroupId: GROUP_A, conflict: false },
     { role: "head", reportingGroupId: GROUP_B, conflict: true },
