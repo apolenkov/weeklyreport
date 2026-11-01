@@ -41,7 +41,9 @@ in a separate sidebar entry or page).
 The History and Archive navigation controls MUST each include an
 explanatory tooltip (or aria-label) describing what the surface
 contains. The text MUST make the distinction unambiguous without
-requiring the user to click into either.
+requiring the user to click into either. The Archive toggle pill MUST
+provide visible keyboard focus indication across its enclosing container
+when focused via keyboard.
 
 #### Scenario: User hovers over History
 
@@ -52,3 +54,8 @@ requiring the user to click into either.
 
 - **WHEN** the user hovers over (or focuses) the Archive control
 - **THEN** a tooltip or aria-label reading "Past weeks and closed reports" is announced
+
+#### Scenario: Keyboard focus on the Archive pill
+
+- **WHEN** keyboard focus moves to the checkbox inside the Archive toggle
+- **THEN** the enclosing Archive pill container indicates focus using the shared design system ring token (`focus-within:ring-2 focus-within:ring-[var(--color-ring)]`)

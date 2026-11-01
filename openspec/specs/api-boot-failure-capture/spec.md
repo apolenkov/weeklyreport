@@ -1,4 +1,11 @@
-## ADDED Requirements
+# api-boot-failure-capture Specification
+
+## Purpose
+
+Capture a failure before bootstrap with Sentry before the bounded
+telemetry drain, keeping the process exit code 1 on every path.
+
+## Requirements
 
 ### Requirement: A boot failure is captured by Sentry before telemetry drains
 
