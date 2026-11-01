@@ -41,13 +41,13 @@ Reconciled 2026-11-02 against main 9d8051cc0 (implementation commits
 - [x] 9. Move notification with Undo; refused Undo reports
       `UNDO_UNAVAILABLE`; Undo survives a row-id re-issue
       (`overview-in-place-move.test.ts`, d15781071).
-- [ ] 10. Stale-tab handling after a move: card revert, standard save-failure
-      message and Overview resync are covered only by the shared draft
-      conflict path (`lead-status-overview.test.tsx` conflict cases); add a
-      move-specific test.
-- [ ] 11. Component tests: present for editor state machine, icons by
-      placement, shortcut applicability, Undo refusal and Previous
-      ineligibility; missing: rejected-drop revert of the card position.
+- [x] 10. Stale-tab handling after a move: a 409 on the move autosave reloads
+      the saved placement and shows the "changed elsewhere" reload notice
+      (`lead-status-overview.test.tsx` "reloads the saved placement when a
+      move autosave hits a stale-tab conflict", addc85847).
+- [x] 11. Component tests: editor state machine, icons by placement, shortcut
+      applicability, Undo refusal, Previous ineligibility and rejected-drop
+      card position (`status-overview-dnd.test.tsx`, addc85847).
 
 ## planning + docs
 
