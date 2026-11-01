@@ -16,6 +16,7 @@ import {
   overviewPlanRecoveryReason,
   type OverviewPlanState,
   type PlanOutcome,
+  STAGE_REQUIRED_ERROR,
 } from "./overview-plan-command";
 import {
   executePlan,
@@ -68,12 +69,14 @@ function useMountedFlag() {
 
 function usePlanDialogControls({
   dialog,
+  error,
   setDialog,
   setError,
   running,
   execute,
 }: {
   readonly dialog: OverviewPlanState | null;
+  readonly error: string | null;
   readonly setDialog: PlanRunContext["setDialog"];
   readonly setError: PlanRunContext["setError"];
   readonly running: PlanRunContext["running"];
@@ -81,12 +84,14 @@ function usePlanDialogControls({
 }) {
   return {
     change: (patch: Partial<OverviewPlanFields>) => {
-      if (!running.current)
-        setDialog((current) =>
-          current
-            ? { ...current, fields: { ...current.fields, ...patch } }
-            : current,
-        );
+      if (running.current) return;
+      setDialog((current) =>
+        current
+          ? { ...current, fields: { ...current.fields, ...patch } }
+          : current,
+      );
+      // A new parent brings its own stage set, so the old stage error is stale.
+      if (patch.parent && error === STAGE_REQUIRED_ERROR) setError(null);
     },
     choose: (outcome: PlanOutcome) => {
       if (!dialog || running.current) return;
@@ -162,6 +167,7 @@ export function useOverviewPlanActions(
 
   const controls = usePlanDialogControls({
     dialog,
+    error,
     setDialog,
     setError,
     running,

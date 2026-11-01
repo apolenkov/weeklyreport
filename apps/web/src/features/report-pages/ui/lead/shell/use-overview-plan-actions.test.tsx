@@ -304,3 +304,55 @@ describe("useOverviewPlanActions open-work retry", () => {
     );
   });
 });
+
+describe("useOverviewPlanActions parent change", () => {
+  const STAGE_ERROR = "Select at least one stage.";
+  const ACTIVITY = {
+    kind: "activity",
+    id: "70000000-0000-4000-8000-000000000007",
+    name: "Support",
+  } as const;
+
+  async function submitWithoutStages(
+    harness: ReturnType<typeof retainedHarness>,
+  ) {
+    act(() => harness.current().openWork(openWork()));
+    act(() => harness.current().change({ stageNames: [] }));
+    act(() => harness.current().submit());
+    await waitFor(() => expect(harness.current().error).toBe(STAGE_ERROR));
+  }
+
+  it("clears the stale stage error when the parent changes", async () => {
+    const resolve = vi.fn<Resolve>();
+    const harness = retainedHarness(resolve);
+    await submitWithoutStages(harness);
+
+    act(() => harness.current().change({ parent: ACTIVITY, stageNames: [] }));
+
+    expect(harness.current().error).toBeNull();
+    expect(resolve).not.toHaveBeenCalled();
+  });
+
+  it("keeps the stage error while only the stages change", async () => {
+    const harness = retainedHarness(vi.fn<Resolve>());
+    await submitWithoutStages(harness);
+
+    act(() => harness.current().change({ stageNames: [] }));
+
+    expect(harness.current().error).toBe(STAGE_ERROR);
+  });
+
+  it("keeps an unrelated validation error when the parent changes", async () => {
+    const harness = retainedHarness(vi.fn<Resolve>());
+    act(() => harness.current().openWork(openWork()));
+    act(() => harness.current().change({ resultText: "" }));
+    act(() => harness.current().submit());
+    await waitFor(() => expect(harness.current().error).not.toBeNull());
+    const unrelated = harness.current().error;
+    expect(unrelated).not.toBe(STAGE_ERROR);
+
+    act(() => harness.current().change({ parent: ACTIVITY, stageNames: [] }));
+
+    expect(harness.current().error).toBe(unrelated);
+  });
+});
