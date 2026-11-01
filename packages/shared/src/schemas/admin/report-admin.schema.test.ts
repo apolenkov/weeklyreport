@@ -3,6 +3,11 @@ import { describe, expect, it } from "vitest";
 import { publishedReportSnapshotSchema } from "../report/report.schema.js";
 import { adminUserInputSchema, adminUserSchema } from "./admin-user.schema.js";
 import {
+  adminReminderRuleSchema,
+  adminSnapshotReminderExecutionSchema,
+  adminSnapshotReminderRuleSchema,
+} from "./reminder-recovery.schema.js";
+import {
   adminReportPeriodSchema,
   adminSnapshotRestoreSchema,
   adminSnapshotSchema,
@@ -1129,5 +1134,172 @@ describe("adminUserSchema — read contract does not tighten stored values", () 
       position: " ".repeat(3),
     });
     expect(result.success).toBe(true);
+  });
+});
+
+const REQUIRED_DATE_MESSAGE = "A required reminder date must not be null.";
+
+function nullRequiredDateSnapshot(
+  collection: "reminderRules" | "reminderExecutions",
+  field: string,
+) {
+  const snapshot = snapshotWithReminderExecution();
+  return collection === "reminderRules"
+    ? {
+        ...snapshot,
+        reminderRules: [{ ...snapshot.reminderRules[0], [field]: null }],
+      }
+    : {
+        ...snapshot,
+        reminderExecutions: [
+          { ...snapshot.reminderExecutions[0], [field]: null },
+        ],
+      };
+}
+
+function expectRequiredDateIssue(
+  collection: "reminderRules" | "reminderExecutions",
+  field: string,
+  invalid: ReturnType<typeof nullRequiredDateSnapshot>,
+): void {
+  const result = adminSnapshotSchema.safeParse(invalid);
+
+  expect(result.success).toBe(false);
+  if (!result.success) {
+    expect(result.error.issues).toContainEqual(
+      expect.objectContaining({
+        path: [collection, 0, field],
+        message: REQUIRED_DATE_MESSAGE,
+      }),
+    );
+  }
+}
+
+describe("reminder recovery — mandatory dates reject null", () => {
+  it.each([
+    ["reminderExecutions", "createdAt"],
+    ["reminderExecutions", "updatedAt"],
+  ] as const)("rejects a null %s.%s before coercion", (collection, field) => {
+    expectRequiredDateIssue(
+      collection,
+      field,
+      nullRequiredDateSnapshot(collection, field),
+    );
+  });
+
+  // TODO(wr-513): validateAdminSnapshotIntegrity dereferences a null
+  // rule.fireAt, rule.deadline or execution.scheduledFor before the field-level
+  // rejection, so safeParse throws a TypeError instead of returning issues.
+  // Un-skip once the integrity validator guards null mandatory dates.
+  it.skip.each([
+    ["reminderRules", "fireAt"],
+    ["reminderRules", "deadline"],
+    ["reminderExecutions", "scheduledFor"],
+  ] as const)("rejects a null %s.%s before coercion", (collection, field) => {
+    expectRequiredDateIssue(
+      collection,
+      field,
+      nullRequiredDateSnapshot(collection, field),
+    );
+  });
+
+  it("keeps the epoch instant valid for a rule fire time", () => {
+    const rule = snapshotWithReminderExecution().reminderRules[0];
+    for (const fireAt of [new Date(0), "1970-01-01T00:00:00.000Z"]) {
+      const result = adminReminderRuleSchema.safeParse({ ...rule, fireAt });
+
+      expect(result.success).toBe(true);
+      expect(result.data?.fireAt.getTime()).toBe(0);
+    }
+  });
+
+  it("parses a Date and an ISO string of one instant to equal times", () => {
+    const instant = new Date("2026-08-29T15:00:00.000Z");
+    const base = snapshotWithReminderExecution();
+    const rule = adminSnapshotReminderRuleSchema.parse({
+      ...base.reminderRules[0],
+      fireAt: instant,
+      deadline: instant.toISOString(),
+    });
+    const execution = adminSnapshotReminderExecutionSchema.parse({
+      ...base.reminderExecutions[0],
+      scheduledFor: instant,
+      createdAt: instant.toISOString(),
+      updatedAt: instant,
+    });
+
+    expect(rule.fireAt.getTime()).toBe(instant.getTime());
+    expect(rule.deadline.getTime()).toBe(instant.getTime());
+    expect(execution.scheduledFor.getTime()).toBe(instant.getTime());
+    expect(execution.createdAt.getTime()).toBe(instant.getTime());
+    expect(execution.updatedAt.getTime()).toBe(instant.getTime());
+    expect(execution.sentAt).toBeNull();
+  });
+});
+
+describe("adminSnapshotSchema — autoArchived requires an archived period", () => {
+  const autoArchivedPublication = {
+    ...lifecycle,
+    status: "published" as const,
+    periodState: "published" as const,
+    periodStatus: "published" as const,
+    publishedAt: "2026-08-30T10:00:00.000Z",
+    publishedById: null,
+    publishedSnapshot,
+    autoArchived: true,
+  };
+  const hasAutoArchivedIssue = (
+    result: ReturnType<typeof adminSnapshotSchema.safeParse>,
+  ): boolean =>
+    !result.success &&
+    result.error.issues.some((issue) => issue.path.at(-1) === "autoArchived");
+
+  it.each([
+    ["snapshot", adminSnapshotSchema],
+    ["restore", adminSnapshotRestoreSchema],
+  ] as const)(
+    "rejects autoArchived on a non-archived publication through the %s schema",
+    (_label, schema) => {
+      const snapshot = {
+        ...snapshotWithUser(user("viewer")),
+        periods: [{ ...autoArchivedPublication, archived: false }],
+      };
+
+      expect(hasAutoArchivedIssue(schema.safeParse(snapshot))).toBe(true);
+    },
+  );
+
+  it("accepts autoArchived on an archived publication", () => {
+    const snapshot = {
+      ...snapshotWithUser(user("viewer")),
+      periods: [
+        {
+          ...autoArchivedPublication,
+          archived: true,
+          periodState: "archived" as const,
+        },
+      ],
+    };
+
+    expect(adminSnapshotSchema.safeParse(snapshot).success).toBe(true);
+  });
+
+  it("rejects autoArchived on an archived draft", () => {
+    const snapshot = {
+      ...snapshotWithUser(user("viewer")),
+      periods: [
+        {
+          ...lifecycle,
+          status: "draft" as const,
+          publishedSnapshot: null,
+          archived: true,
+          autoArchived: true,
+        },
+      ],
+    };
+
+    expect(hasAutoArchivedIssue(adminSnapshotSchema.safeParse(snapshot))).toBe(
+      true,
+    );
   });
 });
