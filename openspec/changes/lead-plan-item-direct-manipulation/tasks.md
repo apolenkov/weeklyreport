@@ -51,9 +51,9 @@ Reconciled 2026-11-02 against main 9d8051cc0 (implementation commits
 
 ## planning + docs
 
-- [ ] 12. E2E scenario (agent-browser) with durable evidence: drag
-      Current→Next, icon move Next→Current, Alt+Arrow round trip, inline edit
-      with empty restore, Undo, Previous read-only. Lane-A browser checks on
-      01.11 were not saved as durable evidence.
+- [x] 12. E2E scenario (agent-browser) with durable evidence: icon move,
+      drag Next→Current, Alt+Arrow round trip, inline edit with empty restore
+      and Esc, Undo with reload, Previous read-only — all PASS on lane A,
+      02.11; evidence in `~/work/handoffs/wr-766-e2e-20261102/RESULT.md`.
 - [ ] 13. Six gates ran green on each delivered SHA (60bfa4814 and later);
       guarded API integration for the move patches is still open.
