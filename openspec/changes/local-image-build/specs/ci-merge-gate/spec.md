@@ -26,6 +26,14 @@ as documented local commands, with the existing destructive target guards.
 - **THEN** the local checks execute and failures block delivery
 - **AND** an agent or CI hook skip is not evidence that checks passed
 
+## REMOVED Requirements
+
+### Requirement: The image-build job fails closed and uses no Docker daemon
+
+The image-build job is removed from GitLab CI. Images are built locally via `pnpm images:build` on Mac and pushed prior to deployment.
+
+## ADDED Requirements
+
 ### Requirement: Release image coordinates have one committed source
 
 `deploy/images/release.env` MUST be the only source of the release image registry (`IMAGE_REGISTRY`) and build platform (`IMAGE_PLATFORM`). Environment variables, CI variables and CLI options MUST NOT override either value, and no literal fallback MAY supply one. `pnpm images:build` MUST read both values from that file and MUST refuse before any git, Docker or registry call when the file is missing or a value is empty. `pnpm images:build` MUST pass `--platform` set to `IMAGE_PLATFORM` for all four images and MUST confirm after each push that the registry index of the image lists that platform. `deploy-production` MUST read the registry from the same file, MUST verify the four manifests under that registry, and MUST pass the same value to Helm as `images.registry`. `deploy-production` MUST refuse before any registry request or Helm call when the file, the registry or the registry credentials are unset.
@@ -46,9 +54,3 @@ as documented local commands, with the existing destructive target guards.
 
 - **WHEN** a pushed image's registry index does not list `IMAGE_PLATFORM`
 - **THEN** `pnpm images:build` fails naming the image and the missing platform
-
-## REMOVED Requirements
-
-### Requirement: The image-build job fails closed and uses no Docker daemon
-
-The image-build job is removed from GitLab CI. Images are built locally via `pnpm images:build` on Mac and pushed prior to deployment.
