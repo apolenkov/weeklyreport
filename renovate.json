@@ -60,7 +60,7 @@
       "allowedVersions": "<7"
     },
     {
-      "description": "2026-11-01 re-reviewed bullmq 6.5.3: removeJob-2.js byte-for-byte the same as 6.5.0 (cmp exit 0), native content sha256 f2acb16fda20ccac200abd5289a8910e48870d454c1577b19bd375ab809bb4b6 (name removeJob keys 2); dependencies, peerDependencies and engines unchanged vs 6.5.0; release notes of 6.5.1-6.5.3 outside the guard pending coordinator review (TASK-513). Earlier 2026-10-28 re-review of bullmq 6.5.0: terminal-job-removal still reproduces the compiled removeJob-2.js byte-for-byte (sha256 f2acb16fda20ccac200abd5289a8910e48870d454c1577b19bd375ab809bb4b6, name removeJob keys 2). 6.5.0 only enforces the node: protocol for built-in module imports (engines.node >=14.18.0, satisfied by Node 26.12.1); the realtime relay and its optional peers pg/redis/bullmq-otel are unchanged. Re-review that script before accepting the next bump (TASK-513).",
+      "description": "2026-11-01 re-reviewed bullmq 6.5.3: removeJob-2.js byte-for-byte the same as 6.5.0 (cmp exit 0), native content sha256 f2acb16fda20ccac200abd5289a8910e48870d454c1577b19bd375ab809bb4b6 (name removeJob keys 2); dependencies, peerDependencies and engines unchanged vs 6.5.0; 6.5.1-6.5.3 change only flow parent release (Redis add*Job and handleDuplicatedJob), node-redis connect and relay time bounds, none used by the API; independent diff review accepted 2026-11-01. 6.5.0 only enforces the node: protocol for built-in module imports (engines.node >=14.18.0, satisfied by Node 26.12.1). Re-review that script before accepting the next bump (TASK-513).",
       "matchPackageNames": ["bullmq"],
       "allowedVersions": "6.5.3"
     },
