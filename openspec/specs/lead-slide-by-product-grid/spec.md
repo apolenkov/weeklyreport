@@ -155,7 +155,7 @@ for every cell. Responsive reflow MUST preserve every source row and its
 existing disclosure and edit behavior. Subsections separate with a dashed top border. A project subsection
 header MUST show a branch icon, the project's status dot, and the project name
 uppercase; it MUST NOT show a textual project status badge. An empty cell MUST
-render an em dash placeholder.
+render an em dash placeholder with `role="img"` and an accessible empty-cell announcement label.
 
 #### Scenario: columns align across products
 
@@ -172,6 +172,12 @@ render an em dash placeholder.
 
 - **WHEN** a project has no decisions
 - **THEN** its Decisions cell renders an em dash placeholder
+
+#### Scenario: empty cell placeholder exposes role and accessible name
+
+- **WHEN** a slide cell has no rows
+- **THEN** its placeholder element exposes `role="img"` and `aria-label="No <label>"` to assistive technology
+- **AND** internal presentation elements remain `aria-hidden="true"`
 
 ### Requirement: Item rows attribute author, priority, status, and stage
 
