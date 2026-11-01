@@ -34,6 +34,19 @@ function anchorId(anchor: RecordCommentAnchor): string | undefined {
   return anchor.itemId ?? anchor.riskId ?? anchor.decisionId;
 }
 
+const COMMENT_REJECTED =
+  "Comment could not be saved. Check its content and try again.";
+
+// Rejected comment content gets guidance; every other failure keeps the
+// shared mutation wording.
+function addCommentErrorMessage(err: unknown): string {
+  const message = mutationErrorMessage(err, "Failed to add comment");
+  if (!(err instanceof Error) || message !== "Failed to add comment") {
+    return message;
+  }
+  return err.message.trimStart().startsWith("[") ? COMMENT_REJECTED : message;
+}
+
 function commentValidationError(
   draft: string,
   submittedText: string,
@@ -154,7 +167,7 @@ export function useRecordCommentState(
       onMutated,
       onCommentError: (err) => {
         resetInFlight();
-        const message = mutationErrorMessage(err, "Failed to add comment");
+        const message = addCommentErrorMessage(err);
         setFeedback({ message, tone: "error" });
         toast.error(message);
       },
