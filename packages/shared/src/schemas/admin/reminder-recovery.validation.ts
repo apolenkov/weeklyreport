@@ -126,6 +126,8 @@ function validateLatestIdentity(
     report.deadline,
     policy.offsetMinutes,
   );
+  // A null date is already rejected on its own field; comparing it here would
+  // add a second, misleading "must match" issue for the same path.
   const checks: readonly [string, boolean, string][] = [
     [
       "kind",
@@ -139,12 +141,14 @@ function validateLatestIdentity(
     ],
     [
       "deadline",
-      rule.deadline?.getTime() !== report.deadline.getTime(),
+      rule.deadline !== null &&
+        rule.deadline.getTime() !== report.deadline.getTime(),
       "The latest live reminder rule deadline must match its report.",
     ],
     [
       "fireAt",
-      rule.fireAt?.getTime() !== expectedFireAt.getTime(),
+      rule.fireAt !== null &&
+        rule.fireAt.getTime() !== expectedFireAt.getTime(),
       "The latest live reminder rule fireAt must match its report and policy.",
     ],
   ];
@@ -191,9 +195,7 @@ function validateVersionGroup(
   });
   const report = reportsById.get(latest.rule.reportId);
   const policy = policiesById.get(latest.rule.policyId);
-  if (report && policy) {
-    validateLatestIdentity(latest, report, policy, context);
-  }
+  if (report && policy) validateLatestIdentity(latest, report, policy, context);
 }
 
 function validateRules(

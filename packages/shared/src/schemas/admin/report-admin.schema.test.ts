@@ -1166,12 +1166,21 @@ function expectRequiredDateIssue(
 
   expect(result.success).toBe(false);
   if (!result.success) {
-    expect(result.error.issues).toContainEqual(
+    // A null date is reported once, on its own field: derived cross-checks
+    // must not add a second "must match" issue for the same path.
+    const issuesOnField = result.error.issues.filter(
+      (issue) =>
+        issue.path.length === 3 &&
+        issue.path[0] === collection &&
+        issue.path[1] === 0 &&
+        issue.path[2] === field,
+    );
+    expect(issuesOnField).toEqual([
       expect.objectContaining({
         path: [collection, 0, field],
         message: REQUIRED_DATE_MESSAGE,
       }),
-    );
+    ]);
   }
 }
 
@@ -1179,15 +1188,6 @@ describe("reminder recovery — mandatory dates reject null", () => {
   it.each([
     ["reminderExecutions", "createdAt"],
     ["reminderExecutions", "updatedAt"],
-  ] as const)("rejects a null %s.%s before coercion", (collection, field) => {
-    expectRequiredDateIssue(
-      collection,
-      field,
-      nullRequiredDateSnapshot(collection, field),
-    );
-  });
-
-  it.each([
     ["reminderRules", "fireAt"],
     ["reminderRules", "deadline"],
     ["reminderExecutions", "scheduledFor"],
