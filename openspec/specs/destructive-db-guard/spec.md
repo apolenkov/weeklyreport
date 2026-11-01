@@ -13,7 +13,7 @@ Consumer surface: `prisma/guards/_destructive-guard.ts` —
 
 ### Requirement: Block on NODE_ENV=production
 
-The guard MUST refuse when `NODE_ENV === "production"`, regardless of `DATABASE_URL`. No environment variable may bypass this refusal for disposable-database workflows.
+The guard MUST refuse when `NODE_ENV === "production"`, regardless of `DATABASE_URL`. No environment variable may bypass this refusal for disposable-database workflows. A guarded migration child MUST receive the same resolved environment snapshot used for this check; inherited production MUST NOT escape validation when the supplied input omits NODE_ENV. The migration wrapper MUST retain its existing explicit input requirements for DATABASE_URL and per-run consent.
 
 Consumer surface: `prisma/guards/_destructive-guard.ts` —
 `assertE2eRuntimeDestructiveTarget`.
@@ -22,6 +22,21 @@ Consumer surface: `prisma/guards/_destructive-guard.ts` —
 
 - **WHEN** `NODE_ENV` is `"production"` and `DATABASE_URL` points to any database
 - **THEN** the disposable-database guard throws before destructive work and MUST NOT advertise a bypass
+
+#### Scenario: Migration input omits an inherited production value
+
+- **WHEN** the supplied migration input omits NODE_ENV and the child would inherit production
+- **THEN** the wrapper refuses before invoking the migration child
+
+#### Scenario: Explicit safe migration environment overrides the parent
+
+- **WHEN** the parent environment is production and the supplied migration input explicitly sets a non-production environment with an authorized target and consent
+- **THEN** the resolved child environment carries that same explicit non-production value and passes the existing guard
+
+#### Scenario: Injected migration safety input is absent
+
+- **WHEN** the supplied migration input omits DATABASE_URL or per-run consent even though the parent has a value
+- **THEN** the wrapper retains its existing refusal before invoking the child
 
 ### Requirement: Block when DATABASE_URL is absent
 
@@ -137,3 +152,27 @@ complete target before invoking any destructive `pg_restore` action.
 
 - **WHEN** archive validation, exact target confirmation, and production-destructive consent all match the same resolved target
 - **THEN** restore may invoke the single-transaction command and logs the canonical target without credentials
+
+### Requirement: Development reseed responses contain safe status
+
+The development tRPC `wipeAndReseed` procedure MUST retain its guarded execution and existing success result shape while returning only a fixed safe completion summary in `output`. Child-process failures MUST produce a generic INTERNAL_SERVER_ERROR message through the existing request-id formatter. The response MUST NOT include raw child stdout, stderr, internal paths or child error causes, and the procedure MUST NOT copy those diagnostics into an unredacted application log. When a reset or seed child step fails, the procedure MUST emit exactly one application-log error entry for that failure, correlated through the request correlation id the logger records, carrying the failed step (`reset` or `seed`), the requested variant, the error class name with its safe code, the exit code and the signal; that entry MUST NOT contain child stdout, stderr, the error message or the command line.
+
+#### Scenario: A seed child fails with internal diagnostics
+
+- **GIVEN** an authenticated development reseed invocation passes the existing destructive guard
+- **WHEN** its seed child fails with an error message and stderr containing an internal source path
+- **THEN** the serialized response contains the generic failure message and failure code with the existing request id
+- **AND** the child message, stderr, internal path and cause are absent from the response
+
+#### Scenario: A failed reseed child step is logged as metadata only
+
+- **GIVEN** an authenticated development reseed invocation passes the existing destructive guard
+- **WHEN** a reset or seed child fails with an exit code or signal and with message, stdout and stderr text containing a credential or an internal path
+- **THEN** exactly one error log entry names the failed step, the variant, the error class, the exit code and the signal
+- **AND** the child message, stdout, stderr and command line are absent from every logged argument
+
+#### Scenario: Reseed children succeed with diagnostic output
+
+- **WHEN** reset and seed children succeed and emit stdout diagnostics
+- **THEN** the response preserves `ok: true`, the requested variant and a string `output` containing a fixed safe completion summary
+- **AND** child stdout diagnostics are absent from the response

@@ -74,6 +74,18 @@ details MUST remain internal.
 - **AND** the raw issues array, its `pattern` regex, and any internal Zod
   field MUST NOT appear in the toast copy
 
+#### Scenario: A non-internal error carries a Reference
+
+- **WHEN** a non-internal, non-invalid-link load error carries a requestId
+- **THEN** the displayed message ends with sentence punctuation before its Reference suffix
+- **AND** a message already ending with sentence punctuation does not receive another period
+
+#### Scenario: A message-free error carries a Reference
+
+- **WHEN** a message-free load error carries a requestId
+- **THEN** the prefix ends with a period before its Reference suffix
+- **AND** existing internal-error suppression, invalid-link copy and no-reference copy remain unchanged
+
 ### Requirement: Deterministic client errors are not retried
 
 The query client MUST NOT retry a query load failure that carries a
@@ -96,3 +108,17 @@ transient failures may retain the configured retry policy.
 - **WHEN** a page-surface query fails with an HTTP 5xx or a network error
 - **THEN** the existing retry behavior is preserved (the 4xx-skip predicate
   does not suppress transient-error retries)
+
+### Requirement: A composed page reports one query failure once
+
+When several components on one page surface read the same query, exactly
+one of them MUST register the error-policy handler for it, so a single
+failure of that query emits one `logClientError` entry and at most one toast
+on that page.
+
+#### Scenario: the active report fails to load on the lead status overview
+
+- **WHEN** `reports.getActive` fails while the lead status overview and its
+  lead-form editor are mounted
+- **THEN** exactly one log entry for `reports.getActive` is emitted
+- **AND** at most one "Failed to load active report" toast is shown
