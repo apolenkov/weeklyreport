@@ -49,6 +49,10 @@ export interface ActionProps {
 const FOCUS_RING =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
 export const ICON_BUTTON_CLASS = `inline-flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)] ${FOCUS_RING}`;
+// The floating action chip is compact on hoverable pointers — it overlays the
+// card corner instead of consuming row width — and falls back to the full
+// touch target where a finger has no hover to reveal it with.
+export const OVERLAY_BUTTON_CLASS = `inline-flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)] [@media(hover:none)]:min-h-[var(--touch-target-min)] [@media(hover:none)]:min-w-[var(--touch-target-min)] ${FOCUS_RING}`;
 export const MENU_ITEM_CLASS = "min-h-[var(--touch-target-min)] cursor-pointer";
 export function identityOf(item: StatusOverviewItem): string {
   return item.stableId ?? item.key;
