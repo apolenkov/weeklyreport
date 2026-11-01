@@ -94,10 +94,11 @@ function undoWeekMove({
           row.stableId === item.stableId &&
           row.type === movedTo,
       );
+    const currentId = current?.id;
     const patch =
-      current === undefined
+      currentId === undefined
         ? null
-        : buildMoveItemPatch(ready.draft.section, current.id, backTo);
+        : buildMoveItemPatch(ready.draft.section, currentId, backTo);
     if (patch === null) {
       toast.error(UNDO_UNAVAILABLE);
       return;
