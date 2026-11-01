@@ -46,6 +46,32 @@ describe("leftAnchoredPanelPosition", () => {
     ).toMatchObject({ left: GUTTER, width: 200 });
   });
 
+  it("keeps a content-wide panel inside the right gutter at 280px", () => {
+    // Real defect: trigger left 75 / width 130 with a 221.5px panel put the
+    // right edge at 296.5px, clipping the Archived badge.
+    const pos = leftAnchoredPanelPosition(
+      trigger(75, 130),
+      viewport(280),
+      221.5,
+    );
+
+    expect(pos.left).toBe(42.5);
+    expect(pos.left + 221.5).toBeLessThanOrEqual(280 - GUTTER);
+    expect(pos.width).toBe(130);
+  });
+
+  it("keeps the trigger-aligned left edge when the measured panel already fits", () => {
+    expect(
+      leftAnchoredPanelPosition(trigger(75, 130), viewport(1440), 221.5),
+    ).toMatchObject({ left: 75, width: 130 });
+  });
+
+  it("clamps a measured panel wider than the gutters to the gutter edge", () => {
+    expect(
+      leftAnchoredPanelPosition(trigger(75, 130), viewport(280), 400),
+    ).toMatchObject({ left: GUTTER });
+  });
+
   it("flips above the trigger when there is more room above than below", () => {
     const pos = leftAnchoredPanelPosition(
       { left: 20, width: 200, top: 400, bottom: 430 },

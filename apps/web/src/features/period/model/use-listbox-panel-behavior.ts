@@ -4,7 +4,10 @@ import {
   type Dispatch,
   type RefObject,
   type SetStateAction,
+  useCallback,
   useEffect,
+  useLayoutEffect,
+  useState,
 } from "react";
 
 import { useDismissOnOutsidePointer } from "../../../shared/hooks/browser/use-dismiss-on-outside-pointer";
@@ -28,10 +31,13 @@ interface PanelAnchorRect {
 // The width becomes the panel's min-width, which outranks max-width in CSS, so
 // a trigger wider than the viewport (clipped by its toolbar) must not pass its
 // own width through: it is capped to the gutter-to-gutter space, and left is
-// clamped so that capped width fits before the right gutter.
+// clamped so that capped width fits before the right gutter. The rendered panel
+// grows with its content past the trigger width, so its measured width
+// (`panelWidth`, 0 until measured) also has to fit before the right gutter.
 export function leftAnchoredPanelPosition(
   rect: PanelAnchorRect,
   viewport: { readonly width: number; readonly height: number },
+  panelWidth = 0,
 ) {
   const roomBelow = Math.max(
     0,
@@ -49,9 +55,13 @@ export function leftAnchoredPanelPosition(
     rect.width,
     viewport.width - 2 * PANEL_VIEWPORT_GUTTER_PX,
   );
+  const extent = Math.min(
+    Math.max(width, panelWidth),
+    viewport.width - 2 * PANEL_VIEWPORT_GUTTER_PX,
+  );
   const left = Math.min(
     Math.max(rect.left, PANEL_VIEWPORT_GUTTER_PX),
-    viewport.width - PANEL_VIEWPORT_GUTTER_PX - width,
+    viewport.width - PANEL_VIEWPORT_GUTTER_PX - extent,
   );
   return {
     top: above
@@ -71,14 +81,6 @@ export function leftAnchoredPanelPosition(
     width,
   };
 }
-
-// Module-level so its identity stays stable across renders — the anchoring
-// effect keys on it and would otherwise re-bind its scroll/resize listeners.
-const leftAnchoredPosition = (rect: DOMRect) =>
-  leftAnchoredPanelPosition(rect, {
-    width: window.innerWidth,
-    height: window.innerHeight,
-  });
 
 // Scroll active option into view; block: "nearest" avoids hover-driven panel jerks.
 function useActiveOptionScroll(
@@ -113,11 +115,32 @@ export function useListboxPanelBehavior({
   triggerRef,
   panelRef,
 }: ListboxPanelBehaviorArgs) {
-  const panelPos = useAnchoredPanelPosition(
-    open,
-    triggerRef,
-    leftAnchoredPosition,
+  // The panel's content-driven width is only known after it renders: measure
+  // it and re-project so the right edge stays inside the gutter. The measured
+  // width only moves the panel left, which can only widen it, so this settles.
+  const [panelWidth, setPanelWidth] = useState(0);
+  // Forget the width when the panel closes (render-phase reset) so a reopen
+  // never projects with a stale measurement.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (!open) setPanelWidth(0);
+  }
+  const project = useCallback(
+    (rect: DOMRect) =>
+      leftAnchoredPanelPosition(
+        rect,
+        { width: window.innerWidth, height: window.innerHeight },
+        panelWidth,
+      ),
+    [panelWidth],
   );
+  const panelPos = useAnchoredPanelPosition(open, triggerRef, project);
+  useLayoutEffect(() => {
+    if (!open) return;
+    const measured = panelRef.current?.getBoundingClientRect().width;
+    if (measured !== undefined) setPanelWidth(measured);
+  }, [open, panelPos, panelRef]);
 
   // containerRef = trigger (not panel): Escape/restore only; no focus into the list.
   useDialogFocus({
