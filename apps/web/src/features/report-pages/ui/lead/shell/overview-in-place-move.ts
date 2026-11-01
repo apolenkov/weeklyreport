@@ -83,7 +83,21 @@ function undoWeekMove({
     return;
   }
   whenIdle((ready) => {
-    const patch = buildMoveItemPatch(ready.draft.section, recordId, backTo);
+    // A draft save may re-issue row ids between the move and the Undo, so the
+    // occurrence is found again by its stable identity in the week it moved to.
+    const rows = ready.draft.section.items;
+    const current =
+      rows.find((row) => row.id === recordId) ??
+      rows.find(
+        (row) =>
+          item.stableId != null &&
+          row.stableId === item.stableId &&
+          row.type === movedTo,
+      );
+    const patch =
+      current === undefined
+        ? null
+        : buildMoveItemPatch(ready.draft.section, current.id, backTo);
     if (patch === null) {
       toast.error(UNDO_UNAVAILABLE);
       return;

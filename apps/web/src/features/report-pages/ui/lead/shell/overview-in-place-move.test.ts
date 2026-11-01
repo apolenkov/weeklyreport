@@ -130,4 +130,20 @@ describe("moveWithoutEditor", () => {
       "This move can no longer be undone.",
     );
   });
+  it("undoes a move after a draft save re-issued the row id", () => {
+    const { args, store } = harness("current");
+    const item = overviewItem("current");
+
+    expect(moveWithoutEditor(args(item, "next"))).toBe(true);
+    // The draft save returns the same occurrence under a new row id; Undo must
+    // find it again by its stable identity in the week it moved to.
+    store.section = {
+      ...store.section,
+      items: store.section.items.map((row) => ({ ...row, id: "reissued-id" })),
+    };
+    moveToastOptions()?.action?.onClick();
+
+    expect(store.section.items[0]).toMatchObject({ type: "current" });
+    expect(toast.error).not.toHaveBeenCalled();
+  });
 });
