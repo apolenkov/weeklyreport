@@ -54,6 +54,11 @@ export function identityOf(item: StatusOverviewItem): string {
   return item.stableId ?? item.key;
 }
 
+/** Shared focus key of the week-move icon and the Alt+Arrow keyboard move. */
+export function weekMoveFocusKey(item: StatusOverviewItem): string {
+  return `move:${item.source}:${identityOf(item)}`;
+}
+
 function StatusMenuItems({
   item,
   onChoose,
