@@ -12,7 +12,10 @@ import {
 import { useSession } from "../../../../../shared/lib/auth/session-provider";
 import type { OverviewItemDialogState } from "./lead-status-overview-item-editor";
 import { createOverviewInputMemory } from "./overview-input-memory";
-import type { OverviewPlanState } from "./overview-plan-command";
+import {
+  isPlanInputEdited,
+  type OverviewPlanState,
+} from "./overview-plan-command";
 
 function createMemory() {
   return {
@@ -39,12 +42,19 @@ function SessionInputMemory({ children }: { readonly children: ReactNode }) {
   );
   useEffect(() => {
     if (!itemPending && !planPending) return;
+    // Retained input that still equals what its composer opened with has
+    // nothing to lose, so unload is only blocked for edited input.
     const preventUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
+      if (
+        memory.item.some((dialog) => dialog.draftStore.isDirty()) ||
+        memory.plan.some(isPlanInputEdited)
+      ) {
+        event.preventDefault();
+      }
     };
     window.addEventListener("beforeunload", preventUnload);
     return () => window.removeEventListener("beforeunload", preventUnload);
-  }, [itemPending, planPending]);
+  }, [itemPending, planPending, memory]);
   return (
     <MemoryContext.Provider value={memory}>{children}</MemoryContext.Provider>
   );
