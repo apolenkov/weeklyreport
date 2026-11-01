@@ -249,6 +249,10 @@ export function overviewPlanRecoveryReason(
   return null;
 }
 
+// Shared with the composer actions, which drop this error once the parent
+// (and with it the stage set) changes.
+export const STAGE_REQUIRED_ERROR = "Select at least one stage.";
+
 function validateFields(fields: OverviewPlanFields) {
   if (fields.outcome === null) throw new Error("Choose a plan outcome.");
   if (fields.parent.kind === "unresolved")
@@ -262,7 +266,7 @@ function validateFields(fields: OverviewPlanFields) {
   if (fields.outcome === "wont_do" && !fields.reason.trim())
     throw new Error("Explain why this plan will not be done.");
   if (fields.parent.kind === "product" && fields.stageNames.length === 0)
-    throw new Error("Select at least one stage.");
+    throw new Error(STAGE_REQUIRED_ERROR);
   return { text, outcome: fields.outcome, parent: fields.parent };
 }
 
