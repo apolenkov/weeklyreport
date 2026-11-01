@@ -86,6 +86,7 @@ export function createMutationAuditEvents(
         procedure: input.procedure,
         ...(input.target !== undefined ? { target: input.target } : {}),
         ...(input.targets ? { targets: input.targets } : {}),
+        ...(input.truncated ? { truncated: true } : {}),
         status: input.status,
         duration: input.duration,
         ...(input.reason ? { reason: input.reason } : {}),

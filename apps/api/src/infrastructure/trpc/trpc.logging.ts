@@ -11,23 +11,53 @@ const TRPC_REQUEST_LOG_PHASE = "trpc.request";
 
 const SLOW_TRPC_MS = 500;
 
+// The breadcrumb runs on every request before the log level is checked, so a
+// deep or wide payload must not grow the debug line (or the stack).
+const MAX_SHAPE_DEPTH = 5;
+const MAX_SHAPE_KEYS = 50;
+
+// Only the first element carries the element shape, matching the pre-bounds
+// descriptor.
+function describeArray(
+  value: readonly unknown[],
+  depth: number,
+  seen: WeakSet<object>,
+): string {
+  if (depth >= MAX_SHAPE_DEPTH) return "…";
+  if (seen.has(value)) return "[circular]";
+  seen.add(value);
+  if (value.length === 0) return "array[0]";
+  const inner = describeShape(value[0], depth + 1, seen);
+  return `array[${value.length}]<${inner}>`;
+}
+
+function describeObject(
+  value: object,
+  depth: number,
+  seen: WeakSet<object>,
+): string {
+  if (depth >= MAX_SHAPE_DEPTH) return "…";
+  if (seen.has(value)) return "[circular]";
+  seen.add(value);
+  // Deterministic key ordering for a debug shape string — the default
+  // code-unit sort, spelled as a comparator so the intent is lint-visible.
+  const keys = Object.keys(value).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  const shown = keys.slice(0, MAX_SHAPE_KEYS);
+  const hidden = keys.length - shown.length;
+  const suffix = hidden > 0 ? `,+${hidden} more` : "";
+  return `object{${shown.join(",")}${suffix}}`;
+}
+
 // Compact response-shape descriptor for debug logs. Auth and admin responses
 // can contain PII, so logs include keys and lengths but never values.
-function describeShape(value: unknown): string {
+function describeShape(
+  value: unknown,
+  depth = 0,
+  seen = new WeakSet<object>(),
+): string {
   if (value === null) return "null";
-  if (Array.isArray(value)) {
-    if (value.length === 0) return "array[0]";
-    const inner = describeShape(value[0]);
-    return `array[${value.length}]<${inner}>`;
-  }
-  if (typeof value === "object") {
-    // Deterministic key ordering for a debug shape string — the default
-    // code-unit sort, spelled as a comparator so the intent is lint-visible.
-    const keys = Object.keys(value).sort((a, b) =>
-      a < b ? -1 : a > b ? 1 : 0,
-    );
-    return `object{${keys.join(",")}}`;
-  }
+  if (Array.isArray(value)) return describeArray(value, depth, seen);
+  if (typeof value === "object") return describeObject(value, depth, seen);
   return typeof value;
 }
 

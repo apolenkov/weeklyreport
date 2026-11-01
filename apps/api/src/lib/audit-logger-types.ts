@@ -55,6 +55,8 @@ type MutationInput = Omit<AuditEnvelope, "event" | "attemptedRole"> & {
   readonly target?: string;
   // Every identity the input names, nested or multiple, in discovery order.
   readonly targets?: readonly string[];
+  // The bounded walk left identities or branches out of targets.
+  readonly truncated?: boolean;
   readonly status: "success" | "fail";
   readonly duration: number;
   readonly reason?: string;
