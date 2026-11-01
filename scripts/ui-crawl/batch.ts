@@ -26,8 +26,8 @@ export type PressResult = Readonly<{
   urlChanged: boolean;
   /** Time the page kept changing after the press (DOM mutations or requests). */
   ms: number;
-  /** Longest main-thread task during the press. */
-  blockedMs: number;
+  /** Longest main-thread task during the press, null when the browser has no longtask timing. */
+  blockedMs: number | null;
   logs: readonly PressLog[];
 }>;
 
@@ -50,7 +50,7 @@ const HOOKS = `(() => {
   const listen = EventTarget.prototype.addEventListener;
   EventTarget.prototype.addEventListener = function (type, ...rest) { return type === 'beforeunload' ? undefined : listen.call(this, type, ...rest); };
   Object.defineProperty(window, 'onbeforeunload', {get: () => null, set: () => {}, configurable: true});
-  const S = {logs: [], inflight: 0, last: performance.now(), net: performance.now(), longTasks: [], longStart: null, longObserver: null, req: 0};
+  const S = {logs: [], inflight: 0, last: performance.now(), net: performance.now(), longTasks: [], longStart: null, longObserver: null, longSupported: false, req: 0};
   const push = (kind, detail) => S.logs.push({kind, detail: String(detail).slice(0, 300)});
   const touch = () => { S.last = performance.now(); };
   const touchNet = () => { S.net = S.last = performance.now(); };
@@ -112,7 +112,7 @@ const HOOKS = `(() => {
   };
   new MutationObserver(touch).observe(document, {subtree: true, childList: true, attributes: true, characterData: true});
   new PerformanceObserver((l) => { touchNet(); for (const e of l.getEntries()) if (e.name.includes('/trpc/')) S.req++; }).observe({type: 'resource', buffered: true});
-  try { S.longObserver = new PerformanceObserver((l) => { if (S.longStart !== null) S.longTasks.push(...l.getEntries()); }); S.longObserver.observe({type: 'longtask'}); } catch {}
+  try { S.longObserver = new PerformanceObserver((l) => { if (S.longStart !== null) S.longTasks.push(...l.getEntries()); }); S.longObserver.observe({type: 'longtask'}); S.longSupported = true; } catch { /* unsupported: blockedMs is reported as null */ }
   return (window.__crawl2 = S);
 })()`;
 
@@ -228,7 +228,7 @@ function batchScript(
     else await new Promise((resolve) => setTimeout(resolve, 0));
     S.longTasks.push(...(S.longObserver?.takeRecords() ?? []));
     const relevant = S.longTasks.filter((e) => e.startTime < finished && e.startTime + e.duration > t0);
-    const blockedMs = Math.round(Math.max(0, ...relevant.map((e) => e.duration)));
+    const blockedMs = S.longSupported ? Math.round(Math.max(0, ...relevant.map((e) => e.duration))) : null;
     S.longStart = null; S.longTasks = [];
     const after = state();
     const urlChanged = location.href !== url;
