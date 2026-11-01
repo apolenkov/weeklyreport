@@ -143,7 +143,10 @@ function LineageRow({
   return (
     <div
       data-testid="overview-lineage-row"
-      className={`${TIMELINE_GRID} mx-3 my-1.5 overflow-hidden rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] bg-[var(--color-card)] md:m-0 md:rounded-none md:border-0 md:border-b md:items-stretch`}
+      // md:overflow-visible: on desktop the row is flat (no radius or
+      // border-box to clip), while the item's action chip floats above the
+      // card and must not be cut off at the row's top edge.
+      className={`${TIMELINE_GRID} mx-3 my-1.5 overflow-hidden rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] bg-[var(--color-card)] md:m-0 md:overflow-visible md:rounded-none md:border-0 md:border-b md:items-stretch`}
     >
       {STATUS_OVERVIEW_COLUMNS.map((column) => {
         const item = row[column.source];

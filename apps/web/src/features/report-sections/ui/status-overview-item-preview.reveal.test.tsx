@@ -69,7 +69,7 @@ describe("StatusOverviewItemPreview reveal and keyboard", () => {
     );
   });
 
-  it("floats the chip over the card so the text keeps the full width", () => {
+  it("floats the chip above the card so it never covers the text", () => {
     render(
       <StatusOverviewItemPreview
         item={{ ...item, canResolve: true }}
@@ -85,9 +85,12 @@ describe("StatusOverviewItemPreview reveal and keyboard", () => {
       "[data-overview-item-actions]",
     );
     expect(chip).not.toBeNull();
+    // Fully above the card's top edge: anchored with bottom-full, never
+    // top-0, which used to lay the chip over the first text line.
     expect(chip).toHaveClass("absolute");
-    expect(chip).toHaveClass("top-0");
+    expect(chip).toHaveClass("bottom-full");
     expect(chip).toHaveClass("right-0");
+    expect(chip).not.toHaveClass("top-0");
     expect(chip).toHaveClass("bg-[var(--color-card)]");
   });
 
