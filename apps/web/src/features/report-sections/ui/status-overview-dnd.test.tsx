@@ -226,6 +226,36 @@ describe("StatusOverview drag and drop", () => {
     expect(onMoveItem).not.toHaveBeenCalled();
   });
 
+  it("leaves a card in its Current lane after a drop on Previous or outside the lanes", async () => {
+    stubLayout();
+    const onMoveItem = vi.fn();
+    render(<StatusOverview model={dndModel()} onMoveItem={onMoveItem} />);
+    // The lanes render twice (mobile and desktop copies), so the lane is found
+    // from the card itself: it must still sit in a Current lane after the drag.
+    const laneOfCard = () => {
+      const lane = screen
+        .getByText("Work item 1")
+        .closest<HTMLElement>("[data-overview-lineage-lane]");
+      if (!lane) throw new Error("Expected the card inside a lane");
+      return lane;
+    };
+
+    await dragCard({ x: 250, y: 140 }, 50);
+    expect(laneOfCard()).toHaveAttribute(
+      "data-overview-lineage-lane",
+      "current",
+    );
+
+    // x=800 lies beyond every lane, so no drop zone is hit at all.
+    await dragCard({ x: 250, y: 140 }, 800);
+    expect(laneOfCard()).toHaveAttribute(
+      "data-overview-lineage-lane",
+      "current",
+    );
+
+    expect(onMoveItem).not.toHaveBeenCalled();
+  });
+
   it("does not start a drag from the card body, only from the grip", async () => {
     stubLayout();
     const onMoveItem = vi.fn();
