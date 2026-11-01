@@ -66,6 +66,18 @@ schema MUST NOT validate a shared column with a looser type (e.g.
 - **THEN** parsing rejects it, the same way `assembledReportSchema.parse` already
   rejects a non-UUID `publishedById`
 
+#### Scenario: Present review text has the same format at read and write boundaries
+
+- **WHEN** the read model carries `RecordComment.text` or a present `SectionReview.comment` containing invisible-only text, a null byte, or more than the existing 2000-character review comment limit
+- **THEN** the read boundary rejects that field with the same visible-text, null-byte and length guard as its owning write boundary
+- **AND** normal read text remains byte-for-byte unchanged, including surrounding spaces and line breaks
+
+#### Scenario: A legacy verdict has no reason
+
+- **WHEN** a stored section verdict predates its optional reason and its read model omits the comment
+- **THEN** the legacy read remains valid
+- **AND** no new placeholder reason or cross-field verdict rule is introduced
+
 ### Requirement: Published projections are immutable and independently scopeable
 
 `PublishedSectionScope` and `PublishedSearchDocument` MUST reference only their

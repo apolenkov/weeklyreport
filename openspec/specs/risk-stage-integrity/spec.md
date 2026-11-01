@@ -273,3 +273,62 @@ Lead Report Item, Risk, and Decision creation MUST pre-select the last saved eli
 - **WHEN** the lead changes Product or switches to an Activity in an open editor
 - **THEN** the previous parent's stage selection is cleared and options follow the new parent
 - **AND** Activity parents have no stages while a sole owned Product stage still auto-applies
+
+### Requirement: Section writes validate stage ownership of new and changed stages
+
+A section write MUST reject an item, risk or decision that carries a stage the
+section author does not own on its product, unless the record keeps its stored
+stable lineage and product and carries no stage beyond its stored stages. Such
+a record MUST NOT be rejected because a stored stage is no longer owned; its
+other fields may change. A record without stable lineage MUST be validated.
+Stored stages MUST NOT be intersected with or rewritten to the author's current
+ownership.
+
+#### Scenario: A record keeps a stage the author lost
+
+- **WHEN** an admin removed the author's stage and the author saves the
+  section with that record's stages unchanged while editing another record
+- **THEN** the save succeeds and the record keeps its stored stage
+
+#### Scenario: A record with a lost stage gets new text
+
+- **WHEN** the author edits the text of a record whose stored stage they no
+  longer own and keeps its lineage, product and stages
+- **THEN** the save succeeds with the new text
+
+#### Scenario: A reused lineage brings a stage or product it did not store
+
+- **WHEN** a payload record reuses a stored `stableId` but adds a stage that is
+  not among its stored stages, including in place of a repeated stored stage,
+  or moves to a product where the author owns no such stage
+- **THEN** the write is rejected with `STAGE_NOT_OWNED`
+
+### Requirement: A readOnly-window raise signal never prefills a later create dialog
+
+A chip/pill raise signal (`addPrefill`) that arrives while the risk section is
+`readOnly` MUST be consumed without caching its stage/severity prefill and
+without opening the dialog, so a later plain +Add in editable mode still opens
+with no SDLC stage pre-selected per the no-pre-select rule. The readOnly
+no-dialog guard and one-shot signal semantics are unchanged.
+
+#### Scenario: A raise signal arrives while the section is read-only
+
+- **WHEN** a fresh raise signal with a `blocked` severity arrives while
+  `readOnly` is true
+- **THEN** no dialog opens
+- **AND** a subsequent plain +Add after returning to editable opens the
+  create form with the default (`at-risk`) severity, not the signal's
+
+### Requirement: A locked risk card does not show the action-implying stage nudge
+
+A risk card that offers no edit affordance (read-only section or foreign row
+rendering `LockBadge`) MUST NOT show the "Select at least one stage" nudge,
+since the viewer cannot act on it. Editable product-parented rows keep the
+nudge under the existing stage-required rule.
+
+#### Scenario: A stage-less foreign card on a flagged product
+
+- **WHEN** a foreign risk with no stages renders against an at-risk or
+  blocked linked product
+- **THEN** no stage nudge is shown
+- **AND** the foreign lock disclosure remains visible

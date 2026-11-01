@@ -1,10 +1,10 @@
-# Spec Delta
+# git-hook-installation Specification
 
 ## Purpose
 
 Keep prepare-time Git hook installation owned by the permanent checkout so disposable linked worktrees cannot redirect shared hooks.
 
-## ADDED Requirements
+## Requirements
 
 ### Requirement: Linked worktrees preserve shared hook installation
 
