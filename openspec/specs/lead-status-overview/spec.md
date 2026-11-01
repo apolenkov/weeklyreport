@@ -271,3 +271,16 @@ Editable Current/Next previews MUST keep readable copy, a separate complete-edit
 - **WHEN** the lead selects Move to next week for an eligible Current item that already carries a saved next step
 - **THEN** no editor opens; the item stays Current with its description and the saved next step, and the Next lane keeps projecting that plan
 - **AND** the acknowledgement rides the ordinary draft save, the continuation-promotion command is not called, and focus returns to the More actions trigger
+
+### Requirement: The Active week control MUST NOT ignore a click after a failed save
+
+While the Overview editor shows a failed save, every Active week radio MUST
+either apply the lead's choice or be disabled. An enabled radio MUST NOT ignore
+a click. The text the lead typed MUST remain in the editor in both cases.
+
+#### Scenario: a week is chosen after a failed save
+
+- **WHEN** a lead saves an edited item and the save fails
+- **AND** the lead clicks the other Active week radio
+- **THEN** that radio is selected, or it is disabled
+- **AND** the lead's typed text is still in the Description field
