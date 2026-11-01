@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { shortItemLabel } from "../../../shared/lib/format/short-label";
 import { reviewRecordAnchor } from "../../../shared/ui/feedback/review-record-focus";
@@ -12,6 +12,7 @@ import {
 } from "./status-overview-item-actions";
 import { ItemBadges, ResolutionNote } from "./status-overview-item-metadata";
 import { ItemActionZone } from "./status-overview-item-overflow";
+import { StatusOverviewItemTextEditor } from "./status-overview-item-text-editor";
 import { OutcomeAudit } from "./status-overview-outcome-audit";
 import { TrackedWorkComments } from "./status-overview-record-comments";
 import { StatusInput } from "./status-overview-status-input";
@@ -28,28 +29,67 @@ function PreviewText({
   item,
   expanded,
   onEditItem,
+  onEditItemText,
 }: {
   readonly item: StatusOverviewItem;
   readonly expanded: boolean;
   readonly onEditItem?:
     ((target: StatusOverviewEditTarget) => void) | undefined;
+  readonly onEditItemText?: ActionProps["onEditItemText"];
 }) {
   const canCollapse = item.text.length > LONG_UPDATE_LENGTH;
   const textClassName = previewTextClassName(expanded, canCollapse);
+  const [editing, setEditing] = useState(false);
+  // Keyboard closes (Enter, Escape) return focus to the title button; a blur
+  // commit leaves focus where the pointer put it.
+  const restoreFocus = useRef(false);
+  const titleRef = useRef<HTMLButtonElement>(null);
   const editTarget = item.editTarget;
-  const canonicalTitle =
-    onEditItem !== undefined &&
+  const interactive =
     editTarget !== null &&
     item.resolution == null &&
     item.workflowStatus !== "done";
+  // The linked Next projection shows the Current record's next step, not its
+  // description, so its text click keeps opening the canonical editor focused
+  // on that field.
+  const canInlineEdit =
+    interactive &&
+    editTarget.focusNextStep !== true &&
+    onEditItemText !== undefined;
+  const canOpenEditor = interactive && onEditItem !== undefined;
+  const interactiveTitle = canInlineEdit || canOpenEditor;
+  useEffect(() => {
+    if (editing || !restoreFocus.current) return;
+    restoreFocus.current = false;
+    requestAnimationFrame(() => titleRef.current?.focus());
+  }, [editing]);
+  const openEditor = (): void => {
+    if (canInlineEdit) setEditing(true);
+    else if (editTarget !== null) onEditItem?.(editTarget);
+  };
+  const closeEditor = (viaKeyboard: boolean): void => {
+    restoreFocus.current = viaKeyboard;
+    setEditing(false);
+  };
   return (
     <div className="min-w-0">
-      {canonicalTitle ? (
+      {editing && canInlineEdit ? (
+        <StatusOverviewItemTextEditor
+          label={`Edit item text: ${item.text}`}
+          text={item.text}
+          onSave={(text, viaKeyboard) => {
+            onEditItemText(item, text);
+            closeEditor(viaKeyboard);
+          }}
+          onCancel={closeEditor}
+        />
+      ) : interactiveTitle ? (
         <button
+          ref={titleRef}
           type="button"
           aria-label={`Edit item: ${item.text}`}
           data-overview-focus={`title:${item.source}:${item.stableId ?? item.key}`}
-          onClick={() => onEditItem(editTarget)}
+          onClick={openEditor}
           className="-mx-1 flex min-h-[var(--touch-target-min)] w-[calc(100%+0.5rem)] items-center rounded-[var(--radius-sm)] px-1 text-left hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
         >
           <span className={textClassName}>{item.text}</span>
@@ -125,6 +165,7 @@ export function StatusOverviewItemPreview(props: ActionProps) {
           item={item}
           expanded={expanded}
           onEditItem={props.onEditItem}
+          onEditItemText={props.onEditItemText}
         />
         <ItemBadges item={item} />
         <StatusInput item={item} flow={statusFlow} />
