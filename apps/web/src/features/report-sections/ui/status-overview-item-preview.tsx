@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import { shortItemLabel } from "../../../shared/lib/format/short-label";
 import { reviewRecordAnchor } from "../../../shared/ui/feedback/review-record-focus";
@@ -6,9 +6,11 @@ import type {
   StatusOverviewEditTarget,
   StatusOverviewItem,
 } from "../model/status-overview";
+import { statusOverviewItemActions } from "../model/status-overview-items";
 import {
   type ActionProps,
   StatusControl,
+  weekMoveFocusKey,
 } from "./status-overview-item-actions";
 import { ItemBadges, ResolutionNote } from "./status-overview-item-metadata";
 import { ItemActionZone } from "./status-overview-item-overflow";
@@ -20,6 +22,35 @@ import { VerdictRail, VerdictStamp } from "./status-overview-verdict-controls";
 import { useOverviewStatusInput } from "./use-overview-status-input";
 
 const LONG_UPDATE_LENGTH = 120;
+
+function isEditableElement(target: EventTarget | null): boolean {
+  return (
+    target instanceof Element &&
+    target.closest("input, textarea, select, [contenteditable]") !== null
+  );
+}
+
+/**
+ * Alt+ArrowRight moves a focused Current card to Next, Alt+ArrowLeft a Next
+ * card to Current; every other combination is a no-op. The card is not a Tab
+ * stop, so focus reaches it from inside; typing in the inline editor or a
+ * status reason must never move the card.
+ */
+function handleWeekMoveKey(
+  event: KeyboardEvent<HTMLDivElement>,
+  item: StatusOverviewItem,
+  onMoveItem: ActionProps["onMoveItem"],
+): void {
+  if (onMoveItem === undefined) return;
+  if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+  if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+  if (isEditableElement(event.target)) return;
+  if (!statusOverviewItemActions(item).secondary.includes("move")) return;
+  const toNext = item.source === "current";
+  if (event.key !== (toNext ? "ArrowRight" : "ArrowLeft")) return;
+  event.preventDefault();
+  onMoveItem(item, toNext ? "next" : "current", weekMoveFocusKey(item));
+}
 
 function previewTextClassName(expanded: boolean, canCollapse: boolean): string {
   return `${expanded || !canCollapse ? "block" : "line-clamp-2"} min-w-0 break-words text-sm leading-5`;
@@ -150,8 +181,12 @@ export function StatusOverviewItemPreview(props: ActionProps) {
           ? reviewRecordAnchor("item", item.recordId)
           : undefined
       }
+      // The card is one focusable group of controls; the group role keeps
+      // the week-move keydown handler on the container lint-legitimate.
+      role="group"
       tabIndex={-1}
       data-overview-item-preview
+      onKeyDown={(event) => handleWeekMoveKey(event, item, props.onMoveItem)}
       className="group/item flex min-w-0 items-start gap-1 rounded-[var(--radius-sm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] md:h-full"
     >
       <StatusControl

@@ -4,9 +4,21 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@weeklyreport/ui/components/ui/dropdown-menu";
-import { CalendarPlus, Ellipsis, Undo2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarPlus,
+  Ellipsis,
+  MessageSquarePlus,
+  Pencil,
+  Undo2,
+} from "lucide-react";
 
 import { shortItemLabel } from "../../../shared/lib/format/short-label";
+import {
+  focusReviewRecord,
+  reviewRecordAnchor,
+} from "../../../shared/ui/feedback/review-record-focus";
 import type {
   StatusOverviewEditTarget,
   StatusOverviewItem,
@@ -17,6 +29,7 @@ import {
   ICON_BUTTON_CLASS,
   identityOf,
   MENU_ITEM_CLASS,
+  weekMoveFocusKey,
 } from "./status-overview-item-actions";
 
 // Hidden by opacity and width only, never display:none or visibility, so the
@@ -173,8 +186,93 @@ function RestoreAction({ item, onRestorePlan }: ActionProps) {
 }
 
 /**
- * Revealed on hover, focus within and tap: the overflow menu (which carries
- * the week move) and the recovery actions. Renders nothing when none applies.
+ * The dedicated week-move icon. It activates the same move handler the
+ * overflow menu entry uses, so one card offers one move contract.
+ */
+function MoveAction({
+  item,
+  move,
+}: {
+  readonly item: StatusOverviewItem;
+  readonly move: ActionProps["onMoveItem"];
+}) {
+  if (!move) return null;
+  const toNext = item.source === "current";
+  const label = toNext
+    ? `Move ${shortItemLabel(item.text)} to next week`
+    : `Move ${shortItemLabel(item.text)} to current week`;
+  const focusKey = weekMoveFocusKey(item);
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      data-overview-focus={focusKey}
+      onClick={() => move(item, toNext ? "next" : "current", focusKey)}
+      className={ICON_BUTTON_CLASS}
+    >
+      {toNext ? (
+        <ArrowRight aria-hidden="true" className="size-4" />
+      ) : (
+        <ArrowLeft aria-hidden="true" className="size-4" />
+      )}
+    </button>
+  );
+}
+
+function EditAction({
+  item,
+  edit,
+}: {
+  readonly item: StatusOverviewItem;
+  readonly edit: ((target: StatusOverviewEditTarget) => void) | undefined;
+}) {
+  const target = item.editTarget;
+  if (!edit || target === null) return null;
+  const label = `Edit details: ${shortItemLabel(item.text)}`;
+  const focusKey = `edit-details:${item.source}:${identityOf(item)}`;
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      data-overview-focus={focusKey}
+      onClick={() => edit(target)}
+      className={ICON_BUTTON_CLASS}
+    >
+      <Pencil aria-hidden="true" className="size-4" />
+    </button>
+  );
+}
+
+function CommentAction({ item }: { readonly item: StatusOverviewItem }) {
+  // The lead surface reads the record's reviewer comments; the anchor only
+  // exists while the card actually renders that stack, so a click without
+  // comments is a no-op.
+  const target = item.editTarget;
+  if (target === null) return null;
+  const label = `Comments on ${shortItemLabel(item.text)}`;
+  const focusKey = `comment:${item.source}:${identityOf(item)}`;
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      data-overview-focus={focusKey}
+      onClick={() =>
+        focusReviewRecord(reviewRecordAnchor("item", target.recordId))
+      }
+      className={ICON_BUTTON_CLASS}
+    >
+      <MessageSquarePlus aria-hidden="true" className="size-4" />
+    </button>
+  );
+}
+
+/**
+ * Revealed on hover, focus within and tap: the week-move, edit and comment
+ * icons, the overflow menu (which keeps the same move entry) and the recovery
+ * actions. Renders nothing when none applies.
  */
 export function ItemActionZone(props: ActionProps) {
   const overflow = overflowHandlers(props);
@@ -188,6 +286,9 @@ export function ItemActionZone(props: ActionProps) {
   if (!hasOverflow && !hasPlan && !hasRestore) return null;
   return (
     <div data-overview-item-actions className={REVEAL_CLASS}>
+      <MoveAction item={props.item} move={overflow.move} />
+      <EditAction item={props.item} edit={overflow.edit} />
+      <CommentAction item={props.item} />
       <MoreActions item={props.item} {...overflow} />
       <PlanAction {...props} />
       <RestoreAction {...props} />
