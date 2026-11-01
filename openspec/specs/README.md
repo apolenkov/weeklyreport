@@ -251,6 +251,7 @@ Authority model:
 - [dependency-integrity](./dependency-integrity/spec.md) — Installs and runs published dependency artifacts without repository-local rewrites of third-party package contents.
 - [ui-crawl](./ui-crawl/spec.md) — The tester-kit crawler walks the running UI in quick and full modes and reports exercised controls, lifecycle states and unexplored coverage. `[roles: Shared]`
 - [ui-crawl-evidence](./ui-crawl-evidence/spec.md) — Defines how the tester-kit crawler keeps diagnostic causes, confirmed screenshot and video references and response statistics honest in its report. `[roles: Shared]`
+- [ui-crawl-request-ledger](./ui-crawl-request-ledger/spec.md) — Defines how the tester-kit crawler keeps reused XHR observations and its shared request ledger honest, so corrupt history and lock failures fail closed. `[roles: Shared]`
 - [tester-kit-coverage](./tester-kit-coverage/spec.md) — The tester-kit proves its own coverage with guarded lifecycle fixtures, per-procedure success evidence and reset between runs. `[roles: Shared]`
 
 ### Lint, tooling, and repository process
