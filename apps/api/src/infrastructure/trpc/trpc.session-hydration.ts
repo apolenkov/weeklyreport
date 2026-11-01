@@ -85,7 +85,10 @@ async function hydrateOrganization(
       `Organization singleton row '${ORGANIZATION_SINGLETON_ID}' is missing; apply the canonical init migration or restore the row`,
     );
   }
-  const value = { shortName: row.shortName, fullName: row.fullName };
+  const value: OrganizationPublic = Object.freeze({
+    shortName: row.shortName,
+    fullName: row.fullName,
+  });
   organizationCache.set(value, now + ORG_CACHE_TTL_MS);
   return { ...session, organization: value };
 }

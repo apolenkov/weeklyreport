@@ -131,6 +131,27 @@ describe("hydrateSession", () => {
     expect(findUnique).toHaveBeenCalledOnce();
   });
 
+  it("returns a frozen organization value", async () => {
+    const result = await hydrateSession(viewerSession(), makePrisma());
+
+    expect(Object.isFrozen(result.organization)).toBe(true);
+  });
+
+  it("does not let one request change the organization seen by the next", async () => {
+    const prisma = makePrisma();
+
+    const first = await hydrateSession(viewerSession(), prisma);
+    expect(() => {
+      (first.organization as { shortName: string }).shortName = "changed";
+    }).toThrow(TypeError);
+    const second = await hydrateSession(viewerSession(), prisma);
+
+    expect(second.organization).toEqual({
+      shortName: "Demo",
+      fullName: "Product Team",
+    });
+  });
+
   it("skips the section and viewer lookups when the live read already supplied them", async () => {
     const findMany = vi.fn().mockResolvedValue([]);
 
