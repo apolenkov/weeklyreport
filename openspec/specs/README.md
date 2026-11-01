@@ -146,7 +146,8 @@ Authority model:
 - [ai-provider-admin-layout](./ai-provider-admin-layout/spec.md) — The top-level Admin AI surface keeps provider configuration compact, accessible, aligned, responsive, and free of horizontal overflow. `[roles: Admin]`
 - [admin-dialog-focus-management](./admin-dialog-focus-management/spec.md) — Admin CRUD dialogs move focus inside on open and restore it to the initiating control on close. `[roles: Admin]`
 - [admin-reminders-ui](./admin-reminders-ui/spec.md) — Admins configure reminder policies through plain-language cards, inline editing, presets, and explicit permanent removal. `[roles: Admin]`
-- [admin-settings-ui](./admin-settings-ui/spec.md) — Admin Settings provides client-side sub-tabs, honest live policy controls, and resilient unsaved form state. `[roles: Admin]`
+- [admin-settings-ui](./admin-settings-ui/spec.md) — Admin Settings provides honest live policy controls and resilient unsaved form state. `[roles: Admin]`
+- [admin-navigation-responsive](./admin-navigation-responsive/spec.md) — Defines Admin tab and primary navigation, Settings secondary navigation and the responsive access to operational alerts and records on every supported viewport. `[roles: Admin]`
 - [admin-snapshot-restore](./admin-snapshot-restore/spec.md) — Admin snapshot restore recovers selected admin entities, reminder delivery state, and immutable published report documents while preserving reporting-group head assignments. `[roles: Admin]`
 - [admin-stage-assignment](./admin-stage-assignment/spec.md) — Stage-to-lead assignment saves atomically against the composite uniqueness rule. `[roles: Admin]`
 - [slide-capacity-signals](./slide-capacity-signals/spec.md) — Product assignment warns an admin when a lead's ownership load becomes presentation-heavy. `[roles: Admin]`
