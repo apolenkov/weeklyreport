@@ -1,55 +1,59 @@
 # Tasks
 
+Reconciled 2026-11-02 against main 9d8051cc0 (implementation commits
+9a793ff8e, 42514c419, d15781071, 60bfa4814).
+
 ## shared
 
-- [ ] 1. Spike: pin the latest stable `@dnd-kit/core` in `apps/web` and
+- [x] 1. Spike: pin the latest stable `@dnd-kit/core` in `apps/web` and
       smoke-test Overview drag against React 19 / React Compiler before
       feature work (design decision validation, no product behaviour).
-- [ ] 2. Add the Next→Current placement-only move patch builder in
-      `@weeklyreport/shared`, symmetric to the existing Current→Next
-      `buildMoveItemPatch`: preserve progress, text, and `stableId`, clear
-      `carriedOver`, and reject when the target week already holds an active
-      occurrence for the same `stableId`.
-- [ ] 3. Extend the shared `DraftPatch` validation for the description-only
-      inline-edit patch (trim; reject empty/whitespace at the boundary).
+      Pinned 6.3.1 (9a793ff8e); drag verified in the browser on the lane-A
+      stand before 60bfa4814.
+- [x] 2. Next→Current placement-only move: the web `buildMoveItemPatch`
+      (`lead-item-actions.ts:85-101`) serves both directions, preserves every
+      saved field including `stableId` and `carriedOver` (see design), and
+      returns no patch when the target week already holds the same lineage
+      (`lead-item-actions.test.ts` "returns no patch for a retry or an
+      existing target lineage").
+- [ ] 3. Description-only inline edit validation: trim and empty-text restore
+      exist in the editor (`status-overview-item-text-editor.tsx:36-38`);
+      decide whether the draft patch boundary also needs its own check.
 
 ## api
 
-- [ ] 4. Accept both placement-only move directions and the description-only
-      patch in `saveSection` through the existing canonical draft save path;
-      add service tests for both directions, the `stableId` duplicate
-      rejection, and the atomic `periodState`/lifecycle-tuple update.
+- [ ] 4. Service tests for both placement directions through `saveSection`,
+      the `stableId` duplicate rejection, and the atomic
+      `periodState`/lifecycle-tuple update (guarded API integration).
 
 ## web
 
-- [ ] 5. DnD layer with `@dnd-kit/core` (pointer + touch sensors, activation
-      constraint): Current/Next columns droppable, editable cards
-      draggable, Previous column inert; a completed drop applies the move
-      patch and confirms through the move notification.
-- [ ] 6. Hover icon cluster (→ for Current items, ← for Next items, ✎, +;
-      always visible on touch) with accessible names; the week-move icon
-      activates the shared move handler, ✎ opens the canonical editor, +
-      opens the existing record comment flow.
-- [ ] 7. `Alt+ArrowRight` / `Alt+ArrowLeft` on the focused card (Current→Next
-      / Next→Current, no-op otherwise); focus follows the moved card.
-- [ ] 8. Inline text editor on the item text: Enter saves, Esc cancels,
-      Shift+Enter line break, click outside saves, empty text restores the
-      previous value; saves through the canonical draft path.
-- [ ] 9. Move confirmation notification with Undo (reverse move through the
-      same handler; a refused Undo keeps server state and reports the
-      failure).
-- [ ] 10. Stale-tab handling: revert the card to the last server state,
-      announce the standard save-failure error, re-synchronize the Overview.
-- [ ] 11. Component tests: inline editor state machine, icon set by
-      placement, shortcut applicability, Undo refusal, Previous
-      ineligibility, rejected-drop revert.
+- [x] 5. DnD layer with `@dnd-kit/core` (pointer distance 6, touch delay 200):
+      `status-overview-dnd.tsx`, `status-overview-lane.tsx`,
+      `status-overview-item-chip.tsx`; Previous inert via `resolveDrop`.
+- [x] 6. Icon cluster with accessible names: week move, ✎ canonical editor,
+      comment flow (`status-overview-item-icons.test.tsx`). Touch visibility is
+      browser-checked only.
+- [x] 7. `Alt+ArrowRight` / `Alt+ArrowLeft` (`status-overview-item-preview.tsx`
+      `handleWeekMoveKey`; `status-overview-item-icons.test.tsx`).
+- [x] 8. Inline text editor: Enter, Esc, Shift+Enter, blur saves, empty
+      restores (`status-overview-item-text-editor.test.tsx`).
+- [x] 9. Move notification with Undo; refused Undo reports
+      `UNDO_UNAVAILABLE`; Undo survives a row-id re-issue
+      (`overview-in-place-move.test.ts`, d15781071).
+- [ ] 10. Stale-tab handling after a move: card revert, standard save-failure
+      message and Overview resync are covered only by the shared draft
+      conflict path (`lead-status-overview.test.tsx` conflict cases); add a
+      move-specific test.
+- [ ] 11. Component tests: present for editor state machine, icons by
+      placement, shortcut applicability, Undo refusal and Previous
+      ineligibility; missing: rejected-drop revert of the card position.
 
 ## planning + docs
 
-- [ ] 12. E2E scenario (agent-browser): drag Current→Next with screenshot
-      evidence, icon move Next→Current, Alt+Arrow round trip, inline edit
-      including empty restore, Undo, Previous read-only; evidence in the
-      durable handoff directory.
-- [ ] 13. Verify: `pnpm format:check`, `pnpm lint`, `pnpm typecheck`,
-      `pnpm test`, `pnpm build`, `pnpm spec:check` on the reviewed tree,
-      plus guarded API integration for the move patches.
+- [ ] 12. E2E scenario (agent-browser) with durable evidence: drag
+      Current→Next, icon move Next→Current, Alt+Arrow round trip, inline edit
+      with empty restore, Undo, Previous read-only. Lane-A browser checks on
+      01.11 were not saved as durable evidence.
+- [ ] 13. Six gates ran green on each delivered SHA (60bfa4814 and later);
+      guarded API integration for the move patches is still open.

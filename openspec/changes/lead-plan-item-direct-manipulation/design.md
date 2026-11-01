@@ -37,10 +37,13 @@ hover icons (week move, ✎ edit, + comment), and Undo after a move.
 ### One shared move handler for drag, icons, and keyboard
 
 All three entry points call the same handler: build the placement-only move
-patch (existing `buildMoveItemPatch` semantics for Current→Next; a symmetric
-builder for Next→Current), apply it to the draft engine, and let the
+patch (the web `buildMoveItemPatch` in
+`report-sections/model/lead-actions/lead-item-actions.ts` serves both
+directions; no shared-package builder is needed), apply it to the draft engine, and let the
 canonical autosave persist it. The move preserves stored progress, text, and
-`stableId`, clears `carriedOver`, and is rejected when the target week
+`stableId` and every other saved field (including `carriedOver`, which
+records rollover provenance; pinned by `moveToCurrentWeekPatch` tests), and
+is rejected when the target week
 already holds an active occurrence for the same `stableId` (rollover
 invariant: at most one active W+1 per `stableId`). A Current item with a
 saved `nextStepText` follows the existing acknowledgement handling from
