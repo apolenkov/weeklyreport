@@ -430,22 +430,36 @@ function echoSaveDraft() {
   });
 }
 
-// Move to next week on a Current item without a saved plan applies at once:
-// no editor, one autosave. The 5 s debounce is advanced instead of waited out.
-async function chooseDirectMoveToNext(
+// A week move on an item without a saved plan applies at once in both
+// directions: no editor, one autosave. The 5 s debounce is advanced instead of
+// waited out; the confirmation toast carries the same Undo action as every
+// other direct move.
+async function chooseDirectMove(
   user: ReturnType<typeof userEvent.setup>,
   text: string,
+  destination: "this week" | "next week",
   saveDraft: ReturnType<typeof echoSaveDraft>,
 ) {
-  const moveToNextWeek = await openMoveMenu(user, text, "next week");
+  const moveItem = await openMoveMenu(user, text, destination);
   vi.useFakeTimers();
   try {
-    fireEvent.click(moveToNextWeek);
+    fireEvent.click(moveItem);
     await act(() => vi.advanceTimersByTimeAsync(0));
     expect(
       screen.queryByRole("form", { name: /week update for/ }),
     ).not.toBeInTheDocument();
-    expect(toast.success).toHaveBeenCalledWith("Moved to next week");
+    const moveToast = vi.mocked(toast.success).mock.calls.at(-1);
+    expect(moveToast?.[0]).toBe(
+      destination === "next week" ? "Moved to next week" : "Moved to this week",
+    );
+    const toastOptions = moveToast?.[1] as
+      | {
+          readonly duration?: number;
+          readonly action?: { readonly label: ReactNode };
+        }
+      | undefined;
+    expect(toastOptions?.duration).toBe(8000);
+    expect(toastOptions?.action?.label).toBe("Undo");
     expect(saveDraft).not.toHaveBeenCalled();
     const focused = document.activeElement;
     await act(() => vi.advanceTimersByTimeAsync(5000));
@@ -2288,9 +2302,10 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
 
-    const { saved } = await chooseDirectMoveToNext(
+    const { saved } = await chooseDirectMove(
       user,
       "Current work",
+      "next week",
       saveDraft,
     );
     const movedStableId = "a0000000-0000-4000-8000-000000000011";
@@ -2327,9 +2342,10 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
 
-    const { focused } = await chooseDirectMoveToNext(
+    const { focused } = await chooseDirectMove(
       user,
       "Current work",
+      "next week",
       saveDraft,
     );
 
@@ -2345,7 +2361,7 @@ describe("LeadForm Overview", () => {
     expect(document.activeElement).toBe(focused);
   });
 
-  it("moves a Next item to this week through the canonical editor without writing before Save", async () => {
+  it("moves a Next item to this week in one action through the ordinary autosave", async () => {
     const user = userEvent.setup();
     const saveDraft = echoSaveDraft();
     render(
@@ -2354,20 +2370,12 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
 
-    await chooseMove(user, "Next work", "this week");
-    expect(screen.getByRole("radio", { name: "Current week" })).toBeChecked();
-    expect(screen.getByRole("textbox", { name: /Description/ })).toHaveValue(
+    const { saved } = await chooseDirectMove(
+      user,
       "Next work",
+      "this week",
+      saveDraft,
     );
-    expect(saveDraft).not.toHaveBeenCalled();
-
-    await user.click(screen.getByRole("button", { name: "Save update" }));
-    await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
-    const saved = (
-      saveDraft.mock.calls[0]?.[0] as {
-        readonly items: ReportSectionReadModel["items"];
-      }
-    ).items;
     const movedStableId = "a0000000-0000-4000-8000-000000000013";
     expect(saved.find((item) => item.text === "Next work")).toMatchObject({
       id: "a0000000-0000-4000-8000-000000000012",
@@ -2375,42 +2383,45 @@ describe("LeadForm Overview", () => {
       type: "current",
       text: "Next work",
     });
+    // Placement changes, the occurrence does not: the same record is no longer
+    // Next and no second occurrence is synthesized for the lineage.
     expect(
       saved.filter((item) => item.stableId === movedStableId),
     ).toHaveLength(1);
   });
 
+  // A genuine Next item moves directly, so the editor Move only remains on
+  // the legacy derived plan — the promotion path still exercised below.
   it("returns focus to a visible same-item control after cancelling a Move", async () => {
     const user = userEvent.setup();
     const saveDraft = vi.fn();
     render(
-      <Wrapper saveDraft={saveDraft}>
+      <Wrapper legacyNextText="Legacy next-week plan" saveDraft={saveDraft}>
         <LeadForm reportId={REPORT_ID} mode="overview" />
       </Wrapper>,
     );
 
-    const preview = await itemPreview("Next work");
+    const preview = await itemPreview("Legacy next-week plan");
     const opener = await within(preview).findByRole("button", {
-      name: "More actions for Next work",
+      name: "More actions for Legacy next-week plan",
     });
-    expect(opener).toHaveAttribute(
-      "data-overview-focus",
-      "more:next:a0000000-0000-4000-8000-000000000013",
-    );
     await user.click(opener);
     await user.click(
       screen.getByRole("menuitem", {
-        name: "Move to this week: Next work",
+        name: "Move to this week: Legacy next-week plan",
       }),
     );
+    expect(
+      screen.getByRole("form", { name: "Current week update for Payments" }),
+    ).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(saveDraft).not.toHaveBeenCalled();
     // The Move origin is the More actions trigger, still in the tree.
-    const settled = await itemPreview("Next work");
+    const settled = await itemPreview("Legacy next-week plan");
     expect(
       within(settled).getByRole("button", {
-        name: "More actions for Next work",
+        name: "More actions for Legacy next-week plan",
       }),
     ).toHaveFocus();
   });
@@ -2786,8 +2797,8 @@ describe("LeadForm Overview", () => {
     ).toBeNull();
   });
 
-  // Move to next week from the menu applies directly, so the Current row
-  // reaches the editor's Save through Edit details and its week radio instead.
+  // Week moves from the menu apply directly in both directions, so both rows
+  // reach the editor's Save through Edit details and its week radio instead.
   it.each([
     {
       initial: "Current work",
@@ -2800,8 +2811,10 @@ describe("LeadForm Overview", () => {
     {
       initial: "Next work",
       target: "current" as const,
-      open: (user: ReturnType<typeof userEvent.setup>) =>
-        chooseMove(user, "Next work", "this week"),
+      open: async (user: ReturnType<typeof userEvent.setup>) => {
+        await openItemEditor(user, "Next work");
+        await user.click(screen.getByRole("radio", { name: "Current week" }));
+      },
     },
   ])(
     "retries an edited $target move from the latest draft without a duplicate",
@@ -2873,9 +2886,10 @@ describe("LeadForm Overview", () => {
         </Wrapper>,
       );
 
-      const { saved } = await chooseDirectMoveToNext(
+      const { saved } = await chooseDirectMove(
         user,
         "Current work",
+        "next week",
         saveDraft,
       );
 
@@ -2910,7 +2924,10 @@ describe("LeadForm Overview", () => {
         </Wrapper>,
       );
 
-      await chooseMove(user, "Next work", "this week");
+      // The menu move is direct; the status selection check lives in the
+      // editor, reached through Edit details and its week radio.
+      await openItemEditor(user, "Next work");
+      await user.click(screen.getByRole("radio", { name: "Current week" }));
 
       expect(screen.getByRole("button", { name: statusLabel })).toHaveAttribute(
         "aria-pressed",
