@@ -168,3 +168,57 @@ Editable Overview Current/Next cells MUST offer contextual `+` creation seeded t
 - **THEN** the unit header contains always-visible touch controls for Current and Next creation, labelled with unit and week
 - **AND** Next creation is available without mounting a hidden-lane composer or first opening a Current composer
 - **AND** the general header Add item action remains and no Previous create action is offered
+
+### Requirement: Overview plan composer MUST warn on unload only while input is edited
+
+The Overview plan composer MUST warn before page unload or in-app navigation
+only while its input differs from the state it opened with. The outcome choice
+alone MUST NOT arm the warning, matching the composer's discard confirmation.
+A pristine composer MUST NOT prompt.
+
+#### Scenario: A pristine composer does not prompt on unload
+
+- **GIVEN** the Overview plan composer has just opened with no edited input
+- **WHEN** the page is unloaded
+- **THEN** the unload proceeds without a browser confirmation
+
+#### Scenario: Edited input arms the unload warning
+
+- **GIVEN** the Overview plan composer is open
+- **WHEN** the lead edits any input field beyond the outcome choice
+- **THEN** page unload is prevented while the composer is open
+
+#### Scenario: Restoring the opened input disarms the warning
+
+- **GIVEN** the lead has edited the composer input
+- **WHEN** the input is restored to the values the composer opened with
+- **THEN** page unload proceeds without a browser confirmation
+
+### Requirement: Discarding a failed Overview edit MUST save the restored text
+
+When the lead cancels an Overview editor whose Save update failed and confirms
+Discard, the draft save issued by Discard MUST carry the restored item fields,
+not the abandoned text. The save MUST run after the restore patch has reached
+the draft engine.
+
+#### Scenario: Discard after a failed Save update
+
+- **GIVEN** the lead edited an item's description in Overview and Save update failed
+- **WHEN** the lead cancels the editor and confirms Discard
+- **THEN** the draft save issued by Discard contains the item's last saved text
+- **AND** it does not contain the abandoned text
+
+### Requirement: Sticky completion Retry MUST be unavailable while an Overview update is open
+
+While an Overview update is open (the same pending-input state that disables
+Submit and review there), the sticky completion cluster MUST render `Retry saving draft`
+disabled, as the header cluster already does. After a failed Save update the
+persisted-save barrier ignores a generic force-save, so the editor's own Save
+update is the retry.
+
+#### Scenario: Sticky Retry with a failed Save update still open
+
+- **GIVEN** a Save update failed and its editor remains open
+- **AND** the header actions have scrolled out of view so the sticky completion actions show
+- **WHEN** the sticky `Retry saving draft` button renders
+- **THEN** it is disabled

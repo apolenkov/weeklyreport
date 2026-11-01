@@ -250,6 +250,7 @@ Authority model:
 - [ci-merge-gate](./ci-merge-gate/spec.md) — Defines the GitLab CI lint/test gate for `main` and the acceptance evidence collected outside CI.
 - [developer-ui-feedback-tooling](./developer-ui-feedback-tooling/spec.md) — Developer visual review uses one shared user-level onUI interface on canonical origins, with annotation closure tied to evidence. `[roles: Shared]`
 - [repository-file-accountability](./repository-file-accountability/spec.md) — Requires a complete one-off file disposition and a residue-free worktree without tracking campaign tooling.
+- [git-hook-installation](./git-hook-installation/spec.md) — Keeps prepare-time Git hook installation owned by the permanent checkout so disposable linked worktrees cannot redirect shared hooks.
 - [surface-token-integrity](./surface-token-integrity/spec.md) — Prevents report UI from referencing undefined surface tokens.
 - [web-status-color-tokens](./web-status-color-tokens/spec.md) — Keeps the web status-token set complete, named, and free of hex fallbacks or unrelated color domains.
 - [admin-action-log-details](./admin-action-log-details/spec.md) — Admin action logs retain the structured details needed for diagnosis.
