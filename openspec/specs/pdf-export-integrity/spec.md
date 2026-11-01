@@ -1,6 +1,6 @@
 ## Purpose
 
-Ensure PDF exports of the weekly report are captured only from a successfully rendered print page, never from a loading spinner or an error state.
+Keep PDF export state, generation, access and delivery integrity. Render readiness, recovery generations and client status live in their own capabilities (pdf-export-render-readiness, pdf-export-state-integrity, pdf-export-recovery-generations, pdf-export-client-status).
 
 ## Requirements
 
