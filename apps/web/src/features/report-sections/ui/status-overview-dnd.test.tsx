@@ -157,7 +157,12 @@ function pointerInit(x: number, y: number) {
 async function dragCard(from: { x: number; y: number }, toX: number) {
   const card = document.querySelector<HTMLElement>("[data-draggable-item]");
   if (!card) throw new Error("Expected a draggable card");
-  fireEvent.pointerDown(card, pointerInit(from.x, from.y));
+  // Only the grip arms the drag; the card body keeps ordinary gestures.
+  const handle = card.querySelector<HTMLElement>(
+    'button[aria-label="Drag to move to another week"]',
+  );
+  if (!handle) throw new Error("Expected a drag handle on the card");
+  fireEvent.pointerDown(handle, pointerInit(from.x, from.y));
   fireEvent.pointerMove(document, pointerInit(from.x + 10, from.y));
   fireEvent.pointerMove(document, pointerInit(toX, from.y));
   // Collision detection settles on the next frame; let the microtasks and the
@@ -176,9 +181,23 @@ describe("StatusOverview drag and drop", () => {
       (element) => element.dataset.draggableItem !== undefined,
     );
     expect(draggable).toHaveLength(1);
-    expect(draggable[0]).toHaveTextContent("Work item 1");
+    const movable = draggable[0];
+    if (!movable) throw new Error("Expected one movable card");
+    expect(movable).toHaveTextContent("Work item 1");
+    // The grip is the only drag start, and only the movable card gets one.
+    expect(
+      movable.querySelector(
+        'button[aria-label="Drag to move to another week"]',
+      ),
+    ).not.toBeNull();
     expect(
       screen.getByText("Prior plan").closest("[data-draggable-item]"),
+    ).toBeNull();
+    expect(
+      screen
+        .getByText("Prior plan")
+        .closest<HTMLElement>("[data-overview-item-preview]")
+        ?.querySelector('button[aria-label="Drag to move to another week"]'),
     ).toBeNull();
   });
 
@@ -203,6 +222,21 @@ describe("StatusOverview drag and drop", () => {
 
     await dragCard({ x: 250, y: 140 }, 50);
     await dragCard({ x: 250, y: 140 }, 250);
+
+    expect(onMoveItem).not.toHaveBeenCalled();
+  });
+
+  it("does not start a drag from the card body, only from the grip", async () => {
+    stubLayout();
+    const onMoveItem = vi.fn();
+    render(<StatusOverview model={dndModel()} onMoveItem={onMoveItem} />);
+    const body = screen.getByText("Work item 1");
+
+    fireEvent.pointerDown(body, pointerInit(250, 140));
+    fireEvent.pointerMove(document, pointerInit(260, 140));
+    fireEvent.pointerMove(document, pointerInit(450, 140));
+    await act(() => new Promise((resolve) => setTimeout(resolve, 30)));
+    fireEvent.pointerUp(document, pointerInit(450, 140));
 
     expect(onMoveItem).not.toHaveBeenCalled();
   });
