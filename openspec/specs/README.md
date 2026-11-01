@@ -41,7 +41,7 @@ This index maps every durable capability to one canonical home. Product capabili
 #### Consume/Search
 
 - [analytics-query-correctness](./analytics-query-correctness/spec.md) — Analytics results and cache keys stay correct under lead scoping, republished periods, and nested inputs. `[roles: Head, Admin]`
-- [pdf-export-integrity](./pdf-export-integrity/spec.md) — PDF workers capture only a successfully rendered report, and completed exports download without opening a blank tab. `[roles: Lead, Head, Viewer, Admin]`
+- [pdf-export-integrity](./pdf-export-integrity/spec.md) — PDF export state, generation, access and delivery integrity; render readiness, recovery and client status are in the split pdf-export-* capabilities. `[roles: Lead, Head, Viewer, Admin]`
 - [pdf-export-render-readiness](./pdf-export-render-readiness/spec.md) — Defines how the print template, the PDF worker and the printed layout prove a report rendered completely before it is captured and mapped onto job outcomes. `[roles: Lead, Head, Viewer, Admin]`
 - [pdf-export-state-integrity](./pdf-export-state-integrity/spec.md) — Defines how terminal queue states, completion persistence and artifact publication stay consistent, immutable and fail closed for every PDF export row. `[roles: Lead, Head, Viewer, Admin]`
 - [pdf-export-recovery-generations](./pdf-export-recovery-generations/spec.md) — Defines the monotonic export generation, quarantine of aged pending exports and the Head-only retry and recovery listing that depend on it. `[roles: Lead, Head, Viewer, Admin]`
@@ -70,7 +70,7 @@ This index maps every durable capability to one canonical home. Product capabili
 - [lead-form-write-actions](./lead-form-write-actions/spec.md) — Lead writes share one action boundary while preserving conflicts, optimistic locking, and user-visible side effects. `[roles: Lead]`
 - [lead-item-card-uniformity](./lead-item-card-uniformity/spec.md) — Lead item cards keep uniform height and expose truncated content through a full-text tooltip. `[roles: Lead]`
 - [lead-plan-verdict](./lead-plan-verdict/spec.md) — Each prior-week planned item gets a one-action verdict recorded on the selected week without editing the prior week, with confirm-all and a review counter. `[roles: Lead]`
-- [lead-pipeline-card](./lead-pipeline-card/spec.md) — Product health remains risk-derived and distinct from the lead's own Mine-scope stage completeness. `[roles: Lead]`
+- [lead-pipeline-card](./lead-pipeline-card/spec.md) — Product health remains risk-derived and distinct from the lead's own stage completeness; Mine-scope lives in lead-pipeline-mine-scope. `[roles: Lead]`
 - [lead-pipeline-mine-scope](./lead-pipeline-mine-scope/spec.md) — Defines which stages the lead pipeline shows in Mine mode, how the completeness counter labels them and which unassigned stages it excludes. `[roles: Lead]`
 - [lead-report-controls-integrity](./lead-report-controls-integrity/spec.md) — Lead report controls avoid no-ops, accidental dialogs, clipped popovers, stale busy states, and mismatched summary populations. `[roles: Lead]`
 - [unified-report-authoring](./unified-report-authoring/spec.md) — Lead report authoring keeps inline editing, lineage, recovery, and progress semantics coherent across sections. `[roles: Lead]`

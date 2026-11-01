@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Present each lead product pipeline with risk-derived health separated from the lead's own stage-input completeness and Mine-scope ownership.
+Present each lead product pipeline with risk-derived health separated from the lead's own stage-input completeness. Mine-scope ownership lives in lead-pipeline-mine-scope.
 
 ## Requirements
 
