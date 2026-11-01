@@ -1,4 +1,12 @@
-import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { useDraggable } from "@dnd-kit/core";
+import {
+  type CSSProperties,
+  type KeyboardEvent,
+  type SyntheticEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import { shortItemLabel } from "../../../shared/lib/format/short-label";
 import { reviewRecordAnchor } from "../../../shared/ui/feedback/review-record-focus";
@@ -6,6 +14,10 @@ import type {
   StatusOverviewEditTarget,
   StatusOverviewItem,
 } from "../model/status-overview";
+import {
+  overviewDraggableId,
+  overviewItemMovable,
+} from "../model/status-overview-dnd";
 import { statusOverviewItemActions } from "../model/status-overview-items";
 import {
   type ActionProps,
@@ -27,6 +39,79 @@ function isEditableElement(target: EventTarget | null): boolean {
   return (
     target instanceof Element &&
     target.closest("input, textarea, select, [contenteditable]") !== null
+  );
+}
+
+// Controls keep their own gestures: a press that starts on a button, a link,
+// a menu, or an editable field never arms the card drag. The card itself —
+// padding, badges, the row chrome — is the drag handle.
+const DRAG_EXCLUSION =
+  "button, a, input, textarea, select, [contenteditable], [role='menu'], [role='listbox'], [role='option'], [role='switch'], [role='checkbox']";
+
+function startsOnControl(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest(DRAG_EXCLUSION) !== null;
+}
+
+function skipControlGesture<E extends SyntheticEvent>(
+  handler: ((event: E) => void) | undefined,
+) {
+  return (event: E): void => {
+    if (!startsOnControl(event.target)) handler?.(event);
+  };
+}
+
+type DragGesture = (event: SyntheticEvent) => void;
+
+// The card body is the drag handle: movable items expose the dnd listeners and
+// carry the card's translate while dragged; non-movable cards render exactly
+// as before — no listeners, no marker, no touch-action override. pan-y keeps
+// the column scrollable on touch while the long-press drag still wins once
+// the TouchSensor delay elapses.
+function useCardDrag(item: StatusOverviewItem, enabled: boolean) {
+  const draggable = useDraggable({
+    id: overviewDraggableId(item),
+    data: { item },
+    disabled: !enabled,
+  });
+  const listeners = enabled ? draggable.listeners : undefined;
+  const gesture = (name: "onPointerDown" | "onTouchStart"): DragGesture =>
+    // SyntheticListenerMap values are loosely typed; both sensors attach
+    // React synthetic-event handlers.
+    (listeners?.[name] as DragGesture | undefined) ?? (() => undefined);
+  const transform = enabled ? draggable.transform : null;
+  const style: CSSProperties =
+    transform === null
+      ? { touchAction: "pan-y" }
+      : {
+          transform: `translate3d(${String(transform.x)}px, ${String(transform.y)}px, 0)`,
+          position: "relative",
+          zIndex: 10,
+          touchAction: "pan-y",
+        };
+  return {
+    nodeRef: draggable.setNodeRef,
+    props: enabled
+      ? {
+          "data-draggable-item": "",
+          style,
+          ...listeners,
+          onPointerDown: skipControlGesture(gesture("onPointerDown")),
+          onTouchStart: skipControlGesture(gesture("onTouchStart")),
+        }
+      : undefined,
+  };
+}
+
+function itemVerdict(item: StatusOverviewItem) {
+  return item.source === "previous" ? item.verdict : undefined;
+}
+
+// The rail is replaced by the stamp once a verdict lands: move focus there.
+function focusVerdictStamp(preview: HTMLElement | null): void {
+  requestAnimationFrame(() =>
+    (
+      preview?.querySelector<HTMLElement>("[data-verdict-stamp]") ?? preview
+    )?.focus(),
   );
 }
 
@@ -164,18 +249,20 @@ export function StatusOverviewItemPreview(props: ActionProps) {
   const [expanded, setExpanded] = useState(false);
   const statusFlow = useOverviewStatusInput(item, onSetStatus);
   const preview = useRef<HTMLDivElement>(null);
-  const verdict = item.source === "previous" ? item.verdict : undefined;
-  // The rail is replaced by the stamp once a verdict lands: move focus there.
-  const focusStamp = () =>
-    requestAnimationFrame(() =>
-      (
-        preview.current?.querySelector<HTMLElement>("[data-verdict-stamp]") ??
-        preview.current
-      )?.focus(),
-    );
+  const drag = useCardDrag(
+    item,
+    props.onMoveItem !== undefined && overviewItemMovable(item),
+  );
+  const verdict = itemVerdict(item);
+  const pendingVerdict = verdict === "pending" && onVerdict !== undefined;
+  const decidedVerdict = verdict !== undefined && verdict !== "pending";
+  const verdictStamp = decidedVerdict ? verdict : undefined;
   return (
     <div
-      ref={preview}
+      ref={(element) => {
+        preview.current = element;
+        drag.nodeRef(element);
+      }}
       id={
         item.recordId && item.comments.length > 0
           ? reviewRecordAnchor("item", item.recordId)
@@ -186,6 +273,7 @@ export function StatusOverviewItemPreview(props: ActionProps) {
       role="group"
       tabIndex={-1}
       data-overview-item-preview
+      {...drag.props}
       onKeyDown={(event) => handleWeekMoveKey(event, item, props.onMoveItem)}
       className="group/item flex min-w-0 items-start gap-1 rounded-[var(--radius-sm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] md:h-full"
     >
@@ -204,11 +292,11 @@ export function StatusOverviewItemPreview(props: ActionProps) {
         />
         <ItemBadges item={item} />
         <StatusInput item={item} flow={statusFlow} />
-        {verdict === "pending" && onVerdict ? (
+        {pendingVerdict ? (
           <VerdictRail
             item={item}
             onVerdict={onVerdict}
-            onDecided={focusStamp}
+            onDecided={() => focusVerdictStamp(preview.current)}
           />
         ) : null}
         <OutcomeAudit item={item} />
@@ -220,8 +308,8 @@ export function StatusOverviewItemPreview(props: ActionProps) {
         />
       </div>
       <div className="flex min-h-[var(--touch-target-min)] shrink-0 items-center">
-        {verdict !== undefined && verdict !== "pending" ? (
-          <VerdictStamp verdict={verdict} />
+        {verdictStamp !== undefined ? (
+          <VerdictStamp verdict={verdictStamp} />
         ) : null}
         <ItemActionZone {...props} />
       </div>

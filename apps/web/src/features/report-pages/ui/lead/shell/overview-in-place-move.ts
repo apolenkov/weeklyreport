@@ -18,7 +18,11 @@ const ACKNOWLEDGEMENT_UNAVAILABLE =
   "This update can no longer be confirmed. Reload the report.";
 const MOVE_UNAVAILABLE =
   "This update can no longer be moved. Reload the report.";
-const MOVED_TO_NEXT_WEEK_MESSAGE = "Moved to next week";
+const UNDO_UNAVAILABLE = "This move can no longer be undone.";
+const UNDO_TIMEOUT_MS = 8000;
+
+const moveMessage = (target: "current" | "next"): string =>
+  target === "next" ? "Moved to next week" : "Moved to this week";
 
 // Move to next week on a Current occurrence whose saved next step already plans
 // that week only acknowledges the plan: the record, its result and its
@@ -57,11 +61,82 @@ interface MoveWithoutEditorArgs {
   readonly target: "current" | "next";
 }
 
-// Moving a Current occurrence to Next needs no input: apply the placement patch
-// through the ordinary draft save. Null patches (a saved next step, a Next of
-// the same stableId, a finished item) keep the canonical editor path. The item
-// leaves its lane, so focus follows it to the Next lane once the move renders.
-function applyDirectMoveToNext({
+// Undo issues the reverse move through the same draft write. A refusal — the
+// occurrence was moved, edited or saved elsewhere in between — reports the
+// failure and leaves the server state untouched.
+function undoWeekMove({
+  whenIdle,
+  focusMoved,
+  item,
+  movedTo,
+  backTo,
+}: {
+  readonly whenIdle: WhenIdle;
+  readonly focusMoved: (identity: string | null) => void;
+  readonly item: StatusOverviewItem;
+  readonly movedTo: "current" | "next";
+  readonly backTo: "current" | "next";
+}): void {
+  const recordId = item.recordId;
+  if (recordId === null) {
+    toast.error(UNDO_UNAVAILABLE);
+    return;
+  }
+  whenIdle((ready) => {
+    const patch = buildMoveItemPatch(ready.draft.section, recordId, backTo);
+    if (patch === null) {
+      toast.error(UNDO_UNAVAILABLE);
+      return;
+    }
+    ready.draft.apply(patch);
+    focusMoved(item.stableId ?? null);
+    announceMove({
+      whenIdle,
+      focusMoved,
+      item,
+      movedFrom: movedTo,
+      movedTo: backTo,
+    });
+  });
+}
+
+// The move confirmation lives in the existing toast channel and offers the
+// reverse move for the same ~8 s window other actions get.
+function announceMove({
+  whenIdle,
+  focusMoved,
+  item,
+  movedFrom,
+  movedTo,
+}: {
+  readonly whenIdle: WhenIdle;
+  readonly focusMoved: (identity: string | null) => void;
+  readonly item: StatusOverviewItem;
+  readonly movedFrom: "current" | "next";
+  readonly movedTo: "current" | "next";
+}): void {
+  toast.success(moveMessage(movedTo), {
+    duration: UNDO_TIMEOUT_MS,
+    action: {
+      label: "Undo",
+      onClick: () =>
+        undoWeekMove({
+          whenIdle,
+          focusMoved,
+          item,
+          movedTo,
+          backTo: movedFrom,
+        }),
+    },
+  });
+}
+
+// A placement move needs no input: apply the placement patch through the
+// ordinary draft save. Null patches (a saved next step, a same-stableId
+// occurrence already in the target week, a finished item) keep the canonical
+// editor path. The item leaves its lane, so focus follows it once the move
+// renders.
+function applyDirectMove({
   whenIdle,
   focusMoved,
   section,
@@ -69,8 +144,9 @@ function applyDirectMoveToNext({
   target,
 }: MoveWithoutEditorArgs): boolean {
   const recordId = item.recordId;
-  if (target !== "next" || recordId === null) return false;
+  if (recordId === null) return false;
   if (buildMoveItemPatch(section, recordId, target) === null) return false;
+  const from = item.source === "next" ? "next" : "current";
   whenIdle((ready) => {
     // The draft may have changed while an outcome command held the editor.
     const patch = buildMoveItemPatch(ready.draft.section, recordId, target);
@@ -80,7 +156,13 @@ function applyDirectMoveToNext({
     }
     ready.draft.apply(patch);
     focusMoved(item.stableId ?? null);
-    toast.success(MOVED_TO_NEXT_WEEK_MESSAGE);
+    announceMove({
+      whenIdle,
+      focusMoved,
+      item,
+      movedFrom: from,
+      movedTo: target,
+    });
   });
   return true;
 }
@@ -90,6 +172,6 @@ export function moveWithoutEditor(args: MoveWithoutEditorArgs): boolean {
   const { whenIdle, section, item, target } = args;
   return (
     acknowledgeSavedNextWeekPlan(whenIdle, section, item, target) ||
-    applyDirectMoveToNext(args)
+    applyDirectMove(args)
   );
 }

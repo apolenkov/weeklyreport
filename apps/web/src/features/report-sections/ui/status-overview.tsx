@@ -4,6 +4,7 @@ import { useEffect, useId, useState } from "react";
 
 import { buildStatusOverviewLineage } from "../model/status-overview-lineage";
 import { ReportHealthPulseView } from "./report-health-pulse";
+import { OverviewDragContext } from "./status-overview-dnd";
 import { STATUS_OVERVIEW_COLUMN_HEADER_IDS } from "./status-overview-layout";
 import type { StatusOverviewProps } from "./status-overview-props";
 import { STATUS_OVERVIEW_DESKTOP_GRID } from "./status-overview-row";
@@ -209,24 +210,26 @@ export function StatusOverview(props: StatusOverviewProps) {
           No reporting units are available for this period.
         </div>
       ) : (
-        <div className="min-w-0 overflow-hidden rounded-[var(--radius)] border-y border-[var(--color-border-subtle)] bg-[var(--color-card)]">
-          {UNIT_GROUPS.map((group) => (
-            <UnitGroup
-              key={group.kind}
-              group={group}
-              idPrefix={idPrefix}
-              overview={props}
-              lineage={lineage}
-              inspectionKey={inspection?.key}
-              healthPanelId={healthPanelId}
-              onInspect={(key, opener) => setInspection({ key, opener })}
-              onCloseHealth={closeInspection}
-              expandedKeys={expandedKeys}
-              onToggle={toggle}
-              onAddItem={addItem}
-            />
-          ))}
-        </div>
+        <OverviewDragContext onMoveItem={props.onMoveItem}>
+          <div className="min-w-0 overflow-hidden rounded-[var(--radius)] border-y border-[var(--color-border-subtle)] bg-[var(--color-card)]">
+            {UNIT_GROUPS.map((group) => (
+              <UnitGroup
+                key={group.kind}
+                group={group}
+                idPrefix={idPrefix}
+                overview={props}
+                lineage={lineage}
+                inspectionKey={inspection?.key}
+                healthPanelId={healthPanelId}
+                onInspect={(key, opener) => setInspection({ key, opener })}
+                onCloseHealth={closeInspection}
+                expandedKeys={expandedKeys}
+                onToggle={toggle}
+                onAddItem={addItem}
+              />
+            ))}
+          </div>
+        </OverviewDragContext>
       )}
     </section>
   );

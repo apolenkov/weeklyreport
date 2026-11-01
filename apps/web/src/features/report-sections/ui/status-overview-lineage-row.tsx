@@ -11,8 +11,8 @@ import {
   ReportItemSlot,
 } from "./status-overview-additional-updates";
 import type { ItemHandlers } from "./status-overview-item-handlers";
+import { Lane } from "./status-overview-lane";
 import {
-  STATUS_OVERVIEW_COLUMN_HEADER_IDS,
   STATUS_OVERVIEW_COLUMNS,
   TIMELINE_CELL,
   TIMELINE_GRID,
@@ -48,9 +48,11 @@ function editorBelongsToLineageRow(
 
 function EmptyLane({
   column,
+  rowKey,
   create,
 }: {
   readonly column: (typeof STATUS_OVERVIEW_COLUMNS)[number];
+  readonly rowKey: string;
   readonly create?: ReactNode;
 }) {
   // R55: an empty lane stays a quiet muted cell — one em dash instead of a
@@ -60,8 +62,9 @@ function EmptyLane({
   // A creatable lane adds its contextual control under the dash, which also
   // reveals on hover/focus of the lane.
   return (
-    <div
-      data-overview-lineage-lane={column.source}
+    <Lane
+      column={column}
+      laneKey={rowKey}
       className={`${TIMELINE_CELL} group/lane hidden md:min-h-24 md:flex md:flex-col md:items-center md:justify-center md:border-t-0 bg-[var(--color-surface-muted)]`}
     >
       <span
@@ -72,7 +75,7 @@ function EmptyLane({
       </span>
       <span className="sr-only">No item in this period</span>
       {create}
-    </div>
+    </Lane>
   );
 }
 
@@ -146,13 +149,19 @@ function LineageRow({
         const item = row[column.source];
         const create = laneCreateControl(unit, row, column, onAddItem);
         if (!item)
-          return <EmptyLane key={column.key} column={column} create={create} />;
+          return (
+            <EmptyLane
+              key={column.key}
+              column={column}
+              rowKey={row.key}
+              create={create}
+            />
+          );
         return (
-          <div
+          <Lane
             key={column.key}
-            data-overview-lineage-lane={column.source}
-            role="group"
-            aria-labelledby={STATUS_OVERVIEW_COLUMN_HEADER_IDS[column.key]}
+            column={column}
+            laneKey={row.key}
             className="group/lane min-w-0 px-3 py-1 block border-t border-[var(--color-border-subtle)] first:border-t-0 md:px-4 md:py-3 md:min-h-24 md:flex-col md:border-t-0 first:md:border-l-0 md:border-l md:border-[var(--color-border-subtle)] md:flex"
           >
             <MobileWeekLabel label={column.label} />
@@ -165,7 +174,7 @@ function LineageRow({
             {create ? (
               <div className="mt-1 flex justify-end md:mt-auto">{create}</div>
             ) : null}
-          </div>
+          </Lane>
         );
       })}
       {editorBelongsToRow ? (
