@@ -23,7 +23,7 @@ commit-msg:
       run: pnpm exec commitlint --edit {1}
 pre-push:
   jobs:
-    # CI builds and deploys; local checks own verification.
+    # CI only deploys (images are built locally, TASK-709); local checks own verification.
     # Existing CI/agent skips are not evidence that checks passed.
     # Explicit skip only via WR_SKIP_PUSH_CHECKS=1; AGENT_* no longer skips check:push (owner decision 2026-10-31).
     # Git fixture subprocesses must resolve their own repositories.
