@@ -113,4 +113,22 @@ describe("recordMutationAudit target extraction bounds", () => {
     expect(shallowCall.target).toBe(shallowId);
     expect(shallowCall).not.toHaveProperty("truncated");
   });
+
+  it("keeps an identity nested 8 levels below the input and truncates one at 9", async () => {
+    const nestUnder = (id: string, wrappers: number): unknown => {
+      let node: Record<string, unknown> = { id };
+      for (let level = 0; level < wrappers; level += 1) node = { nest: node };
+      return node;
+    };
+    const keptId = uuid(41);
+    const keptCall = await mutationCall(nestUnder(keptId, 8));
+
+    expect(keptCall.targets).toEqual([keptId]);
+    expect(keptCall).not.toHaveProperty("truncated");
+
+    const cutCall = await mutationCall(nestUnder(uuid(42), 9));
+
+    expect(cutCall.targets).toBeUndefined();
+    expect(cutCall.truncated).toBe(true);
+  });
 });
