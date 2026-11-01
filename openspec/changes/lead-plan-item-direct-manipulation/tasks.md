@@ -22,9 +22,12 @@ Reconciled 2026-11-02 against main 9d8051cc0 (implementation commits
 
 ## api
 
-- [ ] 4. Service tests for both placement directions through `saveSection`,
-      the `stableId` duplicate rejection, and the atomic
-      `periodState`/lifecycle-tuple update (guarded API integration).
+- [x] 4. Service tests for both placement directions and a round trip through
+      `saveDraft` → `saveSection` keep `stableId`, text and progress
+      (`report-sections.week-move.test.ts`, f6615383b). The draft save has no
+      server-side duplicate-`stableId` check; the web `buildMoveItemPatch`
+      refuses a move into an existing lineage (task 2). The atomic
+      `periodState`/lifecycle-tuple update stays with task 13.
 
 ## web
 
