@@ -1,4 +1,5 @@
 import { useDraggable } from "@dnd-kit/core";
+import { GripVertical } from "lucide-react";
 import {
   type CSSProperties,
   type KeyboardEvent,
@@ -21,6 +22,7 @@ import {
 import { statusOverviewItemActions } from "../model/status-overview-items";
 import {
   type ActionProps,
+  ICON_BUTTON_CLASS,
   StatusControl,
   weekMoveFocusKey,
 } from "./status-overview-item-actions";
@@ -35,6 +37,11 @@ import { useOverviewStatusInput } from "./use-overview-status-input";
 
 const LONG_UPDATE_LENGTH = 120;
 
+const DRAG_HANDLE_LABEL = "Drag to move to another week";
+// Hidden at rest on hoverable pointers, revealed with the card chrome, and
+// always present where hover cannot exist.
+const DRAG_HANDLE_CLASS = `${ICON_BUTTON_CLASS} cursor-grab opacity-0 group-hover/item:opacity-100 group-focus-within/item:opacity-100 active:cursor-grabbing [@media(hover:none)]:opacity-100`;
+
 function isEditableElement(target: EventTarget | null): boolean {
   return (
     target instanceof Element &&
@@ -42,31 +49,15 @@ function isEditableElement(target: EventTarget | null): boolean {
   );
 }
 
-// Controls keep their own gestures: a press that starts on a button, a link,
-// a menu, or an editable field never arms the card drag. The card itself —
-// padding, badges, the row chrome — is the drag handle.
-const DRAG_EXCLUSION =
-  "button, a, input, textarea, select, [contenteditable], [role='menu'], [role='listbox'], [role='option'], [role='switch'], [role='checkbox']";
-
-function startsOnControl(target: EventTarget | null): boolean {
-  return target instanceof Element && target.closest(DRAG_EXCLUSION) !== null;
-}
-
-function skipControlGesture<E extends SyntheticEvent>(
-  handler: ((event: E) => void) | undefined,
-) {
-  return (event: E): void => {
-    if (!startsOnControl(event.target)) handler?.(event);
-  };
-}
-
 type DragGesture = (event: SyntheticEvent) => void;
 
-// The card body is the drag handle: movable items expose the dnd listeners and
-// carry the card's translate while dragged; non-movable cards render exactly
-// as before — no listeners, no marker, no touch-action override. pan-y keeps
-// the column scrollable on touch while the long-press drag still wins once
-// the TouchSensor delay elapses.
+// The grip is the only drag start: the dnd listeners live on the handle, so
+// the card body keeps its ordinary gestures (text selection, its controls).
+// The card root stays the draggable node — it carries the marker the drop
+// measurement reads and the translate while the drag is in flight. Non-movable
+// cards render exactly as before: no marker, no touch-action override. pan-y
+// keeps the column scrollable on touch while the long-press drag still wins
+// once the TouchSensor delay elapses.
 function useCardDrag(item: StatusOverviewItem, enabled: boolean) {
   const draggable = useDraggable({
     id: overviewDraggableId(item),
@@ -90,16 +81,36 @@ function useCardDrag(item: StatusOverviewItem, enabled: boolean) {
         };
   return {
     nodeRef: draggable.setNodeRef,
-    props: enabled
+    activatorRef: draggable.setActivatorNodeRef,
+    rootProps: enabled ? { "data-draggable-item": "", style } : undefined,
+    handleProps: enabled
       ? {
-          "data-draggable-item": "",
-          style,
-          ...listeners,
-          onPointerDown: skipControlGesture(gesture("onPointerDown")),
-          onTouchStart: skipControlGesture(gesture("onTouchStart")),
+          ...draggable.attributes,
+          onPointerDown: gesture("onPointerDown"),
+          onTouchStart: gesture("onTouchStart"),
         }
       : undefined,
   };
+}
+
+type CardDrag = ReturnType<typeof useCardDrag>;
+
+// The grip renders only on movable cards. The activator ref goes through a
+// callback ref so the dnd ref-callback stays out of the JSX value position.
+function DragHandle({ drag }: { readonly drag: CardDrag }) {
+  if (drag.handleProps === undefined) return null;
+  return (
+    <button
+      ref={(element) => drag.activatorRef(element)}
+      type="button"
+      aria-label={DRAG_HANDLE_LABEL}
+      title={DRAG_HANDLE_LABEL}
+      className={DRAG_HANDLE_CLASS}
+      {...drag.handleProps}
+    >
+      <GripVertical aria-hidden="true" className="size-4" />
+    </button>
+  );
 }
 
 function itemVerdict(item: StatusOverviewItem) {
@@ -273,10 +284,11 @@ export function StatusOverviewItemPreview(props: ActionProps) {
       role="group"
       tabIndex={-1}
       data-overview-item-preview
-      {...drag.props}
+      {...drag.rootProps}
       onKeyDown={(event) => handleWeekMoveKey(event, item, props.onMoveItem)}
       className="group/item flex min-w-0 items-start gap-1 rounded-[var(--radius-sm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] md:h-full"
     >
+      <DragHandle drag={drag} />
       <StatusControl
         item={item}
         onSetStatus={onSetStatus ? statusFlow.choose : undefined}

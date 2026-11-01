@@ -574,7 +574,7 @@ describe("StatusOverviewItemPreview reveal and keyboard", () => {
     }
   });
 
-  it("tabs from the status icon through the text to the revealed actions", async () => {
+  it("tabs from the drag grip through the status icon, the text and the revealed actions", async () => {
     const user = userEvent.setup();
     render(
       <StatusOverviewItemPreview
@@ -583,6 +583,10 @@ describe("StatusOverviewItemPreview reveal and keyboard", () => {
       />,
     );
 
+    await user.tab();
+    expect(
+      screen.getByRole("button", { name: "Drag to move to another week" }),
+    ).toHaveFocus();
     await user.tab();
     expect(screen.getByRole("button", { name: STATUS_BUTTON })).toHaveFocus();
     await user.tab();

@@ -13,10 +13,11 @@ import {
   Pencil,
   Undo2,
 } from "lucide-react";
+import { useRef } from "react";
 
 import { shortItemLabel } from "../../../shared/lib/format/short-label";
 import {
-  focusReviewRecord,
+  focusReviewAnchor,
   reviewRecordAnchor,
 } from "../../../shared/ui/feedback/review-record-focus";
 import type {
@@ -247,20 +248,30 @@ function EditAction({
 
 function CommentAction({ item }: { readonly item: StatusOverviewItem }) {
   // The lead surface reads the record's reviewer comments; the anchor only
-  // exists while the card actually renders that stack, so a click without
-  // comments is a no-op.
+  // exists while the card actually renders that stack, so without comments
+  // the click focuses the record's own card — the same element the anchor
+  // resolves to once comments exist.
+  const buttonRef = useRef<HTMLButtonElement>(null);
   const target = item.editTarget;
   if (target === null) return null;
   const label = `Comments on ${shortItemLabel(item.text)}`;
   const focusKey = `comment:${item.source}:${identityOf(item)}`;
   return (
     <button
+      ref={buttonRef}
       type="button"
       aria-label={label}
       title={label}
       data-overview-focus={focusKey}
       onClick={() =>
-        focusReviewRecord(reviewRecordAnchor("item", target.recordId))
+        focusReviewAnchor(
+          document.getElementById(
+            reviewRecordAnchor("item", target.recordId),
+          ) ??
+            buttonRef.current?.closest<HTMLElement>(
+              "[data-overview-item-preview]",
+            ),
+        )
       }
       className={ICON_BUTTON_CLASS}
     >

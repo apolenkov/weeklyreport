@@ -223,7 +223,7 @@ describe("StatusOverviewItemPreview hover action icons", () => {
     );
   });
 
-  it("keeps the comment icon a no-op when the record has no comments", async () => {
+  it("focuses the record card from the comment icon while no comments exist", async () => {
     const user = userEvent.setup();
     render(<StatusOverviewItemPreview item={item} onMoveItem={vi.fn()} />);
     const icon = screen.getByRole("button", {
@@ -231,7 +231,11 @@ describe("StatusOverviewItemPreview hover action icons", () => {
     });
 
     await user.click(icon);
-    expect(icon).toHaveFocus();
+    await waitFor(() =>
+      expect(
+        document.querySelector<HTMLElement>("[data-overview-item-preview]"),
+      ).toHaveFocus(),
+    );
   });
 
   it("moves the focused Current card to Next with Alt+ArrowRight", async () => {
