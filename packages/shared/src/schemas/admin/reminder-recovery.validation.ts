@@ -17,9 +17,24 @@ const ISO_DATE_LENGTH = 10;
 export interface ReminderRecoverySnapshot {
   readonly periods: readonly RecoveryReport[];
   readonly policies: readonly RecoveryPolicy[];
-  readonly reminderRules: readonly AdminSnapshotReminderRule[];
-  readonly reminderExecutions: readonly AdminSnapshotReminderExecution[];
+  readonly reminderRules: readonly RecoveryRule[];
+  readonly reminderExecutions: readonly RecoveryExecution[];
 }
+
+// Mandatory dates may be null here: the field schemas reject null on their own
+// paths before this cross-reference pass, and the checks below never
+// dereference them.
+type RecoveryRule = Omit<AdminSnapshotReminderRule, "deadline" | "fireAt"> & {
+  readonly deadline: Date | null;
+  readonly fireAt: Date | null;
+};
+
+type RecoveryExecution = Omit<
+  AdminSnapshotReminderExecution,
+  "scheduledFor"
+> & {
+  readonly scheduledFor: Date | null;
+};
 
 interface RecoveryReport {
   readonly id: string;
@@ -42,7 +57,7 @@ interface RecoveryPolicy {
 
 interface IndexedRule {
   readonly index: number;
-  readonly rule: AdminSnapshotReminderRule;
+  readonly rule: RecoveryRule;
 }
 
 function addIssue(
@@ -124,12 +139,12 @@ function validateLatestIdentity(
     ],
     [
       "deadline",
-      rule.deadline.getTime() !== report.deadline.getTime(),
+      rule.deadline?.getTime() !== report.deadline.getTime(),
       "The latest live reminder rule deadline must match its report.",
     ],
     [
       "fireAt",
-      rule.fireAt.getTime() !== expectedFireAt.getTime(),
+      rule.fireAt?.getTime() !== expectedFireAt.getTime(),
       "The latest live reminder rule fireAt must match its report and policy.",
     ],
   ];
@@ -204,12 +219,12 @@ function validateRules(
 }
 
 function validatePayloadSchedule(
-  execution: AdminSnapshotReminderExecution,
-  rule: AdminSnapshotReminderRule,
+  execution: RecoveryExecution,
+  ruleDeadline: Date,
   path: readonly (string | number)[],
   context: z.RefinementCtx,
 ): void {
-  const deadline = rule.deadline.getTime();
+  const deadline = ruleDeadline.getTime();
   if (execution.queuePayload.kind === "deadline") {
     if (new Date(execution.queuePayload.deadlineIso).getTime() !== deadline) {
       addIssue(
@@ -251,9 +266,9 @@ function validatePayloadSchedule(
 }
 
 function validateExecution(
-  execution: AdminSnapshotReminderExecution,
+  execution: RecoveryExecution,
   index: number,
-  rulesById: ReadonlyMap<string, AdminSnapshotReminderRule>,
+  rulesById: ReadonlyMap<string, RecoveryRule>,
   context: z.RefinementCtx,
 ): void {
   const path = ["reminderExecutions", index] as const;
@@ -266,6 +281,9 @@ function validateExecution(
     );
     return;
   }
+  // A null mandatory date is already rejected on its own field; the derived
+  // checks below need every date, so this row's cross-checks are skipped.
+  if (!execution.scheduledFor || !rule.fireAt || !rule.deadline) return;
   const cycleDate = execution.scheduledFor
     .toISOString()
     .slice(0, ISO_DATE_LENGTH);
@@ -296,7 +314,7 @@ function validateExecution(
   checks.forEach(([field, invalid, message]) => {
     if (invalid) addIssue(context, [...path, field], message);
   });
-  validatePayloadSchedule(execution, rule, path, context);
+  validatePayloadSchedule(execution, rule.deadline, path, context);
 }
 
 /** Adds cross-entity recovery issues without opening a restore transaction. */
