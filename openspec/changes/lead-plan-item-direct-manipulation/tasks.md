@@ -16,9 +16,11 @@ Reconciled 2026-11-02 against main 9d8051cc0 (implementation commits
       returns no patch when the target week already holds the same lineage
       (`lead-item-actions.test.ts` "returns no patch for a retry or an
       existing target lineage").
-- [ ] 3. Description-only inline edit validation: trim and empty-text restore
-      exist in the editor (`status-overview-item-text-editor.tsx:36-38`);
-      decide whether the draft patch boundary also needs its own check.
+- [x] 3. Description-only inline edit validation: the editor trims and
+      restores empty text (`status-overview-item-text-editor.tsx:36-38`); the
+      draft save boundary already rejects empty and invisible-only item text
+      through `safeText()` on `itemWriteSchema.text`
+      (`report.invisible-text.test.ts`), so no separate check is added.
 
 ## api
 
