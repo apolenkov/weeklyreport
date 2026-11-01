@@ -13,7 +13,7 @@ Two lead-editor defects are admitted by source with an ordinary producer
   actions (`canStartAction`).
 - **C5002.** The basic Overview item editor hides the next-step field. When a
   completed item still carries a next step, Save is blocked and the focused
-  fallback says only "Cancel, then choose More actions → Update status.". The
+  fallback said only "Cancel, then choose More actions → Update status.". The
   real rule ("A completed item cannot have a next step.") is never shown, and
   following the hint discards the inline edits already made.
 
@@ -21,9 +21,9 @@ Two lead-editor defects are admitted by source with an ordinary producer
 
 - Reset to catalogue name marks the weekly-fields draft pending only when it
   changes the title; an unchanged draft stays clean and Save stays disabled.
-- The basic Overview editor fallback shows the actual next-step validation
-  message and keeps the routing hint. It remains the focus target of a blocked
-  Save.
+- A blocked Save in the Overview editor shows the actual next-step validation
+  message, reveals the next-step field and focuses it (the cancel-and-route
+  fallback was replaced by TASK-707, which removed the dead end).
 
 ## Capabilities
 
@@ -34,7 +34,7 @@ None.
 ### Modified Capabilities
 
 - `weekly-activity-presentation`: a no-op Reset is not a pending edit.
-- `lead-status-overview`: the basic editor states the reason a plan blocks Save.
+- `lead-status-overview`: a blocked Save states the reason and reveals the field.
 
 ## Impact
 
