@@ -28,6 +28,10 @@ export function OutcomeAudit({ item }: { readonly item: StatusOverviewItem }) {
   const resolution = item.resolution;
   const events = item.outcomeHistory;
   if (resolution === null && events.length === 0) return null;
+  // The resolution keeps its own audit line whenever history omits its event.
+  const resolutionListed =
+    resolution !== null &&
+    events.some((event) => event.id === resolution.eventId);
   return (
     <details className="text-xs text-[var(--color-muted-foreground)]">
       <summary className="flex min-h-[var(--touch-target-min)] cursor-pointer items-center rounded-[var(--radius-sm)] px-1 font-medium text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]">
@@ -37,18 +41,17 @@ export function OutcomeAudit({ item }: { readonly item: StatusOverviewItem }) {
         ) : null}
       </summary>
       <ul className="space-y-1 px-1 pb-1">
-        {events.length > 0 ? (
-          events.map((event) => (
-            <li key={event.id} className="break-words">
-              {OUTCOME_LABELS[event.outcome]} by {event.actorName} ·{" "}
-              {auditTimestamp(event.occurredAt)}
-              {event.reason ? ` · ${event.reason}` : ""}
-              {supersededText(event)
-                ? ` · Previous: ${supersededText(event) ?? ""}`
-                : ""}
-            </li>
-          ))
-        ) : resolution ? (
+        {events.map((event) => (
+          <li key={event.id} className="break-words">
+            {OUTCOME_LABELS[event.outcome]} by {event.actorName} ·{" "}
+            {auditTimestamp(event.occurredAt)}
+            {event.reason ? ` · ${event.reason}` : ""}
+            {supersededText(event)
+              ? ` · Previous: ${supersededText(event) ?? ""}`
+              : ""}
+          </li>
+        ))}
+        {resolution && !resolutionListed ? (
           <li className="break-words">
             Marked Won&apos;t do by {resolution.actorName} ·{" "}
             {auditTimestamp(resolution.occurredAt)}
