@@ -148,6 +148,12 @@ non-destructive dismissed transition and MUST NOT remove persisted evidence.
 - **THEN** it receives only the permitted initial sync and subsequent events
 - **AND** `Last-Event-ID` replay cannot cross the scope boundary
 
+#### Scenario: A reviewer patches original classification fields
+
+- **WHEN** a visible foreign annotation PATCH includes kind, severity or any non-status field, alone or mixed with lifecycle status
+- **THEN** only the exact author is admitted and an unauthorized patch changes neither row nor event
+- **AND** permitted lifecycle-only updates retain their current role policy
+
 ### Requirement: Agentation transport MUST remain behind the feedback module
 
 WeeklyReport MUST pin Agentation 3.0.2 and agentation-mcp 1.2.0 and expose only
@@ -719,3 +725,26 @@ heading. A cancelled or failed workflow MUST keep returning focus to its opener.
 
 - **WHEN** the delete request fails
 - **THEN** the confirmation stays open and focus does not move to another record
+
+### Requirement: Agentation SSE settles failed and closed connections
+
+After SSE headers are flushed, startup source failures MUST close an open response without falling back to JSON. Destroyed or ended responses MUST receive no subsequent events or heartbeats. Undelivered events MUST NOT advance the cursor. Startup failure or disconnect MUST create no listener/timer leak, and installed cleanup MUST occur once. Existing numeric envelopes, snapshot sync and replay scope remain unchanged.
+
+#### Scenario: A post-flush read fails
+
+- **WHEN** a startup sequence, deletion, pending or event read rejects after headers flush
+- **THEN** startup settles, an open response ends, and no timer or listener remains
+
+#### Scenario: An awaited read completes after disconnect
+
+- **WHEN** the response is destroyed or ended while an initial or live read is pending
+- **THEN** no event or sync terminator is written and no undelivered sequence is consumed
+
+### Requirement: Agentation thread timestamp ties have stable order
+
+Every Agentation annotation/thread read MUST order messages by ascending timestamp and then ascending persisted message id, so equal timestamps have the same order in response and event payloads. Stored timestamps and wire representations MUST remain unchanged.
+
+#### Scenario: Two messages share a timestamp
+
+- **WHEN** a thread with equal-timestamp messages is read through annotation, session, synchronization or action boundaries
+- **THEN** its messages use the same ascending id tie-breaker

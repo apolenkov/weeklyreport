@@ -28,7 +28,6 @@ compliance trail for automated lifecycle changes is never silently empty.
 - **WHEN** `AutoPublisherScheduler.runOnce` publishes a due draft period
 - **THEN** the `AuditLogger.periodAutoPublish` call reaches the AppLogger
   sink with the period id and missing-section count
-- **AND** concurrent scheduler publication of a newer period and Head reopen of an earlier period MAY resolve as the legal serial order reopen then auto-publish.
 
 #### Scenario: Auto-archive writes a real audit line
 
@@ -36,6 +35,12 @@ compliance trail for automated lifecycle changes is never silently empty.
   retention cutoff
 - **THEN** the `AuditLogger.periodAutoArchive` call reaches the AppLogger
   sink with the period id
+
+#### Scenario: Publication commits before an unrelated count read becomes unavailable
+
+- **WHEN** auto publication returns a committed report with draft sections
+- **THEN** the scheduler records success and audits the count of draft sections from that returned report without an additional post-commit count read
+- **AND** skipped/no-write outcomes remain unaudited
 
 ### Requirement: Scheduler And Product-Owned Service Dependencies Are Mandatory
 
@@ -268,6 +273,12 @@ the typed conflict.
 
 - **WHEN** exactly one complete live tuple matches the requested boundary
 - **THEN** the factory returns that row without creating a duplicate
+
+#### Scenario: A valid reopened publication matches the boundary
+
+- **WHEN** a schema-valid reopened publication matches the exact or containing lookup range
+- **THEN** it is excluded from draft current-period lookup
+- **AND** invalid tuples still fail integrity validation and named overlap conflicts retain their current policy
 
 ### Requirement: Arbitrary editable period ranges cannot overlap under concurrency
 
