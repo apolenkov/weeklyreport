@@ -1,4 +1,10 @@
-## ADDED Requirements
+# shared-confirm-delete-dialog Specification
+
+## Purpose
+
+Defines how the shared confirm-delete dialog confirms once while the host reports pending, keeps keyboard focus inside the panel, describes the consequence to assistive technology and restores focus only to a connected opener.
+
+## Requirements
 
 ### Requirement: Confirm is one-shot while the host reports pending
 
