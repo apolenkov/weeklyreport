@@ -193,3 +193,38 @@ An initial unpinned weekly-report visit MUST resolve the current active report b
 - **GIVEN** a former active report is cached and the current active request is paused offline
 - **WHEN** the user opens the unpinned report entry
 - **THEN** no cached report ID is pinned as current before a successful current resolution
+
+### Requirement: The publish and reopen focus hand-off MUST NOT take focus the reviewer moved
+
+After a successful Publish & lock or Reopen period, the control that replaces it
+MUST receive focus only while focus is still dropped (on the document body or
+nowhere). If the reviewer has placed focus on another control before the
+status change arrives, that control MUST keep focus.
+
+#### Scenario: Focus moved while the published status is pending
+
+- **WHEN** a reviewer confirms Publish & lock, then moves focus to another
+  control before the period shows as published
+- **THEN** that control keeps focus when Reopen period appears
+
+#### Scenario: Focus moved while the reopened status is pending
+
+- **WHEN** a reviewer confirms Reopen period, then moves focus to another
+  control before the period shows as open
+- **THEN** that control keeps focus when Publish & lock appears
+
+#### Scenario: Focus is still dropped
+
+- **WHEN** nothing else took focus after the confirmation
+- **THEN** the replacing control receives focus as before
+
+### Requirement: Publish confirmation expires with eligibility
+
+The existing publish confirmation intent MUST expire when submission eligibility becomes false. Restoring eligibility MUST NOT reopen confirmation without a fresh activation. The existing confirmation guard and close-before-publish ordering MUST remain.
+
+#### Scenario: Submission eligibility is lost and restored
+
+- **GIVEN** a head opened publish confirmation while publication was eligible
+- **WHEN** the submitted count removes eligibility and later restores it
+- **THEN** confirmation remains closed until a fresh opener activation
+- **AND** losing eligibility emits no publish mutation
