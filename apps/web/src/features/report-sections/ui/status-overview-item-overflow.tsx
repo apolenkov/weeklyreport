@@ -27,18 +27,11 @@ import type {
 import { statusOverviewItemActions } from "../model/status-overview-items";
 import {
   type ActionProps,
-  ICON_BUTTON_CLASS,
   identityOf,
   MENU_ITEM_CLASS,
+  OVERLAY_BUTTON_CLASS,
   weekMoveFocusKey,
 } from "./status-overview-item-actions";
-
-// Hidden by opacity and width only, never display:none or visibility, so the
-// controls stay in the accessibility tree and the Tab order. They show on
-// hover, on focus within the item, while a menu is open, and always where
-// hover cannot exist.
-const REVEAL_CLASS =
-  "flex shrink-0 items-center overflow-hidden transition-[max-width,opacity] max-w-0 opacity-0 group-hover/item:max-w-48 group-hover/item:opacity-100 group-focus-within/item:max-w-48 group-focus-within/item:opacity-100 has-[[data-state=open]]:max-w-48 has-[[data-state=open]]:opacity-100 [@media(hover:none)]:max-w-48 [@media(hover:none)]:opacity-100 motion-reduce:transition-none";
 
 interface OverflowHandlers {
   readonly edit: ((target: StatusOverviewEditTarget) => void) | undefined;
@@ -99,7 +92,7 @@ function MoreActions({
           aria-label={`More actions for ${label}`}
           title="More actions"
           data-overview-focus={focusKey}
-          className={ICON_BUTTON_CLASS}
+          className={OVERLAY_BUTTON_CLASS}
         >
           <Ellipsis aria-hidden="true" className="size-4" />
         </button>
@@ -158,7 +151,7 @@ function PlanAction({ item, onPlanItem }: ActionProps) {
       title="Plan this work"
       data-overview-focus={`plan:${item.source}:${identityOf(item)}`}
       onClick={() => onPlanItem(item)}
-      className={ICON_BUTTON_CLASS}
+      className={OVERLAY_BUTTON_CLASS}
     >
       <CalendarPlus aria-hidden="true" className="size-4" />
     </button>
@@ -179,7 +172,7 @@ function RestoreAction({ item, onRestorePlan }: ActionProps) {
       title="Restore"
       data-overview-focus={focusKey}
       onClick={() => onRestorePlan(item, focusKey)}
-      className={ICON_BUTTON_CLASS}
+      className={OVERLAY_BUTTON_CLASS}
     >
       <Undo2 aria-hidden="true" className="size-4" />
     </button>
@@ -210,7 +203,7 @@ function MoveAction({
       title={label}
       data-overview-focus={focusKey}
       onClick={() => move(item, toNext ? "next" : "current", focusKey)}
-      className={ICON_BUTTON_CLASS}
+      className={OVERLAY_BUTTON_CLASS}
     >
       {toNext ? (
         <ArrowRight aria-hidden="true" className="size-4" />
@@ -239,7 +232,7 @@ function EditAction({
       title={label}
       data-overview-focus={focusKey}
       onClick={() => edit(target)}
-      className={ICON_BUTTON_CLASS}
+      className={OVERLAY_BUTTON_CLASS}
     >
       <Pencil aria-hidden="true" className="size-4" />
     </button>
@@ -273,7 +266,7 @@ function CommentAction({ item }: { readonly item: StatusOverviewItem }) {
             ),
         )
       }
-      className={ICON_BUTTON_CLASS}
+      className={OVERLAY_BUTTON_CLASS}
     >
       <MessageSquarePlus aria-hidden="true" className="size-4" />
     </button>
@@ -281,11 +274,10 @@ function CommentAction({ item }: { readonly item: StatusOverviewItem }) {
 }
 
 /**
- * Revealed on hover, focus within and tap: the week-move, edit and comment
- * icons, the overflow menu (which keeps the same move entry) and the recovery
- * actions. Renders nothing when none applies.
+ * Whether the card's action row has anything to show at all. The card uses
+ * this to decide whether to render its floating chip.
  */
-export function ItemActionZone(props: ActionProps) {
+export function itemHasActionZone(props: ActionProps): boolean {
   const overflow = overflowHandlers(props);
   const recovery = statusOverviewItemActions(props.item).recovery;
   const hasOverflow =
@@ -294,15 +286,26 @@ export function ItemActionZone(props: ActionProps) {
   const hasPlan = props.onPlanItem !== undefined && recovery.includes("replan");
   const hasRestore =
     props.onRestorePlan !== undefined && recovery.includes("restore");
-  if (!hasOverflow && !hasPlan && !hasRestore) return null;
+  return hasOverflow || hasPlan || hasRestore;
+}
+
+/**
+ * The week-move, edit and comment icons, the overflow menu (which keeps the
+ * same move entry) and the recovery actions. The card floats this row in a
+ * chip over its top-right corner and owns the reveal; renders nothing when
+ * none applies.
+ */
+export function ItemActionZone(props: ActionProps) {
+  if (!itemHasActionZone(props)) return null;
+  const overflow = overflowHandlers(props);
   return (
-    <div data-overview-item-actions className={REVEAL_CLASS}>
+    <>
       <MoveAction item={props.item} move={overflow.move} />
       <EditAction item={props.item} edit={overflow.edit} />
       <CommentAction item={props.item} />
       <MoreActions item={props.item} {...overflow} />
       <PlanAction {...props} />
       <RestoreAction {...props} />
-    </div>
+    </>
   );
 }

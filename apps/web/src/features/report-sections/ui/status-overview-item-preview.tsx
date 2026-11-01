@@ -1,13 +1,4 @@
-import { useDraggable } from "@dnd-kit/core";
-import { GripVertical } from "lucide-react";
-import {
-  type CSSProperties,
-  type KeyboardEvent,
-  type SyntheticEvent,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 
 import { shortItemLabel } from "../../../shared/lib/format/short-label";
 import { reviewRecordAnchor } from "../../../shared/ui/feedback/review-record-focus";
@@ -15,101 +6,28 @@ import type {
   StatusOverviewEditTarget,
   StatusOverviewItem,
 } from "../model/status-overview";
-import {
-  overviewDraggableId,
-  overviewItemMovable,
-} from "../model/status-overview-dnd";
+import { overviewItemMovable } from "../model/status-overview-dnd";
 import { statusOverviewItemActions } from "../model/status-overview-items";
 import {
   type ActionProps,
-  ICON_BUTTON_CLASS,
   StatusControl,
   weekMoveFocusKey,
 } from "./status-overview-item-actions";
+import { ItemActionChip, useCardDrag } from "./status-overview-item-chip";
 import { ItemBadges, ResolutionNote } from "./status-overview-item-metadata";
-import { ItemActionZone } from "./status-overview-item-overflow";
 import { StatusOverviewItemTextEditor } from "./status-overview-item-text-editor";
 import { OutcomeAudit } from "./status-overview-outcome-audit";
 import { TrackedWorkComments } from "./status-overview-record-comments";
 import { StatusInput } from "./status-overview-status-input";
-import { VerdictRail, VerdictStamp } from "./status-overview-verdict-controls";
+import { VerdictRail } from "./status-overview-verdict-controls";
 import { useOverviewStatusInput } from "./use-overview-status-input";
 
 const LONG_UPDATE_LENGTH = 120;
-
-const DRAG_HANDLE_LABEL = "Drag to move to another week";
-// Hidden at rest on hoverable pointers, revealed with the card chrome, and
-// always present where hover cannot exist.
-const DRAG_HANDLE_CLASS = `${ICON_BUTTON_CLASS} cursor-grab opacity-0 group-hover/item:opacity-100 group-focus-within/item:opacity-100 active:cursor-grabbing [@media(hover:none)]:opacity-100`;
 
 function isEditableElement(target: EventTarget | null): boolean {
   return (
     target instanceof Element &&
     target.closest("input, textarea, select, [contenteditable]") !== null
-  );
-}
-
-type DragGesture = (event: SyntheticEvent) => void;
-
-// The grip is the only drag start: the dnd listeners live on the handle, so
-// the card body keeps its ordinary gestures (text selection, its controls).
-// The card root stays the draggable node — it carries the marker the drop
-// measurement reads and the translate while the drag is in flight. Non-movable
-// cards render exactly as before: no marker, no touch-action override. pan-y
-// keeps the column scrollable on touch while the long-press drag still wins
-// once the TouchSensor delay elapses.
-function useCardDrag(item: StatusOverviewItem, enabled: boolean) {
-  const draggable = useDraggable({
-    id: overviewDraggableId(item),
-    data: { item },
-    disabled: !enabled,
-  });
-  const listeners = enabled ? draggable.listeners : undefined;
-  const gesture = (name: "onPointerDown" | "onTouchStart"): DragGesture =>
-    // SyntheticListenerMap values are loosely typed; both sensors attach
-    // React synthetic-event handlers.
-    (listeners?.[name] as DragGesture | undefined) ?? (() => undefined);
-  const transform = enabled ? draggable.transform : null;
-  const style: CSSProperties =
-    transform === null
-      ? { touchAction: "pan-y" }
-      : {
-          transform: `translate3d(${String(transform.x)}px, ${String(transform.y)}px, 0)`,
-          position: "relative",
-          zIndex: 10,
-          touchAction: "pan-y",
-        };
-  return {
-    nodeRef: draggable.setNodeRef,
-    activatorRef: draggable.setActivatorNodeRef,
-    rootProps: enabled ? { "data-draggable-item": "", style } : undefined,
-    handleProps: enabled
-      ? {
-          ...draggable.attributes,
-          onPointerDown: gesture("onPointerDown"),
-          onTouchStart: gesture("onTouchStart"),
-        }
-      : undefined,
-  };
-}
-
-type CardDrag = ReturnType<typeof useCardDrag>;
-
-// The grip renders only on movable cards. The activator ref goes through a
-// callback ref so the dnd ref-callback stays out of the JSX value position.
-function DragHandle({ drag }: { readonly drag: CardDrag }) {
-  if (drag.handleProps === undefined) return null;
-  return (
-    <button
-      ref={(element) => drag.activatorRef(element)}
-      type="button"
-      aria-label={DRAG_HANDLE_LABEL}
-      title={DRAG_HANDLE_LABEL}
-      className={DRAG_HANDLE_CLASS}
-      {...drag.handleProps}
-    >
-      <GripVertical aria-hidden="true" className="size-4" />
-    </button>
   );
 }
 
@@ -286,9 +204,8 @@ export function StatusOverviewItemPreview(props: ActionProps) {
       data-overview-item-preview
       {...drag.rootProps}
       onKeyDown={(event) => handleWeekMoveKey(event, item, props.onMoveItem)}
-      className="group/item flex min-w-0 items-start gap-1 rounded-[var(--radius-sm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] md:h-full"
+      className="group/item relative flex min-w-0 items-start gap-1 rounded-[var(--radius-sm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] [@media(hover:none)]:flex-wrap md:h-full"
     >
-      <DragHandle drag={drag} />
       <StatusControl
         item={item}
         onSetStatus={onSetStatus ? statusFlow.choose : undefined}
@@ -319,12 +236,11 @@ export function StatusOverviewItemPreview(props: ActionProps) {
           onToggle={() => setExpanded(!expanded)}
         />
       </div>
-      <div className="flex min-h-[var(--touch-target-min)] shrink-0 items-center">
-        {verdictStamp !== undefined ? (
-          <VerdictStamp verdict={verdictStamp} />
-        ) : null}
-        <ItemActionZone {...props} />
-      </div>
+      <ItemActionChip
+        actionProps={props}
+        drag={drag}
+        verdictStamp={verdictStamp}
+      />
     </div>
   );
 }

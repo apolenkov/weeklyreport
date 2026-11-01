@@ -68,7 +68,11 @@ describe("StatusOverviewItemPreview hover action icons", () => {
     const moveIcon = screen.getByRole("button", {
       name: "Move Original text to next week",
     });
-    expect(moveIcon).toHaveClass("min-h-[var(--touch-target-min)]");
+    // Compact in the floating chip on pointers; full touch target on touch.
+    expect(moveIcon).toHaveClass("h-7");
+    expect(moveIcon).toHaveClass(
+      "[@media(hover:none)]:min-h-[var(--touch-target-min)]",
+    );
     current.unmount();
 
     render(<StatusOverviewItemPreview item={nextItem} onMoveItem={vi.fn()} />);
