@@ -34,9 +34,9 @@ interface HeadReportShellProps {
   readonly authorId?: string | undefined;
 }
 
-// History omits the active week, so the displayed and active periods are fetched
-// separately and prepended. Both use WeeklyReportPage's key, so RQ dedupes; the
-// active fetch carries no reportId so the navigator can always return to it.
+// The displayed period shares its query key with WeeklyReportPage (by
+// reportId), so RQ dedupes it. The active period is fetched separately without
+// a reportId so the navigator can always return to the active week.
 function useHeadPeriodData(reportId: string, includeArchive: boolean) {
   const trpc = useTRPC();
   const historyQ = useQuery(

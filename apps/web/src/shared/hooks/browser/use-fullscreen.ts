@@ -86,5 +86,18 @@ export function useFullscreen(
     };
   }, [toggle, enabled, focusOnExitRef]);
 
+  // When the deck surface stops being a slide surface (or unmounts), the
+  // fullscreen element leaves the DOM and the browser exits fullscreen with
+  // no listener left to observe the change, so the stale state is dropped in
+  // this cleanup instead of on the removed listener. Scoped to `enabled` only
+  // so churn of the error callback identity never resets it.
+  useEffect(() => {
+    if (!enabled) return;
+    return () => {
+      setIsFullscreen(false);
+      wasFullscreenRef.current = false;
+    };
+  }, [enabled]);
+
   return { isFullscreen, toggle };
 }

@@ -303,3 +303,89 @@ describe("useFullscreen — behaviour", () => {
     button.remove();
   });
 });
+
+describe("useFullscreen — reset when the deck surface leaves slides mode", () => {
+  afterEach(() => {
+    setFullscreenElement(null);
+  });
+
+  function exitControl() {
+    const button = document.createElement("button");
+    document.body.append(button);
+    return { button, focusSpy: vi.spyOn(button, "focus") };
+  }
+
+  it("resets the stale fullscreen state when enabled turns false during fullscreen", () => {
+    const { button } = exitControl();
+    const { rerender, result } = renderHook(
+      ({ enabled }: { readonly enabled: boolean }) =>
+        useFullscreen(createRef<HTMLElement>(), { current: button }, enabled),
+      { initialProps: { enabled: true } },
+    );
+
+    setFullscreenElement(document.createElement("div"));
+    act(() => {
+      document.dispatchEvent(new Event("fullscreenchange"));
+    });
+    expect(result.current.isFullscreen).toBe(true);
+
+    // Browser Back: the deck unmounts while in fullscreen, the element leaves
+    // the DOM, and the browser exits fullscreen without an observed change.
+    setFullscreenElement(null);
+    rerender({ enabled: false });
+    expect(result.current.isFullscreen).toBe(false);
+
+    button.remove();
+  });
+
+  it("reports not-fullscreen after re-enabling and moves no stale exit focus", () => {
+    const { button, focusSpy } = exitControl();
+    const { rerender, result } = renderHook(
+      ({ enabled }: { readonly enabled: boolean }) =>
+        useFullscreen(createRef<HTMLElement>(), { current: button }, enabled),
+      { initialProps: { enabled: true } },
+    );
+
+    setFullscreenElement(document.createElement("div"));
+    act(() => {
+      document.dispatchEvent(new Event("fullscreenchange"));
+    });
+    expect(result.current.isFullscreen).toBe(true);
+
+    setFullscreenElement(null);
+    rerender({ enabled: false });
+    rerender({ enabled: true });
+    expect(result.current.isFullscreen).toBe(false);
+
+    // A later not-fullscreen change must not fire the stale exit-focus.
+    act(() => {
+      document.dispatchEvent(new Event("fullscreenchange"));
+    });
+    expect(focusSpy).not.toHaveBeenCalled();
+
+    button.remove();
+  });
+
+  it("keeps the fullscreen state when the error callback identity changes", () => {
+    const ref = createRef<HTMLElement>();
+    const onErrorA = vi.fn();
+    const onErrorB = vi.fn();
+    const { rerender, result } = renderHook(
+      ({
+        onError,
+      }: {
+        readonly onError: (kind: "request" | "exit", error: unknown) => void;
+      }) => useFullscreen(ref, undefined, true, onError),
+      { initialProps: { onError: onErrorA } },
+    );
+
+    setFullscreenElement(document.createElement("div"));
+    act(() => {
+      document.dispatchEvent(new Event("fullscreenchange"));
+    });
+    expect(result.current.isFullscreen).toBe(true);
+
+    rerender({ onError: onErrorB });
+    expect(result.current.isFullscreen).toBe(true);
+  });
+});
