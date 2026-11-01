@@ -69,6 +69,12 @@ The Lead report context toolbar MUST render **Chat** in its established trailing
 - **WHEN** a head, admin, viewer, or unauthenticated caller invokes the report-assistant tRPC procedure
 - **THEN** the canonical role middleware rejects the request before assistant retrieval runs
 
+#### Scenario: An answer contains a deep native heading
+
+- **WHEN** a configured Lead receives a valid answer containing a level-four, level-five or level-six Markdown heading
+- **THEN** the assistant renders that original native heading level
+- **AND** existing level-one, level-two and level-three headings and consecutive semantic bullet items retain their meaning
+
 ### Requirement: The assistant accepts one bounded question through a shared contract
 
 The Lead assistant tRPC procedure MUST validate a shared Zod input containing one safe-text question and zero or more server-issued resolution tokens. The initial capability MUST remain single-turn and MUST NOT persist conversation history, generated answers, prompts, or report evidence on the server or in durable browser storage. The web client MUST retain exactly one active exchange in authenticated-layout memory—including draft input, submitted question, resolution tokens, request state, and latest outcome—when the Sheet closes and across client-side navigation within the authenticated application. A new submission MUST replace that active exchange rather than append a turn. A full document reload, logout, or authenticated-user identity change MUST clear it.
@@ -293,3 +299,17 @@ remain technical errors.
   is observed
 - **THEN** enqueue rejects with a technical error
 - **AND** it does not claim successful indexing
+
+### Requirement: Unmatched emphasis markers remain literal
+
+A schema-valid answer string with an unmatched trailing `**` MUST preserve that marker and trailing text literally without making that tail strong. Closed pairs MUST retain emphasis and escaped rendering; unsupported Markdown grammar MUST NOT be enabled by this repair.
+
+#### Scenario: An answer has an unmatched tail
+
+- **WHEN** Chat receives `a **b`
+- **THEN** its answer paragraph displays `a **b` and contains no strong tail
+
+#### Scenario: Balanced pairs precede an unmatched marker
+
+- **WHEN** Chat receives `**one** and **two** then **tail`
+- **THEN** only one and two are strong and the trailing `**tail` remains literal

@@ -22,6 +22,13 @@ stripe or a dedicated marker), never by the stage chip's fill.
 - **AND** the difference in workflow status is shown by the row stripe/marker,
   not by the chip color
 
+#### Scenario: Repeated admitted decision-stage labels are updated
+
+- **GIVEN** a decision read model contains two Planning stage labels and one Design label
+- **WHEN** the decision metadata is rendered and then updated to one Design label and three Planning labels
+- **THEN** its stage metadata displays exactly the supplied number of labels in the supplied order
+- **AND** every label retains the same uniform identity treatment without changing stored report data
+
 ### Requirement: Needs Attention never duplicates an item
 
 A product's escalation ("needs attention") SHALL fold into the Risks & Blockers
@@ -283,3 +290,31 @@ ties and unranked items in source order.
 - **GIVEN** a product whose Next Week items arrive as rank 2, unranked, rank 1
 - **WHEN** the accordion renders the Next Week section
 - **THEN** the items read rank 1, rank 2, unranked
+
+### Requirement: Product overview epochs remain scoped to product disclosure
+
+A retained product overview activation MUST affect product accordions only in product scope. Switching the same report page to lead scope MUST NOT replay a product epoch against co-owner product instances. Lead overview navigation MUST continue to preserve each product instance's default or manually chosen disclosure state. Existing product-scope repeat navigation, author-linked highlighting and instance-local identity MUST remain unchanged.
+
+#### Scenario: Product navigation is retained while switching to lead scope
+
+- **GIVEN** one content-bearing product has contributions from two leads
+- **AND** the head activated its product overview card in product scope
+- **WHEN** the same report page switches to lead scope without an author deep link
+- **THEN** neither lead-scoped product instance is opened by the retained product epoch
+- **AND** subsequent lead overview navigation preserves manual product disclosure choices
+
+### Requirement: Portfolio buttons use valid native content
+
+Portfolio Lead and Product navigation buttons SHALL contain phrasing content permitted by the HTML button content model while retaining their existing content, activation and empty-product disabled behavior.
+
+#### Scenario: Lead and active product cards
+
+- **WHEN** the portfolio renders a Lead card or a Product card with report content
+- **THEN** its native button contains valid phrasing descendants
+- **AND** activation continues to request navigation to the corresponding Lead or Product
+
+#### Scenario: Empty product card
+
+- **WHEN** the portfolio renders a Product card with no report content
+- **THEN** its native button contains valid phrasing descendants
+- **AND** it remains disabled, displays No updates and does not request navigation
