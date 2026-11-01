@@ -158,6 +158,8 @@ Authority model:
 - [module-import-boundaries](./module-import-boundaries/spec.md) — Keeps API modules and web slices on facade entrypoints and the domain layer free of infrastructure imports.
 - [auth-module-layering](./auth-module-layering/spec.md) — Keeps authentication ownership narrow and delegates period creation to the sanctioned lifecycle writer.
 - [api-shutdown-coordination](./api-shutdown-coordination/spec.md) — Coordinates API termination, fatal-error handling, ordered resource draining, and one bounded exit outcome.
+- [api-boot-failure-capture](./api-boot-failure-capture/spec.md) — Captures a pre-bootstrap failure with Sentry before the bounded telemetry drain, keeping exit code 1 on every path.
+- [api-logger-transport](./api-logger-transport/spec.md) — Isolates AppLogger calls from standard-stream and OTel transport failures so a log call never throws into its caller.
 - [queue-worker-architecture](./queue-worker-architecture/spec.md) — Standardizes BullMQ worker bases and gives queue job defaults one production source.
 - [report-section-prisma-payload](./report-section-prisma-payload/spec.md) — Types report-section mapping and post-save reads from generated Prisma payloads without nullable drift.
 - [role-type](./role-type/spec.md) — Keeps role vocabulary, database enum, labels, and membership guards on shared sources of truth.
