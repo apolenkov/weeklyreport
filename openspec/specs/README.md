@@ -42,6 +42,10 @@ This index maps every durable capability to one canonical home. Product capabili
 
 - [analytics-query-correctness](./analytics-query-correctness/spec.md) — Analytics results and cache keys stay correct under lead scoping, republished periods, and nested inputs. `[roles: Head, Admin]`
 - [pdf-export-integrity](./pdf-export-integrity/spec.md) — PDF workers capture only a successfully rendered report, and completed exports download without opening a blank tab. `[roles: Lead, Head, Viewer, Admin]`
+- [pdf-export-render-readiness](./pdf-export-render-readiness/spec.md) — Defines how the print template, the PDF worker and the printed layout prove a report rendered completely before it is captured and mapped onto job outcomes. `[roles: Lead, Head, Viewer, Admin]`
+- [pdf-export-state-integrity](./pdf-export-state-integrity/spec.md) — Defines how terminal queue states, completion persistence and artifact publication stay consistent, immutable and fail closed for every PDF export row. `[roles: Lead, Head, Viewer, Admin]`
+- [pdf-export-recovery-generations](./pdf-export-recovery-generations/spec.md) — Defines the monotonic export generation, quarantine of aged pending exports and the Head-only retry and recovery listing that depend on it. `[roles: Lead, Head, Viewer, Admin]`
+- [pdf-export-client-status](./pdf-export-client-status/spec.md) — Defines how the export button recovers from status-query errors, keeps polling to a terminal result, survives a control remount and opens no blank tab. `[roles: Lead, Head, Viewer, Admin]`
 - [trends-query-window](./trends-query-window/spec.md) — Trends derives its date window from the current date and shows an explicit empty state when no results exist. `[roles: Head, Admin]`
 - [trends-chart-semantics](./trends-chart-semantics/spec.md) — Trends shows history, lead submissions and comparison as accessible tables with status badges, full period dates and keyboard-scrollable regions. `[roles: Head, Admin]`
 
@@ -61,11 +65,13 @@ This index maps every durable capability to one canonical home. Product capabili
 - [lead-form-cross-author-scope](./lead-form-cross-author-scope/spec.md) — The cross-author lens never reveals more than the curated Everyone scope. `[roles: Lead]`
 - [lead-form-draft-merges](./lead-form-draft-merges/spec.md) — Draft merges preserve record identity, quick-add behavior, and blocker routing behind one tested boundary. `[roles: Lead]`
 - [lead-form-draft-orchestration](./lead-form-draft-orchestration/spec.md) — Draft state and optimistic-lock versions stay current, with stale conflicts refetched and explained. `[roles: Lead]`
+- [lead-form-overview-activation](./lead-form-overview-activation/spec.md) — Defines how Overview acknowledgements, asynchronous writes and lineage responses stay bound to the section activation and report that issued them. `[roles: Lead]`
 - [lead-form-loaded-view-model](./lead-form-loaded-view-model/spec.md) — One view model derives cross-author visibility, activity alarms, and loaded lead-form affordances. `[roles: Lead]`
 - [lead-form-write-actions](./lead-form-write-actions/spec.md) — Lead writes share one action boundary while preserving conflicts, optimistic locking, and user-visible side effects. `[roles: Lead]`
 - [lead-item-card-uniformity](./lead-item-card-uniformity/spec.md) — Lead item cards keep uniform height and expose truncated content through a full-text tooltip. `[roles: Lead]`
 - [lead-plan-verdict](./lead-plan-verdict/spec.md) — Each prior-week planned item gets a one-action verdict recorded on the selected week without editing the prior week, with confirm-all and a review counter. `[roles: Lead]`
 - [lead-pipeline-card](./lead-pipeline-card/spec.md) — Product health remains risk-derived and distinct from the lead's own Mine-scope stage completeness. `[roles: Lead]`
+- [lead-pipeline-mine-scope](./lead-pipeline-mine-scope/spec.md) — Defines which stages the lead pipeline shows in Mine mode, how the completeness counter labels them and which unassigned stages it excludes. `[roles: Lead]`
 - [lead-report-controls-integrity](./lead-report-controls-integrity/spec.md) — Lead report controls avoid no-ops, accidental dialogs, clipped popovers, stale busy states, and mismatched summary populations. `[roles: Lead]`
 - [unified-report-authoring](./unified-report-authoring/spec.md) — Lead report authoring keeps inline editing, lineage, recovery, and progress semantics coherent across sections. `[roles: Lead]`
 - [lead-report-health-pulse](./lead-report-health-pulse/spec.md) — A read-only, problem-first pulse opens contextual unit health without interrupting report authoring. `[roles: Lead]`
@@ -243,6 +249,7 @@ Authority model:
 - [dependency-vulnerability-scanning](./dependency-vulnerability-scanning/spec.md) — Requires a recurring server-side dependency-vulnerability scan independent of push and branch-protection state.
 - [dependency-integrity](./dependency-integrity/spec.md) — Installs and runs published dependency artifacts without repository-local rewrites of third-party package contents.
 - [ui-crawl](./ui-crawl/spec.md) — The tester-kit crawler walks the running UI in quick and full modes and reports exercised controls, lifecycle states and unexplored coverage. `[roles: Shared]`
+- [ui-crawl-evidence](./ui-crawl-evidence/spec.md) — Defines how the tester-kit crawler keeps diagnostic causes, confirmed screenshot and video references and response statistics honest in its report. `[roles: Shared]`
 - [tester-kit-coverage](./tester-kit-coverage/spec.md) — The tester-kit proves its own coverage with guarded lifecycle fixtures, per-procedure success evidence and reset between runs. `[roles: Shared]`
 
 ### Lint, tooling, and repository process
