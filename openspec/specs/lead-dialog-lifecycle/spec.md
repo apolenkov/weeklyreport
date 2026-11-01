@@ -118,3 +118,75 @@ and stale mount-signal guards MUST remain in effect.
 - **GIVEN** a weekly section with no product or activity seed
 - **WHEN** its add signal advances
 - **THEN** its item dialog remains closed
+
+### Requirement: Decision deletion respects current published-lineage locks
+
+The decision deletion UI in `DecisionsSection` MUST use current edit permission and published-lineage locks when opening and confirming deletion. A refused confirmation MUST close without changing the decision list. Unlocked editable decisions MUST retain the existing delete and Cancel behavior.
+
+#### Scenario: Published lineage arrives while confirmation is open
+
+- **GIVEN** a lead opens Delete for an unlocked editable decision
+- **WHEN** its published-lineage lock arrives before the lead confirms
+- **THEN** confirmation leaves the decision list unchanged
+- **AND** the confirmation closes
+
+#### Scenario: An unlocked editable decision is confirmed
+
+- **WHEN** a lead confirms deletion of an unlocked editable decision
+- **THEN** the decision is removed from the local draft
+- **AND** the confirmation closes
+
+#### Scenario: Edit permission changes while confirmation is open
+
+- **GIVEN** a lead opens Delete for an editable decision
+- **WHEN** the section becomes read-only before confirmation
+- **THEN** confirmation leaves the decision list unchanged
+- **AND** the confirmation closes
+
+### Requirement: A refused Blocker prefill MUST NOT seed a later Risk add
+
+When a Blocker quick-add opens no editor because the report is read-only, the
+prefill it carried (stages, blocked severity) MUST NOT be applied to any editor
+opened afterwards. A manual Risk add on the report once it is editable MUST open
+the Risk editor without a prefilled severity or stages.
+
+#### Scenario: a manual Risk add follows a refused Blocker add
+
+- **GIVEN** a Lead report in Slides that is read-only
+- **WHEN** a Blocker quick-add is raised and opens no editor
+- **AND** the report becomes editable
+- **AND** the lead chooses Risk from `+ Add`
+- **THEN** the Risk editor opens with no prefilled severity and no prefilled stages
+
+The host MUST consume the refused signal so it is not replayed merely because
+readOnly later becomes false. An accepted prefill MUST retain its supplied
+product or activity parent, stage names and severity. This does not permit
+replay across host remounts or loosen existing read-only save guards.
+
+#### Scenario: an editable host accepts a prefill
+
+- **GIVEN** the host is editable and receives a new product or activity prefill
+- **WHEN** it opens the create dialog
+- **THEN** the supplied parent, stage names and severity reach that dialog unchanged
+
+#### Scenario: editing permission returns after a refusal
+
+- **GIVEN** a prefill signal was consumed and refused while read-only
+- **WHEN** the host becomes editable without a new signal
+- **THEN** no create dialog opens automatically
+
+### Requirement: Editor dialogs protect pending save actions from discard and duplicate submission
+
+Lead editor dialogs and discard confirmation dialogs MUST protect asynchronous save operations from dismissal and repeat activation while saving. When an editor save is in flight (`isPending`), the discard confirmation dialog MUST disable its confirmation and cancellation buttons, suppress backdrop and Escape dismissals, and the dialog footer Save button MUST be disabled with a visible busy state (`savePending`).
+
+#### Scenario: Save is in flight while discard confirmation is open
+
+- **GIVEN** a dirty editor dialog has opened the discard confirmation dialog
+- **WHEN** an asynchronous save operation is in flight (`isPending = true`)
+- **THEN** the discard confirmation buttons are disabled and backdrop or Escape dismissal is ignored
+
+#### Scenario: Save button is disabled during save mutation
+
+- **GIVEN** an open item, decision, or risk editor dialog
+- **WHEN** a save action is triggered and in flight (`isPending = true`)
+- **THEN** the Save button in the dialog footer is disabled and indicates saving state (`savePending = true`)

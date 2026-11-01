@@ -289,6 +289,8 @@ client MUST NOT retry, re-render, or resurrect the quarantined job itself. The
 admin recovery surface MUST present the same quarantined state with the
 generation to retry.
 
+A replacement request from ExportPdfButton MUST retain the recovery-required notice while pending or if it fails before a new job ID is acknowledged; the notice MUST clear only when a replacement job is acknowledged.
+
 #### Scenario: The requester sees the quarantine state
 
 - **WHEN** the observed export status becomes `recovery_required`
@@ -300,6 +302,16 @@ generation to retry.
 - **WHEN** a Head opens the admin recovery list
 - **THEN** each quarantined export shows its identity and current generation
 - **AND** the retry action submits `{jobId, expectedGeneration}`
+
+#### Scenario: A failed replacement retains the quarantine notice until a later acknowledgement
+
+- **GIVEN** the current report displays the recovery-required notice and the quarantined job is no longer active
+- **WHEN** the requester starts a replacement export
+- **THEN** the notice remains visible while the replacement request is pending
+- **AND** if the request fails before acknowledging a new job ID, the notice remains and the control is idle and retryable
+- **WHEN** a later explicit replacement request acknowledges a new job ID
+- **THEN** the notice clears and the new job ID becomes the stored active job for the current report
+- **AND** the client never automatically requests or resurrects the quarantined job
 
 ### Requirement: Initial PDF dispatch failure remains the primary request error
 
@@ -329,3 +341,37 @@ The authenticated `/pdfs/{jobId}.pdf` download handler MUST send `Cache-Control:
 - **WHEN** an authenticated requester downloads their completed canonical PDF artifact
 - **THEN** the response carries `Cache-Control: private, no-store`
 - **AND** the response retains PDF content type, attachment disposition, and the authorized generation's bytes
+
+### Requirement: The PDF recovery list is paginated with a continuation cursor
+
+`admin.jobs.listPdfRecovery` SHALL accept an optional `limit` (1–200, default 50) and an optional `cursor`, and SHALL return `jobs` plus `nextCursor`. Rows
+SHALL be ordered by `createdAt` ascending, then `jobId` ascending. The cursor
+SHALL identify the last returned row by `{createdAt, jobId}`, and the next page
+SHALL contain only rows strictly after it in that order. `nextCursor` SHALL be
+null when the page holds fewer than `limit` rows. Every listed row SHALL remain
+reachable by following `nextCursor`; the list SHALL NOT drop rows to fit a page.
+The Head recovery panel SHALL load further pages on request and SHALL NOT
+present a total count until the last page is loaded. Where another recovery
+scenario says a row is listed, the row SHALL appear on the first page or on a
+page reached by following `nextCursor`. A failed next-page load SHALL keep the
+rows already loaded on screen.
+
+#### Scenario: Rows beyond the first page stay reachable
+
+- **GIVEN** 51 `failed` or `recovery_required` export rows
+- **WHEN** a Head lists recovery rows without a cursor
+- **THEN** the first 50 rows by `createdAt`, `jobId` are returned with a
+  `nextCursor`
+- **AND** listing with that cursor returns the 51st row and a null `nextCursor`
+
+#### Scenario: A retried row does not shift later pages
+
+- **GIVEN** a Head has loaded the first page
+- **WHEN** a row on that page is retried and leaves the recovery set
+- **THEN** listing with the earlier `nextCursor` still starts after the last
+  row of the first page and skips no remaining row
+
+#### Scenario: The limit is bounded
+
+- **WHEN** a Head requests a `limit` above 200
+- **THEN** the request is rejected by input validation

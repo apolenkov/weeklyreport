@@ -135,7 +135,7 @@ cannot leak personal data into stdout, the rotating file sink when configured,
 or the OTLP/Loki forwarder when configured by passing it as a log context
 value. Redaction MUST apply at the single
 `emit` call site inside `AppLoggerImpl`, not per call site, so no log call can
-bypass it.
+bypass it. Known fields MUST also be redacted within context objects and arrays, including inherited child context, using the same fixed marker. Redaction MUST NOT mutate the caller's input or change ordinary values, reserved event-field protection, or existing cyclic/serialization-error behavior.
 
 #### Scenario: A log call with a recipient email is redacted at every configured sink
 
@@ -152,6 +152,19 @@ bypass it.
   non-PII fields (for example `ruleId`, `executionId`)
 - **WHEN** the entry is emitted
 - **THEN** every field's value is unchanged
+
+#### Scenario: Structured child context reaches configured sinks
+
+- **GIVEN** child context and a log call contain nested objects and arrays with known personal-data keys
+- **WHEN** an info, warning or error entry is emitted
+- **THEN** every configured stdout/stderr, file and OTel sink receives the fixed marker for those fields
+- **AND** the caller's input, ordinary organization identity and unrelated values remain unchanged
+
+#### Scenario: Structured context has a cycle or an unsupported JSON value
+
+- **WHEN** a log call contains a cycle or an unsupported JSON value
+- **THEN** existing serialization-error envelope behavior remains
+- **AND** redaction does not cause an infinite traversal or mutate the input
 
 ### Requirement: Dev email diagnostics use AppLogger
 
@@ -249,3 +262,23 @@ The production period auto carry-over provider MUST use the shared APP_LOGGER. I
 
 - **WHEN** the production-wired carry-over hook produces its existing completed or skipped diagnostic
 - **THEN** the shared logger receives the meaningful message and structured outcome fields
+
+### Requirement: Nest Error logs retain name and stack
+
+`NestAppLoggerAdapter.error` MUST preserve an actual Error's name and stack in the existing AppLogger context. An explicit caller stack and Nest context MUST take precedence over Error defaults. A two-argument string context MUST keep its existing meaning. The adapter MUST NOT traverse Error causes, extra properties or arbitrary objects to implement this contract.
+
+#### Scenario: Nest reports an actual exception
+
+- **WHEN** Nest ExceptionHandler reports an Error through NestAppLoggerAdapter
+- **THEN** the existing AppLogger sink receives the Error message, name, stack and Nest context
+- **AND** the cause and arbitrary extra properties are absent
+
+#### Scenario: Caller supplies a stack and context
+
+- **WHEN** an Error is logged with an explicit stack and Nest context
+- **THEN** AppLogger receives the explicit stack and context together with the Error name
+
+#### Scenario: Caller supplies only a string context
+
+- **WHEN** a string error message is logged with a second string argument and no third argument
+- **THEN** AppLogger retains that string as Nest context without inventing an Error stack

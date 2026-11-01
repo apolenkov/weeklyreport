@@ -297,6 +297,7 @@ MUST NOT navigate, and each gesture MUST be consumed only once.
 ### Requirement: Search uses an input-owned keyboard selection model
 
 The search combobox on Report History and Admin Products MUST retain input focus while Arrow keys select popup results. Tab MUST move to the next external focusable control without traversing result options and MUST dismiss the popup. Existing Enter selection, Escape clearing, result identity and viewer destination restrictions MUST remain intact.
+When an error retry action is executed (via pointer click or keyboard activation), focus MUST be returned to the search input combobox rather than being dropped to document body.
 
 #### Scenario: Tab leaves a search with results
 
@@ -313,6 +314,13 @@ The search combobox on Report History and Admin Products MUST retain input focus
 - **AND** Enter selects that result through the existing destination rules
 - **WHEN** the search is reopened and Escape is pressed
 - **THEN** the query clears and the result popup closes
+
+#### Scenario: Retry button activation restores focus to search input
+
+- **GIVEN** a search query has failed and the search popup displays "Search failed" with a "Try again" action button
+- **WHEN** the user activates the "Try again" action via mouse click or keyboard
+- **THEN** search retry is initiated
+- **AND** focus is directed to the search combobox input rather than falling back to `<body>`
 
 ### Requirement: The active search result remains visible
 

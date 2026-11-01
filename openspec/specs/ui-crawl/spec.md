@@ -195,7 +195,7 @@ two runs and exit non-zero when a count differs.
 
 ### Requirement: Failed batch recovery preserves observed work
 
-The crawler MUST read completed press evidence before fallible recovery actions. It MUST preserve the original batch failure and separate recovery failures. Failed page restoration MUST stop dependent presses and mark coverage incomplete. Unknown request consumption MUST remain unavailable and MUST NOT refund the outstanding reservation.
+The crawler MUST read completed press evidence before fallible recovery actions. It MUST preserve the original batch failure and separate recovery failures. Failed page restoration MUST stop dependent presses and mark coverage incomplete. Unknown request consumption MUST remain unavailable and MUST NOT refund the outstanding reservation. Failure to persist batch evidence MUST return the completed rows with the original storage failure, stop dependent work and mark coverage incomplete without rereading earlier rows as new evidence.
 
 #### Scenario: Restore fails after a completed press
 
@@ -214,6 +214,19 @@ The crawler MUST read completed press evidence before fallible recovery actions.
 - **WHEN** a full-mode batch fails after a completed press and page restoration fails
 - **THEN** the completed timings and logs remain in the page record with error completion
 - **AND** no screenshot, dependent control, combination or rebase reads the unknown page
+
+#### Scenario: Initial batch persistence fails
+
+- **WHEN** resetting the current batch storage fails before any observation completes
+- **THEN** the failed batch returns no completed rows and reports the storage cause
+- **AND** no control is acted on and older stored rows are not reused
+
+#### Scenario: Persistence fails after an observation completes
+
+- **WHEN** persisting a completed row fails
+- **THEN** the row and original storage cause remain observable
+- **AND** quick and full traversal stop dependent actions with incomplete coverage
+- **AND** unknown request consumption is not refunded
 
 ### Requirement: Reused XHR observations retain request identity
 
@@ -282,3 +295,39 @@ absent ledger MUST remain valid first-run history.
 
 - **WHEN** the persisted ledger is empty or absent
 - **THEN** reservation initializes history normally
+
+### Requirement: Existing crawler request history fails closed
+
+The crawler MUST treat only an absent request ledger as empty history. Other read failures MUST preserve their cause and prevent another reservation from being appended. Valid signed corrections MUST retain the existing request-budget semantics.
+
+#### Scenario: Existing history is writable but unreadable
+
+- **WHEN** the crawler cannot read existing rate history although appending would succeed
+- **THEN** it reports the original filesystem error and adds no reservation
+
+#### Scenario: First request has no ledger
+
+- **WHEN** the request ledger is absent
+- **THEN** the crawler can reserve within the existing budget and create its history
+
+#### Scenario: A reservation consumed fewer requests
+
+- **WHEN** a measured request count is less than its reservation
+- **THEN** its negative correction retains the existing budget refund
+
+### Requirement: Report free-text evidence is displayed as text
+
+Crawler Markdown reports MUST display finding details, page labels and skip reasons as ordinary text rather than interpreting their Markdown markers or line breaks as new report headings or list items. The structured findings and steps MUST retain the observed content unchanged by rendering.
+
+#### Scenario: A console error contains a heading and another list item
+
+- **WHEN** observed console text contains line breaks, heading markers or list markers
+- **THEN** the Markdown report displays it within its original finding
+- **AND** it does not create another report heading or finding item
+- **AND** the structured finding retains its original text
+
+#### Scenario: Page labels and skip reasons contain markup
+
+- **WHEN** a page label or skip reason contains Markdown markers or line breaks
+- **THEN** the report shows the label or reason as text within its existing entry
+- **AND** rendering does not mutate the structured page or step
