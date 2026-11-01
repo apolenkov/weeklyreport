@@ -97,7 +97,9 @@ This index maps every durable capability to one canonical home. Product capabili
 
 - [lead-report-assistant](./lead-report-assistant/spec.md) — Leads ask bounded questions over authorized report evidence through a grounded, fail-closed assistant. `[roles: Lead]`
 - [lead-history-summary](./lead-history-summary/spec.md) — Lead history is period-ordered, aggregates only completed periods, and never fabricates a missing submission for compiled reports. `[roles: Lead]`
-- [lead-slide-by-product-grid](./lead-slide-by-product-grid/spec.md) — One auto-height by-product slide article renders lead, head, and viewer content with priorities, contributors, stages, and full record order. `[roles: Lead, Head, Viewer]`
+- [lead-slide-by-product-grid](./lead-slide-by-product-grid/spec.md) — One auto-height by-product slide article renders lead, head, and viewer content with product cards, the shared subsection grid and item rows in stage order. `[roles: Lead, Head, Viewer]`
+- [lead-slide-header-and-legend](./lead-slide-header-and-legend/spec.md) — Defines the slide article header summary, the priority strip, counter labels, the contributor legend and the summaries that cover every visible own record. `[roles: Lead, Head, Viewer]`
+- [lead-slide-row-density](./lead-slide-row-density/spec.md) — Defines how slide rows paginate under presentation density, reflect the selected author scope, disclose clamped text in full and keep metadata outside the prose flow. `[roles: Lead, Head, Viewer]`
 - [by-lead-referenced-content](./by-lead-referenced-content/spec.md) — Read-only by-lead reports preserve referenced-product contributions without changing ownership or mixing authors. `[roles: Lead, Head, Viewer]`
 - [slide-inline-record-editing](./slide-inline-record-editing/spec.md) — Leads edit or delete their own slide rows through the existing form write path while read-only rows ignore activation. `[roles: Lead]`
 - [status-slide-rendering](./status-slide-rendering/spec.md) — Lead slides preserve fullscreen exit, Mine/Everyone scope, row-state language, and selected-index safety. `[roles: Lead, Head, Viewer]`
