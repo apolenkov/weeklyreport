@@ -14,19 +14,28 @@ import {
   useAnchoredPanelPosition,
 } from "./use-anchored-panel-position";
 
-// Keeps the anchored panel inside the viewport gutter even when the trigger
-// hugs the right edge — content may still widen it via minWidth, so left is
-// clamped by the trigger width, not the eventual content width.
 const PANEL_VIEWPORT_GUTTER_PX = 16;
 const PERIOD_PANEL_MAX_HEIGHT_PX = 280;
 
+interface PanelAnchorRect {
+  readonly left: number;
+  readonly width: number;
+  readonly top: number;
+  readonly bottom: number;
+}
+
 // Left-anchored and width-matched so the panel lines up under the trigger.
-// Module-level so its identity stays stable across renders — the anchoring
-// effect keys on it and would otherwise re-bind its scroll/resize listeners.
-const leftAnchoredPosition = (rect: DOMRect) => {
+// The width becomes the panel's min-width, which outranks max-width in CSS, so
+// a trigger wider than the viewport (clipped by its toolbar) must not pass its
+// own width through: it is capped to the gutter-to-gutter space, and left is
+// clamped so that capped width fits before the right gutter.
+export function leftAnchoredPanelPosition(
+  rect: PanelAnchorRect,
+  viewport: { readonly width: number; readonly height: number },
+) {
   const roomBelow = Math.max(
     0,
-    window.innerHeight -
+    viewport.height -
       PANEL_VIEWPORT_GUTTER_PX -
       rect.bottom -
       ANCHORED_PANEL_GAP_PX,
@@ -36,6 +45,14 @@ const leftAnchoredPosition = (rect: DOMRect) => {
     rect.top - ANCHORED_PANEL_GAP_PX - PANEL_VIEWPORT_GUTTER_PX,
   );
   const above = roomBelow < PERIOD_PANEL_MAX_HEIGHT_PX && roomAbove > roomBelow;
+  const width = Math.min(
+    rect.width,
+    viewport.width - 2 * PANEL_VIEWPORT_GUTTER_PX,
+  );
+  const left = Math.min(
+    Math.max(rect.left, PANEL_VIEWPORT_GUTTER_PX),
+    viewport.width - PANEL_VIEWPORT_GUTTER_PX - width,
+  );
   return {
     top: above
       ? undefined
@@ -43,23 +60,25 @@ const leftAnchoredPosition = (rect: DOMRect) => {
     bottom: above
       ? Math.max(
           PANEL_VIEWPORT_GUTTER_PX,
-          window.innerHeight - rect.top + ANCHORED_PANEL_GAP_PX,
+          viewport.height - rect.top + ANCHORED_PANEL_GAP_PX,
         )
       : undefined,
     maxHeight: Math.min(
       PERIOD_PANEL_MAX_HEIGHT_PX,
       above ? roomAbove : roomBelow,
     ),
-    left: Math.min(
-      rect.left,
-      Math.max(
-        PANEL_VIEWPORT_GUTTER_PX,
-        window.innerWidth - PANEL_VIEWPORT_GUTTER_PX - rect.width,
-      ),
-    ),
-    width: rect.width,
+    left,
+    width,
   };
-};
+}
+
+// Module-level so its identity stays stable across renders — the anchoring
+// effect keys on it and would otherwise re-bind its scroll/resize listeners.
+const leftAnchoredPosition = (rect: DOMRect) =>
+  leftAnchoredPanelPosition(rect, {
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
 
 // Scroll active option into view; block: "nearest" avoids hover-driven panel jerks.
 function useActiveOptionScroll(
