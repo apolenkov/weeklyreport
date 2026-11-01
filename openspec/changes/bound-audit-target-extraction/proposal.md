@@ -31,8 +31,12 @@ Identified under TASK-503.32 (C0536, C0538).
   characterization.
 - `apps/api/src/lib/audit-logger.test.ts`: the mutation envelope carries
   `truncated: true` only when the walk was cut off.
-- New `audit-target-coverage` requirement: mutation audit target extraction
-  is bounded.
+- `apps/api/src/infrastructure/trpc/trpc.logging.ts` and
+  `trpc.logging.test.ts`: the logged input shape descends at most 5 levels,
+  lists at most 50 keys per object and marks cuts (`…`, `[circular]`,
+  `+N more`); values are never logged.
+- New `audit-target-coverage` requirements: mutation audit target extraction
+  is bounded, and mutation log shapes are bounded.
 
 ## Capabilities
 
@@ -49,6 +53,7 @@ None.
 ## Impact
 
 - `apps/api/src/infrastructure/trpc/trpc.audit.ts`
+- `apps/api/src/infrastructure/trpc/trpc.logging.ts` and its test
 - `apps/api/src/lib/audit-logger-types.ts`
 - `apps/api/src/lib/audit-logger-events.ts`
 - `apps/api/src/infrastructure/trpc/mutation-audit.bounds.test.ts` (new)
