@@ -1187,11 +1187,7 @@ describe("reminder recovery — mandatory dates reject null", () => {
     );
   });
 
-  // TODO(wr-513): validateAdminSnapshotIntegrity dereferences a null
-  // rule.fireAt, rule.deadline or execution.scheduledFor before the field-level
-  // rejection, so safeParse throws a TypeError instead of returning issues.
-  // Un-skip once the integrity validator guards null mandatory dates.
-  it.skip.each([
+  it.each([
     ["reminderRules", "fireAt"],
     ["reminderRules", "deadline"],
     ["reminderExecutions", "scheduledFor"],
