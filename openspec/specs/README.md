@@ -265,6 +265,8 @@ Authority model:
 - [web-status-color-tokens](./web-status-color-tokens/spec.md) — Keeps the web status-token set complete, named, and free of hex fallbacks or unrelated color domains.
 - [admin-action-log-details](./admin-action-log-details/spec.md) — Admin action logs retain the structured details needed for diagnosis.
 - [admin-entity-write-integrity](./admin-entity-write-integrity/spec.md) — Admin entity writes enforce their current invariants atomically.
+- [admin-user-identity-integrity](./admin-user-identity-integrity/spec.md) — Defines how Admin user writes keep identity, publisher and reviewer history, activity assignments and the last administrator intact.
+- [admin-assignment-group-integrity](./admin-assignment-group-integrity/spec.md) — Defines how Admin writes keep project-activity group moves, report assignments, the last active reporting group and product ownership consistent.
 - [lead-form-draft-module](./lead-form-draft-module/spec.md) — Lead draft composition stays within the canonical module boundary.
 - [lead-section-draft-payload](./lead-section-draft-payload/spec.md) — Lead draft payloads remain bounded and contract-valid.
 - [period-fill-from-ui](./period-fill-from-ui/spec.md) — Period fill actions use the sanctioned current write path.
