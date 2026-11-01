@@ -83,4 +83,45 @@ describe("Report lifecycle CHECK constraint (integration)", () => {
       }),
     ).resolves.toMatchObject({ periodState: "published" });
   });
+
+  // `Report_auto_archived_state_check` (migration 20261012110000) mirrors the
+  // schema's audit rule: autoArchived can only describe an archived report.
+  it("rejects autoArchived on a published row that is not archived", async () => {
+    await expect(
+      update({
+        status: "published",
+        periodStatus: "published",
+        periodState: "published",
+        publishedAt: PUBLISHED_AT,
+        publishedSnapshot: publishedSnapshot(),
+        autoArchived: true,
+      }),
+    ).rejects.toThrow(/Report_auto_archived_state_check/u);
+  });
+
+  it("accepts the auto-archived published tuple", async () => {
+    await expect(
+      update({
+        status: "published",
+        periodStatus: "published",
+        periodState: "archived",
+        archived: true,
+        publishedAt: PUBLISHED_AT,
+        publishedSnapshot: publishedSnapshot(),
+        autoArchived: true,
+      }),
+    ).resolves.toMatchObject({
+      periodState: "archived",
+      archived: true,
+      autoArchived: true,
+    });
+  });
+
+  it("rejects the autoArchived audit flag on a non-published tuple", async () => {
+    // (archived, draft, true, open) is one of the six legal tuples; the
+    // tuple check's audit clause still forbids autoArchived on drafts.
+    await expect(
+      update({ periodState: "archived", archived: true, autoArchived: true }),
+    ).rejects.toThrow(/Report_lifecycle_tuple_check/u);
+  });
 });
