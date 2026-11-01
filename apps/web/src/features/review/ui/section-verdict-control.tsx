@@ -5,6 +5,7 @@ import type { ReviewVerdict, SectionReviewView } from "@weeklyreport/shared";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { mutationErrorMessage } from "../../../shared/lib/errors/mutation-error-message";
 import { invalidateReview } from "../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { RequestChangesDialog } from "./request-changes-dialog";
@@ -62,11 +63,6 @@ function verdictToastMessage(result: {
     ? "Section approved"
     : "Changes requested";
 }
-
-const errorToastMessage = (err: unknown): string =>
-  err instanceof Error && err.message
-    ? err.message
-    : "Failed to record verdict";
 
 const APPROVE_BUTTON_CLASSNAME =
   "btn-press inline-flex items-center max-md:min-h-[var(--touch-target-min)] rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-2.5 py-0.5 text-xs font-semibold text-[var(--color-success-foreground)] transition-colors hover:border-[var(--color-success)] aria-disabled:cursor-not-allowed aria-disabled:opacity-50";
@@ -173,7 +169,7 @@ export function SectionVerdictControl({
     trpc.review.verdict.mutationOptions({
       onSuccess: onVerdictRecorded,
       onError: (err: unknown) => {
-        toast.error(errorToastMessage(err));
+        toast.error(mutationErrorMessage(err, "Failed to record verdict"));
       },
     }),
   );

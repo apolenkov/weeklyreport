@@ -9,6 +9,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
+import { mutationErrorMessage } from "../../../shared/lib/errors/mutation-error-message";
 import {
   invalidateLeadForm,
   invalidateSubmissionDashboard,
@@ -71,8 +72,8 @@ function useRespondReopenMutation(onResponded: () => void) {
         );
         onResponded();
       },
-      onError: (err) => {
-        toast.error(`Failed to process request: ${err.message}`);
+      onError: (err: unknown) => {
+        toast.error(mutationErrorMessage(err, "Failed to process request"));
       },
       onSettled: () => {
         refreshReopenRequests(queryClient, trpc);
