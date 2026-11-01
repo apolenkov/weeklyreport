@@ -35,8 +35,7 @@ export function useItemEditFormState(args: UseItemEditFormStateArgs) {
   const [errors, setErrors] = useState<ItemEditErrors>({});
   const dialogSurfaceRef = useRef<HTMLDivElement>(null);
   const isDialog = (args.presentation ?? "dialog") === "dialog";
-  // Any field change (not only text) makes the draft worth confirming.
-  const dirty = JSON.stringify(fields) !== JSON.stringify(store.baseline);
+  const dirty = store.isDirty();
   const { requestClose, discardDialog } = useDiscardGuard(
     dirty,
     args.onCancel,

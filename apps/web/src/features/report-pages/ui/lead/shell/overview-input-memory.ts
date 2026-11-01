@@ -6,6 +6,8 @@ export function createOverviewInputMemory<Value>() {
   return {
     read: (reportId: string): Value | null => values.get(reportId) ?? null,
     hasInput: () => values.size > 0,
+    some: (predicate: (value: Value) => boolean) =>
+      [...values.values()].some(predicate),
     subscribe: (listener: () => void) => {
       listeners.add(listener);
       return () => {
