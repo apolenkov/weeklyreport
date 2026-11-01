@@ -8,6 +8,7 @@ import {
   formatClientErrorMessage,
   getClientErrorDetails,
 } from "../../../shared/lib/errors/client-error-reporting";
+import { mutationErrorMessage } from "../../../shared/lib/errors/mutation-error-message";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
 const STATUS_POLL_INTERVAL_MS = 2 * MS_PER_SECOND;
@@ -188,9 +189,7 @@ function exportRequestHandlers(onStarted: (jobId: string) => void) {
       onStarted(job.jobId);
     },
     onError: (err: unknown) => {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to start PDF export",
-      );
+      toast.error(mutationErrorMessage(err, "Failed to start PDF export"));
     },
   };
 }

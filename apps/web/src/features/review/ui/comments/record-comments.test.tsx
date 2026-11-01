@@ -437,7 +437,7 @@ describe("RecordComments — mutation success", () => {
 
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "Comment could not be saved. Check its content and try again.",
+        "Failed to add comment",
       );
       expect(screen.getByRole("alert")).not.toHaveTextContent("too_big");
       expect(draft).toHaveValue("Keep this draft");

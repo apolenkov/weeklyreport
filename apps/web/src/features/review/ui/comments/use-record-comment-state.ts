@@ -7,6 +7,7 @@ import {
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { mutationErrorMessage } from "../../../../shared/lib/errors/mutation-error-message";
 import { invalidateReview } from "../../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
 import type { CommentFeedback } from "./record-comment-feedback";
@@ -31,19 +32,6 @@ export type RecordCommentAnchor =
 
 function anchorId(anchor: RecordCommentAnchor): string | undefined {
   return anchor.itemId ?? anchor.riskId ?? anchor.decisionId;
-}
-
-function reviewErrorMessage(err: unknown, fallback: string): string {
-  if (!(err instanceof Error) || !err.message) return fallback;
-  try {
-    const parsed: unknown = JSON.parse(err.message);
-    if (Array.isArray(parsed)) {
-      return "Comment could not be saved. Check its content and try again.";
-    }
-  } catch {
-    // Ordinary error messages remain useful to the reviewer.
-  }
-  return err.message;
 }
 
 function commentValidationError(
@@ -166,7 +154,7 @@ export function useRecordCommentState(
       onMutated,
       onCommentError: (err) => {
         resetInFlight();
-        const message = reviewErrorMessage(err, "Failed to add comment");
+        const message = mutationErrorMessage(err, "Failed to add comment");
         setFeedback({ message, tone: "error" });
         toast.error(message);
       },
@@ -175,7 +163,7 @@ export function useRecordCommentState(
         setFeedback({ message: "Comment deleted.", tone: "success" });
       },
       onDeleteError: (err) => {
-        const message = reviewErrorMessage(err, "Failed to delete comment");
+        const message = mutationErrorMessage(err, "Failed to delete comment");
         setFeedback({ message, tone: "error" });
         toast.error(message);
       },

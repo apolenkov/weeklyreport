@@ -1,3 +1,4 @@
+import { TRPCClientError } from "@trpc/client";
 import { describe, expect, it } from "vitest";
 
 import { mutationErrorMessage } from "./mutation-error-message";
@@ -30,5 +31,18 @@ describe("mutationErrorMessage", () => {
     expect(
       mutationErrorMessage(new Error(zodIssues), "Failed to save activity"),
     ).toBe("Failed to save activity");
+  });
+
+  it("names the action for an internal server error with a technical message", () => {
+    const prismaLeak =
+      "PrismaClientKnownRequestError: The record to find does not exist. (P2025)";
+    const error = new TRPCClientError<never>(prismaLeak);
+    Object.defineProperty(error, "data", {
+      value: { httpStatus: 500, code: "INTERNAL_SERVER_ERROR" },
+      configurable: true,
+    });
+    expect(mutationErrorMessage(error, "Failed to add comment")).toBe(
+      "Failed to add comment",
+    );
   });
 });

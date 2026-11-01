@@ -5,6 +5,7 @@ import type { ReviewAcknowledgementView } from "@weeklyreport/shared";
 import { toast } from "sonner";
 
 import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
+import { mutationErrorMessage } from "../../../shared/lib/errors/mutation-error-message";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 
 export interface AcknowledgeGroup {
@@ -76,11 +77,7 @@ function useAcknowledgeGroup(
           .catch(() => undefined);
       },
       onError: (err: unknown) => {
-        toast.error(
-          err instanceof Error && err.message
-            ? err.message
-            : "Failed to acknowledge",
-        );
+        toast.error(mutationErrorMessage(err, "Failed to acknowledge"));
       },
     }),
   );
