@@ -150,78 +150,11 @@ The shared assistant output MUST be a discriminated union covering `ok`, `clarif
 - **WHEN** an authorized Lead invokes the assistant while global AI availability is `not_configured`
 - **THEN** the procedure returns `{ "kind": "ai_not_configured" }` without retrieval or provider work
 
-### Requirement: Runtime uses one exact provider and prompt snapshot
+#### Scenario: Planner repair returns malformed data after the request deadline
 
-The report-assistant runtime MUST resolve the enabled active provider and the
-active current-serving `lead-report-assistant` prompt revision under one
-repeatable database snapshot. The request snapshot MUST include the provider
-revision, generation connection identity, effective embedding scope identity,
-feature key, prompt revision, serving-contract identity, contract version, and
-composed planner/repair and answer/repair prompts. Planner, answer, and repair
-calls MUST use the generation connection; query embedding and retrieval MUST use
-the effective embedding connection, which aliases generation only in
-`reuse_generation` mode. A missing,
-corrupt, stale, non-current, or incompatible prompt bundle MUST return
-`ai_not_configured` before retrieval. Runtime resolution MUST NOT fall back to
-compiled prompt constants or the removed integration. Exact provider-only
-embedding worker resolution remains independent of prompt activation. Every
-runtime path that sends report-derived content, including active chat and exact
-revision semantic indexing, MUST also require validated deployment
-configuration `REPORT_ASSISTANT_OUTBOUND_DATA_APPROVED=true`; when that value is
-false, active resolution MUST return `ai_not_configured` and exact report-data
-resolution MUST fail before database/provider or retrieval work, even if a
-persisted provider is active and enabled.
-
-#### Scenario: Separate connections serve one request
-
-- **WHEN** a Lead request resolves a composite with Groq generation and Jina embeddings
-- **THEN** planner and answer calls use only Groq while embedding calls use only Jina
-- **AND** both connections belong to the same immutable active revision snapshot
-
-#### Scenario: Embeddings reuse generation
-
-- **WHEN** the active revision uses `reuse_generation`
-- **THEN** runtime aliases the generation connection for embeddings with the configured embedding model
-- **AND** it does not resolve a second credential
-
-#### Scenario: Prompt activation races with an in-flight request
-
-- **WHEN** an administrator activates a new prompt bundle after a request has
-  resolved its runtime snapshot
-- **THEN** every planner, repair, answer, and citation-repair call in that
-  request uses the original composed prompt set
-
-#### Scenario: The active prompt pair is unavailable
-
-- **WHEN** the global provider is active but the feature prompt control,
-  current serving identity, stored snapshot, or content hash is absent or
-  invalid
-- **THEN** the procedure returns `{ "kind": "ai_not_configured" }` before
-  retrieval or provider work
-
-#### Scenario: Mutable report content changes after activation
-
-- **WHEN** the source-generation counter advances because report content or
-  publication data changes
-- **AND** the enabled active provider and current-serving prompt snapshot remain
-  valid
-- **THEN** active runtime resolution remains available
-- **AND** source-generation freshness is enforced by preparation and activation
-  evidence rather than by disabling the already active runtime
-
-#### Scenario: An active prompt has no separate quality record
-
-- **WHEN** the active prompt is structurally valid and current-serving
-- **THEN** runtime resolution still returns the provider/prompt snapshot
-- **AND** no quality evaluation or LLM request is made as part of resolution
-
-#### Scenario: The active prompt revision is non-current
-
-- **WHEN** the active pointer references a revision without the current
-  serving-contract identity
-- **THEN** the runtime treats the configuration as unavailable
-- **AND** it does not execute the planner, retrieval, answer, or
-  citation-repair path
+- **WHEN** the request deadline expires while planner repair is pending, the lease remains live, and the repair later resolves malformed data
+- **THEN** the procedure returns `provider_unavailable` rather than `invalid_plan`
+- **AND** no further retrieval, answer or repair work starts, and the lease is released idempotently
 
 ### Requirement: Prompt source changes preserve the working generation protocols
 
