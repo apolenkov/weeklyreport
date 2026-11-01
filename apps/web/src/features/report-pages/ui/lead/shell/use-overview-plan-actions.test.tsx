@@ -12,6 +12,7 @@ import type {
 } from "../../../../report-sections";
 import type { OpenWorkRegisterItem } from "./open-work-register-model";
 import { OverviewInputProvider } from "./overview-input-provider";
+import { STAGE_REQUIRED_ERROR } from "./overview-plan-command";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
 import { useOverviewPlanActions } from "./use-overview-plan-actions";
 
@@ -306,7 +307,6 @@ describe("useOverviewPlanActions open-work retry", () => {
 });
 
 describe("useOverviewPlanActions parent change", () => {
-  const STAGE_ERROR = "Select at least one stage.";
   const ACTIVITY = {
     kind: "activity",
     id: "70000000-0000-4000-8000-000000000007",
@@ -319,7 +319,9 @@ describe("useOverviewPlanActions parent change", () => {
     act(() => harness.current().openWork(openWork()));
     act(() => harness.current().change({ stageNames: [] }));
     act(() => harness.current().submit());
-    await waitFor(() => expect(harness.current().error).toBe(STAGE_ERROR));
+    await waitFor(() =>
+      expect(harness.current().error).toBe(STAGE_REQUIRED_ERROR),
+    );
   }
 
   it("clears the stale stage error when the parent changes", async () => {
@@ -339,7 +341,7 @@ describe("useOverviewPlanActions parent change", () => {
 
     act(() => harness.current().change({ stageNames: [] }));
 
-    expect(harness.current().error).toBe(STAGE_ERROR);
+    expect(harness.current().error).toBe(STAGE_REQUIRED_ERROR);
   });
 
   it("keeps an unrelated validation error when the parent changes", async () => {
@@ -349,7 +351,7 @@ describe("useOverviewPlanActions parent change", () => {
     act(() => harness.current().submit());
     await waitFor(() => expect(harness.current().error).not.toBeNull());
     const unrelated = harness.current().error;
-    expect(unrelated).not.toBe(STAGE_ERROR);
+    expect(unrelated).not.toBe(STAGE_REQUIRED_ERROR);
 
     act(() => harness.current().change({ parent: ACTIVITY, stageNames: [] }));
 
