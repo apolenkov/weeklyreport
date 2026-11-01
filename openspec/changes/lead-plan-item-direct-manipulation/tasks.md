@@ -60,5 +60,7 @@ Reconciled 2026-11-02 against main 9d8051cc0 (implementation commits
       drag Next→Current, Alt+Arrow round trip, inline edit with empty restore
       and Esc, Undo with reload, Previous read-only — all PASS on lane A,
       02.11; evidence in `~/work/handoffs/wr-766-e2e-20261102/RESULT.md`.
-- [ ] 13. Six gates ran green on each delivered SHA (60bfa4814 and later);
-      guarded API integration for the move patches is still open.
+- [x] 13. Six gates ran green on each delivered SHA (60bfa4814 and later).
+      Guarded API integration `week-move.integration.test.ts` passed 3/3 on
+      `weeklyreport_e2e_lane_a_test` (02.11): both directions persist with one
+      row per `stableId`, and a stale version is refused with `CONFLICT`.

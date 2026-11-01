@@ -6,6 +6,7 @@ import type { INestApplication } from "@nestjs/common";
 import type { CreateExpressContextOptions } from "@trpc/server/adapters/express";
 import {
   AUTH_COOKIE_NAME,
+  DEFAULT_ORGANIZATION_IDENTITY,
   type DraftSavePayload,
   type UserSession,
 } from "@weeklyreport/shared";
@@ -141,6 +142,9 @@ describe("week move through reports.saveDraft (integration)", () => {
   beforeEach(async () => {
     await cleanDatabase();
     testData = await seedTestData(prisma);
+    await prisma.organization.create({
+      data: { id: "singleton", ...DEFAULT_ORGANIZATION_IDENTITY },
+    });
     await prisma.stage.create({
       data: { id: STAGE_ID, name: STAGE_NAME, sortOrder: 3 },
     });
