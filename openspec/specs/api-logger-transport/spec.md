@@ -1,4 +1,11 @@
-## ADDED Requirements
+# api-logger-transport Specification
+
+## Purpose
+
+Isolate `AppLogger` log calls from standard-stream and OTel transport
+failures so a failed write or emit never throws into its caller.
+
+## Requirements
 
 ### Requirement: A log call never throws into its caller
 
