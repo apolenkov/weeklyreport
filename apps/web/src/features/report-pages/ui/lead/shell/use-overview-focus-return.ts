@@ -41,8 +41,26 @@ function findFocusTarget(
   return buttons.find((element) => element.dataset.overviewFocus === key);
 }
 
+// The item a plain create save just confirmed. Its controls are keyed
+// `<action>:<week>:<stableId>`, so the week suffix excludes Previous copies.
+export interface OverviewCreatedFocus {
+  readonly identity: string;
+  readonly week: "current" | "next";
+}
+
+function findCreatedControl(
+  buttons: readonly HTMLButtonElement[],
+  created: OverviewCreatedFocus,
+) {
+  const suffix = `:${created.week}:${created.identity}`;
+  return buttons.find((element) =>
+    element.dataset.overviewFocus?.endsWith(suffix),
+  );
+}
+
 export function useOverviewFocusReturn(
   open: boolean,
+  createdFocusRef?: { current: OverviewCreatedFocus | null },
 ): (explicitOriginKey?: string) => void {
   const originKey = useRef<string | null>(null);
   const fallbackKey = useRef<string | null>(null);
@@ -54,10 +72,16 @@ export function useOverviewFocusReturn(
     const key = originKey.current;
     const identity = key?.slice(key.lastIndexOf(":") + 1);
     const fallback = fallbackKey.current;
+    const createdTarget = createdFocusRef?.current ?? null;
     originKey.current = null;
+    if (createdFocusRef) createdFocusRef.current = null;
     const buttons = [
       ...document.querySelectorAll<HTMLButtonElement>("[data-overview-focus]"),
     ].filter(isVisibleAction);
+    const createdControl =
+      createdTarget === null
+        ? undefined
+        : findCreatedControl(buttons, createdTarget);
     const origin =
       findFocusTarget(buttons, key) ??
       findFocusTarget(buttons, fallback) ??
@@ -67,11 +91,19 @@ export function useOverviewFocusReturn(
             button.dataset.overviewFocus?.endsWith(`:${identity}`),
           ));
     fallbackKey.current = null;
+    if (createdControl) {
+      createdControl.focus({ preventScroll: true });
+      (
+        createdControl.closest<HTMLElement>("[data-overview-item-preview]") ??
+        createdControl
+      ).scrollIntoView({ block: "nearest" });
+      return;
+    }
     const destination =
       origin ??
       document.querySelector<HTMLElement>("[data-overview-focus-heading]");
     destination?.focus();
-  }, [open]);
+  }, [open, createdFocusRef]);
 
   return (explicitOriginKey?: string) => {
     const origin = document.activeElement;

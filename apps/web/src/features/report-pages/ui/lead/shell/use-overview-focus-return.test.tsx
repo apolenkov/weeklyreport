@@ -1,7 +1,150 @@
 import { act, render, renderHook, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { useOverviewFocusReturn } from "./use-overview-focus-return";
+import {
+  type OverviewCreatedFocus,
+  useOverviewFocusReturn,
+} from "./use-overview-focus-return";
+
+describe("overview created-item focus", () => {
+  it("focuses the created item's visible control ahead of the opener", () => {
+    render(
+      <>
+        <button data-overview-focus="add:product:p:row:r:cell:current">
+          Add
+        </button>
+        <button data-overview-focus="title:current:new-stable">
+          Edit item: New
+        </button>
+        <h2 tabIndex={-1} data-overview-focus-heading>
+          Report
+        </h2>
+      </>,
+    );
+    const created: { current: OverviewCreatedFocus | null } = { current: null };
+    const hook = renderHook(
+      ({ open }) => useOverviewFocusReturn(open, created),
+      { initialProps: { open: false } },
+    );
+    screen.getByRole("button", { name: "Add" }).focus();
+    act(() => hook.result.current());
+    hook.rerender({ open: true });
+    created.current = { identity: "new-stable", week: "current" };
+    hook.rerender({ open: false });
+    expect(
+      screen.getByRole("button", { name: "Edit item: New" }),
+    ).toHaveFocus();
+    expect(created.current).toBeNull();
+  });
+
+  it("skips a hidden responsive copy of the created item's control", () => {
+    render(
+      <>
+        <button data-overview-focus="add:product:p:row:r:cell:current">
+          Add
+        </button>
+        <button
+          data-overview-focus="title:current:new-stable"
+          style={{ display: "none" }}
+        >
+          Hidden copy
+        </button>
+        <button data-overview-focus="title:current:new-stable">
+          Visible copy
+        </button>
+      </>,
+    );
+    const created: { current: OverviewCreatedFocus | null } = { current: null };
+    const hook = renderHook(
+      ({ open }) => useOverviewFocusReturn(open, created),
+      { initialProps: { open: false } },
+    );
+    screen.getByRole("button", { name: "Add" }).focus();
+    act(() => hook.result.current());
+    hook.rerender({ open: true });
+    created.current = { identity: "new-stable", week: "current" };
+    hook.rerender({ open: false });
+    expect(screen.getByRole("button", { name: "Visible copy" })).toHaveFocus();
+  });
+
+  it("never takes a control of another week for the created item", () => {
+    render(
+      <>
+        <button data-overview-focus="add:product:p:row:r:cell:current">
+          Add
+        </button>
+        <button data-overview-focus="title:next:new-stable">Next copy</button>
+        <h2 tabIndex={-1} data-overview-focus-heading>
+          Report
+        </h2>
+      </>,
+    );
+    const created: { current: OverviewCreatedFocus | null } = { current: null };
+    const hook = renderHook(
+      ({ open }) => useOverviewFocusReturn(open, created),
+      { initialProps: { open: false } },
+    );
+    screen.getByRole("button", { name: "Add" }).focus();
+    act(() => hook.result.current());
+    hook.rerender({ open: true });
+    created.current = { identity: "new-stable", week: "current" };
+    hook.rerender({ open: false });
+    expect(screen.getByRole("button", { name: "Add" })).toHaveFocus();
+  });
+
+  it("returns to the opener when the created item's control is not rendered", () => {
+    render(
+      <>
+        <button data-overview-focus="add:product:p:row:r:cell:current">
+          Add
+        </button>
+        <h2 tabIndex={-1} data-overview-focus-heading>
+          Report
+        </h2>
+      </>,
+    );
+    const created: { current: OverviewCreatedFocus | null } = { current: null };
+    const hook = renderHook(
+      ({ open }) => useOverviewFocusReturn(open, created),
+      { initialProps: { open: false } },
+    );
+    screen.getByRole("button", { name: "Add" }).focus();
+    act(() => hook.result.current());
+    hook.rerender({ open: true });
+    created.current = { identity: "missing-stable", week: "current" };
+    hook.rerender({ open: false });
+    expect(screen.getByRole("button", { name: "Add" })).toHaveFocus();
+  });
+
+  it("returns to the heading when neither the created item nor the opener is rendered", () => {
+    const page = render(
+      <>
+        <button data-overview-focus="add:product:p:row:r:cell:current">
+          Add
+        </button>
+        <h2 tabIndex={-1} data-overview-focus-heading>
+          Report
+        </h2>
+      </>,
+    );
+    const created: { current: OverviewCreatedFocus | null } = { current: null };
+    const hook = renderHook(
+      ({ open }) => useOverviewFocusReturn(open, created),
+      { initialProps: { open: false } },
+    );
+    screen.getByRole("button", { name: "Add" }).focus();
+    act(() => hook.result.current());
+    hook.rerender({ open: true });
+    page.rerender(
+      <h2 tabIndex={-1} data-overview-focus-heading>
+        Report
+      </h2>,
+    );
+    created.current = { identity: "missing-stable", week: "current" };
+    hook.rerender({ open: false });
+    expect(screen.getByRole("heading")).toHaveFocus();
+  });
+});
 
 describe("overview focus recovery", () => {
   it("uses the heading when the surviving lineage is in a hidden mobile column", () => {

@@ -1,5 +1,5 @@
 import type { LeadStatusOverviewOutput } from "@weeklyreport/shared";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
 import type {
   KanbanItem,
@@ -15,11 +15,14 @@ import { useRetainedOverviewState } from "./overview-input-provider";
 import { saveOverviewItem } from "./overview-item-save";
 import {
   closeOverviewDialog,
-  driveOverviewSubmission,
   overviewSaveFailure,
+  useOverviewSubmissionDriver,
 } from "./overview-item-submission";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
-import { useOverviewFocusReturn } from "./use-overview-focus-return";
+import {
+  type OverviewCreatedFocus,
+  useOverviewFocusReturn,
+} from "./use-overview-focus-return";
 import { useOverviewMovedFocus } from "./use-overview-moved-focus";
 import {
   useOverviewCreateOpeners,
@@ -40,18 +43,17 @@ export function useOverviewItemEditor(
   const recoveryReason = overviewEditorRecoveryReason(editor, dialog, model);
   const startedAttempt = useRef<number | null>(null);
   const promotionAttempt = useRef<string | null>(null);
-  const rememberFocus = useOverviewFocusReturn(dialog !== null);
+  const createdFocus = useRef<OverviewCreatedFocus | null>(null);
+  const rememberFocus = useOverviewFocusReturn(dialog !== null, createdFocus);
   const focusMoved = useOverviewMovedFocus();
-
-  useEffect(() => {
-    driveOverviewSubmission({
-      editor,
-      dialog,
-      recoveryReason,
-      setDialog,
-      startedAttempt,
-    });
-  }, [dialog, editor, recoveryReason, setDialog]);
+  useOverviewSubmissionDriver({
+    editor,
+    dialog,
+    recoveryReason,
+    setDialog,
+    startedAttempt,
+    createdFocus,
+  });
   const openers = {
     editor,
     model,
