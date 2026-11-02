@@ -193,18 +193,32 @@ function isPreviousPlanItem(item: SectionItem): boolean {
   return hasNextCommitment(item) || item.resolution != null;
 }
 
+// Reads return items in durable stableId order (report-record-ordering); the
+// local draft appends new items, so order here too or a saved row jumps on
+// refetch. Items without an identity yet stay last in insertion order.
+function compareIdentityOrder(a: SectionItem, b: SectionItem): number {
+  const left = stableIdentity(a);
+  const right = stableIdentity(b);
+  if (left === right) return 0;
+  if (left === null) return 1;
+  if (right === null) return -1;
+  return left < right ? -1 : 1;
+}
+
 function itemsForUnit(
   items: readonly SectionItem[],
   source: "current" | "next",
   kind: StatusOverviewUnitKind,
   id: string,
 ): SectionItem[] {
-  return items.filter((item) => {
-    const parent = statusOverviewItemParent(item);
-    const inColumn =
-      source === "next" ? hasNextCommitment(item) : item.type === "current";
-    return inColumn && parent?.kind === kind && parent.id === id;
-  });
+  return items
+    .filter((item) => {
+      const parent = statusOverviewItemParent(item);
+      const inColumn =
+        source === "next" ? hasNextCommitment(item) : item.type === "current";
+      return inColumn && parent?.kind === kind && parent.id === id;
+    })
+    .sort(compareIdentityOrder);
 }
 
 export function buildStatusOverviewColumns(
