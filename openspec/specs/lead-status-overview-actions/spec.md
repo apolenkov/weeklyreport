@@ -85,7 +85,7 @@ separate Edit mode.
 
 ### Requirement: Overview MUST expose one primary progress interaction per active item
 
-The `/lead/report/:reportId` Report Overview MUST keep the three temporal columns and the canonical item editor. Each editable Current or Next item MUST rest as one status icon followed by its text, with at most a small stage badge in a corner; it MUST NOT render permanent text action buttons or a metadata line. The status icon MUST be the one primary progress/status interaction and MUST open a menu of statuses, because a cycling click would pass over statuses that need a reason. Secondary actions (edit details, move between weeks, resolve) MUST be reachable from one overflow control that is revealed on pointer hover, on keyboard focus within the item, and on tap, and MUST stay in the accessibility tree and keyboard order while visually hidden. Week moves MUST use that overflow menu, without a duplicate standalone button. Updating an unconfirmed carried item through the status interaction MUST clear its unconfirmed marker; it MUST NOT require a separate Confirm action. Previously planned content MUST remain read-only: no control in that column edits, moves or changes the status of the prior-week occurrence; the verdict controls defined by `lead-plan-verdict` write only the selected week's occurrence.
+The `/lead/report/:reportId` Report Overview MUST keep the three temporal columns and the canonical item editor. Each editable Current or Next item MUST rest as one status icon followed by its text, with at most a small stage badge in a corner; it MUST NOT render permanent text action buttons or a metadata line. The status icon MUST be the one primary progress/status interaction and MUST open a menu of statuses, because a cycling click would pass over statuses that need a reason. Secondary actions (edit details, move between weeks, resolve) MUST be reachable from one overflow control that is revealed on pointer hover, on keyboard focus within the item, and on tap, and MUST stay in the accessibility tree and keyboard order while visually hidden. Week moves MUST be reachable both from that overflow menu and from a dedicated week-move icon on the item (toward Next for a Current item, toward Current for a Next item), revealed on pointer hover and on keyboard focus within the item and always visible on touch; the icon MUST stay in the accessibility tree and keyboard order while visually hidden on pointer devices and MUST NOT be rendered for Previously planned content. Updating an unconfirmed carried item through the status interaction MUST clear its unconfirmed marker; it MUST NOT require a separate Confirm action. Previously planned content MUST remain read-only: no control in that column edits, moves or changes the status of the prior-week occurrence; the verdict controls defined by `lead-plan-verdict` write only the selected week's occurrence.
 
 #### Scenario: an unconfirmed carried item is shown
 
@@ -102,10 +102,10 @@ The `/lead/report/:reportId` Report Overview MUST keep the three temporal column
 #### Scenario: actions are revealed on hover, focus and tap
 
 - **WHEN** the lead hovers the item, moves keyboard focus into it, or taps it
-- **THEN** the overflow control becomes visible and offers the applicable week-move action
-- **AND** no duplicate standalone quick week-move button is rendered
-- **AND** keyboard users reach the control and menu actions with Tab without a hover
-- **AND** touch users get them without any hover requirement
+- **THEN** the overflow control and the dedicated week-move icon become visible
+- **AND** the week-move icon offers the move toward the other active week, matching the item's placement
+- **AND** keyboard users reach the control, the icon, and the menu actions with Tab without a hover
+- **AND** touch users see them without any hover requirement
 
 #### Scenario: prior week remains read-only
 
@@ -251,3 +251,41 @@ update is the retry.
 - **AND** the header actions have scrolled out of view so the sticky completion actions show
 - **WHEN** the sticky `Retry saving draft` button renders
 - **THEN** it is disabled
+
+### Requirement: Overview items MUST support inline text editing in place
+
+On an editable lead draft at `/lead/report/:reportId`, clicking the description text of an editable Current or Next item MUST open an inline text editor in place without opening the canonical item editor. Saving MUST use the canonical draft and autosave path for that item's description, preserving progress, placement, and stable identity. Previously planned, submitted, locked, historical, or foreign items MUST NOT offer inline editing.
+
+#### Scenario: a lead edits an item text in place
+
+- **WHEN** the lead clicks the description text of an owned Current item in an editable draft
+- **THEN** the text becomes an inline editor in place and the canonical item editor does not open
+- **AND** pressing Enter saves the edited text through the canonical draft save path
+- **AND** the item keeps its progress, placement, and stable identity
+
+#### Scenario: Esc cancels and Shift+Enter adds a line
+
+- **GIVEN** the inline editor is open on an item
+- **WHEN** the lead edits the text and presses Shift+Enter
+- **THEN** the editor inserts a line break without saving
+- **WHEN** the lead then presses Esc
+- **THEN** the item returns to its last saved text and no draft patch is emitted
+
+#### Scenario: clicking outside saves non-empty text
+
+- **GIVEN** the lead edited the item text to a non-empty value
+- **WHEN** the lead clicks outside the field
+- **THEN** the edited text is saved and the card shows the edited text
+
+#### Scenario: empty text is not saved
+
+- **GIVEN** the lead cleared the item text to empty or whitespace-only
+- **WHEN** the lead activates save by Enter or a click outside
+- **THEN** no draft patch is emitted
+- **AND** the item displays its previous text
+
+#### Scenario: read-only items are not inline editable
+
+- **WHEN** the lead clicks the text of a Previously planned item, or of a submitted, locked, historical, or foreign record
+- **THEN** no inline editor opens
+- **AND** activating the read-only text cannot emit a draft patch
