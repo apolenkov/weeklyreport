@@ -1,7 +1,10 @@
 import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { toast } from "sonner";
 
-import type { StatusOverviewItem } from "../../../../report-sections";
+import type {
+  DraftPatch,
+  StatusOverviewItem,
+} from "../../../../report-sections";
 import {
   buildMoveItemPatch,
   buildNextWeekPlanAcknowledgementPatch,
@@ -11,6 +14,7 @@ import { NEXT_WEEK_PLAN_CONFIRMED_MESSAGE } from "../chrome/lead-form-draft-acti
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
 
 type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
+type ItemRow = ReportSectionReadModel["items"][number];
 
 export type WhenIdle = (action: (ready: ReadyEditor) => void) => void;
 
@@ -61,6 +65,39 @@ interface MoveWithoutEditorArgs {
   readonly target: "current" | "next";
 }
 
+// The occurrence's saved fields as the draft holds them, without its row id: a
+// draft save may re-issue the id. Absent and null fields compare equal.
+function canonicalFields(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalFields);
+  if (value === null || typeof value !== "object") return value;
+  return Object.fromEntries(
+    Object.entries(value)
+      .filter(([, field]) => field != null)
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+      .map(([key, field]) => [key, canonicalFields(field)]),
+  );
+}
+
+function sameOccurrence(a: ItemRow, b: ItemRow): boolean {
+  const withoutId = (row: ItemRow) =>
+    Object.fromEntries(Object.entries(row).filter(([key]) => key !== "id"));
+  return (
+    JSON.stringify(canonicalFields(withoutId(a))) ===
+    JSON.stringify(canonicalFields(withoutId(b)))
+  );
+}
+
+// The row a patch leaves in the draft, computed from the section the patch was
+// built on: the editor handle's section is fixed when the action starts.
+function rowAfterPatch(
+  section: ReportSectionReadModel,
+  patch: DraftPatch,
+): ItemRow | null {
+  if (patch.kind !== "item-patch") return null;
+  const row = section.items.find((candidate) => candidate.id === patch.itemId);
+  return row ? { ...row, ...patch.patch } : null;
+}
+
 // Undo issues the reverse move through the same draft write. A refusal — the
 // occurrence was moved, edited or saved elsewhere in between — reports the
 // failure and leaves the server state untouched.
@@ -68,12 +105,14 @@ function undoWeekMove({
   whenIdle,
   focusMoved,
   item,
+  movedRow,
   movedTo,
   backTo,
 }: {
   readonly whenIdle: WhenIdle;
   readonly focusMoved: (identity: string | null) => void;
   readonly item: StatusOverviewItem;
+  readonly movedRow: ItemRow | null;
   readonly movedTo: "current" | "next";
   readonly backTo: "current" | "next";
 }): void {
@@ -85,7 +124,8 @@ function undoWeekMove({
   whenIdle((ready) => {
     // A draft save may re-issue row ids between the move and the Undo, so the
     // occurrence is found again by its stable identity in the week it moved to.
-    const rows = ready.draft.section.items;
+    const draftBefore = ready.draft.section;
+    const rows = draftBefore.items;
     const current =
       rows.find((row) => row.id === recordId) ??
       rows.find(
@@ -95,10 +135,15 @@ function undoWeekMove({
           row.type === movedTo,
       );
     const currentId = current?.id;
+    // An occurrence edited after the move no longer matches the moved snapshot,
+    // so the reverse move is refused rather than undoing those edits' week.
     const patch =
-      currentId === undefined
+      currentId === undefined ||
+      current === undefined ||
+      movedRow === null ||
+      !sameOccurrence(current, movedRow)
         ? null
-        : buildMoveItemPatch(ready.draft.section, currentId, backTo);
+        : buildMoveItemPatch(draftBefore, currentId, backTo);
     if (patch === null) {
       toast.error(UNDO_UNAVAILABLE);
       return;
@@ -109,6 +154,7 @@ function undoWeekMove({
       whenIdle,
       focusMoved,
       item,
+      movedRow: rowAfterPatch(draftBefore, patch),
       movedFrom: movedTo,
       movedTo: backTo,
     });
@@ -116,17 +162,20 @@ function undoWeekMove({
 }
 
 // The move confirmation lives in the existing toast channel and offers the
-// reverse move for the same ~8 s window other actions get.
+// reverse move for the same ~8 s window other actions get. The moved row
+// snapshot lets Undo detect that the occurrence changed in the meantime.
 function announceMove({
   whenIdle,
   focusMoved,
   item,
+  movedRow,
   movedFrom,
   movedTo,
 }: {
   readonly whenIdle: WhenIdle;
   readonly focusMoved: (identity: string | null) => void;
   readonly item: StatusOverviewItem;
+  readonly movedRow: ItemRow | null;
   readonly movedFrom: "current" | "next";
   readonly movedTo: "current" | "next";
 }): void {
@@ -139,6 +188,7 @@ function announceMove({
           whenIdle,
           focusMoved,
           item,
+          movedRow,
           movedTo,
           backTo: movedFrom,
         }),
@@ -164,7 +214,8 @@ function applyDirectMove({
   const from = item.source === "next" ? "next" : "current";
   whenIdle((ready) => {
     // The draft may have changed while an outcome command held the editor.
-    const patch = buildMoveItemPatch(ready.draft.section, recordId, target);
+    const draftBefore = ready.draft.section;
+    const patch = buildMoveItemPatch(draftBefore, recordId, target);
     if (patch === null) {
       toast.error(MOVE_UNAVAILABLE);
       return;
@@ -175,6 +226,7 @@ function applyDirectMove({
       whenIdle,
       focusMoved,
       item,
+      movedRow: rowAfterPatch(draftBefore, patch),
       movedFrom: from,
       movedTo: target,
     });

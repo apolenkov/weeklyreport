@@ -146,4 +146,66 @@ describe("moveWithoutEditor", () => {
     expect(store.section.items[0]).toMatchObject({ type: "current" });
     expect(toast.error).not.toHaveBeenCalled();
   });
+
+  it("refuses Undo after the moved occurrence's text was edited", () => {
+    const { args, store } = harness("current");
+
+    expect(moveWithoutEditor(args(overviewItem("current"), "next"))).toBe(true);
+    store.section = applyDraftPatch(store.section, {
+      kind: "item-patch",
+      itemId: RECORD_ID,
+      patch: { text: "Ship the exporter" },
+    });
+    moveToastOptions()?.action?.onClick();
+
+    expect(store.section.items[0]).toMatchObject({
+      type: "next",
+      text: "Ship the exporter",
+    });
+    expect(toast.error).toHaveBeenCalledWith(
+      "This move can no longer be undone.",
+    );
+  });
+
+  it("refuses Undo after the moved occurrence's status was edited", () => {
+    const { args, store } = harness("current");
+
+    expect(moveWithoutEditor(args(overviewItem("current"), "next"))).toBe(true);
+    store.section = applyDraftPatch(store.section, {
+      kind: "item-patch",
+      itemId: RECORD_ID,
+      patch: { workflowStatus: "in_progress" },
+    });
+    moveToastOptions()?.action?.onClick();
+
+    expect(store.section.items[0]).toMatchObject({
+      type: "next",
+      workflowStatus: "in_progress",
+    });
+    expect(toast.error).toHaveBeenCalledWith(
+      "This move can no longer be undone.",
+    );
+  });
+
+  it("undoes a move when a draft save re-issues the id with the same content", () => {
+    const { args, store } = harness("current");
+
+    expect(moveWithoutEditor(args(overviewItem("current"), "next"))).toBe(true);
+    // The save returns the unchanged occurrence under a new id, with absent
+    // optional fields now explicit nulls; neither is an edit of the occurrence.
+    store.section = {
+      ...store.section,
+      items: store.section.items.map((row) => ({
+        ...row,
+        id: "reissued-id",
+        nextStepText: null,
+        pausedReason: null,
+        priorityRank: null,
+      })),
+    };
+    moveToastOptions()?.action?.onClick();
+
+    expect(store.section.items[0]).toMatchObject({ type: "current" });
+    expect(toast.error).not.toHaveBeenCalled();
+  });
 });
