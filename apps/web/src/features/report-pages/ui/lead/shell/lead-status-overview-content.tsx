@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 
 import { SdlcTooltipProvider } from "../../../../../shared/ui/feedback/sdlc-tooltip";
 import {
@@ -23,6 +23,7 @@ import {
 } from "./lead-status-overview-item-editor";
 import { OpenWorkRegister } from "./open-work-register";
 import { openWorkOutsideTimeline } from "./open-work-register-model";
+import { OverviewItemDialogSurface } from "./overview-item-dialog-surface";
 import { overviewItemActions } from "./overview-plan-presentation";
 import type { CompletionPresentation } from "./presentation/use-completion-presentation";
 import {
@@ -74,25 +75,39 @@ function OverviewRefreshWarning({
 function OverviewEditorNotices({
   dialog,
   error,
+  itemEditor,
 }: {
   readonly dialog: OverviewDialogSlice;
   readonly error: string | null;
+  readonly itemEditor: ReactNode;
 }) {
+  if (!dialog.dialog) return null;
   return (
-    <>
-      {dialog.dialog && dialog.recoveryReason ? (
+    <OverviewItemDialogSurface
+      title={
+        dialog.recoveryReason
+          ? "Unsaved update recovery"
+          : dialog.dialog.mode === "create"
+            ? "Add item"
+            : "Edit item"
+      }
+      onCancel={dialog.close}
+    >
+      {dialog.recoveryReason ? (
         <OverviewInputRecovery
           dialog={dialog.dialog}
           reason={dialog.recoveryReason}
           onCancel={dialog.close}
         />
-      ) : null}
+      ) : (
+        itemEditor
+      )}
       {error ? (
         <p role="alert" className="text-sm text-[var(--color-destructive)]">
           {error}
         </p>
       ) : null}
-    </>
+    </OverviewItemDialogSurface>
   );
 }
 
@@ -214,7 +229,7 @@ export function LeadStatusOverviewContent({
     plan,
     verdict,
     planPresentation,
-    editorSlot,
+    itemEditor,
     pendingInput,
     saveStatus,
     openWork,
@@ -240,14 +255,18 @@ export function LeadStatusOverviewContent({
           <EditorAvailabilityNotice editor={editor} />
           <OverviewRefreshWarning failed={refreshError} onRetry={onRefresh} />
           {planPresentation.recovery}
-          <OverviewEditorNotices dialog={dialog} error={dialog.error} />
+          <OverviewEditorNotices
+            dialog={dialog}
+            error={dialog.error}
+            itemEditor={itemEditor}
+          />
           <StatusOverview
             model={model}
             health={projectReportHealthPulse(
               model.units,
               readyEditor?.draft.section ?? output.current.section,
             )}
-            editorSlot={editorSlot}
+            editorSlot={planPresentation.slot}
             {...overviewItemActions(canStartAction, dialog, plan)}
             {...overviewDirectActions(canStartAction, dialog, verdict)}
             detailsHref={detailsHref}

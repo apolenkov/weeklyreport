@@ -60,11 +60,11 @@ const FOREIGN_SUPPORT = {
 type Snapshot = Awaited<ReturnType<typeof snapshot>>;
 
 // Every write control an editable Overview exposes: report actions, the item
-// status icon and title, the revealed overflow menu, and the
+// status icon and title, direct item actions, and the
 // Activity weekly-fields edit control.
 const EARLIER_OPEN_WORK_LINE = /^\d+ earlier open items?$/;
 const OVERVIEW_WRITE_CONTROL =
-  /^(?:Save draft now|Retry saving draft|Submit(?: report)?$|Add item to |Status of |Edit item: |More actions for |Edit weekly fields for )/;
+  /^(?:Save draft now|Retry saving draft|Submit(?: report)?$|Add item to |Status of |Edit item: |Edit details: |Move .* to (?:next|current) week$|Edit weekly fields for )/;
 
 function namedRefs(
   data: Snapshot,

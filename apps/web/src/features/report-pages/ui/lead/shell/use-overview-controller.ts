@@ -8,7 +8,7 @@ import { useCompletionPresentation } from "./presentation/use-completion-present
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
 import { useOpenWorkRegister } from "./use-open-work-register";
 import {
-  buildOverviewEditorSlot,
+  buildOverviewEditor,
   useOverviewItemEditor,
 } from "./use-overview-item-editor";
 import { useOverviewPlanActions } from "./use-overview-plan-actions";
@@ -101,18 +101,16 @@ export function useOverviewController({
   );
   const verdict = useOverviewVerdictActions(readyEditor, output);
   const planPresentation = overviewPlanPresentation(plan, model);
-  const editorSlot =
-    planPresentation.slot ??
-    buildOverviewEditorSlot(
-      readyEditor,
-      dialog.recoveryReason ? null : dialog.dialog,
-      {
-        onSave: dialog.save,
-        onSaveAndAddAnother: dialog.saveAndAddAnother,
-        onCancel: dialog.close,
-        onWeekChange: dialog.changeWeek,
-      },
-    );
+  const itemEditor = buildOverviewEditor(
+    readyEditor,
+    dialog.recoveryReason ? null : dialog.dialog,
+    {
+      onSave: dialog.save,
+      onSaveAndAddAnother: dialog.saveAndAddAnother,
+      onCancel: dialog.close,
+      onWeekChange: dialog.changeWeek,
+    },
+  );
   const pendingInput =
     dialog.dialog !== null ||
     plan.dialog !== null ||
@@ -138,7 +136,7 @@ export function useOverviewController({
     plan,
     verdict,
     planPresentation,
-    editorSlot,
+    itemEditor,
     pendingInput,
     saveStatus,
     openWork,

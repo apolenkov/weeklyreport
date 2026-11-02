@@ -3,10 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import type { StatusOverviewUnit } from "../model/status-overview";
-import {
-  TimelineFooter,
-  UnitAddItemButton,
-} from "./status-overview-timeline-footer";
+import { UnitAddItemButton } from "./status-overview-timeline-footer";
 
 function overviewUnit(
   overrides: Partial<StatusOverviewUnit> = {},
@@ -68,39 +65,5 @@ describe("unit creation controls", () => {
     expect(
       screen.queryByRole("button", { name: "Add item to Incident duty" }),
     ).not.toBeInTheDocument();
-  });
-});
-
-describe("TimelineFooter", () => {
-  it("hosts the single create composer in the unit region", () => {
-    const { rerender } = render(
-      <TimelineFooter
-        editorSlot={{
-          mode: "create",
-          unitKey: "activity:activity-1",
-          source: "next",
-          recordId: null,
-          stableId: null,
-          content: <form aria-label="Create next update" />,
-        }}
-      />,
-    );
-
-    expect(screen.getByTestId("report-unit-footer")).toBeInTheDocument();
-    expect(screen.getAllByRole("form")).toHaveLength(1);
-
-    rerender(
-      <TimelineFooter
-        editorSlot={{
-          mode: "edit",
-          unitKey: "activity:activity-1",
-          source: "current",
-          recordId: "record-1",
-          stableId: "stable-1",
-          content: <form aria-label="Edit update" />,
-        }}
-      />,
-    );
-    expect(screen.queryByTestId("report-unit-footer")).not.toBeInTheDocument();
   });
 });

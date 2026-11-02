@@ -1088,7 +1088,10 @@ describe("LeadForm Overview", () => {
     expect(screen.getByRole("textbox", { name: /Description/ })).toBe(text);
     expect(text).toHaveValue("Keep my work during a network error");
     failOverview.mockReturnValue(false);
-    await user.click(screen.getByRole("button", { name: "Retry overview" }));
+    // A background refresh can complete while the modal protects pending input.
+    await act(async () => {
+      await client.refetchQueries({ queryKey: [["leadForm", "statusOverview"]] });
+    });
     expect(text).toHaveValue("Keep my work during a network error");
   });
 
@@ -1391,7 +1394,7 @@ describe("LeadForm Overview", () => {
     expect(
       within(screen.getByTestId("status-overview")).getByRole("status"),
     ).toHaveTextContent("Unsaved update");
-    expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Submit", hidden: true })).toBeDisabled();
 
     await user.click(within(form).getByRole("button", { name: "Cancel" }));
     const editButton = screen.getByTestId(
@@ -1453,7 +1456,7 @@ describe("LeadForm Overview", () => {
       within(screen.getByTestId("status-overview")).getByRole("status"),
     ).toHaveTextContent("Unsaved update");
     expect(screen.queryByText("Autosaved")).toBeNull();
-    expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Submit", hidden: true })).toBeDisabled();
 
     await user.click(screen.getByRole("link", { name: "Slides" }));
     expect(confirm).toHaveBeenCalledOnce();
@@ -1499,7 +1502,7 @@ describe("LeadForm Overview", () => {
       const description = screen.getByLabelText(/Description \*/i);
       await user.clear(description);
       await user.type(description, updated);
-      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(screen.getByRole("dialog")).toContainElement(description);
       await user.click(screen.getByRole("button", { name: "Save update" }));
 
       expect(await screen.findByText(updated)).toBeInTheDocument();
@@ -1654,7 +1657,7 @@ describe("LeadForm Overview", () => {
       within(screen.getByTestId("status-overview")).getByRole("status"),
     ).toHaveTextContent("Unsaved update");
     expect(screen.queryByText("Autosaved")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Submit", hidden: true })).toBeDisabled();
     expect(screen.getByLabelText("Product")).toHaveValue(
       `product:${PROJECT_ID}`,
     );
@@ -1877,7 +1880,8 @@ describe("LeadForm Overview", () => {
       name: "Next week update for Payments",
     });
     expect(screen.getAllByRole("form")).toHaveLength(1);
-    expect(screen.getByTestId("report-unit-footer")).toContainElement(form);
+    expect(screen.getByRole("dialog")).toContainElement(form);
+    expect(screen.queryByTestId("report-unit-footer")).not.toBeInTheDocument();
     expect(
       within(form).getByRole("button", { name: "Planned" }),
     ).toHaveAttribute("aria-pressed", "true");
@@ -2065,7 +2069,7 @@ describe("LeadForm Overview", () => {
       name: "Current week update for Payments",
     });
     expect(screen.getAllByRole("form")).toHaveLength(1);
-    expect(screen.getByTestId("report-unit-footer")).toContainElement(form);
+    expect(screen.getByRole("dialog")).toContainElement(form);
     expect(
       within(form).getByRole("button", { name: "In progress" }),
     ).toHaveAttribute("aria-pressed", "true");
@@ -2234,7 +2238,7 @@ describe("LeadForm Overview", () => {
     });
     expect(recovery).toHaveTextContent("Never saved text");
     expect(recovery).toHaveTextContent("restoration was not confirmed");
-    expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Submit", hidden: true })).toBeDisabled();
     expect(saveDraft).toHaveBeenCalledTimes(2);
   });
 
@@ -2256,11 +2260,12 @@ describe("LeadForm Overview", () => {
     );
     const header = await screen.findByRole("group", {
       name: "Header completion actions",
+      hidden: true,
     });
     // The persisted-save barrier ignores a generic forceSave, so a live
     // Retry here would do nothing; Save update in the editor is the retry.
     expect(
-      within(header).getByRole("button", { name: "Retry saving draft" }),
+      within(header).getByRole("button", { name: "Retry saving draft", hidden: true }),
     ).toBeDisabled();
   });
 
@@ -3245,7 +3250,7 @@ it("does not acknowledge a later parent-and-stage edit from an earlier in-flight
   expect(screen.getByRole("textbox", { name: /Description/ })).toHaveValue(
     "Latest parent and stage",
   );
-  expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Submit", hidden: true })).toBeDisabled();
   expect(server?.items.find((item) => item.type === "current")?.text).toBe(
     "Earlier submitted text",
   );
@@ -3314,7 +3319,7 @@ it("keeps lost-ACK discard recovery after a real CAS conflict and never compensa
   expect(
     within(recovery).getByRole("textbox", { name: /Description/ }),
   ).toHaveValue("Committed but unacknowledged");
-  expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Submit", hidden: true })).toBeDisabled();
   expect(server?.items.find((item) => item.type === "current")?.text).toBe(
     "Committed but unacknowledged",
   );

@@ -649,26 +649,20 @@ describe("StatusOverview", () => {
       ],
     };
     render(
-      <StatusOverview
-        model={model}
-        health={health}
-        onAddItem={mutation}
-        onEditItem={mutation}
-        onResolvePlan={mutation}
-        onRestorePlan={mutation}
-        editorSlot={{
-          mode: "create",
-          unitKey: "activity:activity-1",
-          recordId: null,
-          source: "current",
-          content: (
-            <input
-              aria-label="Pending update"
-              defaultValue="Keep my unfinished work"
-            />
-          ),
-        }}
-      />,
+      <>
+        <input
+          aria-label="Pending update"
+          defaultValue="Keep my unfinished work"
+        />
+        <StatusOverview
+          model={model}
+          health={health}
+          onAddItem={mutation}
+          onEditItem={mutation}
+          onResolvePlan={mutation}
+          onRestorePlan={mutation}
+        />
+      </>,
     );
     await user.click(screen.getByText("Report health"));
     const pulseOpener = screen.getByRole("button", {
@@ -1071,31 +1065,18 @@ describe("StatusOverview", () => {
     );
   });
 
-  it("uses one Add item entry point in the unit header and keeps its editor in the unit footer", () => {
+  it("uses one Add item entry point in the unit header without an editor host in the grid", () => {
     const unit = model.units[0];
     if (!unit) throw new Error("Expected one overview unit");
     const onAddItem = vi.fn();
-    const rendered = render(
+    render(
       <StatusOverview
         model={model}
         onAddItem={onAddItem}
-        editorSlot={{
-          mode: "create",
-          unitKey: unit.key,
-          source: "next",
-          recordId: null,
-          stableId: null,
-          content: <form aria-label="Create next update" />,
-        }}
       />,
     );
-    const footer = screen.getByTestId("report-unit-footer");
-    expect(
-      within(footer).getByRole("form", { name: "Create next update" }),
-    ).toBeVisible();
-    expect(screen.getAllByRole("form")).toHaveLength(1);
-
-    rendered.rerender(<StatusOverview model={model} onAddItem={onAddItem} />);
+    expect(screen.queryByTestId("report-unit-footer")).not.toBeInTheDocument();
+    expect(screen.queryByRole("form")).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Add item to Incident duty" }),
     ).toBeInTheDocument();
