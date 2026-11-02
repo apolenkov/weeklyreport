@@ -71,7 +71,7 @@ describe("StatusOverviewItemPreview reveal and keyboard", () => {
     );
   });
 
-  it("keeps the action row in its own column so revealing it never covers the text", () => {
+  it("floats the action row over the corner on hover devices and wraps it below the text on touch", () => {
     render(
       <StatusOverviewItemPreview
         item={{ ...item, canResolve: true }}
@@ -83,9 +83,10 @@ describe("StatusOverviewItemPreview reveal and keyboard", () => {
       "[data-overview-item-actions]",
     );
     expect(row).not.toBeNull();
-    // In flow beside the text, never floated over it; on touch it wraps below.
-    expect(row).not.toHaveClass("absolute");
-    expect(row).toHaveClass("shrink-0");
+    // The text keeps the full column; the row only overlays it while revealed.
+    expect(row).toHaveClass("absolute");
+    expect(row).toHaveClass("right-0");
+    expect(row).toHaveClass("[@media(hover:none)]:static");
     expect(row).toHaveClass("[@media(hover:none)]:w-full");
   });
 

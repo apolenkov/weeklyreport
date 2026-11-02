@@ -22,7 +22,9 @@ export function canSetStages({
 }: ActionProps): boolean {
   return Boolean(
     onSetStages &&
+    // A single owned stage leaves nothing to choose.
     ownedStages &&
+    ownedStages.length > 1 &&
     item.editTarget &&
     item.source !== "previous" &&
     !item.editTarget.focusNextStep &&
