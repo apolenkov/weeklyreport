@@ -178,10 +178,13 @@ function driveOverviewSubmission({
     setDialog((current) => {
       if (current?.submission?.attempt !== submission.attempt) return current;
       if (submission.addAnother && current.mode === "create") {
+        // Keep creating in the week the lead actually saved to, not the week
+        // the dialog opened with.
+        const target = { ...current.target, source: current.week };
         return {
-          ...createOverviewComposerState(editor, current.target, null),
+          ...createOverviewComposerState(editor, target, null),
           mode: "create",
-          target: current.target,
+          target,
           seq: current.seq + 1,
         };
       }

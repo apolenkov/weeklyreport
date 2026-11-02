@@ -77,6 +77,9 @@ export function createItemEditDraftStore(args: ItemEditDraftSeed) {
   };
   const baseline = state.snapshot;
   const listeners = new Set<() => void>();
+  // True once the lead picked a progress themselves: a later week switch must
+  // not replace that choice with the week's starting progress.
+  let statusChosen = false;
   const update = <Key extends keyof ItemEditDraftFields>(
     key: Key,
     value: SetStateAction<ItemEditDraftFields[Key]>,
@@ -94,6 +97,7 @@ export function createItemEditDraftStore(args: ItemEditDraftSeed) {
     // Any field change (not only text) makes the draft worth confirming.
     isDirty: () => JSON.stringify(state.snapshot) !== JSON.stringify(baseline),
     getSnapshot: () => state.snapshot,
+    isStatusChosen: () => statusChosen,
     subscribe: (listener: () => void) => {
       listeners.add(listener);
       return () => {
@@ -104,7 +108,12 @@ export function createItemEditDraftStore(args: ItemEditDraftSeed) {
       setText: (value: SetStateAction<string>) => update("text", value),
       setNextStepText: (value: SetStateAction<string>) =>
         update("nextStepText", value),
-      setStatus: (value: SetStateAction<ItemStatus>) => update("status", value),
+      setStatus: (value: SetStateAction<ItemStatus>) => {
+        statusChosen = true;
+        update("status", value);
+      },
+      // The week's starting progress; never counts as the lead's own choice.
+      setStartingStatus: (value: ItemStatus) => update("status", value),
       setPausedReason: (value: SetStateAction<string>) =>
         update("pausedReason", value),
       setParent: (value: SetStateAction<RecordParent>) =>

@@ -1775,6 +1775,88 @@ describe("LeadForm Overview", () => {
     expect(screen.getByLabelText(/Description \*/i)).toHaveFocus();
   });
 
+  it("keeps a status the lead picked when the week is switched", async () => {
+    const user = userEvent.setup();
+    render(
+      <Wrapper>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "Add item to Payments" }),
+    );
+    const form = await screen.findByRole("form", {
+      name: "Current week update for Payments",
+    });
+    await user.click(within(form).getByRole("button", { name: "Paused" }));
+    await user.click(within(form).getByRole("radio", { name: "Next week" }));
+
+    const next = await screen.findByRole("form", {
+      name: "Next week update for Payments",
+    });
+    expect(
+      within(next).getByRole("button", { name: "Paused" }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("Save and add another keeps creating in the week the lead chose", async () => {
+    const user = userEvent.setup();
+    const saveDraft = vi.fn(
+      (input: unknown, current: ReportSectionReadModel) => {
+        const draft = input as {
+          readonly version: number;
+          readonly items: ReportSectionReadModel["items"];
+        };
+        return Promise.resolve({
+          ...current,
+          version: draft.version + 1,
+          items: draft.items.map((item) =>
+            item.stableId === undefined
+              ? {
+                  ...item,
+                  id: "a0000000-0000-4000-8000-000000000050",
+                  stableId: "a0000000-0000-4000-8000-000000000051",
+                }
+              : item,
+          ),
+        });
+      },
+    );
+    render(
+      <Wrapper saveDraft={saveDraft}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "Add item to Payments" }),
+    );
+    await user.click(screen.getByRole("radio", { name: "Next week" }));
+    await user.type(
+      screen.getByLabelText(/Description \*/i),
+      "First next item",
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Save and add another" }),
+    );
+
+    await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
+    await vi.waitFor(
+      () => expect(screen.getByLabelText(/Description \*/i)).toHaveValue(""),
+      { timeout: 2000 },
+    );
+    const again = screen.getByRole("form", {
+      name: "Next week update for Payments",
+    });
+    expect(
+      within(again).getByRole("radio", { name: "Next week" }),
+    ).toBeChecked();
+    expect(
+      within(again).getByRole("button", { name: "Planned" }),
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("Save and add another validation failure retains input and keeps editor open", async () => {
     const user = userEvent.setup();
     const saveDraft = vi.fn();
