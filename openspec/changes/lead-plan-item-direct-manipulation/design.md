@@ -40,10 +40,11 @@ All three entry points call the same handler: build the placement-only move
 patch (the web `buildMoveItemPatch` in
 `report-sections/model/lead-actions/lead-item-actions.ts` serves both
 directions; no shared-package builder is needed), apply it to the draft engine, and let the
-canonical autosave persist it. The move preserves stored progress, text, and
-`stableId` and every other saved field (including `carriedOver`, which
-records rollover provenance; pinned by `moveToCurrentWeekPatch` tests), and
-is rejected when the target week
+canonical autosave persist it. The move preserves stored progress, text, `stableId`
+and every other saved field, with one exception: Current→Next clears
+`carriedOver` so the occurrence stays eligible for a later carry-over
+(`moveToNextWeekPatch`), while Next→Current changes only the week
+(`moveToCurrentWeekPatch`). The move is rejected when the target week
 already holds an active occurrence for the same `stableId` (rollover
 invariant: at most one active W+1 per `stableId`). A Current item with a
 saved `nextStepText` follows the existing acknowledgement handling from

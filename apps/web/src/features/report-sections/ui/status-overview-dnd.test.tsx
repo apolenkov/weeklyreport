@@ -143,18 +143,23 @@ function stubLayout() {
 
 // PointerSensor arms only on a primary left-button pointer, so the synthetic
 // events must say so explicitly (jsdom defaults isPrimary to false).
-function pointerInit(x: number, y: number) {
+function pointerInit(x: number, y: number, pointerType = "mouse") {
   return {
     clientX: x,
     clientY: y,
     pointerId: 1,
+    pointerType,
     isPrimary: true,
     button: 0,
     bubbles: true,
   };
 }
 
-async function dragCard(from: { x: number; y: number }, toX: number) {
+async function dragCard(
+  from: { x: number; y: number },
+  toX: number,
+  pointerType = "mouse",
+) {
   const card = document.querySelector<HTMLElement>("[data-draggable-item]");
   if (!card) throw new Error("Expected a draggable card");
   // Only the grip arms the drag; the card body keeps ordinary gestures.
@@ -162,13 +167,16 @@ async function dragCard(from: { x: number; y: number }, toX: number) {
     'button[aria-label="Drag to move to another week"]',
   );
   if (!handle) throw new Error("Expected a drag handle on the card");
-  fireEvent.pointerDown(handle, pointerInit(from.x, from.y));
-  fireEvent.pointerMove(document, pointerInit(from.x + 10, from.y));
-  fireEvent.pointerMove(document, pointerInit(toX, from.y));
+  fireEvent.pointerDown(handle, pointerInit(from.x, from.y, pointerType));
+  fireEvent.pointerMove(
+    document,
+    pointerInit(from.x + 10, from.y, pointerType),
+  );
+  fireEvent.pointerMove(document, pointerInit(toX, from.y, pointerType));
   // Collision detection settles on the next frame; let the microtasks and the
   // frame run before the release.
   await act(() => new Promise((resolve) => setTimeout(resolve, 30)));
-  fireEvent.pointerUp(document, pointerInit(toX, from.y));
+  fireEvent.pointerUp(document, pointerInit(toX, from.y, pointerType));
 }
 
 describe("StatusOverview drag and drop", () => {
@@ -213,6 +221,18 @@ describe("StatusOverview drag and drop", () => {
       "next",
       "move:current:item-1",
     );
+  });
+
+  it("starts no drag from a plain touch swipe on the handle", async () => {
+    stubLayout();
+    const onMoveItem = vi.fn();
+    render(<StatusOverview model={dndModel()} onMoveItem={onMoveItem} />);
+
+    // A touch drag needs the TouchSensor long press; the pointer events a
+    // touch also emits must not arm the distance-based sensor.
+    await dragCard({ x: 250, y: 140 }, 450, "touch");
+
+    expect(onMoveItem).not.toHaveBeenCalled();
   });
 
   it("ignores a drop back on the same lane or onto Previous", async () => {

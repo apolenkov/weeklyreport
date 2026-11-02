@@ -210,6 +210,6 @@ On a touch device, Report Overview item actions MUST NOT depend on pointer hover
 #### Scenario: a touch drag starts with a long press
 
 - **GIVEN** a touch device
-- **WHEN** the lead long-presses an editable card, drags it onto the other week's column, and releases
+- **WHEN** the lead long-presses an editable card's drag handle, drags the card onto the other week's column, and releases
 - **THEN** the move is applied through the canonical draft save path
-- **AND** a plain swipe or tap on the card starts no drag and performs no move
+- **AND** a plain swipe or tap on the card or its handle starts no drag and performs no move

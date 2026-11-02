@@ -19,12 +19,26 @@ import {
 import { weekMoveFocusKey } from "./status-overview-item-actions";
 import type { ItemHandlers } from "./status-overview-item-handlers";
 
-// A click must read as a click, not a drag start: pointer drags arm only after
-// a small movement, touch drags after a long press so scrolling and tapping
-// stay unambiguous.
+// Touch input also emits pointer events, so the pointer sensor ignores touch
+// pointers: otherwise a plain swipe on the handle would start a drag after the
+// distance threshold and the TouchSensor long press would never be required.
+class MouseAndPenSensor extends PointerSensor {
+  static override readonly activators = PointerSensor.activators.map(
+    (activator) => ({
+      ...activator,
+      handler: (...args: Parameters<typeof activator.handler>) =>
+        args[0].nativeEvent.pointerType !== "touch" &&
+        activator.handler(...args),
+    }),
+  );
+}
+
+// A click must read as a click, not a drag start: mouse and pen drags arm only
+// after a small movement, touch drags after a long press so scrolling and
+// tapping stay unambiguous.
 function useOverviewSensors() {
   return useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(MouseAndPenSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, {
       activationConstraint: { delay: 200, tolerance: 8 },
     }),
