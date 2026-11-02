@@ -64,3 +64,16 @@ Reconciled 2026-11-02 against main 9d8051cc0 (implementation commits
       Guarded API integration `week-move.integration.test.ts` passed 3/3 on
       `weeklyreport_e2e_lane_a_test` (02.11): both directions persist with one
       row per `stableId`, and a stale version is refused with `CONFLICT`.
+
+## acceptance review fixes (independent reviewer, 02.11)
+
+- [x] 14. Undo is refused once the moved occurrence was edited: the move keeps
+      a snapshot of the moved row and Undo compares it without the row id
+      (`overview-in-place-move.test.ts`, d7efe11b3).
+- [x] 15. A stale autosave (409) forces the next server delivery to replace
+      the draft even when only the version moved
+      (`use-lead-form-server-sync.conflict.test.tsx`, b9ea18f44). Submit and
+      outcome 409 paths keep the existing conflict flow.
+- [x] 16. Touch drags arm only through the long-press sensor on the drag
+      handle; mouse and pen keep the distance threshold
+      (`status-overview-dnd.test.tsx`, bc060bd6f).
