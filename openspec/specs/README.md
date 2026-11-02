@@ -80,6 +80,7 @@ This index maps every durable capability to one canonical home. Product capabili
 - [lead-report-health-pulse](./lead-report-health-pulse/spec.md) — A read-only, problem-first pulse opens contextual unit health without interrupting report authoring. `[roles: Lead]`
 - [lead-status-overview](./lead-status-overview/spec.md) — Lead Overview groups reporting units clearly and keeps the reading grid, temporal sources and canonical health vocabulary coherent. `[roles: Lead]`
 - [lead-status-overview-actions](./lead-status-overview-actions/spec.md) — Lead Overview edits and creates Current and Next items through one canonical editor, composer and progress-interaction path. `[roles: Lead]`
+- [lead-overview-week-moves](./lead-overview-week-moves/spec.md) — Lead Overview moves an item between Current and Next in place by drag, hover icons, keyboard or touch, with Undo and server-state convergence. `[roles: Lead]`
 - [lead-product-accordion-identity](./lead-product-accordion-identity/spec.md) — Repeated lead-scope product accordions keep stable, instance-local accessible identity. `[roles: Lead]`
 - [lead-surface-name-resolution](./lead-surface-name-resolution/spec.md) — Lead cards resolve every report-known product name without placeholder fallback. `[roles: Lead]`
 - [record-dialog-layout](./record-dialog-layout/spec.md) — Item, risk, and decision editors share one consistent two-column layout. `[roles: Lead]`
