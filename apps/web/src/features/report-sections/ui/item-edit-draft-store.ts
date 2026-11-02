@@ -34,9 +34,7 @@ interface ItemEditDraftFields {
   readonly stageNames: string[];
 }
 
-// Owned by one open composer, never shared between users or report sessions.
-// Keeping it above a timeline row preserves input when save echoes re-key rows.
-export function createItemEditDraftStore(args: ItemEditDraftSeed) {
+function seedDraft(args: ItemEditDraftSeed) {
   const isCreate = args.item === null;
   const initial = resolveInitialItem({
     item: args.item,
@@ -64,22 +62,30 @@ export function createItemEditDraftStore(args: ItemEditDraftSeed) {
     availableStages:
       productId === undefined ? [] : (args.stagesForProduct?.(productId) ?? []),
   });
-  const state: { snapshot: ItemEditDraftFields } = {
-    snapshot: {
-      text: initial.text,
-      nextStepText: initial.nextStepText ?? "",
-      status: initial.status,
-      pausedReason: args.item?.pausedReason ?? "",
-      parent,
-      priorityRank: args.item?.priorityRank ?? null,
-      stageNames: [...stageNames],
-    },
+  const snapshot: ItemEditDraftFields = {
+    text: initial.text,
+    nextStepText: initial.nextStepText ?? "",
+    status: initial.status,
+    pausedReason: args.item?.pausedReason ?? "",
+    parent,
+    priorityRank: args.item?.priorityRank ?? null,
+    stageNames: [...stageNames],
+  };
+  return { isCreate, initial, snapshot };
+}
+
+// Owned by one open composer, never shared between users or report sessions.
+// Keeping it above a timeline row preserves input when save echoes re-key rows.
+export function createItemEditDraftStore(args: ItemEditDraftSeed) {
+  const { isCreate, initial, snapshot } = seedDraft(args);
+  // statusChosen is true once the lead picked a progress themselves: a later
+  // week switch must not replace that choice with the week's starting progress.
+  const state: { snapshot: ItemEditDraftFields; statusChosen: boolean } = {
+    snapshot,
+    statusChosen: false,
   };
   const baseline = state.snapshot;
   const listeners = new Set<() => void>();
-  // True once the lead picked a progress themselves: a later week switch must
-  // not replace that choice with the week's starting progress.
-  let statusChosen = false;
   const update = <Key extends keyof ItemEditDraftFields>(
     key: Key,
     value: SetStateAction<ItemEditDraftFields[Key]>,
@@ -97,7 +103,7 @@ export function createItemEditDraftStore(args: ItemEditDraftSeed) {
     // Any field change (not only text) makes the draft worth confirming.
     isDirty: () => JSON.stringify(state.snapshot) !== JSON.stringify(baseline),
     getSnapshot: () => state.snapshot,
-    isStatusChosen: () => statusChosen,
+    isStatusChosen: () => state.statusChosen,
     subscribe: (listener: () => void) => {
       listeners.add(listener);
       return () => {
@@ -109,7 +115,7 @@ export function createItemEditDraftStore(args: ItemEditDraftSeed) {
       setNextStepText: (value: SetStateAction<string>) =>
         update("nextStepText", value),
       setStatus: (value: SetStateAction<ItemStatus>) => {
-        statusChosen = true;
+        state.statusChosen = true;
         update("status", value);
       },
       // The week's starting progress; never counts as the lead's own choice.

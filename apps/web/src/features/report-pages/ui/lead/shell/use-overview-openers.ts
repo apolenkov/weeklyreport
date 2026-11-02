@@ -158,6 +158,24 @@ function useSetItemStages(
   };
 }
 
+function useSetItemStatus(
+  editor: ReadyEditor | null,
+  isReadOnly: boolean,
+  dialog: OverviewItemDialogState | null,
+) {
+  const saveStatus = useOverviewStatusSave(editor);
+  return (
+    item: StatusOverviewItem,
+    status: Parameters<typeof saveStatus>[1],
+    _focusKey?: string,
+    input: Parameters<typeof saveStatus>[2] = {},
+  ): Promise<string | null> => {
+    if (!editor || isReadOnly || dialog || !item.recordId || !item.editTarget)
+      return Promise.resolve("This report is not editable right now.");
+    return saveStatus(item, status, input);
+  };
+}
+
 export function useOverviewEditOpeners({
   editor,
   dialog,
@@ -168,7 +186,7 @@ export function useOverviewEditOpeners({
   resetAttempt,
 }: OpenersArgs) {
   const { whenIdle } = useEditorSettle(editor);
-  const saveStatus = useOverviewStatusSave(editor);
+  const setItemStatus = useSetItemStatus(editor, isReadOnly, dialog);
   const setItemStages = useSetItemStages(editor, isReadOnly, dialog);
   const openEditItem = (
     target: StatusOverviewEditTarget,
@@ -218,16 +236,6 @@ export function useOverviewEditOpeners({
   const confirmItem = (item: StatusOverviewItem): void => {
     if (!editor || isReadOnly || dialog) return;
     applyCarriedConfirmation(whenIdle, item);
-  };
-  const setItemStatus = (
-    item: StatusOverviewItem,
-    status: Parameters<typeof saveStatus>[1],
-    _focusKey?: string,
-    input: Parameters<typeof saveStatus>[2] = {},
-  ): Promise<string | null> => {
-    if (!editor || isReadOnly || dialog || !item.recordId || !item.editTarget)
-      return Promise.resolve("This report is not editable right now.");
-    return saveStatus(item, status, input);
   };
   const editItemText = (item: StatusOverviewItem, text: string): void => {
     const target = item.editTarget;

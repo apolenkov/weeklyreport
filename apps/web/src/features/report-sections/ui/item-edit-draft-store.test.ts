@@ -218,7 +218,7 @@ describe("create item draft store — editable draft stage default", () => {
     expect(store.getSnapshot().status).toBe("planned");
     expect(store.isStatusChosen()).toBe(false);
 
-    store.setters.setStatus("in_progress");
+    store.setters.setStatus("in-progress");
     expect(store.isStatusChosen()).toBe(true);
   });
 });

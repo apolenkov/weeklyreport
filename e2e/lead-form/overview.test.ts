@@ -298,7 +298,7 @@ async function itemAction(
 ): Promise<void> {
   const label = shortItemLabel(text);
   if (action === "Edit details") {
-    await clickRef(
+    await revealClick(
       await weekControl(
         column,
         text,
@@ -342,18 +342,10 @@ async function quickMove(
   );
 }
 
-function editItemName(text: string): string | RegExp {
-  // Very long updates are matched by their opening so one snapshot name stays short.
-  return text.length > 120
-    ? new RegExp(`^Edit item: ${escapePattern(text.slice(0, 80))}`, "u")
-    : `Edit item: ${text}`;
-}
-
 async function openEditor(week: Week, text: string, parent: string = ACTIVITY) {
-  await clickRef(
-    await weekControl(week, text, "button", editItemName(text), parent),
-  );
-  await namedBlock("form", `${week} update for ${parent}`);
+  await itemAction(week, text, "Edit details", parent);
+  await waitScope({ role: "dialog", name: "Edit item" });
+  await waitScope({ role: "form", name: `${week} update for ${parent}` });
 }
 
 async function saveUpdate(
@@ -754,11 +746,41 @@ void test("report health is one summary line that expands on demand", async () =
   );
 });
 
-void test("health inspection preserves pending input and restores focus", async () => {
+void test("the item dialog preserves pending input and makes health inspection modal", async () => {
   await openLeadReport();
+  await expandHealth();
+  const pulse = `Inspect health for ${PRODUCT}`;
+  await namedRef("button", pulse);
   await openEditor("Current week", LEAD_FORM_FIXTURE.currentText, PRODUCT);
   const pending = `${LEAD_FORM_FIXTURE.currentText} pending`;
   await fill("Description *", pending);
+  const before = await writeCount();
+  const modalBackground = await command([
+    "eval",
+    `(() => {
+      const health = document.querySelector(${JSON.stringify(HEALTH)});
+      const dialog = document.querySelector('[role="dialog"][aria-modal="true"]');
+      return health !== null && dialog !== null && !dialog.contains(health) && health.closest('[aria-hidden="true"], [inert]') !== null;
+    })()`,
+  ]);
+  assert.equal(modalBackground.result, true);
+  assert.equal(refsByRole(await snapshot(), "button", pulse).length, 0);
+  assert.equal(await value("Description *"), pending);
+  await cancelUpdate("Current week", PRODUCT);
+  await discardChanges();
+  await waitClosed({ role: "dialog", name: "Edit item" });
+  assert.equal(await writeCount(), before);
+  await reloadOverview();
+  assert.ok(
+    (
+      await weekBlock("Current week", LEAD_FORM_FIXTURE.currentText, PRODUCT)
+    ).includes(LEAD_FORM_FIXTURE.currentText),
+  );
+  assert.ok(!(await snapshot()).snapshot.includes(pending));
+});
+
+void test("health inspection without an item dialog restores focus without writes", async () => {
+  await openLeadReport();
   const before = await writeCount();
   await expandHealth();
   const pulse = `Inspect health for ${PRODUCT}`;
@@ -792,7 +814,6 @@ void test("health inspection preserves pending input and restores focus", async 
     ).result,
     pulse,
   );
-  assert.equal(await value("Description *"), pending);
   await clickRole("button", PRODUCT);
   await namedBlock("region", detailLabel);
   await command([
@@ -806,17 +827,7 @@ void test("health inspection preserves pending input and restores focus", async 
       .result,
     PRODUCT,
   );
-  assert.equal(await value("Description *"), pending);
   assert.equal(await writeCount(), before);
-  await cancelUpdate("Current week", PRODUCT);
-  await discardChanges();
-  await reloadOverview();
-  assert.ok(
-    (
-      await weekBlock("Current week", LEAD_FORM_FIXTURE.currentText, PRODUCT)
-    ).includes(LEAD_FORM_FIXTURE.currentText),
-  );
-  assert.ok(!(await snapshot()).snapshot.includes(pending));
 });
 
 void test("activity health stays stage-free and historical health stays read-only", async () => {
@@ -939,24 +950,27 @@ void test("direct item actions edit details and move between current and next we
   await reloadOverview();
   await assertPlacement("Next week", text);
   await itemAction("Next week", text, "Move to this week");
-  await saveUpdate("Current week");
+  await waitText("Moved to this week");
+  assert.equal(scopeCount(await snapshot(), "dialog", "Edit item"), 0);
+  await saveDraft();
   await reloadOverview();
   await assertPlacement("Current week", text);
   await quickMove("Current week", text);
-  await waitScope({ role: "form", name: `Next week update for ${ACTIVITY}` });
-  await saveUpdate("Next week");
+  await waitText("Moved to next week");
+  assert.equal(scopeCount(await snapshot(), "dialog", "Edit item"), 0);
+  await saveDraft();
   await reloadOverview();
   await assertPlacement("Next week", text);
   await quickMove("Next week", text);
-  await waitScope({
-    role: "form",
-    name: `Current week update for ${ACTIVITY}`,
-  });
-  await saveUpdate("Current week");
+  await waitText("Moved to this week");
+  assert.equal(scopeCount(await snapshot(), "dialog", "Edit item"), 0);
+  await saveDraft();
   await reloadOverview();
   await assertPlacement("Current week", text);
   await itemAction("Current week", text, "Move to next week");
-  await saveUpdate("Next week");
+  await waitText("Moved to next week");
+  assert.equal(scopeCount(await snapshot(), "dialog", "Edit item"), 0);
+  await saveDraft();
   await reloadOverview();
   await assertPlacement("Next week", text);
   assert.equal(await statusButtonCount(text), 1);
@@ -1626,9 +1640,18 @@ for (const week of ["Current week", "Next week"] as const) {
       week === "Current week" ? "Move to this week" : "Move to next week",
       parent,
     );
-    const form = await namedBlock("form", `${week} update for ${parent}`);
-    assert.ok(form.includes("No changes are made until you save."));
-    await saveUpdate(week, parent);
+    if (week === "Current week") {
+      // Promoting a linked next step needs the canonical form, not a direct move.
+      await waitScope({ role: "dialog", name: "Edit item" });
+      const form = await namedBlock("form", `${week} update for ${parent}`);
+      assert.ok(form.includes("No changes are made until you save."));
+      await saveUpdate(week, parent);
+    } else {
+      // The saved next step already plans Next: acknowledge it without moving Current.
+      await waitText("Already planned for next week");
+      assert.equal(scopeCount(await snapshot(), "dialog", "Edit item"), 0);
+      await saveDraft();
+    }
     await reloadOverview();
     await weekBlock(week, LEAD_FORM_FIXTURE.explicitNextText, parent);
     const article = await namedBlock("article", `Product ${parent}`);
@@ -1640,14 +1663,36 @@ for (const week of ["Current week", "Next week"] as const) {
       0,
     );
     assert.equal(await statusIconCount(LEAD_FORM_FIXTURE.explicitNextText), 1);
-    await findRole("DisclosureTriangle", "History · 1", "click");
-    const row = await weekBlock(
-      week,
-      LEAD_FORM_FIXTURE.explicitNextText,
-      parent,
-    );
-    assert.ok(row.includes(`Previous: ${LEAD_FORM_FIXTURE.carriedText}`));
-    assert.ok(row.includes(LEAD_FORM_FIXTURE.leadName));
+    if (week === "Current week") {
+      await findRole("DisclosureTriangle", "History · 1", "click");
+      const row = await weekBlock(
+        week,
+        LEAD_FORM_FIXTURE.explicitNextText,
+        parent,
+      );
+      assert.ok(row.includes(`Previous: ${LEAD_FORM_FIXTURE.carriedText}`));
+      assert.ok(row.includes(LEAD_FORM_FIXTURE.leadName));
+    } else {
+      const current = await weekBlock(
+        "Current week",
+        LEAD_FORM_FIXTURE.carriedText,
+        parent,
+      );
+      assert.doesNotMatch(current, /DisclosureTriangle "History/u);
+      assert.ok(!current.includes(CARRIED_MARKER));
+      await assertStatus(
+        "Current week",
+        LEAD_FORM_FIXTURE.carriedText,
+        "In progress",
+        parent,
+      );
+      await assertStatus(
+        "Next week",
+        LEAD_FORM_FIXTURE.explicitNextText,
+        "Planned",
+        parent,
+      );
+    }
     assert.equal(
       await historyText(LEAD_FORM_FIXTURE.previousReportId),
       previous,
