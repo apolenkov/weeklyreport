@@ -1557,17 +1557,17 @@ describe("StatusOverview", () => {
     };
     expect(
       within(lane("current")).getByRole("button", {
-        name: "Add current week update to Incident duty",
+        name: /^Add current week update below ".+" in Incident duty$/,
       }),
     ).toBeInTheDocument();
     expect(
       within(lane("next")).getByRole("button", {
-        name: "Add next week update to Incident duty",
+        name: /^Add next week update below ".+" in Incident duty$/,
       }),
     ).toBeInTheDocument();
     expect(
       within(lane("previous")).queryByRole("button", {
-        name: /Add .* update to Incident duty/,
+        name: /^Add .* update .*Incident duty$/,
       }),
     ).not.toBeInTheDocument();
   });
