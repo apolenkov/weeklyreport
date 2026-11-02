@@ -8,6 +8,7 @@ import type {
 import type { StatusOverviewActivityFieldsChange } from "./status-overview-activity-editor";
 import type { StatusOverviewEditorSlot } from "./status-overview-editor-slot";
 import type {
+  SetStagesHandler,
   SetStatusHandler,
   VerdictHandler,
 } from "./status-overview-item-handlers";
@@ -33,6 +34,7 @@ export interface StatusOverviewProps {
     | undefined;
   readonly onConfirmItem?: ((item: StatusOverviewItem) => void) | undefined;
   readonly onSetStatus?: SetStatusHandler | undefined;
+  readonly onSetStages?: SetStagesHandler | undefined;
   readonly onResolvePlan?:
     ((item: StatusOverviewItem, focusKey?: string) => void) | undefined;
   readonly onRestorePlan?:

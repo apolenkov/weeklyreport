@@ -25,6 +25,7 @@ import {
   ROW_BUTTON_CLASS,
   weekMoveFocusKey,
 } from "./status-overview-item-actions";
+import { canSetStages, StageControl } from "./status-overview-stage-control";
 import { VerdictStamp } from "./status-overview-verdict-controls";
 
 // The row sits in a column the card always reserves, so revealing it changes
@@ -43,7 +44,11 @@ interface RowHandlers {
   readonly move: ActionProps["onMoveItem"];
 }
 
-function rowHandlers({ item, onEditItem, onMoveItem }: ActionProps): RowHandlers {
+function rowHandlers({
+  item,
+  onEditItem,
+  onMoveItem,
+}: ActionProps): RowHandlers {
   const secondary = statusOverviewItemActions(item).secondary;
   const target = item.editTarget;
   return {
@@ -191,6 +196,7 @@ function hasRowActions(props: ActionProps): boolean {
   const recovery = statusOverviewItemActions(props.item).recovery;
   return (
     (props.item.editTarget !== null && Boolean(edit ?? move)) ||
+    canSetStages(props) ||
     (props.onPlanItem !== undefined && recovery.includes("replan")) ||
     (props.onRestorePlan !== undefined && recovery.includes("restore"))
   );
@@ -224,6 +230,7 @@ export function ItemActionRow({
     >
       <MoveAction item={actionProps.item} move={move} />
       <EditAction item={actionProps.item} edit={edit} />
+      <StageControl {...actionProps} />
       <CommentAction item={actionProps.item} />
       <PlanAction {...actionProps} />
       <RestoreAction {...actionProps} />

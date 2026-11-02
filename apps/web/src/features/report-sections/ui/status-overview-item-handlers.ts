@@ -23,6 +23,12 @@ export type SetStatusHandler = (
   input?: ItemStatusInput,
 ) => void | Promise<string | null>;
 
+export type SetStagesHandler = (
+  item: StatusOverviewItem,
+  stageNames: readonly string[],
+  focusKey?: string,
+) => void | Promise<string | null>;
+
 /** Overview row callbacks threaded from the shell into every timeline lane. */
 export interface ItemHandlers {
   readonly editorSlot?: StatusOverviewEditorSlot | undefined;
@@ -43,6 +49,8 @@ export interface ItemHandlers {
     | undefined;
   readonly onConfirmItem?: ((item: StatusOverviewItem) => void) | undefined;
   readonly onSetStatus?: SetStatusHandler | undefined;
+  readonly onSetStages?: SetStagesHandler | undefined;
+  readonly ownedStages?: readonly string[] | undefined;
   readonly onResolvePlan?:
     ((item: StatusOverviewItem, focusKey?: string) => void) | undefined;
   readonly onRestorePlan?:

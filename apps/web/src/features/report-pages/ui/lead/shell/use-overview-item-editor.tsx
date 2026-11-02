@@ -65,10 +65,8 @@ export function useOverviewItemEditor(
       startedAttempt.current = null;
     },
   };
-  const { editItem, editItemText, moveItem, confirmItem, setItemStatus } =
-    useOverviewEditOpeners(openers);
-  const { addItem, planItem, changeWeek } =
-    useOverviewCreateOpeners(openers);
+  const editOpeners = useOverviewEditOpeners(openers);
+  const { addItem, planItem, changeWeek } = useOverviewCreateOpeners(openers);
   const saveContext = {
     editor,
     dialog,
@@ -88,13 +86,9 @@ export function useOverviewItemEditor(
     dialog,
     error: error ?? overviewSaveFailure(editor, dialog),
     recoveryReason,
-    editItem,
-    editItemText,
+    ...editOpeners,
     addItem,
     planItem,
-    moveItem,
-    confirmItem,
-    setItemStatus,
     changeWeek,
     save: (updatedItem: KanbanItem) =>
       saveOverviewItem(saveContext, updatedItem),

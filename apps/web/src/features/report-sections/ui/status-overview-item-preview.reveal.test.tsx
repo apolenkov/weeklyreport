@@ -32,6 +32,8 @@ describe("StatusOverviewItemPreview reveal and keyboard", () => {
     onMoveItem: vi.fn(),
     onResolvePlan: vi.fn(),
     onSetStatus: vi.fn(),
+    onSetStages: vi.fn(),
+    ownedStages: ["Development", "Testing"],
   };
 
   it("hides the action row with opacity only, never from the tree", () => {
@@ -130,6 +132,10 @@ describe("StatusOverviewItemPreview reveal and keyboard", () => {
     await user.tab();
     expect(
       screen.getByRole("button", { name: "Edit details: Original text" }),
+    ).toHaveFocus();
+    await user.tab();
+    expect(
+      screen.getByRole("button", { name: "Stages for Original text" }),
     ).toHaveFocus();
     await user.tab();
     expect(

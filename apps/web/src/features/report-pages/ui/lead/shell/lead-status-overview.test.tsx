@@ -1090,7 +1090,9 @@ describe("LeadForm Overview", () => {
     failOverview.mockReturnValue(false);
     // A background refresh can complete while the modal protects pending input.
     await act(async () => {
-      await client.refetchQueries({ queryKey: [["leadForm", "statusOverview"]] });
+      await client.refetchQueries({
+        queryKey: [["leadForm", "statusOverview"]],
+      });
     });
     expect(text).toHaveValue("Keep my work during a network error");
   });
@@ -1394,7 +1396,9 @@ describe("LeadForm Overview", () => {
     expect(
       within(screen.getByTestId("status-overview")).getByRole("status"),
     ).toHaveTextContent("Unsaved update");
-    expect(screen.getByRole("button", { name: "Submit", hidden: true })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Submit", hidden: true }),
+    ).toBeDisabled();
 
     await user.click(within(form).getByRole("button", { name: "Cancel" }));
     const editButton = screen.getByTestId(
@@ -1456,7 +1460,9 @@ describe("LeadForm Overview", () => {
       within(screen.getByTestId("status-overview")).getByRole("status"),
     ).toHaveTextContent("Unsaved update");
     expect(screen.queryByText("Autosaved")).toBeNull();
-    expect(screen.getByRole("button", { name: "Submit", hidden: true })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Submit", hidden: true }),
+    ).toBeDisabled();
 
     await user.click(screen.getByRole("link", { name: "Slides" }));
     expect(confirm).toHaveBeenCalledOnce();
@@ -1657,7 +1663,9 @@ describe("LeadForm Overview", () => {
       within(screen.getByTestId("status-overview")).getByRole("status"),
     ).toHaveTextContent("Unsaved update");
     expect(screen.queryByText("Autosaved")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Submit", hidden: true })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Submit", hidden: true }),
+    ).toBeDisabled();
     expect(screen.getByLabelText("Product")).toHaveValue(
       `product:${PROJECT_ID}`,
     );
@@ -2238,7 +2246,9 @@ describe("LeadForm Overview", () => {
     });
     expect(recovery).toHaveTextContent("Never saved text");
     expect(recovery).toHaveTextContent("restoration was not confirmed");
-    expect(screen.getByRole("button", { name: "Submit", hidden: true })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Submit", hidden: true }),
+    ).toBeDisabled();
     expect(saveDraft).toHaveBeenCalledTimes(2);
   });
 
@@ -2265,7 +2275,10 @@ describe("LeadForm Overview", () => {
     // The persisted-save barrier ignores a generic forceSave, so a live
     // Retry here would do nothing; Save update in the editor is the retry.
     expect(
-      within(header).getByRole("button", { name: "Retry saving draft", hidden: true }),
+      within(header).getByRole("button", {
+        name: "Retry saving draft",
+        hidden: true,
+      }),
     ).toBeDisabled();
   });
 
@@ -2405,7 +2418,8 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
 
-    const { saved } = await chooseDirectMove("Current work",
+    const { saved } = await chooseDirectMove(
+      "Current work",
       "next week",
       saveDraft,
     );
@@ -2442,7 +2456,8 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
 
-    const { focused } = await chooseDirectMove("Current work",
+    const { focused } = await chooseDirectMove(
+      "Current work",
       "next week",
       saveDraft,
     );
@@ -2467,7 +2482,8 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
 
-    const { saved } = await chooseDirectMove("Next work",
+    const { saved } = await chooseDirectMove(
+      "Next work",
       "this week",
       saveDraft,
     );
@@ -2866,9 +2882,7 @@ describe("LeadForm Overview", () => {
 
     // Open the row menu on the real clock; the acknowledgement only starts the
     // autosave debounce, which is virtualized below instead of waited out.
-    const moveToNextWeek = await openMoveMenu("Current work",
-      "next week",
-    );
+    const moveToNextWeek = await openMoveMenu("Current work", "next week");
     const confirmedStableId = "a0000000-0000-4000-8000-000000000011";
     vi.useFakeTimers();
     try {
@@ -3044,7 +3058,8 @@ describe("LeadForm Overview", () => {
         </Wrapper>,
       );
 
-      const { saved } = await chooseDirectMove("Current work",
+      const { saved } = await chooseDirectMove(
+        "Current work",
         "next week",
         saveDraft,
       );
@@ -3250,7 +3265,9 @@ it("does not acknowledge a later parent-and-stage edit from an earlier in-flight
   expect(screen.getByRole("textbox", { name: /Description/ })).toHaveValue(
     "Latest parent and stage",
   );
-  expect(screen.getByRole("button", { name: "Submit", hidden: true })).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: "Submit", hidden: true }),
+  ).toBeDisabled();
   expect(server?.items.find((item) => item.type === "current")?.text).toBe(
     "Earlier submitted text",
   );
@@ -3319,7 +3336,9 @@ it("keeps lost-ACK discard recovery after a real CAS conflict and never compensa
   expect(
     within(recovery).getByRole("textbox", { name: /Description/ }),
   ).toHaveValue("Committed but unacknowledged");
-  expect(screen.getByRole("button", { name: "Submit", hidden: true })).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: "Submit", hidden: true }),
+  ).toBeDisabled();
   expect(server?.items.find((item) => item.type === "current")?.text).toBe(
     "Committed but unacknowledged",
   );

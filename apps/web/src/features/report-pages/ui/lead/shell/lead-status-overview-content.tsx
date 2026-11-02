@@ -45,6 +45,9 @@ interface OverviewDialogSlice {
   readonly setItemStatus: NonNullable<
     ComponentProps<typeof StatusOverview>["onSetStatus"]
   >;
+  readonly setItemStages: NonNullable<
+    ComponentProps<typeof StatusOverview>["onSetStages"]
+  >;
 }
 
 function OverviewRefreshWarning({
@@ -178,6 +181,7 @@ function overviewDirectActions(
         onMoveItem: dialog.moveItem,
         onConfirmItem: dialog.confirmItem,
         onSetStatus: dialog.setItemStatus,
+        onSetStages: dialog.setItemStages,
         onVerdict: verdict.onVerdict,
         onConfirmAll: verdict.onConfirmAll,
         pendingReviewCount: verdict.pendingReviewCount,

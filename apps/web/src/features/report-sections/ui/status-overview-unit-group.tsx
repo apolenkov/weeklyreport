@@ -35,6 +35,19 @@ interface UnitGroupProps {
   readonly onAddItem: StatusOverviewProps["onAddItem"];
 }
 
+function stageActions(unit: StatusOverviewUnit, overview: StatusOverviewProps) {
+  return {
+    onSetStages:
+      unit.kind === "product" && !unit.historical
+        ? overview.onSetStages
+        : undefined,
+    ownedStages:
+      unit.kind === "product"
+        ? unit.stages.map((stage) => stage.name)
+        : undefined,
+  };
+}
+
 function canEditActivityFields(
   overview: StatusOverviewProps,
   unit: StatusOverviewUnit,
@@ -149,6 +162,7 @@ export function UnitGroup({
             onMoveItem={overview.onMoveItem}
             onConfirmItem={overview.onConfirmItem}
             onSetStatus={overview.onSetStatus}
+            {...stageActions(unit, overview)}
             onResolvePlan={overview.onResolvePlan}
             onRestorePlan={overview.onRestorePlan}
             onVerdict={overview.onVerdict}

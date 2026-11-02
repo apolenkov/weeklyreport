@@ -186,11 +186,7 @@ export function LineageRowList({
             hidden={index >= REPORT_PREVIEW_COUNT && !expanded}
             inert={index >= REPORT_PREVIEW_COUNT && !expanded}
           >
-            <LineageRow
-              row={row}
-              editorSlot={editorSlot}
-              {...handlers}
-            />
+            <LineageRow row={row} editorSlot={editorSlot} {...handlers} />
           </li>
         ))}
       </ul>

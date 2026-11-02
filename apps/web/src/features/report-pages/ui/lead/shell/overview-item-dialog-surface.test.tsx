@@ -11,7 +11,9 @@ function DirtyEditor({ onClose }: { readonly onClose: () => void }) {
     <OverviewItemDialogSurface title="Add item" onCancel={onClose}>
       <form aria-label="Current week update for Payments">
         <input aria-label="Description" defaultValue="Retained input" />
-        <button type="button" onClick={requestClose}>Cancel</button>
+        <button type="button" onClick={requestClose}>
+          Cancel
+        </button>
       </form>
       {discardDialog}
     </OverviewItemDialogSurface>
@@ -32,11 +34,20 @@ describe("Overview item dialog dismissal", () => {
         const overlay = document.querySelector("[data-slot=dialog-overlay]");
         if (!overlay) throw new Error("Expected the modal overlay");
         await user.click(overlay);
-      } else await user.click(within(dialog).getByRole("button", { name: dismissal }));
-      const confirmation = await screen.findByRole("alertdialog", { name: "Discard changes?" });
+      } else
+        await user.click(
+          within(dialog).getByRole("button", { name: dismissal }),
+        );
+      const confirmation = await screen.findByRole("alertdialog", {
+        name: "Discard changes?",
+      });
       expect(onClose).not.toHaveBeenCalled();
-      await user.click(within(confirmation).getByRole("button", { name: "Keep editing" }));
-      expect(screen.getByRole("textbox", { name: "Description" })).toHaveValue("Retained input");
+      await user.click(
+        within(confirmation).getByRole("button", { name: "Keep editing" }),
+      );
+      expect(screen.getByRole("textbox", { name: "Description" })).toHaveValue(
+        "Retained input",
+      );
       await user.click(within(dialog).getByRole("button", { name: "Close" }));
       await user.click(screen.getByRole("button", { name: "Discard" }));
       expect(onClose).toHaveBeenCalledOnce();
