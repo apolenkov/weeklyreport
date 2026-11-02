@@ -190,14 +190,11 @@ async function clickViewMode(name: "Report" | "Slides"): Promise<void> {
   await command(["click", await scopedRef(VIEW_MODE_SCOPE, "link", name)]);
 }
 
-// Header and rail hand off one completion cluster. Autosave has no healthy
-// Save action; Submit is the persistent control even when readiness disables it.
+// The header owns the only completion cluster. Autosave has no healthy Save
+// action; Submit is the persistent control even when readiness disables it.
 async function waitCompletionActions(): Promise<void> {
   await waitSnapshot((data) => {
-    const groups = [
-      "Header completion actions",
-      "Sticky completion actions",
-    ].flatMap((name) => scopeSnapshots(data, "group", name));
+    const groups = scopeSnapshots(data, "group", "Header completion actions");
     return (
       groups.length === 1 &&
       groups.every((group) => scopeCount(group, "button", "Submit") === 1)

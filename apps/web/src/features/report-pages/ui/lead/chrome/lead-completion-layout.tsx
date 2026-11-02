@@ -2,10 +2,8 @@ import type { ReactNode } from "react";
 
 export function LeadCompletionLayout({
   children,
-  actions,
 }: {
   readonly children: ReactNode;
-  readonly actions: ReactNode;
 }) {
   return (
     <div
@@ -18,7 +16,6 @@ export function LeadCompletionLayout({
       >
         {children}
       </div>
-      {actions}
     </div>
   );
 }

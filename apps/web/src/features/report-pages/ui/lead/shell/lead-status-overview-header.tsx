@@ -14,18 +14,12 @@ export function ReadyOverviewHeader({
   editor,
   pendingInput,
   completionActions,
-  completionSentinelRef,
-  showCompletionActions,
 }: {
   readonly pendingInput: boolean;
-  readonly showCompletionActions: boolean;
   readonly editor: ReadyEditor;
   readonly completionActions: ComponentProps<
     typeof LeadFormHeaderActions
   >["completionActions"];
-  readonly completionSentinelRef: ComponentProps<
-    typeof LeadFormHeaderActions
-  >["completionSentinelRef"];
 }) {
   return (
     <>
@@ -38,8 +32,6 @@ export function ReadyOverviewHeader({
           editor.view.data.byPeriodData?.section.reportId,
         )}
         completionActions={completionActions}
-        completionSentinelRef={completionSentinelRef}
-        showCompletionActions={showCompletionActions}
         isSlidesMode={false}
         isForeignSlidesDeck={editor.view.data.isForeignSlidesDeck}
         isSubmitted={editor.view.isSubmitted}

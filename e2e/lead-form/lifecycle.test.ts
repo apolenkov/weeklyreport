@@ -85,12 +85,8 @@ function disabledRef(
   return ref;
 }
 
-// The header cluster hands over to the sticky one while the page is scrolled
-// or an update is open; exactly one of them is ever in the tree.
-const COMPLETION_GROUPS = [
-  "Header completion actions",
-  "Sticky completion actions",
-];
+// The header owns the only completion cluster; there is no bottom rail.
+const COMPLETION_GROUPS = ["Header completion actions"];
 
 function completionActions(data: BrowserSnapshot): BrowserSnapshot {
   const groups = COMPLETION_GROUPS.flatMap((name) =>
@@ -125,7 +121,7 @@ async function clickIn(
   session?: string,
 ): Promise<void> {
   const ref = await scopedRef(scope, "button", name, session);
-  // Centre the button first: at the viewport edge the fixed completion cluster covers it.
+  // Centre the button first: at the viewport edge the sticky period toolbar covers it.
   await command(["scrollintoview", ref], session);
   await command(["click", ref], session);
 }
