@@ -297,9 +297,12 @@ export function useOverviewCreateOpeners({
   // Planned) until the lead picks a progress of their own.
   const changeWeek = (week: "current" | "next"): void => {
     if (dialog?.mode === "create" && dialog.submission === null) {
-      const { status } = dialog.draftStore.getSnapshot();
-      if (status === defaultCreateStatus(dialog.week))
-        dialog.draftStore.setters.setStatus(defaultCreateStatus(week));
+      const { draftStore } = dialog;
+      if (
+        !draftStore.isStatusChosen() &&
+        draftStore.getSnapshot().status === defaultCreateStatus(dialog.week)
+      )
+        draftStore.setters.setStartingStatus(defaultCreateStatus(week));
     }
     setDialog((current) =>
       current?.submission === null ? { ...current, week } : current,

@@ -209,4 +209,16 @@ describe("create item draft store — editable draft stage default", () => {
     expect(store.getSnapshot().parent).toEqual({ kind: "activity", id: "a-1" });
     expect(store.getSnapshot().stageNames).toEqual([]);
   });
+
+  it("counts only an explicit status pick as the lead's choice", () => {
+    const store = createItemEditDraftStore(seed);
+    expect(store.isStatusChosen()).toBe(false);
+
+    store.setters.setStartingStatus("planned");
+    expect(store.getSnapshot().status).toBe("planned");
+    expect(store.isStatusChosen()).toBe(false);
+
+    store.setters.setStatus("in_progress");
+    expect(store.isStatusChosen()).toBe(true);
+  });
 });
