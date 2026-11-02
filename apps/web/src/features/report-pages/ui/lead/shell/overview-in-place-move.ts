@@ -157,6 +157,7 @@ function undoWeekMove({
       movedRow: rowAfterPatch(draftBefore, patch),
       movedFrom: movedTo,
       movedTo: backTo,
+      message: "Move undone",
     });
   });
 }
@@ -171,6 +172,7 @@ function announceMove({
   movedRow,
   movedFrom,
   movedTo,
+  message = moveMessage(movedTo),
 }: {
   readonly whenIdle: WhenIdle;
   readonly focusMoved: (identity: string | null) => void;
@@ -178,8 +180,9 @@ function announceMove({
   readonly movedRow: ItemRow | null;
   readonly movedFrom: "current" | "next";
   readonly movedTo: "current" | "next";
+  readonly message?: string;
 }): void {
-  toast.success(moveMessage(movedTo), {
+  toast.success(message, {
     duration: UNDO_TIMEOUT_MS,
     action: {
       label: "Undo",

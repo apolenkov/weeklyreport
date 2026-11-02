@@ -12,7 +12,8 @@ export function OfflineSaveNotice({ saving }: { readonly saving: boolean }) {
   if (online || !saving) return null;
   return (
     <span
-      role="alert"
+      role="status"
+      aria-live="polite"
       className="inline-flex items-center gap-1 rounded-[var(--radius-pill)] bg-[var(--color-status-blocked-bg)] px-2.5 py-1 text-xs font-semibold text-[var(--color-destructive)]"
     >
       <WifiOff aria-hidden="true" className="size-3" />

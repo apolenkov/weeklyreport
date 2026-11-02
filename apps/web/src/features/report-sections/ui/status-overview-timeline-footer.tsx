@@ -111,17 +111,23 @@ export function CellCreateButton({
   unit,
   source,
   rowKey,
+  rowTitle,
   onAddItem,
 }: {
   readonly unit: StatusOverviewUnit;
   readonly source: CreateSource;
   readonly rowKey: string;
+  readonly rowTitle?: string | undefined;
   readonly onAddItem: (target: StatusOverviewCreateTarget) => void;
 }) {
   return (
     <button
       type="button"
-      aria-label={createLabel(unit, source)}
+      aria-label={
+        rowTitle
+          ? `Add ${weekLabel(source)} update below "${rowTitle}" in ${unit.name}`
+          : createLabel(unit, source)
+      }
       title={`Add ${weekLabel(source)} update`}
       data-overview-create-origin="cell"
       data-overview-create-source={source}

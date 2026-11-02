@@ -330,32 +330,38 @@ describe("LeadFormHeaderActions", () => {
       onlineManager.setOnline(false);
       renderSaving(true);
 
-      expect(screen.getByRole("alert")).toHaveTextContent(
+      const offlineNotice = screen.getByText(
         "You’re offline — changes will save when the connection returns",
       );
+      expect(offlineNotice).toHaveAttribute("role", "status");
+      expect(offlineNotice).toHaveAttribute("aria-live", "polite");
+      expect(offlineNotice).toHaveTextContent(
+        "You’re offline — changes will save when the connection returns",
+      );
+      expect(screen.queryByRole("alert")).toBeNull();
 
       act(() => {
         onlineManager.setOnline(true);
       });
-      expect(screen.queryByRole("alert")).toBeNull();
+      expect(screen.queryByText(/You’re offline/)).toBeNull();
     });
 
     it("leaves the announcement to pages with their own autosave live region", () => {
       onlineManager.setOnline(false);
       renderSaving(true, false);
 
-      expect(screen.queryByRole("alert")).toBeNull();
+      expect(screen.queryByText(/You’re offline/)).toBeNull();
     });
 
     it("stays silent while offline without a save in flight, and while online", () => {
       onlineManager.setOnline(false);
       const idle = renderSaving(false);
-      expect(screen.queryByRole("alert")).toBeNull();
+      expect(screen.queryByText(/You’re offline/)).toBeNull();
       idle.unmount();
 
       onlineManager.setOnline(true);
       renderSaving(true);
-      expect(screen.queryByRole("alert")).toBeNull();
+      expect(screen.queryByText(/You’re offline/)).toBeNull();
     });
   });
 });
