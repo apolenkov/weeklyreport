@@ -8,6 +8,22 @@ import { describe, expect, it, vi } from "vitest";
 import { StageMultiSelect } from "./stage-multi-select";
 
 describe("StageMultiSelect", () => {
+  it("announces the stage validation error as an alert", () => {
+    render(
+      <StageMultiSelect
+        id="stages"
+        value={[]}
+        stages={["Dev", "Testing"]}
+        error="Select at least one stage."
+        onChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Select at least one stage.",
+    );
+  });
+
   it("keeps labelled stage checkboxes keyboard-operable with 44px targets", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();

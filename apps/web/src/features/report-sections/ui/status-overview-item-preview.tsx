@@ -204,7 +204,9 @@ export function StatusOverviewItemPreview(props: ActionProps) {
       data-overview-item-preview
       {...drag.rootProps}
       onKeyDown={(event) => handleWeekMoveKey(event, item, props.onMoveItem)}
-      className="group/item relative flex min-w-0 items-start gap-1 rounded-[var(--radius-sm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] [@media(hover:none)]:flex-wrap md:h-full"
+      // The action chip floats above the card on hover devices; the margin
+      // keeps it clear of the sticky toolbar when focus scrolls the card in.
+      className="group/item relative flex min-w-0 items-start [@media(hover:hover)]:scroll-mt-10 gap-1 rounded-[var(--radius-sm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] [@media(hover:none)]:flex-wrap md:h-full"
     >
       <StatusControl
         item={item}
