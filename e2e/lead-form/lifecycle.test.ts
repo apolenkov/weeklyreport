@@ -174,11 +174,10 @@ async function clickRevealed(
   await command(["click", ref], session);
 }
 
-/** Opens the canonical item editor from the row's overflow menu. */
+/** Opens the canonical item editor from the row's direct Edit details action. */
 async function openItemEditor(text: string, session?: string): Promise<void> {
   const label = shortItemLabel(text);
-  await clickRevealed("button", `More actions for ${label}`, session);
-  await findRole("menuitem", `Edit details: ${label}`, "click", { session });
+  await findRole("button", `Edit details: ${label}`, "click", { session });
 }
 
 async function clickPoint(x: number, y: number): Promise<void> {
@@ -491,7 +490,7 @@ async function assertSubmitted(): Promise<void> {
       .length,
     0,
   );
-  assert.equal(refsByRole(data, "button", /^More actions for /).length, 0);
+  assert.equal(refsByRole(data, "button", /^Edit details: /).length, 0);
 }
 
 function headLeadRow(data: BrowserSnapshot): BrowserSnapshot {

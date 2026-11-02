@@ -19,10 +19,7 @@ import {
   ShowMoreButton,
 } from "./status-overview-lineage-row";
 import { StatusOverviewUnitSummary } from "./status-overview-summary";
-import {
-  TimelineFooter,
-  UnitAddItemButton,
-} from "./status-overview-timeline-footer";
+import { UnitAddItemButton } from "./status-overview-timeline-footer";
 
 export { STATUS_OVERVIEW_DESKTOP_GRID };
 
@@ -128,7 +125,6 @@ export function StatusOverviewUnitRow({
             panelId={panelId}
             onToggle={onToggle}
           />
-          <TimelineFooter editorSlot={editorSlot} />
         </div>
       </div>
       {health && healthExpanded ? (

@@ -4,7 +4,6 @@ import type {
   StatusOverviewCreateTarget,
   StatusOverviewUnit,
 } from "../model/status-overview";
-import type { StatusOverviewEditorSlot } from "./status-overview-editor-slot";
 
 // Creation has one entry point per unit, the header Add item control; its
 // composer picks the week, so timeline cells never offer a second Add.
@@ -39,22 +38,5 @@ export function UnitAddItemButton({
       <Plus aria-hidden="true" className="size-4" />
       <span>Add item</span>
     </button>
-  );
-}
-
-export function TimelineFooter({
-  editorSlot,
-}: {
-  readonly editorSlot?: StatusOverviewEditorSlot | undefined;
-}) {
-  const createEditor = editorSlot?.mode === "create" ? editorSlot : undefined;
-  if (!createEditor) return null;
-  return (
-    <div
-      className="border-t border-[var(--color-border-subtle)] px-4 py-3"
-      data-testid="report-unit-footer"
-    >
-      {createEditor.content}
-    </div>
   );
 }

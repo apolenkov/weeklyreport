@@ -36,8 +36,8 @@ registerE2eHooks();
 
 type Week = "Current week" | "Next week";
 type Column = Week | "Previously planned";
-type MenuAction =
-  "Edit details" | "Update status" | "Move to next week" | "Move to this week";
+type ItemAction =
+  "Edit details" | "Resolve plan" | "Move to next week" | "Move to this week";
 
 const ACTIVITY = LEAD_FORM_FIXTURE.activityName;
 const PRODUCT = LEAD_FORM_FIXTURE.productName;
@@ -58,8 +58,8 @@ const TERMINAL_SUMMARY = /^Completed and cancelled work \(\d+\)$/u;
 const HEALTH = 'section[aria-label="Report health"]';
 const HEALTH_SUMMARY =
   /^Report health · \d+ of \d+ blocked · \d+ of \d+ at risk · \d+ of \d+ missing status$/u;
-// More actions, Plan this work and Restore stay in the accessibility
-// tree but are clipped until the item is hovered or holds focus.
+// Item actions stay in the accessibility tree but are clipped until the item
+// is hovered or holds focus.
 const ACTIONS_REVEALED = `(() => { const zone = document.activeElement?.closest('[data-overview-item-actions]'); return zone !== null && zone !== undefined && zone.getBoundingClientRect().width > 0 && zone.getAnimations().length === 0; })()`;
 
 async function namedBlock(role: string, name: string): Promise<string> {
@@ -290,32 +290,51 @@ async function revealClick(ref: string): Promise<void> {
   await clickRef(ref);
 }
 
-async function moreAction(
+async function itemAction(
   column: Week,
   text: string,
-  action: MenuAction,
+  action: ItemAction,
   parent: string = ACTIVITY,
 ): Promise<void> {
   const label = shortItemLabel(text);
-  await revealClick(
-    await weekControl(
-      column,
-      text,
-      "button",
-      `More actions for ${label}`,
-      parent,
-    ),
+  if (action === "Edit details") {
+    await clickRef(
+      await weekControl(
+        column,
+        text,
+        "button",
+        `Edit details: ${label}`,
+        parent,
+      ),
+    );
+    return;
+  }
+  if (action === "Move to next week" || action === "Move to this week") {
+    const destination = action === "Move to next week" ? "next" : "current";
+    await revealClick(
+      await weekControl(
+        column,
+        text,
+        "button",
+        `Move ${label} to ${destination} week`,
+        parent,
+      ),
+    );
+    return;
+  }
+  await clickRef(
+    await weekControl(column, text, "button", statusButtonName(text), parent),
   );
-  await clickRole("menuitem", `${action}: ${label}`);
+  await clickRole("menuitem", `Resolve plan: ${label}`);
 }
 
-// The week move lives only inside the More actions disclosure.
+// Week moves are direct actions on the item row.
 async function quickMove(
   column: Week,
   text: string,
   parent: string = ACTIVITY,
 ): Promise<void> {
-  await moreAction(
+  await itemAction(
     column,
     text,
     column === "Current week" ? "Move to next week" : "Move to this week",
@@ -627,16 +646,15 @@ void test("items rest as a status icon, text and stage badge", async () => {
   const names = buttonNames(current.snapshot);
   // The three controls of an item: the status icon, the editable text, and the
   // overflow action that stays in the tree while visually hidden.
-  for (const prefix of ["Status of ", "Edit item: ", "More actions for "])
+  for (const prefix of ["Status of ", "Edit item: ", "Edit details: ", "Move "])
     assert.equal(
       names.filter((name) => name.startsWith(prefix)).length,
       1,
       `${prefix}; buttons seen: ${names.join(" | ")}`,
     );
   assert.equal(
-    names.filter((name) =>
-      /^(?:Update|Plan this work|Confirm|Edit details|Move to)/u.test(name),
-    ).length,
+    names.filter((name) => /^(?:Update|Plan this work|Confirm)/u.test(name))
+      .length,
     0,
     `Text action buttons at rest: ${names.join(" | ")}`,
   );
@@ -661,37 +679,6 @@ void test("items rest as a status icon, text and stage badge", async () => {
   assert.ok(
     !buttonNames(previous).some((name) => name.startsWith("Status of ")),
   );
-});
-
-void test("item actions are revealed by focus or hover and stay in the accessibility tree", async () => {
-  await openLeadReport();
-  await waitText("Project activities");
-  const opacity = (text: string) => {
-    const selector = `button[aria-label="More actions for ${shortItemLabel(text)}"]`;
-    return `getComputedStyle(document.querySelector(${JSON.stringify(selector)}).closest('[data-overview-item-actions]')).opacity`;
-  };
-  const focused = LEAD_FORM_FIXTURE.currentText;
-  const hovered = LEAD_FORM_FIXTURE.carriedText;
-  const actionsRef = await weekControl(
-    "Current week",
-    focused,
-    "button",
-    `More actions for ${shortItemLabel(focused)}`,
-    PRODUCT,
-  );
-  const titleRef = await weekControl(
-    "Current week",
-    hovered,
-    "button",
-    `Edit item: ${hovered}`,
-    LEAD_FORM_FIXTURE.carriedProductName,
-  );
-  for (const text of [focused, hovered])
-    assert.equal((await command(["eval", opacity(text)])).result, "0");
-  await command(["focus", actionsRef]);
-  await command(["wait", "--fn", `${opacity(focused)} === "1"`]);
-  await command(["hover", titleRef]);
-  await command(["wait", "--fn", `${opacity(hovered)} === "1"`]);
 });
 
 void test("overview disclosures reveal long updates and additional rows", async () => {
@@ -934,24 +921,24 @@ void test("the item editor saves current and next week through the canonical for
   );
 });
 
-void test("More actions edits details and moves between current and next week", async () => {
+void test("direct item actions edit details and move between current and next week", async () => {
   await openLeadReport();
   const text = "E2E reversible week placement";
   await addActivity(text);
-  await moreAction("Current week", text, "Edit details");
+  await itemAction("Current week", text, "Edit details");
   await clickRole("radio", "Next week");
   await fill("Description *", `${text} discarded`);
   await command(["press", "Escape"]);
   await discardChanges();
   await reloadOverview();
   assert.ok((await weekBlock("Current week", text)).includes(text));
-  await moreAction("Current week", text, "Edit details");
+  await itemAction("Current week", text, "Edit details");
   await clickRole("radio", "Next week");
   await namedBlock("form", `Next week update for ${ACTIVITY}`);
   await saveUpdate("Next week");
   await reloadOverview();
   await assertPlacement("Next week", text);
-  await moreAction("Next week", text, "Move to this week");
+  await itemAction("Next week", text, "Move to this week");
   await saveUpdate("Current week");
   await reloadOverview();
   await assertPlacement("Current week", text);
@@ -968,7 +955,7 @@ void test("More actions edits details and moves between current and next week", 
   await saveUpdate("Current week");
   await reloadOverview();
   await assertPlacement("Current week", text);
-  await moreAction("Current week", text, "Move to next week");
+  await itemAction("Current week", text, "Move to next week");
   await saveUpdate("Next week");
   await reloadOverview();
   await assertPlacement("Next week", text);
@@ -979,7 +966,7 @@ void test("Edit details changes the parent and persists its owned stage", async 
   await openLeadReport();
   const text = "E2E canonical parent placement";
   await addActivity(text);
-  await moreAction("Current week", text, "Edit details");
+  await itemAction("Current week", text, "Edit details");
   await findRole("DisclosureTriangle", "Edit details", "click");
   await command([
     "select",
@@ -1009,7 +996,7 @@ for (const week of ["Current week", "Next week"] as const) {
     week === "Current week" ? "Not started" : "Planned",
     ...STATUS_CHOICES,
   ]) {
-    void test(`Update status persists ${week} ${status}`, async () => {
+    void test(`status persists ${week} ${status}`, async () => {
       await openLeadReport();
       const text = `E2E ${week} ${status} status`;
       await startActivity(text, week);
@@ -1022,7 +1009,7 @@ for (const week of ["Current week", "Next week"] as const) {
       await saveUpdate(week);
       await reloadOverview();
       await assertStatus(week, text, status);
-      await moreAction(week, text, "Edit details");
+      await itemAction(week, text, "Edit details");
       assert.equal(
         await getAttr(await namedRef("button", status), "aria-pressed"),
         "true",
@@ -1135,7 +1122,7 @@ void test("Resolve plan records Done immediately with retained audit", async () 
   await openLeadReport();
   const text = "E2E terminal completed result";
   await addActivity(text);
-  await moreAction("Current week", text, "Update status");
+  await itemAction("Current week", text, "Resolve plan");
   await clickRole("button", "Done");
   await waitClosed({ role: "form", name: "Resolve plan" });
   await reloadOverview();
@@ -1155,7 +1142,7 @@ void test("Resolve plan completes a Next plan in Current with retained audit", a
   await openLeadReport();
   const text = "E2E completed next-period plan";
   await addActivity(text, "Next week");
-  await moreAction("Next week", text, "Update status");
+  await itemAction("Next week", text, "Resolve plan");
   await clickRole("button", "Done");
   await waitClosed({ role: "form", name: "Resolve plan" });
   await reloadOverview();
@@ -1177,7 +1164,7 @@ for (const week of ["Current week", "Next week"] as const) {
     await openLeadReport();
     const text = `E2E terminal ${week} cancelled plan`;
     await addActivity(text, week);
-    await moreAction(week, text, "Update status");
+    await itemAction(week, text, "Resolve plan");
     const before = await writeCount();
     await clickRef(
       await namedRef("button", "Cancel", {
@@ -1187,7 +1174,7 @@ for (const week of ["Current week", "Next week"] as const) {
     );
     await waitClosed({ role: "form", name: "Resolve plan" });
     assert.equal(await writeCount(), before);
-    await moreAction(week, text, "Update status");
+    await itemAction(week, text, "Resolve plan");
     await clickRole("button", "Won't do");
     await clickRole("button", "Save outcome");
     await waitText("Explain why this plan will not be done.");
@@ -1309,7 +1296,7 @@ void test("Previous remains read-only", async () => {
   // only the verdict rail and the historical replan act, on the selected week.
   assert.doesNotMatch(
     previous,
-    /(?:button|menuitem) "(?:Edit item:|Status of |Edit details|Update status:|Move to|Restore )/u,
+    /(?:button|menuitem) "(?:Edit item:|Status of |Edit details|Resolve plan:|Move to|Restore )/u,
   );
   assert.match(previous, /image "Status of /u);
   assert.equal(
@@ -1633,7 +1620,7 @@ for (const week of ["Current week", "Next week"] as const) {
       week === "Current week"
         ? LEAD_FORM_FIXTURE.explicitNextText
         : LEAD_FORM_FIXTURE.carriedText;
-    await moreAction(
+    await itemAction(
       week === "Current week" ? "Next week" : "Current week",
       sourceText,
       week === "Current week" ? "Move to this week" : "Move to next week",
@@ -1758,7 +1745,7 @@ void test("outcome and restore failures retain inputs and retry with audit", asy
   const text = "E2E outcome transport retries preserve lineage";
   const reason = "E2E cancellation input retained after a transport failure";
   await addActivity(text);
-  await moreAction("Current week", text, "Update status");
+  await itemAction("Current week", text, "Resolve plan");
   await clickRole("button", "Won't do");
   await fill("Why won't this be done?", reason);
   const resolveRoute = "**/trpc/*leadForm.resolvePlan*";
@@ -1892,7 +1879,7 @@ void test("Won't do outcome limit preserves a reason of 500 characters in histor
   await openLeadReport();
   const text = "E2E cancellation boundary target";
   await addActivity(text);
-  await moreAction("Current week", text, "Update status");
+  await itemAction("Current week", text, "Resolve plan");
   await clickRole("button", "Won't do");
   const reason = await fillOutcomeBoundary(
     "Why won't this be done?",
