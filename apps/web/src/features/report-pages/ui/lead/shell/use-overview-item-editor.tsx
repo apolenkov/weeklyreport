@@ -1,10 +1,10 @@
 import type { LeadStatusOverviewOutput } from "@weeklyreport/shared";
 import { useRef, useState } from "react";
 
-import type {
-  KanbanItem,
-  StatusOverviewEditorSlot,
-  StatusOverviewModel,
+import {
+  type KanbanItem,
+  type StatusOverviewEditorSlot,
+  type StatusOverviewModel,
 } from "../../../../report-sections";
 import {
   OverviewEditorDialog,
@@ -30,7 +30,6 @@ import {
 } from "./use-overview-openers";
 
 type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
-
 export function useOverviewItemEditor(
   editor: ReadyEditor | null,
   model: StatusOverviewModel,
@@ -69,7 +68,8 @@ export function useOverviewItemEditor(
   };
   const { editItem, editItemText, moveItem, confirmItem, setItemStatus } =
     useOverviewEditOpeners(openers);
-  const { addItem, planItem } = useOverviewCreateOpeners(openers);
+  const { addItem, planItem, changeWeek } =
+    useOverviewCreateOpeners(openers);
   const saveContext = {
     editor,
     dialog,
@@ -96,10 +96,7 @@ export function useOverviewItemEditor(
     moveItem,
     confirmItem,
     setItemStatus,
-    changeWeek: (week: "current" | "next") =>
-      setDialog((current) =>
-        current?.submission === null ? { ...current, week } : current,
-      ),
+    changeWeek,
     save: (updatedItem: KanbanItem) =>
       saveOverviewItem(saveContext, updatedItem),
     saveAndAddAnother,

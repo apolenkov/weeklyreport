@@ -45,20 +45,6 @@ describe("StatusOverviewItemPreview at rest", () => {
     ).toBeVisible();
   });
 
-  it("keeps room above itself for the floating action chip when scrolled to", () => {
-    const { container } = render(
-      <StatusOverviewItemPreview
-        item={item}
-        onEditItem={vi.fn()}
-        onSetStatus={vi.fn()}
-      />,
-    );
-
-    // jsdom cannot scroll; the hover-only margin class is the teeth.
-    const root = container.querySelector("[data-overview-item-preview]");
-    expect(root?.className).toContain("[@media(hover:hover)]:scroll-mt-10");
-  });
-
   it("shows the status icon, the text and a short stage badge only", () => {
     render(
       <StatusOverviewItemPreview
@@ -333,64 +319,24 @@ describe("StatusOverviewItemPreview status menu", () => {
 });
 
 describe("StatusOverviewItemPreview revealed actions", () => {
-  it("keeps secondary actions in one More actions menu", async () => {
+  it("exposes move, edit and comments as one flat row with no overflow menu", async () => {
     const user = userEvent.setup();
-    const onResolvePlan = vi.fn();
     const onMoveItem = vi.fn();
     const onEditItem = vi.fn();
     render(
       <StatusOverviewItemPreview
-        item={{ ...item, canResolve: true }}
+        item={item}
         onEditItem={onEditItem}
         onMoveItem={onMoveItem}
-        onResolvePlan={onResolvePlan}
+        onResolvePlan={vi.fn()}
       />,
     );
 
+    expect(screen.queryByRole("button", { name: /More actions/ })).toBeNull();
     await user.click(
-      screen.getByRole("button", { name: "More actions for Original text" }),
-    );
-    await user.click(
-      screen.getByRole("menuitem", { name: "Edit details: Original text" }),
+      screen.getByRole("button", { name: "Edit details: Original text" }),
     );
     expect(onEditItem).toHaveBeenCalledWith(item.editTarget);
-
-    await user.click(
-      screen.getByRole("button", { name: "More actions for Original text" }),
-    );
-    await user.click(
-      screen.getByRole("menuitem", { name: "Update status: Original text" }),
-    );
-    expect(onResolvePlan).toHaveBeenCalledWith(
-      expect.objectContaining({ key: "item-1" }),
-      "resolve:current:stable-1",
-    );
-
-    await user.click(
-      screen.getByRole("button", { name: "More actions for Original text" }),
-    );
-    await user.click(
-      screen.getByRole("menuitem", {
-        name: "Move to next week: Original text",
-      }),
-    );
-    expect(onMoveItem).toHaveBeenCalledWith(
-      expect.objectContaining({ text: "Original text" }),
-      "next",
-      "more:current:stable-1",
-    );
-  });
-
-  it("offers the week move from the icon and from the overflow menu", async () => {
-    const user = userEvent.setup();
-    const onMoveItem = vi.fn();
-    render(
-      <StatusOverviewItemPreview
-        item={item}
-        onEditItem={vi.fn()}
-        onMoveItem={onMoveItem}
-      />,
-    );
 
     await user.click(
       screen.getByRole("button", { name: "Move Original text to next week" }),
@@ -400,42 +346,51 @@ describe("StatusOverviewItemPreview revealed actions", () => {
       "next",
       "move:current:stable-1",
     );
+    expect(
+      screen.getByRole("button", { name: "Comments on Original text" }),
+    ).toBeInTheDocument();
+  });
 
-    await user.click(
-      screen.getByRole("button", { name: "More actions for Original text" }),
+  it("reaches the terminal outcome from the status menu, one level deep", async () => {
+    const user = userEvent.setup();
+    const onResolvePlan = vi.fn();
+    render(
+      <StatusOverviewItemPreview
+        item={{ ...item, canResolve: true }}
+        onEditItem={vi.fn()}
+        onSetStatus={vi.fn()}
+        onResolvePlan={onResolvePlan}
+      />,
     );
+
+    await user.click(screen.getByRole("button", { name: STATUS_BUTTON }));
     await user.click(
-      screen.getByRole("menuitem", {
-        name: "Move to next week: Original text",
-      }),
+      screen.getByRole("menuitem", { name: "Resolve plan: Original text" }),
     );
-    expect(onMoveItem).toHaveBeenLastCalledWith(
+    expect(onResolvePlan).toHaveBeenCalledWith(
       expect.objectContaining({ key: "item-1" }),
-      "next",
-      "more:current:stable-1",
+      "resolve:current:stable-1",
     );
   });
 
-  it("withholds Update status while a carried item is unconfirmed", async () => {
+  it("withholds the terminal outcome while a carried item is unconfirmed", async () => {
     const user = userEvent.setup();
     render(
       <StatusOverviewItemPreview
         item={{ ...item, needsConfirmation: true, canResolve: true }}
         onEditItem={vi.fn()}
+        onSetStatus={vi.fn()}
         onResolvePlan={vi.fn()}
       />,
     );
 
-    await user.click(
-      screen.getByRole("button", { name: "More actions for Original text" }),
-    );
+    await user.click(screen.getByRole("button", { name: /^Status of/ }));
     expect(
-      screen.queryByRole("menuitem", { name: /Update status/ }),
+      screen.queryByRole("menuitem", { name: /Resolve plan/ }),
     ).toBeNull();
   });
 
-  it("keeps a completed item editable but not movable and not clickable by text", async () => {
-    const user = userEvent.setup();
+  it("keeps a completed item editable but not movable and not clickable by text", () => {
     render(
       <StatusOverviewItemPreview
         item={{ ...item, workflowStatus: "done" }}
@@ -447,16 +402,10 @@ describe("StatusOverviewItemPreview revealed actions", () => {
     );
 
     expect(screen.queryByRole("button", { name: /Edit item/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: /Quick move/ })).toBeNull();
-    await user.click(
-      screen.getByRole("button", { name: "More actions for Original text" }),
-    );
     expect(
-      screen.getByRole("menuitem", { name: "Edit details: Original text" }),
+      screen.getByRole("button", { name: "Edit details: Original text" }),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("menuitem", { name: /Move to .* week/ }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Move .* week$/ })).toBeNull();
   });
 
   it("keeps a resolved item restorable with its reason and no competing controls", async () => {

@@ -164,11 +164,8 @@ async function openItemEditor(
   );
   await user.click(
     await within(preview).findByRole("button", {
-      name: `More actions for ${text}`,
+      name: `Edit details: ${text}`,
     }),
-  );
-  await user.click(
-    await screen.findByRole("menuitem", { name: `Edit details: ${text}` }),
   );
 }
 

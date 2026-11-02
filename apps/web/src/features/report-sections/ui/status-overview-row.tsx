@@ -22,7 +22,6 @@ import { StatusOverviewUnitSummary } from "./status-overview-summary";
 import {
   TimelineFooter,
   UnitAddItemButton,
-  UnitWeekCreateControls,
 } from "./status-overview-timeline-footer";
 
 export { STATUS_OVERVIEW_DESKTOP_GRID };
@@ -53,17 +52,10 @@ function UnitHeaderActions({
     onAddItem && !unit.historical ? (
       <UnitAddItemButton unit={unit} onAddItem={onAddItem} />
     ) : null;
-  // Empty mobile lanes collapse, so the header owns touch creation for both
-  // editable weeks alongside the general Add item action.
-  const weekCreateAction =
-    onAddItem && !unit.historical ? (
-      <UnitWeekCreateControls unit={unit} onAddItem={onAddItem} />
-    ) : null;
-  if (!headerAction && !addAction && !weekCreateAction) return undefined;
+  if (!headerAction && !addAction) return undefined;
   return (
     <div className="flex shrink-0 flex-wrap items-start justify-end gap-1">
       {headerAction}
-      {weekCreateAction}
       {addAction}
     </div>
   );
@@ -126,7 +118,6 @@ export function StatusOverviewUnitRow({
           <PreviousUnavailableNotice column={unit.columns.previouslyPlanned} />
           <LineageRowList
             rows={rows}
-            unit={unit}
             expanded={expanded}
             editorSlot={editorSlot}
             handlers={handlers}
