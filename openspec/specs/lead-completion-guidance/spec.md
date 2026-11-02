@@ -88,42 +88,52 @@ change the existing submit payload or automatic-promotion rules.
 - **THEN** the status-change disclosure is absent
 - **AND** the submission outcome and blockers remain understandable without an empty group
 
-### Requirement: Sticky actions and submission explanation stay separate
+### Requirement: Submission explanation stays in normal flow
 
-The editable Lead Report submission explanation MUST stay at the end of content in normal flow. The completion rail MUST occupy its own layout row beside `lead-completion-scrollport`, not a fixed overlay. It MUST share canonical Submit state and handlers with the header, show pending review count, and use Retry only for autosave recovery, not a permanent Save action.
+The editable Lead Report submission explanation MUST stay at the end of content in normal flow. Completion actions MUST share canonical Submit state and handlers in the header, show pending review count, and use Retry only for autosave recovery, not a permanent Save action. No completion rail, fixed overlay or bottom Submit card MUST cover report content.
 
 #### Scenario: The lead scrolls through a long report
 
-- **WHEN** the canonical header actions leave the viewport
-- **THEN** completion actions remain available in the separate rail row without covering report content
+- **WHEN** the header actions leave the viewport
+- **THEN** no completion rail appears and report content uses the full viewport height
 - **AND** the explanation stays at the end of the content scrollport in normal flow
-- **AND** the rail does not introduce a second validator or submit handler
 
 #### Scenario: Continuations await review
 
 - **WHEN** two suggested continuations are unconfirmed
-- **THEN** the completion actions show `2 to review` beside Submit
+- **THEN** the header completion actions show `2 to review` beside Submit
 - **AND** the end-of-form explanation names the same items and stays in document flow
 - **AND** the indicator disappears at zero without adding another banner
 
+### Requirement: Completion layout keeps the content row clear
+
+The Lead Report completion layout MUST give the content scrollport the full row with no action overlay. Content focus scrolling MUST use its own scrollport clearance below the period toolbar. At short viewport heights or high zoom, the layout MUST permit normal document flow instead of trapping content behind the keyboard.
+
 #### Scenario: Keyboard focus passes through the report
 
-- **WHEN** the lead tabs through content while the completion rail is visible
-- **THEN** scrolling keeps focused controls visible above the separate rail and below the period toolbar
+- **WHEN** the lead tabs through content
+- **THEN** scrolling keeps focused controls visible below the period toolbar
 - **AND** the form end remains reachable without fixed-overlay compensation
-
-### Requirement: Completion layout MUST accommodate safe areas and short viewports
-
-The Lead Report completion layout MUST reserve content and action rows rather than overlay them. The rail MUST respect the bottom safe area and remain scrollable if tall. Content focus scrolling MUST use its own scrollport clearance. At short viewport heights or high zoom, the layout MUST permit normal document flow instead of trapping content behind the keyboard.
-
-#### Scenario: A disabled reason wraps or the safe area grows
-
-- **WHEN** the rail grows because its reason wraps or the bottom safe-area inset increases
-- **THEN** the content row shrinks without placing content behind the rail
-- **AND** tall rail content remains scrollable and its actions reachable
 
 #### Scenario: A keyboard reduces the visual viewport
 
 - **WHEN** the viewport height is below the layout's short-height breakpoint, including high zoom or an on-screen keyboard
 - **THEN** content can flow and scroll in the document instead of a constrained full-height scrollport
-- **AND** focused inputs and completion actions remain reachable
+- **AND** focused inputs and header completion actions remain reachable
+
+### Requirement: A failed autosave stays visible at the top of the viewport
+
+While the editable Lead draft's autosave is in the error state, a persistent notification at the top of the viewport MUST say the draft is not saved and MUST offer a Retry action that resends the draft through the canonical save path. It MUST stay visible at any scroll position until autosave leaves the error state, then close by itself. Read-only and Slides views MUST NOT raise it. The header Retry remains.
+
+#### Scenario: the lead scrolls while a save has failed
+
+- **GIVEN** autosave of the editable draft has failed
+- **WHEN** the lead scrolls the report so the header leaves the viewport
+- **THEN** the "Draft not saved" notification with Retry stays visible at the top
+- **AND** activating Retry resends the draft immediately
+
+#### Scenario: the draft saves again
+
+- **GIVEN** the "Draft not saved" notification is visible
+- **WHEN** a later save succeeds
+- **THEN** the notification closes without user action

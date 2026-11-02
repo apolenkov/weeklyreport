@@ -58,7 +58,7 @@ When rollover has suggested continuations, the Overview MUST provide one `Confir
 
 ### Requirement: Pending verdicts MUST be counted and MUST block submission
 
-Unconfirmed suggested continuations MUST count as pending review. Lead Report completion actions MUST show `n to review` above zero and block Submit through the existing unconfirmed-carried-item rule. The count MUST work in header and non-overlay rail presentations without requiring Save. Paused and postponed prior items MUST NOT count as pending.
+Unconfirmed suggested continuations MUST count as pending review. Lead Report completion actions MUST show `n to review` above zero and block Submit through the existing unconfirmed-carried-item rule. The count MUST work in the header completion actions without requiring Save. Paused and postponed prior items MUST NOT count as pending.
 
 #### Scenario: Submit with pending items
 
