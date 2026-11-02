@@ -57,6 +57,19 @@ describe("overview stage control", () => {
     ).toBeInTheDocument();
   });
 
+  it("hides when the unit owns a single stage", () => {
+    render(
+      <StatusOverviewItemPreview
+        item={item}
+        ownedStages={["Development"]}
+        onSetStages={vi.fn()}
+      />,
+    );
+    expect(
+      screen.queryByRole("button", { name: "Stages for Work" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("hides without a product stage list or save handler", () => {
     const { rerender } = render(
       <StatusOverviewItemPreview item={item} onSetStages={vi.fn()} />,
