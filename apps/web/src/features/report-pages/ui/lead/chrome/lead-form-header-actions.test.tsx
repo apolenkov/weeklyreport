@@ -30,47 +30,34 @@ const viewModel = {
 } as unknown as LeadFormLoadedViewModel;
 
 describe("LeadFormHeaderActions", () => {
-  it("observes the action wrapper without collapsing it on rail handoff", () => {
-    const sentinel = { current: null as HTMLDivElement | null };
-    const props = {
-      viewModel: { ...viewModel, isReadOnly: false } as LeadFormLoadedViewModel,
-      writeActions: {
-        fillFromPending: false,
-        handleFillFrom: vi.fn(),
-        reopenPending: false,
-        openReopenDialog: vi.fn(),
-        revokePending: false,
-        handleRevoke: vi.fn(),
-      },
-      completionActions: {
-        autosave,
-        onSubmit: vi.fn(),
-        onReviewPending: vi.fn(),
-        submitDisabled: true,
-        submitDisabledReason: "Review a long carried item before submitting.",
-      },
-      completionSentinelRef: sentinel,
-      isSlidesMode: false,
-      isSubmitted: false,
-      isForeignSlidesDeck: false,
-    };
-    const { rerender } = render(
-      <LeadFormHeaderActions {...props} showCompletionActions />,
+  it("keeps Submit in the header with no rail handoff", () => {
+    render(
+      <LeadFormHeaderActions
+        viewModel={{ ...viewModel, isReadOnly: false }}
+        writeActions={{
+          fillFromPending: false,
+          handleFillFrom: vi.fn(),
+          reopenPending: false,
+          openReopenDialog: vi.fn(),
+          revokePending: false,
+          handleRevoke: vi.fn(),
+        }}
+        completionActions={{
+          autosave,
+          onSubmit: vi.fn(),
+          onReviewPending: vi.fn(),
+          submitDisabled: true,
+          submitDisabledReason: "Review a long carried item before submitting.",
+        }}
+        isSlidesMode={false}
+        isSubmitted={false}
+        isForeignSlidesDeck={false}
+      />,
     );
-    const wrapper = sentinel.current;
-    expect(wrapper).toContainElement(
-      screen.getByRole("button", { name: "Submit" }),
-    );
-    rerender(
-      <LeadFormHeaderActions {...props} showCompletionActions={false} />,
-    );
-    expect(sentinel.current).toBe(wrapper);
-    expect(wrapper).toHaveAttribute("inert");
-    expect(wrapper).toHaveClass("invisible");
-    expect(
-      wrapper?.querySelector('button[data-testid="lead-completion-submit"]'),
-    ).not.toBeNull();
-    expect(screen.queryByRole("button", { name: "Submit" })).toBeNull();
+
+    const submit = screen.getByRole("button", { name: "Submit" });
+    expect(submit.closest("[inert]")).toBeNull();
+    expect(submit.closest("[aria-hidden='true']")).toBeNull();
   });
 
   it.each([
@@ -96,8 +83,6 @@ describe("LeadFormHeaderActions", () => {
             onReviewPending: vi.fn(),
             submitDisabled: false,
           }}
-          completionSentinelRef={{ current: null }}
-          showCompletionActions
           isSlidesMode={false}
           isSubmitted={isSubmitted}
           isForeignSlidesDeck={false}
@@ -128,8 +113,6 @@ describe("LeadFormHeaderActions", () => {
           onReviewPending: vi.fn(),
           submitDisabled: false,
         }}
-        completionSentinelRef={{ current: null }}
-        showCompletionActions
         isSlidesMode
         isSubmitted
         isForeignSlidesDeck
@@ -160,8 +143,6 @@ describe("LeadFormHeaderActions", () => {
           onReviewPending: vi.fn(),
           submitDisabled: false,
         }}
-        completionSentinelRef={{ current: null }}
-        showCompletionActions
         isSlidesMode
         isSubmitted
         isForeignSlidesDeck={false}
@@ -184,8 +165,6 @@ describe("LeadFormHeaderActions", () => {
         revokePending: false,
         handleRevoke: vi.fn(),
       },
-      completionSentinelRef: { current: null },
-      showCompletionActions: true,
       isSlidesMode: false,
       isSubmitted: false,
       isForeignSlidesDeck: false,
@@ -261,8 +240,6 @@ describe("LeadFormHeaderActions", () => {
             onReviewPending: vi.fn(),
             submitDisabled: false,
           }}
-          completionSentinelRef={{ current: null }}
-          showCompletionActions
           isSlidesMode
           isSubmitted
           isForeignSlidesDeck={false}
@@ -317,8 +294,6 @@ describe("LeadFormHeaderActions", () => {
             onReviewPending: vi.fn(),
             submitDisabled: false,
           }}
-          completionSentinelRef={{ current: null }}
-          showCompletionActions
           isSlidesMode={false}
           isSubmitted={false}
           isForeignSlidesDeck={false}

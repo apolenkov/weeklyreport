@@ -8,7 +8,6 @@ import {
   RefreshCw,
   TriangleAlert,
 } from "lucide-react";
-import type { Ref } from "react";
 
 import { isLead } from "../../../../../shared/lib/auth/role-predicates";
 import { ReportBreadcrumb } from "../../../../../shared/ui/report-shell/report-breadcrumb";
@@ -40,8 +39,6 @@ interface LeadFormHeaderActionsProps {
   readonly viewModel: LeadFormLoadedViewModel;
   readonly writeActions: LeadFormHeaderWriteActions;
   readonly completionActions: LeadCompletionActionContract;
-  readonly completionSentinelRef: Ref<HTMLDivElement>;
-  readonly showCompletionActions: boolean;
   readonly isSlidesMode: boolean;
   readonly isForeignSlidesDeck: boolean;
   readonly isSubmitted: boolean;
@@ -226,8 +223,6 @@ function HeaderActionToolbar({
   viewModel,
   writeActions,
   completionActions,
-  completionSentinelRef,
-  showCompletionActions,
   isForeignSlidesDeck,
   isSubmitted,
 }: Omit<LeadFormHeaderActionsProps, "isSlidesMode">) {
@@ -262,24 +257,16 @@ function HeaderActionToolbar({
           writeActions={writeActions}
         />
       )}
-      <div
-        ref={completionSentinelRef}
-        inert={!showCompletionActions}
-        aria-hidden={!showCompletionActions}
-        className={`min-h-px min-w-px ${showCompletionActions ? "" : "invisible"}`}
-      >
-        {canEditDraft && (
-          <LeadCompletionActions
-            {...completionActions}
-            label="Header completion actions"
-          />
-        )}
-      </div>
+      {canEditDraft && (
+        <LeadCompletionActions
+          {...completionActions}
+          label="Header completion actions"
+        />
+      )}
     </DocumentActionGroup>
   );
 }
 
-// Shared completion presentation so sticky handoff cannot fork action state.
 export function LeadFormHeaderActions({
   isSlidesMode,
   ...header

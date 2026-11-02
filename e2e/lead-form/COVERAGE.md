@@ -109,10 +109,10 @@ saves nor retry a failed request repeatedly. Request-payload/count assertions
 and reload persistence remain independent evidence of actual writes.
 `waitDraftSaved` waits for the same settled status without activating Retry.
 
-Completion actions are located by the single Header/Sticky completion group
+Completion actions are located by the single Header completion group
 and its persistent `Submit` button, not by a Save button. The `n to review`
 control is a button. Fill confirmation scrolls `lead-completion-scrollport` to
-the top and observes the header handoff before clicking the Fill trigger;
+the top before clicking the Fill trigger;
 window scroll does not move this internal content area.
 
 Shared `waitScope`, `waitClosed` and `waitButton` use bounded observed AX

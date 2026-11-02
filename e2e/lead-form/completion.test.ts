@@ -315,8 +315,7 @@ async function addMarker(text: string): Promise<void> {
 }
 
 async function openFillConfirmation(): Promise<{ role: string; name: RegExp }> {
-  // The completion handoff changes the split button's horizontal position.
-  // Wait for the header actions to return before measuring the click target.
+  // The Fill trigger lives in the header; scroll it into view first.
   await command([
     "eval",
     `(() => {

@@ -12,7 +12,6 @@ import {
 } from "../../../../report-sections";
 import { LeadCompletionLayout } from "../chrome/lead-completion-layout";
 import { LeadFormDialogs } from "../chrome/lead-form-dialogs";
-import { LeadStickyCompletionActions } from "../chrome/lead-sticky-completion-actions";
 import { EditorAvailabilityNotice } from "./lead-editor-availability-notice";
 import { LeadOverviewDetails } from "./lead-overview-details";
 export { buildStatusOverviewDetailsHref } from "./lead-status-overview-content-helpers";
@@ -178,10 +177,7 @@ function OverviewHeader({
 }: {
   readonly editor: ReadyEditor | null;
   readonly pendingInput: boolean;
-  readonly completion: Pick<
-    CompletionPresentation,
-    "completionActions" | "headerActionsVisible" | "sentinelRef"
-  >;
+  readonly completion: Pick<CompletionPresentation, "completionActions">;
 }) {
   if (!editor) return null;
   return (
@@ -189,35 +185,6 @@ function OverviewHeader({
       editor={editor}
       pendingInput={pendingInput}
       completionActions={completion.completionActions}
-      completionSentinelRef={completion.sentinelRef}
-      showCompletionActions={completion.headerActionsVisible}
-    />
-  );
-}
-
-function OverviewSticky({
-  completion: { showStickyCompletion, completionActions: actions },
-  pending,
-}: {
-  readonly completion: Pick<
-    CompletionPresentation,
-    "showStickyCompletion" | "completionActions"
-  >;
-  readonly pending: boolean;
-}) {
-  if (!showStickyCompletion) return null;
-  // Same guard as the header cluster: no submit with an open update.
-  return (
-    <LeadStickyCompletionActions
-      actions={{
-        ...actions,
-        submitDisabled: actions.submitDisabled || pending,
-        reviewDisabled: pending,
-        saveDisabled: pending,
-        submitDisabledReason: pending
-          ? "Save or cancel the open update before submitting the report."
-          : actions.submitDisabledReason,
-      }}
     />
   );
 }
@@ -258,11 +225,7 @@ export function LeadStatusOverviewContent({
   const detailsHref = useOverviewDetailsHref(readyEditor, targetReportId);
   return (
     <SdlcTooltipProvider>
-      <LeadCompletionLayout
-        actions={
-          <OverviewSticky completion={completion} pending={pendingInput} />
-        }
-      >
+      <LeadCompletionLayout>
         <div
           className="min-w-0 space-y-5"
           data-testid="lead-status-overview-page"

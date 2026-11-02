@@ -5,7 +5,6 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { LeadCompletionLayout } from "./lead-completion-layout";
-import { LeadStickyCompletionActions } from "./lead-sticky-completion-actions";
 
 const appCss = readFileSync(
   resolve(import.meta.dirname, "../../../../../styles/app.css"),
@@ -18,69 +17,29 @@ function cssBlockAt(source: string, marker: string): string {
   return source.slice(start, source.indexOf("}", start) + 1);
 }
 
-describe("completion rail layout", () => {
-  it("renders actions outside the content scrollport", () => {
+describe("completion layout", () => {
+  it("renders only the content scrollport, with no completion rail", () => {
     render(
-      <LeadCompletionLayout
-        actions={<aside aria-label="Completion">Actions</aside>}
-      >
+      <LeadCompletionLayout>
         <button>Report content</button>
       </LeadCompletionLayout>,
     );
     const layout = screen.getByTestId("lead-completion-layout");
     const scrollport = screen.getByTestId("lead-completion-scrollport");
-    expect(layout).toHaveClass("lead-completion-layout");
-    expect(scrollport).toHaveClass("lead-completion-scrollport");
     expect(scrollport).toContainElement(
       screen.getByRole("button", { name: "Report content" }),
     );
-    expect(scrollport).not.toContainElement(screen.getByRole("complementary"));
-    expect(scrollport.nextElementSibling).toBe(
-      screen.getByRole("complementary"),
-    );
-  });
-  // jsdom computes no geometry, so this pins the structure and the stylesheet
-  // contract; the browser proof is e2e/lead-form/rail-clearance.test.ts.
-  it("keeps the rail a layout row after the scrollport, not a painted overlay", () => {
-    render(
-      <LeadCompletionLayout
-        actions={
-          <LeadStickyCompletionActions
-            actions={{
-              autosave: {
-                state: "idle",
-                lastSavedAt: null,
-                dirty: false,
-                currentPayloadMatchesSavedBaseline: true,
-                isInFlight: false,
-                forceSave: () => Promise.resolve(),
-              },
-              onSubmit: () => undefined,
-              onReviewPending: () => undefined,
-              submitDisabled: false,
-            }}
-          />
-        }
-      >
-        <button>Report content</button>
-      </LeadCompletionLayout>,
-    );
-    const rail = screen.getByRole("complementary", {
-      name: "Report completion",
-    });
-    const layout = screen.getByTestId("lead-completion-layout");
-    expect(rail.parentElement).toBe(layout);
-    expect(screen.getByTestId("lead-completion-scrollport").nextSibling).toBe(
-      rail,
-    );
+    expect(layout.children).toHaveLength(1);
+    expect(screen.queryByRole("complementary")).toBeNull();
   });
 
-  it("gives the layout two rows and the remaining viewport height", () => {
+  it("gives the scrollport the one row and the remaining viewport height", () => {
     const layoutRule = cssBlockAt(appCss, ".lead-completion-layout {");
     expect(layoutRule).toContain("display: grid;");
-    expect(layoutRule).toContain("grid-template-rows: minmax(0, 1fr) auto;");
+    expect(layoutRule).toContain("grid-template-rows: minmax(0, 1fr);");
     // A viewport-tall layout under an unpinned nav bar scrolls the document.
     expect(layoutRule).not.toMatch(/(?<![-\w])height:/u);
+    expect(appCss).not.toContain(".lead-completion-layout > aside");
     const fillRule = cssBlockAt(
       appCss,
       ".app-viewport:has(.lead-completion-layout) .lead-completion-layout {",
@@ -95,18 +54,8 @@ describe("completion rail layout", () => {
     ).toContain("height: 100dvh;");
   });
 
-  // Stylesheet contract for the two geometry cases jsdom cannot compute: a
-  // wrapped disabled reason/safe-area growing the rail, and a short viewport
-  // (high zoom or an on-screen keyboard) giving up the constrained scrollport.
-  // e2e/lead-form/rail-clearance.test.ts and the coordinator browser run own
-  // the actual geometry proof at 1280/375 and short heights.
-  it("keeps a tall rail scrollable and falls back to document flow below 32rem", () => {
-    const railRule = cssBlockAt(appCss, ".lead-completion-layout > aside {");
-    expect(railRule).toContain("max-height: 40dvh;");
-    expect(railRule).toContain("overflow-y: auto;");
-
-    // Focus scrolling stays below the sticky period toolbar and one rem clear
-    // of the rail; callers can override the toolbar offset variable.
+  it("keeps focus clear of the period toolbar and falls back to document flow below 32rem", () => {
+    // Callers can override the toolbar offset variable.
     expect(cssBlockAt(appCss, ".lead-completion-scrollport {")).toContain(
       "scroll-padding-block: var(--sticky-toolbar-offset, 5rem) 1rem;",
     );

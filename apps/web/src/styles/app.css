@@ -10,13 +10,8 @@
      including when the reason wraps or the safe-area inset grows. */
   .lead-completion-layout {
     display: grid;
-    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-rows: minmax(0, 1fr);
     min-height: 0;
-  }
-
-  .lead-completion-layout > aside {
-    max-height: 40dvh;
-    overflow-y: auto;
   }
 
   /* Containing block for the absolutely positioned sr-only labels, so they

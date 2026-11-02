@@ -112,10 +112,6 @@ function LoadedChrome({
         writeActions={writeActions}
         periodLabel={periodLabel}
         completionActions={completion.completionActions}
-        completionSentinelRef={completion.sentinelRef}
-        showCompletionActions={
-          props.isSlidesMode || completion.headerActionsVisible
-        }
         isSlidesMode={props.isSlidesMode}
         isForeignSlidesDeck={data.isForeignSlidesDeck}
         isSubmitted={props.isSubmitted}
@@ -222,7 +218,6 @@ export function LeadFormLoaded(props: LeadFormLoadedProps) {
     readiness: props.submitReadiness,
     isSlidesMode: props.isSlidesMode,
     isReadOnly: props.viewModel.isReadOnly,
-    canHandOffActions: false,
   });
   const byPeriod = props.data.byPeriodData;
   if (!byPeriod) return null;
