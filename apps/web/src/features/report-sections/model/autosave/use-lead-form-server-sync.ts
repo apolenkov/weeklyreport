@@ -45,6 +45,7 @@ function useSaveEchoLedger(): SaveEchoLedger {
   const echoesRef = useRef<readonly PendingSaveEcho[]>([]);
   const lastKeyRef = useRef<string | null>(null);
   const lastRevisionRef = useRef<string | null>(null);
+  const resyncRef = useRef(false);
   return useMemo(
     () => ({
       lastKey: () => lastKeyRef.current,
@@ -63,6 +64,14 @@ function useSaveEchoLedger(): SaveEchoLedger {
         lastKeyRef.current = serverDraftKey;
         lastRevisionRef.current = revision;
         echoesRef.current = withoutEcho(echoesRef.current, serverDraftKey);
+      },
+      requireResync: () => {
+        resyncRef.current = true;
+      },
+      takeResync: () => {
+        const required = resyncRef.current;
+        resyncRef.current = false;
+        return required;
       },
     }),
     [],
@@ -201,6 +210,11 @@ export function useDraftServerSync({
     receiptScope,
     stageMemory,
   });
+  // The refused save's refetch must replace the draft on delivery, not compare.
+  const handleSaveConflict = useCallback(() => {
+    ledger.requireResync();
+    handleConflict();
+  }, [handleConflict, ledger]);
   const autosave = useLeadFormAutosave({
     writePort,
     reportSectionId,
@@ -210,7 +224,7 @@ export function useDraftServerSync({
     version,
     onVersionChange: setVersionSafe,
     onSaved,
-    onConflict: handleConflict,
+    onConflict: handleSaveConflict,
   });
   useServerSectionReseed({
     serverSection,
