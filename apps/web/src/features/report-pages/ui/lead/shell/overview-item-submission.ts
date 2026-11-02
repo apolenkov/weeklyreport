@@ -1,12 +1,16 @@
-import type { SetStateAction } from "react";
+import { type SetStateAction, useEffect } from "react";
 
 import {
   createOverviewComposerState,
   type OverviewItemDialogState,
 } from "./lead-status-overview-item-editor";
-import { overviewSubmissionIsAcknowledged } from "./overview-editor-recovery";
+import {
+  type AcknowledgedOverviewItem,
+  overviewAcknowledgedItem,
+} from "./overview-editor-recovery";
 import { abandonedSaveRestorePatch } from "./overview-save-restore";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
+import type { OverviewCreatedFocus } from "./use-overview-focus-return";
 
 type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
 type SetDialog = (
@@ -72,16 +76,53 @@ function submittedScopeMatches(
   );
 }
 
+interface DriveRefs {
+  readonly startedAttempt: { current: number | null };
+  readonly createdFocus: { current: OverviewCreatedFocus | null };
+}
+
+// The save this effect started must still be the open attempt, with no failed
+// write and no recovery in force, before its confirmed receipt may close.
+function acknowledgedAttempt(
+  editor: ReadyEditor,
+  dialog: OverviewItemDialogState,
+  startedAttempt: { current: number | null },
+  recoveryReason: string | null,
+): AcknowledgedOverviewItem | undefined {
+  const attempt = dialog.submission?.attempt;
+  if (
+    attempt === undefined ||
+    startedAttempt.current !== attempt ||
+    editor.draft.autosave.state === "error" ||
+    recoveryReason
+  )
+    return undefined;
+  return overviewAcknowledgedItem(editor, dialog);
+}
+
+// Only a plain create closes onto its new item. Add-another keeps the composer
+// open, and cancel or edit exits never reach this function with a target.
+function rememberCreatedFocus(
+  createdFocus: { current: OverviewCreatedFocus | null },
+  dialog: OverviewItemDialogState,
+  acknowledged: AcknowledgedOverviewItem,
+): void {
+  if (dialog.mode !== "create" || dialog.submission?.addAnother) return;
+  createdFocus.current = {
+    identity: acknowledged.stableId,
+    week: acknowledged.week,
+  };
+}
+
 // Plain function so the mutable attempt ref can be written outside a hook body.
-export function driveOverviewSubmission({
+function driveOverviewSubmission({
   editor,
   dialog,
   recoveryReason,
   setDialog,
   startedAttempt,
-}: SubmissionContext & {
-  readonly startedAttempt: { current: number | null };
-}): void {
+  createdFocus,
+}: SubmissionContext & DriveRefs): void {
   const submission = dialog?.submission;
   if (!editor || !dialog || !submission) return;
   if (!submittedScopeMatches(editor, dialog)) return;
@@ -125,13 +166,15 @@ export function driveOverviewSubmission({
         void editor.draft.savePersisted(submission.token);
     });
   }
-  const acknowledged =
-    startedAttempt.current === submission.attempt &&
-    autosave.state !== "error" &&
-    !recoveryReason &&
-    overviewSubmissionIsAcknowledged(editor, dialog);
+  const acknowledged = acknowledgedAttempt(
+    editor,
+    dialog,
+    startedAttempt,
+    recoveryReason,
+  );
   if (acknowledged) {
     startedAttempt.current = null;
+    rememberCreatedFocus(createdFocus, dialog, acknowledged);
     setDialog((current) => {
       if (current?.submission?.attempt !== submission.attempt) return current;
       if (submission.addAnother && current.mode === "create") {
@@ -145,6 +188,26 @@ export function driveOverviewSubmission({
       return null;
     });
   }
+}
+
+export function useOverviewSubmissionDriver({
+  editor,
+  dialog,
+  recoveryReason,
+  setDialog,
+  startedAttempt,
+  createdFocus,
+}: SubmissionContext & DriveRefs): void {
+  useEffect(() => {
+    driveOverviewSubmission({
+      editor,
+      dialog,
+      recoveryReason,
+      setDialog,
+      startedAttempt,
+      createdFocus,
+    });
+  }, [dialog, editor, recoveryReason, setDialog, startedAttempt, createdFocus]);
 }
 
 export function overviewSaveFailure(

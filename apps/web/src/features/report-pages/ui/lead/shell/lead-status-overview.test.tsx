@@ -63,6 +63,7 @@ function Wrapper({
   coveringRisk = false,
   predecessorItem,
   reviewerFeedback = false,
+  extraCurrentRow = false,
 }: {
   readonly children: ReactNode;
   readonly reportId?: string;
@@ -93,6 +94,7 @@ function Wrapper({
   readonly predecessorItem?:
     ReportSectionReadModel["items"][number] | undefined;
   readonly reviewerFeedback?: boolean;
+  readonly extraCurrentRow?: boolean;
 }) {
   const section = makeReportSectionFixture({
     reportId,
@@ -204,6 +206,24 @@ function Wrapper({
         nextStepText: legacyNextText ?? null,
         stageNames: ["Development"],
       },
+      ...(extraCurrentRow
+        ? [
+            {
+              id: "a0000000-0000-4000-8000-000000000014",
+              stableId: "a0000000-0000-4000-8000-000000000015",
+              projectId: PROJECT_ID,
+              activityId: null,
+              type: "current" as const,
+              text: "Second current work",
+              tag: "delivery",
+              workflowStatus: "in_progress" as const,
+              pausedReason: null,
+              carriedOver: false,
+              nextStepText: null,
+              stageNames: ["Development"],
+            },
+          ]
+        : []),
       {
         id: "a0000000-0000-4000-8000-000000000012",
         stableId: "a0000000-0000-4000-8000-000000000013",
@@ -1692,11 +1712,14 @@ describe("LeadForm Overview", () => {
     expect(
       within(screen.getByTestId("status-overview")).getByRole("status"),
     ).toHaveTextContent(/Draft changes pending|Saving draft|Draft saved/);
-    expect(
-      screen.getByRole("button", {
-        name: "Add item to Payments",
-      }),
-    ).toHaveFocus();
+    // The saved row duplicates the existing row's text, so only the server
+    // stableId separates the new item's control from the existing one.
+    await pollUntil(() => {
+      const active = document.activeElement;
+      expect(
+        active instanceof HTMLElement ? active.dataset.overviewFocus : null,
+      ).toMatch(new RegExp(`^[a-z-]+:current:${serverStableId}$`));
+    });
   });
 
   it("Save and add another clears the composer fields and returns focus to the description", async () => {
@@ -1914,7 +1937,125 @@ describe("LeadForm Overview", () => {
       const active = document.activeElement;
       expect(
         active instanceof HTMLElement ? active.dataset.overviewFocus : null,
-      ).toMatch(new RegExp(`^add:product:${PROJECT_ID}:row:.*:cell:next$`));
+      ).toMatch(new RegExp(`^[a-z-]+:next:${serverStableId}$`));
+    });
+  });
+
+  it("focuses the new item in a unit with several Current rows and keeps it inside that unit", async () => {
+    const user = userEvent.setup();
+    const serverItemId = "a0000000-0000-4000-8000-000000000050";
+    const serverStableId = "a0000000-0000-4000-8000-000000000051";
+    const saveDraft = vi.fn(
+      (input: unknown, current: ReportSectionReadModel) => {
+        const draft = input as {
+          readonly version: number;
+          readonly items: ReportSectionReadModel["items"];
+        };
+        return Promise.resolve({
+          ...current,
+          version: draft.version + 1,
+          items: draft.items.map((item) =>
+            item.stableId === undefined
+              ? { ...item, id: serverItemId, stableId: serverStableId }
+              : item,
+          ),
+        });
+      },
+    );
+    render(
+      <Wrapper saveDraft={saveDraft} extraCurrentRow>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "Add item to Payments" }),
+    );
+    await user.type(
+      screen.getByLabelText(/Description \*/i),
+      "Fresh current item",
+    );
+    await user.click(screen.getByRole("button", { name: "Save update" }));
+
+    await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
+    await pollUntil(() =>
+      expect(
+        screen.queryByRole("form", {
+          name: "Current week update for Payments",
+        }),
+      ).not.toBeInTheDocument(),
+    );
+    await pollUntil(() => {
+      const active = document.activeElement;
+      expect(
+        active instanceof HTMLElement ? active.dataset.overviewFocus : null,
+      ).toMatch(new RegExp(`^[a-z-]+:current:${serverStableId}$`));
+    });
+    const unit = screen.getByRole("article", { name: "Product Payments" });
+    expect(unit).toContainElement(document.activeElement as HTMLElement);
+  });
+
+  it("focuses the new item after a retried create save that failed once", async () => {
+    const user = userEvent.setup();
+    const serverItemId = "a0000000-0000-4000-8000-000000000060";
+    const serverStableId = "a0000000-0000-4000-8000-000000000061";
+    const saveDraft = vi
+      .fn()
+      .mockImplementationOnce(() =>
+        Promise.reject(new Error("network unavailable")),
+      )
+      .mockImplementation((input: unknown, current: ReportSectionReadModel) => {
+        const draft = input as {
+          readonly version: number;
+          readonly items: ReportSectionReadModel["items"];
+        };
+        return Promise.resolve({
+          ...current,
+          version: draft.version + 1,
+          items: draft.items.map((item) =>
+            item.stableId === undefined
+              ? { ...item, id: serverItemId, stableId: serverStableId }
+              : item,
+          ),
+        });
+      });
+    render(
+      <Wrapper saveDraft={saveDraft} extraCurrentRow>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "Add item to Payments" }),
+    );
+    await user.type(
+      screen.getByLabelText(/Description \*/i),
+      "Retried current item",
+    );
+    await user.click(screen.getByRole("button", { name: "Save update" }));
+    expect(
+      await screen.findByText(
+        "Save failed. Your update is still here; try saving again.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("form", { name: "Current week update for Payments" }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Save update" }));
+
+    await pollUntil(() =>
+      expect(
+        screen.queryByRole("form", {
+          name: "Current week update for Payments",
+        }),
+      ).not.toBeInTheDocument(),
+    );
+    await pollUntil(() => {
+      const active = document.activeElement;
+      expect(
+        active instanceof HTMLElement ? active.dataset.overviewFocus : null,
+      ).toMatch(new RegExp(`^[a-z-]+:current:${serverStableId}$`));
     });
   });
 

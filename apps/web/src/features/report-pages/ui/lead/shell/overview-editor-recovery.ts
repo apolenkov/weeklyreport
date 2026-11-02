@@ -100,10 +100,18 @@ function projectedItems(editor: ReadyEditor, dialog: OverviewItemDialogState) {
     : editor.view.viewModel.ownNextWeekItems;
 }
 
+// The confirmed identity of a create save, read from the persisted receipt.
+// The dialog carries no stableId for a plain create, so the receipt is the
+// only source for the item's own control.
+export interface AcknowledgedOverviewItem {
+  readonly stableId: string;
+  readonly week: "current" | "next";
+}
+
 function findAcknowledgedItem(
   editor: ReadyEditor,
   dialog: OverviewItemDialogState,
-): KanbanItem | undefined {
+): AcknowledgedOverviewItem | undefined {
   const submission = dialog.submission;
   const receipt = editor.draft.lastSaveReceipt;
   if (
@@ -135,7 +143,7 @@ function findAcknowledgedItem(
     dialog.week,
   ).find((row) => row.id === identity.serverId);
   return confirmed && overviewItemFieldsUnchanged(submission.item, confirmed)
-    ? confirmed
+    ? { stableId, week: dialog.week }
     : undefined;
 }
 
@@ -161,14 +169,15 @@ export function overviewSubmittedItemIsCurrent(
     : false;
 }
 
-export function overviewSubmissionIsAcknowledged(
+export function overviewAcknowledgedItem(
   editor: ReadyEditor,
   dialog: OverviewItemDialogState,
-): boolean {
-  return (
-    findAcknowledgedItem(editor, dialog) !== undefined &&
+): AcknowledgedOverviewItem | undefined {
+  const acknowledged = findAcknowledgedItem(editor, dialog);
+  return acknowledged !== undefined &&
     overviewSubmittedItemIsCurrent(editor, dialog)
-  );
+    ? acknowledged
+    : undefined;
 }
 
 export function overviewItemFieldsUnchanged(
