@@ -6,7 +6,7 @@ import { buildStatusOverviewColumns } from "./status-overview-items";
 
 const PROJECT = "20000000-0000-4000-8000-000000000001";
 
-function item(id: string, stableId: string | null, text: string) {
+function item(id: string, stableId: string | undefined, text: string) {
   return {
     id,
     stableId,
@@ -14,6 +14,8 @@ function item(id: string, stableId: string | null, text: string) {
     type: "current" as const,
     text,
     workflowStatus: "in_progress" as const,
+    carriedOver: false,
+    tag: "delivery",
   };
 }
 
@@ -55,7 +57,7 @@ describe("overview item order", () => {
           "a0000000-0000-4000-8000-000000000001",
           "First",
         ),
-        item("20000000-0000-4000-8000-0000000000a3", null, "Unsaved"),
+        item("20000000-0000-4000-8000-0000000000a3", undefined, "Unsaved"),
         item(
           "20000000-0000-4000-8000-0000000000a4",
           "b0000000-0000-4000-8000-000000000002",
