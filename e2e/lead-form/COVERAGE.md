@@ -25,7 +25,7 @@ lifecycle scenario.
 
 The inventory has **72 rows: 63 mapped capability groups and 9 explicit
 source-only/execution dispositions**, reconciled against the actual actions,
-assertions and source rather than titles alone. The suite authors **124
+assertions and source rather than titles alone. The suite authors **125
 browser cases**. Conditional subcases without a written test are **NOT VERIFIED
 (test not written/no valid fixture)** below; an absent or unreachable product
 control is **N/A** with its source rationale.
@@ -33,11 +33,11 @@ control is **N/A** with its source rationale.
 | Browser test file    | Authored cases |
 | -------------------- | -------------: |
 | `navigation.test.ts` |             14 |
-| `overview.test.ts`   |             43 |
+| `overview.test.ts`   |             44 |
 | `sections.test.ts`   |             23 |
 | `lifecycle.test.ts`  |             18 |
 | `completion.test.ts` |             26 |
-| Total                |        **124** |
+| Total                |        **125** |
 
 The browser-free safety/helper tests in `e2e/setup/*.test.ts` are a separate
 denominator run by `pnpm test:e2e-setup` (part of `pnpm test`); they do not
@@ -159,6 +159,29 @@ before canonical save-schema checks; no browser adapter is added.
 | N11 | If the editor's required reads fail while the independent Overview read succeeds, the timeline remains usable and read-only; Retry editing retries only failed required reads and restores canonical authoring after actual recovery. Retrying editing disables duplicate retry.        | `lead/shell/lead-editor-availability-notice.tsx`, `lead/shell/use-lead-form-required-reads.ts`, `lead/shell/lead-status-overview-content.tsx`; alert `Editing is temporarily unavailable. Overview remains read-only.`, buttons `Retry editing` / `Retrying editing…`.                                                      | `navigation.test.ts` — `Overview editing read failure preserves data and recovers through Retry editing`: real saved-risk invalidation leaves the independent timeline visible, removes write actions; offline retry becomes disabled Retrying editing, real recovery restores authoring and persisted risk.                                                                                                                                     |
 
 ## Overview: each visible interaction
+
+The flat-card editor contract supersedes the legacy Update progress/text-click
+descriptions in O01/O05 below: `the item editor saves current and next week
+through the canonical form` opens `Edit details: <item>` in the modal `Edit item`
+dialog. Text clicks open a local inline text editor, not that canonical form.
+`Add item to <unit>` is the sole creation entry and opens the `Add item` dialog.
+
+For O03, `the item dialog preserves pending input and makes health inspection
+modal` checks retained input, an aria-hidden/inert health background, inaccessible
+health actions, and Cancel + Discard followed by unchanged data after reload.
+`health inspection without an item dialog restores focus without writes` checks
+the stage/risk details and Close/Escape focus restoration separately. Health
+inspection while the modal item form is open is intentionally unavailable.
+
+For O07, ordinary direct moves show `Moved to next week` / `Moved to this week`
+without an editor, await draft autosave and retain their placement after reload.
+The saved-next-step fixture has distinct behavior: promoting its linked Next
+projection to Current still requires the canonical form and retains prior-result
+audit; moving Current toward its existing Next plan shows `Already planned for
+next week` without a form, preserves both texts/statuses and creates no audit.
+Both branches preserve the historical report and one Next commitment. The
+parameterized test `moving the explicit commitment to <week> retains its previous
+result` covers these exceptions rather than an ordinary placement move.
 
 | ID  | Capability and observable assertion                                                                                                                                                                                                                                                                               | Source and accessible control                                                                                                                                                                                                                                                                                                                                                              | Test mapping and checked assertions                                                                                                                                                                                                                                                                                                                                                                                                |
 | --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

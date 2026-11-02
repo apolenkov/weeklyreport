@@ -159,21 +159,6 @@ function statusName(text: string): RegExp {
   return new RegExp(`^Status of ${label}: `);
 }
 
-// Row actions stay clipped until the item is hovered or holds focus.
-const ACTIONS_REVEALED = `(() => { const zone = document.activeElement?.closest('[data-overview-item-actions]'); return zone !== null && zone !== undefined && zone.getBoundingClientRect().width > 0 && zone.getAnimations().length === 0; })()`;
-
-// Row actions are revealed on hover or focus; focus first so the click lands.
-async function clickRevealed(
-  role: string,
-  name: string | RegExp,
-  session?: string,
-): Promise<void> {
-  const ref = oneRef(await snapshot(session), role, name);
-  await command(["focus", ref], session);
-  await command(["wait", "--fn", ACTIONS_REVEALED], session);
-  await command(["click", ref], session);
-}
-
 /** Opens the canonical item editor from the row's direct Edit details action. */
 async function openItemEditor(text: string, session?: string): Promise<void> {
   const label = shortItemLabel(text);
