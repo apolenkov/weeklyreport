@@ -18,7 +18,7 @@ import { LeadForm } from "./lead-form";
 import { makeLeadFormSectionFixture } from "./lead-form-test-fixtures";
 
 vi.mock("sonner", () => ({
-  toast: { error: vi.fn(), success: vi.fn() },
+  toast: { error: vi.fn(), success: vi.fn(), dismiss: vi.fn() },
 }));
 
 vi.mock("../../../../../shared/lib/query/cache-keys", async (importActual) => ({
