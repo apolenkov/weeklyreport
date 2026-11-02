@@ -21,7 +21,10 @@ import { moveWithoutEditor, type WhenIdle } from "./overview-in-place-move";
 import { overviewMoveEditorItem } from "./overview-item-save";
 import { useEditorSettle } from "./use-editor-settle";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
-import { useOverviewStatusSave } from "./use-overview-status-save";
+import {
+  useOverviewStagesSave,
+  useOverviewStatusSave,
+} from "./use-overview-status-save";
 
 type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
 
@@ -139,6 +142,22 @@ function moveEditorOptions(
   };
 }
 
+function useSetItemStages(
+  editor: ReadyEditor | null,
+  isReadOnly: boolean,
+  dialog: OverviewItemDialogState | null,
+) {
+  const saveStages = useOverviewStagesSave(editor);
+  return (
+    item: StatusOverviewItem,
+    stageNames: readonly string[],
+  ): Promise<string | null> => {
+    if (!editor || isReadOnly || dialog || !item.recordId || !item.editTarget)
+      return Promise.resolve("This report is not editable right now.");
+    return saveStages(item, stageNames);
+  };
+}
+
 export function useOverviewEditOpeners({
   editor,
   dialog,
@@ -150,6 +169,7 @@ export function useOverviewEditOpeners({
 }: OpenersArgs) {
   const { whenIdle } = useEditorSettle(editor);
   const saveStatus = useOverviewStatusSave(editor);
+  const setItemStages = useSetItemStages(editor, isReadOnly, dialog);
   const openEditItem = (
     target: StatusOverviewEditTarget,
     week: "current" | "next",
@@ -214,7 +234,14 @@ export function useOverviewEditOpeners({
     if (!editor || isReadOnly || dialog || !target) return;
     applyItemTextEdit(whenIdle, target, text);
   };
-  return { editItem, editItemText, moveItem, confirmItem, setItemStatus };
+  return {
+    editItem,
+    editItemText,
+    moveItem,
+    confirmItem,
+    setItemStatus,
+    setItemStages,
+  };
 }
 
 export function useOverviewCreateOpeners({

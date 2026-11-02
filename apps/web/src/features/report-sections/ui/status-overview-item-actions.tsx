@@ -3,6 +3,7 @@ import type {
   StatusOverviewItem,
 } from "../model/status-overview";
 import type {
+  SetStagesHandler,
   SetStatusHandler,
   VerdictHandler,
 } from "./status-overview-item-handlers";
@@ -24,6 +25,8 @@ export interface ActionProps {
     | undefined;
   readonly onConfirmItem?: ((item: StatusOverviewItem) => void) | undefined;
   readonly onSetStatus?: SetStatusHandler | undefined;
+  readonly onSetStages?: SetStagesHandler | undefined;
+  readonly ownedStages?: readonly string[] | undefined;
   readonly onResolvePlan?:
     ((item: StatusOverviewItem, focusKey?: string) => void) | undefined;
   readonly onRestorePlan?:

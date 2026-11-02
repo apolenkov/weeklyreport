@@ -209,24 +209,24 @@ export function StatusOverview(props: StatusOverviewProps) {
           No reporting units are available for this period.
         </div>
       ) : (
-          <div className="min-w-0 overflow-hidden rounded-[var(--radius)] border-y border-[var(--color-border-subtle)] bg-[var(--color-card)]">
-            {UNIT_GROUPS.map((group) => (
-              <UnitGroup
-                key={group.kind}
-                group={group}
-                idPrefix={idPrefix}
-                overview={props}
-                lineage={lineage}
-                inspectionKey={inspection?.key}
-                healthPanelId={healthPanelId}
-                onInspect={(key, opener) => setInspection({ key, opener })}
-                onCloseHealth={closeInspection}
-                expandedKeys={expandedKeys}
-                onToggle={toggle}
-                onAddItem={addItem}
-              />
-            ))}
-          </div>
+        <div className="min-w-0 overflow-hidden rounded-[var(--radius)] border-y border-[var(--color-border-subtle)] bg-[var(--color-card)]">
+          {UNIT_GROUPS.map((group) => (
+            <UnitGroup
+              key={group.kind}
+              group={group}
+              idPrefix={idPrefix}
+              overview={props}
+              lineage={lineage}
+              inspectionKey={inspection?.key}
+              healthPanelId={healthPanelId}
+              onInspect={(key, opener) => setInspection({ key, opener })}
+              onCloseHealth={closeInspection}
+              expandedKeys={expandedKeys}
+              onToggle={toggle}
+              onAddItem={addItem}
+            />
+          ))}
+        </div>
       )}
     </section>
   );

@@ -385,9 +385,7 @@ describe("StatusOverviewItemPreview revealed actions", () => {
     );
 
     await user.click(screen.getByRole("button", { name: /^Status of/ }));
-    expect(
-      screen.queryByRole("menuitem", { name: /Resolve plan/ }),
-    ).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: /Resolve plan/ })).toBeNull();
   });
 
   it("keeps a completed item editable but not movable and not clickable by text", () => {

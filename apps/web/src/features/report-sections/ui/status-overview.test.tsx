@@ -1069,12 +1069,7 @@ describe("StatusOverview", () => {
     const unit = model.units[0];
     if (!unit) throw new Error("Expected one overview unit");
     const onAddItem = vi.fn();
-    render(
-      <StatusOverview
-        model={model}
-        onAddItem={onAddItem}
-      />,
-    );
+    render(<StatusOverview model={model} onAddItem={onAddItem} />);
     expect(screen.queryByTestId("report-unit-footer")).not.toBeInTheDocument();
     expect(screen.queryByRole("form")).not.toBeInTheDocument();
     expect(
@@ -1487,9 +1482,7 @@ describe("StatusOverview", () => {
     expect(add).toHaveTextContent("Add item");
     expect(add).not.toHaveClass("opacity-0");
     expect(add).toHaveClass("min-h-[var(--touch-target-min)]");
-    expect(
-      article.querySelector("[data-overview-mobile-create]"),
-    ).toBeNull();
+    expect(article.querySelector("[data-overview-mobile-create]")).toBeNull();
     expect(
       document.querySelectorAll("[data-overview-create-origin]"),
     ).toHaveLength(0);

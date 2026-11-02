@@ -4,7 +4,10 @@ import { describe, expect, it, vi } from "vitest";
 import { makeReportSectionFixture } from "../../../../../test-utils/report-section-fixtures";
 import type { StatusOverviewItem } from "../../../../report-sections";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
-import { useOverviewStatusSave } from "./use-overview-status-save";
+import {
+  useOverviewStagesSave,
+  useOverviewStatusSave,
+} from "./use-overview-status-save";
 
 type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
 const stableId = "80000000-0000-4000-8000-000000000003";
@@ -102,5 +105,29 @@ describe("inline status save guards", () => {
       hook.result.current(item, "paused", { pausedReason: "Waiting" }),
     ).resolves.toMatch(/no longer available/);
     expect(editor.draft.apply).not.toHaveBeenCalled();
+  });
+});
+
+it("patches only stages on the latest draft item", async () => {
+  const { editor } = setup();
+  const section = {
+    ...editor.draft.section,
+    items: [{ ...raw, id: "reminted", projectId: "product" }],
+    projects: [
+      {
+        projectId: "product",
+        ownedStages: [{ stageName: "Development" }, { stageName: "Testing" }],
+      },
+    ],
+  } as unknown as ReadyEditor["draft"]["section"];
+  const current = { ...editor, draft: { ...editor.draft, section } };
+  const hook = renderHook(() => useOverviewStagesSave(current));
+  await expect(
+    hook.result.current(item, ["Development", "Testing"]),
+  ).resolves.toBeNull();
+  expect(editor.draft.apply).toHaveBeenCalledWith({
+    kind: "item-patch",
+    itemId: "reminted",
+    patch: { stageNames: ["Development", "Testing"] },
   });
 });
