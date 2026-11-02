@@ -120,7 +120,7 @@ describe("useDraftServerSync — stale-tab conflict with unchanged content", () 
     expect(handleConflict).toHaveBeenCalledTimes(1);
   });
 
-  it("reverts to a newer server copy that arrived while the refused save was in flight", async () => {
+  it("reverts to a newer server copy that arrived before the refused save answered", async () => {
     const { calls, useTab, wrapper } = setup({ refetchOnConflict: false });
     const { result } = renderHook(() => useTab(), { wrapper });
 

@@ -73,8 +73,8 @@ Reconciled 2026-11-02 against main 9d8051cc0 (implementation commits
       a snapshot of the moved row and Undo compares it without the row id
       (`overview-in-place-move.test.ts`, d7efe11b3).
 - [x] 15. A stale autosave (409) reverts the draft to the last server section
-      at once, including a newer copy that arrived while the save was in
-      flight, and the conflict refetch then reseeds a clean draft
+      at once, including a newer copy delivered before the refused save
+      answered, and the conflict refetch then reseeds a clean draft
       (`useAutosaveWithStaleRevert`,
       `use-lead-form-server-sync.conflict.test.tsx`). Submit and outcome 409
       paths keep the existing conflict flow.
