@@ -77,3 +77,8 @@ Reconciled 2026-11-02 against main 9d8051cc0 (implementation commits
 - [x] 16. Touch drags arm only through the long-press sensor on the drag
       handle; mouse and pen keep the distance threshold
       (`status-overview-dnd.test.tsx`, bc060bd6f).
+- [x] 17. Second review round: Undo compares only the author-edited fields of
+      the draft save payload, so a save echo that adds comments or outcome
+      history to a new row no longer refuses it; the 409 resync flag waits
+      for a revision newer than the one held at the conflict, so a re-render
+      before the refetch cannot consume it.

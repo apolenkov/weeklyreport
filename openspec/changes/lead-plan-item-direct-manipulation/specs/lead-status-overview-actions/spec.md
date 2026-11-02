@@ -199,7 +199,7 @@ When the same editable draft is open in two tabs, the server draft save MUST be 
 
 ### Requirement: Overview item actions MUST be operable on touch devices
 
-On a touch device, Report Overview item actions MUST NOT depend on pointer hover: the icon cluster MUST be visible without hover and operable by tap, and tapping the item's text MUST open the inline editor. A drag on touch MUST start with a long press on the card so scrolling and tapping stay unambiguous; a released touch drag MUST complete or cancel the move like a pointer drag.
+On a touch device, Report Overview item actions MUST NOT depend on pointer hover: the icon cluster MUST be visible without hover and operable by tap, and tapping the item's text MUST open the inline editor. A drag on touch MUST start with a long press on the card's drag handle so scrolling and tapping stay unambiguous; a released touch drag MUST complete or cancel the move like a pointer drag.
 
 #### Scenario: icons are visible and tappable without hover
 

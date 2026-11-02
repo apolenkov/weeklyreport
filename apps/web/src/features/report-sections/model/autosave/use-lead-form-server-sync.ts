@@ -45,7 +45,10 @@ function useSaveEchoLedger(): SaveEchoLedger {
   const echoesRef = useRef<readonly PendingSaveEcho[]>([]);
   const lastKeyRef = useRef<string | null>(null);
   const lastRevisionRef = useRef<string | null>(null);
-  const resyncRef = useRef(false);
+  // The revision this tab held when its save was refused, or null: a delivery
+  // of that same revision is a re-render, not the conflict refetch.
+  const resyncFromRef = useRef<string | null>(null);
+  const resyncPendingRef = useRef(false);
   return useMemo(
     () => ({
       lastKey: () => lastKeyRef.current,
@@ -66,12 +69,16 @@ function useSaveEchoLedger(): SaveEchoLedger {
         echoesRef.current = withoutEcho(echoesRef.current, serverDraftKey);
       },
       requireResync: () => {
-        resyncRef.current = true;
+        resyncPendingRef.current = true;
+        resyncFromRef.current = lastRevisionRef.current;
       },
-      takeResync: () => {
-        const required = resyncRef.current;
-        resyncRef.current = false;
-        return required;
+      takeResync: (revision) => {
+        if (!resyncPendingRef.current || revision === resyncFromRef.current) {
+          return false;
+        }
+        resyncPendingRef.current = false;
+        resyncFromRef.current = null;
+        return true;
       },
     }),
     [],

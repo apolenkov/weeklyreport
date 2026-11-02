@@ -9,6 +9,7 @@ import {
   buildMoveItemPatch,
   buildNextWeekPlanAcknowledgementPatch,
   isSavedNextWeekPlan,
+  sectionToDraftPayload,
 } from "../../../../report-sections";
 import { NEXT_WEEK_PLAN_CONFIRMED_MESSAGE } from "../chrome/lead-form-draft-actions";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
@@ -65,26 +66,25 @@ interface MoveWithoutEditorArgs {
   readonly target: "current" | "next";
 }
 
-// The occurrence's saved fields as the draft holds them, without its row id: a
-// draft save may re-issue the id. Absent and null fields compare equal.
-function canonicalFields(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalFields);
-  if (value === null || typeof value !== "object") return value;
-  return Object.fromEntries(
-    Object.entries(value)
-      .filter(([, field]) => field != null)
-      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
-      .map(([key, field]) => [key, canonicalFields(field)]),
+// What an author edits and the draft save writes, in the save payload's shape.
+// The row id and stableId are left out (a save may re-issue the id, and the row
+// was already matched by identity), as are server-only fields such as comments
+// and outcome history that the save echo fills in for a new row.
+function savedFields(section: ReportSectionReadModel, row: ItemRow): string {
+  const [payload] = sectionToDraftPayload({ ...section, items: [row] }).items;
+  return JSON.stringify(
+    Object.entries(payload ?? {}).filter(
+      ([key]) => key !== "id" && key !== "stableId",
+    ),
   );
 }
 
-function sameOccurrence(a: ItemRow, b: ItemRow): boolean {
-  const withoutId = (row: ItemRow) =>
-    Object.fromEntries(Object.entries(row).filter(([key]) => key !== "id"));
-  return (
-    JSON.stringify(canonicalFields(withoutId(a))) ===
-    JSON.stringify(canonicalFields(withoutId(b)))
-  );
+function sameOccurrence(
+  section: ReportSectionReadModel,
+  a: ItemRow,
+  b: ItemRow,
+): boolean {
+  return savedFields(section, a) === savedFields(section, b);
 }
 
 // The row a patch leaves in the draft, computed from the section the patch was
@@ -141,7 +141,7 @@ function undoWeekMove({
       currentId === undefined ||
       current === undefined ||
       movedRow === null ||
-      !sameOccurrence(current, movedRow)
+      !sameOccurrence(draftBefore, current, movedRow)
         ? null
         : buildMoveItemPatch(draftBefore, currentId, backTo);
     if (patch === null) {
