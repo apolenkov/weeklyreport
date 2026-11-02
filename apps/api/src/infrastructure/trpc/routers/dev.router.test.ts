@@ -123,7 +123,7 @@ afterEach(() => {
 
 describe("dev.wipeAndReseed — destructive guard runs before the first spawn", () => {
   it("refuses a non-disposable target before any child process", async () => {
-    vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
+    vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "");
     const caller = buildCaller(true, NON_DISPOSABLE_URL);
 
     await expect(
@@ -132,18 +132,27 @@ describe("dev.wipeAndReseed — destructive guard runs before the first spawn", 
     expect(execFileMock).not.toHaveBeenCalled();
   });
 
-  it("refuses a run without the operator's per-run consent", async () => {
+  it("treats the dev action as the per-run consent without changing process env", async () => {
     vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "");
     const caller = buildCaller(true);
 
     await expect(
       caller.wipeAndReseed({ variant: "minimal" }),
-    ).rejects.toMatchObject({ code: "INTERNAL_SERVER_ERROR" });
-    expect(execFileMock).not.toHaveBeenCalled();
+    ).resolves.toMatchObject({ ok: true, variant: "minimal" });
+
+    expect(execFileMock).toHaveBeenCalledTimes(2);
+    for (const call of execFileMock.mock.calls) {
+      const options = call[2];
+      if (options === undefined) throw new TypeError("expected spawn options");
+      expect(options.env?.PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION).toBe(
+        "давай",
+      );
+    }
+    expect(process.env.PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION).toBe("");
   });
 
-  it("reaches the reset spawn for a consented disposable E2E target", async () => {
-    vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "давай");
+  it("reaches the reset spawn for a disposable E2E target", async () => {
+    vi.stubEnv("PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION", "");
     const caller = buildCaller(true);
 
     await expect(
@@ -158,10 +167,13 @@ describe("dev.wipeAndReseed — destructive guard runs before the first spawn", 
       "reset",
       "--force",
     ]);
-    // Consent is inherited from the operator environment, never injected.
+    // The child inherits the operator environment plus the click's consent.
     const options = execFileMock.mock.calls[0]?.[2];
     if (options === undefined) throw new TypeError("expected spawn options");
-    expect(options.env).toBe(process.env);
+    expect(options.env).toMatchObject({
+      PATH: process.env.PATH,
+      PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: "давай",
+    });
   });
 });
 
