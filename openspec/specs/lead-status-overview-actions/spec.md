@@ -9,18 +9,18 @@ and the item progress interaction on one canonical authoring path.
 
 ### Requirement: Overview MUST edit and create current-period items through the canonical editor
 
-The editable Lead Report Overview MUST use the existing item editor and canonical draft-save path for Current/Next editing and creation. Contextual creation MUST follow the separate contextual-create requirement. Previously planned and ineligible sections MUST remain read-only.
+The editable Lead Report Overview MUST use the existing item editor and canonical draft-save path for Current/Next editing and creation. Creation and detail editing MUST follow the dialog requirement. Previously planned and ineligible sections MUST remain read-only.
 
 #### Scenario: A lead creates a Product update from Overview
 
-- **WHEN** the lead activates Add for an editable Product Current or Next period
-- **THEN** the existing editor opens on the same page with that Product and week selected
+- **WHEN** the lead activates Add item for an editable Product
+- **THEN** the existing editor opens in a dialog with that Product and the chosen week selected
 - **AND** saving uses the existing `DraftPatch`, autosave, optimistic version, authorization, and lifecycle paths
 - **AND** the live Overview projection and autosave status reflect the change
 
 #### Scenario: A lead creates an Activity update from Overview
 
-- **WHEN** the lead activates Add for an editable Activity Current or Next period
+- **WHEN** the lead activates Add item for an editable Activity
 - **THEN** the same editor opens with that Activity selected and no Product-stage requirement
 - **AND** saving uses the canonical draft and autosave path
 
@@ -82,121 +82,6 @@ separate Edit mode.
 - **WHEN** the lead then cancels the editor and confirms Discard
 - **THEN** the edited row returns to its last saved fields, or a newly created row is removed
 - **AND** the discarded text is not part of any later autosave payload
-
-### Requirement: Overview MUST expose one primary progress interaction per active item
-
-The `/lead/report/:reportId` Report Overview MUST keep the three temporal columns and the canonical item editor. Each editable Current or Next item MUST rest as one status icon followed by its text, with at most a small stage badge in a corner; it MUST NOT render permanent text action buttons or a metadata line. The status icon MUST be the one primary progress/status interaction and MUST open a menu of statuses, because a cycling click would pass over statuses that need a reason. Secondary actions (edit details, move between weeks, resolve) MUST be reachable from one overflow control that is revealed on pointer hover, on keyboard focus within the item, and on tap, and MUST stay in the accessibility tree and keyboard order while visually hidden. Week moves MUST be reachable both from that overflow menu and from a dedicated week-move icon on the item (toward Next for a Current item, toward Current for a Next item), revealed on pointer hover and on keyboard focus within the item and always visible on touch; the icon MUST stay in the accessibility tree and keyboard order while visually hidden on pointer devices and MUST NOT be rendered for Previously planned content. Updating an unconfirmed carried item through the status interaction MUST clear its unconfirmed marker; it MUST NOT require a separate Confirm action. Previously planned content MUST remain read-only: no control in that column edits, moves or changes the status of the prior-week occurrence; the verdict controls defined by `lead-plan-verdict` write only the selected week's occurrence.
-
-#### Scenario: an unconfirmed carried item is shown
-
-- **WHEN** Overview renders a carried Current item that the lead has not updated in the selected week
-- **THEN** its status icon visibly marks it as continued or planned but not updated this week
-- **AND** the status interaction lets the lead update it without a separate Confirm action
-
-#### Scenario: an ordinary active item is shown
-
-- **WHEN** Overview renders an editable Current or Next item with no restore or historical-replan state
-- **THEN** it shows only the status icon, its text and an optional stage badge
-- **AND** no text button and no metadata line is visible
-
-#### Scenario: actions are revealed on hover, focus and tap
-
-- **WHEN** the lead hovers the item, moves keyboard focus into it, or taps it
-- **THEN** the overflow control and the dedicated week-move icon become visible
-- **AND** the week-move icon offers the move toward the other active week, matching the item's placement
-- **AND** keyboard users reach the control, the icon, and the menu actions with Tab without a hover
-- **AND** touch users see them without any hover requirement
-
-#### Scenario: prior week remains read-only
-
-- **WHEN** Overview renders Previously planned content
-- **THEN** no control edits, moves or changes the status of the prior-week occurrence
-- **AND** its text, outcome and lineage remain visible
-- **AND** verdict controls, when shown, change only the selected week's occurrence
-
-#### Scenario: keyboard operation preserves context
-
-- **WHEN** the lead operates the status interaction or cancels the canonical editor with a keyboard
-- **THEN** focus returns to the triggering item control or the Overview heading
-- **AND** the three-column lineage remains visible without document-level horizontal overflow
-
-### Requirement: Overview editing MUST preserve context and use the timeline width
-
-Status Overview MUST keep its compact reading grid while one matching editor spans the timeline below its lineage at multi-lane widths. Selection MUST use stable identity with record-ID fallback and source. Header and contextual creation MUST share one unit composer region. Idle units MUST NOT render a footer solely for Add.
-
-#### Scenario: a linked Current item is edited
-
-- **WHEN** the lead activates Update progress or Edit details for a linked Current item
-- **THEN** exactly one matching editor spans the three timeline columns below its lineage
-- **AND** Previous, Current, Next, unmatched lineage rows, and other units remain visible
-- **AND** closing returns focus to the triggering control
-
-#### Scenario: an independent update is edited
-
-- **WHEN** the lead edits an unlinked Current or Next update
-- **THEN** its matching editor spans the timeline below the source row
-- **AND** sibling timeline cells stay visible and matching uses stable identity or record ID together with source
-
-#### Scenario: an update is created
-
-- **WHEN** the lead activates the unit-header Add item control or contextual Current/Next creation
-- **THEN** exactly one composer spans the timeline in that unit's composer region
-- **AND** header Add item retains its accessible name `Add item to <unit name>` and Current default; contextual creation seeds its selected week
-- **AND** closing or acknowledging creation restores the idle composer region
-
-### Requirement: Overview contextual creation MUST seed Current or Next through one composer
-
-Editable Overview Current/Next cells MUST offer contextual `+` creation seeded to unit and week, visible on hover/focus and always on touch. When mobile empty lanes are collapsed, equivalent Current/Next controls MUST live in the unit header. These controls MUST supplement header Add item and share its composer. Direct Next creation MUST start with editable Planned progress.
-
-The item creation composer and dialog MUST offer a "Save and add another" action (accessible via button and keyboard shortcut `Ctrl+Shift+Enter` / `Cmd+Shift+Enter`). In create mode, activating "Save and add another" MUST validate and submit the item via the canonical draft save path. Upon successful save, the composer MUST remain open seeded to the same reporting unit, section, and week with cleared text fields and focus returned to the description field. If save fails or validation fails, entered input MUST be preserved and the composer MUST NOT be cleared. In edit mode, "Save and add another" MUST NOT be rendered.
-
-#### Scenario: Contextual creation is reachable without hover
-
-- **WHEN** the lead focuses an eligible Current/Next create control or uses a touch device
-- **THEN** that control is visible and operable without hover
-- **AND** its accessible name identifies creation, unit, and week
-- **AND** pointer hover reveals the same cell action on desktop
-
-#### Scenario: A new item is created directly in Next
-
-- **WHEN** the lead activates the Next contextual `+`
-- **THEN** one composer opens with that unit, Next, and Planned selected
-- **AND** the lead can change progress before saving
-- **AND** saving unchanged defaults emits one Next item with `workflowStatus=planned`, without rewriting an existing item's progress
-
-#### Scenario: An empty Next lane has a mobile creation target
-
-- **WHEN** empty lanes are collapsed on mobile, including an entirely empty unit
-- **THEN** the unit header contains always-visible touch controls for Current and Next creation, labelled with unit and week
-- **AND** Next creation is available without mounting a hidden-lane composer or first opening a Current composer
-- **AND** the general header Add item action remains and no Previous create action is offered
-
-#### Scenario: Save and add another successfully saves and prepares a new item
-
-- **WHEN** the lead enters a valid item in the Overview composer and activates "Save and add another" (or presses Ctrl+Shift+Enter / Cmd+Shift+Enter)
-- **THEN** the item is submitted to the canonical draft save path
-- **AND** upon save completion, the composer remains open for the same reporting unit and week
-- **AND** description and next step fields are empty
-- **AND** keyboard focus is placed into the description field
-
-#### Scenario: Save and add another validation failure retains input
-
-- **WHEN** the lead activates "Save and add another" while required fields are missing or invalid
-- **THEN** client validation blocks the submission and displays field errors
-- **AND** the typed input is preserved in the composer
-- **AND** the composer does not reset or close
-
-#### Scenario: Save and add another failure during persistence retains input
-
-- **WHEN** "Save and add another" submits a valid item but server draft save encounters an error
-- **THEN** the editor displays the save failure message
-- **AND** the typed input is retained in the composer for retry
-
-#### Scenario: Edit mode does not expose Save and add another
-
-- **WHEN** the lead opens an existing item in edit mode
-- **THEN** "Save and add another" is not rendered
-- **AND** `Ctrl+Shift+Enter` does not trigger batch creation
 
 ### Requirement: Overview plan composer MUST warn on unload only while input is edited
 
@@ -309,3 +194,130 @@ does not move when the confirmed section is read back.
 
 - **WHEN** the lead cancels the composer, saves an edit, or uses "Save and add another"
 - **THEN** focus follows the existing rules for that action
+
+### Requirement: Overview cards MUST expose their actions flat, one click and one menu level
+
+The `/lead/report/:reportId` Report Overview MUST keep the three temporal columns. Each editable Current or Next item MUST rest as one status icon followed by its text, with its stage badges below the text. The status icon MUST open a menu of statuses; when the item can take a terminal outcome, that same menu MUST end with an outcome entry that opens the existing outcome flow, and no separate "Update status" entry MUST exist. The outcome entry MUST follow the existing eligibility: never on Previous rows, an unconfirmed carry, or a derived Next projection. On pointer hover, keyboard focus within the item, or an open control, a row of icon buttons MUST appear without changing the card's layout or the text's width (on hover devices it floats over the card's corner and steps aside while the inline text editor has focus): Edit (pencil), the week move, the stage label control for Product items whose unit owns more than one stage, the record comment action, and the Plan or Restore recovery action where it applies. Hidden controls MUST stay in the accessibility tree and the Tab order. No control on a Current or Next card MUST open a nested menu, and no overflow menu MUST exist there; the Previously planned verdict controls of `lead-plan-verdict` keep their own menu. On devices without hover the row MUST be visible at all times. The stage control MUST list only the unit's owned stages, MUST write through the current draft with every other item field preserved, and MUST NOT remove a Product item's last stage. Activity items MUST NOT render a stage control. Operating the status menu or a row control with a keyboard MUST return focus to the triggering control, and the three-column lineage MUST stay visible without document-level horizontal overflow. Updating an unconfirmed carried item through the status menu MUST clear its unconfirmed marker without a separate Confirm action. Previously planned content MUST remain read-only: no control in that column edits, moves or changes the status of the prior-week occurrence; the verdict controls defined by `lead-plan-verdict` write only the selected week's occurrence.
+
+#### Scenario: an ordinary active item is shown
+
+- **WHEN** Overview renders an editable Current or Next item with no restore or historical-replan state
+- **THEN** it shows the status icon, its text and its stage badges
+- **AND** no text button and no metadata line is visible until hover or focus
+
+#### Scenario: actions appear on hover without moving the layout
+
+- **WHEN** the lead hovers the item or moves keyboard focus into it
+- **THEN** Edit, the week move and the stage control become visible in one row
+- **AND** the card and its neighbours keep their size and position
+- **AND** no "More actions" control is rendered
+
+#### Scenario: the status menu holds the outcome
+
+- **GIVEN** an editable Current item that can be resolved
+- **WHEN** the lead opens its status menu
+- **THEN** the progress statuses and one outcome entry are listed in that single menu
+- **AND** choosing the outcome entry opens the existing outcome flow
+
+#### Scenario: the stage label is set on the card
+
+- **GIVEN** an editable Product item
+- **WHEN** the lead opens its stage control and checks a stage owned by the unit
+- **THEN** the item's stages update through the canonical draft save path
+- **AND** the control lists only the unit's owned stages, one level deep
+
+#### Scenario: the last stage cannot be removed
+
+- **GIVEN** an editable Product item with one stage
+- **WHEN** the lead opens its stage control
+- **THEN** that stage cannot be unchecked and the control says a Product update needs a stage
+- **AND** no draft patch is emitted
+
+#### Scenario: an Activity item has no stage control
+
+- **WHEN** Overview renders an editable Activity item
+- **THEN** its action row has no stage control
+
+#### Scenario: keyboard operation preserves context
+
+- **WHEN** the lead operates the status menu or a row control with a keyboard, or closes a dialog
+- **THEN** focus returns to the triggering item control or the Overview heading
+- **AND** the three-column lineage remains visible without document-level horizontal overflow
+
+#### Scenario: an unconfirmed carried item is shown
+
+- **WHEN** Overview renders a carried Current item that the lead has not updated in the selected week
+- **THEN** its status icon visibly marks it as continued or planned but not updated this week
+- **AND** the status menu lets the lead update it without a separate Confirm action
+
+#### Scenario: prior week remains read-only
+
+- **WHEN** Overview renders Previously planned content
+- **THEN** no control edits, moves or changes the status of the prior-week occurrence
+- **AND** verdict controls, when shown, change only the selected week's occurrence
+
+#### Scenario: touch shows the row without hover
+
+- **WHEN** the Overview renders editable items on a device without hover
+- **THEN** each item's action row is visible and every control has a touch-size target
+
+### Requirement: Overview create and edit MUST open in a dialog
+
+Creating an Overview item and editing an item's details MUST open the canonical item editor in a modal dialog over the Overview; the timeline grid MUST NOT change height while the editor is open. Creation MUST start from the unit header `Add item to <unit name>` control, whose dialog seeds the unit and offers the Current or Next week, defaulting to Current; direct Next creation MUST start with editable Planned progress. Editable Overview cells MUST NOT render per-cell or per-row create controls. At most one editor MUST be open, selected by stable identity with record-ID fallback and source. Escape, the close button and an outside click MUST take the same discard and save-recovery path as Cancel. Closing the dialog MUST return focus to the control that opened it unless a create save moves focus to the new item.
+
+The dialog MUST offer "Save and add another" in create mode (button and `Ctrl+Shift+Enter` / `Cmd+Shift+Enter`). Upon successful save it MUST stay open for the same unit and week with cleared text fields and focus in the description field. If validation or save fails, entered input MUST be preserved. In edit mode, "Save and add another" MUST NOT be rendered.
+
+#### Scenario: an update is created
+
+- **WHEN** the lead activates `Add item to <unit name>`
+- **THEN** a dialog opens with that unit selected and Current preselected
+- **AND** the Overview grid keeps its height and position behind the dialog
+
+#### Scenario: A new item is created directly in Next
+
+- **WHEN** the lead chooses Next in the create dialog
+- **THEN** Planned progress is selected and can be changed before saving
+- **AND** saving unchanged defaults emits one Next item with `workflowStatus=planned`
+
+#### Scenario: an item is edited
+
+- **WHEN** the lead activates Edit on an editable Current or Next item
+- **THEN** the canonical editor opens in a dialog with that item selected
+- **AND** closing it returns focus to the Edit control
+
+#### Scenario: a dirty dialog is dismissed
+
+- **GIVEN** the lead typed into the create or edit dialog
+- **WHEN** the lead presses Escape or clicks outside the dialog
+- **THEN** the same discard confirmation as Cancel is shown and nothing is saved without it
+
+#### Scenario: no cell offers creation
+
+- **WHEN** Overview renders an editable unit
+- **THEN** no timeline cell or lineage row renders an Add control
+- **AND** the unit header Add item control remains, also on mobile
+
+#### Scenario: Save and add another successfully saves and prepares a new item
+
+- **WHEN** the lead enters a valid item and activates "Save and add another" (or presses Ctrl+Shift+Enter / Cmd+Shift+Enter)
+- **THEN** the item is submitted to the canonical draft save path
+- **AND** upon save completion the dialog stays open for the same unit and week with empty description and next step
+- **AND** keyboard focus is placed into the description field
+
+#### Scenario: Save and add another validation failure retains input
+
+- **WHEN** the lead activates "Save and add another" while required fields are missing or invalid
+- **THEN** client validation blocks the submission and displays field errors
+- **AND** the typed input is preserved and the dialog does not reset or close
+
+#### Scenario: Save and add another failure during persistence retains input
+
+- **WHEN** "Save and add another" submits a valid item but the draft save fails
+- **THEN** the dialog displays the save failure message
+- **AND** the typed input is retained for retry
+
+#### Scenario: Edit mode does not expose Save and add another
+
+- **WHEN** the lead opens an existing item in edit mode
+- **THEN** "Save and add another" is not rendered
+- **AND** `Ctrl+Shift+Enter` does not trigger batch creation

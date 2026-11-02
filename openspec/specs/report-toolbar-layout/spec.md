@@ -194,7 +194,7 @@ header actions before the context controls.
 
 ### Requirement: The lead document-action group holds no quick-add control
 
-The Lead document-action group MUST contain Fill from and eligible Submit/reversal actions, plus Retry only for autosave recovery. Record creation MUST stay with reporting-unit/header or contextual Current/Next entry points and the Risks/Decisions sections, not a report-header quick-add. Report/Slides switching MUST retain action order; read-only past periods MUST hide mutating actions.
+The Lead document-action group MUST contain Fill from and eligible Submit/reversal actions, plus Retry only for autosave recovery. Record creation MUST stay with the reporting-unit header Add item controls and the Risks/Decisions sections, not a report-header quick-add. Report/Slides switching MUST retain action order; read-only past periods MUST hide mutating actions.
 
 #### Scenario: switching Report to Slides keeps the document actions
 
