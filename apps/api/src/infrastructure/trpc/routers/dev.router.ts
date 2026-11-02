@@ -15,7 +15,10 @@ import { z } from "zod";
 
 import type { AppLogger } from "../../../lib/logger.js";
 import type { EnvConfig } from "../../config/env.schema";
-import { assertE2eRuntimeDestructiveTarget } from "../../prisma/e2e-destructive-target.js";
+import {
+  assertE2eRuntimeDestructiveTarget,
+  E2E_DESTRUCTIVE_CONSENT,
+} from "../../prisma/e2e-destructive-target.js";
 import {
   captureMutationAuditInputMiddleware,
   deriveCauseInfo,
@@ -92,11 +95,12 @@ async function runReseed(
   logger: AppLogger,
   variant: ReseedVariant,
   repoRoot: string,
+  env: NodeJS.ProcessEnv,
 ) {
   const options = {
     cwd: repoRoot,
     encoding: "utf8",
-    env: process.env,
+    env,
     timeout: reseedTimeoutMs(variant),
   } as const;
   const runStep = async (
@@ -191,14 +195,17 @@ export function createDevRouter(deps: DevRouterDeps) {
         // Run Prisma reset as a child process so "wipe & reseed" is a
         // real clean-slate operation in Docker too.
         const repoRoot = resolveRepoRoot(deps.env.WEEKLYREPORT_REPO_ROOT);
-        // The canonical destructive guard runs immediately before the first
-        // child process: it refuses a non-disposable target or a run without the
-        // operator's per-run consent. Consent is read from the operator's
-        // environment and never injected here.
+        // The explicit dev-mode click with a chosen variant is the operator's
+        // per-run consent (owner, 2026-11-02). It is passed only to this guard
+        // check and the reset/seed children; the target allowlist still applies.
+        const childEnv: NodeJS.ProcessEnv = {
+          ...process.env,
+          PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: E2E_DESTRUCTIVE_CONSENT,
+        };
         assertE2eRuntimeDestructiveTarget(
           "dev-reseed",
           deps.env.DATABASE_URL,
-          process.env,
+          childEnv,
         );
         if (reseed.inFlight) {
           throw new TRPCError({
@@ -208,7 +215,7 @@ export function createDevRouter(deps: DevRouterDeps) {
         }
         reseed.inFlight = true;
         try {
-          return await runReseed(ctx.logger, input.variant, repoRoot);
+          return await runReseed(ctx.logger, input.variant, repoRoot, childEnv);
         } catch {
           throw new TRPCError({
             code: "INTERNAL_SERVER_ERROR",

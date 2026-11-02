@@ -34,6 +34,10 @@ proceed with diagnostics, tests, browser checks and recoverable changes to known
 synthetic records. Localhost alone does not prove a disposable target. Inspect
 handlers before unclear controls, record lifecycle pre-state, and disclose any
 unexpected state change; recover only when recovery is known and authorized.
+Owner decision 2026-11-02: this is an MVP — decide development, stand, test-data
+and routine UX questions yourself and report them; do not stop the owner on them.
+Production, secrets and anything sent outside on the owner's behalf keep their
+rules. The dev "Wipe + reseed" click is itself the per-run consent.
 
 - Backlog holds task state and execution plans; OpenSpec holds requirements and
   changes. Cross-link them. Read the applicable Backlog CLI phase instructions.
