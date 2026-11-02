@@ -146,6 +146,18 @@ test("all repository-built workloads use the selected registry and exact release
   assert.match(latest.stderr, /tag/);
 });
 
+test("the database name must stay lower-case because restore.sh canonicalises it", () => {
+  const mixedCase = helm(
+    templateArgs("deploy/helm/weeklyreport/values.production.example.yaml", [
+      "--set",
+      "postgres.db=ReviewDatabase",
+    ]),
+  );
+  assert.notEqual(mixedCase.status, 0);
+  assert.equal(mixedCase.stdout, "");
+  assert.match(mixedCase.stderr, /\/postgres\/db.*does not match pattern/);
+});
+
 test("the API pools connections while migration and backup use direct postgres sessions", () => {
   const { manifests } = renderExample([
     "--set",
