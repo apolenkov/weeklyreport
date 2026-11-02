@@ -120,27 +120,32 @@ describe("useDraftServerSync — stale-tab conflict with unchanged content", () 
     expect(handleConflict).toHaveBeenCalledTimes(1);
   });
 
-  it("waits for the refetched revision: a re-delivery of the refused revision keeps the flag", async () => {
-    const { useTab, wrapper } = setup({ refetchOnConflict: false });
+  it("reverts to a newer server copy that arrived while the refused save was in flight", async () => {
+    const { calls, useTab, wrapper } = setup({ refetchOnConflict: false });
     const { result } = renderHook(() => useTab(), { wrapper });
 
     act(() => {
       result.current.setDraftSection(sectionAt(1, "next"));
     });
-    await act(async () => {
-      await result.current.sync.autosave.forceSave();
-    });
-    // A re-render hands the hook the same revision before the refetch lands; it
-    // must not count as the server copy.
-    act(() => {
-      result.current.setServerSection(sectionAt(1, "current"));
-    });
-    expect(result.current.draftSection?.items[0]?.type).toBe("next");
-
+    // The other tab's v3 lands first; its content equals this tab's base, so
+    // the local move stays on screen until the save answers.
     act(() => {
       result.current.setServerSection(sectionAt(3, "current"));
     });
+    expect(result.current.draftSection?.items[0]?.type).toBe("next");
+
+    // The save is refused; the refetch returns the same v3 and so changes
+    // nothing, yet the card must already show the server placement.
+    await act(async () => {
+      await result.current.sync.autosave.forceSave();
+    });
+    expect(calls).toHaveLength(1);
     expect(result.current.draftSection?.items[0]?.type).toBe("current");
+
+    await act(async () => {
+      await result.current.sync.autosave.forceSave();
+    });
+    expect(calls).toHaveLength(1);
   });
 
   it("keeps a local move when a same-content delivery arrives without a conflict", () => {

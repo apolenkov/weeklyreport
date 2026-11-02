@@ -7,7 +7,7 @@ import { sectionToDraftPayload } from "../lead-section-draft-payload";
 import type { AutosaveController } from "./autosave-types";
 import { encodeDraftSaveComparisonKey } from "./draft-save-comparison-key";
 import {
-  classifyDelivery,
+  classifyReseed,
   type PendingSaveEcho,
   reconcileSavedIdentities,
   reconcileServerRecordMetadata,
@@ -25,11 +25,6 @@ export interface SaveEchoLedger {
   readonly find: (serverDraftKey: string) => PendingSaveEcho | undefined;
   readonly record: (echo: PendingSaveEcho) => void;
   readonly consume: (serverDraftKey: string, revision: string) => void;
-  // Set by a stale-save (409) conflict; the next accepted delivery of a newer
-  // revision replaces the draft even when its content matches the last key this
-  // tab saw. Re-deliveries of the revision held at the conflict keep the flag.
-  readonly requireResync: () => void;
-  readonly takeResync: (revision: string) => boolean;
 }
 
 export function sectionRevision(section: ReportSectionReadModel): string {
@@ -98,8 +93,6 @@ export function useServerSectionReseed({
       sectionToDraftPayload(serverSection),
     );
     const revision = sectionRevision(serverSection);
-    // Set by a refused stale save: this delivery replaces the draft outright.
-    const resync = ledger.takeResync(revision);
     const sameSection =
       ledger.lastRevision()?.startsWith(`${serverSection.reportSectionId}:`) ??
       false;
@@ -109,13 +102,12 @@ export function useServerSectionReseed({
       revision,
       sameSection,
     );
-    const trigger = classifyDelivery({
+    const trigger = classifyReseed(
       serverDraftKey,
-      lastServerDraftKey: sameSection ? ledger.lastKey() : null,
-      dirty: hasLocalEdits && sameSection,
-      isSaveEcho: saveEcho !== undefined,
-      resync,
-    });
+      sameSection ? ledger.lastKey() : null,
+      hasLocalEdits && sameSection,
+      saveEcho !== undefined,
+    );
     if (trigger === "unchanged") {
       if (ledger.lastRevision() !== revision) {
         ledger.consume(serverDraftKey, revision);

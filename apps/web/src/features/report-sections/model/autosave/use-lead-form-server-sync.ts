@@ -5,6 +5,7 @@ import {
   type Dispatch,
   type SetStateAction,
   useCallback,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -18,7 +19,11 @@ import {
 import type { LeadFormWritePort } from "../lead-form/lead-form-write-port";
 import { useLeadFormStageMemory } from "../lead-form/use-draft-stage-memory";
 import { sectionToDraftPayload } from "../lead-section-draft-payload";
-import type { AutosaveSaveReceipt, DraftSaveContent } from "./autosave-types";
+import type {
+  AutosaveController,
+  AutosaveSaveReceipt,
+  DraftSaveContent,
+} from "./autosave-types";
 import { encodeDraftSaveComparisonKey } from "./draft-save-comparison-key";
 import {
   type PendingSaveEcho,
@@ -45,10 +50,6 @@ function useSaveEchoLedger(): SaveEchoLedger {
   const echoesRef = useRef<readonly PendingSaveEcho[]>([]);
   const lastKeyRef = useRef<string | null>(null);
   const lastRevisionRef = useRef<string | null>(null);
-  // The revision this tab held when its save was refused, or null: a delivery
-  // of that same revision is a re-render, not the conflict refetch.
-  const resyncFromRef = useRef<string | null>(null);
-  const resyncPendingRef = useRef(false);
   return useMemo(
     () => ({
       lastKey: () => lastKeyRef.current,
@@ -67,18 +68,6 @@ function useSaveEchoLedger(): SaveEchoLedger {
         lastKeyRef.current = serverDraftKey;
         lastRevisionRef.current = revision;
         echoesRef.current = withoutEcho(echoesRef.current, serverDraftKey);
-      },
-      requireResync: () => {
-        resyncPendingRef.current = true;
-        resyncFromRef.current = lastRevisionRef.current;
-      },
-      takeResync: (revision) => {
-        if (!resyncPendingRef.current || revision === resyncFromRef.current) {
-          return false;
-        }
-        resyncPendingRef.current = false;
-        resyncFromRef.current = null;
-        return true;
       },
     }),
     [],
@@ -170,6 +159,55 @@ function useSaveEchoRecorder(args: SaveEchoRecorderArgs) {
   );
 }
 
+// A refused stale save reverts the draft to the last server section at once,
+// whatever arrived while the save was in flight, exactly like the reseed of an
+// external change; the conflict refetch then lands on a clean draft. The
+// autosave controller exists only after the conflict callback, hence the refs.
+function useAutosaveWithStaleRevert({
+  serverSection,
+  ledger,
+  setDraftSection,
+  handleConflict,
+  autosaveArgs,
+}: {
+  readonly autosaveArgs: Omit<
+    Parameters<typeof useLeadFormAutosave>[0],
+    "onConflict"
+  >;
+  readonly serverSection: ReportSectionReadModel | null | undefined;
+  readonly ledger: SaveEchoLedger;
+  readonly setDraftSection: SetDraftSection;
+  readonly handleConflict: () => void;
+}) {
+  const latestServerSectionRef = useRef<
+    ReportSectionReadModel | null | undefined
+  >(null);
+  const autosaveRef = useRef<AutosaveController | null>(null);
+  useEffect(() => {
+    latestServerSectionRef.current = serverSection;
+  });
+  const handleSaveConflict = useCallback(() => {
+    const section = latestServerSectionRef.current;
+    if (section) {
+      const serverDraftKey = encodeDraftSaveComparisonKey(
+        sectionToDraftPayload(section),
+      );
+      ledger.consume(serverDraftKey, sectionRevision(section));
+      autosaveRef.current?.adoptBaseline(serverDraftKey, "read");
+      setDraftSection(section);
+    }
+    handleConflict();
+  }, [handleConflict, ledger, setDraftSection]);
+  const autosave = useLeadFormAutosave({
+    ...autosaveArgs,
+    onConflict: handleSaveConflict,
+  });
+  useEffect(() => {
+    autosaveRef.current = autosave;
+  });
+  return autosave;
+}
+
 interface DraftServerSyncArgs {
   readonly generation: LeadFormGeneration | null;
   readonly receiptScope: string;
@@ -217,21 +255,21 @@ export function useDraftServerSync({
     receiptScope,
     stageMemory,
   });
-  // The refused save's refetch must replace the draft on delivery, not compare.
-  const handleSaveConflict = useCallback(() => {
-    ledger.requireResync();
-    handleConflict();
-  }, [handleConflict, ledger]);
-  const autosave = useLeadFormAutosave({
-    writePort,
-    reportSectionId,
-    payload,
-    enabled,
-    localOnlyRows,
-    version,
-    onVersionChange: setVersionSafe,
-    onSaved,
-    onConflict: handleSaveConflict,
+  const autosave = useAutosaveWithStaleRevert({
+    serverSection,
+    ledger,
+    setDraftSection,
+    handleConflict,
+    autosaveArgs: {
+      writePort,
+      reportSectionId,
+      payload,
+      enabled,
+      localOnlyRows,
+      version,
+      onVersionChange: setVersionSafe,
+      onSaved,
+    },
   });
   useServerSectionReseed({
     serverSection,

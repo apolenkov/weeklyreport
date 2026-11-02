@@ -60,7 +60,9 @@ Reconciled 2026-11-02 against main 9d8051cc0 (implementation commits
       drag Next→Current, Alt+Arrow round trip, inline edit with empty restore
       and Esc, Undo with reload, Previous read-only — all PASS on lane A,
       02.11; evidence in `~/work/handoffs/wr-766-e2e-20261102/RESULT.md`.
-- [x] 13. Six gates ran green on each delivered SHA (60bfa4814 and later).
+- [x] 13. Six gates ran green on each delivered SHA (60bfa4814 and later;
+      logs `$CLAUDE_JOB_DIR/tmp/gate*-*.log` of the gate session, results
+      copied to `~/work/handoffs/wr-766-e2e-20261102/gates/`).
       Guarded API integration `week-move.integration.test.ts` passed 3/3 on
       `weeklyreport_e2e_lane_a_test` (02.11): both directions persist with one
       row per `stableId`, and a stale version is refused with `CONFLICT`.
@@ -70,15 +72,17 @@ Reconciled 2026-11-02 against main 9d8051cc0 (implementation commits
 - [x] 14. Undo is refused once the moved occurrence was edited: the move keeps
       a snapshot of the moved row and Undo compares it without the row id
       (`overview-in-place-move.test.ts`, d7efe11b3).
-- [x] 15. A stale autosave (409) forces the next server delivery to replace
-      the draft even when only the version moved
-      (`use-lead-form-server-sync.conflict.test.tsx`, b9ea18f44). Submit and
-      outcome 409 paths keep the existing conflict flow.
+- [x] 15. A stale autosave (409) reverts the draft to the last server section
+      at once, including a newer copy that arrived while the save was in
+      flight, and the conflict refetch then reseeds a clean draft
+      (`useAutosaveWithStaleRevert`,
+      `use-lead-form-server-sync.conflict.test.tsx`). Submit and outcome 409
+      paths keep the existing conflict flow.
 - [x] 16. Touch drags arm only through the long-press sensor on the drag
       handle; mouse and pen keep the distance threshold
       (`status-overview-dnd.test.tsx`, bc060bd6f).
 - [x] 17. Second review round: Undo compares only the author-edited fields of
       the draft save payload, so a save echo that adds comments or outcome
-      history to a new row no longer refuses it; the 409 resync flag waits
-      for a revision newer than the one held at the conflict, so a re-render
-      before the refetch cannot consume it.
+      history to a new row no longer refuses it. The first 409 fix (a resync flag
+      for the next delivery) was replaced by the immediate revert in task 15
+      after the third review round.
