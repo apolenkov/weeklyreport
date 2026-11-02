@@ -133,7 +133,7 @@ than lose meaningful names to truncation.
 
 ### Requirement: Document actions render on the page header line; the toolbar holds the context-control bar
 
-Report document actions MUST occupy the header action group and context controls one bordered toolbar row. Lead completion actions MAY hand off between the header and a separate non-overlay rail while sharing state and handlers. The rail MUST use Retry-only autosave recovery, not a permanent Save/Add cluster. The context toolbar MUST NOT become a second document-action surface.
+Report document actions MUST occupy the header action group and context controls one bordered toolbar row. Lead completion actions MUST render only in the header action group; there is no bottom rail or other second completion surface. Completion actions MUST use Retry-only autosave recovery, not a permanent Save/Add cluster. The context toolbar MUST NOT become a second document-action surface.
 
 #### Scenario: the lead surface splits across the header and the toolbar
 
@@ -141,6 +141,12 @@ Report document actions MUST occupy the header action group and context controls
 - **THEN** the header offers Fill from and eligible completion actions, with Retry only during autosave recovery
 - **AND** the single context row holds period navigation, archived filter, Report chat, Mine/Everyone scope, and Report/Slides mode
 - **AND** Report Overview has no collapse-all control and no permanent manual Save
+
+#### Scenario: the lead scrolls past the header
+
+- **WHEN** a lead scrolls an editable report so the header leaves the viewport
+- **THEN** no completion rail or bottom Submit card appears
+- **AND** Submit stays in the header action group
 
 #### Scenario: the lead slides surface shows density and fullscreen in the trailing slot
 
