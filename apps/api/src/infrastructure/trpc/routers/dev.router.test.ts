@@ -141,9 +141,7 @@ describe("dev.wipeAndReseed — destructive guard runs before the first spawn", 
     ).resolves.toMatchObject({ ok: true, variant: "minimal" });
 
     expect(execFileMock).toHaveBeenCalledTimes(2);
-    for (const call of execFileMock.mock.calls) {
-      const options = call[2];
-      if (options === undefined) throw new TypeError("expected spawn options");
+    for (const [, , options] of execFileMock.mock.calls) {
       expect(options.env?.PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION).toBe(
         "давай",
       );
