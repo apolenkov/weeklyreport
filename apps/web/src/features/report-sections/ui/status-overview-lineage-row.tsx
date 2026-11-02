@@ -1,9 +1,4 @@
-import type { ReactNode } from "react";
-
-import type {
-  StatusOverviewModel,
-  StatusOverviewUnit,
-} from "../model/status-overview";
+import type { StatusOverviewModel } from "../model/status-overview";
 import type { StatusOverviewLineageRow } from "../model/status-overview-lineage";
 import {
   REPORT_PREVIEW_COUNT,
@@ -17,7 +12,6 @@ import {
   TIMELINE_CELL,
   TIMELINE_GRID,
 } from "./status-overview-layout";
-import { CellCreateButton } from "./status-overview-timeline-footer";
 
 const PERIOD_UNAVAILABLE = "Period unavailable";
 function MobileWeekLabel({ label }: { readonly label: string }) {
@@ -48,24 +42,18 @@ function editorBelongsToLineageRow(
 
 function EmptyLane({
   column,
-  rowKey,
-  create,
 }: {
   readonly column: (typeof STATUS_OVERVIEW_COLUMNS)[number];
-  readonly rowKey: string;
-  readonly create?: ReactNode;
 }) {
   // R55: an empty lane stays a quiet muted cell — one em dash instead of a
   // "No item" caption that competes with real content; on mobile it folds
   // into one summary per unit, after its lineage row list. The dash is hidden
   // from assistive technology; the screen-reader sentence carries the meaning.
-  // A creatable lane adds its contextual control under the dash, which also
-  // reveals on hover/focus of the lane.
+  // Creation lives in the unit header only, so the cell offers no Add.
   return (
     <Lane
       column={column}
-      laneKey={rowKey}
-      className={`${TIMELINE_CELL} group/lane hidden md:min-h-24 md:flex md:flex-col md:items-center md:justify-center md:border-t-0 bg-[var(--color-surface-muted)]`}
+      className={`${TIMELINE_CELL} hidden md:min-h-24 md:flex md:flex-col md:items-center md:justify-center md:border-t-0 bg-[var(--color-surface-muted)]`}
     >
       <span
         aria-hidden="true"
@@ -74,30 +62,7 @@ function EmptyLane({
         —
       </span>
       <span className="sr-only">No item in this period</span>
-      {create}
     </Lane>
-  );
-}
-
-// Eligible lanes only: editable (handler present), non-historical and an
-// available Current/Next column. Previous stays read-only.
-function laneCreateControl(
-  unit: StatusOverviewUnit,
-  row: StatusOverviewLineageRow,
-  column: (typeof STATUS_OVERVIEW_COLUMNS)[number],
-  onAddItem: ItemHandlers["onAddItem"],
-): ReactNode {
-  if (!onAddItem || unit.historical || column.source === "previous")
-    return null;
-  if (unit.columns[column.key].availability !== "available") return null;
-  return (
-    <CellCreateButton
-      unit={unit}
-      source={column.source}
-      rowKey={row.key}
-      rowTitle={row.current?.text ?? row.next?.text ?? row.previous?.text}
-      onAddItem={onAddItem}
-    />
   );
 }
 
@@ -131,42 +96,28 @@ export function MobilePeriodsSummary({
 
 function LineageRow({
   row,
-  unit,
   editorSlot,
   ...handlers
 }: {
   readonly row: StatusOverviewLineageRow;
-  readonly unit: StatusOverviewUnit;
   readonly editorSlot: ItemHandlers["editorSlot"];
 } & Omit<ItemHandlers, "editorSlot">) {
-  const { onAddItem, ...itemHandlers } = handlers;
+  // Creation lives in the unit header; rows never render an Add control.
+  const { onAddItem: _onAddItem, ...itemHandlers } = handlers;
   const editorBelongsToRow = editorBelongsToLineageRow(row, editorSlot);
   return (
     <div
       data-testid="overview-lineage-row"
-      // md:overflow-visible: on desktop the row is flat (no radius or
-      // border-box to clip), while the item's action chip floats above the
-      // card and must not be cut off at the row's top edge.
-      className={`${TIMELINE_GRID} mx-3 my-1.5 overflow-hidden rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] bg-[var(--color-card)] md:m-0 md:overflow-visible md:rounded-none md:border-0 md:border-b md:items-stretch`}
+      className={`${TIMELINE_GRID} mx-3 my-1.5 overflow-hidden rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] bg-[var(--color-card)] md:m-0 md:rounded-none md:border-0 md:border-b md:items-stretch`}
     >
       {STATUS_OVERVIEW_COLUMNS.map((column) => {
         const item = row[column.source];
-        const create = laneCreateControl(unit, row, column, onAddItem);
-        if (!item)
-          return (
-            <EmptyLane
-              key={column.key}
-              column={column}
-              rowKey={row.key}
-              create={create}
-            />
-          );
+        if (!item) return <EmptyLane key={column.key} column={column} />;
         return (
           <Lane
             key={column.key}
             column={column}
-            laneKey={row.key}
-            className="group/lane min-w-0 px-3 py-1 block border-t border-[var(--color-border-subtle)] first:border-t-0 md:px-4 md:py-3 md:min-h-24 md:flex-col md:border-t-0 first:md:border-l-0 md:border-l md:border-[var(--color-border-subtle)] md:flex"
+            className="min-w-0 px-3 py-1 block border-t border-[var(--color-border-subtle)] first:border-t-0 md:px-4 md:py-3 md:min-h-24 md:flex-col md:border-t-0 first:md:border-l-0 md:border-l md:border-[var(--color-border-subtle)] md:flex"
           >
             <MobileWeekLabel label={column.label} />
             {column.source === "previous" && row.previousParent ? (
@@ -175,9 +126,6 @@ function LineageRow({
               </p>
             ) : null}
             <ReportItemSlot item={item} {...itemHandlers} />
-            {create ? (
-              <div className="mt-1 flex justify-end md:mt-auto">{create}</div>
-            ) : null}
           </Lane>
         );
       })}
@@ -214,13 +162,11 @@ export function DesktopPeriodHeader({
 export function LineageRowList({
   rows,
   expanded,
-  unit,
   editorSlot,
   handlers,
 }: {
   readonly rows: readonly StatusOverviewLineageRow[];
   readonly expanded: boolean;
-  readonly unit: StatusOverviewUnit;
   readonly editorSlot: ItemHandlers["editorSlot"];
   readonly handlers: Omit<ItemHandlers, "editorSlot">;
 }) {
@@ -242,7 +188,6 @@ export function LineageRowList({
           >
             <LineageRow
               row={row}
-              unit={unit}
               editorSlot={editorSlot}
               {...handlers}
             />

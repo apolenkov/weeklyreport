@@ -413,18 +413,13 @@ async function itemPreview(text: string): Promise<HTMLElement> {
 }
 
 async function openMoveMenu(
-  user: ReturnType<typeof userEvent.setup>,
   text: string,
   destination: "this week" | "next week",
 ) {
+  // The week move is a direct row button.
   const preview = await itemPreview(text);
-  await user.click(
-    await within(preview).findByRole("button", {
-      name: `More actions for ${text}`,
-    }),
-  );
-  return screen.findByRole("menuitem", {
-    name: `Move to ${destination}: ${text}`,
+  return within(preview).findByRole("button", {
+    name: `Move ${text} to ${destination === "this week" ? "current week" : "next week"}`,
   });
 }
 
@@ -433,7 +428,7 @@ async function chooseMove(
   text: string,
   destination: "this week" | "next week",
 ) {
-  await user.click(await openMoveMenu(user, text, destination));
+  await user.click(await openMoveMenu(text, destination));
 }
 
 function echoSaveDraft() {
@@ -455,12 +450,11 @@ function echoSaveDraft() {
 // waited out; the confirmation toast carries the same Undo action as every
 // other direct move.
 async function chooseDirectMove(
-  user: ReturnType<typeof userEvent.setup>,
   text: string,
   destination: "this week" | "next week",
   saveDraft: ReturnType<typeof echoSaveDraft>,
 ) {
-  const moveItem = await openMoveMenu(user, text, destination);
+  const moveItem = await openMoveMenu(text, destination);
   vi.useFakeTimers();
   try {
     fireEvent.click(moveItem);
@@ -499,7 +493,7 @@ async function chooseDirectMove(
 }
 
 // The item title opens the inline text editor; the canonical editor is
-// reached through the overflow menu's Edit details entry.
+// reached through the row's Edit details (pencil) button.
 async function openItemEditor(
   user: ReturnType<typeof userEvent.setup>,
   text: string,
@@ -507,11 +501,8 @@ async function openItemEditor(
   const preview = await itemPreview(text);
   await user.click(
     await within(preview).findByRole("button", {
-      name: `More actions for ${text}`,
+      name: `Edit details: ${text}`,
     }),
-  );
-  await user.click(
-    await screen.findByRole("menuitem", { name: `Edit details: ${text}` }),
   );
 }
 
@@ -946,7 +937,7 @@ describe("LeadForm Overview", () => {
     expect(within(preview).queryByText("Development")).toBeNull();
   });
 
-  it("reaches the terminal outcome composer through More actions for a committed Current item", async () => {
+  it("reaches the terminal outcome composer through the status menu for a committed Current item", async () => {
     const user = userEvent.setup();
     const resolvePlan = vi.fn();
     render(
@@ -978,12 +969,12 @@ describe("LeadForm Overview", () => {
     const settled = await itemPreview("Current work");
     await user.click(
       await within(settled).findByRole("button", {
-        name: "More actions for Current work",
+        name: /^Status of Current work:/,
       }),
     );
     await user.click(
       await screen.findByRole("menuitem", {
-        name: "Update status: Current work",
+        name: "Resolve plan: Current work",
       }),
     );
     const composer = await screen.findByRole("form", { name: "Resolve plan" });
@@ -1514,7 +1505,7 @@ describe("LeadForm Overview", () => {
       expect(await screen.findByText(updated)).toBeInTheDocument();
       expect(
         await screen.findByRole("button", {
-          name: `More actions for ${updated}`,
+          name: `Edit details: ${updated}`,
         }),
       ).toHaveFocus();
       expect(await screen.findByTestId("lead-submit-readiness")).toBeVisible();
@@ -1841,7 +1832,7 @@ describe("LeadForm Overview", () => {
     );
   });
 
-  it("creates a Next item from the Next cell with Planned progress and focuses the new item", async () => {
+  it("creates a Next item from the header Add item with Planned progress and focuses the new item", async () => {
     const user = userEvent.setup();
     const serverItemId = "a0000000-0000-4000-8000-000000000030";
     const serverStableId = "a0000000-0000-4000-8000-000000000031";
@@ -1871,18 +1862,16 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
 
-    const nextCreate = await pollUntil(() => {
-      const control = document.querySelector<HTMLButtonElement>(
-        '[data-overview-create-origin="cell"][data-overview-create-source="next"]',
-      );
-      if (!control)
-        throw new Error("Expected a contextual Next creation control");
-      return control;
-    });
-    expect(nextCreate.dataset.overviewFocus).toMatch(
-      new RegExp(`^add:product:${PROJECT_ID}:row:.*:cell:next$`),
+    await user.click(
+      await screen.findByRole("button", { name: "Add item to Payments" }),
     );
-    await user.click(nextCreate);
+    await user.click(
+      within(
+        await screen.findByRole("form", {
+          name: "Current week update for Payments",
+        }),
+      ).getByRole("radio", { name: "Next week" }),
+    );
 
     const form = await screen.findByRole("form", {
       name: "Next week update for Payments",
@@ -1895,7 +1884,7 @@ describe("LeadForm Overview", () => {
     expect(
       within(form).getByRole("radio", { name: "Next week" }),
     ).toBeChecked();
-    // The open composer is the only creation path: no second draft store.
+    // Cells never offer creation: the unit header is the only entry point.
     expect(
       document.querySelectorAll("[data-overview-create-origin]"),
     ).toHaveLength(0);
@@ -2059,7 +2048,7 @@ describe("LeadForm Overview", () => {
     });
   });
 
-  it("creates a Current item from a populated Current cell and returns focus there on Cancel", async () => {
+  it("creates a Current item from the header Add item and returns focus there on Cancel", async () => {
     const user = userEvent.setup();
     const saveDraft = vi.fn();
     render(
@@ -2068,15 +2057,9 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
 
-    const currentCreate = await pollUntil(() => {
-      const control = document.querySelector<HTMLButtonElement>(
-        '[data-overview-create-origin="cell"][data-overview-create-source="current"]',
-      );
-      if (!control)
-        throw new Error("Expected a contextual Current creation control");
-      return control;
-    });
-    await user.click(currentCreate);
+    await user.click(
+      await screen.findByRole("button", { name: "Add item to Payments" }),
+    );
 
     const form = await screen.findByRole("form", {
       name: "Current week update for Payments",
@@ -2104,7 +2087,7 @@ describe("LeadForm Overview", () => {
       const active = document.activeElement;
       expect(
         active instanceof HTMLElement ? active.dataset.overviewFocus : null,
-      ).toMatch(new RegExp(`^add:product:${PROJECT_ID}:row:.*:cell:current$`));
+      ).toBe(`add:product:${PROJECT_ID}`);
     });
   });
 
@@ -2120,7 +2103,7 @@ describe("LeadForm Overview", () => {
     await user.keyboard("{Escape}");
     await user.click(screen.getByRole("button", { name: "Discard" }));
     expect(
-      screen.getByRole("button", { name: "More actions for Current work" }),
+      screen.getByRole("button", { name: "Edit details: Current work" }),
     ).toHaveFocus();
     expect(
       within(screen.getByTestId("status-overview")).getByRole("status"),
@@ -2347,7 +2330,7 @@ describe("LeadForm Overview", () => {
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", {
-        name: "More actions for Current work",
+        name: "Edit details: Current work",
       }),
     ).toHaveFocus();
   });
@@ -2410,7 +2393,6 @@ describe("LeadForm Overview", () => {
   });
 
   it("moves a Current item to next week in one action through the ordinary autosave", async () => {
-    const user = userEvent.setup();
     const saveDraft = echoSaveDraft();
     render(
       <Wrapper saveDraft={saveDraft}>
@@ -2418,9 +2400,7 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
 
-    const { saved } = await chooseDirectMove(
-      user,
-      "Current work",
+    const { saved } = await chooseDirectMove("Current work",
       "next week",
       saveDraft,
     );
@@ -2450,7 +2430,6 @@ describe("LeadForm Overview", () => {
   });
 
   it("moves focus to the moved item's visible control in the Next lane", async () => {
-    const user = userEvent.setup();
     const saveDraft = echoSaveDraft();
     render(
       <Wrapper saveDraft={saveDraft}>
@@ -2458,9 +2437,7 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
 
-    const { focused } = await chooseDirectMove(
-      user,
-      "Current work",
+    const { focused } = await chooseDirectMove("Current work",
       "next week",
       saveDraft,
     );
@@ -2478,7 +2455,6 @@ describe("LeadForm Overview", () => {
   });
 
   it("moves a Next item to this week in one action through the ordinary autosave", async () => {
-    const user = userEvent.setup();
     const saveDraft = echoSaveDraft();
     render(
       <Wrapper saveDraft={saveDraft}>
@@ -2486,9 +2462,7 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
 
-    const { saved } = await chooseDirectMove(
-      user,
-      "Next work",
+    const { saved } = await chooseDirectMove("Next work",
       "this week",
       saveDraft,
     );
@@ -2510,7 +2484,6 @@ describe("LeadForm Overview", () => {
   // first, the autosave is refused and the Overview must show the saved
   // placement again instead of keeping the move this tab never persisted.
   it("reloads the saved placement when a move autosave hits a stale-tab conflict", async () => {
-    const user = userEvent.setup();
     const conflict = new TRPCClientError("stale version");
     Object.defineProperty(conflict, "data", {
       value: { httpStatus: 409, code: "CONFLICT" },
@@ -2541,7 +2514,7 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
 
-    const moveItem = await openMoveMenu(user, "Current work", "next week");
+    const moveItem = await openMoveMenu("Current work", "next week");
     vi.useFakeTimers();
     try {
       fireEvent.click(moveItem);
@@ -2589,25 +2562,20 @@ describe("LeadForm Overview", () => {
 
     const preview = await itemPreview("Legacy next-week plan");
     const opener = await within(preview).findByRole("button", {
-      name: "More actions for Legacy next-week plan",
+      name: "Move Legacy next-week plan to current week",
     });
     await user.click(opener);
-    await user.click(
-      screen.getByRole("menuitem", {
-        name: "Move to this week: Legacy next-week plan",
-      }),
-    );
     expect(
       screen.getByRole("form", { name: "Current week update for Payments" }),
     ).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(saveDraft).not.toHaveBeenCalled();
-    // The Move origin is the More actions trigger, still in the tree.
+    // The Move origin is the row's week-move button, still in the tree.
     const settled = await itemPreview("Legacy next-week plan");
     expect(
       within(settled).getByRole("button", {
-        name: "More actions for Legacy next-week plan",
+        name: "Move Legacy next-week plan to current week",
       }),
     ).toHaveFocus();
   });
@@ -2629,7 +2597,7 @@ describe("LeadForm Overview", () => {
     expect(resolvePlan).not.toHaveBeenCalled();
     expect(
       await screen.findByRole("button", {
-        name: "More actions for Next work",
+        name: "Edit details: Next work",
       }),
     ).toHaveFocus();
   });
@@ -2690,10 +2658,10 @@ describe("LeadForm Overview", () => {
         }),
       ).toBeNull(),
     );
-    // Focus returns to the overflow control that opened the editor.
+    // Focus returns to the Edit details control that opened the editor.
     expect(
       await screen.findByRole("button", {
-        name: "More actions for Current work",
+        name: "Edit details: Current work",
       }),
     ).toHaveFocus();
   });
@@ -2840,7 +2808,7 @@ describe("LeadForm Overview", () => {
     ).toBeVisible();
     expect(
       await screen.findByRole("button", {
-        name: "More actions for Current work",
+        name: "Edit details: Current work",
       }),
     ).toHaveFocus();
   });
@@ -2866,7 +2834,6 @@ describe("LeadForm Overview", () => {
   });
 
   it("confirms a saved next-week plan in place and never promotes the result", async () => {
-    const user = userEvent.setup();
     const saveDraft = vi.fn(
       (input: unknown, current: ReportSectionReadModel) => {
         const draft = input as {
@@ -2894,14 +2861,14 @@ describe("LeadForm Overview", () => {
 
     // Open the row menu on the real clock; the acknowledgement only starts the
     // autosave debounce, which is virtualized below instead of waited out.
-    const moveToNextWeek = await openMoveMenu(
-      user,
-      "Current work",
+    const moveToNextWeek = await openMoveMenu("Current work",
       "next week",
     );
     const confirmedStableId = "a0000000-0000-4000-8000-000000000011";
     vi.useFakeTimers();
     try {
+      // A real click focuses the button; fireEvent alone does not.
+      moveToNextWeek.focus();
       fireEvent.click(moveToNextWeek);
 
       // Move on a saved plan confirms it in place: no editor, no promotion.
@@ -2945,7 +2912,7 @@ describe("LeadForm Overview", () => {
     await pollUntil(() =>
       expect(document.activeElement).toHaveAttribute(
         "data-overview-focus",
-        `more:current:${confirmedStableId}`,
+        `move:current:${confirmedStableId}`,
       ),
     );
   }, 15_000);
@@ -3072,9 +3039,7 @@ describe("LeadForm Overview", () => {
         </Wrapper>,
       );
 
-      const { saved } = await chooseDirectMove(
-        user,
-        "Current work",
+      const { saved } = await chooseDirectMove("Current work",
         "next week",
         saveDraft,
       );

@@ -6,39 +6,20 @@ import type {
 } from "../model/status-overview";
 import type { StatusOverviewEditorSlot } from "./status-overview-editor-slot";
 
-// Every creation entry point is the same button contract: the unit header, the
-// timeline lanes and the mobile header all emit one canonical create target so
-// they share the single composer and never a second draft store.
+// Creation has one entry point per unit, the header Add item control; its
+// composer picks the week, so timeline cells never offer a second Add.
 const CREATE_CONTROL =
-  "min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-primary)] hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
-
-// Desktop lanes reveal their create control on pointer hover or keyboard focus
-// within the lane, and keep it visible where hover cannot exist (touch). The
-// node always stays in the accessibility tree; only sight is hidden. Mobile
-// creation lives in the unit header instead, because empty lanes stay collapsed.
-const CELL_CREATE_REVEAL =
-  "hidden md:inline-flex opacity-0 transition-opacity group-hover/lane:opacity-100 group-focus-within/lane:opacity-100 [@media(hover:none)]:opacity-100 motion-reduce:transition-none";
-
-type CreateSource = "current" | "next";
+  "min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-primary)] hover:bg-[var(--color-muted)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--color-primary)]";
 
 function createTarget(
   unit: StatusOverviewUnit,
-  source: CreateSource,
+  source: "current" | "next",
 ): StatusOverviewCreateTarget {
   return { source, unitKind: unit.kind, unitId: unit.id };
 }
 
-function weekLabel(source: CreateSource): string {
-  return source === "current" ? "current week" : "next week";
-}
-
-// The accessible name identifies creation, unit and week for every origin.
-function createLabel(unit: StatusOverviewUnit, source: CreateSource): string {
-  return `Add ${weekLabel(source)} update to ${unit.name}`;
-}
-
-// The unit-level add affordance lives in the unit header; the footer strip is
-// kept only as the create-composer host so the editor still spans the timeline.
+// The visible label matches the start of the accessible name (WCAG 2.5.3) and
+// stays on mobile, including for a unit with no items.
 export function UnitAddItemButton({
   unit,
   onAddItem,
@@ -51,91 +32,12 @@ export function UnitAddItemButton({
     <button
       type="button"
       aria-label={`Add item to ${unit.name}`}
-      title="Add item"
       data-overview-focus={`add:${unit.key}`}
       onClick={() => onAddItem(createTarget(unit, "current"))}
-      className={`inline-flex ${CREATE_CONTROL}`}
+      className={`inline-flex gap-1 px-2 text-sm font-semibold ${CREATE_CONTROL}`}
     >
       <Plus aria-hidden="true" className="size-4" />
-    </button>
-  );
-}
-
-// The mobile header shows three creation controls side by side (unit Add,
-// Current, Next). The two week controls carry visible labels so identical "+"
-// icons cannot be told apart only by their accessible names; wrapping keeps
-// them inside a 375px header instead of overflowing it.
-const MOBILE_CREATE_LABEL =
-  "whitespace-nowrap text-xs font-semibold leading-none";
-
-// Mobile overview collapses empty lanes, so the unit header owns always-visible
-// Current and Next creation for every unit, including an entirely empty one.
-export function UnitWeekCreateControls({
-  unit,
-  onAddItem,
-}: {
-  readonly unit: StatusOverviewUnit;
-  readonly onAddItem: (target: StatusOverviewCreateTarget) => void;
-}) {
-  if (unit.historical) return null;
-  return (
-    <div
-      className="flex flex-wrap items-center gap-1 md:hidden"
-      data-overview-mobile-create={unit.key}
-    >
-      {(["current", "next"] as const).map((source) => (
-        <button
-          key={source}
-          type="button"
-          aria-label={createLabel(unit, source)}
-          title={`Add ${weekLabel(source)} update`}
-          data-overview-create-origin="mobile-header"
-          data-overview-create-source={source}
-          data-overview-focus={`add:${unit.key}:mobile:${source}`}
-          onClick={() => onAddItem(createTarget(unit, source))}
-          className={`inline-flex gap-1 px-2 ${CREATE_CONTROL}`}
-        >
-          <Plus aria-hidden="true" className="size-4" />
-          <span className={MOBILE_CREATE_LABEL}>
-            {source === "current" ? "Current" : "Next"}
-          </span>
-        </button>
-      ))}
-    </div>
-  );
-}
-
-// Contextual desktop creation in one Current or Next lane. The row key keeps
-// focus restoration exact when several rows of one unit share a week.
-export function CellCreateButton({
-  unit,
-  source,
-  rowKey,
-  rowTitle,
-  onAddItem,
-}: {
-  readonly unit: StatusOverviewUnit;
-  readonly source: CreateSource;
-  readonly rowKey: string;
-  readonly rowTitle?: string | undefined;
-  readonly onAddItem: (target: StatusOverviewCreateTarget) => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={
-        rowTitle
-          ? `Add ${weekLabel(source)} update below "${rowTitle}" in ${unit.name}`
-          : createLabel(unit, source)
-      }
-      title={`Add ${weekLabel(source)} update`}
-      data-overview-create-origin="cell"
-      data-overview-create-source={source}
-      data-overview-focus={`add:${unit.key}:row:${rowKey}:cell:${source}`}
-      onClick={() => onAddItem(createTarget(unit, source))}
-      className={`${CREATE_CONTROL} ${CELL_CREATE_REVEAL}`}
-    >
-      <Plus aria-hidden="true" className="size-4" />
+      <span>Add item</span>
     </button>
   );
 }

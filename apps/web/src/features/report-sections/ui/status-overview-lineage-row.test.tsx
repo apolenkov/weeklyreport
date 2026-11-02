@@ -4,10 +4,7 @@ import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { LeadReviewFeedback } from "../../review";
-import type {
-  StatusOverviewItem,
-  StatusOverviewUnit,
-} from "../model/status-overview";
+import type { StatusOverviewItem } from "../model/status-overview";
 import type { StatusOverviewLineageRow } from "../model/status-overview-lineage";
 import {
   LineageRowList,
@@ -52,34 +49,11 @@ function row(
   };
 }
 
-function overviewUnit(
-  overrides: Partial<StatusOverviewUnit> = {},
-): StatusOverviewUnit {
-  return {
-    key: "product:product-1",
-    id: "product-1",
-    kind: "product",
-    name: "Payments",
-    historical: false,
-    status: "on-track",
-    stages: [],
-    linkedProducts: [],
-    columns: {
-      previouslyPlanned: { availability: "available", items: [] },
-      currentWeek: { availability: "available", items: [] },
-      nextWeek: { availability: "available", items: [] },
-    },
-    ...overrides,
-  };
-}
-
 function Rows({
   rows = [row(1), row(2), row(3)],
-  unit = overviewUnit(),
   onAddItem,
 }: {
   readonly rows?: readonly StatusOverviewLineageRow[];
-  readonly unit?: StatusOverviewUnit;
   readonly onAddItem?: (target: {
     readonly source: "current" | "next";
     readonly unitKind: "product" | "activity";
@@ -89,7 +63,6 @@ function Rows({
   return (
     <LineageRowList
       rows={rows}
-      unit={unit}
       expanded={false}
       editorSlot={undefined}
       handlers={{ onAddItem }}
@@ -198,7 +171,6 @@ describe("mobile lineage layout", () => {
                   previousParent: null,
                 },
               ]}
-              unit={overviewUnit()}
               expanded={expanded}
               editorSlot={undefined}
               handlers={{}}
@@ -282,7 +254,7 @@ describe("mobile lineage layout", () => {
   });
 });
 
-describe("contextual creation in timeline lanes", () => {
+describe("timeline lanes", () => {
   function lane(container: HTMLElement, source: string): HTMLElement {
     const element = [
       ...container.querySelectorAll<HTMLElement>(
@@ -293,84 +265,31 @@ describe("contextual creation in timeline lanes", () => {
     return element;
   }
 
-  it("offers only Current and Next creation, never for the previous plan", () => {
-    const onAddItem = vi.fn();
+  it("offers no creation control in any lane, even with an add handler", () => {
     const { container } = render(
       <Rows
         rows={[row(1, { text: "Ship the importer" })]}
-        onAddItem={onAddItem}
+        onAddItem={vi.fn()}
       />,
     );
-    const currentLane = lane(container, "current");
-    const nextLane = lane(container, "next");
-    const previousLane = lane(container, "previous");
 
+    // The unit header's Add item is the only creation entry point.
+    for (const source of ["previous", "current", "next"]) {
+      expect(
+        within(lane(container, source)).queryByRole("button", {
+          name: /^Add /,
+        }),
+      ).not.toBeInTheDocument();
+    }
     expect(
-      within(currentLane).getByRole("button", {
-        name: 'Add current week update below "Ship the importer" in Payments',
-      }),
-    ).toBeInTheDocument();
-    expect(
-      within(nextLane).getByRole("button", {
-        name: 'Add next week update below "Ship the importer" in Payments',
-      }),
-    ).toBeInTheDocument();
-    expect(
-      within(previousLane).queryByRole("button", {
-        name: /Add .* update to Payments/,
-      }),
-    ).not.toBeInTheDocument();
-    expect(within(previousLane).queryByRole("button")).not.toBeInTheDocument();
-    // One target per lane, whichever occurrence fills it.
-    expect(
-      within(currentLane).getAllByRole("button", {
-        name: 'Add current week update below "Ship the importer" in Payments',
-      }),
-    ).toHaveLength(1);
-    expect(
-      within(nextLane).getAllByRole("button", {
-        name: 'Add next week update below "Ship the importer" in Payments',
-      }),
-    ).toHaveLength(1);
+      container.querySelectorAll("[data-overview-create-origin]"),
+    ).toHaveLength(0);
   });
 
-  it("passes the lane week and the unit through the canonical create handler", async () => {
-    const user = userEvent.setup();
-    const onAddItem = vi.fn();
-    const { container } = render(<Rows onAddItem={onAddItem} />);
-
-    await user.click(
-      within(lane(container, "next")).getByRole("button", {
-        name: 'Add next week update below "Update 1" in Payments',
-      }),
-    );
-    expect(onAddItem).toHaveBeenLastCalledWith({
-      source: "next",
-      unitKind: "product",
-      unitId: "product-1",
-    });
-
-    await user.click(
-      within(lane(container, "current")).getByRole("button", {
-        name: 'Add current week update below "Update 1" in Payments',
-      }),
-    );
-    expect(onAddItem).toHaveBeenLastCalledWith({
-      source: "current",
-      unitKind: "product",
-      unitId: "product-1",
-    });
-  });
-
-  it("keeps the dash and screen-reader emptiness in a creatable empty lane", () => {
+  it("keeps the dash and screen-reader emptiness in an empty lane", () => {
     const { container } = render(<Rows onAddItem={vi.fn()} />);
     const nextLane = lane(container, "next");
 
-    expect(
-      within(nextLane).getByRole("button", {
-        name: 'Add next week update below "Update 1" in Payments',
-      }),
-    ).toBeInTheDocument();
     expect(within(nextLane).getByText("—")).toHaveAttribute(
       "aria-hidden",
       "true",
@@ -378,78 +297,8 @@ describe("contextual creation in timeline lanes", () => {
     expect(within(nextLane).getByText("No item in this period")).toHaveClass(
       "sr-only",
     );
-    // Empty lanes stay collapsed on mobile; the unit header owns touch creation.
+    // Empty lanes stay collapsed on mobile; the unit header owns creation.
     expect(nextLane).toHaveClass("hidden", "md:flex");
-  });
-
-  it("offers both lanes when the row only holds a next-week occurrence", () => {
-    const current = row(1).current;
-    if (!current) throw new Error("Expected an item");
-    const next = { ...current, source: "next" as const, key: "next:1" };
-    const { container } = render(
-      <Rows
-        rows={[
-          {
-            key: "next:1",
-            previous: null,
-            current: null,
-            next,
-            previousParent: null,
-          },
-        ]}
-        onAddItem={vi.fn()}
-      />,
-    );
-
-    expect(
-      within(lane(container, "next")).getByRole("button", {
-        name: 'Add next week update below "Update 1" in Payments',
-      }),
-    ).toBeInTheDocument();
-    expect(
-      within(lane(container, "current")).getByRole("button", {
-        name: 'Add current week update below "Update 1" in Payments',
-      }),
-    ).toBeInTheDocument();
-  });
-
-  it("offers no creation control for a historical or read-only unit", () => {
-    const { container: historical } = render(
-      <Rows unit={overviewUnit({ historical: true })} onAddItem={vi.fn()} />,
-    );
-    expect(
-      historical.querySelectorAll("[data-overview-create-origin]"),
-    ).toHaveLength(0);
-
-    const { container: readOnly } = render(<Rows />);
-    expect(
-      readOnly.querySelectorAll("[data-overview-create-origin]"),
-    ).toHaveLength(0);
-  });
-
-  it("offers no creation in an unavailable lane", () => {
-    const { container } = render(
-      <Rows
-        unit={overviewUnit({
-          columns: {
-            previouslyPlanned: { availability: "available", items: [] },
-            currentWeek: {
-              availability: "unavailable",
-              reason: "Period unavailable",
-              items: [],
-            },
-            nextWeek: { availability: "available", items: [] },
-          },
-        })}
-        onAddItem={vi.fn()}
-      />,
-    );
-
-    expect(
-      within(lane(container, "current")).queryByRole("button", {
-        name: /Add current week update/,
-      }),
-    ).not.toBeInTheDocument();
   });
 
   it("omits leading left border on the first timeline cell at md breakpoint (C3013)", () => {

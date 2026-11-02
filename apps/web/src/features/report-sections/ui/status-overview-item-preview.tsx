@@ -6,18 +6,17 @@ import type {
   StatusOverviewEditTarget,
   StatusOverviewItem,
 } from "../model/status-overview";
-import { overviewItemMovable } from "../model/status-overview-dnd";
 import { statusOverviewItemActions } from "../model/status-overview-items";
 import {
   type ActionProps,
-  StatusControl,
   weekMoveFocusKey,
 } from "./status-overview-item-actions";
-import { ItemActionChip, useCardDrag } from "./status-overview-item-chip";
 import { ItemBadges, ResolutionNote } from "./status-overview-item-metadata";
+import { ItemActionRow } from "./status-overview-item-row";
 import { StatusOverviewItemTextEditor } from "./status-overview-item-text-editor";
 import { OutcomeAudit } from "./status-overview-outcome-audit";
 import { TrackedWorkComments } from "./status-overview-record-comments";
+import { StatusControl } from "./status-overview-status-control";
 import { StatusInput } from "./status-overview-status-input";
 import { VerdictRail } from "./status-overview-verdict-controls";
 import { useOverviewStatusInput } from "./use-overview-status-input";
@@ -178,20 +177,13 @@ export function StatusOverviewItemPreview(props: ActionProps) {
   const [expanded, setExpanded] = useState(false);
   const statusFlow = useOverviewStatusInput(item, onSetStatus);
   const preview = useRef<HTMLDivElement>(null);
-  const drag = useCardDrag(
-    item,
-    props.onMoveItem !== undefined && overviewItemMovable(item),
-  );
   const verdict = itemVerdict(item);
   const pendingVerdict = verdict === "pending" && onVerdict !== undefined;
   const decidedVerdict = verdict !== undefined && verdict !== "pending";
   const verdictStamp = decidedVerdict ? verdict : undefined;
   return (
     <div
-      ref={(element) => {
-        preview.current = element;
-        drag.nodeRef(element);
-      }}
+      ref={preview}
       id={
         item.recordId && item.comments.length > 0
           ? reviewRecordAnchor("item", item.recordId)
@@ -202,16 +194,14 @@ export function StatusOverviewItemPreview(props: ActionProps) {
       role="group"
       tabIndex={-1}
       data-overview-item-preview
-      {...drag.rootProps}
       onKeyDown={(event) => handleWeekMoveKey(event, item, props.onMoveItem)}
-      // The action chip floats above the card on hover devices; the margin
-      // keeps it clear of the sticky toolbar when focus scrolls the card in.
-      className="group/item relative flex min-w-0 items-start [@media(hover:hover)]:scroll-mt-10 gap-1 rounded-[var(--radius-sm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] [@media(hover:none)]:flex-wrap md:h-full"
+      className="group/item relative flex min-w-0 items-start gap-1 rounded-[var(--radius-sm)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--color-primary)] [@media(hover:none)]:flex-wrap md:h-full"
     >
       <StatusControl
         item={item}
         onSetStatus={onSetStatus ? statusFlow.choose : undefined}
         onConfirmItem={onConfirmItem}
+        onResolvePlan={props.onResolvePlan}
         lockReason={statusFlow.lockReason}
       />
       <div className="min-w-0 flex-1 space-y-1.5">
@@ -238,11 +228,7 @@ export function StatusOverviewItemPreview(props: ActionProps) {
           onToggle={() => setExpanded(!expanded)}
         />
       </div>
-      <ItemActionChip
-        actionProps={props}
-        drag={drag}
-        verdictStamp={verdictStamp}
-      />
+      <ItemActionRow actionProps={props} verdictStamp={verdictStamp} />
     </div>
   );
 }

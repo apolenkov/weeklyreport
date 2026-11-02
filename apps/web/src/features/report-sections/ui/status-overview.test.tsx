@@ -159,16 +159,13 @@ describe("StatusOverview", () => {
     if (!preview) throw new Error("Expected the item preview");
     await user.click(
       within(preview).getByRole("button", {
-        name: "More actions for Work item 1",
+        name: "Move Work item 1 to next week",
       }),
-    );
-    await user.click(
-      screen.getByRole("menuitem", { name: "Move to next week: Work item 1" }),
     );
     expect(onMoveItem).toHaveBeenCalledWith(
       expect.objectContaining({ recordId: "item-1" }),
       "next",
-      "more:current:item-1",
+      "move:current:item-1",
     );
   });
 
@@ -232,25 +229,25 @@ describe("StatusOverview", () => {
       .getByText("Work item 1")
       .closest<HTMLElement>("[data-overview-item-preview]");
     if (!preview) throw new Error("Expected the item preview");
-    await user.click(
+    expect(
       within(preview).getByRole("button", {
-        name: "More actions for Work item 1",
+        name: "Edit details: Work item 1",
       }),
-    );
+    ).toBeInTheDocument();
     expect(
-      screen.getByRole("menuitem", { name: "Edit details: Work item 1" }),
-    ).toBeVisible();
-    expect(
-      screen.getByRole("menuitem", { name: "Move to next week: Work item 1" }),
-    ).toBeVisible();
+      within(preview).getByRole("button", {
+        name: "Move Work item 1 to next week",
+      }),
+    ).toBeInTheDocument();
     // The unconfirmed carry offers no terminal outcome entry: choosing a
     // status in the icon menu is the way to clear it.
+    await user.click(status);
     expect(
-      screen.queryByRole("menuitem", { name: "Update status: Work item 1" }),
+      screen.queryByRole("menuitem", { name: "Resolve plan: Work item 1" }),
     ).toBeNull();
   });
 
-  it("keeps the terminal Update status entry inside More actions", async () => {
+  it("keeps the terminal outcome entry inside the status menu", async () => {
     const user = userEvent.setup();
     const onResolvePlan = vi.fn();
     const onEditItem = vi.fn();
@@ -259,6 +256,7 @@ describe("StatusOverview", () => {
         model={model}
         onResolvePlan={onResolvePlan}
         onEditItem={onEditItem}
+        onSetStatus={vi.fn()}
       />,
     );
 
@@ -266,18 +264,16 @@ describe("StatusOverview", () => {
       .getByText("Work item 1")
       .closest<HTMLElement>("[data-overview-item-preview]");
     if (!preview) throw new Error("Expected the item preview");
-    // The outcome path stays inside the quiet overflow, never beside the text.
+    // The outcome path is one level inside the status menu, never a button.
     expect(
-      within(preview).queryByRole("button", { name: /Update status/ }),
+      within(preview).queryByRole("button", { name: /Resolve plan/ }),
     ).toBeNull();
 
     await user.click(
-      within(preview).getByRole("button", {
-        name: "More actions for Work item 1",
-      }),
+      within(preview).getByRole("button", { name: /^Status of Work item 1:/ }),
     );
     await user.click(
-      screen.getByRole("menuitem", { name: "Update status: Work item 1" }),
+      screen.getByRole("menuitem", { name: "Resolve plan: Work item 1" }),
     );
 
     expect(onResolvePlan).toHaveBeenCalledWith(
@@ -287,7 +283,7 @@ describe("StatusOverview", () => {
     expect(onEditItem).not.toHaveBeenCalled();
   });
 
-  it("offers no terminal Update status on a derived Next commitment row", async () => {
+  it("offers no terminal outcome on a derived Next commitment row", async () => {
     const user = userEvent.setup();
     const onResolvePlan = vi.fn();
     const onMoveItem = vi.fn();
@@ -326,6 +322,7 @@ describe("StatusOverview", () => {
         }}
         onResolvePlan={onResolvePlan}
         onMoveItem={onMoveItem}
+        onSetStatus={vi.fn()}
       />,
     );
 
@@ -333,26 +330,25 @@ describe("StatusOverview", () => {
       .getByText("Ship the follow-up")
       .closest<HTMLElement>("[data-overview-item-preview]");
     if (!preview) throw new Error("Expected the item preview");
-    await user.click(
-      within(preview).getByRole("button", {
-        name: "More actions for Ship the follow-up",
-      }),
-    );
+    const status = within(preview).queryByRole("button", {
+      name: /^Status of Ship the follow-up:/,
+    });
+    if (status) await user.click(status);
     expect(
       screen.queryByRole("menuitem", {
-        name: "Update status: Ship the follow-up",
+        name: "Resolve plan: Ship the follow-up",
       }),
     ).toBeNull();
     // The derived commitment keeps its supported move action.
     expect(
-      screen.getByRole("menuitem", {
-        name: "Move to this week: Ship the follow-up",
+      within(preview).getByRole("button", {
+        name: "Move Ship the follow-up to current week",
       }),
-    ).toBeVisible();
+    ).toBeInTheDocument();
     expect(onResolvePlan).not.toHaveBeenCalled();
   });
 
-  it("keeps the terminal Update status on a genuine Next item", async () => {
+  it("keeps the terminal outcome on a genuine Next item", async () => {
     const user = userEvent.setup();
     const onResolvePlan = vi.fn();
     const baseUnit = model.units[0];
@@ -388,6 +384,7 @@ describe("StatusOverview", () => {
           ],
         }}
         onResolvePlan={onResolvePlan}
+        onSetStatus={vi.fn()}
       />,
     );
 
@@ -397,12 +394,12 @@ describe("StatusOverview", () => {
     if (!preview) throw new Error("Expected the item preview");
     await user.click(
       within(preview).getByRole("button", {
-        name: "More actions for Genuine next work",
+        name: /^Status of Genuine next work:/,
       }),
     );
     await user.click(
       screen.getByRole("menuitem", {
-        name: "Update status: Genuine next work",
+        name: "Resolve plan: Genuine next work",
       }),
     );
     expect(onResolvePlan).toHaveBeenCalledWith(
@@ -764,14 +761,9 @@ describe("StatusOverview", () => {
 
     await user.click(
       within(preview).getByRole("button", {
-        name: "More actions for Work item 1",
+        name: "Edit details: Work item 1",
       }),
     );
-    const edit = screen.getByRole("menuitem", {
-      name: "Edit details: Work item 1",
-    });
-    expect(edit).toHaveTextContent("Edit details");
-    await user.click(edit);
 
     expect(onEditItem).toHaveBeenCalledWith({
       recordId: "item-1",
@@ -1500,7 +1492,7 @@ describe("StatusOverview", () => {
     ).toHaveLength(0);
   });
 
-  it("keeps the header Add and adds touch-reachable Current and Next creation to the mobile unit header", async () => {
+  it("offers one labelled Add item in the unit header and no cell creation", async () => {
     const user = userEvent.setup();
     const onAddItem = vi.fn();
     render(<StatusOverview model={model} onAddItem={onAddItem} />);
@@ -1508,68 +1500,28 @@ describe("StatusOverview", () => {
     const article = screen.getByRole("article", {
       name: "Activity Incident duty",
     });
+    const add = within(article).getByRole("button", {
+      name: "Add item to Incident duty",
+    });
+    expect(add).toHaveTextContent("Add item");
+    expect(add).not.toHaveClass("opacity-0");
+    expect(add).toHaveClass("min-h-[var(--touch-target-min)]");
     expect(
-      within(article).getByRole("button", {
-        name: "Add item to Incident duty",
-      }),
-    ).toBeInTheDocument();
-    const mobileCreate = article.querySelector("[data-overview-mobile-create]");
-    if (!(mobileCreate instanceof HTMLElement))
-      throw new TypeError("Expected the mobile create controls");
-    expect(mobileCreate).toHaveClass("md:hidden");
-    const current = within(mobileCreate).getByRole("button", {
-      name: "Add current week update to Incident duty",
-    });
-    const next = within(mobileCreate).getByRole("button", {
-      name: "Add next week update to Incident duty",
-    });
-    for (const control of [current, next]) {
-      expect(control).not.toHaveClass("opacity-0");
-      expect(control).toHaveClass("min-h-[var(--touch-target-min)]");
-      expect(control).toHaveClass("min-w-[var(--touch-target-min)]");
-    }
+      article.querySelector("[data-overview-mobile-create]"),
+    ).toBeNull();
+    expect(
+      document.querySelectorAll("[data-overview-create-origin]"),
+    ).toHaveLength(0);
+    expect(
+      screen.queryByRole("button", { name: /^Add (current|next) week update/ }),
+    ).toBeNull();
 
-    await user.click(next);
-    expect(onAddItem).toHaveBeenLastCalledWith({
-      source: "next",
-      unitKind: "activity",
-      unitId: "activity-1",
-    });
-    await user.click(current);
+    await user.click(add);
     expect(onAddItem).toHaveBeenLastCalledWith({
       source: "current",
       unitKind: "activity",
       unitId: "activity-1",
     });
-  });
-
-  it("offers contextual creation only inside Current and Next lanes", () => {
-    render(<StatusOverview model={model} onAddItem={vi.fn()} />);
-
-    const lane = (source: string): HTMLElement => {
-      const element = [
-        ...document.querySelectorAll<HTMLElement>(
-          "[data-overview-lineage-lane]",
-        ),
-      ].find((candidate) => candidate.dataset.overviewLineageLane === source);
-      if (!element) throw new Error(`Expected a ${source} lane`);
-      return element;
-    };
-    expect(
-      within(lane("current")).getByRole("button", {
-        name: /^Add current week update below ".+" in Incident duty$/,
-      }),
-    ).toBeInTheDocument();
-    expect(
-      within(lane("next")).getByRole("button", {
-        name: /^Add next week update below ".+" in Incident duty$/,
-      }),
-    ).toBeInTheDocument();
-    expect(
-      within(lane("previous")).queryByRole("button", {
-        name: /^Add .* update .*Incident duty$/,
-      }),
-    ).not.toBeInTheDocument();
   });
 
   it("renders no creation controls without an add handler", () => {

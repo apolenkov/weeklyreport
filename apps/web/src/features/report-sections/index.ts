@@ -130,7 +130,10 @@ export { ItemCard } from "./ui/item-card";
 export { PublishedRecordMarker } from "./ui/item-card-actions";
 export { ItemDialogStack } from "./ui/item-dialog-stack";
 export { ItemEditDialog } from "./ui/item-edit-dialog";
-export { resolveSaveProduct } from "./ui/item-edit-dialog-helpers";
+export {
+  defaultCreateStatus,
+  resolveSaveProduct,
+} from "./ui/item-edit-dialog-helpers";
 export {
   createItemEditDraftStore,
   type ItemEditDraftStore,

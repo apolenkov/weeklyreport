@@ -1,12 +1,13 @@
 import type { LeadStatusOverviewOutput } from "@weeklyreport/shared";
 import type { SetStateAction } from "react";
 
-import type {
-  KanbanItem,
-  StatusOverviewCreateTarget,
-  StatusOverviewEditTarget,
-  StatusOverviewItem,
-  StatusOverviewModel,
+import {
+  defaultCreateStatus,
+  type KanbanItem,
+  type StatusOverviewCreateTarget,
+  type StatusOverviewEditTarget,
+  type StatusOverviewItem,
+  type StatusOverviewModel,
 } from "../../../../report-sections";
 import { buildConfirmCarriedItemPatch } from "../../../../report-sections";
 import {
@@ -265,5 +266,17 @@ export function useOverviewCreateOpeners({
       target: planned.target,
     });
   };
-  return { addItem, planItem };
+  // A new item follows the chosen week's starting progress (Next starts
+  // Planned) until the lead picks a progress of their own.
+  const changeWeek = (week: "current" | "next"): void => {
+    if (dialog?.mode === "create" && dialog.submission === null) {
+      const { status } = dialog.draftStore.getSnapshot();
+      if (status === defaultCreateStatus(dialog.week))
+        dialog.draftStore.setters.setStatus(defaultCreateStatus(week));
+    }
+    setDialog((current) =>
+      current?.submission === null ? { ...current, week } : current,
+    );
+  };
+  return { addItem, planItem, changeWeek };
 }

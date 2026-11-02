@@ -162,6 +162,11 @@ export function buildRankOptions(existingRank: number | null): number[] {
     : base;
 }
 
+/** The progress a new item starts with in each week. */
+export function defaultCreateStatus(week: "current" | "next"): ItemStatus {
+  return week === "current" ? IN_PROGRESS_STATUS : "planned";
+}
+
 export function resolveInitialItem(args: {
   readonly item: KanbanItem | null;
   readonly week: "current" | "next";
@@ -171,7 +176,7 @@ export function resolveInitialItem(args: {
   if (args.item) return args.item;
   const common = {
     id: "",
-    status: args.week === "current" ? IN_PROGRESS_STATUS : "planned",
+    status: defaultCreateStatus(args.week),
     text: "",
     author: args.currentUserName ?? "",
   } as const;

@@ -34,7 +34,7 @@ describe("StatusOverviewItemPreview reveal and keyboard", () => {
     onSetStatus: vi.fn(),
   };
 
-  it("hides the action chip with opacity only, never from the tree", () => {
+  it("hides the action row with opacity only, never from the tree", () => {
     render(
       <StatusOverviewItemPreview
         item={{ ...item, canResolve: true }}
@@ -55,9 +55,9 @@ describe("StatusOverviewItemPreview reveal and keyboard", () => {
       expect(chip).not.toHaveClass(hiding);
     }
     // Still reachable by name while visually hidden; compact on pointers,
-    // full touch target where a finger has no hover to reveal the chip.
+    // full touch target where a finger has no hover to reveal the row.
     const more = within(chip as HTMLElement).getByRole("button", {
-      name: "More actions for Original text",
+      name: "Edit details: Original text",
     });
     expect(more).toHaveClass("h-7");
     expect(more).toHaveClass("w-7");
@@ -69,7 +69,7 @@ describe("StatusOverviewItemPreview reveal and keyboard", () => {
     );
   });
 
-  it("floats the chip above the card so it never covers the text", () => {
+  it("keeps the action row in its own column so revealing it never covers the text", () => {
     render(
       <StatusOverviewItemPreview
         item={{ ...item, canResolve: true }}
@@ -77,21 +77,14 @@ describe("StatusOverviewItemPreview reveal and keyboard", () => {
       />,
     );
 
-    const card = document.querySelector<HTMLElement>(
-      "[data-overview-item-preview]",
-    );
-    expect(card).toHaveClass("relative");
-    const chip = document.querySelector<HTMLElement>(
+    const row = document.querySelector<HTMLElement>(
       "[data-overview-item-actions]",
     );
-    expect(chip).not.toBeNull();
-    // Fully above the card's top edge: anchored with bottom-full, never
-    // top-0, which used to lay the chip over the first text line.
-    expect(chip).toHaveClass("absolute");
-    expect(chip).toHaveClass("bottom-full");
-    expect(chip).toHaveClass("right-0");
-    expect(chip).not.toHaveClass("top-0");
-    expect(chip).toHaveClass("bg-[var(--color-card)]");
+    expect(row).not.toBeNull();
+    // In flow beside the text, never floated over it; on touch it wraps below.
+    expect(row).not.toHaveClass("absolute");
+    expect(row).toHaveClass("shrink-0");
+    expect(row).toHaveClass("[@media(hover:none)]:w-full");
   });
 
   it("gives every control the touch target size where hover cannot exist", () => {
@@ -115,7 +108,7 @@ describe("StatusOverviewItemPreview reveal and keyboard", () => {
     }
   });
 
-  it("tabs through the status icon and the text, then the chip's grip and actions", async () => {
+  it("tabs through the status icon and the text, then the row's actions", async () => {
     const user = userEvent.setup();
     render(
       <StatusOverviewItemPreview
@@ -132,10 +125,6 @@ describe("StatusOverviewItemPreview reveal and keyboard", () => {
     ).toHaveFocus();
     await user.tab();
     expect(
-      screen.getByRole("button", { name: "Drag to move to another week" }),
-    ).toHaveFocus();
-    await user.tab();
-    expect(
       screen.getByRole("button", { name: "Move Original text to next week" }),
     ).toHaveFocus();
     await user.tab();
@@ -146,29 +135,28 @@ describe("StatusOverviewItemPreview reveal and keyboard", () => {
     expect(
       screen.getByRole("button", { name: "Comments on Original text" }),
     ).toHaveFocus();
+    // No drag handle and no overflow menu follow the flat row.
     await user.tab();
-    expect(
-      screen.getByRole("button", { name: "More actions for Original text" }),
-    ).toHaveFocus();
+    expect(document.body).toHaveFocus();
   });
 
-  it("opens the overflow on a touch tap", async () => {
+  it("runs a row action on a touch tap", async () => {
     const user = userEvent.setup();
+    const onEditItem = vi.fn();
     render(
       <StatusOverviewItemPreview
         item={{ ...item, canResolve: true }}
         {...handlers}
+        onEditItem={onEditItem}
       />,
     );
 
     await user.pointer({
       keys: "[TouchA]",
       target: screen.getByRole("button", {
-        name: "More actions for Original text",
+        name: "Edit details: Original text",
       }),
     });
-    expect(
-      screen.getByRole("menuitem", { name: "Edit details: Original text" }),
-    ).toBeInTheDocument();
+    expect(onEditItem).toHaveBeenCalledWith(item.editTarget);
   });
 });

@@ -83,7 +83,7 @@ describe("StatusOverviewItemPreview hover action icons", () => {
     ).toBeInTheDocument();
   });
 
-  it("moves from the icon and still offers the move in the overflow menu", async () => {
+  it("moves from the icon, the only week-move entry", async () => {
     const user = userEvent.setup();
     const onMoveItem = vi.fn();
     render(<StatusOverviewItemPreview item={item} onMoveItem={onMoveItem} />);
@@ -96,20 +96,7 @@ describe("StatusOverviewItemPreview hover action icons", () => {
       "next",
       "move:current:stable-1",
     );
-
-    await user.click(
-      screen.getByRole("button", { name: "More actions for Original text" }),
-    );
-    await user.click(
-      screen.getByRole("menuitem", {
-        name: "Move to next week: Original text",
-      }),
-    );
-    expect(onMoveItem).toHaveBeenLastCalledWith(
-      item,
-      "next",
-      "more:current:stable-1",
-    );
+    expect(screen.queryByRole("button", { name: /More actions/ })).toBeNull();
   });
 
   it("moves a Next item back to Current from the icon", async () => {
