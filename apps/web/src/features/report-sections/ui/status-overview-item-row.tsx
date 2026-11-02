@@ -38,7 +38,7 @@ import { VerdictStamp } from "./status-overview-verdict-controls";
 const ROW_CLASS =
   "flex shrink-0 items-center gap-0.5 [@media(hover:none)]:order-last [@media(hover:none)]:w-full [@media(hover:none)]:flex-wrap [@media(hover:none)]:pl-[var(--touch-target-min)]";
 const ROW_REVEAL_CLASS =
-  "absolute top-0 right-0 z-10 rounded-[var(--radius-sm)] bg-[var(--color-card)] shadow-sm [@media(hover:none)]:static [@media(hover:none)]:shadow-none pointer-events-none opacity-0 transition-[opacity] group-hover/item:pointer-events-auto group-hover/item:opacity-100 group-focus-within/item:pointer-events-auto group-focus-within/item:opacity-100 has-[[data-state=open]]:pointer-events-auto has-[[data-state=open]]:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100 motion-reduce:transition-none";
+  "absolute top-0 right-0 z-10 rounded-[var(--radius-sm)] bg-[var(--color-card)] shadow-sm [@media(hover:none)]:static [@media(hover:none)]:shadow-none pointer-events-none opacity-0 transition-[opacity] group-has-[textarea:focus]/item:pointer-events-none! group-has-[textarea:focus]/item:opacity-0! group-hover/item:pointer-events-auto group-hover/item:opacity-100 group-focus-within/item:pointer-events-auto group-focus-within/item:opacity-100 has-[[data-state=open]]:pointer-events-auto has-[[data-state=open]]:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100 motion-reduce:transition-none";
 
 interface RowHandlers {
   readonly edit: ((target: StatusOverviewEditTarget) => void) | undefined;

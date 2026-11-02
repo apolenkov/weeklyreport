@@ -131,3 +131,44 @@ it("patches only stages on the latest draft item", async () => {
     patch: { stageNames: ["Development", "Testing"] },
   });
 });
+
+it.each([
+  ["Current first", ["current", "next"]],
+  ["Next first", ["next", "current"]],
+] as const)(
+  "targets the Next occurrence of a shared stable item (%s)",
+  async (_label, order) => {
+    const { editor } = setup();
+    const rows = order.map((type) => ({
+      ...raw,
+      id: `row-${type}`,
+      type,
+      projectId: "product",
+    }));
+    const section = {
+      ...editor.draft.section,
+      items: rows,
+      projects: [
+        {
+          projectId: "product",
+          ownedStages: [{ stageName: "Development" }, { stageName: "Testing" }],
+        },
+      ],
+    } as unknown as ReadyEditor["draft"]["section"];
+    const current = { ...editor, draft: { ...editor.draft, section } };
+    const hook = renderHook(() => useOverviewStagesSave(current));
+    const nextItem = {
+      ...item,
+      source: "next",
+      editTarget: { source: "next", recordId: "row-next" },
+    } as StatusOverviewItem;
+    await expect(
+      hook.result.current(nextItem, ["Development", "Testing"]),
+    ).resolves.toBeNull();
+    expect(editor.draft.apply).toHaveBeenCalledWith({
+      kind: "item-patch",
+      itemId: "row-next",
+      patch: { stageNames: ["Development", "Testing"] },
+    });
+  },
+);

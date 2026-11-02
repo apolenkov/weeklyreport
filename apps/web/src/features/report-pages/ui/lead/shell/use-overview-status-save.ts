@@ -63,10 +63,13 @@ export function useOverviewStagesSave(editor: ReadyEditor | null) {
       return "The report context changed. Reload the report before trying again.";
     if (ready.view.viewModel.isReadOnly)
       return "This report is read-only. Reload the report.";
-    const source = ready.draft.section.items.find((row) =>
-      item.stableId !== null
-        ? row.stableId === item.stableId
-        : item.recordId !== null && row.id === item.recordId,
+    // Current and Next may share one stableId; pick the occurrence the card shows.
+    const source = ready.draft.section.items.find(
+      (row) =>
+        row.type === item.source &&
+        (item.stableId !== null
+          ? row.stableId === item.stableId
+          : item.recordId !== null && row.id === item.recordId),
     );
     if (
       !source?.id ||
