@@ -95,6 +95,7 @@ function laneCreateControl(
       unit={unit}
       source={column.source}
       rowKey={row.key}
+      rowTitle={row.current?.text ?? row.next?.text ?? row.previous?.text}
       onAddItem={onAddItem}
     />
   );

@@ -103,9 +103,7 @@ describe("moveWithoutEditor", () => {
     // Undo moves the same record back to Next through the same draft write.
     offered?.action?.onClick();
     expect(store.section.items[0]).toMatchObject({ type: "next" });
-    expect(vi.mocked(toast.success).mock.calls.at(-1)?.[0]).toBe(
-      "Moved to next week",
-    );
+    expect(vi.mocked(toast.success).mock.calls.at(-1)?.[0]).toBe("Move undone");
     expect(moveToastOptions()?.action?.label).toBe("Undo");
   });
 

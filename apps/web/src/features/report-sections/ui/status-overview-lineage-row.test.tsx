@@ -20,7 +20,10 @@ const periods = {
   nextWeek: "7–13 Sep 2026",
 };
 
-function row(index: number): StatusOverviewLineageRow {
+function row(
+  index: number,
+  overrides: Partial<StatusOverviewItem> = {},
+): StatusOverviewLineageRow {
   const item: StatusOverviewItem = {
     key: `current:${String(index)}`,
     recordId: String(index),
@@ -38,6 +41,7 @@ function row(index: number): StatusOverviewLineageRow {
     canRestore: false,
     workflowStatus: "in_progress",
     continuity: null,
+    ...overrides,
   };
   return {
     key: item.key,
@@ -291,19 +295,24 @@ describe("contextual creation in timeline lanes", () => {
 
   it("offers only Current and Next creation, never for the previous plan", () => {
     const onAddItem = vi.fn();
-    const { container } = render(<Rows onAddItem={onAddItem} />);
+    const { container } = render(
+      <Rows
+        rows={[row(1, { text: "Ship the importer" })]}
+        onAddItem={onAddItem}
+      />,
+    );
     const currentLane = lane(container, "current");
     const nextLane = lane(container, "next");
     const previousLane = lane(container, "previous");
 
     expect(
       within(currentLane).getByRole("button", {
-        name: "Add current week update to Payments",
+        name: 'Add current week update below "Ship the importer" in Payments',
       }),
     ).toBeInTheDocument();
     expect(
       within(nextLane).getByRole("button", {
-        name: "Add next week update to Payments",
+        name: 'Add next week update below "Ship the importer" in Payments',
       }),
     ).toBeInTheDocument();
     expect(
@@ -315,12 +324,12 @@ describe("contextual creation in timeline lanes", () => {
     // One target per lane, whichever occurrence fills it.
     expect(
       within(currentLane).getAllByRole("button", {
-        name: "Add current week update to Payments",
+        name: 'Add current week update below "Ship the importer" in Payments',
       }),
     ).toHaveLength(1);
     expect(
       within(nextLane).getAllByRole("button", {
-        name: "Add next week update to Payments",
+        name: 'Add next week update below "Ship the importer" in Payments',
       }),
     ).toHaveLength(1);
   });
@@ -332,7 +341,7 @@ describe("contextual creation in timeline lanes", () => {
 
     await user.click(
       within(lane(container, "next")).getByRole("button", {
-        name: "Add next week update to Payments",
+        name: 'Add next week update below "Update 1" in Payments',
       }),
     );
     expect(onAddItem).toHaveBeenLastCalledWith({
@@ -343,7 +352,7 @@ describe("contextual creation in timeline lanes", () => {
 
     await user.click(
       within(lane(container, "current")).getByRole("button", {
-        name: "Add current week update to Payments",
+        name: 'Add current week update below "Update 1" in Payments',
       }),
     );
     expect(onAddItem).toHaveBeenLastCalledWith({
@@ -359,7 +368,7 @@ describe("contextual creation in timeline lanes", () => {
 
     expect(
       within(nextLane).getByRole("button", {
-        name: "Add next week update to Payments",
+        name: 'Add next week update below "Update 1" in Payments',
       }),
     ).toBeInTheDocument();
     expect(within(nextLane).getByText("—")).toHaveAttribute(
@@ -394,12 +403,12 @@ describe("contextual creation in timeline lanes", () => {
 
     expect(
       within(lane(container, "next")).getByRole("button", {
-        name: "Add next week update to Payments",
+        name: 'Add next week update below "Update 1" in Payments',
       }),
     ).toBeInTheDocument();
     expect(
       within(lane(container, "current")).getByRole("button", {
-        name: "Add current week update to Payments",
+        name: 'Add current week update below "Update 1" in Payments',
       }),
     ).toBeInTheDocument();
   });
