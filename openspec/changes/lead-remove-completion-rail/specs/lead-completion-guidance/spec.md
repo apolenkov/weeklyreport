@@ -46,3 +46,20 @@ The Lead Report completion layout MUST give the content scrollport the full row 
 - **WHEN** the viewport height is below the layout's short-height breakpoint, including high zoom or an on-screen keyboard
 - **THEN** content can flow and scroll in the document instead of a constrained full-height scrollport
 - **AND** focused inputs and header completion actions remain reachable
+
+### Requirement: A failed autosave stays visible at the top of the viewport
+
+While the editable Lead draft's autosave is in the error state, a persistent notification at the top of the viewport MUST say the draft is not saved and MUST offer a Retry action that resends the draft through the canonical save path. It MUST stay visible at any scroll position until autosave leaves the error state, then close by itself. Read-only and Slides views MUST NOT raise it. The header Retry remains.
+
+#### Scenario: the lead scrolls while a save has failed
+
+- **GIVEN** autosave of the editable draft has failed
+- **WHEN** the lead scrolls the report so the header leaves the viewport
+- **THEN** the "Draft not saved" notification with Retry stays visible at the top
+- **AND** activating Retry resends the draft immediately
+
+#### Scenario: the draft saves again
+
+- **GIVEN** the "Draft not saved" notification is visible
+- **WHEN** a later save succeeds
+- **THEN** the notification closes without user action

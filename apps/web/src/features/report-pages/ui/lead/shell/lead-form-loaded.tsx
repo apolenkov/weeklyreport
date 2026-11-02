@@ -35,6 +35,7 @@ import { LeadFormPastPeriodBanner } from "../chrome/lead-form-past-period-banner
 import { LeadFormToolbarControls } from "../chrome/lead-form-toolbar-controls";
 import { LeadSubmitReadinessSummary } from "../chrome/lead-submit-readiness-summary";
 import type { QuickAddKind } from "../chrome/quick-add-button";
+import { useSaveFailureNotice } from "../chrome/use-save-failure-notice";
 import {
   type CompletionPresentation,
   useCompletionPresentation,
@@ -219,6 +220,7 @@ export function LeadFormLoaded(props: LeadFormLoadedProps) {
     isSlidesMode: props.isSlidesMode,
     isReadOnly: props.viewModel.isReadOnly,
   });
+  useSaveFailureNotice(props.autosave, completion.showCompletionSurface);
   const byPeriod = props.data.byPeriodData;
   if (!byPeriod) return null;
 
