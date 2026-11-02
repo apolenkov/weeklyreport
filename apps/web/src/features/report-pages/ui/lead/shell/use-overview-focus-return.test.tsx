@@ -144,6 +144,43 @@ describe("overview created-item focus", () => {
     hook.rerender({ open: false });
     expect(screen.getByRole("heading")).toHaveFocus();
   });
+
+  it("never lands on another unit's Add when the created item and opener are gone", () => {
+    const page = render(
+      <>
+        <button data-overview-focus="add:product:p:row:r:cell:current">
+          Add
+        </button>
+        <button data-overview-focus="add:product:q:row:s:cell:current">
+          Other unit Add
+        </button>
+        <h2 tabIndex={-1} data-overview-focus-heading>
+          Report
+        </h2>
+      </>,
+    );
+    const created: { current: OverviewCreatedFocus | null } = { current: null };
+    const hook = renderHook(
+      ({ open }) => useOverviewFocusReturn(open, created),
+      { initialProps: { open: false } },
+    );
+    screen.getByRole("button", { name: "Add" }).focus();
+    act(() => hook.result.current());
+    hook.rerender({ open: true });
+    page.rerender(
+      <>
+        <button data-overview-focus="add:product:q:row:s:cell:current">
+          Other unit Add
+        </button>
+        <h2 tabIndex={-1} data-overview-focus-heading>
+          Report
+        </h2>
+      </>,
+    );
+    created.current = { identity: "missing-stable", week: "current" };
+    hook.rerender({ open: false });
+    expect(screen.getByRole("heading")).toHaveFocus();
+  });
 });
 
 describe("overview focus recovery", () => {

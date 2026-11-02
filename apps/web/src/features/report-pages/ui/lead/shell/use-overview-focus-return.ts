@@ -82,13 +82,16 @@ export function useOverviewFocusReturn(
       createdTarget === null
         ? undefined
         : findCreatedControl(buttons, createdTarget);
+    // After a create save the opener key ends in a week, not an item identity,
+    // so the lineage match would pick another unit's Add: exact opener only.
+    const lineageIdentity = createdTarget === null ? identity : undefined;
     const origin =
       findFocusTarget(buttons, key) ??
       findFocusTarget(buttons, fallback) ??
-      (identity === undefined
+      (lineageIdentity === undefined
         ? undefined
         : buttons.find((button) =>
-            button.dataset.overviewFocus?.endsWith(`:${identity}`),
+            button.dataset.overviewFocus?.endsWith(`:${lineageIdentity}`),
           ));
     fallbackKey.current = null;
     if (createdControl) {

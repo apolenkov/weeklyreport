@@ -1841,7 +1841,7 @@ describe("LeadForm Overview", () => {
     );
   });
 
-  it("creates a Next item from the Next cell with Planned progress and restores the cell focus", async () => {
+  it("creates a Next item from the Next cell with Planned progress and focuses the new item", async () => {
     const user = userEvent.setup();
     const serverItemId = "a0000000-0000-4000-8000-000000000030";
     const serverStableId = "a0000000-0000-4000-8000-000000000031";
