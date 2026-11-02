@@ -45,6 +45,20 @@ describe("StatusOverviewItemPreview at rest", () => {
     ).toBeVisible();
   });
 
+  it("keeps room above itself for the floating action chip when scrolled to", () => {
+    const { container } = render(
+      <StatusOverviewItemPreview
+        item={item}
+        onEditItem={vi.fn()}
+        onSetStatus={vi.fn()}
+      />,
+    );
+
+    // jsdom cannot scroll; the hover-only margin class is the teeth.
+    const root = container.querySelector("[data-overview-item-preview]");
+    expect(root?.className).toContain("[@media(hover:hover)]:scroll-mt-10");
+  });
+
   it("shows the status icon, the text and a short stage badge only", () => {
     render(
       <StatusOverviewItemPreview
