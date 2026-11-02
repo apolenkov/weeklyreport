@@ -382,8 +382,8 @@ new connections; suspend backups during that window. Do not use a generic
 Secret restart command as a database-password rotation procedure.
 
 The password must contain only URL-safe unreserved characters
-(`A-Z a-z 0-9 . - _ ~`); `postgres.db` must contain only letters, digits, and
-underscores. Helm validates the database name and a values-supplied password.
+(`A-Z a-z 0-9 . - _ ~`); `postgres.db` must contain only lower-case letters,
+digits, and underscores. Helm validates the database name and a values-supplied password.
 For an existing Secret, the migrate initContainer validates the password before
 its first database connection. `NEXT_PUBLIC_*` changes need a **rebuild** —
 they are inlined at build time and a restart will not pick them up.
