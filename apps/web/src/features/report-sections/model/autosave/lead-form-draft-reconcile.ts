@@ -18,7 +18,7 @@ type SectionDecision = ReportSectionReadModel["decisions"][number];
 type SectionRecord = SectionItem | SectionRisk | SectionDecision;
 
 export type ReseedTrigger =
-  "unchanged" | "save-echo" | "external-clean" | "external-dirty";
+  "unchanged" | "save-echo" | "external-clean" | "external-dirty" | "resync";
 
 export interface PendingSaveEcho {
   readonly persistedPayload: DraftSaveContent;
@@ -287,4 +287,22 @@ export function classifyReseed(
   if (serverDraftKey === lastServerDraftKey) return "unchanged";
   if (isSaveEcho) return "save-echo";
   return dirty ? "external-dirty" : "external-clean";
+}
+
+// A delivery after a refused stale save replaces the draft even when its content
+// matches the last key this tab saw, so the resync flag is checked first.
+export function classifyDelivery(delivery: {
+  readonly serverDraftKey: string;
+  readonly lastServerDraftKey: string | null;
+  readonly dirty: boolean;
+  readonly isSaveEcho: boolean;
+  readonly resync: boolean;
+}): ReseedTrigger {
+  if (delivery.resync) return "resync";
+  return classifyReseed(
+    delivery.serverDraftKey,
+    delivery.lastServerDraftKey,
+    delivery.dirty,
+    delivery.isSaveEcho,
+  );
 }
