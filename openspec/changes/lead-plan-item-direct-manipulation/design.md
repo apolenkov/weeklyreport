@@ -103,8 +103,9 @@ affected card to the last server state, announces the standard save-failure
 error, and re-synchronizes the Overview from the server's section. The
 tab never retries implicitly; the lead may re-issue the move manually. The
 server stays the single source of truth, and the at-most-one-active-W+1-per-
-`stableId` invariant holds because every committed move passes the same
-guarded patch builder.
+`stableId` invariant holds because every move passes the same guarded patch
+builder in the client, and the database constraint
+`UNIQUE(reportSectionId, stableId)` rejects a duplicate that bypasses it.
 
 ## Data flow
 

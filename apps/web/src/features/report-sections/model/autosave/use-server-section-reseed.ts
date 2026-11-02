@@ -25,10 +25,11 @@ export interface SaveEchoLedger {
   readonly find: (serverDraftKey: string) => PendingSaveEcho | undefined;
   readonly record: (echo: PendingSaveEcho) => void;
   readonly consume: (serverDraftKey: string, revision: string) => void;
-  // Set by a stale-save (409) conflict; the next accepted delivery replaces the
-  // draft even when its content matches the last key this tab saw.
+  // Set by a stale-save (409) conflict; the next accepted delivery of a newer
+  // revision replaces the draft even when its content matches the last key this
+  // tab saw. Re-deliveries of the revision held at the conflict keep the flag.
   readonly requireResync: () => void;
-  readonly takeResync: () => boolean;
+  readonly takeResync: (revision: string) => boolean;
 }
 
 export function sectionRevision(section: ReportSectionReadModel): string {
@@ -98,7 +99,7 @@ export function useServerSectionReseed({
     );
     const revision = sectionRevision(serverSection);
     // Set by a refused stale save: this delivery replaces the draft outright.
-    const resync = ledger.takeResync();
+    const resync = ledger.takeResync(revision);
     const sameSection =
       ledger.lastRevision()?.startsWith(`${serverSection.reportSectionId}:`) ??
       false;

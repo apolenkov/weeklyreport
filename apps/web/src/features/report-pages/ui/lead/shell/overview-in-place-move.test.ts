@@ -208,4 +208,24 @@ describe("moveWithoutEditor", () => {
     expect(store.section.items[0]).toMatchObject({ type: "current" });
     expect(toast.error).not.toHaveBeenCalled();
   });
+
+  it("undoes a move when the save echo adds server-only fields to a new row", () => {
+    const { args, store } = harness("current");
+
+    expect(moveWithoutEditor(args(overviewItem("current"), "next"))).toBe(true);
+    // A row created locally carries no comments or outcome history; the save
+    // echo returns both as empty lists. Neither is an author edit.
+    store.section = {
+      ...store.section,
+      items: store.section.items.map((row) => ({
+        ...row,
+        comments: [],
+        outcomeHistory: [],
+      })),
+    };
+    moveToastOptions()?.action?.onClick();
+
+    expect(store.section.items[0]).toMatchObject({ type: "current" });
+    expect(toast.error).not.toHaveBeenCalled();
+  });
 });
