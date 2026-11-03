@@ -109,6 +109,17 @@ describe("report-section status read projection", () => {
 });
 
 describe("deterministic section relation ordering", () => {
+  it("orders live record comments by time and stable identity", () => {
+    for (const record of [
+      reportSectionFullInclude.items,
+      reportSectionFullInclude.risks,
+      reportSectionFullInclude.decisions,
+    ]) {
+      expect(record.include.recordComments).toMatchObject({
+        orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+      });
+    }
+  });
   it("retains name priority and resolves activity/product name ties by identity in live and frozen projections", () => {
     const id = (suffix: number) =>
       `10000000-0000-4000-8000-${suffix.toString().padStart(12, "0")}`;

@@ -7,6 +7,10 @@ const recordWithCommentsInclude = {
   include: {
     project: { select: { name: true } },
     recordComments: {
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }] as [
+        { createdAt: "asc" },
+        { id: "asc" },
+      ],
       include: { reviewer: { select: { name: true } } },
     },
   },
