@@ -1,5 +1,5 @@
 import type { LeadStatusOverviewOutput } from "@weeklyreport/shared";
-import { useRef, useState } from "react";
+import { type RefObject, useRef, useState } from "react";
 
 import {
   type KanbanItem,
@@ -42,6 +42,7 @@ export function useOverviewItemEditor(
   const startedAttempt = useRef<number | null>(null);
   const promotionAttempt = useRef<string | null>(null);
   const createdFocus = useRef<OverviewCreatedFocus | null>(null);
+  const requestCloseRef = useRef<(() => void) | null>(null);
   const rememberFocus = useOverviewFocusReturn(dialog !== null, createdFocus);
   const focusMoved = useOverviewMovedFocus();
   useOverviewSubmissionDriver({
@@ -84,6 +85,7 @@ export function useOverviewItemEditor(
       : undefined;
   return {
     dialog,
+    requestCloseRef,
     error: error ?? overviewSaveFailure(editor, dialog),
     recoveryReason,
     ...editOpeners,
@@ -110,11 +112,13 @@ export function buildOverviewEditor(
     onSaveAndAddAnother,
     onCancel,
     onWeekChange,
+    requestCloseRef,
   }: {
     onSave: (item: KanbanItem) => void;
     onSaveAndAddAnother?: ((item: KanbanItem) => void) | undefined;
     onCancel: () => void;
     onWeekChange: (week: "current" | "next") => void;
+    requestCloseRef: RefObject<(() => void) | null>;
   },
 ) {
   if (!editor || !editing || editor.view.viewModel.isReadOnly) return undefined;
@@ -143,6 +147,7 @@ export function buildOverviewEditor(
       onSaveAndAddAnother={onSaveAndAddAnother}
       onCancel={onCancel}
       onWeekChange={onWeekChange}
+      requestCloseRef={requestCloseRef}
     />
   );
 }

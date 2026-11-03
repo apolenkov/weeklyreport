@@ -3,28 +3,23 @@ import {
   DialogContent,
   DialogTitle,
 } from "@weeklyreport/ui/components/ui/dialog";
-import { type ReactNode, useRef } from "react";
+import { type ReactNode, type RefObject, useRef } from "react";
 
 export function OverviewItemDialogSurface({
   title,
   onCancel,
+  requestCloseRef,
   children,
 }: {
   readonly title: string;
   readonly onCancel: () => void;
+  readonly requestCloseRef: RefObject<(() => void) | null>;
   readonly children: ReactNode;
 }) {
   const panel = useRef<HTMLDivElement>(null);
   const requestClose = () => {
-    // The canonical Cancel owns dirty-input confirmation before host recovery.
-    const buttons = panel.current?.querySelectorAll<HTMLButtonElement>(
-      "form button[type=button]",
-    );
-    const cancel = [...(buttons ?? [])].find(
-      (button) => button.textContent === "Cancel",
-    );
-    if (cancel) cancel.click();
-    else onCancel();
+    if (requestCloseRef.current) requestCloseRef.current();
+    else if (panel.current && !panel.current.querySelector("form")) onCancel();
   };
   return (
     <Dialog

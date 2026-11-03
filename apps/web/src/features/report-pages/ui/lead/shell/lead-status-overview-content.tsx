@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import type { ComponentProps, ReactNode } from "react";
+import type { ComponentProps, ReactNode, RefObject } from "react";
 
 import { SdlcTooltipProvider } from "../../../../../shared/ui/feedback/sdlc-tooltip";
 import {
@@ -36,6 +36,7 @@ interface OverviewDialogSlice {
   readonly dialog: OverviewItemDialogState | null;
   readonly recoveryReason: string | null;
   readonly close: () => void;
+  readonly requestCloseRef: RefObject<(() => void) | null>;
   readonly moveItem: (
     item: StatusOverviewItem,
     target: "current" | "next",
@@ -95,12 +96,14 @@ function OverviewEditorNotices({
             : "Edit item"
       }
       onCancel={dialog.close}
+      requestCloseRef={dialog.requestCloseRef}
     >
       {dialog.recoveryReason ? (
         <OverviewInputRecovery
           dialog={dialog.dialog}
           reason={dialog.recoveryReason}
           onCancel={dialog.close}
+          requestCloseRef={dialog.requestCloseRef}
         />
       ) : (
         itemEditor

@@ -1,3 +1,5 @@
+import type { RefObject } from "react";
+
 import {
   createItemEditDraftStore,
   type DraftPatch,
@@ -151,6 +153,7 @@ function OverviewItemDialog({
   onSaveAndAddAnother,
   onCancel,
   onWeekChange,
+  requestCloseRef,
   saveDisabled = false,
 }: {
   readonly editor: ReadyEditor;
@@ -160,6 +163,7 @@ function OverviewItemDialog({
   readonly onCancel: () => void;
   readonly onWeekChange?: ((week: "current" | "next") => void) | undefined;
   readonly saveDisabled?: boolean | undefined;
+  readonly requestCloseRef: RefObject<(() => void) | null>;
 }) {
   const viewModel = editor.view.viewModel;
   const createTarget = dialog.mode === "create" ? dialog.target : null;
@@ -200,6 +204,7 @@ function OverviewItemDialog({
       onSave={onSave}
       onSaveAndAddAnother={onSaveAndAddAnother}
       onCancel={onCancel}
+      requestCloseRef={requestCloseRef}
     />
   );
 }
@@ -213,6 +218,7 @@ export function OverviewEditorDialog({
   onSaveAndAddAnother,
   onCancel,
   onWeekChange,
+  requestCloseRef,
 }: {
   readonly editor: ReadyEditor | null;
   readonly dialog: OverviewItemDialogState | null;
@@ -222,6 +228,7 @@ export function OverviewEditorDialog({
   readonly onSaveAndAddAnother?: ((item: KanbanItem) => void) | undefined;
   readonly onCancel: () => void;
   readonly onWeekChange: (week: "current" | "next") => void;
+  readonly requestCloseRef: RefObject<(() => void) | null>;
 }) {
   if (!editor || !dialog || isReadOnly) return null;
   if (dialog.generation !== editor.generation) return null;
@@ -237,6 +244,7 @@ export function OverviewEditorDialog({
       onSaveAndAddAnother={onSaveAndAddAnother}
       onCancel={onCancel}
       onWeekChange={onWeekChange}
+      requestCloseRef={requestCloseRef}
     />
   );
 }
@@ -245,10 +253,12 @@ export function OverviewInputRecovery({
   dialog,
   reason,
   onCancel,
+  requestCloseRef,
 }: {
   readonly dialog: OverviewItemDialogState;
   readonly reason: string;
   readonly onCancel: () => void;
+  readonly requestCloseRef: RefObject<(() => void) | null>;
 }) {
   return (
     <section
@@ -268,6 +278,7 @@ export function OverviewInputRecovery({
         saveDisabled
         onSave={() => undefined}
         onCancel={onCancel}
+        requestCloseRef={requestCloseRef}
       />
     </section>
   );
