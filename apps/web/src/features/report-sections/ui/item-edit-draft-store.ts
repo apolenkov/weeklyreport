@@ -101,7 +101,8 @@ export function createItemEditDraftStore(args: ItemEditDraftSeed) {
     baseline,
     isCreate,
     // Any field change (not only text) makes the draft worth confirming.
-    isDirty: () => JSON.stringify(state.snapshot) !== JSON.stringify(baseline),
+    isDirty: (snapshot = state.snapshot) =>
+      JSON.stringify(snapshot) !== JSON.stringify(baseline),
     getSnapshot: () => state.snapshot,
     isStatusChosen: () => state.statusChosen,
     subscribe: (listener: () => void) => {

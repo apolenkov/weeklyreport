@@ -35,7 +35,8 @@ export function useItemEditFormState(args: UseItemEditFormStateArgs) {
   const [errors, setErrors] = useState<ItemEditErrors>({});
   const dialogSurfaceRef = useRef<HTMLDivElement>(null);
   const isDialog = (args.presentation ?? "dialog") === "dialog";
-  const dirty = store.isDirty();
+  // Make the subscribed snapshot an explicit dependency for React Compiler.
+  const dirty = store.isDirty(fields);
   const { requestClose, discardDialog } = useDiscardGuard(
     dirty,
     args.onCancel,

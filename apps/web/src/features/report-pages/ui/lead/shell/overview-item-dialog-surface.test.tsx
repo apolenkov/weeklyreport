@@ -76,6 +76,9 @@ describe("Overview item dialog dismissal", () => {
       "Retained input",
     );
     expect(closeRef.current).toEqual(expect.any(Function));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(onClose).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Keep editing" }));
     // Escape outside the form exercises the surface-to-editor registration.
     screen.getByRole("button", { name: "Close" }).focus();
     await user.keyboard("{Escape}");
