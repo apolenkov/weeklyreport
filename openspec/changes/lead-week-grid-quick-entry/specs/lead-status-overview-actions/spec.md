@@ -1,5 +1,71 @@
 ## MODIFIED Requirements
 
+### Requirement: Overview cards MUST expose their actions flat, one click and one menu level
+
+The `/lead/report/:reportId` Report Overview MUST keep the three temporal columns. Each editable Current or Next item MUST rest as one status icon followed by its text, with directly visible labelled stage controls below the text for eligible Product items. The status icon MUST open a menu of statuses; when the item can take a terminal outcome, that same menu MUST end with an outcome entry that opens the existing outcome flow, and no separate "Update status" entry MUST exist. The outcome entry MUST follow the existing eligibility: never on Previous rows, an unconfirmed carry, or a derived Next projection. On pointer hover, keyboard focus within the item, or an open control, a row of icon buttons MUST appear without changing the card's layout or the text's width (on hover devices it floats over the card's corner and steps aside while the inline text editor has focus): Edit (pencil), the week move, the record comment action, and the Plan or Restore recovery action where it applies. Hidden controls MUST stay in the accessibility tree and the Tab order. No control on a Current or Next card MUST open a nested menu, and no overflow menu MUST exist there; the Previously planned verdict controls of `lead-plan-verdict` keep their own menu. On devices without hover the row MUST be visible at all times. The directly visible stage controls MUST present only the Lead's currently owned stages as selectable labels for eligible Product items, including a visible singleton readout when only one stage is owned. They MUST be keyboard operable, write through the current draft with every other item field preserved, and MUST NOT remove a Product item's last stage. Activity, Previously planned and unowned items MUST NOT render stage mutation controls. Operating the status menu, a stage control or a row control with a keyboard MUST return focus to the triggering control, and the three-column lineage MUST stay visible without document-level horizontal overflow. Updating an unconfirmed carried item through the status menu MUST clear its unconfirmed marker without a separate Confirm action. Previously planned content MUST remain read-only: no control in that column edits, moves or changes the status of the prior-week occurrence; the verdict controls defined by `lead-plan-verdict` write only the selected week's occurrence.
+
+#### Scenario: an ordinary active item is shown
+
+- **WHEN** Overview renders an editable Current or Next item with no restore or historical-replan state
+- **THEN** it shows the status icon, its text and, for an eligible Product item, directly visible labelled stage controls
+- **AND** no text button and no metadata line is visible until hover or focus
+
+#### Scenario: actions appear on hover without moving the layout
+
+- **WHEN** the lead hovers the item or moves keyboard focus into it
+- **THEN** Edit and the week move become visible in one row
+- **AND** the card and its neighbours keep their size and position
+- **AND** no "More actions" control is rendered
+
+#### Scenario: the status menu holds the outcome
+
+- **GIVEN** an editable Current item that can be resolved
+- **WHEN** the lead opens its status menu
+- **THEN** the progress statuses and one outcome entry are listed in that single menu
+- **AND** choosing the outcome entry opens the existing outcome flow
+
+#### Scenario: the stage label is set on the card
+
+- **GIVEN** an editable Product item
+- **WHEN** the lead selects a directly visible labelled stage owned by the Lead
+- **THEN** the item's stages update through the canonical draft save path with all other fields preserved
+- **AND** only currently owned stages are selectable without opening a menu or details editor
+
+#### Scenario: the last stage cannot be removed
+
+- **GIVEN** an editable Product item with one stage
+- **WHEN** the lead attempts to deselect its directly visible stage label
+- **THEN** that stage cannot be unchecked and the control says a Product update needs a stage
+- **AND** no draft patch is emitted
+
+#### Scenario: an Activity item has no stage control
+
+- **WHEN** Overview renders an editable Activity item
+- **THEN** it has no stage control
+
+#### Scenario: keyboard operation preserves context
+
+- **WHEN** the lead operates the status menu, a stage control or a row control with a keyboard, or closes a dialog
+- **THEN** focus returns to the triggering item control or the Overview heading
+- **AND** the three-column lineage remains visible without document-level horizontal overflow
+
+#### Scenario: an unconfirmed carried item is shown
+
+- **WHEN** Overview renders a carried Current item that the lead has not updated in the selected week
+- **THEN** its status icon visibly marks it as continued or planned but not updated this week
+- **AND** the status menu lets the lead update it without a separate Confirm action
+
+#### Scenario: prior week remains read-only
+
+- **WHEN** Overview renders Previously planned content
+- **THEN** no control edits, moves or changes the status of the prior-week occurrence
+- **AND** verdict controls, when shown, change only the selected week's occurrence
+
+#### Scenario: touch shows the row without hover
+
+- **WHEN** the Overview renders editable items on a device without hover
+- **THEN** each item's action row is visible and every control has a touch-size target
+
 ### Requirement: Overview MUST edit and create current-period items through the canonical editor
 
 Editable Lead Overview MUST create Current and Next items in an inline, owner- and week-specific composer, using canonical draft-save, authorization and lifecycle paths. Detailed editing MUST use the canonical item editor. Previously planned and ineligible sections remain read-only.
@@ -85,7 +151,7 @@ Overview MUST offer contextual inline creation in editable Current and Next unit
 
 ### Requirement: Owned product stages are directly selectable in context
 
-An eligible Lead MUST be able to see and select their product's currently assigned SDLC stages directly in the item creation context and on an editable item, without opening the full details dialog. Selection MUST remain within the author-owned stages and retain existing minimum-stage and lifecycle validation.
+An eligible Lead MUST see and select currently owned Product stages directly in creation and on editable items without the full details dialog. Selection MUST respect ownership, minimum-stage and lifecycle validation.
 
 #### Scenario: Choose an available stage while creating an item
 
@@ -99,6 +165,24 @@ An eligible Lead MUST be able to see and select their product's currently assign
 - **GIVEN** exactly one eligible stage is assigned to the Lead for the product
 - **WHEN** a new item is started in that context
 - **THEN** the stage is applied by the established default and remains visible
+
+#### Scenario: Select an owned stage on an existing item
+
+- **GIVEN** an eligible editable Current or Next Product item
+- **WHEN** the Lead selects a directly visible owned stage label by pointer or keyboard
+- **THEN** the canonical draft save updates its stages while preserving all other item fields
+- **AND** keyboard focus returns to the triggering control and the last selected stage cannot be removed
+
+#### Scenario: A sole owned stage on an existing item
+
+- **WHEN** an eligible Product item has exactly one currently owned stage
+- **THEN** its stage label remains directly visible without opening a menu or details editor
+- **AND** the last selected stage cannot be removed
+
+#### Scenario: Ineligible items cannot change stages
+
+- **WHEN** an item is an Activity, Previously planned, foreign, submitted, locked, historical or otherwise ineligible
+- **THEN** it offers no stage mutation controls
 
 #### Scenario: A selected stage becomes unavailable
 
