@@ -87,3 +87,106 @@ describe("StatusOverviewCommentsView", () => {
     expect(onClose).toHaveBeenCalledOnce();
   });
 });
+
+it("submits the controlled reply by keyboard and keeps multiline Enter", async () => {
+  const user = userEvent.setup();
+  const onChange = vi.fn();
+  const onSend = vi.fn();
+  render(
+    <StatusOverviewCommentsView
+      id="c"
+      itemLabel="Item"
+      comments={[]}
+      onClose={vi.fn()}
+      composer={{ value: "Draft", onChange, onSend, state: "idle" }}
+    />,
+  );
+  const input = screen.getByRole("textbox", { name: "Reply to Item" });
+  await user.click(input);
+  await user.keyboard("{Enter}");
+  expect(onChange).toHaveBeenCalledWith("Draft\n");
+  expect(onSend).not.toHaveBeenCalled();
+  await user.tab();
+  expect(screen.getByRole("button", { name: "Send" })).toHaveFocus();
+  await user.keyboard("{Enter}");
+  expect(onSend).toHaveBeenCalledOnce();
+});
+
+it("prevents duplicate sends while pending and preserves controlled input", () => {
+  const onSend = vi.fn();
+  render(
+    <StatusOverviewCommentsView
+      id="c"
+      itemLabel="Item"
+      comments={[comment]}
+      onClose={vi.fn()}
+      composer={{
+        value: "Keep this",
+        onChange: vi.fn(),
+        onSend,
+        state: "pending",
+      }}
+    />,
+  );
+  expect(screen.getByRole("textbox")).toHaveValue("Keep this");
+  expect(screen.getByRole("button", { name: /sending/i })).toBeDisabled();
+  expect(onSend).not.toHaveBeenCalled();
+});
+
+it.each([
+  ["error", /could not send/i],
+  ["uncertain", /check the discussion before/i],
+  ["refresh-failed", /sent.*refresh failed/i],
+] as const)("shows actionable %s state", (state, message) => {
+  const onRefresh = vi.fn();
+  render(
+    <StatusOverviewCommentsView
+      id="c"
+      itemLabel="Item"
+      comments={[]}
+      onClose={vi.fn()}
+      composer={{
+        value: "Keep this",
+        onChange: vi.fn(),
+        onSend: vi.fn(),
+        state,
+        onRefresh,
+      }}
+    />,
+  );
+  expect(screen.getByRole("textbox")).toHaveValue("Keep this");
+  expect(screen.getByRole("alert")).toHaveTextContent(message);
+  if (state !== "error") {
+    screen.getByRole("button", { name: /refresh discussion/i }).click();
+    expect(onRefresh).toHaveBeenCalledOnce();
+  }
+});
+
+it("shows authors and timestamps in the supplied chronological order", () => {
+  const reply = {
+    ...comment,
+    id: "reply",
+    reviewerName: "Lead",
+    text: "Reply",
+    createdAt: new Date("2026-09-11T10:00:00Z"),
+  };
+  render(
+    <StatusOverviewCommentsView
+      id="c"
+      itemLabel="Item"
+      comments={[comment, reply]}
+      onClose={vi.fn()}
+    />,
+  );
+  const messages = screen.getAllByRole("listitem");
+  expect(within(messages[0]).getByText("Head")).toBeVisible();
+  expect(within(messages[1]).getByText("Lead")).toBeVisible();
+  expect(messages[0].querySelector("time")).toHaveAttribute(
+    "datetime",
+    comment.createdAt.toISOString(),
+  );
+  expect(messages[1].querySelector("time")).toHaveAttribute(
+    "datetime",
+    reply.createdAt.toISOString(),
+  );
+});
