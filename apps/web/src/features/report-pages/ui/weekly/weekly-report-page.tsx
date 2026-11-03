@@ -51,17 +51,18 @@ function PeriodLifecycleActions({
           placement="header"
         />
       )}
-      {page.canMutatePeriod && (
-        <PublishLockButton
-          pendingCount={page.pendingCount}
-          totalLeads={page.total}
-          periodStatus={page.periodStatus}
-          onPublish={page.handlers.publish}
-          onReopen={page.handlers.reopen}
-          isPending={page.mutationState.isLifecyclePending}
-          canPublish={page.canPublishReport}
-        />
-      )}
+      {page.canMutatePeriod &&
+        !(page.archived && page.periodStatus === "published") && (
+          <PublishLockButton
+            pendingCount={page.pendingCount}
+            totalLeads={page.total}
+            periodStatus={page.periodStatus}
+            onPublish={page.handlers.publish}
+            onReopen={page.handlers.reopen}
+            isPending={page.mutationState.isLifecyclePending}
+            canPublish={page.canPublishReport}
+          />
+        )}
     </>
   );
 }
