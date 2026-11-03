@@ -255,7 +255,7 @@ export function RequestChangesDialog({
       surfaceRef={surfaceRef}
       onDismiss={closeIfIdle}
       isPending={isPending}
-      surfaceClassName="animate-scale-in mx-4 flex w-full max-w-md flex-col rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-xl"
+      surfaceClassName="animate-scale-in mx-4 flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-y-auto rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-card)] p-6 shadow-xl"
       ariaLabelledBy={`${id}-title`}
       testId="request-changes-dialog"
     >

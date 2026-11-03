@@ -55,6 +55,16 @@ const submitButton = () =>
   screen.getByRole("button", { name: /Request changes|Requesting/u });
 
 describe("RequestChangesDialog", () => {
+  it("keeps its form in a viewport-bounded scroll surface", () => {
+    setup();
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveClass("max-h-[calc(100dvh-2rem)]", "overflow-y-auto");
+    expect(dialog).toContainElement(
+      screen.getByLabelText("Reason for the lead"),
+    );
+    expect(dialog).toContainElement(submitButton());
+  });
+
   it("focuses the reason field on open", () => {
     setup();
     expect(screen.getByLabelText("Reason for the lead")).toHaveFocus();

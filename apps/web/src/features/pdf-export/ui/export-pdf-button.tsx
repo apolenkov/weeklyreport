@@ -35,6 +35,19 @@ function exportButtonClassName(isGenerating: boolean): string {
     : "border-[var(--color-border)] bg-transparent text-[var(--color-foreground)] hover:bg-[var(--color-surface-hover)] disabled:opacity-40";
 }
 
+function RecoveryNotice() {
+  return (
+    <>
+      <p role="alert" className="text-sm text-[var(--color-destructive)]">
+        {RECOVERY_MESSAGE}
+      </p>
+      <a href="/pdf-exports" className={FALLBACK_LINK_CLASS}>
+        Open PDF exports
+      </a>
+    </>
+  );
+}
+
 function ExportActionButton({
   disabled,
   isGenerating,
@@ -140,11 +153,7 @@ export function ExportPdfButton({
           Download PDF
         </a>
       ) : null}
-      {recoveryRequired ? (
-        <p role="alert" className="text-sm text-[var(--color-destructive)]">
-          {RECOVERY_MESSAGE}
-        </p>
-      ) : null}
+      {recoveryRequired ? <RecoveryNotice /> : null}
     </>
   );
 }

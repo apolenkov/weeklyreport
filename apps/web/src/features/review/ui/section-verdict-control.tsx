@@ -90,7 +90,7 @@ function VerdictActions({
   readonly onRequestChanges: () => void;
 }) {
   return (
-    <span className="flex items-center gap-1.5">
+    <span className="flex min-w-0 flex-wrap items-center gap-1.5">
       <button
         type="button"
         data-interaction-effect="mutation-required"
@@ -175,7 +175,7 @@ export function SectionVerdictControl({
   );
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-0 flex-col items-start gap-2 sm:flex-row sm:items-center">
       <span
         className="whitespace-nowrap rounded-[var(--radius-pill)] px-2.5 py-0.5 text-xs font-semibold"
         style={{
