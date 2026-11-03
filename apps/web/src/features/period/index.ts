@@ -5,6 +5,12 @@ export { useHistoryData } from "./model/use-report-history-data";
 export { ActivityStatusSection } from "./ui/activity-status-section";
 export { CurrentWeekSection } from "./ui/current-week-section";
 export { DecisionEditDialog } from "./ui/decision-edit-dialog";
+export {
+  buildActivityDecisionSave,
+  buildDecisionSaveBase,
+  buildProductDecisionSave,
+  collectDecisionErrors,
+} from "./ui/decision-edit-dialog-helpers";
 export { DecisionsSection } from "./ui/decisions-section";
 export { FillFromButton } from "./ui/fill-from-button";
 export { HeadPublishLockAction } from "./ui/head-publish-lock-action";

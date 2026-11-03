@@ -16,6 +16,11 @@ export type { ReviewMode } from "./ui/review-mode-toggle";
 export { ReviewModeToggle } from "./ui/review-mode-toggle";
 export { ReviewVerdictBand } from "./ui/review-verdict-band";
 export { RiskEditDialog } from "./ui/risk-edit-dialog";
+export {
+  buildActivityRiskEntry,
+  buildProductRiskEntry,
+  collectRiskErrors,
+} from "./ui/risk-edit-dialog-helpers";
 export { RisksSection } from "./ui/risks-section";
 export type { SubmissionFilter } from "./ui/submission-filter";
 export {
