@@ -48,6 +48,7 @@ export function collectItemErrors(args: {
 // Save and status changes apply the same normalized status-dependent rules.
 export function collectItemStatusErrors(args: {
   readonly status: ItemStatus;
+  readonly week?: "current" | "next" | undefined;
   readonly trimmedNextStepText: string;
   readonly trimmedPausedReason: string;
 }): { nextStepText?: string; pausedReason?: string } {
@@ -72,6 +73,12 @@ export function collectItemStatusErrors(args: {
             "A completed item cannot have a next step. Resume it or clear the plan.",
         }
       : {}),
+    ...(args.week === "next" && args.trimmedNextStepText.length > 0
+      ? {
+          nextStepText:
+            "A Next week item cannot have a next step. Clear the plan.",
+        }
+      : {}),
     // The server's safeText also refuses null bytes and oversized values; the
     // same helper gates the pause prompt, so both surfaces agree.
     ...(pausedReasonError ? { pausedReason: pausedReasonError } : {}),
@@ -90,16 +97,26 @@ export function firstInvalidControl(
   },
   surface: HTMLElement | null,
 ): HTMLElement | null {
-  if (next.text) return document.getElementById("item-text");
-  if (next.nextStepText) return document.getElementById("item-next-step");
-  if (next.parent) return document.getElementById("item-product");
+  if (next.text)
+    return surface?.querySelector('[name="text"], #item-text') ?? null;
+  if (next.nextStepText)
+    return (
+      surface?.querySelector('[name="nextStepText"], #item-next-step') ?? null
+    );
+  if (next.parent)
+    return surface?.querySelector('[name="parent"], #item-product') ?? null;
   if (next.stageNames) {
     return (
       surface?.querySelector<HTMLElement>('fieldset input[type="checkbox"]') ??
+      surface?.querySelector<HTMLElement>('fieldset[name="stageNames"]') ??
       null
     );
   }
-  if (next.pausedReason) return document.getElementById("item-paused-reason");
+  if (next.pausedReason)
+    return (
+      surface?.querySelector('[name="pausedReason"], #item-paused-reason') ??
+      null
+    );
   return null;
 }
 

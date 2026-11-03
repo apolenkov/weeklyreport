@@ -17,6 +17,8 @@ import type { ItemEditErrors } from "./use-item-edit-form-state";
 
 interface UseItemEditSaveArgs {
   readonly item: KanbanItem | null;
+  readonly week: "current" | "next";
+  readonly contextualCreateValidation: boolean;
   readonly initial: KanbanItem;
   readonly products: readonly Product[];
   readonly currentUserName?: string | undefined;
@@ -57,8 +59,30 @@ function collectSaveErrors(
   });
   return {
     ...errors,
+    ...(args.contextualCreateValidation &&
+    (args.parent.kind === "unresolved" ||
+      (args.parent.kind === "activity" && !args.selectedActivity) ||
+      (args.parent.kind === "product" &&
+        !args.products.some(
+          (product) =>
+            product.id ===
+            (args.parent.kind === "product" ? args.parent.id : undefined),
+        )))
+      ? { parent: "This parent is no longer eligible." }
+      : {}),
+    ...(args.contextualCreateValidation &&
+    args.parent.kind === "product" &&
+    (args.availableStages.length === 0 ||
+      args.effectiveStageNames.some(
+        (stage) => !args.availableStages.includes(stage),
+      ))
+      ? { stageNames: "Select currently eligible stages." }
+      : {}),
     ...collectItemStatusErrors({
       status: args.status,
+      // Existing item placement is decided by the caller's movement guard.
+      // Deliver its next step intact rather than preempting that guard.
+      week: args.item === null ? args.week : undefined,
       trimmedNextStepText: text.trimmedNextStepText,
       trimmedPausedReason: text.trimmedPausedReason,
     }),
@@ -115,7 +139,7 @@ export function useItemEditSave(args: UseItemEditSaveArgs) {
 
   function executeSave(deliver: (next: KanbanItem) => void) {
     // Dead-end: never save empty stageNames or show the unsatisfiable stage error.
-    if (args.isDeadEnd) return;
+    if (args.isDeadEnd && !args.contextualCreateValidation) return;
     const text: TrimmedSaveText = {
       trimmed: args.text.trim(),
       trimmedNextStepText: args.nextStepText.trim(),
