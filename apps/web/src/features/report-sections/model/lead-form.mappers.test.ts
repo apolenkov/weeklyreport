@@ -163,6 +163,7 @@ describe("mapLeadRisks / mapLeadDecisions / mapLeadPriorities", () => {
       risks: [
         {
           id: "r1",
+          stableId: "88888888-8888-4888-8888-888888888888",
           projectId: PROJECT_A,
           risk: "OAuth delay",
           impact: "SSO slips",
@@ -173,6 +174,7 @@ describe("mapLeadRisks / mapLeadDecisions / mapLeadPriorities", () => {
     });
 
     const mapped = mapLeadRisks(section).at(0);
+    expect(mapped?.stableId).toBe("88888888-8888-4888-8888-888888888888");
     expect(mapped?.productName).toBe("CRM");
     expect(mapped?.severity).toBe("blocked");
     // `text` holds raw `risk` only; impact/mitigation surface as

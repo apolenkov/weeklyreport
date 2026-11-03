@@ -26,6 +26,7 @@ function mapRisk(
     : undefined;
   return {
     id: requireRiskId(risk),
+    ...(risk.stableId === undefined ? {} : { stableId: risk.stableId }),
     productId: risk.projectId ?? "",
     productName: productName ?? activityName ?? "Unknown",
     ...(risk.activityId ? { activityId: risk.activityId, activityName } : {}),

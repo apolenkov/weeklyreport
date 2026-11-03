@@ -33,18 +33,70 @@ export function mergeActivityStatusDraft(
   };
 }
 
+interface Identity {
+  readonly id?: string | undefined;
+  readonly stableId?: string | undefined;
+}
+
+function addUniqueIdentity(
+  value: string | undefined,
+  seen: Set<string>,
+  error: string,
+) {
+  if (value && seen.has(value)) throw new Error(error);
+  if (value) seen.add(value);
+}
+
+function validateIdentities(rows: readonly Identity[]) {
+  const ids = new Set<string>();
+  const stableIds = new Set<string>();
+  for (const row of rows) {
+    addUniqueIdentity(row.id, ids, "Duplicate record id");
+    addUniqueIdentity(row.stableId, stableIds, "Duplicate record lineage");
+  }
+}
+
+function identityMatcher<T extends Identity>(
+  existing: readonly T[],
+  next: readonly Identity[],
+) {
+  const byId = new Map<string, T>();
+  const byStable = new Map<string, T>();
+  validateIdentities(existing);
+  validateIdentities(next);
+  for (const row of existing) {
+    if (row.id) byId.set(row.id, row);
+    if (row.stableId) byStable.set(row.stableId, row);
+  }
+  const claimed = new Set<T>();
+  return (row: Identity): T | undefined => {
+    const byPhysical = row.id ? byId.get(row.id) : undefined;
+    const byLineage = row.stableId ? byStable.get(row.stableId) : undefined;
+    if (
+      byPhysical &&
+      row.stableId &&
+      byPhysical.stableId &&
+      row.stableId !== byPhysical.stableId
+    )
+      throw new Error("Record id and lineage mismatch");
+    if (byLineage && byPhysical && byLineage !== byPhysical)
+      throw new Error("Record id and lineage mismatch");
+    const match = byLineage ?? byPhysical;
+    if (match && claimed.has(match))
+      throw new Error("Duplicate record lineage");
+    if (match) claimed.add(match);
+    return match;
+  };
+}
+
 export function mergeDecisionDraft(
   section: DraftSection,
   next: readonly DecisionEntry[],
 ): DraftSection {
-  const existingById = new Map(
-    section.decisions.flatMap((decision) =>
-      decision.id ? [[decision.id, decision] as const] : [],
-    ),
-  );
   const editableDecisions = next.filter((decision) => !decision.foreign);
+  const match = identityMatcher(section.decisions, editableDecisions);
   const decisions = editableDecisions.map((decision) => {
-    const existing = existingById.get(decision.id);
+    const existing = match(decision);
     const deadline = decision.deadline ? new Date(decision.deadline) : null;
     const parentFields = decision.activityId
       ? {
@@ -60,6 +112,7 @@ export function mergeDecisionDraft(
     if (existing) {
       return {
         ...existing,
+        stableId: existing.stableId ?? decision.stableId,
         ...parentFields,
         text: decision.text,
         owner: decision.owner,
@@ -69,6 +122,7 @@ export function mergeDecisionDraft(
     }
     return {
       id: decision.id,
+      stableId: decision.stableId,
       ...parentFields,
       text: decision.text,
       owner: decision.owner,
@@ -85,13 +139,9 @@ export function mergeRiskDraft(
   next: readonly RiskEntry[],
 ): DraftSection {
   const editableRisks = next.filter((risk) => !risk.foreign);
-  const existingById = new Map(
-    section.risks.flatMap((risk) =>
-      risk.id ? [[risk.id, risk] as const] : [],
-    ),
-  );
+  const match = identityMatcher(section.risks, editableRisks);
   const risks = editableRisks.map((risk) => {
-    const existing = risk.id ? existingById.get(risk.id) : undefined;
+    const existing = match(risk);
     const parentFields = risk.activityId
       ? {
           projectId: null,
@@ -106,6 +156,7 @@ export function mergeRiskDraft(
     if (existing) {
       return {
         ...existing,
+        stableId: existing.stableId ?? risk.stableId,
         ...parentFields,
         risk: risk.text,
         impact: risk.impact,
@@ -115,6 +166,7 @@ export function mergeRiskDraft(
     }
     return {
       id: risk.id,
+      stableId: risk.stableId,
       ...parentFields,
       risk: risk.text,
       impact: risk.impact,

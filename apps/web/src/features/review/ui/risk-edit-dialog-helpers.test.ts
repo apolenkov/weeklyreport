@@ -17,3 +17,18 @@ describe("buildActivityRiskEntry", () => {
     expect(entry.productName).toBe("Unknown");
   });
 });
+
+it("retains a caller-supplied identity for contextual risks", () => {
+  expect(
+    buildActivityRiskEntry({
+      existingId: "id",
+      stableId: "lineage",
+      activityId: "activity",
+      activityName: "Activity",
+      severity: "blocked",
+      text: "Risk",
+      impact: "Impact",
+      mitigation: "Mitigation",
+    }),
+  ).toMatchObject({ id: "id", stableId: "lineage" });
+});
