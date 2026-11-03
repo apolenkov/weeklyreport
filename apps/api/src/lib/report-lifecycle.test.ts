@@ -92,6 +92,17 @@ describe("lockCurrentEditableReport", () => {
     ).resolves.toEqual({ kind: "not-found" });
   });
 
+  it("propagates a serialization failure without admitting the writer", async () => {
+    const tx = txWith(openReport);
+    const conflict = Object.assign(new Error("serialization conflict"), {
+      code: "P2034",
+    });
+    tx.$queryRaw.mockRejectedValue(conflict);
+    await expect(
+      lockCurrentEditableReport(tx as never, { reportId: REPORT_ID }),
+    ).rejects.toBe(conflict);
+  });
+
   it("locks the parent report row FOR UPDATE when addressed by report id", async () => {
     const tx = txWith(openReport);
 
@@ -100,7 +111,9 @@ describe("lockCurrentEditableReport", () => {
     const sql = sqlText(tx.$queryRaw.mock.calls[0]?.[0]);
     expect(sql).toContain('FROM "Report"');
     expect(sql).toContain('WHERE "id" = ?');
-    expect(sql).toMatch(/FOR UPDATE$/);
+    expect(sql).toContain("FOR UPDATE");
+    expect(sql).toContain('UPDATE "Report" AS target SET "id" = target."id"');
+    expect(sql).toContain('FROM locked WHERE target."id" = locked."id"');
     expect(sql).not.toContain("FOR UPDATE OF");
     expect(tx.$queryRaw.mock.calls[0]?.[1]).toBe(REPORT_ID);
   });
@@ -115,7 +128,8 @@ describe("lockCurrentEditableReport", () => {
     expect(sql).toContain('INNER JOIN "ReportSection" AS section');
     expect(sql).toContain('ON section."reportId" = report."id"');
     expect(sql).toContain('WHERE section."id" = ?');
-    expect(sql).toMatch(/FOR UPDATE OF report$/);
+    expect(sql).toContain("FOR UPDATE OF report");
+    expect(sql).toContain('UPDATE "Report" AS target SET "id" = target."id"');
     expect(tx.$queryRaw.mock.calls[0]?.[1]).toBe("section-1");
   });
 });

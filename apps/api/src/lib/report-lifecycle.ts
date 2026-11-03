@@ -50,13 +50,21 @@ async function readLockedReport(
   const rows =
     "reportId" in target
       ? await tx.$queryRaw<LockedReportLifecycleRow[]>`
+          WITH locked AS MATERIALIZED (
           SELECT "id", "status", "periodState", "periodStatus", "archived",
             "autoPublished", "autoArchived", "publishedAt", "publishedById",
             "reopenedAt"
           FROM "Report"
           WHERE "id" = ${target.reportId}
-          FOR UPDATE`
+          FOR UPDATE
+          ), fenced AS (
+            UPDATE "Report" AS target SET "id" = target."id"
+            FROM locked WHERE target."id" = locked."id"
+            RETURNING target."id"
+          )
+          SELECT locked.* FROM locked INNER JOIN fenced USING ("id")`
       : await tx.$queryRaw<LockedReportLifecycleRow[]>`
+          WITH locked AS MATERIALIZED (
           SELECT report."id", report."status", report."periodState",
             report."periodStatus", report."archived", report."autoPublished",
             report."autoArchived", report."publishedAt",
@@ -65,11 +73,24 @@ async function readLockedReport(
           INNER JOIN "ReportSection" AS section
             ON section."reportId" = report."id"
           WHERE section."id" = ${target.sectionId}
-          FOR UPDATE OF report`;
+          FOR UPDATE OF report
+          ), fenced AS (
+            UPDATE "Report" AS target SET "id" = target."id"
+            FROM locked WHERE target."id" = locked."id"
+            RETURNING target."id"
+          )
+          SELECT locked.* FROM locked INNER JOIN fenced USING ("id")`;
   return rows[0];
 }
 
-/** Locks the parent Report first and admits only an exact editable lifecycle. */
+/**
+ * Locks/write-fences Report before admitting an exact editable lifecycle.
+ * A child-only writer must create a parent row version: otherwise an older
+ * RepeatableRead publisher can win its CAS and freeze a pre-comment graph.
+ * The identity assignment changes no lifecycle, snapshot or audit fields, but
+ * makes that stale publisher fail serialization. The CTE retains Report-first
+ * row locking and returns the lifecycle observed under that lock.
+ */
 export async function lockCurrentEditableReport(
   tx: Prisma.TransactionClient,
   target: EditableReportLockTarget,

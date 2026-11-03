@@ -70,6 +70,9 @@ export class PublicationPrismaRepository implements PublicationRepository {
         // user/project/rule/group changes cannot be published from a stale
         // payload. RepeatableRead makes that graph and the lifecycle CAS one
         // coherent snapshot for the whole admission/write/freeze sequence.
+        // Editable graph writers write-fence Report in lockCurrentEditableReport.
+        // If one commits after this snapshot, the CAS below must serialize-fail;
+        // merely locking Report in those writers would allow stale child data.
         const currentRow = await tx.report.findUnique({
           where: { id: report.reportId },
           include: reportFullIncludeForSnapshot,

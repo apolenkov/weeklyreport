@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import {
+  leadItemCommentInputSchema,
   reviewAcknowledgeInputSchema,
   reviewCommentInputSchema,
   reviewDeleteCommentInputSchema,
@@ -16,6 +17,7 @@ import {
   captureMutationAuditInputMiddleware,
   headProcedure,
   leadershipProcedure,
+  leadProcedure,
   router,
 } from "../trpc.middleware.js";
 
@@ -28,9 +30,7 @@ export interface ReviewRouterDeps {
   reviewActionsService: ReviewActionsService;
 }
 
-// All on `leadershipProcedure` (head + admin + viewer; lead excluded) so
-// `role-coverage-gate` stays green; the per-group scope + reviewer
-// designation are enforced in the service.
+// Reviewer actions retain their leadership chain and per-group entitlement.
 function createReviewActionProcedures(deps: ReviewRouterDeps) {
   return {
     // Group-level "seen" receipt — any access-holder (scope check only).
@@ -85,6 +85,15 @@ function createReviewActionProcedures(deps: ReviewRouterDeps) {
 
 export function createReviewRouter(deps: ReviewRouterDeps) {
   return router({
+    leadItemComment: leadProcedure
+      .input(leadItemCommentInputSchema)
+      .use(captureMutationAuditInputMiddleware)
+      .mutation(({ input, ctx }) =>
+        withDomainErrorMapping(() =>
+          deps.reviewActionsService.commentOwnItem(ctx.session, input),
+        ),
+      ),
+
     // review.dashboard is headProcedure — defense-in-depth: only heads (and
     // admins, aliased) see the submission dashboard.
     dashboard: headProcedure.query(({ ctx }) =>
