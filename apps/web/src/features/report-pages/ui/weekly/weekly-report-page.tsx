@@ -165,7 +165,7 @@ function WeeklyReportBody({
   // The report/deep-link basis rides inside the state (render-phase
   // adjustment) so a stale overview target can never shadow the fresh
   // focusedProductId after the basis changes while this body stays mounted.
-  const navBasis = `${page.reportId}::${page.focusedProductId ?? ""}`;
+  const navBasis = `${page.reportId}::${page.focusedProductId ?? ""}::${scope}::${initialFocusedLeadId ?? ""}`;
   const [overviewNavigation, setOverviewNavigation] = useState<{
     readonly basis: string;
     readonly targetId: string | undefined;
@@ -217,6 +217,12 @@ function WeeklyReportBody({
           : focusedProductId
       }
       focusedLeadId={focusedLeadId}
+      scrollTargetLeadId={
+        scope === "lead" &&
+        (page.reviewMode === "review" || focusedTargetId !== undefined)
+          ? focusedLeadId
+          : undefined
+      }
       overviewNavigationEpochs={overviewNavigation.epochs}
       onNavigateOverview={navigateOverview}
       onNavigateAuthor={onNavigateAuthor}

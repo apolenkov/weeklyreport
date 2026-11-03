@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 vi.mock("next/navigation", () => ({
   usePathname: () => navigation.pathname,
-  useRouter: () => ({ replace: navigation.replace }),
+  useRouter: () => ({ replace: navigation.replace, push: navigation.push }),
   useSearchParams: () => navigation.searchParams(),
 }));
 // @vitest-environment jsdom

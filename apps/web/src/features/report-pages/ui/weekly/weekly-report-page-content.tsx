@@ -78,6 +78,7 @@ interface ReportAccordionBodyProps {
   readonly focusedProductId: string | undefined;
   readonly scrollTargetProductId: string | undefined;
   readonly focusedLeadId: string | undefined;
+  readonly scrollTargetLeadId?: string | undefined;
   readonly overviewNavigationEpochs: ReadonlyMap<string, number>;
   readonly review: ReviewModel["context"];
   readonly reviewModel?: ReviewModel;
@@ -91,6 +92,7 @@ export function ReportAccordionBody({
   focusedProductId,
   scrollTargetProductId,
   focusedLeadId,
+  scrollTargetLeadId,
   overviewNavigationEpochs,
   review,
   reviewModel,
@@ -131,7 +133,7 @@ export function ReportAccordionBody({
             key={group.id}
             groupId={group.id}
             groupName={group.name}
-            focused={focusedLeadId === group.id}
+            focused={scrollTargetLeadId === group.id}
             navigationEpoch={overviewNavigationEpochs.get(group.id) ?? 0}
             verdict={
               <SectionVerdict

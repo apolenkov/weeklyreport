@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 vi.mock("next/navigation", () => ({
   usePathname: () => navigation.pathname,
-  useRouter: () => ({ replace: navigation.replace }),
+  useRouter: () => ({ replace: navigation.replace, push: navigation.push }),
   useSearchParams: () => navigation.searchParams(),
 }));
 // @vitest-environment jsdom
@@ -84,4 +84,22 @@ describe("useReportShellUrlState — 2", () => {
       { scroll: false },
     );
   });
+});
+
+it("pushes deliberate Review and Read changes, including a queued toggle", () => {
+  const { result, rerender } = renderHook(() =>
+    useReportShellUrlState({ stripParams: [] }),
+  );
+  act(() => result.current.setReviewIntent(true));
+  expect(navigation.push).toHaveBeenLastCalledWith(
+    "/reports/report-1?review=1",
+    { scroll: false },
+  );
+  act(() => result.current.setReviewIntent(false));
+  navigation.searchParams.mockReturnValue(new URLSearchParams("review=1"));
+  rerender();
+  expect(navigation.push).toHaveBeenLastCalledWith("/reports/report-1", {
+    scroll: false,
+  });
+  expect(navigation.push).toHaveBeenCalledTimes(2);
 });
