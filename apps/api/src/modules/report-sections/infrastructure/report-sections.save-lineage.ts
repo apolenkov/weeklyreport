@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 // after saveSection delete-recreates anchor rows.
 type RecordKind = "item" | "risk" | "decision";
 export interface CapturedComment {
+  readonly id: string;
   readonly stableId: string;
   readonly kind: RecordKind;
   readonly reviewerId: string;
@@ -29,6 +30,7 @@ export async function captureRecordComments(
       ],
     },
     select: {
+      id: true,
       reviewerId: true,
       text: true,
       createdAt: true,
@@ -49,6 +51,7 @@ export async function captureRecordComments(
     if (!anchor) return [];
     return [
       {
+        id: comment.id,
         stableId: anchor.stableId,
         kind: anchor.kind,
         reviewerId: comment.reviewerId,
@@ -113,6 +116,7 @@ export async function reinsertRecordComments(
     if (newRecordId === undefined) return [];
     return [
       {
+        id: comment.id,
         reviewerId: comment.reviewerId,
         text: comment.text,
         // Preserve the original authoring timestamp across the recreate.
