@@ -110,6 +110,6 @@ function riskData(reportSectionId: string, activityId: string, risk: string) {
     risk,
     impact: "Release delayed",
     mitigation: "Escalate",
-    severity: "at_risk",
+    severity: "at-risk",
   };
 }
