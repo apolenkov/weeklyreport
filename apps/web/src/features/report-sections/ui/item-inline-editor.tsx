@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { type RefObject, useEffect, useLayoutEffect, useRef } from "react";
 
 import type { ParentActivityOption } from "../model/record-parent";
 import type { ItemEditDialogProps } from "./item-edit-dialog";
@@ -102,6 +102,7 @@ function InlineEditActions({
 }
 
 type ItemInlineEditorProps = Omit<ItemEditDialogProps, "open" | "onDelete"> & {
+  readonly requestCloseRef?: RefObject<(() => void) | null> | undefined;
   readonly focusNextStep?: boolean | undefined;
   readonly draftStore?: ItemEditDraftStore | undefined;
   readonly saveDisabled?: boolean | undefined;
@@ -235,6 +236,7 @@ export function ItemInlineEditor({
   showPriority = true,
   confirmationOnly = false,
   onWeekChange,
+  requestCloseRef,
   ...props
 }: ItemInlineEditorProps) {
   const nextStepTextareaRef = useFocusNextStep(focusNextStep, props.week);
@@ -254,6 +256,13 @@ export function ItemInlineEditor({
         }
       : undefined,
   });
+  useLayoutEffect(() => {
+    if (!requestCloseRef) return;
+    requestCloseRef.current = dialogForm.requestClose;
+    return () => {
+      requestCloseRef.current = null;
+    };
+  }, [requestCloseRef, dialogForm.requestClose]);
   return (
     <div ref={dialogSurfaceRef} className="min-w-0">
       <InlineFormView

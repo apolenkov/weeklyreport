@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useEffect, useRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { useDiscardGuard } from "../../../../../shared/ui/dialogs/use-discard-guard";
@@ -7,12 +8,23 @@ import { OverviewItemDialogSurface } from "./overview-item-dialog-surface";
 
 function DirtyEditor({ onClose }: { readonly onClose: () => void }) {
   const { requestClose, discardDialog } = useDiscardGuard(true, onClose);
+  const closeRef = useRef<(() => void) | null>(null);
+  useEffect(() => {
+    closeRef.current = requestClose;
+    return () => {
+      closeRef.current = null;
+    };
+  }, [requestClose]);
   return (
-    <OverviewItemDialogSurface title="Add item" onCancel={onClose}>
+    <OverviewItemDialogSurface
+      title="Add item"
+      onCancel={onClose}
+      requestCloseRef={closeRef}
+    >
       <form aria-label="Current week update for Payments">
         <input aria-label="Description" defaultValue="Retained input" />
         <button type="button" onClick={requestClose}>
-          Cancel
+          Abandon
         </button>
       </form>
       {discardDialog}
@@ -21,7 +33,7 @@ function DirtyEditor({ onClose }: { readonly onClose: () => void }) {
 }
 
 describe("Overview item dialog dismissal", () => {
-  it.each(["Escape", "Close", "outside", "Cancel"])(
+  it.each(["Escape", "Close", "outside", "Abandon"])(
     "%s takes the canonical Cancel discard path without losing input",
     async (dismissal) => {
       const user = userEvent.setup();
@@ -53,4 +65,38 @@ describe("Overview item dialog dismissal", () => {
       expect(onClose).toHaveBeenCalledOnce();
     },
   );
+
+  it("closes recovery without a form", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <OverviewItemDialogSurface
+        title="Recovery"
+        onCancel={onClose}
+        requestCloseRef={{ current: null }}
+      >
+        Recovery
+      </OverviewItemDialogSurface>,
+    );
+    await user.keyboard("{Escape}");
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("does not close an unregistered form", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <OverviewItemDialogSurface
+        title="Recovery"
+        onCancel={onClose}
+        requestCloseRef={{ current: null }}
+      >
+        <form>
+          <input aria-label="Input" />
+        </form>
+      </OverviewItemDialogSurface>,
+    );
+    await user.keyboard("{Escape}");
+    expect(onClose).not.toHaveBeenCalled();
+  });
 });

@@ -109,6 +109,7 @@ export function useOverviewController({
       onSaveAndAddAnother: dialog.saveAndAddAnother,
       onCancel: dialog.close,
       onWeekChange: dialog.changeWeek,
+      requestCloseRef: dialog.requestCloseRef,
     },
   );
   const pendingInput =
