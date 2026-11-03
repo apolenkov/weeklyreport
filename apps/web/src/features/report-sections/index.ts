@@ -1,3 +1,16 @@
+export type {
+  CommentsViewProps,
+  CommonView,
+  DecisionComposerProps,
+  DecisionInput,
+  ItemComposerProps,
+  ItemInput,
+  ItemTarget,
+  Parent,
+  RecordTarget,
+  RiskComposerProps,
+  RiskInput,
+} from "./model/contextual-entry-contract";
 export { crossAuthorContentFetchEnabled } from "./model/cross-author/cross-author-content-gate";
 export type { DraftStageMemory } from "./model/draft-stage-memory";
 export { createDraftStageMemory } from "./model/draft-stage-memory";
