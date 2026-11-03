@@ -16,6 +16,10 @@ Use a dedicated `review.leadItemComment` mutation on canonical `leadProcedure` w
 
 The conversation is a flat chronological list with names and timestamps. Preserve comment IDs and creation times when section saves recreate item rows, and order live comments by creation time and ID; otherwise a successfully sent message can duplicate or be resurrected during reconciliation. The UI retains its own per-user/report/section/item draft across rerenders and pending writes. On a confirmed send, merge or refresh comments only for the matching own lineage, never replace the whole unsaved report. On an ambiguous response, preserve text and explain that the Lead should check the conversation before resending; do not automatically retry or claim exactly-once. Reviewer capabilities and the broader existing requirement for comments on other own editable record types remain outside this item-specific increment and must not be claimed complete.
 
+## Pending minimum-input decision
+
+The owner subsequently requested the minimum possible fields on initial entry. The current risk/decision requirement below still reflects the existing complete-record storage contract; it is not a final answer to that request. The related `lead-incomplete-record-drafts` change is being specified to permit honest durable incomplete drafts, strict section submission, scoped publication disclosure and retained author recovery. Until its cross-capability design and implementation are accepted, do not claim that a text-only risk or decision is saved, and do not treat the present full-fields-first forms as final UX.
+
 ## Alternatives
 
 Putting a modal behind each week button would preserve much of the current code but fails the requested in-grid input. A separate standalone quick-entry store or new write API would duplicate existing draft and concurrency ownership. The selected approach uses the current projection, canonical validated record builders, draft coordinator and save receipts, with small contextual presentation components.
