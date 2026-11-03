@@ -76,7 +76,7 @@ const DEADLINE_SEGMENTS = [
   { maximum: "275760", digits: "2000" },
 ] as const;
 const SAVE_ROUTE = "**/trpc/*reports.saveDraft*";
-const FETCH_FAILURE = "Failed to fetch";
+const FETCH_FAILURE = "Slide save failed. Try again.";
 const MINIMAL_CURRENT_TEXT = "Minimal editable report item";
 const PUBLISHED_RECORD_LOCKED =
   "This record is part of the published report. Mark it done or carry it forward — it cannot be deleted.";
@@ -1162,7 +1162,7 @@ async function assertPendingSlide(
     ["textbox", entry.field],
     ["button", "Cancel"],
     ["button", "Delete"],
-    ["button", entry.saveLabel],
+    ["button", "Saving…"],
   ] as const)
     disabledRef(data, role, name);
   assert.equal(await saveRequestCount(), before);
@@ -1192,7 +1192,7 @@ for (const entry of SLIDE_SAVE_CASES) {
       await clickBackdrop(modalName);
       await assertPendingSlide(entry, modalName, revised, before);
       await clickDisabledButton("Cancel");
-      await clickDisabledButton(entry.saveLabel);
+      await clickDisabledButton("Saving…");
       await command(["press", "Control+Enter"]);
       await assertPendingSlide(entry, modalName, revised, before);
     } finally {

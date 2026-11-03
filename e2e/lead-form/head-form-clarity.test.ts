@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { shortNameFromName } from "@weeklyreport/shared";
-import superjson from "superjson";
 
 import { LEAD_FORM_FIXTURE } from "../setup/fixture-data.js";
 import {
@@ -24,6 +23,10 @@ import {
 } from "./browser.js";
 import { registerE2eHooks } from "./fixtures.js";
 import {
+  assertMutation,
+  assertPersistedVerdict,
+} from "./head-form-clarity-support.js";
+import {
   oneRef,
   scopedRef,
   scopeSnapshot,
@@ -33,52 +36,13 @@ import {
 
 registerE2eHooks();
 
-async function assertMutation(procedure: string, expected: object) {
-  const session = headSession();
-  await waitSnapshot(
-    async () => {
-      const { requests } = await command(["network", "requests"], session);
-      assert(Array.isArray(requests));
-      return requests.some((request: unknown) => {
-        assert(typeof request === "object" && request !== null);
-        if (
-          !("url" in request) ||
-          typeof request.url !== "string" ||
-          !request.url.includes(procedure)
-        )
-          return false;
-        if (
-          !("method" in request) ||
-          request.method !== "POST" ||
-          !("postData" in request)
-        )
-          return false;
-        assert(typeof request.postData === "string");
-        const paths = decodeURIComponent(new URL(request.url).pathname)
-          .split("/trpc/")[1]
-          ?.split(",");
-        assert(paths);
-        const batch: unknown = JSON.parse(request.postData);
-        assert(typeof batch === "object" && batch !== null);
-        const key = String(paths.indexOf(procedure));
-        assert(key in batch);
-        const input = superjson.parse(JSON.stringify(Reflect.get(batch, key)));
-        assert.partialDeepStrictEqual(input, expected);
-        return true;
-      });
-    },
-    `Expected acknowledged ${procedure} anchor`,
-    session,
-  );
-}
-
 async function assertReadOnly() {
   const data = await snapshot(headSession());
   assert.equal(refsByRole(data, "button", /^Approve /).length, 0);
   assert.equal(refsByRole(data, "textbox", /^Add a review comment/).length, 0);
 }
 
-test("Head queue Review preserves Activity anchors and one section verdict", async () => {
+void test("Head queue Review preserves Activity anchors and one section verdict", async () => {
   const fixture = await prepareHeadClarity();
   const session = headSession();
   await loginAsHead(session);
@@ -168,6 +132,13 @@ test("Head queue Review preserves Activity anchors and one section verdict", asy
     riskId: fixture.riskId,
     text: HEAD_CLARITY.comment,
   });
+  await command(
+    [
+      "eval",
+      `(() => { const original = window.fetch; window.fetch = async (...args) => { const response = await original(...args); if (String(args[0]).includes('review.verdict')) { const body = await response.clone().json(); window.__e2eVerdictResponse = { ok: response.ok, body }; } return response; }; })()`,
+    ],
+    session,
+  );
   await findRole("button", `Approve ${fixture.authorName}`, "click", {
     session,
   });
@@ -176,16 +147,33 @@ test("Head queue Review preserves Activity anchors and one section verdict", asy
     version: fixture.version,
     verdict: "approved",
   });
+  await command(
+    [
+      "wait",
+      "--fn",
+      `window.__e2eVerdictResponse?.ok === true && !JSON.stringify(window.__e2eVerdictResponse.body).includes('"error"')`,
+    ],
+    session,
+  );
+  await assertPersistedVerdict(fixture.sectionId, fixture.version);
+  await reload(session);
+  await assertMutation("review.verdict", {
+    reportSectionId: fixture.sectionId,
+    version: fixture.version,
+    verdict: "approved",
+  });
 });
 
-test("Head Read history, Slides, draft opt-in and period changes follow URL intent", async () => {
+void test("Head Read history, Slides, draft opt-in and period changes follow URL intent", async () => {
   const fixture = await prepareHeadClarity();
   const session = headSession();
   await loginAsHead(session);
   await open(
-    `/head/report/${fixture.reportId}?authorId=${fixture.authorId}&scope=lead&review=1`,
+    `/head/report/${fixture.reportId}?authorId=${fixture.authorId}&scope=lead`,
     session,
   );
+  await waitButton("Review", { session });
+  await findRole("button", "Review", "click", { session });
   await waitButton(`Approve ${fixture.authorName}`, { session });
   await findRole("button", "Read", "click", { session });
   await waitSnapshot(
@@ -193,22 +181,19 @@ test("Head Read history, Slides, draft opt-in and period changes follow URL inte
     "Read removes review intent",
     session,
   );
-  await reload(session);
-  await waitText("Portfolio report", session);
-  await assertReadOnly();
-  await open(
-    `/head/report/${fixture.reportId}?authorId=${fixture.authorId}&scope=lead&review=1`,
-    session,
-  );
-  await waitButton(`Approve ${fixture.authorName}`, { session });
   await command(["back"], session);
+  await waitButton(`Approve ${fixture.authorName}`, { session });
+  await command(["forward"], session);
   await waitSnapshot(
     async () => !new URL(await getUrl(session)).searchParams.has("review"),
     "Read history entry",
     session,
   );
   await assertReadOnly();
-  await command(["forward"], session);
+  await reload(session);
+  await waitText("Portfolio report", session);
+  await assertReadOnly();
+  await command(["back"], session);
   await waitButton(`Approve ${fixture.authorName}`, { session });
   await command(
     [
@@ -275,7 +260,7 @@ for (const reportId of [
   LEAD_FORM_FIXTURE.previousReportId,
   LEAD_FORM_FIXTURE.oldestArchiveReportId,
 ]) {
-  test(`Head frozen ${reportId} rejects Review without mutation controls`, async () => {
+  void test(`Head frozen ${reportId} rejects Review without mutation controls`, async () => {
     const session = headSession();
     await loginAsHead(session);
     await open(`/head/report/${reportId}?review=1`, session);

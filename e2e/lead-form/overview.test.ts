@@ -1042,23 +1042,19 @@ for (const week of ["Current week", "Next week"] as const) {
   }
 }
 
-void test("the status icon menu changes status in place and Paused opens the editor", async () => {
+void test("the status icon menu changes status in place and Paused asks for a reason", async () => {
   await openLeadReport();
   const text = "E2E status icon menu";
   await addActivity(text);
   await assertStatus("Current week", text, "In progress");
-  // A pause needs its reason, so the menu opens the editor instead of patching.
+  // A pause needs a reason before the inline status flow can patch the item.
   await chooseStatus("Current week", text, "Paused");
-  await waitScope({
-    role: "form",
-    name: `Current week update for ${ACTIVITY}`,
-  });
-  assert.equal(await value("Description *"), text);
-  await cancelUpdate("Current week");
-  await waitClosed({
-    role: "form",
-    name: `Current week update for ${ACTIVITY}`,
-  });
+  await namedRef("textbox", `Paused reason — ${text}`);
+  await command(["press", "Escape"]);
+  assert.equal(
+    refsByRole(await snapshot(), "textbox", `Paused reason — ${text}`).length,
+    0,
+  );
   await assertStatus("Current week", text, "In progress");
   for (const status of ["Not started", "Postponed", "Done"]) {
     await chooseStatus("Current week", text, status);
@@ -1093,14 +1089,25 @@ void test("leaving Paused clears the saved reason", async () => {
 
 void test("covering risk locks canonical item status", async () => {
   await openLeadReport();
-  // A covering risk owns the status: the icon menu cannot patch it in place and
-  // opens the canonical editor on the same item instead.
-  await chooseStatus(
-    "Current week",
-    LEAD_FORM_FIXTURE.currentText,
-    "Done",
-    PRODUCT,
+  const before = await writeCount();
+  // A covering risk disables status choices and explains how to unlock them.
+  await clickRef(
+    await weekControl(
+      "Current week",
+      LEAD_FORM_FIXTURE.currentText,
+      "button",
+      statusButtonName(LEAD_FORM_FIXTURE.currentText),
+      PRODUCT,
+    ),
   );
+  await waitText("Set by risk:");
+  assert.equal(
+    await getAttr(await namedRef("menuitem", "Done"), "aria-disabled"),
+    "true",
+  );
+  await command(["press", "Escape"]);
+  assert.equal(await writeCount(), before);
+  await openEditor("Current week", LEAD_FORM_FIXTURE.currentText, PRODUCT);
   await waitScope({
     role: "form",
     name: `Current week update for ${PRODUCT}`,
