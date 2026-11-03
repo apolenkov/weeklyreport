@@ -9,12 +9,13 @@ export function ReviewedRow({
   review,
   anchor,
   record,
+  subject,
   children,
 }: {
   readonly review: AccordionReviewContext | undefined;
   readonly anchor: RecordCommentAnchor;
+  readonly subject: string;
   readonly record: {
-    readonly text?: string;
     readonly comments?: readonly RecordCommentView[];
     readonly canReview?: boolean;
   };
@@ -28,12 +29,14 @@ export function ReviewedRow({
       {children}
       {review && hasReviewContent ? (
         <RecordComments
+          key={review.currentUserId}
           anchor={anchor}
           comments={record.comments ?? []}
           canReview={record.canReview ?? false}
           currentUserId={review.currentUserId}
           isAdmin={review.isAdmin}
-          subject={record.text}
+          subject={subject}
+          subjectReference={anchor.riskId ? `risk ${anchor.riskId}` : undefined}
           onMutated={review.onMutated}
         />
       ) : null}

@@ -28,9 +28,13 @@ function commentDeleteLabel(comment: RecordCommentView): string {
 }
 
 // Subject-specific accessible names keep repeated composers distinguishable.
-function composerLabels(subject: string | undefined) {
+function composerLabels(
+  subject: string | undefined,
+  subjectReference: string | undefined,
+) {
   if (!subject) return {};
-  const excerpt = shortItemLabel(subject);
+  const reference = subjectReference ? ` (${subjectReference})` : "";
+  const excerpt = `${shortItemLabel(subject)}${reference}`;
   return {
     label: `Add a review comment on ${excerpt}`,
     submitLabel: `Comment on ${excerpt}`,
@@ -96,6 +100,7 @@ export function RecordComments({
   currentUserId,
   isAdmin,
   subject,
+  subjectReference,
   onMutated,
 }: {
   readonly anchor: RecordCommentAnchor;
@@ -105,14 +110,12 @@ export function RecordComments({
   readonly isAdmin: boolean;
   /** Record text; makes each composer's accessible name unique in a list. */
   readonly subject?: string | undefined;
+  readonly subjectReference?: string | undefined;
   readonly onMutated: () => void;
 }) {
-  const c = useRecordCommentState(anchor, onMutated);
+  const c = useRecordCommentState(anchor, currentUserId, onMutated);
   const { id, feedback, feedbackId, deleteCandidate } = c;
-
-  // An idle confirmation is retired once its comment leaves the list or the
-  // actor may no longer delete it; an in-flight delete keeps its dialog until
-  // it settles. The server still decides every delete.
+  // Retire stale confirmations, but keep in-flight deletes until they settle.
   if (
     deleteCandidate &&
     !c.isDeletePending &&
@@ -123,22 +126,16 @@ export function RecordComments({
     )
   )
     c.setDeleteCandidate(null);
-
-  // A synthetic (non-persisted) record has no real UUID — the composer stays
-  // hidden so a synthetic id can never reach the uuid-validated mutation.
+  // Synthetic records cannot reach the UUID-validated mutation.
   const canCompose = canReview && id !== undefined && UUID_RE.test(id);
   const hasComments = comments.length > 0;
   if (!hasComments && !canCompose) return null;
-
   const requestDelete = (commentId: string) => {
     c.setDeleteCandidate(
       comments.find((candidate) => candidate.id === commentId) ?? null,
     );
   };
-
   return (
-    // md+ indent matches the anchor row content column; below md keep a
-    // minimal inset so the block stacks under the record on phones.
     <div className="mt-1.5 flex flex-col gap-2 pl-2 md:pl-[calc(20px+3px+124px+3.5rem)]">
       {hasComments ? (
         <RecordCommentThread
@@ -161,7 +158,7 @@ export function RecordComments({
           onSubmit={c.submitDraft}
           submitDisabled={c.submitDisabled}
           isPending={c.isCommentPending}
-          {...composerLabels(subject)}
+          {...composerLabels(subject, subjectReference)}
           validationError={c.validationError}
           {...(feedback ? { feedbackId } : {})}
         />

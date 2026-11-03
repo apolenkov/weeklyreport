@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { mutationErrorMessage } from "../../../../shared/lib/errors/mutation-error-message";
 import { invalidateReview } from "../../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
+import { useRecordCommentDraft } from "./record-comment-drafts";
 import type { CommentFeedback } from "./record-comment-feedback";
 
 // Exactly one concrete record anchors each comment.
@@ -141,17 +142,16 @@ function deriveCommentValidation(
 
 export function useRecordCommentState(
   anchor: RecordCommentAnchor,
+  currentUserId: string,
   onMutated: () => void,
 ) {
-  const [draft, setDraft] = useState("");
+  const { draft, setDraft } = useRecordCommentDraft(anchor, currentUserId);
   const [validationAttempted, setValidationAttempted] = useState(false);
   const [feedback, setFeedback] = useState<CommentFeedback | null>(null);
   const [deleteCandidate, setDeleteCandidate] =
     useState<RecordCommentView | null>(null);
   const id = anchorId(anchor);
   const feedbackId = `record-comment-feedback-${id ?? "unknown"}`;
-  // Synchronous guard against rapid same-tick double-submission before React
-  // re-renders the mutation's pending state.
   const inFlightRef = useRef(false);
   const resetInFlight = () => {
     inFlightRef.current = false;
@@ -181,16 +181,12 @@ export function useRecordCommentState(
         toast.error(message);
       },
     });
-  // The composer validates the text it submits: surrounding whitespace is not
-  // part of the comment, so the counter and the schema bounds apply to the
-  // trimmed value instead of a payload that differs from the validated draft.
   const { submittedText, isValid, validationError } = deriveCommentValidation(
     anchor,
     draft,
     validationAttempted,
   );
   const submitDisabled = !isValid || isCommentPending;
-
   const submitDraft = () => {
     if (inFlightRef.current) return;
     setValidationAttempted(true);
@@ -202,13 +198,11 @@ export function useRecordCommentState(
     inFlightRef.current = true;
     submitComment(currentResult.data.text);
   };
-
   const changeDraft = (value: string) => {
     setDraft(value);
     setValidationAttempted(false);
     setFeedback(null);
   };
-
   return {
     draft,
     characterCount: Array.from(submittedText).length,

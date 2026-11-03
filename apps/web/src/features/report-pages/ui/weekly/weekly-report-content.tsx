@@ -15,6 +15,7 @@ import {
   ReviewModeToggle,
   SubmissionFilterToggle,
 } from "../../../review";
+import { RecordCommentDraftProvider } from "../../../review/ui/comments/record-comment-drafts";
 import { ReportEmptyState } from "./weekly-report-empty-state";
 import {
   AcknowledgeSurface,
@@ -203,6 +204,14 @@ function ReportSectionsSurface({
 // Empty-state keys off FULL content (head-report-visibility), never the
 // submitted count; otherwise review surfaces + submitted-only-filtered accordion.
 export function ReportContent(props: ReportContentProps) {
+  return (
+    <RecordCommentDraftProvider reportId={props.reportId}>
+      <ReportContentBody {...props} />
+    </RecordCommentDraftProvider>
+  );
+}
+
+function ReportContentBody(props: ReportContentProps) {
   if (!props.hasAnyContent) {
     return (
       <ReportEmptyState

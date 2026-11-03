@@ -33,6 +33,7 @@ function ItemsSection({
             review={review}
             anchor={{ itemId: item.id }}
             record={item}
+            subject={item.text}
           >
             <ItemRow item={item} />
           </ReviewedRow>
@@ -74,6 +75,7 @@ function RisksSection({
             review={review}
             anchor={{ riskId: risk.id }}
             record={risk}
+            subject={risk.problem}
           >
             <RiskRow risk={risk} />
           </ReviewedRow>
@@ -100,6 +102,7 @@ function DecisionsSection({
             review={review}
             anchor={{ decisionId: decision.id }}
             record={decision}
+            subject={decision.text}
           >
             <DecisionRow decision={decision} />
           </ReviewedRow>

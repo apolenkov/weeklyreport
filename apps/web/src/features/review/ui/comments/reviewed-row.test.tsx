@@ -23,6 +23,7 @@ describe("ReviewedRow", () => {
     const { rerender } = render(
       <ReviewedRow
         review={review}
+        subject="Item"
         anchor={{ itemId: "22222222-2222-4222-8222-222222222222" }}
         record={{ comments: [], canReview: false }}
       >
@@ -36,6 +37,7 @@ describe("ReviewedRow", () => {
     rerender(
       <ReviewedRow
         review={review}
+        subject="Item"
         anchor={{ itemId: "22222222-2222-4222-8222-222222222222" }}
         record={{ comments: [], canReview: true }}
       >
@@ -52,6 +54,7 @@ describe("ReviewedRow", () => {
     render(
       <ReviewedRow
         review={undefined}
+        subject="Risk"
         anchor={{ riskId: "33333333-3333-4333-8333-333333333333" }}
         record={{ comments: [], canReview: true }}
       >
