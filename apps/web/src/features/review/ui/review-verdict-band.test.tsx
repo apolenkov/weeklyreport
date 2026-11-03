@@ -34,9 +34,11 @@ const GRACE = row("bbbbbbbb", "Grace Hopper");
 function Harness({
   initial,
   mutationFn,
+  onNavigateSection,
 }: {
   readonly initial: readonly SectionReviewRow[];
   readonly mutationFn: ReturnType<typeof createMockTRPC>["captured"][string];
+  readonly onNavigateSection?: ((id: string) => void) | undefined;
 }) {
   const [sections, setSections] = useState(initial);
   // Mirrors the server: a changes-requested verdict returns the section to draft.
@@ -64,12 +66,19 @@ function Harness({
       <button type="button" onClick={() => setSections((c) => c.slice(1))}>
         Refetch
       </button>
-      <ReviewVerdictBand sections={sections} onMutated={vi.fn()} />
+      <ReviewVerdictBand
+        sections={sections}
+        onMutated={vi.fn()}
+        onNavigateSection={onNavigateSection}
+      />
     </>
   );
 }
 
-function renderBand(initial: readonly SectionReviewRow[]) {
+function renderBand(
+  initial: readonly SectionReviewRow[],
+  onNavigateSection?: (id: string) => void,
+) {
   const { proxy, captured } = createMockTRPC([
     { path: ["review", "verdict"], mutation: true },
   ]);
@@ -87,6 +96,7 @@ function renderBand(initial: readonly SectionReviewRow[]) {
     <Harness
       initial={initial}
       mutationFn={expectDefined(captured["review.verdict"])}
+      onNavigateSection={onNavigateSection}
     />,
     { wrapper },
   );
@@ -104,6 +114,16 @@ async function requestChangesFor(name: string) {
 }
 
 describe("ReviewVerdictBand", () => {
+  it("navigates an author's section without issuing a verdict", async () => {
+    const navigate = vi.fn();
+    renderBand([ADA, GRACE], navigate);
+    await userEvent.click(screen.getByRole("button", { name: "Grace Hopper" }));
+    expect(navigate).toHaveBeenCalledExactlyOnceWith(GRACE.reportSectionId);
+    expect(
+      screen.getByRole("button", { name: "Approve Grace Hopper" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
   it("names every verdict button after its lead", () => {
     renderBand([ADA, GRACE]);
 

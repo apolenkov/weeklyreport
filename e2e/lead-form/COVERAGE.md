@@ -1,5 +1,19 @@
 # Lead form regression coverage
 
+## Head form clarity journey
+
+`head-form-clarity.test.ts` uses the same Node-test/agent-browser runner and
+per-test guarded reset/seed as this suite. Its dedicated guarded overlay creates
+two submitted authors (one Activity-only), an unavailable Activity parent and a
+draft. Four authored cases cover queue Review, author focus, disclosure and original
+risk/verdict network anchors; Read refresh/history, Slides and period intent reset;
+draft opt-in; and published/archived read-only entry. These cases have **not been
+executed** during implementation; Terra owns runtime acceptance and screenshots.
+They are separate from the historical Lead-only case counts below.
+
+Targeted invocation: `pnpm exec node --import tsx --test e2e/lead-form/head-form-clarity.test.ts`.
+`pnpm test:e2e` also discovers the file. Typecheck: `pnpm exec tsc --noEmit -p e2e/tsconfig.json`.
+
 The suite is node:test driving the pinned agent-browser CLI 0.39.1 (verified at
 start-up by `e2e/setup/agent-browser-version.ts`). Run it with `pnpm test:e2e`
 against the running web/API; it resets and seeds `weeklyreport_e2e` with Redis

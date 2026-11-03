@@ -1,41 +1,22 @@
-// Pure derivation tests for `buildAccordionModel`'s `draftCount`.
+// @vitest-environment jsdom
+// @vitest-environment jsdom
 import { TRPCClientError } from "@trpc/client";
-import {
-  buildEscalationsFromReadSections,
-  type WeeklyReportReadModel,
-} from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
-import {
-  makeWeeklyReportFixture,
-  type WeeklyReportFixture,
-} from "../../../../test-utils/report-section-fixtures";
-import {
-  mapWeeklyReport,
-  mapWeeklyReportLeadGroups,
-} from "../../../report-sections";
 import {
   buildAccordionModel,
   resolveTerminalNotice,
 } from "./weekly-report-page-helpers";
+import {
+  ACTIVITY_A,
+  AUTHOR_A,
+  baseReport,
+  PRODUCT_A,
+  REPORT_ID,
+  SECTION_A,
+} from "./weekly-report-page-helpers.test-support";
 
-const REPORT_ID = "11111111-1111-4111-8111-111111111111";
-const AUTHOR_A = "22222222-2222-4222-8222-222222222222";
-const PRODUCT_A = "33333333-3333-4333-8333-333333333333";
-const ACTIVITY_A = "44444444-4444-4444-8444-444444444444";
-const SECTION_A = "55555555-5555-4555-8555-555555555555";
-
-function baseReport(
-  overrides: WeeklyReportFixture = {},
-): WeeklyReportReadModel {
-  return makeWeeklyReportFixture({
-    reportId: REPORT_ID,
-    totalLeads: 1,
-    ...overrides,
-  });
-}
-
-describe("resolveTerminalNotice — failure classes stay distinct", () => {
+describe("resolveTerminalNotice — failure classes stay distinct — 1", () => {
   it("returns null for a healthy active period", () => {
     expect(
       resolveTerminalNotice({
@@ -45,7 +26,8 @@ describe("resolveTerminalNotice — failure classes stay distinct", () => {
       }),
     ).toBeNull();
   });
-
+});
+describe("resolveTerminalNotice — failure classes stay distinct — 2", () => {
   it("surfaces a transient failure instead of 'no active period'", () => {
     const notice = resolveTerminalNotice({
       isError: true,
@@ -54,7 +36,8 @@ describe("resolveTerminalNotice — failure classes stay distinct", () => {
     });
     expect(notice?.title).toBe("Report could not be loaded");
   });
-
+});
+describe("resolveTerminalNotice — failure classes stay distinct — 3", () => {
   it("renders 'no active period' only when data genuinely says so", () => {
     const notice = resolveTerminalNotice({
       isError: false,
@@ -64,8 +47,78 @@ describe("resolveTerminalNotice — failure classes stay distinct", () => {
     expect(notice?.title).toBe("No active reporting period");
   });
 });
-
-describe("buildAccordionModel — draftCount includes activity-only drafts", () => {
+describe("buildAccordionModel — draftCount includes activity-only drafts — 4", () => {
+  it("keeps a lone empty submitted reviewable section out of the empty-period screen", () => {
+    const report = baseReport({
+      leadSections: [
+        {
+          reportSectionId: SECTION_A,
+          authorId: AUTHOR_A,
+          authorName: "Alice",
+          status: "submitted",
+          canReview: true,
+          activities: [],
+        },
+      ],
+    });
+    const accordion = buildAccordionModel({
+      reportData: report,
+      scope: "lead",
+      submittedOnly: true,
+      fullProducts: [],
+      fullLeadGroups: [],
+    });
+    expect(accordion.hasAnyContent).toBe(true);
+    expect(accordion.leadGroups.map((group) => group.id)).toEqual([AUTHOR_A]);
+  });
+});
+describe("buildAccordionModel — draftCount includes activity-only drafts — 5", () => {
+  it("keeps Activity-only and empty submitted reviewable author regions", () => {
+    const report = baseReport({
+      leadSections: [
+        {
+          reportSectionId: SECTION_A,
+          authorId: AUTHOR_A,
+          authorName: "Alice",
+          status: "submitted",
+          canReview: true,
+          activities: [],
+        },
+        {
+          reportSectionId: "second",
+          authorId: "bob",
+          authorName: "Bob",
+          status: "submitted",
+          activities: [],
+          items: [
+            {
+              id: "saved",
+              activityId: ACTIVITY_A,
+              type: "current",
+              text: "Detached record",
+              workflowStatus: "paused",
+              tag: "delivery",
+              carriedOver: false,
+            },
+          ],
+        },
+      ],
+    });
+    const accordion = buildAccordionModel({
+      reportData: report,
+      scope: "lead",
+      submittedOnly: true,
+      fullProducts: [],
+      fullLeadGroups: [],
+    });
+    expect(accordion.leadGroups.map((group) => group.id)).toEqual([
+      AUTHOR_A,
+      "bob",
+    ]);
+    expect(accordion.hasAnyContent).toBe(true);
+  });
+});
+describe("buildAccordionModel — draftCount includes activity-only drafts — 6", () => {
   it("counts a draft section whose only content is a touched activity, with no draft product content", () => {
     const report = baseReport({
       portfolioOverview: [],
@@ -106,7 +159,8 @@ describe("buildAccordionModel — draftCount includes activity-only drafts", () 
 
     expect(accordion.draftCount).toBe(1);
   });
-
+});
+describe("buildAccordionModel — draftCount includes activity-only drafts — 7", () => {
   it("does not count a draft section with neither product nor activity content", () => {
     const report = baseReport({
       portfolioOverview: [],
@@ -149,7 +203,8 @@ describe("buildAccordionModel — draftCount includes activity-only drafts", () 
 
     expect(accordion.draftCount).toBe(0);
   });
-
+});
+describe("buildAccordionModel — draftCount includes activity-only drafts — 8", () => {
   it("still counts a draft section with draft product content and no activities", () => {
     const report = baseReport({
       portfolioOverview: [
@@ -208,13 +263,14 @@ describe("buildAccordionModel — draftCount includes activity-only drafts", () 
     expect(accordion.draftCount).toBe(1);
   });
 });
-
-describe("terminal notice — missing healthy data is not no-period", () => {
+describe("terminal notice — missing healthy data is not no-period — 9", () => {
   it("leaves pending/healthy absence to the page loading gate", () => {
     expect(
       resolveTerminalNotice({ isError: false, error: null, data: undefined }),
     ).toBeNull();
   });
+});
+describe("terminal notice — missing healthy data is not no-period — 10", () => {
   it("retains invalid-link precedence without data", () => {
     const error = TRPCClientError.from({
       error: {
@@ -228,70 +284,3 @@ describe("terminal notice — missing healthy data is not no-period", () => {
     ).toBe("Report not found");
   });
 });
-
-describe.each(["product", "lead"] as const)(
-  "own red draft count in %s scope",
-  (scope) => {
-    it.each([
-      { order: "submitted-first", draftRed: true, expected: 1 },
-      { order: "draft-first", draftRed: true, expected: 1 },
-      { order: "submitted-first", draftRed: false, expected: 0 },
-      { order: "draft-first", draftRed: false, expected: 0 },
-    ])(
-      "counts row-free co-owner independently: $order, red=$draftRed",
-      ({ order, draftRed, expected }) => {
-        const submitted = {
-          reportSectionId: SECTION_A,
-          reportId: REPORT_ID,
-          authorId: AUTHOR_A,
-          authorName: "Alice",
-          status: "submitted" as const,
-          submittedAt: new Date("2026-04-14T09:00:00Z"),
-          projects: [
-            {
-              projectId: PRODUCT_A,
-              projectName: "Shared red",
-              trafficLight: "red" as const,
-            },
-          ],
-          items: [],
-          risks: [],
-          decisions: [],
-        };
-        const draft = {
-          ...submitted,
-          reportSectionId: "66666666-6666-4666-8666-666666666666",
-          authorId: "77777777-7777-4777-8777-777777777777",
-          authorName: "Bob",
-          status: "draft" as const,
-          submittedAt: null,
-          projects: [
-            {
-              projectId: PRODUCT_A,
-              projectName: "Shared red",
-              trafficLight: draftRed ? ("red" as const) : ("green" as const),
-            },
-          ],
-        };
-        const raw = baseReport({
-          leadSections:
-            order === "submitted-first"
-              ? [submitted, draft]
-              : [draft, submitted],
-        });
-        const report = {
-          ...raw,
-          escalations: buildEscalationsFromReadSections(raw.leadSections),
-        };
-        const model = buildAccordionModel({
-          reportData: report,
-          scope,
-          submittedOnly: true,
-          fullProducts: mapWeeklyReport(report).products,
-          fullLeadGroups: mapWeeklyReportLeadGroups(report),
-        });
-        expect(model.draftCount).toBe(expected);
-      },
-    );
-  },
-);

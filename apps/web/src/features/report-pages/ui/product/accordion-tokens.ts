@@ -1,3 +1,4 @@
+import { PAUSED_PROGRESS } from "../../../../shared/lib/status/item-progress-presentation";
 import {
   STATUS_BADGE as ITEM_STATUS_BADGE,
   type WeeklyProductStatus,
@@ -90,9 +91,9 @@ export const STATUS_BADGE = {
     fg: CSS.mutedForeground,
   },
   paused: {
-    label: ITEM_STATUS_BADGE.paused.label,
+    label: PAUSED_PROGRESS.label,
     bg: CSS.muted,
-    fg: CSS.mutedForeground,
+    fg: `var(${PAUSED_PROGRESS.foreground})`,
   },
   postponed: {
     label: ITEM_STATUS_BADGE.postponed.label,
@@ -104,6 +105,7 @@ export const STATUS_BADGE = {
 // Item row left-stripe: red only for blocked (the alarm hue); every other status
 // is carried by the right-side badge, so the rail stays a neutral spine.
 export function itemRailTone(status: string): string {
+  if (status === "paused") return `var(${PAUSED_PROGRESS.foreground})`;
   return status === "blocked" ? CSS.destructive : "var(--color-border)";
 }
 

@@ -1,5 +1,6 @@
 import type { ReportSectionReadModel } from "@weeklyreport/shared";
 
+import { useFocusAfterRowRemoved } from "../../../../shared/hooks/browser/use-focus-after-row-removed";
 import type {
   LeadOverviewRow,
   WeeklyPortfolioProduct,
@@ -13,6 +14,7 @@ import type {
 import {
   DraftHiddenSignal,
   RecordCommentDraftProvider,
+  ReviewedRow,
   ReviewModeToggle,
   SubmissionFilterToggle,
 } from "../../../review";
@@ -27,6 +29,8 @@ import type { AccordionModel } from "./weekly-report-page-helpers";
 import { isSubmittedSection } from "./weekly-report-page-helpers";
 
 export interface ReportContentProps {
+  readonly onNavigateAuthor?: ((authorId: string) => void) | undefined;
+  readonly reviewUnavailableNotice?: string | null | undefined;
   readonly hasAnyContent: boolean;
   readonly submissionCount: number;
   readonly periodLabel: string;
@@ -163,17 +167,42 @@ function ReportSectionsSurface({
   scrollTargetProductId,
   focusedLeadId,
   overviewNavigationEpochs,
+  activitySections,
+  onNavigateAuthor,
   ...toolbar
-}: SectionsToolbarProps & Pick<ReportContentProps, SectionsSurfaceKeys>) {
+}: SectionsToolbarProps &
+  Pick<
+    ReportContentProps,
+    SectionsSurfaceKeys | "activitySections" | "onNavigateAuthor"
+  >) {
+  const review =
+    toolbar.reviewMode === "review" ? reviewModel.context : undefined;
+  const navigateSection = (sectionId: string) => {
+    const section = activitySections.find(
+      (row) => row.reportSectionId === sectionId,
+    );
+    if (section) onNavigateAuthor?.(section.authorId);
+  };
   return (
     <>
       <SectionsToolbar {...toolbar} reviewEnabled={reviewEnabled} />
 
-      <ReviewModeVerdictSurface
-        reportId={reportId}
-        reviewModel={reviewModel}
-        reviewMode={toolbar.reviewMode}
-      />
+      {scope === "product" ? (
+        <ReviewModeVerdictSurface
+          reportId={reportId}
+          reviewModel={reviewModel}
+          reviewMode={toolbar.reviewMode}
+          onNavigateSection={onNavigateAuthor ? navigateSection : undefined}
+        />
+      ) : null}
+
+      {scope === "product" ? (
+        <ActivityStatusStrip
+          sections={activitySections}
+          Row={ReviewedRow}
+          review={review}
+        />
+      ) : null}
 
       {/* Anti-empty-state when submitted-only is hiding draft content.
           The live region stays mounted across filter switches while review is enabled,
@@ -193,9 +222,9 @@ function ReportSectionsSurface({
         scrollTargetProductId={scrollTargetProductId}
         focusedLeadId={focusedLeadId}
         overviewNavigationEpochs={overviewNavigationEpochs}
-        review={
-          toolbar.reviewMode === "review" ? reviewModel.context : undefined
-        }
+        review={review}
+        reviewModel={reviewModel}
+        activitySections={activitySections}
       />
     </>
   );
@@ -204,9 +233,29 @@ function ReportSectionsSurface({
 // Empty-state keys off FULL content (head-report-visibility), never the
 // submitted count; otherwise review surfaces + submitted-only-filtered accordion.
 export function ReportContent(props: ReportContentProps) {
+  const sectionsRef = useFocusAfterRowRemoved<HTMLElement>(
+    props.hasAnyContent
+      ? props.accordion.leadGroups.length + props.accordion.products.length + 1
+      : 0,
+  );
   return (
     <RecordCommentDraftProvider reportId={props.reportId}>
-      <ReportContentBody {...props} />
+      <section
+        ref={sectionsRef}
+        tabIndex={-1}
+        aria-label="Report sections"
+        className="space-y-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+      >
+        {props.reviewUnavailableNotice ? (
+          <p
+            role="status"
+            className="text-sm text-[var(--color-muted-foreground)]"
+          >
+            {props.reviewUnavailableNotice}
+          </p>
+        ) : null}
+        <ReportContentBody {...props} />
+      </section>
     </RecordCommentDraftProvider>
   );
 }
@@ -223,15 +272,7 @@ function ReportContentBody(props: ReportContentProps) {
 
   return (
     <>
-      <ReportTopSurfaces
-        reviewModel={props.reviewModel}
-        reportId={props.reportId}
-        scope={props.scope}
-        portfolio={props.portfolio}
-        leadOverviewRows={props.leadOverviewRows}
-        accordion={props.accordion}
-        onNavigateOverview={props.onNavigateOverview}
-      />
+      <ReportTopSurfaces {...props} />
 
       <div
         data-layout-key="report-body-continuation"
@@ -239,31 +280,13 @@ function ReportContentBody(props: ReportContentProps) {
         data-feedback-anchor="weekly-report-sections"
         className="space-y-4"
       >
-        {/* Display-only; same submitted-only filter as the accordion body. */}
-        <ActivityStatusStrip
-          sections={
+        <ReportSectionsSurface
+          {...props}
+          activitySections={
             props.submittedOnly
               ? props.activitySections.filter(isSubmittedSection)
               : props.activitySections
           }
-        />
-
-        <ReportSectionsSurface
-          reportId={props.reportId}
-          reviewEnabled={props.reviewEnabled}
-          reviewModel={props.reviewModel}
-          submittedOnly={props.submittedOnly}
-          accordion={props.accordion}
-          scope={props.scope}
-          focusedProductId={props.focusedProductId}
-          scrollTargetProductId={props.scrollTargetProductId}
-          focusedLeadId={props.focusedLeadId}
-          overviewNavigationEpochs={props.overviewNavigationEpochs}
-          canReviewAny={props.canReviewAny}
-          reviewMode={props.reviewMode}
-          onReviewModeChange={props.onReviewModeChange}
-          submissionFilter={props.submissionFilter}
-          onFilterChange={props.onFilterChange}
         />
       </div>
     </>

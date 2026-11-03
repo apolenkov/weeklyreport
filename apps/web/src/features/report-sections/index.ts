@@ -142,6 +142,11 @@ export { ItemInlineEditor } from "./ui/item-inline-editor";
 export { NextWeekSection } from "./ui/next-week/next-week-section";
 export { ParentPicker } from "./ui/parent-picker";
 export { PortfolioOverviewTable } from "./ui/portfolio/portfolio-overview-table";
+export {
+  DecisionRecordContent,
+  ItemRecordContent,
+  RiskRecordContent,
+} from "./ui/records/report-record-rows";
 export { StageChip } from "./ui/stage-chip";
 export { StageStep } from "./ui/stage-step";
 export { StatusOverview } from "./ui/status-overview";

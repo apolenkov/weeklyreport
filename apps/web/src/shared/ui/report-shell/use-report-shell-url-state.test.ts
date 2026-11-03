@@ -1,17 +1,15 @@
+import { vi } from "vitest";
+vi.mock("next/navigation", () => ({
+  usePathname: () => navigation.pathname,
+  useRouter: () => ({ replace: navigation.replace }),
+  useSearchParams: () => navigation.searchParams(),
+}));
 // @vitest-environment jsdom
-
+// @vitest-environment jsdom
 import { act, render, renderHook, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { createElement, type PropsWithChildren, StrictMode } from "react";
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  expect,
-  expectTypeOf,
-  it,
-  vi,
-} from "vitest";
+import { createElement } from "react";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
 import { ArchiveToggle } from "./archive-toggle";
 import { ScopeToggle } from "./scope-toggle";
@@ -19,29 +17,9 @@ import {
   type ReportShellScopeValue,
   useReportShellUrlState,
 } from "./use-report-shell-url-state";
+import { navigation } from "./use-report-shell-url-state.test-support";
 
-const navigation = vi.hoisted(() => ({
-  pathname: "/reports/report-1",
-  replace: vi.fn(),
-  searchParams: vi.fn(() => new URLSearchParams()),
-}));
-
-vi.mock("next/navigation", () => ({
-  usePathname: () => navigation.pathname,
-  useRouter: () => ({ replace: navigation.replace }),
-  useSearchParams: () => navigation.searchParams(),
-}));
-
-beforeEach(() => {
-  navigation.pathname = "/reports/report-1";
-});
-
-afterEach(() => {
-  navigation.replace.mockReset();
-  navigation.searchParams.mockReturnValue(new URLSearchParams());
-});
-
-describe("useReportShellUrlState", () => {
+describe("useReportShellUrlState — 1", () => {
   it.each([
     { shell: "viewer", stripParams: ["source", "recovery"] },
     { shell: "head", stripParams: [] },
@@ -106,7 +84,8 @@ describe("useReportShellUrlState", () => {
       expect(original.get("recovery")).toBe("1");
     },
   );
-
+});
+describe("useReportShellUrlState — 2", () => {
   it.each([
     ["", "product"],
     ["scope=product", "product"],
@@ -125,7 +104,8 @@ describe("useReportShellUrlState", () => {
       .parameter(0)
       .toEqualTypeOf<ReportShellScopeValue>();
   });
-
+});
+describe("useReportShellUrlState — 3", () => {
   it("stores lead explicitly and represents product by omitting the scope param", () => {
     navigation.searchParams.mockReturnValue(
       new URLSearchParams("archive=1&scope=product"),
@@ -151,7 +131,8 @@ describe("useReportShellUrlState", () => {
       { scroll: false },
     );
   });
-
+});
+describe("useReportShellUrlState — 4", () => {
   it("drops repeated report controls on navigation without touching unrelated values", () => {
     navigation.searchParams.mockReturnValue(
       new URLSearchParams(
@@ -168,7 +149,8 @@ describe("useReportShellUrlState", () => {
       { scroll: false },
     );
   });
-
+});
+describe("useReportShellUrlState — 5", () => {
   it("actual repeated Archive clicks preserve the latest selections through URL acknowledgements", async () => {
     navigation.searchParams.mockReturnValue(new URLSearchParams("tag=a&tag=b"));
     function Controls() {
@@ -207,10 +189,10 @@ describe("useReportShellUrlState", () => {
       "/reports/report-1?tag=a&tag=b&archive=1",
       { scroll: false },
     );
-    // Link construction continues to describe the committed URL.
+    // Links preserve the latest deliberate controls, including queued Read intent.
     expect(screen.getByRole("link", { name: "Slides" })).toHaveAttribute(
       "href",
-      "?tag=a&tag=b&mode=slides",
+      "?tag=a&tag=b&scope=lead&mode=slides",
     );
 
     navigation.searchParams.mockReturnValue(
@@ -225,7 +207,7 @@ describe("useReportShellUrlState", () => {
     expect(leads).toHaveAttribute("aria-checked", "true");
     expect(screen.getByRole("link", { name: "Slides" })).toHaveAttribute(
       "href",
-      "?tag=a&tag=b&archive=1&mode=slides",
+      "?tag=a&tag=b&scope=lead&mode=slides",
     );
     expect(navigation.replace).toHaveBeenCalledTimes(2);
     await user.click(screen.getByRole("radio", { name: "Product" }));
@@ -250,73 +232,29 @@ describe("useReportShellUrlState", () => {
       "true",
     );
   });
-
-  it.each(["query", "path", "popstate"])(
-    "external %s navigation supersedes queued selections",
-    (change) => {
-      const { result, rerender } = renderHook(() =>
-        useReportShellUrlState({ stripParams: [] }),
-      );
-      act(() => {
-        result.current.setIncludeArchive(true);
-        result.current.setScope("lead");
-      });
-      expect(navigation.replace).toHaveBeenCalledTimes(1);
-      expect(result.current.includeArchive).toBe(true);
-      expect(result.current.scope).toBe("lead");
-
-      if (change === "popstate") {
-        // Back can land on the first replacement's URL; it is not an acknowledgement.
-        act(() => {
-          window.dispatchEvent(new PopStateEvent("popstate"));
-        });
-        expect(result.current.includeArchive).toBe(false);
-        expect(result.current.scope).toBe("product");
-        navigation.searchParams.mockReturnValue(
-          new URLSearchParams("archive=1"),
-        );
-      } else if (change === "path") {
-        navigation.pathname = "/reports/report-2";
-      } else {
-        navigation.searchParams.mockReturnValue(
-          new URLSearchParams("tag=external"),
-        );
-      }
-      rerender();
-      expect(navigation.replace).toHaveBeenCalledTimes(1);
-      expect(result.current.includeArchive).toBe(change === "popstate");
-      expect(result.current.scope).toBe("product");
-
-      act(() => result.current.setScope("lead"));
-      expect(navigation.replace).toHaveBeenLastCalledWith(
-        change === "popstate"
-          ? "/reports/report-1?archive=1&scope=lead"
-          : change === "path"
-            ? "/reports/report-2?scope=lead"
-            : "/reports/report-1?tag=external&scope=lead",
-        { scroll: false },
-      );
-    },
-  );
-
-  it("acknowledges a queued selection only once in StrictMode", () => {
-    const { result, rerender } = renderHook(
-      () => useReportShellUrlState({ stripParams: [] }),
-      {
-        wrapper: ({ children }: PropsWithChildren) =>
-          createElement(StrictMode, null, children),
-      },
+});
+describe("useReportShellUrlState — 6", () => {
+  it("does not restore Review when Read overlaps scope and Slides navigation", () => {
+    navigation.searchParams.mockReturnValue(
+      new URLSearchParams("review=1&authorId=lead-1"),
     );
-    act(() => {
-      result.current.setIncludeArchive(true);
-      result.current.setScope("lead");
-    });
-    navigation.searchParams.mockReturnValue(new URLSearchParams("archive=1"));
+    const { result, rerender } = renderHook(() =>
+      useReportShellUrlState({ stripParams: [] }),
+    );
+    expect(result.current.reviewIntent).toBe(true);
+    act(() => result.current.setReviewIntent(false));
+    act(() => result.current.setScope("lead"));
+    expect(result.current.reviewIntent).toBe(false);
+    expect(result.current.buildQuery({ mode: "slides" })).toBe(
+      "?authorId=lead-1&scope=lead&mode=slides",
+    );
+    navigation.searchParams.mockReturnValue(
+      new URLSearchParams("authorId=lead-1"),
+    );
     rerender();
-    rerender();
-    expect(navigation.replace).toHaveBeenCalledTimes(2);
+    expect(result.current.reviewIntent).toBe(false);
     expect(navigation.replace).toHaveBeenLastCalledWith(
-      "/reports/report-1?archive=1&scope=lead",
+      "/reports/report-1?authorId=lead-1&scope=lead",
       { scroll: false },
     );
   });

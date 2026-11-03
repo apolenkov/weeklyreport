@@ -153,10 +153,12 @@ function WeeklyReportBody({
   page,
   scope,
   initialFocusedLeadId,
+  onNavigateAuthor,
 }: {
   readonly page: ReadyWeeklyReportPage;
   readonly scope: "product" | "lead";
   readonly initialFocusedLeadId: string | undefined;
+  readonly onNavigateAuthor: ((authorId: string) => void) | undefined;
 }) {
   // Overview-card clicks lift their target into React state here; the accordion
   // and lead sections react to it. No component reaches into another's DOM.
@@ -209,10 +211,16 @@ function WeeklyReportBody({
       submissionFilter={page.submissionFilter}
       onFilterChange={page.handlers.setSubmissionFilter}
       focusedProductId={focusedProductId}
-      scrollTargetProductId={focusedProductId}
+      scrollTargetProductId={
+        page.reviewMode === "review" && scope === "lead"
+          ? undefined
+          : focusedProductId
+      }
       focusedLeadId={focusedLeadId}
       overviewNavigationEpochs={overviewNavigation.epochs}
       onNavigateOverview={navigateOverview}
+      onNavigateAuthor={onNavigateAuthor}
+      reviewUnavailableNotice={page.reviewUnavailableNotice}
     />
   );
 }
@@ -223,6 +231,9 @@ export function WeeklyReportPage({
   canonicalBasePath = "/head/report",
   authorId,
   scope = "product",
+  reviewIntent,
+  onReviewModeChange,
+  onNavigateAuthor,
   documentActionsLeading,
   contextControls,
   contextControlsLeading,
@@ -235,6 +246,8 @@ export function WeeklyReportPage({
     canonicalBasePath,
     authorId,
     scope,
+    reviewIntent,
+    onReviewModeChange,
   });
 
   if (page.kind === "loading") {
@@ -267,6 +280,7 @@ export function WeeklyReportPage({
         page={page}
         scope={scope}
         initialFocusedLeadId={authorId}
+        onNavigateAuthor={onNavigateAuthor}
       />
     </div>
   );

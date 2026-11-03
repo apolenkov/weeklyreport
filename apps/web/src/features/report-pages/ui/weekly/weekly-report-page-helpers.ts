@@ -73,7 +73,12 @@ function sectionHasActivityContent(
   >,
 ): boolean {
   const activities = section.activities;
-  if (activities.length === 0) return false;
+  if (
+    [...section.items, ...section.risks, ...section.decisions].some(
+      (record) => record.activityId != null,
+    )
+  )
+    return true;
   const ownsRecord = (activityId: string): boolean =>
     section.items.some((i) => i.activityId === activityId) ||
     section.risks.some((r) => r.activityId === activityId) ||
@@ -90,6 +95,20 @@ function sectionHasActivityContent(
 export const isSubmittedSection = (section: {
   readonly status: ReportSectionStatus;
 }): boolean => section.status === "submitted";
+
+function withActivityLeadGroups(
+  sections: readonly ReportSectionReadModel[],
+  groups: LeadGroup[],
+): LeadGroup[] {
+  return sections.flatMap((section) => {
+    const existing = groups.find((group) => group.id === section.authorId);
+    if (existing) return [existing];
+    return sectionHasActivityContent(section) ||
+      (isSubmittedSection(section) && section.canReview)
+      ? [{ id: section.authorId, name: section.authorName, products: [] }]
+      : [];
+  });
+}
 
 // Same per-lead grouping as mapWeeklyReportLeadGroups, scoped to one section.
 function sectionHasProductContent(
@@ -117,11 +136,17 @@ export function buildAccordionModel(params: {
   // Product content OR a touched activity (an all-activity period is real content).
   const hasAnyContent =
     fullProducts.some(reportHasContent) ||
-    reportData.leadSections.some(sectionHasActivityContent);
+    reportData.leadSections.some(sectionHasActivityContent) ||
+    reportData.leadSections.some(
+      (section) => isSubmittedSection(section) && section.canReview === true,
+    );
   if (!submittedOnly) {
     return {
       products: fullProducts,
-      leadGroups: fullLeadGroups,
+      leadGroups:
+        scope === "lead"
+          ? withActivityLeadGroups(reportData.leadSections, fullLeadGroups)
+          : fullLeadGroups,
       hasAnyContent,
       draftCount: 0,
     };
@@ -140,7 +165,12 @@ export function buildAccordionModel(params: {
   const products =
     mapWeeklyReport(submittedData).products.filter(reportHasContent);
   const leadGroups =
-    scope === "lead" ? mapWeeklyReportLeadGroups(submittedData) : [];
+    scope === "lead"
+      ? withActivityLeadGroups(
+          submittedSections,
+          mapWeeklyReportLeadGroups(submittedData),
+        )
+      : [];
   // Count product OR activity content so activity-only drafts stay visible.
   const draftCount = draftSections.filter(
     (section) =>

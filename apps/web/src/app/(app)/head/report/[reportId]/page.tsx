@@ -10,6 +10,7 @@ interface Props {
   searchParams: Promise<{
     authorId?: string | string[];
     mode?: string | string[];
+    review?: string | string[];
   }>;
 }
 
@@ -18,7 +19,7 @@ export default async function HeadReportByIdPage({
   searchParams,
 }: Props) {
   const { reportId } = await params;
-  const { authorId, mode: modeParam } = await searchParams;
+  const { authorId, mode: modeParam, review } = await searchParams;
   const mode = modeParam === "slides" ? "slides" : "form";
   const resolvedAuthorId = typeof authorId === "string" ? authorId : undefined;
 
@@ -36,6 +37,7 @@ export default async function HeadReportByIdPage({
             reportId={reportId}
             mode={mode}
             authorId={resolvedAuthorId}
+            reviewIntent={review === "1"}
           />
         </Suspense>
       </div>

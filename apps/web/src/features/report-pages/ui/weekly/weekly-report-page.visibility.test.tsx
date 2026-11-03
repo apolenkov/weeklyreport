@@ -37,6 +37,7 @@ describe("WeeklyReportPage visibility states", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.HTMLElement.prototype.scrollIntoView = vi.fn();
+    vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: false }));
   });
 
   async function waitForReadyPage(): Promise<void> {

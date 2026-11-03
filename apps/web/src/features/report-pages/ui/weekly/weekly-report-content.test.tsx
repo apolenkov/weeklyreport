@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ReviewModel } from "../../../review";
@@ -49,6 +49,40 @@ const baseProps: ReportContentProps = {
 };
 
 describe("ReportContent — Sections heading", () => {
+  it("does not steal focus from outside the disappearing report body", () => {
+    const { rerender } = render(
+      <>
+        <button type="button">Elsewhere</button>
+        <ReportContent {...baseProps} reviewEnabled />
+      </>,
+    );
+    const elsewhere = screen.getByRole("button", { name: "Elsewhere" });
+    act(() => elsewhere.focus());
+    rerender(
+      <>
+        <button type="button">Elsewhere</button>
+        <ReportContent {...baseProps} hasAnyContent={false} />
+      </>,
+    );
+    expect(elsewhere).toHaveFocus();
+  });
+  it("recovers only lost section focus when the final author region disappears", () => {
+    const { rerender } = render(
+      <ReportContent
+        {...baseProps}
+        reviewEnabled
+        accordion={{
+          ...baseProps.accordion,
+          leadGroups: [{ id: "ada", name: "Ada", products: [] }],
+        }}
+      />,
+    );
+    const sections = screen.getByRole("region", { name: "Report sections" });
+    const button = screen.getByRole("button", { name: "All" });
+    act(() => button.focus());
+    rerender(<ReportContent {...baseProps} hasAnyContent={false} />);
+    expect(sections).toHaveFocus();
+  });
   it("keeps the Sections caption on a published report (no review toolbar)", () => {
     render(<ReportContent {...baseProps} />);
 
@@ -150,6 +184,19 @@ describe("ReportContent — no-content empty state (C5019)", () => {
       screen.getByText("No report content for Jun 8–14, 2026"),
     ).toBeInTheDocument();
     expect(screen.queryByText("Portfolio Overview")).not.toBeInTheDocument();
+  });
+
+  it("announces unavailable targeted Review even when the report is empty", () => {
+    render(
+      <ReportContent
+        {...NO_CONTENT_PROPS}
+        reviewUnavailableNotice="Review is unavailable for this section."
+      />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Review is unavailable for this section.",
+    );
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
   });
 
   it("keeps the Portfolio Overview when sections have content", () => {

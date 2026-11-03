@@ -30,7 +30,7 @@ function HeadDepartmentLabel() {
   return (
     <ReportToolbarCenterLabel
       label={sessionState?.organization?.fullName ?? FALLBACK_DEPARTMENT_LABEL}
-      detail="Live portfolio review"
+      detail="Portfolio report"
     />
   );
 }
@@ -65,6 +65,7 @@ function HeadContextTrailing({
         editHref={`${HEAD_REPORT_ROUTE}/${encodeURIComponent(reportId)}${buildQuery({ mode: null })}`}
         slidesHref={`${HEAD_REPORT_ROUTE}/${encodeURIComponent(reportId)}${buildQuery({ mode: "slides" })}`}
         mode={mode === "slides" ? "slides" : "edit"}
+        readOnly
         desktopLabels
       />
     </div>
@@ -93,7 +94,7 @@ export function HeadContextControls({
   const { buildQuery, includeArchive, setIncludeArchive } = urlState;
   const urlBuilder = useCallback(
     (periodId: string) =>
-      `${HEAD_REPORT_ROUTE}/${encodeURIComponent(periodId)}${buildQuery({})}`,
+      `${HEAD_REPORT_ROUTE}/${encodeURIComponent(periodId)}${buildQuery({ review: null })}`,
     [buildQuery],
   );
 

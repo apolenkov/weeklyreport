@@ -10,7 +10,9 @@ vi.mock("../../../period", () => ({
   PeriodNavigationSkeleton: ({ testId }: { testId: string }) => (
     <div data-testid={testId} />
   ),
-  PeriodNavigator: () => null,
+  PeriodNavigator: ({ urlBuilder }: { urlBuilder: (id: string) => string }) => (
+    <a href={urlBuilder("next-period")}>Next period</a>
+  ),
 }));
 vi.mock("../../../../shared/ui/report-shell/scope-toggle", () => ({
   ScopeToggle: () => null,
@@ -19,9 +21,48 @@ vi.mock("../../../../shared/ui/report-shell/view-mode-toggle", () => ({
   ViewModeToggle: () => null,
 }));
 
-import { HeadContextControls } from "./head-report-chrome";
+import {
+  HEAD_DEPARTMENT_LABEL,
+  HeadContextControls,
+} from "./head-report-chrome";
+
+it("uses lifecycle-neutral portfolio context", () => {
+  render(HEAD_DEPARTMENT_LABEL);
+  expect(screen.getByText("Portfolio report")).toBeInTheDocument();
+});
 
 describe("HeadContextControls", () => {
+  it("clears Review intent in period destinations", () => {
+    const buildQuery = (overrides: Record<string, string | null>) => {
+      const params = new URLSearchParams("review=1&scope=lead&authorId=ada");
+      for (const [key, value] of Object.entries(overrides)) {
+        if (value === null) params.delete(key);
+        else params.set(key, value);
+      }
+      return `?${params.toString()}`;
+    };
+    render(
+      <HeadContextControls
+        periods={[{} as never]}
+        reportId="r1"
+        mode="form"
+        urlState={
+          {
+            buildQuery,
+            includeArchive: false,
+            setIncludeArchive: () => undefined,
+          } as never
+        }
+        historyError={false}
+        historyLoading={false}
+        historyTruncated={false}
+      />,
+    );
+    expect(screen.getByRole("link", { name: "Next period" })).toHaveAttribute(
+      "href",
+      "/head/report/next-period?scope=lead&authorId=ada",
+    );
+  });
   it.each([true, false])(
     "discloses compiled history truncation=%s",
     (truncated) => {

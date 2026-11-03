@@ -1,3 +1,4 @@
+import { PAUSED_PROGRESS } from "../../../shared/lib/status/item-progress-presentation";
 import type { StatusOverviewItem } from "../model/status-overview";
 import type { PlanVerdict } from "../model/status-overview-verdict";
 
@@ -6,15 +7,15 @@ import type { PlanVerdict } from "../model/status-overview-verdict";
 // shape so colour is never the only signal.
 const ICON_CLASS = "h-5 w-5 shrink-0";
 
-// Completion and active work use semantic hues; paused uses the alarm-family
-// hue, while postponed, planned and wont-do states stay neutral.
+// Completion and active work use semantic hues; paused, postponed, planned
+// and wont-do states stay neutral.
 const NEUTRAL_TONE = "text-[var(--color-muted-foreground)]";
 const PROGRESS_TONE: Readonly<
   Record<StatusOverviewItem["workflowStatus"] | "wont_do", string>
 > = {
   done: "text-[var(--color-chip-on-track-text)]",
   in_progress: "text-[var(--color-status-in-progress-fg)]",
-  paused: "text-[var(--color-status-at-risk-fg)]",
+  paused: PAUSED_PROGRESS.className,
   postponed: NEUTRAL_TONE,
   planned: NEUTRAL_TONE,
   wont_do: NEUTRAL_TONE,

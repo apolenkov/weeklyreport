@@ -1,4 +1,7 @@
-import type { PeriodStatus } from "@weeklyreport/shared";
+import type {
+  PeriodStatus,
+  ReportSectionReadModel,
+} from "@weeklyreport/shared";
 import { shortNameFromName } from "@weeklyreport/shared";
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
@@ -9,14 +12,20 @@ import type {
   WeeklyPortfolioProduct,
   WeeklyProductReport,
 } from "../../../report-sections";
-import { PortfolioOverviewTable } from "../../../report-sections";
+import {
+  ActivityStatusStrip,
+  PortfolioOverviewTable,
+} from "../../../report-sections";
 import type { ReviewMode, ReviewModel } from "../../../review";
-import { ReviewAcknowledgeBar, ReviewVerdictBand } from "../../../review";
+import {
+  ReviewAcknowledgeBar,
+  ReviewedRow,
+  ReviewVerdictBand,
+} from "../../../review";
 import { SCROLL_INTO_VIEW_DELAY_MS } from "../product/accordion-tokens";
 import { ProductAccordion } from "../product/product-accordion";
 import type { LeadGroup } from "./weekly-report-page-helpers";
 
-// Shared layout for terminal page states (invalid-link, no active period).
 export function CenteredNotice({
   title,
   body,
@@ -35,8 +44,46 @@ export function CenteredNotice({
     </div>
   );
 }
+function SectionVerdict({
+  groupId,
+  review,
+  reviewModel,
+  activitySections,
+}: {
+  readonly groupId: string;
+  readonly review: ReviewModel["context"];
+  readonly reviewModel: ReviewModel | undefined;
+  readonly activitySections: readonly ReportSectionReadModel[];
+}) {
+  if (!review || !reviewModel) return null;
+  const sections = reviewModel.sections.filter((section) =>
+    activitySections.some(
+      (row) =>
+        row.authorId === groupId &&
+        row.reportSectionId === section.reportSectionId,
+    ),
+  );
+  return (
+    <ReviewVerdictBand
+      sections={sections}
+      onMutated={review.onMutated}
+      inline
+    />
+  );
+}
+interface ReportAccordionBodyProps {
+  readonly scope: "product" | "lead";
+  readonly products: WeeklyProductReport[];
+  readonly leadGroups: LeadGroup[];
+  readonly focusedProductId: string | undefined;
+  readonly scrollTargetProductId: string | undefined;
+  readonly focusedLeadId: string | undefined;
+  readonly overviewNavigationEpochs: ReadonlyMap<string, number>;
+  readonly review: ReviewModel["context"];
+  readonly reviewModel?: ReviewModel;
+  readonly activitySections?: readonly ReportSectionReadModel[];
+}
 
-// Flat per-product list, or products bucketed under each authoring lead.
 export function ReportAccordionBody({
   scope,
   products,
@@ -46,16 +93,9 @@ export function ReportAccordionBody({
   focusedLeadId,
   overviewNavigationEpochs,
   review,
-}: {
-  readonly scope: "product" | "lead";
-  readonly products: WeeklyProductReport[];
-  readonly leadGroups: LeadGroup[];
-  readonly focusedProductId: string | undefined;
-  readonly scrollTargetProductId: string | undefined;
-  readonly focusedLeadId: string | undefined;
-  readonly overviewNavigationEpochs: ReadonlyMap<string, number>;
-  readonly review: ReviewModel["context"];
-}) {
+  reviewModel,
+  activitySections = [],
+}: ReportAccordionBodyProps) {
   const renderAccordion = (report: WeeklyProductReport, leadId?: string) => {
     const targetsInstance = leadId === undefined || focusedLeadId === leadId;
     const targetsProduct = focusedProductId === report.id && targetsInstance;
@@ -82,7 +122,6 @@ export function ReportAccordionBody({
       />
     );
   };
-
   if (scope === "lead") {
     return (
       <div className="space-y-6">
@@ -94,35 +133,48 @@ export function ReportAccordionBody({
             groupName={group.name}
             focused={focusedLeadId === group.id}
             navigationEpoch={overviewNavigationEpochs.get(group.id) ?? 0}
+            verdict={
+              <SectionVerdict
+                groupId={group.id}
+                review={review}
+                reviewModel={reviewModel}
+                activitySections={activitySections}
+              />
+            }
           >
             {group.products.map((report) => renderAccordion(report, group.id))}
+            <ActivityStatusStrip
+              Row={ReviewedRow}
+              sections={activitySections.filter(
+                (section) => section.authorId === group.id,
+              )}
+              review={review}
+            />
           </LeadSection>
         ))}
       </div>
     );
   }
-
   return (
     <div className="space-y-3">
       {products.map((report) => renderAccordion(report))}
     </div>
   );
 }
-
-// React-driven scroll/focus for a lead section targeted from the overview band —
-// the section owns its own DOM; nothing pokes it from outside.
 function LeadSection({
   groupId,
   groupName,
   focused,
   navigationEpoch,
   children,
+  verdict,
 }: {
   readonly groupId: string;
   readonly groupName: string;
   readonly focused: boolean;
   readonly navigationEpoch: number | undefined;
   readonly children: ReactNode;
+  readonly verdict: ReactNode;
 }) {
   const ref = useRef<HTMLElement | null>(null);
   const groupDisplayName = shortNameFromName(groupName);
@@ -131,12 +183,16 @@ function LeadSection({
     const handle = window.setTimeout(() => {
       const el = ref.current;
       if (!el) return;
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+        block: "start",
+      });
       if (el instanceof HTMLElement) el.focus({ preventScroll: true });
     }, SCROLL_INTO_VIEW_DELAY_MS);
     return () => window.clearTimeout(handle);
   }, [focused, groupId, navigationEpoch]);
-
   return (
     <section
       ref={ref}
@@ -146,15 +202,16 @@ function LeadSection({
       aria-label={groupDisplayName}
       className="space-y-3 scroll-mt-4 rounded-[var(--radius-sm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2"
     >
-      <h2 className="font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary)]">
-        {groupDisplayName}
-      </h2>
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+        <h2 className="font-[family-name:var(--font-sans)] text-sm font-semibold text-[var(--color-primary)]">
+          {groupDisplayName}
+        </h2>
+        {verdict}
+      </div>
       {children}
     </section>
   );
 }
-
-// Scope-adaptive overview: lead cards in by-lead scope, product cards otherwise.
 export function ReportOverviewBand({
   scope,
   portfolio,
@@ -185,8 +242,6 @@ export function ReportOverviewBand({
     />
   );
 }
-
-// Export is shown only when the server-provided capability allows it.
 export function ToolbarExportControl({
   canExportPdf,
   reportId,
@@ -201,9 +256,6 @@ export function ToolbarExportControl({
   }
   return null;
 }
-
-// Head/admin: header Publish cluster so review → acknowledge → publish is one
-// sequence. Viewer: body band — they have no publish cluster to host it.
 export function AcknowledgeSurface({
   reviewModel,
   reportId,
@@ -225,16 +277,16 @@ export function AcknowledgeSurface({
     </div>
   );
 }
-
-// Self-gating verdict band: only in review mode so normal mode stays read-only.
 export function ReviewModeVerdictSurface({
   reportId,
   reviewModel,
   reviewMode,
+  onNavigateSection,
 }: {
   readonly reportId: string;
   readonly reviewModel: ReviewModel;
   readonly reviewMode: ReviewMode;
+  readonly onNavigateSection?: ((reportSectionId: string) => void) | undefined;
 }) {
   if (reviewMode !== "review" || !reviewModel.context) return null;
   return (
@@ -242,6 +294,7 @@ export function ReviewModeVerdictSurface({
       key={reportId}
       sections={reviewModel.sections}
       onMutated={reviewModel.context.onMutated}
+      onNavigateSection={onNavigateSection}
     />
   );
 }

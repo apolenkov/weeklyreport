@@ -1,5 +1,6 @@
 "use client";
 
+import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -16,6 +17,9 @@ export interface ReportShellUrlState {
   readonly setIncludeArchive: (value: boolean) => void;
   readonly scope: ReportShellScopeValue;
   readonly setScope: (value: ReportShellScopeValue) => void;
+  readonly reviewIntent: boolean;
+  readonly setReviewIntent: (value: boolean) => void;
+  readonly navigateAuthor: (authorId: string) => void;
 }
 
 interface PendingNavigation {
@@ -42,7 +46,7 @@ function buildReportQuery(
 function usePendingNavigation(
   pathname: string,
   observedQuery: string,
-  router: ReturnType<typeof useRouter>,
+  router: AppRouterInstance,
 ) {
   const pendingNavigationRef = useRef<PendingNavigation | null>(null);
   const [pendingNavigation, setPendingNavigation] =
@@ -97,14 +101,7 @@ function usePendingNavigation(
   };
 }
 
-// Shared head/viewer report-shell URL state. stripParams is wiped on every
-// setter call — viewer passes ["source","recovery"] so a later NOT_FOUND is
-// not misread as Status navigation bouncing back to the Status target.
-export function useReportShellUrlState({
-  stripParams,
-}: {
-  readonly stripParams: readonly string[];
-}): ReportShellUrlState {
+function useReportQueryNavigation(stripParams: readonly string[]) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -114,10 +111,10 @@ export function useReportShellUrlState({
 
   const buildQuery = useCallback(
     (overrides: Record<string, string | null>) => {
-      const qs = buildReportQuery(searchParams, stripParams, overrides);
+      const qs = buildReportQuery(controlParams, stripParams, overrides);
       return qs ? `?${qs}` : "";
     },
-    [searchParams, stripParams],
+    [controlParams, stripParams],
   );
 
   const updateQuery = useCallback(
@@ -168,6 +165,17 @@ export function useReportShellUrlState({
     ],
   );
 
+  return { buildQuery, updateQuery, controlParams };
+}
+
+// One pending URL owner keeps overlapping controls and destination links aligned.
+export function useReportShellUrlState({
+  stripParams,
+}: {
+  readonly stripParams: readonly string[];
+}): ReportShellUrlState {
+  const { buildQuery, updateQuery, controlParams } =
+    useReportQueryNavigation(stripParams);
   const includeArchive = getScalarSearchParam(controlParams, "archive") === "1";
   const setIncludeArchive = useCallback(
     (value: boolean) => updateQuery({ archive: value ? "1" : null }),
@@ -184,5 +192,23 @@ export function useReportShellUrlState({
     [updateQuery],
   );
 
-  return { buildQuery, includeArchive, setIncludeArchive, scope, setScope };
+  const reviewIntent = getScalarSearchParam(controlParams, "review") === "1";
+  const setReviewIntent = useCallback(
+    (value: boolean) => updateQuery({ review: value ? "1" : null }),
+    [updateQuery],
+  );
+  const navigateAuthor = useCallback(
+    (authorId: string) => updateQuery({ scope: "lead", authorId }),
+    [updateQuery],
+  );
+  return {
+    buildQuery,
+    includeArchive,
+    setIncludeArchive,
+    scope,
+    setScope,
+    reviewIntent,
+    setReviewIntent,
+    navigateAuthor,
+  };
 }

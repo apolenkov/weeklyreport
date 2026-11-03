@@ -32,6 +32,7 @@ interface HeadReportShellProps {
   readonly reportId: string;
   readonly mode: HeadReportMode;
   readonly authorId?: string | undefined;
+  readonly reviewIntent?: boolean | undefined;
 }
 
 // The displayed period shares its query key with WeeklyReportPage (by
@@ -93,6 +94,8 @@ function renderExportPdf(
 }
 
 interface HeadReportBodyProps extends HeadReportShellProps {
+  readonly onReviewModeChange: (mode: "read" | "review") => void;
+  readonly onNavigateAuthor: (authorId: string) => void;
   readonly scope: ReportShellScopeValue;
   readonly deckRef: RefObject<HTMLDivElement | null>;
   readonly fullscreenToggleRef: RefObject<HTMLButtonElement | null>;
@@ -137,6 +140,9 @@ function HeadReportBody(props: HeadReportBodyProps) {
         <div className="min-w-0">
           <WeeklyReportPage
             reportId={props.reportId}
+            reviewIntent={props.reviewIntent}
+            onReviewModeChange={props.onReviewModeChange}
+            onNavigateAuthor={props.onNavigateAuthor}
             authorId={props.authorId}
             scope={props.scope}
             documentActionsLeading={props.exportPdf}
@@ -194,6 +200,9 @@ export function HeadReportShell({
       reportId={reportId}
       mode={mode}
       authorId={authorId}
+      reviewIntent={urlState.reviewIntent}
+      onReviewModeChange={(next) => urlState.setReviewIntent(next === "review")}
+      onNavigateAuthor={urlState.navigateAuthor}
       scope={urlState.scope}
       deckRef={deckRef}
       fullscreenToggleRef={fullscreenToggleRef}
