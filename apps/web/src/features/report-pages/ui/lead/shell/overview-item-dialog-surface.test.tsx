@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import { useDiscardGuard } from "../../../../../shared/ui/dialogs/use-discard-guard";
+import { ItemInlineEditor } from "../../../../report-sections/ui/item-inline-editor";
 import { OverviewItemDialogSurface } from "./overview-item-dialog-surface";
 
 function DirtyEditor({ onClose }: { readonly onClose: () => void }) {
@@ -33,6 +34,65 @@ function DirtyEditor({ onClose }: { readonly onClose: () => void }) {
 }
 
 describe("Overview item dialog dismissal", () => {
+  it("registers the real editor discard guard for surface Escape and clears it on unmount", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const closeRef: { current: (() => void) | null } = { current: null };
+    const { unmount } = render(
+      <OverviewItemDialogSurface
+        title="Add item"
+        onCancel={onClose}
+        requestCloseRef={closeRef}
+      >
+        <ItemInlineEditor
+          item={null}
+          products={[
+            {
+              id: "product",
+              name: "Payments",
+              overallStatus: "on-track",
+              stages: [
+                {
+                  stageName: "Development",
+                  ownership: "mine",
+                  status: "on-track",
+                  assignee: "Lead",
+                },
+              ],
+            },
+          ]}
+          defaultProductId="product"
+          week="current"
+          stagesForProduct={() => ["Development"]}
+          currentUserName="Lead"
+          onSave={vi.fn()}
+          onCancel={onClose}
+          requestCloseRef={closeRef}
+        />
+      </OverviewItemDialogSurface>,
+    );
+    await user.type(
+      screen.getByRole("textbox", { name: /Description/ }),
+      "Retained input",
+    );
+    expect(closeRef.current).toEqual(expect.any(Function));
+    // Escape outside the form exercises the surface-to-editor registration.
+    screen.getByRole("button", { name: "Close" }).focus();
+    await user.keyboard("{Escape}");
+    const confirmation = await screen.findByRole("alertdialog", {
+      name: "Discard changes?",
+    });
+    expect(onClose).not.toHaveBeenCalled();
+    await user.click(
+      within(confirmation).getByRole("button", { name: "Keep editing" }),
+    );
+    expect(screen.getByRole("textbox", { name: /Description/ })).toHaveValue(
+      "Retained input",
+    );
+    unmount();
+    expect(closeRef.current).toBeNull();
+  });
+
   it.each(["Escape", "Close", "outside", "Abandon"])(
     "%s takes the canonical Cancel discard path without losing input",
     async (dismissal) => {
