@@ -148,6 +148,29 @@ describe("planVerdictWrite with a linked occurrence", () => {
     );
   });
 
+  it("continues the existing Next occurrence without changing its identity or text", () => {
+    const linked = carried({
+      type: "next",
+      workflowStatus: "planned",
+      carriedOver: false,
+    });
+    const prior = item();
+    const snapshot = structuredClone(prior);
+    const result = planVerdictWrite({
+      verdict: "continue",
+      prior: { reportId: REPORT_ID, item: prior },
+      linked,
+    });
+    expect(result).toMatchObject({ kind: "item-patch", itemId: LINKED_ID });
+    expect(appliedItem(linked, patchOf(result))).toMatchObject({
+      id: LINKED_ID,
+      stableId: STABLE_ID,
+      type: "current",
+      text: linked.text,
+    });
+    expect(prior).toEqual(snapshot);
+  });
+
   it("continue returns a done or paused occurrence to planned", () => {
     const paused = carried({
       workflowStatus: "paused",
