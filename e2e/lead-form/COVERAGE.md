@@ -14,7 +14,7 @@ They are separate from the historical Lead-only case counts below.
 Targeted invocation: `pnpm exec node --import tsx --test e2e/lead-form/head-form-clarity.test.ts`.
 `pnpm test:e2e` also discovers the file. Typecheck: `pnpm exec tsc --noEmit -p e2e/tsconfig.json`.
 
-The suite is node:test driving the pinned agent-browser CLI 0.39.1 (verified at
+The suite is node:test driving the pinned agent-browser CLI 0.41.1 (verified at
 start-up by `e2e/setup/agent-browser-version.ts`). Run it with `pnpm test:e2e`
 against the running web/API; it resets and seeds `weeklyreport_e2e` with Redis
 DB 15 before every test, so exactly one e2e process may use that database at a
