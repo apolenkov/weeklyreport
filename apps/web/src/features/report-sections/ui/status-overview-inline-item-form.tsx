@@ -97,6 +97,7 @@ function TextFields(props: FieldProps) {
       <label className="block space-y-1 text-sm">
         Description
         <textarea
+          name="text"
           className={control}
           required
           value={value.text}
@@ -109,6 +110,7 @@ function TextFields(props: FieldProps) {
       <label className="block space-y-1 text-sm">
         Next step
         <textarea
+          name="nextStepText"
           className={control}
           value={value.nextStepText}
           aria-invalid={!!error("nextStepText")}
@@ -158,6 +160,7 @@ function ProgressFields(props: FieldProps) {
           <label className="block space-y-1 text-sm">
             Pause reason
             <textarea
+              name="pausedReason"
               className={control}
               required
               value={value.pausedReason}
@@ -182,14 +185,26 @@ function StageFields(props: FieldProps) {
   if (target.parent.kind !== "product") return null;
   return (
     <fieldset
-      aria-describedby={describedBy("stageNames")}
+      name="stageNames"
+      tabIndex={view.eligibleStages.length === 0 ? 0 : undefined}
+      aria-describedby={
+        [
+          view.eligibleStages.length === 0 ? `${id}-no-stages` : undefined,
+          describedBy("stageNames"),
+        ]
+          .filter(Boolean)
+          .join(" ") || undefined
+      }
       className="min-w-0 space-y-1 text-sm"
     >
       <legend>Stages (required)</legend>
-      {view.eligibleStages.length === 0 && <p>No eligible stages available.</p>}
+      {view.eligibleStages.length === 0 && (
+        <p id={`${id}-no-stages`}>No eligible stages available.</p>
+      )}
       {view.eligibleStages.map((stage) => (
         <label key={stage} className="flex min-h-11 items-center gap-2">
           <input
+            name="stageNames"
             type="checkbox"
             checked={value.stageNames.includes(stage)}
             onChange={(event) =>
@@ -207,7 +222,25 @@ function StageFields(props: FieldProps) {
       {value.stageNames
         .filter((stage) => !view.eligibleStages.includes(stage))
         .map((stage) => (
-          <p key={stage}>Unavailable stage: {stage}</p>
+          <div
+            key={stage}
+            className="flex min-h-11 flex-wrap items-center gap-2"
+          >
+            <span>Unavailable stage: {stage}</span>
+            <button
+              type="button"
+              className={button}
+              aria-label={`Remove unavailable stage ${stage}`}
+              onClick={() =>
+                onChange({
+                  ...value,
+                  stageNames: value.stageNames.filter((name) => name !== stage),
+                })
+              }
+            >
+              Remove
+            </button>
+          </div>
         ))}
       {fieldError("stageNames")}
     </fieldset>

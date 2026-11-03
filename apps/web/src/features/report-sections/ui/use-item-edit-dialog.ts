@@ -10,6 +10,7 @@ import { useItemEditSave } from "./use-item-edit-save";
 
 interface UseItemEditDialogArgs {
   readonly presentation?: "dialog" | "inline" | undefined;
+  readonly contextualCreateValidation?: boolean | undefined;
   readonly draftStore?: ItemEditDraftStore | undefined;
   readonly item: KanbanItem | null;
   readonly products: readonly Product[];
@@ -38,6 +39,7 @@ function buildItemEditHandle(
   formState: ItemEditFormState,
   derived: ItemEditDerived,
   save: ItemEditSave,
+  week: "current" | "next" | undefined,
 ) {
   return {
     dialogSurfaceRef: formState.dialogSurfaceRef,
@@ -79,6 +81,7 @@ function buildItemEditHandle(
       formState.setStatus(next);
       const errors = collectItemStatusErrors({
         status: next,
+        week,
         trimmedNextStepText: formState.nextStepText.trim(),
         trimmedPausedReason: formState.pausedReason.trim(),
       });
@@ -143,6 +146,9 @@ export function useItemEditDialog(args: UseItemEditDialogArgs) {
 
   const save = useItemEditSave({
     item: args.item,
+    week: args.week,
+    contextualCreateValidation:
+      args.item === null && args.contextualCreateValidation === true,
     initial: formState.initial,
     products: args.products,
     currentUserName: args.currentUserName,
@@ -167,5 +173,10 @@ export function useItemEditDialog(args: UseItemEditDialogArgs) {
       : undefined,
   });
 
-  return buildItemEditHandle(formState, derived, save);
+  return buildItemEditHandle(
+    formState,
+    derived,
+    save,
+    args.item === null ? args.week : undefined,
+  );
 }

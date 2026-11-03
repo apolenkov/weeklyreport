@@ -4,6 +4,7 @@ import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ItemComposerProps } from "../model/contextual-entry-contract";
+import { firstInvalidControl } from "./item-edit-dialog-helpers";
 import { StatusOverviewInlineItemForm } from "./status-overview-inline-item-form";
 
 function props(): ItemComposerProps {
@@ -36,6 +37,47 @@ function props(): ItemComposerProps {
 }
 
 describe("StatusOverviewInlineItemForm", () => {
+  it("lets a user remove an obsolete stage and select an eligible replacement", async () => {
+    const user = userEvent.setup();
+    const p = props();
+    function ControlledForm({ stages }: { stages: string[] }) {
+      const [value, setValue] = useState(p.value);
+      return (
+        <StatusOverviewInlineItemForm
+          {...p}
+          value={value}
+          onChange={setValue}
+          view={{
+            ...p.view,
+            eligibleStages: stages,
+            errors: { stageNames: "Choose an eligible stage" },
+          }}
+        />
+      );
+    }
+    const { rerender } = render(<ControlledForm stages={["Build", "Test"]} />);
+    expect(screen.getByLabelText("Build")).toBeChecked();
+    rerender(<ControlledForm stages={[]} />);
+    const group = screen.getByRole("group", { name: "Stages (required)" });
+    expect(group).toHaveAccessibleDescription(
+      "No eligible stages available. Choose an eligible stage",
+    );
+    firstInvalidControl(
+      { stageNames: "Choose an eligible stage" },
+      group.closest("form"),
+    )?.focus();
+    expect(group).toHaveFocus();
+    expect(screen.getByText(/Unavailable stage: Build/)).toBeInTheDocument();
+    await user.tab();
+    expect(
+      screen.getByRole("button", { name: "Remove unavailable stage Build" }),
+    ).toHaveFocus();
+    await user.keyboard("{Enter}");
+    rerender(<ControlledForm stages={["Test"]} />);
+    await user.click(screen.getByLabelText("Test"));
+    expect(screen.getByLabelText("Test")).toBeChecked();
+    expect(screen.getByLabelText("Description")).toHaveValue("Draft");
+  });
   it("keeps newer edits usable while a save is pending without submitting twice", async () => {
     const user = userEvent.setup();
     const p = props();
