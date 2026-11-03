@@ -1,14 +1,26 @@
 "use client";
 
-import { ReviewCommentList } from "../../../shared/ui/feedback/review-comment-list";
 import type { CommentsViewProps } from "../model/contextual-entry-contract";
+
+type Composer = {
+  readonly value: string;
+  readonly onChange: (value: string) => void;
+  readonly onSend: () => void;
+} & (
+  | { readonly state: "idle" | "pending" | "error" }
+  | {
+      readonly state: "uncertain" | "refresh-failed";
+      readonly onRefresh: () => void;
+    }
+);
 
 export function StatusOverviewCommentsView({
   id,
   itemLabel,
   comments,
   onClose,
-}: CommentsViewProps) {
+  composer,
+}: CommentsViewProps & { readonly composer?: Composer }) {
   return (
     <section
       id={id}
@@ -32,8 +44,93 @@ export function StatusOverviewCommentsView({
           No comments yet.
         </p>
       ) : (
-        <ReviewCommentList comments={comments} />
+        <ul aria-label="Discussion messages" className="flex flex-col gap-1.5">
+          {comments.map((comment) => (
+            <li
+              key={comment.id}
+              className="min-w-0 rounded-[var(--radius-sm)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-2.5 py-1.5"
+            >
+              <div className="flex flex-wrap items-baseline justify-between gap-2 text-xs">
+                <span className="min-w-0 font-semibold [overflow-wrap:anywhere]">
+                  {comment.reviewerName ?? "Unknown author"}
+                </span>
+                <time dateTime={comment.createdAt.toISOString()}>
+                  {comment.createdAt.toLocaleString()}
+                </time>
+              </div>
+              <p className="mt-0.5 whitespace-pre-wrap text-xs [overflow-wrap:anywhere]">
+                {comment.text}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+      {composer && (
+        <ReplyComposer id={id} itemLabel={itemLabel} composer={composer} />
       )}
     </section>
+  );
+}
+
+function ReplyComposer({
+  id,
+  itemLabel,
+  composer,
+}: {
+  readonly id: string;
+  readonly itemLabel: string;
+  readonly composer: Composer;
+}) {
+  return (
+    <form
+      className="flex min-w-0 flex-col gap-2"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (composer.state !== "pending" && composer.value.trim())
+          composer.onSend();
+      }}
+    >
+      <label className="text-xs font-semibold" htmlFor={`${id}-reply`}>
+        Reply to {itemLabel}
+      </label>
+      <textarea
+        id={`${id}-reply`}
+        className="min-h-11 w-full rounded border border-[var(--color-border)] bg-[var(--color-background)] p-2 text-sm"
+        value={composer.value}
+        onChange={(event) => composer.onChange(event.target.value)}
+      />
+      {composer.state === "error" && (
+        <p role="alert">Could not send. Check your reply and try again.</p>
+      )}
+      {composer.state === "uncertain" && (
+        <p role="alert">
+          The result is uncertain. Refresh and check the discussion before
+          resending; resending may duplicate the message.
+        </p>
+      )}
+      {composer.state === "refresh-failed" && (
+        <p role="alert">
+          Sent, but refresh failed. Refresh the discussion to see the latest
+          messages.
+        </p>
+      )}
+      {(composer.state === "uncertain" ||
+        composer.state === "refresh-failed") && (
+        <button
+          type="button"
+          className="min-h-11 self-start px-2 text-sm underline"
+          onClick={composer.onRefresh}
+        >
+          Refresh discussion
+        </button>
+      )}
+      <button
+        type="submit"
+        disabled={composer.state === "pending" || !composer.value.trim()}
+        className="min-h-11 min-w-11 self-start rounded bg-[var(--color-foreground)] px-4 text-sm text-[var(--color-background)] disabled:opacity-50"
+      >
+        {composer.state === "pending" ? "Sending…" : "Send"}
+      </button>
+    </form>
   );
 }
