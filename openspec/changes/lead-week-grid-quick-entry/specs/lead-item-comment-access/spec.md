@@ -1,3 +1,7 @@
+## Purpose
+
+Make authorized record comments understandable and reachable from the Lead Overview.
+
 ## ADDED Requirements
 
 ### Requirement: The item comment control has a visible, authorized result

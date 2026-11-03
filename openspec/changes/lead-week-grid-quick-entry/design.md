@@ -8,7 +8,7 @@ Provide similarly compact inline risk and decision entry in the relevant unit co
 
 A prior commitment is immutable historical input. Its existing Done, Continue, Next week, Paused and Won't do actions write the selected week's occurrence or the existing outcome command, never the prior snapshot. Reuse stable identity, existing rollover precedence, conflict handling and undo; identical text alone is not an identity conflict. Directional buttons and existing keyboard shortcuts provide quick movement without requiring drag.
 
-The comment icon opens a labelled read-only comments region with its actual authorized comments or an explicit empty state. It does not invent a Lead reply endpoint: existing `review.comment` forbids Lead writes. The owner was asked whether replies are desired; absent a reply, the current permission boundary is retained. If the owner later requests replies, revise this design and spec before implementing server authorization and lifecycle rules.
+The comment icon opens a labelled read-only comments region with its actual authorized comments or an explicit empty state. It does not invent a Lead reply endpoint: existing `review.comment` forbids Lead writes. The owner was asked whether replies are desired; absent a reply, the current permission boundary is retained. The prior tracked-work spec says Leads may comment, while the current review route and service forbid it; this pre-existing discrepancy is recorded rather than silently changing authorization. If the owner later requests replies, revise this design and spec before implementing server authorization and lifecycle rules.
 
 ## Alternatives
 
@@ -19,12 +19,91 @@ Putting a modal behind each week button would preserve much of the current code 
 1. `report-sections` Overview renders labelled unit/week actions and compact presentation. It passes an explicit existing unit kind/id and Current/Next target; no Previous creation. On mobile, preserve unit and period labels, 44px targets, touch-visible controls and no page overflow.
 2. The Lead shell owns one mutually exclusive contextual editor state and all writes. Item creation reuses `useOverviewCreateOpeners`, `saveOverviewItem`, the submission driver, generation and focus/recovery machinery. Detailed edit remains the modal. New inline input participates in existing pending-input, leave and discard guards.
 3. Contextual risk/decision presentation produces a valid `RiskEntry`/`DecisionEntry` through existing domain builders; no changes are made to foreign rows. The shell applies a patch against the latest **own** list and waits for a record-specific, generation-scoped persistence receipt before reporting success. A generic last-saved timestamp is not proof that the intended record survived filtering. Keep a stable submitted ID across retries; disable duplicate submissions while pending.
-4. Validation, save failure, offline, conflict, lost capability, target or stage changes and unmount/navigation must not discard typed input or silently overwrite newer data. Dirty cancel asks before discard. If a failed save already applied a draft patch, restore/remove that patch and wait for it to be observable before issuing a save. A stale result cannot clear a newer input. Server authorization and the atomic report lifecycle remain authoritative.
+4. At dispatch, the existing autosave owner captures an immutable whole-section payload, section/generation/scope, expected version, record stableId and input snapshot. Each new risk/decision gets one client-generated stableId which survives builder, own-list merge, payload and server remint. Extend the existing receipt with the saved risk/decision records and submitted request metadata needed to correlate exact kind, stableId, parent and normalized fields; a local patch or generic saved timestamp is not proof.
+
+   On an ambiguous transport result, offer retry of **the same immutable request at the same expected version and same identities**. The existing section CAS runs in the transaction before child writes; competing requests with that version cannot both commit. A conflict or other restriction triggers an uncached authorized read and explicit reconciliation, never replay of the stale whole-section payload at a newer version. A matching row alone is not proof of the complete original payload. Keep later local edits, fence callbacks by generation/attempt and show unresolved outcomes honestly while the server is unavailable.
+
+   Cancel before dispatch removes only the unchanged intended lineage from the latest own draft. After possible dispatch, retain cancel intent until the original result is resolved; if it committed and the lineage is still unchanged, apply and confirm a scoped compensating removal against fresh state. A changed lineage or permission/lifecycle restriction is surfaced for resolution. No stale whole-list rollback; other own and foreign rows are not removed. Reuse the existing coordinator, generation and pending-input mechanisms rather than introducing a general state-machine framework.
+
 5. The comment presentation consumes only the existing authorized `item.comments`; it opens a named region, exposes an empty state and focus return, and must not fetch foreign/private data. A viewing affordance must not falsely imply a writable composer.
 
-## Ownership and sequencing
+## Frozen presentation interface and ownership
 
-Shell/controller and receipt integration are a single-writer responsibility. Timeline placement, compact record-form components and the comment control can be produced in separate work packages against explicit interfaces; shared barrel and prop wiring are integrated by the shell owner after candidates are reviewed. No worker edits another owner's files or the active owner-preview worktree. The separate design, guideline and UX inputs are archived under `/home/user/work/handoffs/task-836/`.
+The integration owner creates and exports the following typed presentation contract before other owners implement forms. `ItemWorkflowStatus` is the canonical shared type, including `postponed`; invalid week/status combinations are validated by the canonical owner. Target and input are correlated by discriminant; mismatches and stale parent/stage eligibility are rejected by the integration owner.
+
+```ts
+type Parent = {
+  readonly kind: "product" | "activity";
+  readonly id: string;
+  readonly name: string;
+};
+type ItemTarget = {
+  readonly kind: "item";
+  readonly parent: Parent;
+  readonly week: "current" | "next";
+};
+type RecordTarget = {
+  readonly kind: "risk" | "decision";
+  readonly parent: Parent;
+};
+type ItemInput = {
+  readonly text: string;
+  readonly nextStepText: string;
+  readonly stageNames: readonly string[];
+  readonly status: ItemWorkflowStatus;
+  readonly pausedReason: string;
+};
+type RiskInput = {
+  readonly text: string;
+  readonly impact: string;
+  readonly mitigation: string;
+  readonly severity: "at-risk" | "blocked";
+  readonly stageNames: readonly string[];
+};
+type DecisionInput = {
+  readonly text: string;
+  readonly impact: string;
+  readonly deadline: string;
+  readonly stageNames: readonly string[];
+};
+type CommonView = {
+  readonly eligibleStages: readonly string[];
+  readonly authorName: string;
+  readonly errors: Readonly<Record<string, string>>;
+  readonly message: string | null;
+  readonly pending: boolean;
+  readonly dirty: boolean;
+  readonly canSubmit: boolean;
+};
+type ItemComposerProps = {
+  readonly target: ItemTarget;
+  readonly value: ItemInput;
+  readonly view: CommonView;
+  readonly onChange: (value: ItemInput) => void;
+  readonly onSubmit: (mode: "save" | "save-and-add-another") => void;
+  readonly onCancel: () => void;
+};
+type RiskComposerProps = {
+  readonly target: RecordTarget & { readonly kind: "risk" };
+  readonly value: RiskInput;
+  readonly view: CommonView;
+  readonly onChange: (value: RiskInput) => void;
+  readonly onSubmit: () => void;
+  readonly onCancel: () => void;
+};
+type DecisionComposerProps = {
+  readonly target: RecordTarget & { readonly kind: "decision" };
+  readonly value: DecisionInput;
+  readonly view: CommonView;
+  readonly onChange: (value: DecisionInput) => void;
+  readonly onSubmit: () => void;
+  readonly onCancel: () => void;
+};
+```
+
+One **integration owner** exclusively owns the contract, `report-sections/model` draft/merge/autosave files, existing Overview hosts/props/barrels, `report-pages/ui/lead/shell` and bridges, canonical builder adaptations and their shared tests. The **item presentation owner** creates only `status-overview-inline-item-form.tsx` and its own test. The **record presentation owner** creates only `status-overview-inline-risk-form.tsx`, `status-overview-inline-decision-form.tsx` and their own tests. The **comments presentation owner** creates only a new named comments-view component and its own test; existing row/preview/comments files and their wiring remain exclusively with integration. Presentation owners emit user intent, never mutate draft state or claim persistence. The contract must be committed and reviewed before presentation work; integration of all candidates follows their completion. Cross-component and browser tests belong to the integration owner. Workers do not alter the active owner-preview worktree, browser, ports or data.
+
+The separate visual, guideline and UX inputs are archived under `/home/user/work/handoffs/task-836/`.
 
 ## Verification
 

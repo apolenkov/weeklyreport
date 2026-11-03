@@ -33,24 +33,51 @@ Editable Lead Overview MUST create Current and Next items in an inline, owner- a
 
 ## ADDED Requirements
 
-### Requirement: Overview creation is inline and details remain editable
+### Requirement: Overview creation is inline and detailed edit remains modal
 
-On editable owned Products and Activities, Overview MUST offer item creation within Current and Next, including empty units, using an inline composer bound to that owner and week. Previously planned MUST offer no create action. Eligible existing items MUST retain detailed editing in the canonical dialog with safe dismissal and recovery.
+Overview MUST offer contextual inline creation in editable Current and Next unit lanes, including empty units. Previously planned MUST offer no creation. Eligible existing items MUST retain the canonical detailed modal editor. Only one item editor may be open, selected by stable identity with physical-ID fallback and source; focus, dismissal, validation and save recovery MUST remain deterministic.
 
-#### Scenario: Create in the selected week
+#### Scenario: Create a Current item inline
 
-- **WHEN** a Lead opens the Next week add action for an editable Activity and submits valid input
-- **THEN** a single Next item is saved under that Activity with Planned progress unless explicitly changed
-- **AND** no Product parent is invented and the input is not written to the previous period
+- **WHEN** a Lead selects Add item in an eligible Product's Current week lane
+- **THEN** an inline composer opens with that Product and Current week fixed
+- **AND** there is no duplicate Add control on each lineage row or solely on the left unit rail
 
-#### Scenario: Create fails or is cancelled
+#### Scenario: A new item is created directly in Next
 
-- **WHEN** required input is invalid, a save fails, or the Lead cancels a dirty inline composer
-- **THEN** the interface preserves recoverable input or explicitly confirms discard, reports validation or failure, and does not claim an unsaved record exists
-- **AND** a retry does not create a duplicate and keyboard focus remains meaningful
+- **WHEN** a Lead selects Add item in an eligible Activity's Next week lane
+- **THEN** the inline composer is bound to that Activity and Next week
+- **AND** Planned progress is selected and can be changed before saving
+- **AND** saving unchanged defaults emits one Next item with `workflowStatus=planned`
 
-#### Scenario: Full edit and read-only records
+#### Scenario: An item is edited in detail
 
-- **WHEN** the Lead activates the edit-details control on an eligible Current or Next item
-- **THEN** the canonical detailed editor opens for that item and preserves its dismissal and save-recovery protections
-- **AND** frozen, submitted, foreign or otherwise ineligible records expose no mutation controls
+- **WHEN** the Lead activates Edit details on an eligible Current or Next item
+- **THEN** the canonical editor opens in a modal for that item, without moving the timeline grid behind it
+- **AND** closing returns focus to the Edit control unless a successful creation moves focus to the new item
+
+#### Scenario: A dirty editor is dismissed
+
+- **WHEN** a dirty inline composer is cancelled or the detailed modal receives Escape, outside click, close button or Cancel
+- **THEN** the existing discard and save-recovery protections apply and unsaved input is not silently lost
+
+#### Scenario: Save and add another succeeds
+
+- **WHEN** the Lead enters a valid inline item and activates Save and add another or presses Ctrl+Shift+Enter / Cmd+Shift+Enter
+- **THEN** the item is persisted through the canonical draft path and the composer remains for the same owner and week
+- **AND** the entry fields clear only after confirmed success and focus returns to the description
+
+#### Scenario: Save and add another fails
+
+- **WHEN** validation fails or persistence fails during Save and add another
+- **THEN** the editor retains typed values, identifies the failure, does not clear or announce success and supports correction or retry without duplication
+
+#### Scenario: Edit mode does not expose Save and add another
+
+- **WHEN** the Lead opens the detailed editor for an existing item
+- **THEN** Save and add another is not rendered and its shortcut does not create an item
+
+#### Scenario: Creation is unavailable
+
+- **WHEN** a unit or section is foreign, historical, submitted, locked or otherwise ineligible
+- **THEN** it offers no creation or edit mutation controls
