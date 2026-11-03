@@ -37,6 +37,60 @@ function props(): ItemComposerProps {
 }
 
 describe("StatusOverviewInlineItemForm", () => {
+  it("shows minimal fields first and retains advanced values through Details toggles", async () => {
+    const user = userEvent.setup();
+    const p = props();
+    function ControlledForm() {
+      const [value, setValue] = useState(p.value);
+      return (
+        <StatusOverviewInlineItemForm
+          {...p}
+          value={value}
+          onChange={setValue}
+        />
+      );
+    }
+    render(<ControlledForm />);
+    expect(screen.getByText(/Progress: Planned/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Build")).toBeChecked();
+    expect(screen.queryByLabelText("Next step")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Progress")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Details" }));
+    expect(screen.getByLabelText("Next step")).toHaveValue("Next");
+    await user.selectOptions(screen.getByLabelText("Progress"), "in_progress");
+    await user.click(screen.getByRole("button", { name: "Details" }));
+    expect(screen.getByText(/Progress: In progress/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Details" }));
+    expect(screen.getByLabelText("Next step")).toHaveValue("Next");
+    expect(screen.getByLabelText("Progress")).toHaveValue("in_progress");
+  });
+  it("reveals advanced errors arriving after the form is mounted", () => {
+    const p = props();
+    const { rerender } = render(<StatusOverviewInlineItemForm {...p} />);
+    expect(screen.queryByLabelText("Next step")).not.toBeInTheDocument();
+    rerender(
+      <StatusOverviewInlineItemForm
+        {...p}
+        view={{
+          ...p.view,
+          errors: {
+            nextStepText: "Fix next step",
+            status: "Invalid for next week",
+          },
+        }}
+      />,
+    );
+    expect(screen.getByLabelText("Next step")).toHaveAccessibleDescription(
+      "Fix next step",
+    );
+    expect(screen.getByLabelText("Progress")).toHaveAccessibleDescription(
+      "Invalid for next week",
+    );
+    expect(screen.getByRole("button", { name: "Details" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+  });
   it("lets a user remove an obsolete stage and select an eligible replacement", async () => {
     const user = userEvent.setup();
     const p = props();
@@ -94,6 +148,7 @@ describe("StatusOverviewInlineItemForm", () => {
     }
     render(<ControlledForm />);
     await user.type(screen.getByLabelText("Description"), " newer");
+    await user.click(screen.getByRole("button", { name: "Details" }));
     await user.type(screen.getByLabelText("Next step"), " later");
     await user.selectOptions(screen.getByLabelText("Progress"), "paused");
     await user.type(screen.getByLabelText("Pause reason"), "Waiting");
@@ -116,6 +171,7 @@ describe("StatusOverviewInlineItemForm", () => {
     expect(screen.getByText(/Atlas/)).toBeInTheDocument();
     expect(screen.getByText(/Next week/)).toBeInTheDocument();
     expect(screen.getByText(/Alex/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
     expect(screen.getByLabelText("Progress")).toHaveValue("planned");
     fireEvent.change(screen.getByLabelText("Progress"), {
       target: { value: "in_progress" },
@@ -141,6 +197,7 @@ describe("StatusOverviewInlineItemForm", () => {
     expect(
       screen.getByRole("form", { name: "Add item for Atlas, current week" }),
     ).toHaveTextContent("Product: Atlas · Current week · Owner: Alex");
+    fireEvent.click(screen.getByRole("button", { name: "Details" }));
     expect(screen.getByRole("option", { name: "Not started" })).toHaveValue(
       "planned",
     );
@@ -215,11 +272,9 @@ describe("StatusOverviewInlineItemForm", () => {
     await user.tab();
     expect(screen.getByLabelText("Description")).toHaveFocus();
     await user.tab();
-    expect(screen.getByLabelText("Next step")).toHaveFocus();
-    await user.tab();
-    expect(screen.getByLabelText("Progress")).toHaveFocus();
-    await user.tab();
     expect(screen.getByLabelText("Build")).toHaveFocus();
+    await user.keyboard(" ");
+    expect(p.onChange).toHaveBeenCalledWith({ ...p.value, stageNames: [] });
     await user.keyboard("{Control>}{Shift>}{Enter}{/Shift}{/Control}");
     await user.keyboard("{Meta>}{Shift>}{Enter}{/Shift}{/Meta}");
     expect(p.onSubmit).toHaveBeenCalledTimes(2);

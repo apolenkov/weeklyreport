@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, useState } from "react";
 
 import type { ItemComposerProps } from "../model/contextual-entry-contract";
 
@@ -7,9 +7,31 @@ const control =
 const button =
   "min-h-11 rounded border border-[var(--color-border)] px-3 py-2 text-sm disabled:opacity-50";
 
+function statusLabel(
+  status: ItemComposerProps["value"]["status"],
+  week: ItemComposerProps["target"]["week"],
+) {
+  const labels = {
+    planned: week === "current" ? "Not started" : "Planned",
+    in_progress: "In progress",
+    paused: "Paused",
+    postponed: "Postponed",
+    done: "Done",
+  } satisfies Record<ItemComposerProps["value"]["status"], string>;
+  return labels[status];
+}
+
 export function StatusOverviewInlineItemForm(props: ItemComposerProps) {
   const { target, view, onSubmit, onCancel } = props;
   const id = useId();
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const needsDetails = Boolean(
+    view.errors.nextStepText ||
+    view.errors.status ||
+    view.errors.pausedReason ||
+    (props.value.status === "paused" && !props.value.pausedReason.trim()),
+  );
+  const expanded = detailsOpen || needsDetails;
   const error = (field: string) => view.errors[field];
   const disabled = view.pending || !view.canSubmit;
   return (
@@ -49,29 +71,61 @@ export function StatusOverviewInlineItemForm(props: ItemComposerProps) {
         </p>
       )}
       <TextFields {...props} id={id} />
-      <ProgressFields {...props} id={id} />
+      <StageFields {...props} id={id} />
+      <p className="text-sm">
+        Progress: {statusLabel(props.value.status, target.week)}
+      </p>
+      <button
+        type="button"
+        className={button}
+        aria-expanded={expanded}
+        aria-controls={`${id}-details`}
+        onClick={() => setDetailsOpen(!expanded)}
+      >
+        Details
+      </button>
+      {expanded && (
+        <div id={`${id}-details`} className="space-y-3">
+          <AdvancedFields {...props} id={id} />
+          <ProgressFields {...props} id={id} />
+        </div>
+      )}
       {error("parent") && (
         <p role="alert" className="text-sm">
           {error("parent")}
         </p>
       )}
-      <div className="flex flex-wrap gap-2">
-        <button type="button" className={button} onClick={onCancel}>
-          Cancel
-        </button>
-        <button type="submit" className={button} disabled={disabled}>
-          Save
-        </button>
-        <button
-          type="button"
-          className={button}
-          disabled={disabled}
-          onClick={() => onSubmit("save-and-add-another")}
-        >
-          Save and add another
-        </button>
-      </div>
+      <Actions disabled={disabled} onCancel={onCancel} onSubmit={onSubmit} />
     </form>
+  );
+}
+
+function Actions({
+  disabled,
+  onCancel,
+  onSubmit,
+}: {
+  readonly disabled: boolean;
+  readonly onCancel: ItemComposerProps["onCancel"];
+  readonly onSubmit: ItemComposerProps["onSubmit"];
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      <button type="button" className={button} onClick={onCancel}>
+        Cancel
+      </button>
+      <button type="submit" className={button} disabled={disabled}>
+        Save
+      </button>
+      <button
+        type="button"
+        className={button}
+        disabled={disabled}
+        onClick={() => onSubmit("save-and-add-another")}
+      >
+        Save and add another
+      </button>
+    </div>
   );
 }
 
@@ -107,6 +161,15 @@ function TextFields(props: FieldProps) {
         />
       </label>
       {fieldError("text")}
+    </>
+  );
+}
+
+function AdvancedFields(props: FieldProps) {
+  const { value, view, onChange, id } = props;
+  const { error, describedBy, fieldError } = fieldHelpers(view, id);
+  return (
+    <>
       <label className="block space-y-1 text-sm">
         Next step
         <textarea
@@ -174,7 +237,6 @@ function ProgressFields(props: FieldProps) {
           {fieldError("pausedReason")}
         </>
       )}
-      <StageFields {...props} />
     </>
   );
 }
