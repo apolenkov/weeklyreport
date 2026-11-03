@@ -3,7 +3,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { shortItemLabel } from "../../../../shared/lib/format/short-label";
 import type { WeeklyProductReport } from "../../../report-sections";
@@ -16,7 +16,13 @@ import {
 
 const submission = vi.hoisted(() => ({
   pending: null as Promise<object> | null,
+  send: vi.fn(),
 }));
+
+afterEach(() => {
+  submission.pending = null;
+  submission.send.mockClear();
+});
 
 vi.mock("../../../../shared/lib/query/cache-keys", () => ({
   invalidateReview: vi.fn(),
@@ -28,7 +34,10 @@ vi.mock("../../../../shared/lib/trpc/trpc-context", () => ({
       comment: {
         mutationOptions: (options: object) => ({
           ...options,
-          mutationFn: () => submission.pending ?? Promise.resolve({}),
+          mutationFn: () => {
+            submission.send();
+            return submission.pending ?? Promise.resolve({});
+          },
         }),
       },
       deleteComment: { mutationOptions: (options: object) => options },
@@ -142,6 +151,45 @@ function firstComposer() {
   if (!composer) throw new Error("Expected a review composer");
   return composer;
 }
+
+function submitFirstComment() {
+  const form = firstComposer().closest("form");
+  if (!form) throw new Error("Expected comment form");
+  fireEvent.submit(form);
+}
+
+describe("Pending comment ownership", () => {
+  it.each(["mode", "scope"])(
+    "locks the same key after a %s remount and prevents duplicate sends",
+    async (remount) => {
+      let finish: () => void = () => {
+        throw new Error("Missing submission");
+      };
+      submission.pending = new Promise((resolve) => {
+        finish = () => resolve({});
+      });
+      const { rerender } = renderReport();
+      fireEvent.change(firstComposer(), { target: { value: "Comment A" } });
+      submitFirstComment();
+      await waitFor(() => expect(submission.send).toHaveBeenCalledOnce());
+      if (remount === "mode") {
+        rerender({ reviewMode: "read" });
+        rerender({});
+      } else rerender({ scope: "lead" });
+      expect(firstComposer()).toHaveValue("Comment A");
+      expect(firstComposer()).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Adding…" })).toBeDisabled();
+      submitFirstComment();
+      finish();
+      await waitFor(() => expect(firstComposer()).toBeEnabled());
+      expect(submission.send).toHaveBeenCalledOnce();
+      expect(firstComposer()).toHaveValue("");
+      fireEvent.change(firstComposer(), { target: { value: "Comment B" } });
+      rerender({});
+      expect(firstComposer()).toHaveValue("Comment B");
+    },
+  );
+});
 
 describe("Head record comment drafts", () => {
   it("survives Review → Read → Review and scope remounts without mixing records", () => {

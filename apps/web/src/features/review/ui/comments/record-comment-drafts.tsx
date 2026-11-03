@@ -10,15 +10,46 @@ import {
 
 import type { RecordCommentAnchor } from "./use-record-comment-state";
 
+interface CommentSubmission {
+  readonly draft: string;
+}
+
+interface CommentDraft {
+  readonly text: string;
+  readonly submission: CommentSubmission | null;
+}
+
+const EMPTY_DRAFT: CommentDraft = { text: "", submission: null };
+
 function createCommentDraftStore() {
-  const drafts = new Map<string, string>();
+  const drafts = new Map<string, CommentDraft>();
   const listeners = new Set<() => void>();
+  const read = (key: string) => drafts.get(key) ?? EMPTY_DRAFT;
+  const write = (key: string, value: CommentDraft) => {
+    if (value.text === "" && !value.submission) drafts.delete(key);
+    else drafts.set(key, value);
+    listeners.forEach((listener) => listener());
+  };
   return {
-    read: (key: string) => drafts.get(key) ?? "",
-    write: (key: string, value: string) => {
-      if (value === "") drafts.delete(key);
-      else drafts.set(key, value);
-      listeners.forEach((listener) => listener());
+    read,
+    write: (key: string, text: string) => write(key, { ...read(key), text }),
+    beginSubmission: (key: string) => {
+      const current = read(key);
+      if (current.submission) return null;
+      const submission = { draft: current.text };
+      write(key, { ...current, submission });
+      return submission;
+    },
+    finishSubmission: (
+      key: string,
+      submission: CommentSubmission,
+      success: boolean,
+    ) => {
+      const current = read(key);
+      if (current.submission !== submission) return;
+      const text =
+        success && current.text === submission.draft ? "" : current.text;
+      write(key, { text, submission: null });
     },
     subscribe: (listener: () => void) => {
       listeners.add(listener);
@@ -68,10 +99,20 @@ export function useRecordCommentDraft(
     anchor.riskId,
     anchor.decisionId,
   ]);
-  const draft = useSyncExternalStore(
+  const state = useSyncExternalStore(
     store.subscribe,
     () => store.read(key),
-    () => "",
+    () => EMPTY_DRAFT,
   );
-  return { draft, setDraft: (value: string) => store.write(key, value) };
+  return {
+    draft: state.text,
+    isCommentPending: state.submission !== null,
+    setDraft: (value: string) => store.write(key, value),
+    beginSubmission: () => {
+      const submission = store.beginSubmission(key);
+      return submission
+        ? (success: boolean) => store.finishSubmission(key, submission, success)
+        : null;
+    },
+  };
 }

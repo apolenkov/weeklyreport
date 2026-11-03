@@ -4,7 +4,7 @@ import {
   REVIEW_COMMENT_MAX_LENGTH,
   reviewCommentInputSchema,
 } from "@weeklyreport/shared";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 
 import { mutationErrorMessage } from "../../../../shared/lib/errors/mutation-error-message";
@@ -110,8 +110,12 @@ function useRecordCommentMutations(
   );
 
   return {
-    submitComment: (text: string) => commentMut.mutate({ ...anchor, text }),
-    isCommentPending: commentMut.isPending,
+    submitComment: (text: string, finish: (success: boolean) => void) => {
+      commentMut.mutateAsync({ ...anchor, text }).then(
+        () => finish(true),
+        () => finish(false),
+      );
+    },
     deleteComment: (commentId: string) => deleteMut.mutate({ commentId }),
     isDeletePending: deleteMut.isPending,
   };
@@ -145,28 +149,22 @@ export function useRecordCommentState(
   currentUserId: string,
   onMutated: () => void,
 ) {
-  const { draft, setDraft } = useRecordCommentDraft(anchor, currentUserId);
+  const { draft, setDraft, beginSubmission, isCommentPending } =
+    useRecordCommentDraft(anchor, currentUserId);
   const [validationAttempted, setValidationAttempted] = useState(false);
   const [feedback, setFeedback] = useState<CommentFeedback | null>(null);
   const [deleteCandidate, setDeleteCandidate] =
     useState<RecordCommentView | null>(null);
   const id = anchorId(anchor);
   const feedbackId = `record-comment-feedback-${id ?? "unknown"}`;
-  const inFlightRef = useRef(false);
-  const resetInFlight = () => {
-    inFlightRef.current = false;
-  };
-  const { submitComment, isCommentPending, deleteComment, isDeletePending } =
+  const { submitComment, deleteComment, isDeletePending } =
     useRecordCommentMutations(anchor, {
       onCommentAdded: () => {
-        resetInFlight();
-        setDraft("");
         setValidationAttempted(false);
         setFeedback({ message: "Comment added.", tone: "success" });
       },
       onMutated,
       onCommentError: (err) => {
-        resetInFlight();
         const message = addCommentErrorMessage(err);
         setFeedback({ message, tone: "error" });
         toast.error(message);
@@ -188,15 +186,14 @@ export function useRecordCommentState(
   );
   const submitDisabled = !isValid || isCommentPending;
   const submitDraft = () => {
-    if (inFlightRef.current) return;
     setValidationAttempted(true);
     const currentResult = reviewCommentInputSchema.safeParse({
       ...anchor,
       text: submittedText,
     });
     if (!currentResult.success || isCommentPending) return;
-    inFlightRef.current = true;
-    submitComment(currentResult.data.text);
+    const finish = beginSubmission();
+    if (finish) submitComment(currentResult.data.text, finish);
   };
   const changeDraft = (value: string) => {
     setDraft(value);
