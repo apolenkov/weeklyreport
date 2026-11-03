@@ -8,7 +8,7 @@ Provide similarly compact inline risk and decision entry in the relevant unit co
 
 A prior commitment is immutable historical input. Its existing Done, Continue, Next week, Paused and Won't do actions write the selected week's occurrence or the existing outcome command, never the prior snapshot. Reuse stable identity, existing rollover precedence, conflict handling and undo; identical text alone is not an identity conflict. Directional buttons and existing keyboard shortcuts provide quick movement without requiring drag.
 
-The comment icon opens a labelled read-only comments region with its actual authorized comments or an explicit empty state. It does not invent a Lead reply endpoint: existing `review.comment` forbids Lead writes. The owner was asked whether replies are desired; absent a reply, the current permission boundary is retained. The prior tracked-work spec says Leads may comment, while the current review route and service forbid it; this pre-existing discrepancy is recorded rather than silently changing authorization. If the owner later requests replies, revise this design and spec before implementing server authorization and lifecycle rules.
+The comment icon opens a labelled item discussion, including an empty state and a reply composer for the Lead on their own eligible item. The owner explicitly chose two-way conversation. The existing `tracked-work-continuation` contract permits such replies, but current `review.comment` rejects Leads; implement a narrowly scoped Lead write route with server-derived author and transactional ownership, stable lineage and lifecycle checks, while preserving the existing reviewer-only routes and permissions. Existing comments form one chronological discussion; do not invent a threaded relationship or modify frozen historical records.
 
 ## Alternatives
 
@@ -25,7 +25,7 @@ Putting a modal behind each week button would preserve much of the current code 
 
    Cancel before dispatch removes only the unchanged intended lineage from the latest own draft. After possible dispatch, retain cancel intent until the original result is resolved; if it committed and the lineage is still unchanged, apply and confirm a scoped compensating removal against fresh state. A changed lineage or permission/lifecycle restriction is surfaced for resolution. No stale whole-list rollback; other own and foreign rows are not removed. Reuse the existing coordinator, generation and pending-input mechanisms rather than introducing a general state-machine framework.
 
-5. The comment presentation consumes only the existing authorized `item.comments`; it opens a named region, exposes an empty state and focus return, and must not fetch foreign/private data. A viewing affordance must not falsely imply a writable composer.
+5. The comment presentation consumes only the existing authorized `item.comments`; it opens a named discussion with an empty state, direct reply input and focus return. The Lead reply uses a narrowly scoped server-authorized write for an own editable item; preserve input on rejection or uncertainty and refresh that item without replacing newer report edits. Do not fetch foreign/private data or grant delete, review, acknowledgement or verdict permissions.
 
 ## Frozen presentation interface and ownership
 
