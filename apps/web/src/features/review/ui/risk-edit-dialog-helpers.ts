@@ -111,6 +111,7 @@ interface RiskDialogCreatePrefill {
 // Activity-parented: empty productId, no stage (activities own no SDLC stage).
 export function buildActivityRiskEntry(args: {
   readonly existingId: string | undefined;
+  readonly stableId?: string | undefined;
   readonly activityId: string;
   readonly activityName: string | undefined;
   readonly severity: RiskSeverity;
@@ -120,6 +121,7 @@ export function buildActivityRiskEntry(args: {
 }): RiskSaveEntry {
   return {
     id: args.existingId ?? crypto.randomUUID(),
+    ...(args.stableId === undefined ? {} : { stableId: args.stableId }),
     productId: "",
     productName: args.activityName ?? "Unknown",
     activityId: args.activityId,
@@ -134,6 +136,7 @@ export function buildActivityRiskEntry(args: {
 
 export function buildProductRiskEntry(args: {
   readonly existingId: string | undefined;
+  readonly stableId?: string | undefined;
   readonly product: { id: string; name: string };
   readonly stageNames: readonly string[];
   readonly severity: RiskSeverity;
@@ -143,6 +146,7 @@ export function buildProductRiskEntry(args: {
 }): RiskSaveEntry {
   return {
     id: args.existingId ?? crypto.randomUUID(),
+    ...(args.stableId === undefined ? {} : { stableId: args.stableId }),
     productId: args.product.id,
     productName: args.product.name,
     activityId: null,

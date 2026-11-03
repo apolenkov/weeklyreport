@@ -368,3 +368,96 @@ describe("unrelated product status merge", () => {
     expect(noOp.projects[0]?.trafficLight).toBe("yellow");
   });
 });
+
+describe("record lineage", () => {
+  it("matches reminted risk and decision IDs by stable identity", () => {
+    const section = makeDraftMergeSection();
+    const riskRow = section.risks[0];
+    const decisionRow = section.decisions[0];
+    if (!riskRow || !decisionRow) throw new Error("Missing fixture rows");
+    const risk = { ...riskRow, stableId: "risk-lineage" };
+    const decision = { ...decisionRow, stableId: "decision-lineage" };
+    const input = { ...section, risks: [risk], decisions: [decision] };
+    const riskResult = mergeRiskDraft(input, [
+      {
+        id: "old-risk",
+        stableId: "risk-lineage",
+        productId: PROJECT_ID,
+        productName: "Product",
+        stageNames: [],
+        severity: "blocked",
+        text: "same",
+        impact: "impact",
+        mitigation: "mitigation",
+      },
+    ]);
+    const decisionResult = mergeDecisionDraft(input, [
+      {
+        id: "old-decision",
+        stableId: "decision-lineage",
+        productId: PROJECT_ID,
+        productName: "Product",
+        stageNames: [],
+        text: "same",
+        owner: "Owner",
+        impact: "impact",
+        deadline: null,
+      },
+    ]);
+    expect(riskResult.risks[0]).toMatchObject({
+      id: risk.id,
+      stableId: "risk-lineage",
+    });
+    expect(decisionResult.decisions[0]).toMatchObject({
+      id: decision.id,
+      stableId: "decision-lineage",
+    });
+  });
+  it("rejects an ID collision with a different lineage", () => {
+    const section = makeDraftMergeSection();
+    const riskRow = section.risks[0];
+    if (!riskRow?.id) throw new Error("Missing risk fixture id");
+    const risk = { ...riskRow, id: riskRow.id, stableId: "original" };
+    expect(() =>
+      mergeRiskDraft({ ...section, risks: [risk] }, [
+        {
+          id: risk.id,
+          stableId: "other",
+          productId: PROJECT_ID,
+          productName: "Product",
+          stageNames: [],
+          severity: "blocked",
+          text: "same",
+          impact: "impact",
+          mitigation: "mitigation",
+        },
+      ]),
+    ).toThrow();
+  });
+});
+
+it("preserves identical risk text across different lineages and rejects duplicates", () => {
+  const section = makeDraftMergeSection();
+  const base: RiskEntry = {
+    id: "one",
+    stableId: "first",
+    productId: PROJECT_ID,
+    productName: "Product",
+    stageNames: [],
+    severity: "blocked",
+    text: "same",
+    impact: "impact",
+    mitigation: "mitigation",
+  };
+  const result = mergeRiskDraft({ ...section, risks: [] }, [
+    base,
+    { ...base, id: "two", stableId: "second" },
+  ]);
+  expect(result.risks.map((risk) => risk.stableId)).toEqual([
+    "first",
+    "second",
+  ]);
+  expect(() =>
+    mergeRiskDraft({ ...section, risks: [] }, [base, { ...base, id: "two" }]),
+  ).toThrow(/lineage/);
+});

@@ -82,6 +82,7 @@ export type KanbanItem =
 
 export interface RiskEntry {
   readonly id: string;
+  readonly stableId?: string | undefined;
   readonly productId: string;
   readonly productName: string;
   readonly activityId?: string | null | undefined;

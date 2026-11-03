@@ -80,6 +80,7 @@ export function resolveDecisionProductName(
 
 interface DecisionSaveBase {
   readonly id: string;
+  readonly stableId?: string | undefined;
   readonly text: string;
   readonly owner: string;
   readonly impact: string;
@@ -88,13 +89,18 @@ interface DecisionSaveBase {
 
 export function buildDecisionSaveBase(args: {
   readonly decision: DecisionEntry | null;
+  readonly id?: string | undefined;
+  readonly stableId?: string | undefined;
   readonly text: string;
   readonly owner: string;
   readonly impact: string;
   readonly deadline: string;
 }): DecisionSaveBase {
   return {
-    id: args.decision?.id ?? crypto.randomUUID(),
+    id: args.decision?.id ?? args.id ?? crypto.randomUUID(),
+    ...((args.decision?.stableId ?? args.stableId) === undefined
+      ? {}
+      : { stableId: args.decision?.stableId ?? args.stableId }),
     text: args.text,
     owner: args.owner,
     impact: args.impact,
