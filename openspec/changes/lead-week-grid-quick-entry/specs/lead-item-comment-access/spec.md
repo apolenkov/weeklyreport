@@ -37,3 +37,15 @@ The item comment control MUST reveal a visible view of the record's authorized c
 - **WHEN** a Lead attempts to reply to another author's item or an immutable historical snapshot
 - **THEN** the server rejects the write
 - **AND** existing authorized reviewer actions remain governed by their established role and lifecycle rules
+
+#### Scenario: Item saves preserve the discussion
+
+- **WHEN** a report save recreates the physical item row while preserving its lineage
+- **THEN** existing discussion messages retain their identity, authors and timestamps on that lineage
+- **AND** live messages remain in chronological order without duplicate or resurrected entries
+
+#### Scenario: A reply response is lost
+
+- **WHEN** the reply might have been persisted but its response is lost
+- **THEN** the text remains available and the result is presented as uncertain
+- **AND** the Lead can check the discussion before a manual resend without an automatic duplicate retry

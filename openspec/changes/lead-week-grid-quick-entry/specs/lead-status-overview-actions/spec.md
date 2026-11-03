@@ -105,3 +105,10 @@ An eligible Lead MUST be able to see and select their product's currently assign
 - **WHEN** a previously selected stage is no longer eligible before saving
 - **THEN** the selection and user input remain visible with an explanation and an explicit way to remove the stale selection
 - **AND** the write is blocked until the choice is valid
+
+#### Scenario: Start work directly from an owned stage
+
+- **GIVEN** an eligible owned product stage and an editable Current or Next week context
+- **WHEN** the Lead activates that stage's add-work control
+- **THEN** the inline item composer opens for that product and week with the selected stage visible and preselected
+- **AND** no separate full editor or repeated week selection is required
