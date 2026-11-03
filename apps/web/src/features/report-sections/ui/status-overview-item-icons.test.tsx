@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 // @vitest-environment jsdom
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -154,7 +154,7 @@ describe("StatusOverviewItemPreview hover action icons — 6", () => {
   });
 });
 describe("StatusOverviewItemPreview hover action icons — 7", () => {
-  it("focuses the record's comment flow from the comment icon", async () => {
+  it("reveals the record's comments from the comment icon", async () => {
     const user = userEvent.setup();
     render(
       <StatusOverviewItemPreview
@@ -166,15 +166,14 @@ describe("StatusOverviewItemPreview hover action icons — 7", () => {
     await user.click(
       screen.getByRole("button", { name: "Comments on Original text" }),
     );
-    await waitFor(() =>
-      expect(
-        document.getElementById("review-record:item:item-1"),
-      ).toHaveFocus(),
-    );
+    const region = screen.getByRole("region", {
+      name: "Comments for Original text",
+    });
+    expect(within(region).getByText(COMMENT.text)).toBeVisible();
   });
 });
 describe("StatusOverviewItemPreview hover action icons — 8", () => {
-  it("focuses the record card from the comment icon while no comments exist", async () => {
+  it("reveals an honest empty state from the comment icon", async () => {
     const user = userEvent.setup();
     render(<StatusOverviewItemPreview item={item} onMoveItem={vi.fn()} />);
     const icon = screen.getByRole("button", {
@@ -182,11 +181,11 @@ describe("StatusOverviewItemPreview hover action icons — 8", () => {
     });
 
     await user.click(icon);
-    await waitFor(() =>
-      expect(
-        document.querySelector<HTMLElement>("[data-overview-item-preview]"),
-      ).toHaveFocus(),
-    );
+    expect(
+      within(
+        screen.getByRole("region", { name: "Comments for Original text" }),
+      ).getByText("No comments yet."),
+    ).toBeVisible();
   });
 });
 describe("StatusOverviewItemPreview hover action icons — 9", () => {

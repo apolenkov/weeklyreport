@@ -1,19 +1,7 @@
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@weeklyreport/ui/components/ui/dropdown-menu";
-import { Check, Tags } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { shortItemLabel } from "../../../shared/lib/format/short-label";
-import {
-  type ActionProps,
-  identityOf,
-  MENU_ITEM_CLASS,
-  ROW_BUTTON_CLASS,
-} from "./status-overview-item-actions";
+import { type ActionProps, identityOf } from "./status-overview-item-actions";
 
 export function canSetStages({
   item,
@@ -22,9 +10,7 @@ export function canSetStages({
 }: ActionProps): boolean {
   return Boolean(
     onSetStages &&
-    // A single owned stage leaves nothing to choose.
-    ownedStages &&
-    ownedStages.length > 1 &&
+    ownedStages?.length &&
     item.editTarget &&
     item.source !== "previous" &&
     !item.editTarget.focusNextStep &&
@@ -36,87 +22,75 @@ export function StageControl(props: ActionProps) {
   const { item, onSetStages, ownedStages = [] } = props;
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
-  const trigger = useRef<HTMLButtonElement>(null);
+  const busy = useRef(false);
   if (!canSetStages(props) || !onSetStages) return null;
   const focusKey = `stage:${item.source}:${identityOf(item)}`;
-  const label = `Stages for ${shortItemLabel(item.text)}`;
+  const invalid =
+    item.stageNames.length === 0 ||
+    item.stageNames.some((name) => !ownedStages.includes(name));
   const toggle = async (name: string) => {
-    if (pending) return;
+    if (busy.current || invalid) return;
     const next = item.stageNames.includes(name)
       ? item.stageNames.filter((stage) => stage !== name)
       : [...item.stageNames, name];
     if (next.length === 0) return;
+    busy.current = true;
     setPending(true);
+    setError(null);
     try {
       setError((await onSetStages(item, next, focusKey)) ?? null);
     } catch {
       setError("Could not update stages. Try again.");
     } finally {
+      busy.current = false;
       setPending(false);
-      trigger.current?.focus();
     }
   };
   return (
-    <DropdownMenu modal={false}>
-      <DropdownMenuTrigger asChild>
-        <button
-          ref={trigger}
-          type="button"
-          aria-label={label}
-          title={label}
-          data-overview-focus={focusKey}
-          className={ROW_BUTTON_CLASS}
-        >
-          <Tags aria-hidden="true" className="size-4" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="end"
-        onFocusOutside={(event) => {
-          if (event.target === trigger.current) event.preventDefault();
-        }}
-      >
+    <div
+      role="group"
+      aria-label={`Stages for ${shortItemLabel(item.text)}`}
+      className="space-y-1"
+    >
+      <div className="flex flex-wrap gap-1">
         {ownedStages.map((name) => {
-          const checked = item.stageNames.includes(name);
+          const selected = item.stageNames.includes(name);
           return (
-            <DropdownMenuItem
+            <button
               key={name}
-              role="menuitemcheckbox"
-              aria-checked={checked}
-              disabled={pending || (checked && item.stageNames.length === 1)}
-              onSelect={(event) => {
-                event.preventDefault();
-                void toggle(name);
-              }}
-              className={MENU_ITEM_CLASS}
+              type="button"
+              aria-pressed={selected}
+              disabled={
+                pending || invalid || (selected && item.stageNames.length === 1)
+              }
+              data-overview-focus={focusKey}
+              onClick={() => void toggle(name)}
+              className={`min-h-[var(--touch-target-min)] max-w-full rounded-[var(--radius-sm)] border px-2 text-xs font-medium focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--color-primary)] ${selected ? "border-[var(--color-primary)] bg-[var(--color-muted)] text-[var(--color-foreground)]" : "border-[var(--color-border)] text-[var(--color-muted-foreground)]"}`}
             >
-              <span className="w-4">
-                {checked ? (
-                  <Check aria-hidden="true" className="size-4" />
-                ) : null}
-              </span>
               {name}
-            </DropdownMenuItem>
+            </button>
           );
         })}
-        {item.stageNames.length === 1 ? (
-          <p className="px-2 py-1 text-xs text-[var(--color-muted-foreground)]">
-            A Product item keeps at least one stage
-          </p>
-        ) : null}
-        {error ? <StageError message={error} /> : null}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-function StageError({ message }: { readonly message: string }) {
-  return (
-    <p
-      role="alert"
-      className="px-2 py-1 text-sm text-[var(--color-destructive)]"
-    >
-      {message}
-    </p>
+      </div>
+      {invalid ? (
+        <p role="alert" className="text-xs text-[var(--color-destructive)]">
+          Stages are out of date. Open the item editor to review them.
+        </p>
+      ) : item.stageNames.length === 1 ? (
+        <p className="text-xs text-[var(--color-muted-foreground)]">
+          A Product item keeps at least one stage
+        </p>
+      ) : null}
+      {pending ? (
+        <p role="status" className="text-xs">
+          Saving stages…
+        </p>
+      ) : null}
+      {error ? (
+        <p role="alert" className="text-xs text-[var(--color-destructive)]">
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }

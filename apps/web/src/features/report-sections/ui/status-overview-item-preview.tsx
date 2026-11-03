@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 
 import { shortItemLabel } from "../../../shared/lib/format/short-label";
 import { reviewRecordAnchor } from "../../../shared/ui/feedback/review-record-focus";
@@ -7,6 +7,7 @@ import type {
   StatusOverviewItem,
 } from "../model/status-overview";
 import { statusOverviewItemActions } from "../model/status-overview-items";
+import { StatusOverviewCommentsView } from "./status-overview-comments-view";
 import {
   type ActionProps,
   weekMoveFocusKey,
@@ -16,6 +17,7 @@ import { ItemActionRow } from "./status-overview-item-row";
 import { StatusOverviewItemTextEditor } from "./status-overview-item-text-editor";
 import { OutcomeAudit } from "./status-overview-outcome-audit";
 import { TrackedWorkComments } from "./status-overview-record-comments";
+import { canSetStages, StageControl } from "./status-overview-stage-control";
 import { StatusControl } from "./status-overview-status-control";
 import { StatusInput } from "./status-overview-status-input";
 import { VerdictRail } from "./status-overview-verdict-controls";
@@ -172,11 +174,65 @@ function TextDisclosure({
   );
 }
 
+function useItemComments(
+  item: StatusOverviewItem,
+  preview: React.RefObject<HTMLDivElement | null>,
+) {
+  const [openCommentsKey, setOpenCommentsKey] = useState<string | null>(null);
+  const [previousItemKey, setPreviousItemKey] = useState(item.key);
+  if (previousItemKey !== item.key) {
+    setPreviousItemKey(item.key);
+    setOpenCommentsKey(null);
+  }
+  const commentsOpen = openCommentsKey === item.key;
+  const commentsId = useId();
+  const commentButtonRef = useRef<HTMLButtonElement>(null);
+  const closeComments = () => {
+    setOpenCommentsKey(null);
+    commentButtonRef.current?.focus();
+  };
+  useEffect(() => {
+    if (commentsOpen && document.activeElement === commentButtonRef.current) {
+      document
+        .getElementById(commentsId)
+        ?.querySelector<HTMLButtonElement>("button")
+        ?.focus();
+    }
+  }, [commentsOpen, commentsId, preview]);
+  const onCardFocus = (event: React.FocusEvent<HTMLDivElement>) => {
+    if (
+      event.target === event.currentTarget &&
+      item.comments.length > 0 &&
+      item.editTarget !== null
+    )
+      setOpenCommentsKey(item.key);
+  };
+  const toggleComments = () =>
+    setOpenCommentsKey(commentsOpen ? null : item.key);
+  return {
+    commentsOpen,
+    commentsId,
+    commentButtonRef,
+    closeComments,
+    toggleComments,
+    onCardFocus,
+  };
+}
+
+function StageLabels(props: ActionProps) {
+  return canSetStages(props) ? (
+    <StageControl {...props} />
+  ) : (
+    <ItemBadges item={props.item} />
+  );
+}
+
 export function StatusOverviewItemPreview(props: ActionProps) {
   const { item, onSetStatus, onConfirmItem, onVerdict } = props;
   const [expanded, setExpanded] = useState(false);
-  const statusFlow = useOverviewStatusInput(item, onSetStatus);
   const preview = useRef<HTMLDivElement>(null);
+  const comments = useItemComments(item, preview);
+  const statusFlow = useOverviewStatusInput(item, onSetStatus);
   const verdict = itemVerdict(item);
   const pendingVerdict = verdict === "pending" && onVerdict !== undefined;
   const decidedVerdict = verdict !== undefined && verdict !== "pending";
@@ -194,6 +250,7 @@ export function StatusOverviewItemPreview(props: ActionProps) {
       role="group"
       tabIndex={-1}
       data-overview-item-preview
+      onFocus={comments.onCardFocus}
       onKeyDown={(event) => handleWeekMoveKey(event, item, props.onMoveItem)}
       className="group/item relative flex min-w-0 items-start gap-1 rounded-[var(--radius-sm)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--color-primary)] [@media(hover:none)]:flex-wrap md:h-full"
     >
@@ -211,7 +268,7 @@ export function StatusOverviewItemPreview(props: ActionProps) {
           onEditItem={props.onEditItem}
           onEditItemText={props.onEditItemText}
         />
-        <ItemBadges item={item} />
+        <StageLabels {...props} />
         <StatusInput item={item} flow={statusFlow} />
         {pendingVerdict ? (
           <VerdictRail
@@ -221,14 +278,30 @@ export function StatusOverviewItemPreview(props: ActionProps) {
           />
         ) : null}
         <OutcomeAudit item={item} />
-        <TrackedWorkComments item={item} />
+        {item.editTarget === null || decidedVerdict ? (
+          <TrackedWorkComments item={item} />
+        ) : comments.commentsOpen ? (
+          <StatusOverviewCommentsView
+            id={comments.commentsId}
+            itemLabel={item.text}
+            comments={item.comments}
+            onClose={comments.closeComments}
+          />
+        ) : null}
         <TextDisclosure
           item={item}
           expanded={expanded}
           onToggle={() => setExpanded(!expanded)}
         />
       </div>
-      <ItemActionRow actionProps={props} verdictStamp={verdictStamp} />
+      <ItemActionRow
+        actionProps={props}
+        verdictStamp={verdictStamp}
+        commentsOpen={comments.commentsOpen}
+        commentsId={comments.commentsId}
+        commentButtonRef={comments.commentButtonRef}
+        onToggleComments={comments.toggleComments}
+      />
     </div>
   );
 }
