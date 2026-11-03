@@ -29,7 +29,7 @@ Putting a modal behind each week button would preserve much of the current code 
 
 ## Frozen presentation interface and ownership
 
-The integration owner creates and exports the following typed presentation contract before other owners implement forms. `ItemWorkflowStatus` is the canonical shared type, including `postponed`; invalid week/status combinations are validated by the canonical owner. Target and input are correlated by discriminant; mismatches and stale parent/stage eligibility are rejected by the integration owner.
+The integration owner creates the following data-only presentation contract in `apps/web/src/features/report-sections/model/contextual-entry-contract.ts` and exports it through `report-sections/index.ts` before other owners implement forms. This keeps report-sections independent of the Lead page shell. `ItemWorkflowStatus` and `RecordCommentView` are canonical types from `@weeklyreport/shared`. `ItemWorkflowStatus` includes `postponed`; invalid week/status combinations are validated by the canonical owner. Target and input are correlated by discriminant; mismatches and stale parent/stage eligibility are rejected by the integration owner.
 
 ```ts
 type Parent = {

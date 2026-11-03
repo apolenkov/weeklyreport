@@ -44,7 +44,7 @@ A Lead MUST be able to enter risks and decisions inline in an eligible Product o
 
 ### Requirement: A contextual record is confirmed by its saved identity
 
-Contextual creation MUST retain one stable lineage identity for each intended risk or decision across a save and retry. The UI MUST report success only when the matching scoped server response confirms the intended record and validated fields. Uncertain outcomes MUST be reconciled before retrying, without replacing unrelated records or silently replaying stale data.
+Each intended contextual risk or decision MUST retain one stable lineage through save and retry. Success requires a matching scoped server response. The identical captured request MAY be retried at its original version to resolve uncertainty; changed-payload or new-version retries, success and cancellation claims require reconciliation first.
 
 #### Scenario: The server remints a physical record ID
 
