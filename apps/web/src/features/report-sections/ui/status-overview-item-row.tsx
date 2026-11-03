@@ -2,17 +2,13 @@ import {
   ArrowLeft,
   ArrowRight,
   CalendarPlus,
-  MessageSquarePlus,
+  MessageSquare,
   Pencil,
   Undo2,
 } from "lucide-react";
-import { useRef } from "react";
+import type { RefObject } from "react";
 
 import { shortItemLabel } from "../../../shared/lib/format/short-label";
-import {
-  focusReviewAnchor,
-  reviewRecordAnchor,
-} from "../../../shared/ui/feedback/review-record-focus";
 import type {
   StatusOverviewEditTarget,
   StatusOverviewItem,
@@ -25,7 +21,6 @@ import {
   ROW_BUTTON_CLASS,
   weekMoveFocusKey,
 } from "./status-overview-item-actions";
-import { canSetStages, StageControl } from "./status-overview-stage-control";
 import { VerdictStamp } from "./status-overview-verdict-controls";
 
 // Where hover exists the row floats over the card's top-right corner on a
@@ -116,36 +111,34 @@ function EditAction({
   );
 }
 
-function CommentAction({ item }: { readonly item: StatusOverviewItem }) {
-  // The lead surface reads the record's reviewer comments; the anchor only
-  // exists while the card actually renders that stack, so without comments
-  // the click focuses the record's own card — the same element the anchor
-  // resolves to once comments exist.
-  const buttonRef = useRef<HTMLButtonElement>(null);
-  const target = item.editTarget;
-  if (target === null) return null;
+function CommentAction({
+  item,
+  open,
+  controls,
+  onToggle,
+  buttonRef,
+}: {
+  readonly item: StatusOverviewItem;
+  readonly open: boolean;
+  readonly controls: string;
+  readonly onToggle: () => void;
+  readonly buttonRef: RefObject<HTMLButtonElement | null>;
+}) {
+  if (item.editTarget === null) return null;
   const label = `Comments on ${shortItemLabel(item.text)}`;
-  const focusKey = `comment:${item.source}:${identityOf(item)}`;
   return (
     <button
       ref={buttonRef}
       type="button"
       aria-label={label}
+      aria-expanded={open}
+      aria-controls={open ? controls : undefined}
       title={label}
-      data-overview-focus={focusKey}
-      onClick={() =>
-        focusReviewAnchor(
-          document.getElementById(
-            reviewRecordAnchor("item", target.recordId),
-          ) ??
-            buttonRef.current?.closest<HTMLElement>(
-              "[data-overview-item-preview]",
-            ),
-        )
-      }
+      data-overview-focus={`comment:${item.source}:${identityOf(item)}`}
+      onClick={onToggle}
       className={ROW_BUTTON_CLASS}
     >
-      <MessageSquarePlus aria-hidden="true" className="size-4" />
+      <MessageSquare aria-hidden="true" className="size-4" />
     </button>
   );
 }
@@ -197,7 +190,6 @@ function hasRowActions(props: ActionProps): boolean {
   const recovery = statusOverviewItemActions(props.item).recovery;
   return (
     (props.item.editTarget !== null && Boolean(edit ?? move)) ||
-    canSetStages(props) ||
     (props.onPlanItem !== undefined && recovery.includes("replan")) ||
     (props.onRestorePlan !== undefined && recovery.includes("restore"))
   );
@@ -211,9 +203,17 @@ function hasRowActions(props: ActionProps): boolean {
 export function ItemActionRow({
   actionProps,
   verdictStamp,
+  commentsOpen,
+  commentsId,
+  onToggleComments,
+  commentButtonRef,
 }: {
   readonly actionProps: ActionProps;
   readonly verdictStamp?: PlanVerdict | undefined;
+  readonly commentsOpen: boolean;
+  readonly commentsId: string;
+  readonly onToggleComments: () => void;
+  readonly commentButtonRef: RefObject<HTMLButtonElement | null>;
 }) {
   if (verdictStamp !== undefined) {
     return (
@@ -231,8 +231,13 @@ export function ItemActionRow({
     >
       <MoveAction item={actionProps.item} move={move} />
       <EditAction item={actionProps.item} edit={edit} />
-      <StageControl {...actionProps} />
-      <CommentAction item={actionProps.item} />
+      <CommentAction
+        item={actionProps.item}
+        open={commentsOpen}
+        controls={commentsId}
+        onToggle={onToggleComments}
+        buttonRef={commentButtonRef}
+      />
       <PlanAction {...actionProps} />
       <RestoreAction {...actionProps} />
     </div>

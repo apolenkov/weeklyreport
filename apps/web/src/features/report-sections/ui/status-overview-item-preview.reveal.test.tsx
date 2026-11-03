@@ -111,7 +111,7 @@ describe("StatusOverviewItemPreview reveal and keyboard", () => {
     }
   });
 
-  it("tabs through the status icon and the text, then the row's actions", async () => {
+  it("tabs through status, text, direct stages, and the row's actions", async () => {
     const user = userEvent.setup();
     render(
       <StatusOverviewItemPreview
@@ -127,16 +127,14 @@ describe("StatusOverviewItemPreview reveal and keyboard", () => {
       screen.getByRole("button", { name: "Edit item: Original text" }),
     ).toHaveFocus();
     await user.tab();
+    expect(screen.getByRole("button", { name: "Testing" })).toHaveFocus();
+    await user.tab();
     expect(
       screen.getByRole("button", { name: "Move Original text to next week" }),
     ).toHaveFocus();
     await user.tab();
     expect(
       screen.getByRole("button", { name: "Edit details: Original text" }),
-    ).toHaveFocus();
-    await user.tab();
-    expect(
-      screen.getByRole("button", { name: "Stages for Original text" }),
     ).toHaveFocus();
     await user.tab();
     expect(

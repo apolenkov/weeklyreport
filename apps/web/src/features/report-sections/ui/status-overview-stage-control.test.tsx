@@ -25,39 +25,105 @@ const item: StatusOverviewItem = {
 };
 const stages = ["Development", "Testing"];
 
-describe("overview stage control", () => {
-  it("saves one toggle and prevents removing the last stage", async () => {
+describe("direct stage labels", () => {
+  it("shows labels directly and toggles with keyboard while keeping the last stage", async () => {
     const user = userEvent.setup();
-    const onSetStages = vi.fn().mockResolvedValue(null);
+    const save = vi.fn().mockResolvedValue(null);
+    const { rerender } = render(
+      <StatusOverviewItemPreview
+        item={item}
+        ownedStages={stages}
+        onSetStages={save}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Development" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: "Development" })).toBeDisabled();
+    const testing = screen.getByRole("button", { name: "Testing" });
+    testing.focus();
+    await user.keyboard("{Enter}");
+    expect(save).toHaveBeenCalledWith(item, stages, "stage:current:stable");
+    expect(testing).toHaveFocus();
+    const updated = { ...item, stageNames: stages };
+    rerender(
+      <StatusOverviewItemPreview
+        item={updated}
+        ownedStages={stages}
+        onSetStages={save}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Development" }));
+    expect(save).toHaveBeenLastCalledWith(
+      updated,
+      ["Testing"],
+      "stage:current:stable",
+    );
+  });
+  it("updates explicit Next items", async () => {
+    const user = userEvent.setup();
+    const next = {
+      ...item,
+      source: "next" as const,
+      editTarget: { recordId: "one", source: "next" as const },
+    };
+    const save = vi.fn().mockResolvedValue(null);
+    render(
+      <StatusOverviewItemPreview
+        item={next}
+        ownedStages={stages}
+        onSetStages={save}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Testing" }));
+    expect(save).toHaveBeenCalledWith(next, stages, "stage:next:stable");
+  });
+  it("preserves the text draft when a stage is selected", async () => {
+    const user = userEvent.setup();
+    const saveText = vi.fn();
+    const saveStages = vi.fn().mockResolvedValue(null);
     render(
       <StatusOverviewItemPreview
         item={item}
         ownedStages={stages}
-        onSetStages={onSetStages}
+        onSetStages={saveStages}
+        onEditItemText={saveText}
       />,
     );
-    await user.click(screen.getByRole("button", { name: "Stages for Work" }));
-    expect(
-      screen.getByRole("menuitemcheckbox", { name: "Development" }),
-    ).toHaveAttribute("aria-disabled", "true");
-    expect(
-      screen.getByText("A Product item keeps at least one stage"),
-    ).toBeInTheDocument();
-    await user.click(screen.getByRole("menuitemcheckbox", { name: "Testing" }));
-    expect(onSetStages).toHaveBeenCalledWith(
+    await user.click(screen.getByRole("button", { name: "Edit item: Work" }));
+    const editor = screen.getByRole("textbox", {
+      name: "Edit item text: Work",
+    });
+    await user.clear(editor);
+    await user.type(editor, "Draft work");
+    await user.click(screen.getByRole("button", { name: "Testing" }));
+    expect(saveText).toHaveBeenCalledWith(item, "Draft work");
+    expect(saveStages).toHaveBeenCalledWith(
       item,
-      ["Development", "Testing"],
+      stages,
       "stage:current:stable",
     );
-    expect(
-      screen.getByRole("button", { name: "Stages for Work" }),
-    ).toHaveFocus();
-    expect(
-      screen.getByRole("menuitemcheckbox", { name: "Testing" }),
-    ).toBeInTheDocument();
   });
-
-  it("hides when the unit owns a single stage", () => {
+  it.each([[[]], [["Foreign"]], [["Development", "Foreign"]]])(
+    "blocks stale or foreign selected stages %j",
+    async (selected) => {
+      const user = userEvent.setup();
+      const save = vi.fn();
+      render(
+        <StatusOverviewItemPreview
+          item={{ ...item, stageNames: selected }}
+          ownedStages={stages}
+          onSetStages={save}
+        />,
+      );
+      expect(screen.getByRole("alert")).toHaveTextContent(/out of date/i);
+      expect(screen.getByRole("button", { name: "Testing" })).toBeDisabled();
+      await user.click(screen.getByRole("button", { name: "Testing" }));
+      expect(save).not.toHaveBeenCalled();
+    },
+  );
+  it("shows the sole stage selected and unavailable for removal", () => {
     render(
       <StatusOverviewItemPreview
         item={item}
@@ -65,27 +131,13 @@ describe("overview stage control", () => {
         onSetStages={vi.fn()}
       />,
     );
-    expect(
-      screen.queryByRole("button", { name: "Stages for Work" }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Development" })).toBeDisabled();
+    expect(screen.getByText(/keeps at least one stage/i)).toBeInTheDocument();
   });
-
-  it("hides without a product stage list or save handler", () => {
-    const { rerender } = render(
-      <StatusOverviewItemPreview item={item} onSetStages={vi.fn()} />,
-    );
-    expect(
-      screen.queryByRole("button", { name: "Stages for Work" }),
-    ).not.toBeInTheDocument();
-    rerender(<StatusOverviewItemPreview item={item} ownedStages={stages} />);
-    expect(
-      screen.queryByRole("button", { name: "Stages for Work" }),
-    ).not.toBeInTheDocument();
-  });
-
   it.each([
     { ...item, source: "previous" as const },
     { ...item, editTarget: null },
+    { ...item, needsConfirmation: true },
     {
       ...item,
       editTarget: {
@@ -94,8 +146,7 @@ describe("overview stage control", () => {
         focusNextStep: true,
       },
     },
-    { ...item, needsConfirmation: true },
-  ])("hides for ineligible items", (value) => {
+  ])("does not offer editing to ineligible items", (value) => {
     render(
       <StatusOverviewItemPreview
         item={value}
@@ -104,7 +155,28 @@ describe("overview stage control", () => {
       />,
     );
     expect(
-      screen.queryByRole("button", { name: "Stages for Work" }),
+      screen.queryByRole("button", { name: "Testing" }),
     ).not.toBeInTheDocument();
+  });
+  it("blocks pending updates and exposes a failure for retry", async () => {
+    const user = userEvent.setup();
+    let reject!: (reason: Error) => void;
+    const save = vi.fn().mockReturnValue(
+      new Promise((_, fail) => {
+        reject = fail;
+      }),
+    );
+    render(
+      <StatusOverviewItemPreview
+        item={item}
+        ownedStages={stages}
+        onSetStages={save}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Testing" }));
+    expect(screen.getByRole("button", { name: "Testing" })).toBeDisabled();
+    reject(new Error("failed"));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Try again");
+    expect(screen.getByRole("button", { name: "Testing" })).toBeEnabled();
   });
 });
