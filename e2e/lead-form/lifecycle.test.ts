@@ -43,6 +43,11 @@ import {
   waitScope,
   waitSnapshot,
 } from "./helpers.js";
+import {
+  assertBackgroundSubmissionLocked,
+  injectSlidesNavigation,
+  waitForBrowserDialog,
+} from "./modal-background.js";
 import { scopeSnapshots } from "./snapshot-scope.js";
 
 registerE2eHooks();
@@ -92,7 +97,11 @@ function completionActions(data: BrowserSnapshot): BrowserSnapshot {
   const groups = COMPLETION_GROUPS.flatMap((name) =>
     scopeSnapshots(data, "group", name),
   );
-  assert.equal(groups.length, 1, "Expected one completion actions cluster");
+  assert.equal(
+    groups.length,
+    1,
+    `Expected one completion actions cluster\n${data.snapshot}`,
+  );
   const group = groups.at(0);
   assert(group);
   return group;
@@ -110,7 +119,13 @@ async function clickCompletion(name: string): Promise<void> {
   await command(["click", oneRef(completionActions(data), "button", name)]);
 }
 
-function assertPendingSubmissionActions(data: BrowserSnapshot): void {
+async function assertPendingSubmissionActions(
+  data: BrowserSnapshot,
+): Promise<void> {
+  if (scopeCount(data, "group", "Header completion actions") === 0) {
+    await assertBackgroundSubmissionLocked();
+    return;
+  }
   assert.equal(refsByRole(data, "button", "Submit report").length, 0);
   disabledRef(completionActions(data), "button", "Submit");
 }
@@ -162,7 +177,13 @@ function statusName(text: string): RegExp {
 /** Opens the canonical item editor from the row's direct Edit details action. */
 async function openItemEditor(text: string, session?: string): Promise<void> {
   const label = shortItemLabel(text);
-  await findRole("button", `Edit details: ${label}`, "click", { session });
+  const ref = oneRef(
+    await snapshot(session),
+    "button",
+    `Edit details: ${label}`,
+  );
+  await centerControl(ref, session);
+  await command(["click", ref], session);
 }
 
 async function clickPoint(x: number, y: number): Promise<void> {
@@ -579,8 +600,8 @@ void test("draft changes persist after reload", async () => {
   await saveDraft();
   await assertSavePost();
   await assertPersistedItem("E2E persisted draft item");
-  // The row title opens the canonical editor with the saved text.
-  await findRole("button", "Edit item: E2E persisted draft item", "click");
+  // The explicit details action opens the canonical editor with the saved text.
+  await openItemEditor("E2E persisted draft item");
   assert.equal(
     await inputValue(ACTIVITY_FORM, "Description *"),
     "E2E persisted draft item",
@@ -599,7 +620,7 @@ void test("save failure preserves local changes and recovers", async () => {
     await clickIn(ACTIVITY_FORM, "Save update");
     await waitText("Save failed. Your update is still here; try saving again.");
     assert.equal(await inputValue(ACTIVITY_FORM, "Description *"), text);
-    assertPendingSubmissionActions(await snapshot());
+    await assertPendingSubmissionActions(await snapshot());
     assert.equal(await reportActionsDisabled(), true);
   } finally {
     await command(["network", "unroute", SAVE_ROUTE]);
@@ -690,7 +711,7 @@ void test("pending canonical save locks write actions until connectivity returns
     const pending = await snapshot();
     assert.equal(refsByRole(pending, "button", /^Add item to /).length, 0);
     assert.equal(refsByRole(pending, "button", /^Status of /).length, 0);
-    assertPendingSubmissionActions(pending);
+    await assertPendingSubmissionActions(pending);
     assert.equal(await reportActionsDisabled(), true);
     await command(["press", "Escape"]);
     // Focus moved to Cancel when the save locked Save, so Escape reaches the form.
@@ -726,10 +747,10 @@ void test("pending edits guard navigation and competing write actions", async ()
   await waitText(
     "Save or cancel the open update before submitting the report.",
   );
-  assertPendingSubmissionActions(await snapshot());
+  await assertPendingSubmissionActions(await snapshot());
   assert.equal(await reportActionsDisabled(), true);
-  await command(["click", await scopedRef(VIEW_MODE, "link", "Slides")]);
-  const dialog = await command(["dialog", "status"]);
+  await injectSlidesNavigation();
+  const dialog = await waitForBrowserDialog();
   assert.equal(dialog.hasDialog, true);
   assert.equal(dialog.type, "confirm");
   assert.equal(
@@ -762,12 +783,8 @@ void test("accepted navigation retains pending input without changing the saved 
   await startActivityUpdate(text);
   await command(["network", "requests"]);
   await command(["network", "requests", "--clear"]);
-  const clicked = await command([
-    "click",
-    await scopedRef(VIEW_MODE, "link", "Slides"),
-  ]);
-  assert.equal(clicked.dialogOpened, true);
-  const dialog = await command(["dialog", "status"]);
+  await injectSlidesNavigation();
+  const dialog = await waitForBrowserDialog();
   assert.equal(dialog.hasDialog, true);
   assert.equal(dialog.type, "confirm");
   assert.equal(
@@ -874,19 +891,41 @@ void test("concurrent Lead edits recover unsaved input without overwriting the s
     disabledRef(retained, "button", "Save update");
     assert.equal(await inputValue(form, "Description *"), localText);
     assert(retained.snapshot.includes("Saving is disabled"));
-    const product = scopeSnapshot(
-      data,
-      "article",
-      `Product ${LEAD_FORM_FIXTURE.productName}`,
+    // The recovery editor is modal, so inspect the hidden background DOM.
+    const background = await command([
+      "eval",
+      String.raw`(() => {
+      const article = document.querySelector(${JSON.stringify(`article[aria-label="Product ${LEAD_FORM_FIXTURE.productName}"]`)});
+      const prior = [...(article?.querySelectorAll('[data-overview-lineage-lane="previous"]') ?? [])].find(element => element.textContent?.includes(${JSON.stringify(LEAD_FORM_FIXTURE.previousText)}));
+      const label = prior?.getAttribute('aria-labelledby')?.split(/\s+/).map(id => document.getElementById(id)?.textContent?.replace(/\s+/g, ' ').trim()).join(' ');
+      return { text: article?.textContent, hidden: Boolean(article?.closest('[aria-hidden="true"], [inert]')), priorLabel: label, priorText: prior?.textContent, priorButtons: [...(prior?.querySelectorAll('button') ?? [])].map(button => button.getAttribute('aria-label')) };
+    })()`,
+    ]);
+    assert(typeof background.result === "object" && background.result !== null);
+    const state = background.result as Record<string, unknown>;
+    assert.equal(state.hidden, true);
+    assert(typeof state.text === "string" && state.text.includes(serverText));
+    assert(!state.text.includes(localText));
+    assert.equal(
+      typeof state.priorLabel === "string"
+        ? state.priorLabel.replaceAll(/\s+/g, "").toLowerCase()
+        : state.priorLabel,
+      previous.period.replaceAll(/\s+/g, "").toLowerCase(),
     );
-    assert(product.snapshot.includes(serverText));
-    assert(!product.snapshot.includes(localText));
-    const retainedPrevious = previousMarketingPlan(data);
-    assert.deepEqual(previousPlanData(retainedPrevious), previous);
-    assertPreviousControls(retainedPrevious, false);
+    assert(typeof state.priorText === "string");
+    for (const value of previous.values)
+      assert(state.priorText.includes(value));
+    assert(Array.isArray(state.priorButtons));
+    assert(
+      !state.priorButtons.some(
+        (name: unknown) =>
+          typeof name === "string" &&
+          /^Status of |^(Done|Continue|Next week|Paused) — /.test(name),
+      ),
+    );
     assert.equal(refsByRole(data, "button", /^Add item to /).length, 0);
     assert.equal(refsByRole(data, "button", /^Status of /).length, 0);
-    assertPendingSubmissionActions(data);
+    await assertPendingSubmissionActions(data);
     assert.equal(await reportActionsDisabled(), true);
     await clickIn(recovery, "Cancel");
     await clickIn({ role: "alertdialog", name: "Discard changes?" }, "Discard");

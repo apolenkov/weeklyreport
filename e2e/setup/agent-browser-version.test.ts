@@ -19,7 +19,11 @@ void test("only the exact pinned agent-browser version is accepted", () => {
   ]) {
     assert.throws(
       () => assertAgentBrowserVersion(output),
-      /requires agent-browser 0\.39\.1, found "/u,
+      (error: unknown) =>
+        error instanceof Error &&
+        error.message.startsWith(
+          `E2E requires agent-browser ${AGENT_BROWSER_VERSION}, found "`,
+        ),
     );
   }
 });
