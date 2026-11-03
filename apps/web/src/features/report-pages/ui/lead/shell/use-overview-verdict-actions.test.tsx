@@ -179,6 +179,55 @@ function setup({
 afterEach(() => vi.useRealTimers());
 
 describe("useOverviewVerdictActions.onVerdict", () => {
+  it("continues Current before Next and preserves the explicit Next and prior snapshot", async () => {
+    const before = structuredClone(priorSection);
+    const { hook, state, resolve } = setup({
+      linked: { carriedOver: true },
+      nextTwin: true,
+    });
+    const nextBefore = structuredClone(
+      state.section.items.find((row) => row.id === NEXT_TWIN_ID),
+    );
+    await expect(
+      hook.result.current.onVerdict(overviewItem, "continue"),
+    ).resolves.toBeNull();
+    expect(
+      state.section.items.find((row) => row.id === LINKED_ID)?.carriedOver,
+    ).toBe(false);
+    expect(state.section.items.find((row) => row.id === NEXT_TWIN_ID)).toEqual(
+      nextBefore,
+    );
+    expect(priorSection).toEqual(before);
+    expect(resolve).not.toHaveBeenCalled();
+  });
+
+  it("continues only Next in place, preserving its lineage", async () => {
+    const { hook, state, resolve } = setup({ nextTwin: true });
+    await expect(
+      hook.result.current.onVerdict(overviewItem, "continue"),
+    ).resolves.toBeNull();
+    expect(state.section.items).toHaveLength(1);
+    expect(state.section.items[0]).toMatchObject({
+      id: NEXT_TWIN_ID,
+      stableId: STABLE_ID,
+      type: "current",
+      text: "Ship the importer",
+    });
+    expect(resolve).not.toHaveBeenCalled();
+  });
+
+  it("does not treat identical text in another lineage as a linked occurrence", async () => {
+    const { hook, resolve } = setup({
+      linked: { stableId: "80000000-0000-4000-8000-0000000000aa" },
+    });
+    await expect(
+      hook.result.current.onVerdict(overviewItem, "continue"),
+    ).resolves.toBeNull();
+    expect(resolve.mock.calls[0]?.[0]).toMatchObject({
+      source: { kind: "prior", recordId: PRIOR_ID },
+      outcome: "continue",
+    });
+  });
   it("patches the linked occurrence in the draft and never calls the command", async () => {
     const before = structuredClone(priorSection);
     const { hook, apply, resolve } = setup({
