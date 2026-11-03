@@ -65,7 +65,8 @@ Overview MUST offer contextual inline creation in editable Current and Next unit
 
 - **WHEN** the Lead enters a valid inline item and activates Save and add another or presses Ctrl+Shift+Enter / Cmd+Shift+Enter
 - **THEN** the item is persisted through the canonical draft path and the composer remains for the same owner and week
-- **AND** the entry fields clear only after confirmed success and focus returns to the description
+- **AND** the entry fields clear and focus returns to the description only if the current input still matches the confirmed submitted snapshot
+- **AND** newer input typed while the save was pending is retained and is not claimed as part of the confirmed item
 
 #### Scenario: Save and add another fails
 
