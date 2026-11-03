@@ -1,7 +1,12 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useMutation,
+  useMutationState,
+  useQueryClient,
+} from "@tanstack/react-query";
 import type { ReviewVerdict, SectionReviewView } from "@weeklyreport/shared";
+import { reviewVerdictInputSchema } from "@weeklyreport/shared";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -49,6 +54,20 @@ const BADGE_STYLE: Record<VerdictBadge["kind"], { bg: string; fg: string }> = {
   },
   none: { bg: "var(--color-muted)", fg: "var(--color-muted-foreground)" },
 };
+
+function VerdictBadgeLabel({ badge }: { readonly badge: VerdictBadge }) {
+  return (
+    <span
+      className="whitespace-nowrap rounded-[var(--radius-pill)] px-2.5 py-0.5 text-xs font-semibold"
+      style={{
+        background: BADGE_STYLE[badge.kind].bg,
+        color: BADGE_STYLE[badge.kind].fg,
+      }}
+    >
+      {badge.label}
+    </span>
+  );
+}
 
 // A changes-requested verdict that unsubmitted the section outranks the plain
 // verdict copy — the lead getting the section back is the newsworthy part.
@@ -137,6 +156,52 @@ interface SectionVerdictControlProps {
   readonly onMutated: () => void;
 }
 
+function useSectionVerdictPending(reportSectionId: string) {
+  const pendingVerdicts = useMutationState({
+    filters: {
+      status: "pending",
+      predicate: (mutation) => {
+        const command = reviewVerdictInputSchema.safeParse(
+          mutation.state.variables,
+        );
+        return (
+          command.success && command.data.reportSectionId === reportSectionId
+        );
+      },
+    },
+    select: (mutation) => mutation.state.status,
+  });
+  return pendingVerdicts.length > 0;
+}
+
+function recoverUnsubmittedFocus(
+  control: HTMLElement | null,
+  dialogOpen: boolean,
+) {
+  const active = document.activeElement;
+  const ownsFocus =
+    control?.contains(active) === true ||
+    (dialogOpen &&
+      active instanceof Element &&
+      active.closest('[role="dialog"]'));
+  if (!ownsFocus) return;
+  const author = control?.closest<HTMLElement>('[id^="report-lead-"]');
+  const sections = control?.closest<HTMLElement>(
+    '[aria-label="Report sections"]',
+  );
+  const verdict = control?.closest<HTMLElement>(
+    '[aria-label="Section verdict"]',
+  );
+  window.setTimeout(() => {
+    if (
+      document.activeElement !== document.body &&
+      verdict?.isSameNode(document.activeElement) !== true
+    )
+      return;
+    (author?.isConnected ? author : sections)?.focus({ preventScroll: true });
+  }, 0);
+}
+
 // Verdict badge + Approve/Request-changes for one section. Reflects server
 // unsubmit; never mutates status or offers publish/lock (viewer-reviewer only).
 export function SectionVerdictControl({
@@ -150,13 +215,17 @@ export function SectionVerdictControl({
   const trpc = useTRPC();
   const qc = useQueryClient();
   const badge = resolveBadge(reviews);
+  const pending = useSectionVerdictPending(reportSectionId);
+  const [control, setControl] = useState<HTMLDivElement | null>(null);
 
   const [requestingChanges, setRequestingChanges] = useState(false);
+  if (!canReview && requestingChanges) setRequestingChanges(false);
 
   const onVerdictRecorded = (result: {
     unsubmitted: boolean;
     verdict: ReviewVerdict;
   }) => {
+    if (result.unsubmitted) recoverUnsubmittedFocus(control, requestingChanges);
     toast.success(verdictToastMessage(result));
     invalidateReview(qc, trpc);
     onMutated();
@@ -175,26 +244,18 @@ export function SectionVerdictControl({
   );
 
   return (
-    <div className="flex min-w-0 flex-col items-start gap-2 sm:flex-row sm:items-center">
-      <span
-        className="whitespace-nowrap rounded-[var(--radius-pill)] px-2.5 py-0.5 text-xs font-semibold"
-        style={{
-          background: BADGE_STYLE[badge.kind].bg,
-          color: BADGE_STYLE[badge.kind].fg,
-        }}
-      >
-        {badge.label}
-      </span>
+    <div
+      ref={setControl}
+      className="flex min-w-0 flex-col items-start gap-2 sm:flex-row sm:items-center"
+    >
+      <VerdictBadgeLabel badge={badge} />
       {canReview ? (
         <VerdictActions
           subjectName={subjectName}
-          pending={verdictMut.isPending}
-          // The reason dialog owns an independent mutation; while it is open
-          // (and therefore while it is pending) the background Approve must
-          // not arm a second verdict write for the same version.
-          disabled={verdictMut.isPending || requestingChanges}
+          pending={pending}
+          disabled={pending || requestingChanges}
           onApprove={() => {
-            if (approveInFlight.current) return;
+            if (pending || approveInFlight.current) return;
             approveInFlight.current = true;
             verdictMut.mutate(
               { reportSectionId, verdict: "approved", version },
@@ -208,7 +269,7 @@ export function SectionVerdictControl({
           onRequestChanges={() => setRequestingChanges(true)}
         />
       ) : null}
-      {requestingChanges ? (
+      {requestingChanges && canReview ? (
         <RequestChangesDialog
           reportSectionId={reportSectionId}
           version={version}

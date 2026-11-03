@@ -1,134 +1,31 @@
 "use client";
 
-import type {
-  CanonicalStatus,
-  ReportSectionReadModel,
-  SectionActivity,
-} from "@weeklyreport/shared";
-import {
-  shortNameFromName,
-  trafficLightToCanonical,
-} from "@weeklyreport/shared";
+import { shortNameFromName } from "@weeklyreport/shared";
 
-import { activityDisplayTitle } from "../../../../shared/lib/activity/activity-display";
 import {
   statusDotClassName,
   statusLabel,
 } from "../../../../shared/lib/status/status-presentation";
+import type { AccordionReviewContext } from "../../../review/index";
+import {
+  type ActivitySectionSlice,
+  buildHeadActivityRecords,
+  type HeadActivityRecords,
+} from "../../model/head-activity-records";
+import {
+  ActivityRecordDetails,
+  type ActivityReviewRow,
+} from "./activity-record-details";
 
-type ActivitySectionSlice = Pick<
-  ReportSectionReadModel,
-  "authorId" | "authorName" | "activities" | "items" | "risks" | "decisions"
->;
-
-type ActivityTone = CanonicalStatus;
-
-interface ActivityCardModel {
-  readonly key: string;
-  readonly activityName: string;
-  readonly authorName: string;
-  readonly tone: ActivityTone | null;
-  readonly note: string | null;
-  readonly linkedProducts: readonly string[];
-  readonly currentItems: readonly string[];
-  readonly nextItems: readonly string[];
-  readonly risks: readonly string[];
-  readonly decisions: readonly string[];
-}
-
-function toActivityCard(
-  section: ActivitySectionSlice,
-  activity: SectionActivity,
-): ActivityCardModel {
-  const owns = (parentId: string | null | undefined): boolean =>
-    parentId === activity.activityId;
-  const items = section.items.filter((i) => owns(i.activityId));
-  return {
-    key: `${activity.activityId}::${section.authorId}`,
-    activityName: activityDisplayTitle(activity),
-    authorName: section.authorName,
-    // Render the risk/blocker-derived floor, falling back to the stored status.
-    tone: trafficLightToCanonical(activity.derivedStatus ?? activity.status),
-    note: activity.note ?? null,
-    linkedProducts: activity.linkedProducts.map((p) => p.productName),
-    currentItems: items.filter((i) => i.type === "current").map((i) => i.text),
-    nextItems: items.filter((i) => i.type === "next").map((i) => i.text),
-    risks: section.risks.filter((r) => owns(r.activityId)).map((r) => r.risk),
-    decisions: section.decisions
-      .filter((d) => owns(d.activityId))
-      .map((d) => d.text),
-  };
-}
-
-function buildActivityCards(
-  sections: readonly ActivitySectionSlice[],
-): ActivityCardModel[] {
-  return sections
-    .flatMap((section) => {
-      const cards = section.activities.map((activity) =>
-        toActivityCard(section, activity),
-      );
-      const activityIds = new Set(section.activities.map((a) => a.activityId));
-      const unavailable = (activityId: string | null | undefined): boolean =>
-        activityId != null && !activityIds.has(activityId);
-      const items = section.items.filter((i) => unavailable(i.activityId));
-      const risks = section.risks.filter((r) => unavailable(r.activityId));
-      const decisions = section.decisions.filter((d) =>
-        unavailable(d.activityId),
-      );
-      if (items.length > 0 || risks.length > 0 || decisions.length > 0) {
-        cards.push({
-          key: `unavailable::${section.authorId}`,
-          activityName: "Activity details unavailable",
-          authorName: section.authorName,
-          tone: null,
-          note: "These saved records no longer have activity details in this section.",
-          linkedProducts: [],
-          currentItems: items
-            .filter((i) => i.type === "current")
-            .map((i) => i.text),
-          nextItems: items.filter((i) => i.type === "next").map((i) => i.text),
-          risks: risks.map((r) => r.risk),
-          decisions: decisions.map((d) => d.text),
-        });
-      }
-      return cards;
-    })
-    .sort(
-      (a, b) =>
-        a.activityName.localeCompare(b.activityName, "ru") ||
-        a.authorName.localeCompare(b.authorName, "ru"),
-    );
-}
-
-function RecordList({
-  label,
-  rows,
+function ActivityBodyCard({
+  card,
+  review,
+  Row,
 }: {
-  readonly label: string;
-  readonly rows: readonly string[];
+  readonly card: HeadActivityRecords;
+  readonly review: AccordionReviewContext | undefined;
+  readonly Row: ActivityReviewRow | undefined;
 }) {
-  if (rows.length === 0) return null;
-  return (
-    <div className="mt-2">
-      <span className="text-xs font-semibold uppercase tracking-wide text-[var(--color-muted-foreground)]">
-        {label}
-      </span>
-      <ul className="mt-0.5 space-y-0.5">
-        {rows.map((text, idx) => (
-          <li
-            key={`${label}-${String(idx)}`}
-            className="text-sm text-[var(--color-foreground)] [overflow-wrap:anywhere]"
-          >
-            {text}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-function ActivityBodyCard({ card }: { readonly card: ActivityCardModel }) {
   const linkedNames = card.linkedProducts.join(", ");
   return (
     <li className="rounded-[var(--radius)] border border-[var(--color-border-subtle)] bg-[var(--color-card)]/70 p-3">
@@ -176,20 +73,21 @@ function ActivityBodyCard({ card }: { readonly card: ActivityCardModel }) {
           {card.note}
         </p>
       ) : null}
-      <RecordList label="Current" rows={card.currentItems} />
-      <RecordList label="Next" rows={card.nextItems} />
-      <RecordList label="Risks & Blockers" rows={card.risks} />
-      <RecordList label="Decisions" rows={card.decisions} />
+      <ActivityRecordDetails card={card} review={review} Row={Row} />
     </li>
   );
 }
 
 export function ActivityStatusStrip({
   sections,
+  review,
+  Row,
 }: {
   readonly sections: readonly ActivitySectionSlice[];
+  readonly review?: AccordionReviewContext | undefined;
+  readonly Row?: ActivityReviewRow | undefined;
 }) {
-  const cards = buildActivityCards(sections);
+  const cards = buildHeadActivityRecords(sections);
   if (cards.length === 0) return null;
 
   return (
@@ -203,7 +101,12 @@ export function ActivityStatusStrip({
       </h2>
       <ul className="mt-3 space-y-2">
         {cards.map((card) => (
-          <ActivityBodyCard key={card.key} card={card} />
+          <ActivityBodyCard
+            key={card.key}
+            card={card}
+            review={review}
+            Row={Row}
+          />
         ))}
       </ul>
     </section>

@@ -1,6 +1,7 @@
 import "@testing-library/jest-dom/vitest";
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import type { LeadInfo } from "../model/dashboard";
@@ -61,7 +62,44 @@ function renderActions(value: LeadInfo) {
   );
 }
 
+function expectUncancelledModifiedClick(link: HTMLElement, modifier: string) {
+  let cancelledByLink = true;
+  document.addEventListener(
+    "click",
+    (event) => {
+      cancelledByLink = event.defaultPrevented;
+      event.preventDefault();
+    },
+    { once: true },
+  );
+  fireEvent.click(link, { [modifier]: true, button: 0 });
+  expect(cancelledByLink).toBe(false);
+}
+
 describe("lead queue contextual actions", () => {
+  it("keeps the native Review link first in keyboard order", async () => {
+    renderActions(
+      lead({
+        canOpen: true,
+        canReview: true,
+        canRemind: false,
+        canRequestChanges: false,
+        canRevoke: false,
+      }),
+    );
+    await userEvent.tab();
+    expect(
+      screen.getByRole("link", {
+        name: "Review Alice Lead report section",
+      }),
+    ).toHaveFocus();
+    await userEvent.tab();
+    expect(
+      screen.getByRole("link", {
+        name: "Open Alice Lead report section",
+      }),
+    ).toHaveFocus();
+  });
   it("makes Open primary and Remind secondary for a content-bearing draft", () => {
     renderActions(
       lead({
@@ -109,13 +147,16 @@ describe("lead queue contextual actions", () => {
     });
     expect(reviewLink).toHaveAttribute(
       "href",
-      `/head/report/${REPORT_ID}?authorId=20000000-0000-4000-8000-000000000001`,
+      `/head/report/${REPORT_ID}?authorId=20000000-0000-4000-8000-000000000001&scope=lead&review=1`,
     );
     expect(reviewLink).toHaveClass(
       "min-h-[var(--touch-target-min)]",
       "focus-visible:ring-2",
       "bg-[var(--color-starbucks-accent)]",
     );
+    expectUncancelledModifiedClick(reviewLink, "ctrlKey");
+    expectUncancelledModifiedClick(reviewLink, "metaKey");
+    expect(reviewLink).not.toHaveAttribute("role", "button");
     expect(
       screen.getByRole("link", { name: "Review Alice Lead report section" }),
     ).toBeVisible();

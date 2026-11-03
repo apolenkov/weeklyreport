@@ -13,9 +13,13 @@ import { SectionVerdictControl } from "./section-verdict-control";
 export function ReviewVerdictBand({
   sections,
   onMutated,
+  inline = false,
+  onNavigateSection,
 }: {
   readonly sections: readonly SectionReviewRow[];
   readonly onMutated: () => void;
+  readonly inline?: boolean;
+  readonly onNavigateSection?: ((reportSectionId: string) => void) | undefined;
 }) {
   const actionable = sections.filter(isSubmittedReviewableSection);
   // Stays mounted after the last row is actioned; the caller keys it by report.
@@ -28,12 +32,18 @@ export function ReviewVerdictBand({
     <section
       ref={bandRef}
       tabIndex={-1}
-      aria-label="Section reviews"
-      className="flex flex-col gap-1.5 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+      aria-label={inline ? "Section verdict" : "Section reviews"}
+      className={
+        inline
+          ? "min-w-0"
+          : "flex flex-col gap-1.5 rounded-[var(--radius)] border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+      }
     >
-      <span className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
-        Review
-      </span>
+      {!inline ? (
+        <span className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--color-muted-foreground)]">
+          Review
+        </span>
+      ) : null}
       {actionable.length === 0 ? (
         <p
           role="status"
@@ -47,14 +57,26 @@ export function ReviewVerdictBand({
           key={section.reportSectionId}
           className="flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-sm)] bg-[var(--color-background)] px-2.5 py-1.5"
         >
-          <span className="flex min-w-0 items-center gap-2">
-            <span className="truncate text-[13px] font-semibold text-[var(--color-foreground)]">
-              {section.authorName}
+          {!inline ? (
+            <span className="flex min-w-0 items-center gap-2">
+              {onNavigateSection ? (
+                <button
+                  type="button"
+                  onClick={() => onNavigateSection(section.reportSectionId)}
+                  className="min-h-[var(--touch-target-min)] rounded-[var(--radius-sm)] text-left text-[13px] font-semibold text-[var(--color-primary)] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+                >
+                  {section.authorName}
+                </button>
+              ) : (
+                <span className="truncate text-[13px] font-semibold text-[var(--color-foreground)]">
+                  {section.authorName}
+                </span>
+              )}
+              <span className="text-xs text-[var(--color-muted-foreground)]">
+                Submitted
+              </span>
             </span>
-            <span className="text-xs text-[var(--color-muted-foreground)]">
-              Submitted
-            </span>
-          </span>
+          ) : null}
           <SectionVerdictControl
             reportSectionId={section.reportSectionId}
             version={section.version}

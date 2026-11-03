@@ -73,7 +73,8 @@ function deriveReviewSurface(
   view: MappedWeeklyReport,
   params: ReviewSurfaceParams,
 ) {
-  const { scope, currentRole } = params;
+  const { scope } = params;
+  const currentRole = view.period.archived ? null : params.currentRole;
   // Reviewer surface only for access-holders on a live (non-published) period.
   const reviewModel = buildReviewModel(reportData, {
     currentRole,

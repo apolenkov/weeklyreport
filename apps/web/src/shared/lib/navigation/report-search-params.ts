@@ -7,6 +7,7 @@ export function copyReportSearchParams(
 ): URLSearchParams {
   return copyScalarSearchParams(searchParams, [
     "mode",
+    "review",
     "authorId",
     "archive",
     "scope",

@@ -6,6 +6,7 @@ import { SessionContext } from "../../../../shared/lib/auth/session-provider";
 import { invalidateReview } from "../../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
 import type { ReviewMode, SubmissionFilter } from "../../../review";
+import { isSubmittedReviewableSection } from "../../../review";
 import {
   useWeeklyReportMutations,
   type WeeklyReportMutations,
@@ -29,6 +30,8 @@ interface UseWeeklyReportPageParams {
   readonly canonicalBasePath: string;
   readonly authorId?: string | undefined;
   readonly scope: "product" | "lead";
+  readonly reviewIntent?: boolean | undefined;
+  readonly onReviewModeChange?: ((mode: ReviewMode) => void) | undefined;
 }
 
 interface WeeklyReportPageHandlers {
@@ -57,6 +60,7 @@ export type WeeklyReportPageState =
       readonly kind: "ready";
       readonly submissionFilter: SubmissionFilter;
       readonly reviewMode: ReviewMode;
+      readonly reviewUnavailableNotice: string | null;
       readonly handlers: WeeklyReportPageHandlers;
       readonly mutationState: WeeklyReportPageMutationState;
     } & WeeklyReportPageView);
@@ -149,6 +153,7 @@ function readyState({
   setSubmissionFilter,
   setReviewMode,
   mutations,
+  reviewUnavailableNotice,
 }: {
   readonly view: WeeklyReportPageView;
   readonly submissionFilter: SubmissionFilter;
@@ -156,12 +161,14 @@ function readyState({
   readonly setSubmissionFilter: (next: SubmissionFilter) => void;
   readonly setReviewMode: (next: ReviewMode) => void;
   readonly mutations: WeeklyReportMutations;
+  readonly reviewUnavailableNotice: string | null;
 }): WeeklyReportPageState {
   return {
     kind: "ready",
     ...view,
     submissionFilter,
     reviewMode,
+    reviewUnavailableNotice,
     handlers: {
       setSubmissionFilter,
       setReviewMode,
@@ -178,6 +185,39 @@ function readyState({
       archiveLabel: mutations.isArchivePending ? "Archiving…" : "Archive",
       restoreLabel: mutations.isRestorePending ? "Restoring…" : "Restore",
     },
+  };
+}
+
+function resolveReviewPreference(
+  params: UseWeeklyReportPageParams,
+  view: WeeklyReportPageView,
+  sections: NonNullable<WeeklyReportPageViewArgs["reportData"]>["leadSections"],
+  localMode: ReviewMode,
+) {
+  const targetedSection = sections.find(
+    (section) => section.authorId === params.authorId,
+  );
+  const targetEligible = params.authorId
+    ? targetedSection !== undefined &&
+      isSubmittedReviewableSection({
+        ...targetedSection,
+        canReview: targetedSection.canReview ?? false,
+      })
+    : view.canReviewAny;
+  const eligible =
+    !view.archived &&
+    view.periodStatus !== "published" &&
+    view.reviewModel.context !== undefined &&
+    targetEligible;
+  const requested = params.onReviewModeChange
+    ? params.reviewIntent === true
+    : params.reviewIntent === true || localMode === "review";
+  return {
+    reviewMode: requested && eligible ? ("review" as const) : ("read" as const),
+    reviewUnavailableNotice:
+      params.reviewIntent && !eligible
+        ? `Review is unavailable for this ${params.authorId ? "section" : "report"}.`
+        : null,
   };
 }
 
@@ -224,5 +264,16 @@ export function useWeeklyReportPage(
 
   if (!view) return { kind: "empty" };
 
-  return readyState({ view, mutations, ...preferences });
+  return readyState({
+    view,
+    mutations,
+    ...preferences,
+    ...resolveReviewPreference(
+      params,
+      view,
+      reportData?.leadSections ?? [],
+      preferences.reviewMode,
+    ),
+    setReviewMode: params.onReviewModeChange ?? preferences.setReviewMode,
+  });
 }

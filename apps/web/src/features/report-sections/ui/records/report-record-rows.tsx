@@ -1,0 +1,120 @@
+import type {
+  WeeklyReportDecision,
+  WeeklyReportItem,
+  WeeklyReportRisk,
+} from "../../model/weekly-report-types";
+
+const OUTCOME_LABELS = {
+  done: "Completed",
+  continue: "Continued",
+  plan_next: "Planned next step",
+  promote: "Promoted next step",
+  restore: "Restored plan",
+  wont_do: "Marked Won't do",
+} as const;
+
+function auditTimestamp(occurredAt: string): string {
+  return occurredAt.replace("T", " ").replace(/:\d{2}(?:\.\d+)?Z$/, " UTC");
+}
+
+function ItemOutcomeDetails({ item }: { readonly item: WeeklyReportItem }) {
+  const events = item.outcomeHistory ?? [];
+  const resolution = item.resolution;
+  if (events.length === 0 && resolution == null) return null;
+  const resolutionListed =
+    resolution != null &&
+    events.some((event) => event.id === resolution.eventId);
+  return (
+    <details className="mt-1.5 text-xs text-[var(--color-muted-foreground)]">
+      <summary className="cursor-pointer font-medium text-[var(--color-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]">
+        Outcome history
+      </summary>
+      <ul className="mt-1 space-y-1">
+        {events.map((event) => (
+          <li key={event.id} className="[overflow-wrap:anywhere]">
+            {OUTCOME_LABELS[event.outcome]} by {event.actorName} ·{" "}
+            {auditTimestamp(event.occurredAt)}
+            {event.reason ? ` · ${event.reason}` : ""}
+          </li>
+        ))}
+        {resolution != null && !resolutionListed ? (
+          <li className="[overflow-wrap:anywhere]">
+            Marked Won&apos;t do by {resolution.actorName} ·{" "}
+            {auditTimestamp(resolution.occurredAt)}
+          </li>
+        ) : null}
+      </ul>
+    </details>
+  );
+}
+
+export function ItemRecordContent({
+  item,
+}: {
+  readonly item: WeeklyReportItem;
+}) {
+  return (
+    <div className="min-w-0 pt-px text-[14.5px] leading-normal text-[var(--color-foreground)]">
+      <p className="[overflow-wrap:anywhere]">{item.text}</p>
+      {item.nextStepText ? (
+        <p className="mt-1 text-[13px] text-[var(--color-muted-foreground)] [overflow-wrap:anywhere]">
+          Next commitment: {item.nextStepText}
+        </p>
+      ) : null}
+      {item.resolution ? (
+        <p className="mt-1 text-[13px] text-[var(--color-muted-foreground)] [overflow-wrap:anywhere]">
+          Won&apos;t do: {item.resolution.reason}
+        </p>
+      ) : null}
+      <ItemOutcomeDetails item={item} />
+    </div>
+  );
+}
+
+export function RiskRecordContent({
+  risk,
+}: {
+  readonly risk: WeeklyReportRisk;
+}) {
+  return (
+    <div className="min-w-0 pt-px">
+      <div className="text-[14.5px] leading-snug text-[var(--color-foreground)]">
+        {risk.problem}
+      </div>
+      {risk.impact || risk.mitigation ? (
+        <div className="mt-1.5 grid grid-cols-1 items-baseline gap-x-2.5 gap-y-1 sm:grid-cols-[84px_minmax(0,1fr)]">
+          {risk.impact ? (
+            <>
+              <span className="text-xs font-bold text-[var(--color-destructive)]">
+                Impact
+              </span>
+              <span className="text-[13px] leading-snug">{risk.impact}</span>
+            </>
+          ) : null}
+          {risk.mitigation ? (
+            <>
+              <span className="text-xs font-bold text-[var(--color-muted-foreground)]">
+                Mitigation
+              </span>
+              <span className="text-[13px] leading-snug text-[var(--color-starbucks-accent)]">
+                {risk.mitigation}
+              </span>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function DecisionRecordContent({
+  decision,
+}: {
+  readonly decision: WeeklyReportDecision;
+}) {
+  return (
+    <span className="pt-px text-[14.5px] leading-normal text-[var(--color-foreground)]">
+      {decision.text}
+    </span>
+  );
+}

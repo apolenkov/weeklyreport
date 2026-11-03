@@ -58,7 +58,7 @@ export function LeadPrimaryAction({
   if (action === "review" || action === "open") {
     return (
       <QueueLink
-        href={reportHref(reportId, lead.id)}
+        href={`${reportHref(reportId, lead.id)}${action === "review" ? "&scope=lead&review=1" : ""}`}
         label={action === "review" ? "Review" : "Open"}
         leadName={lead.name}
       />

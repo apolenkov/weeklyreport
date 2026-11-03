@@ -10,7 +10,7 @@ interface ViewModeToggleProps {
   readonly editHref: string;
   readonly slidesHref: string;
   readonly mode?: "overview" | "edit" | "slides";
-  // Viewer is read-only — pencil "Edit" is misleading; head keeps "Edit".
+  // Read-only report consumers must not promise content editing.
   readonly readOnly?: boolean;
   readonly desktopLabels?: boolean;
 }

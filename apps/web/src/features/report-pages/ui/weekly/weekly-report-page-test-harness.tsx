@@ -26,6 +26,7 @@ export type WeeklyReportPageOptions = Readonly<{
   readonly documentActionsLeading?: ReactNode;
   readonly contextControls?: ReactNode;
   readonly contextControlsLeading?: ReactNode;
+  readonly headerContextLabel?: ReactNode;
 }>;
 
 export type WeeklyReportPageRender = ReturnType<typeof render> & {
@@ -105,6 +106,7 @@ export function renderWeeklyReportPage(
       documentActionsLeading={options.documentActionsLeading}
       contextControls={options.contextControls}
       contextControlsLeading={options.contextControlsLeading}
+      headerContextLabel={options.headerContextLabel}
     />,
     { wrapper: providersFor(proxy, queryClient(), options.role ?? "head") },
   );

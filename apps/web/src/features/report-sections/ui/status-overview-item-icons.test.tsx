@@ -1,66 +1,19 @@
+// @vitest-environment jsdom
+// @vitest-environment jsdom
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { RecordCommentView } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import type { StatusOverviewItem } from "../model/status-overview";
+import {
+  COMMENT,
+  focusCard,
+  item,
+  nextItem,
+  previousItem,
+  projection,
+} from "./status-overview-item-icons.test-support";
 import { StatusOverviewItemPreview } from "./status-overview-item-preview";
-
-const item: StatusOverviewItem = {
-  key: "item-1",
-  recordId: "item-1",
-  source: "current",
-  editTarget: { recordId: "item-1", source: "current" },
-  stableId: "stable-1",
-  text: "Original text",
-  tag: "feature",
-  stageNames: ["Development"],
-  pausedReason: null,
-  resolution: null,
-  outcomeHistory: [],
-  comments: [],
-  canResolve: false,
-  canRestore: false,
-  workflowStatus: "in_progress",
-  continuity: "continued",
-};
-
-const nextItem: StatusOverviewItem = {
-  ...item,
-  source: "next",
-  workflowStatus: "planned",
-  editTarget: { recordId: "item-1", source: "next" },
-  continuity: null,
-};
-
-const projection: StatusOverviewItem = {
-  ...nextItem,
-  editTarget: { recordId: "item-1", source: "current", focusNextStep: true },
-};
-
-const previousItem: StatusOverviewItem = {
-  ...item,
-  source: "previous",
-  editTarget: null,
-  continuity: null,
-};
-
-const COMMENT: RecordCommentView = {
-  id: "33333333-3333-4333-8333-333333333333",
-  reviewerId: "22222222-2222-4222-8222-222222222222",
-  reviewerName: "Head Reviewer",
-  text: "Please split this item.",
-  createdAt: new Date("2026-07-01T10:00:00Z"),
-};
-
-function focusCard(): void {
-  const card = document.querySelector<HTMLElement>(
-    "[data-overview-item-preview]",
-  );
-  card?.focus();
-}
-
-describe("StatusOverviewItemPreview hover action icons", () => {
+describe("StatusOverviewItemPreview hover action icons — 1", () => {
   it("shows the week-move icon toward the other active week", () => {
     const current = render(
       <StatusOverviewItemPreview item={item} onMoveItem={vi.fn()} />,
@@ -82,7 +35,8 @@ describe("StatusOverviewItemPreview hover action icons", () => {
       }),
     ).toBeInTheDocument();
   });
-
+});
+describe("StatusOverviewItemPreview hover action icons — 2", () => {
   it("moves from the icon, the only week-move entry", async () => {
     const user = userEvent.setup();
     const onMoveItem = vi.fn();
@@ -98,7 +52,8 @@ describe("StatusOverviewItemPreview hover action icons", () => {
     );
     expect(screen.queryByRole("button", { name: /More actions/ })).toBeNull();
   });
-
+});
+describe("StatusOverviewItemPreview hover action icons — 3", () => {
   it("moves a Next item back to Current from the icon", async () => {
     const user = userEvent.setup();
     const onMoveItem = vi.fn();
@@ -117,7 +72,8 @@ describe("StatusOverviewItemPreview hover action icons", () => {
       "move:next:stable-1",
     );
   });
-
+});
+describe("StatusOverviewItemPreview hover action icons — 4", () => {
   it("withholds the week-move icon where the move is forbidden", () => {
     const done = render(
       <StatusOverviewItemPreview
@@ -155,7 +111,8 @@ describe("StatusOverviewItemPreview hover action icons", () => {
       screen.queryByRole("button", { name: "Comments on Original text" }),
     ).toBeNull();
   });
-
+});
+describe("StatusOverviewItemPreview hover action icons — 5", () => {
   it("opens the canonical item editor from the edit icon", async () => {
     const user = userEvent.setup();
     const onEditItem = vi.fn();
@@ -172,7 +129,8 @@ describe("StatusOverviewItemPreview hover action icons", () => {
     );
     expect(onEditItem).toHaveBeenLastCalledWith(item.editTarget);
   });
-
+});
+describe("StatusOverviewItemPreview hover action icons — 6", () => {
   it("gives the derived Next projection move and comment but no edit icon", () => {
     render(
       <StatusOverviewItemPreview
@@ -194,7 +152,8 @@ describe("StatusOverviewItemPreview hover action icons", () => {
       screen.getByRole("button", { name: "Comments on Original text" }),
     ).toBeInTheDocument();
   });
-
+});
+describe("StatusOverviewItemPreview hover action icons — 7", () => {
   it("focuses the record's comment flow from the comment icon", async () => {
     const user = userEvent.setup();
     render(
@@ -213,7 +172,8 @@ describe("StatusOverviewItemPreview hover action icons", () => {
       ).toHaveFocus(),
     );
   });
-
+});
+describe("StatusOverviewItemPreview hover action icons — 8", () => {
   it("focuses the record card from the comment icon while no comments exist", async () => {
     const user = userEvent.setup();
     render(<StatusOverviewItemPreview item={item} onMoveItem={vi.fn()} />);
@@ -228,7 +188,8 @@ describe("StatusOverviewItemPreview hover action icons", () => {
       ).toHaveFocus(),
     );
   });
-
+});
+describe("StatusOverviewItemPreview hover action icons — 9", () => {
   it("moves the focused Current card to Next with Alt+ArrowRight", async () => {
     const user = userEvent.setup();
     const onMoveItem = vi.fn();
@@ -242,7 +203,8 @@ describe("StatusOverviewItemPreview hover action icons", () => {
       "move:current:stable-1",
     );
   });
-
+});
+describe("StatusOverviewItemPreview hover action icons — 10", () => {
   it("moves the focused Next card to Current with Alt+ArrowLeft", async () => {
     const user = userEvent.setup();
     const onMoveItem = vi.fn();
@@ -258,7 +220,8 @@ describe("StatusOverviewItemPreview hover action icons", () => {
       "move:next:stable-1",
     );
   });
-
+});
+describe("StatusOverviewItemPreview hover action icons — 11", () => {
   it("does not move on a shortcut with no applicable direction", async () => {
     const user = userEvent.setup();
     const onMoveItem = vi.fn();
@@ -271,7 +234,8 @@ describe("StatusOverviewItemPreview hover action icons", () => {
     await user.keyboard("{ArrowRight}");
     expect(onMoveItem).not.toHaveBeenCalled();
   });
-
+});
+describe("StatusOverviewItemPreview hover action icons — 12", () => {
   it("does not move a done item or a Previous item from the keyboard", async () => {
     const user = userEvent.setup();
     const onMoveItem = vi.fn();
@@ -293,7 +257,8 @@ describe("StatusOverviewItemPreview hover action icons", () => {
     await user.keyboard("{Alt>}{ArrowRight}{/Alt}");
     expect(onMoveItem).not.toHaveBeenCalled();
   });
-
+});
+describe("StatusOverviewItemPreview hover action icons — 13", () => {
   it("does not move while typing inside the inline editor", async () => {
     const user = userEvent.setup();
     const onMoveItem = vi.fn();
