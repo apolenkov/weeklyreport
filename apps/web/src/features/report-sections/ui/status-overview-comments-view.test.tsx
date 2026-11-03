@@ -179,13 +179,17 @@ it("shows authors and timestamps in the supplied chronological order", () => {
     />,
   );
   const messages = screen.getAllByRole("listitem");
-  expect(within(messages[0]).getByText("Head")).toBeVisible();
-  expect(within(messages[1]).getByText("Lead")).toBeVisible();
-  expect(messages[0].querySelector("time")).toHaveAttribute(
+  const [firstMessage, secondMessage] = messages;
+  if (!firstMessage || !secondMessage) {
+    throw new Error("Expected at least two comments");
+  }
+  expect(within(firstMessage).getByText("Head")).toBeVisible();
+  expect(within(secondMessage).getByText("Lead")).toBeVisible();
+  expect(firstMessage.querySelector("time")).toHaveAttribute(
     "datetime",
     comment.createdAt.toISOString(),
   );
-  expect(messages[1].querySelector("time")).toHaveAttribute(
+  expect(secondMessage.querySelector("time")).toHaveAttribute(
     "datetime",
     reply.createdAt.toISOString(),
   );
