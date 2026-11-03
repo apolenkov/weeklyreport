@@ -78,14 +78,18 @@ async function assertReadOnly() {
   assert.equal(refsByRole(data, "textbox", /^Add a review comment/).length, 0);
 }
 
-await test("Head queue Review preserves Activity anchors and one section verdict", async () => {
+test("Head queue Review preserves Activity anchors and one section verdict", async () => {
   const fixture = await prepareHeadClarity();
   const session = headSession();
   await loginAsHead(session);
   const href = `/head/report/${fixture.reportId}?authorId=${fixture.authorId}&scope=lead&review=1`;
   const queue = await waitSnapshot(
     async (data) => {
-      for (const ref of refsByRole(data, "link", "Review")) {
+      for (const ref of refsByRole(
+        data,
+        "link",
+        /^Review .* report section$/,
+      )) {
         if ((await getAttr(ref, "href", session)) === href) return true;
       }
       return false;
@@ -93,7 +97,7 @@ await test("Head queue Review preserves Activity anchors and one section verdict
     "Expected the submitted Activity-only author's Review link",
     session,
   );
-  const candidates = refsByRole(queue, "link", "Review");
+  const candidates = refsByRole(queue, "link", /^Review .* report section$/);
   const links = await Promise.all(
     candidates.map(async (ref) => ({
       ref,
@@ -174,7 +178,7 @@ await test("Head queue Review preserves Activity anchors and one section verdict
   });
 });
 
-await test("Head Read history, Slides, draft opt-in and period changes follow URL intent", async () => {
+test("Head Read history, Slides, draft opt-in and period changes follow URL intent", async () => {
   const fixture = await prepareHeadClarity();
   const session = headSession();
   await loginAsHead(session);
@@ -184,9 +188,10 @@ await test("Head Read history, Slides, draft opt-in and period changes follow UR
   );
   await waitButton(`Approve ${fixture.authorName}`, { session });
   await findRole("button", "Read", "click", { session });
-  assert.equal(
-    new URL(await getUrl(session)).searchParams.has("review"),
-    false,
+  await waitSnapshot(
+    async () => !new URL(await getUrl(session)).searchParams.has("review"),
+    "Read removes review intent",
+    session,
   );
   await reload(session);
   await waitText("Portfolio report", session);
@@ -215,6 +220,12 @@ await test("Head Read history, Slides, draft opt-in and period changes follow UR
         session,
       ),
     ],
+    session,
+  );
+  await waitSnapshot(
+    async () =>
+      new URL(await getUrl(session)).searchParams.get("mode") === "slides",
+    "Slides navigation",
     session,
   );
   await waitText("Portfolio report", session);
@@ -264,7 +275,7 @@ for (const reportId of [
   LEAD_FORM_FIXTURE.previousReportId,
   LEAD_FORM_FIXTURE.oldestArchiveReportId,
 ]) {
-  await test(`Head frozen ${reportId} rejects Review without mutation controls`, async () => {
+  test(`Head frozen ${reportId} rejects Review without mutation controls`, async () => {
     const session = headSession();
     await loginAsHead(session);
     await open(`/head/report/${reportId}?review=1`, session);
