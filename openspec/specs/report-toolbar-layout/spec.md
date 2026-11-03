@@ -22,13 +22,14 @@ At desktop width, period/archive controls MUST remain the left cluster and
 Product/Leads scope, the Head fullscreen toggle in Slides mode, and view mode
 MUST remain the right cluster of the single report context toolbar. Head MUST
 NOT render a density control. The fullscreen toggle MUST be adjacent to the
-scope controls and MUST use the shared fullscreen affordance.
+scope controls and MUST use the shared fullscreen affordance. Head view-mode
+labels MUST be Report / Slides, not Edit / Slides.
 
 #### Scenario: Head opens Slides
 
 - **WHEN** the Head opens Slides mode
 - **THEN** the context toolbar contains period/archive controls, Product/Leads,
-  one fullscreen toggle, and the Edit/Slides view mode in one row
+  one fullscreen toggle, and the Report/Slides view mode in one row
 - **AND** no `Slide density` control is present
 - **AND** the active deck does not render a second fullscreen toggle
 
@@ -133,7 +134,7 @@ than lose meaningful names to truncation.
 
 ### Requirement: Document actions render on the page header line; the toolbar holds the context-control bar
 
-Report document actions MUST occupy the header action group and context controls one bordered toolbar row. Lead completion actions MUST render only in the header action group; there is no bottom rail or other second completion surface. Completion actions MUST use Retry-only autosave recovery, not a permanent Save/Add cluster. The context toolbar MUST NOT become a second document-action surface.
+Report document actions MUST occupy the header action group and context controls one bordered toolbar row. Lead completion actions MUST render only in the header action group; there is no bottom rail or other second completion surface. Completion actions MUST use Retry-only autosave recovery, not a permanent Save/Add cluster. The context toolbar MUST NOT become a second document-action surface. Head form view MUST be labeled Report, independently of its Read/Review interaction mode.
 
 #### Scenario: the lead surface splits across the header and the toolbar
 
@@ -157,7 +158,7 @@ Report document actions MUST occupy the header action group and context controls
 
 - **WHEN** a head opens review for an open period
 - **THEN** PDF export and Publish & lock occupy the header action group
-- **AND** period navigation, archived filter, Product/Leads scope, and Edit/Slides mode occupy the single context row
+- **AND** period navigation, archived filter, Product/Leads scope, and Report/Slides mode occupy the single context row
 
 #### Scenario: a published head period offers move-to-archive as a document action
 
