@@ -27,9 +27,10 @@ roles are already covered), `PublishLockButton` component in
 
 Period cards and period-detail views MUST render a "Reopen" action button
 on periods whose companion `periodStatus` is `published` when the viewer is a
-head or admin. The action
-MUST NOT appear on periods whose `periodStatus` is `open`, and MUST NOT appear
-for leads or viewers.
+head or admin and the report is not archived. The action
+MUST NOT appear on periods whose `periodStatus` is `open`, MUST NOT appear on an
+archived report (the server refuses to reopen it; Restore is the way back), and
+MUST NOT appear for leads or viewers.
 
 #### Scenario: Head views a published period
 
@@ -56,6 +57,12 @@ for leads or viewers.
 - **WHEN** a lead opens the period list and looks at a period whose
   `periodStatus` is `published`
 - **THEN** no "Reopen" button is rendered (lead is not authorized to reopen)
+
+#### Scenario: Head views an archived published report
+
+- **WHEN** a head opens a published report that is archived
+- **THEN** no "Reopen" button is rendered
+- **AND** the "Restore" action remains available
 
 ### Requirement: Reopen Action Requires Confirmation
 
