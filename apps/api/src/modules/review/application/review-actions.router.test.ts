@@ -118,6 +118,7 @@ function rosterCaller(
   const listAcknowledgements = vi.fn(() => Promise.resolve(rows));
   const getViewerCanReview = vi.fn(() => Promise.resolve(false));
   const repo: ReviewActionsRepository = {
+    insertLeadItemComment: unused,
     acknowledge: unused,
     listAcknowledgements,
     getRecordAnchorGroup: unused,

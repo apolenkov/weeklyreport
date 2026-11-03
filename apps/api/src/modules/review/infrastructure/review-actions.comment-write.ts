@@ -3,6 +3,7 @@ import type { RecordCommentView } from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import { isForeignKeyViolation } from "../../../lib/prisma-foreign-key-violation.js";
+import { lockCurrentEditableReport } from "../../../lib/report-lifecycle.js";
 import { ReviewNotFoundError } from "../application/review.service.js";
 import type {
   RecordAnchor,
@@ -182,6 +183,51 @@ export function insertCoordinatedComment(
     const groupId = section.author.reportingGroupId;
     if (!groupId) throw new ReviewNotFoundError("Review group not found.");
     await assertReviewEntitlement(tx, actor, groupId);
+    const currentAnchorId = await loadCurrentAnchorId(tx, lineage);
+    return createComment(tx, lineage, currentAnchorId, {
+      reviewerId: actor.userId,
+      text,
+    });
+  });
+}
+
+/** Lead replies share lineage/insert mechanics, never reviewer entitlement. */
+export function insertCoordinatedLeadItemComment(
+  prisma: PrismaService,
+  actor: ReviewWriteActor,
+  itemId: string,
+  text: string,
+): Promise<RecordCommentView> {
+  return prisma.$transaction(async (tx) => {
+    const lineage = await loadAnchorLineage(tx, { itemId });
+    try {
+      await lockReviewUsers(tx, [actor.userId, lineage.authorId]);
+    } catch (error) {
+      if (error instanceof ReviewNotFoundError) throwAnchorNotFound();
+      throw error;
+    }
+    // Lifecycle-only eligibility; do not imply globally latest-period selection.
+    const gate = await lockCurrentEditableReport(tx, {
+      reportId: lineage.reportId,
+    });
+    if (gate.kind !== "editable") throwAnchorNotFound();
+    const section = await tx.reportSection.findFirst({
+      where: { id: lineage.reportSectionId, reportId: lineage.reportId },
+      select: { authorId: true },
+    });
+    if (
+      section?.authorId !== lineage.authorId ||
+      section.authorId !== actor.userId
+    ) {
+      throwAnchorNotFound();
+    }
+    const user = await tx.user.findUnique({
+      where: { id: actor.userId },
+      select: { isActive: true, role: true },
+    });
+    if (!user?.isActive || user.role !== "lead" || actor.role !== "lead") {
+      throwAnchorNotFound();
+    }
     const currentAnchorId = await loadCurrentAnchorId(tx, lineage);
     return createComment(tx, lineage, currentAnchorId, {
       reviewerId: actor.userId,

@@ -1,4 +1,5 @@
 import {
+  type LeadItemCommentInput,
   type PeriodStatus,
   type RecordCommentView,
   recordCommentViewSchema,
@@ -54,6 +55,11 @@ export interface PostVerdictParams {
 }
 
 export interface ReviewActionsRepository {
+  insertLeadItemComment(
+    actor: ReviewWriteActor,
+    itemId: string,
+    text: string,
+  ): Promise<RecordCommentView>;
   acknowledge(
     actor: ReviewWriteActor,
     reportId: string,
@@ -96,6 +102,21 @@ function toAnchor(input: ReviewCommentInput): RecordAnchor {
 // and reviewer designation on the write surface.
 export class ReviewActionsService {
   constructor(private readonly repository: ReviewActionsRepository) {}
+
+  async commentOwnItem(
+    session: ReviewSession,
+    input: LeadItemCommentInput,
+  ): Promise<RecordCommentView> {
+    if (session.role !== "lead") {
+      throw new ReviewNotFoundError("Record not found.");
+    }
+    const comment = await this.repository.insertLeadItemComment(
+      session,
+      input.itemId,
+      input.text,
+    );
+    return recordCommentViewSchema.parse(comment);
+  }
 
   async acknowledge(
     session: ReviewSession,

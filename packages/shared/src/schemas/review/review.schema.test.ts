@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  leadItemCommentInputSchema,
   recordCommentViewSchema,
   REVIEW_COMMENT_MAX_LENGTH,
   reviewVerdictInputSchema,
@@ -11,6 +12,45 @@ const base = {
   reportSectionId: "6f1b0c5e-2f0a-4b53-9d43-0c2f4a1b7e11",
   version: 2,
 };
+
+describe("leadItemCommentInputSchema", () => {
+  const itemId = "6f1b0c5e-2f0a-4b53-9d43-0c2f4a1b7e11";
+  it("accepts only an item and safe comment text", () => {
+    expect(
+      leadItemCommentInputSchema.safeParse({ itemId, text: "Hello" }).success,
+    ).toBe(true);
+    for (const extra of [
+      "authorId",
+      "riskId",
+      "decisionId",
+      "reportId",
+      "parentId",
+      "groupId",
+      "other",
+    ]) {
+      expect(
+        leadItemCommentInputSchema.safeParse({
+          itemId,
+          text: "Hello",
+          [extra]: itemId,
+        }).success,
+      ).toBe(false);
+    }
+    for (const text of [
+      "",
+      " ".repeat(3),
+      "x".repeat(REVIEW_COMMENT_MAX_LENGTH + 1),
+    ]) {
+      expect(
+        leadItemCommentInputSchema.safeParse({ itemId, text }).success,
+      ).toBe(false);
+    }
+    expect(
+      leadItemCommentInputSchema.safeParse({ itemId: "invalid", text: "Hello" })
+        .success,
+    ).toBe(false);
+  });
+});
 
 describe("reviewVerdictInputSchema comment rule", () => {
   it("requires a visible comment for changes_requested", () => {

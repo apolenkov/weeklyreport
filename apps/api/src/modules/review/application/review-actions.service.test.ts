@@ -65,6 +65,7 @@ function buildRepo(overrides: RepoOverrides = {}) {
   );
   const deleteComment = vi.fn((_commentId: string) => Promise.resolve());
   const repo: ReviewActionsRepository = {
+    insertLeadItemComment: vi.fn(),
     acknowledge,
     listAcknowledgements: vi.fn(() => Promise.resolve([])),
     getRecordAnchorGroup: vi.fn(() =>

@@ -9,6 +9,20 @@ import type { EnvConfig } from "../config/env.schema.js";
 
 const SLOW_QUERY_MS = 100;
 
+function prismaEventDiagnostic(
+  level: "warn" | "error",
+  event: Prisma.LogEvent,
+): string {
+  // LogEvent has no structured error code. Neither message nor arbitrary
+  // target strings are safe: retain only recognized engine classifications.
+  const target =
+    event.target === "ClientEngine" || event.target === "RemoteExecutor"
+      ? event.target
+      : "unknown";
+  const phase = `prisma.${level}`;
+  return `prisma: ${JSON.stringify({ phase, target })}`;
+}
+
 // All three DB_POOL_* values are required by env.schema so the resolved pool
 // configuration is explicit in every environment.
 
@@ -86,11 +100,11 @@ export class PrismaService
     });
 
     this.$on("warn", (e) => {
-      this.logger.warn(`prisma: ${e.message}`);
+      this.logger.warn(prismaEventDiagnostic("warn", e));
     });
 
     this.$on("error", (e) => {
-      this.logger.error(`prisma: ${e.message}`);
+      this.logger.error(prismaEventDiagnostic("error", e));
     });
 
     await this.$connect();

@@ -16,7 +16,10 @@ import type {
   ReviewWriteActor,
   VerdictContext,
 } from "../application/review-actions.service.js";
-import { insertCoordinatedComment } from "./review-actions.comment-write.js";
+import {
+  insertCoordinatedComment,
+  insertCoordinatedLeadItemComment,
+} from "./review-actions.comment-write.js";
 import { writeVerdict } from "./review-actions.verdict-write.js";
 import {
   assertAcknowledgementAccess,
@@ -173,6 +176,14 @@ export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
     text: string,
   ): Promise<RecordCommentView> {
     return insertCoordinatedComment(this.prisma, actor, anchor, text);
+  }
+
+  insertLeadItemComment(
+    actor: ReviewWriteActor,
+    itemId: string,
+    text: string,
+  ): Promise<RecordCommentView> {
+    return insertCoordinatedLeadItemComment(this.prisma, actor, itemId, text);
   }
 
   async getCommentContext(
