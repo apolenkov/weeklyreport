@@ -12,10 +12,10 @@ import type {
 } from "../../../review";
 import {
   DraftHiddenSignal,
+  RecordCommentDraftProvider,
   ReviewModeToggle,
   SubmissionFilterToggle,
 } from "../../../review";
-import { RecordCommentDraftProvider } from "../../../review/ui/comments/record-comment-drafts";
 import { ReportEmptyState } from "./weekly-report-empty-state";
 import {
   AcknowledgeSurface,
