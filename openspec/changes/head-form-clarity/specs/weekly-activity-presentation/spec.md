@@ -9,7 +9,7 @@ The `/head/report/[reportId]` form MUST offer expandable Activity details with t
 - **WHEN** Head expands an Activity with Current and Next items, a risk and a decision
 - **THEN** all four typed groups show their complete authorized fields rather than text-only summaries
 - **AND** item outcomes and outcome history remain readable where present, without authoring controls
-- **AND** the Activity header retains effective weekly title, description, note, derived health and linked Product names
+- **AND** the Activity header retains effective weekly title, weekly note (the activity description), derived health and linked Product names
 
 #### Scenario: One Activity links to two Products
 

@@ -19,6 +19,7 @@ import "./weekly-report-page.author.test-support";
 import "@testing-library/jest-dom/vitest";
 
 import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -236,4 +237,54 @@ describe("WeeklyReportPage author highlighting — 3", () => {
       expect(alphaAccordion).toHaveAttribute("aria-expanded", "false");
     });
   });
+});
+
+it("roster navigation reaches an Activity-only author after a Product overview selection", async () => {
+  vi.stubGlobal("matchMedia", vi.fn().mockReturnValue({ matches: false }));
+  window.HTMLElement.prototype.scrollIntoView = vi.fn();
+  const initial = makeWeeklyReportData("open");
+  const firstSection = initial.leadSections[0];
+  if (!firstSection) throw new Error("Missing fixture section");
+  const data = makeWeeklyReportData("open", {
+    leadSections: initial.leadSections
+      .map((section) => ({ ...section, canReview: true }))
+      .concat([
+        {
+          ...firstSection,
+          reportSectionId: "22222222-2222-4222-8222-bbbbbbbbbbb1",
+          authorId: "11111111-1111-4111-8111-bbbbbbbbbbbb",
+          authorName: "Bob",
+          status: "submitted",
+          canReview: true,
+          projects: [],
+          activities: [
+            {
+              activityId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+              activityName: "Duty",
+              status: "green",
+              jiraAccounts: [],
+              derivedStatus: null,
+              alarmFloor: null,
+              linkedProducts: [],
+            },
+          ],
+          items: [],
+          risks: [],
+          decisions: [],
+        },
+      ]),
+  });
+  const { rerender } = renderWeeklyReportPage(data);
+  await userEvent.click(await screen.findByTitle("Open Product Alpha details"));
+  rerender(
+    <WeeklyReportPage
+      authorId="11111111-1111-4111-8111-bbbbbbbbbbbb"
+      scope="lead"
+      reviewIntent
+    />,
+  );
+  await waitFor(
+    () => expect(screen.getByRole("region", { name: "Bob" })).toHaveFocus(),
+    { timeout: 1000 },
+  );
 });

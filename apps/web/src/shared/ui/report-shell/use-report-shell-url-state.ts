@@ -27,6 +27,7 @@ interface PendingNavigation {
   readonly observedQuery: string;
   readonly inFlightQuery: string;
   readonly desiredQuery: string;
+  readonly desiredMethod: "push" | "replace";
 }
 
 function buildReportQuery(
@@ -73,9 +74,12 @@ function usePendingNavigation(
           ...pending,
           observedQuery,
           inFlightQuery: pending.desiredQuery,
+          desiredMethod: "replace",
         });
         const suffix = pending.desiredQuery ? `?${pending.desiredQuery}` : "";
-        router.replace(`${pathname}${suffix}`, { scroll: false });
+        router[pending.desiredMethod](`${pathname}${suffix}`, {
+          scroll: false,
+        });
       }
     }
   }, [pathname, observedQuery, router, publishPending]);
@@ -118,7 +122,10 @@ function useReportQueryNavigation(stripParams: readonly string[]) {
   );
 
   const updateQuery = useCallback(
-    (overrides: Record<string, string | null>) => {
+    (
+      overrides: Record<string, string | null>,
+      method: "push" | "replace" = "replace",
+    ) => {
       const pending = pendingNavigationRef.current;
       if (
         pending?.pathname === pathname &&
@@ -130,7 +137,11 @@ function useReportQueryNavigation(stripParams: readonly string[]) {
           stripParams,
           overrides,
         );
-        publishPending({ ...pending, desiredQuery });
+        publishPending({
+          ...pending,
+          desiredQuery,
+          desiredMethod: method === "push" ? "push" : pending.desiredMethod,
+        });
         return;
       }
 
@@ -147,11 +158,12 @@ function useReportQueryNavigation(stripParams: readonly string[]) {
               observedQuery,
               inFlightQuery: desiredQuery,
               desiredQuery,
+              desiredMethod: "replace",
             },
       );
       if (desiredQuery !== observedQuery) {
         const suffix = desiredQuery ? `?${desiredQuery}` : "";
-        router.replace(`${pathname}${suffix}`, { scroll: false });
+        router[method](`${pathname}${suffix}`, { scroll: false });
       }
     },
     [
@@ -194,7 +206,7 @@ export function useReportShellUrlState({
 
   const reviewIntent = getScalarSearchParam(controlParams, "review") === "1";
   const setReviewIntent = useCallback(
-    (value: boolean) => updateQuery({ review: value ? "1" : null }),
+    (value: boolean) => updateQuery({ review: value ? "1" : null }, "push"),
     [updateQuery],
   );
   const navigateAuthor = useCallback(

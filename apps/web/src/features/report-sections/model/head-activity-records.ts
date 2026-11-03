@@ -26,7 +26,6 @@ export interface HeadActivityRecords {
   readonly authorName: string;
   readonly canReview: boolean;
   readonly activityName: string;
-  readonly description: string | null;
   readonly tone: CanonicalStatus | null;
   readonly note: string | null;
   readonly linkedProducts: readonly string[];
@@ -53,7 +52,6 @@ function activityRecords(
     activityName: activity
       ? activityDisplayTitle(activity)
       : "Activity details unavailable",
-    description: null,
     tone: activity
       ? trafficLightToCanonical(activity.derivedStatus ?? activity.status)
       : null,

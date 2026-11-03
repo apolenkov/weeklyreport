@@ -94,3 +94,7 @@ No database migration, destructive operation, feature flag or API rollout is nee
 ## Acceptance
 
 Each [delta requirement](specs/) maps to a file-and-test task in [tasks.md](tasks.md). Planning acceptance is strict OpenSpec validation, changed-directory Prettier checking and whitespace checking only. Future implementation requires all six repository gates plus browser evidence at 1280 and 375 CSS pixels, including Activity-only review, keyboard focus, correct mutation anchors, draft visibility, unavailable intent, and unchanged published/archived read behavior. No runtime/browser acceptance is claimed by this planning delivery. There are no unresolved UX decisions.
+
+### Activity description source
+
+ActivityStatus.note is the sole weekly description; the catalogue and section read model do not carry a separate description. The authorized live mapper and frozen snapshot retain that note. Head displays it once as the weekly note and does not enrich frozen reports from a live catalogue.

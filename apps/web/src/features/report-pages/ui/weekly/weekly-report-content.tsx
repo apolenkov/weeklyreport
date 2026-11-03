@@ -54,6 +54,7 @@ export interface ReportContentProps {
   readonly focusedProductId: string | undefined;
   readonly scrollTargetProductId: string | undefined;
   readonly focusedLeadId: string | undefined;
+  readonly scrollTargetLeadId?: string | undefined;
   readonly overviewNavigationEpochs: ReadonlyMap<string, number>;
   readonly onNavigateOverview: (targetId: string) => void;
 }
@@ -154,6 +155,7 @@ type SectionsSurfaceKeys =
   | "focusedProductId"
   | "scrollTargetProductId"
   | "focusedLeadId"
+  | "scrollTargetLeadId"
   | "overviewNavigationEpochs";
 
 function ReportSectionsSurface({
@@ -166,6 +168,7 @@ function ReportSectionsSurface({
   focusedProductId,
   scrollTargetProductId,
   focusedLeadId,
+  scrollTargetLeadId,
   overviewNavigationEpochs,
   activitySections,
   onNavigateAuthor,
@@ -221,6 +224,7 @@ function ReportSectionsSurface({
         focusedProductId={focusedProductId}
         scrollTargetProductId={scrollTargetProductId}
         focusedLeadId={focusedLeadId}
+        scrollTargetLeadId={scrollTargetLeadId}
         overviewNavigationEpochs={overviewNavigationEpochs}
         review={review}
         reviewModel={reviewModel}

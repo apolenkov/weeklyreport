@@ -143,19 +143,24 @@ describe("WeeklyReportPage author highlighting — 1", () => {
       "aria-expanded",
       "true",
     );
-    await waitFor(() => {
-      const receivers = scrollIntoView.mock.instances.map(
-        (instance) => (instance as HTMLElement).id,
-      );
-      expect(receivers).toContain(bobProductId);
-      expect(receivers).not.toContain(
-        `report-lead-${AUTHOR_ID_A}-product-${PRODUCT_ID_A}`,
-      );
-      expect(receivers).not.toContain(
-        `report-lead-${AUTHOR_ID_B}-product-${PRODUCT_ID_A}`,
-      );
-    });
-    expect(document.getElementById(`report-lead-${AUTHOR_ID_B}`)).toHaveFocus();
+    await waitFor(
+      () => {
+        const receivers = scrollIntoView.mock.instances.map(
+          (instance) => (instance as HTMLElement).id,
+        );
+        expect(receivers).toEqual([bobProductId]);
+        expect(receivers).not.toContain(
+          `report-lead-${AUTHOR_ID_A}-product-${PRODUCT_ID_A}`,
+        );
+        expect(receivers).not.toContain(
+          `report-lead-${AUTHOR_ID_B}-product-${PRODUCT_ID_A}`,
+        );
+      },
+      { timeout: 1000 },
+    );
+    expect(
+      document.getElementById(`report-lead-${AUTHOR_ID_B}`),
+    ).not.toHaveFocus();
   });
 });
 describe("WeeklyReportPage author highlighting — 2", () => {
