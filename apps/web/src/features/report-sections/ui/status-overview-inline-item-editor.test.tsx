@@ -43,6 +43,7 @@ describe("StatusOverviewInlineItemEditor", () => {
     const props = setup();
     render(<StatusOverviewInlineItemEditor {...props} />);
     await user.type(screen.getByLabelText("Description"), "Result");
+    await user.click(screen.getByRole("button", { name: "Details" }));
     await user.selectOptions(screen.getByLabelText("Progress"), "done");
     await user.click(screen.getByRole("button", { name: "Save" }));
     expect(props.onSave).not.toHaveBeenCalled();
@@ -123,6 +124,48 @@ describe("StatusOverviewInlineItemEditor", () => {
     ).toBeVisible();
     expect(screen.getByLabelText("Description")).toHaveValue("Draft");
   });
+  it("reveals and focuses a hidden invalid next step without losing input", async () => {
+    const user = userEvent.setup();
+    const activities = [{ id: "a", name: "Ops" }];
+    const draftStore = createItemEditDraftStore({
+      item: null,
+      products: [],
+      activities,
+      week: "next",
+      defaultActivityId: "a",
+    });
+    const onSave = vi.fn();
+    render(
+      <StatusOverviewInlineItemEditor
+        target={{
+          kind: "item",
+          parent: { kind: "activity", id: "a", name: "Ops" },
+          week: "next",
+        }}
+        products={[]}
+        activities={activities}
+        stagesForProduct={stages}
+        draftStore={draftStore}
+        currentUserName="Lead"
+        onSave={onSave}
+        onSaveAndAddAnother={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+    await user.type(screen.getByLabelText("Description"), "Keep this draft");
+    await user.click(screen.getByRole("button", { name: "Details" }));
+    await user.type(screen.getByLabelText("Next step"), "Invalid next step");
+    await user.click(screen.getByRole("button", { name: "Details" }));
+    expect(screen.queryByLabelText("Next step")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    expect(onSave).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(/Next week item cannot have a next step/),
+    ).toBeVisible();
+    expect(screen.getByLabelText("Next step")).toHaveValue("Invalid next step");
+    expect(screen.getByLabelText("Next step")).toHaveFocus();
+    expect(screen.getByLabelText("Description")).toHaveValue("Keep this draft");
+  });
   it("validates next week next step and supports activity keyboard save", async () => {
     const user = userEvent.setup();
     const onSaveAndAddAnother = vi.fn();
@@ -152,6 +195,7 @@ describe("StatusOverviewInlineItemEditor", () => {
         onCancel={vi.fn()}
       />,
     );
+    await user.click(screen.getByRole("button", { name: "Details" }));
     expect(screen.getByLabelText("Progress")).toHaveValue("planned");
     await user.type(screen.getByLabelText("Description"), "Activity");
     await user.type(screen.getByLabelText("Next step"), "Illegal plan");
