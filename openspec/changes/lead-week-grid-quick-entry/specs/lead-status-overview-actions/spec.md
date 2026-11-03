@@ -82,3 +82,26 @@ Overview MUST offer contextual inline creation in editable Current and Next unit
 
 - **WHEN** a unit or section is foreign, historical, submitted, locked or otherwise ineligible
 - **THEN** it offers no creation or edit mutation controls
+
+### Requirement: Owned product stages are directly selectable in context
+
+An eligible Lead MUST be able to see and select their product's currently assigned SDLC stages directly in the item creation context and on an editable item, without opening the full details dialog. Selection MUST remain within the author-owned stages and retain existing minimum-stage and lifecycle validation.
+
+#### Scenario: Choose an available stage while creating an item
+
+- **GIVEN** a product has multiple stages currently assigned to the Lead
+- **WHEN** the Lead begins creating an item for that product and week
+- **THEN** available stages are presented as directly selectable labelled controls
+- **AND** choosing one associates that stage with the intended item without opening a separate details editor
+
+#### Scenario: A sole owned stage is unambiguous
+
+- **GIVEN** exactly one eligible stage is assigned to the Lead for the product
+- **WHEN** a new item is started in that context
+- **THEN** the stage is applied by the established default and remains visible
+
+#### Scenario: A selected stage becomes unavailable
+
+- **WHEN** a previously selected stage is no longer eligible before saving
+- **THEN** the selection and user input remain visible with an explanation and an explicit way to remove the stale selection
+- **AND** the write is blocked until the choice is valid

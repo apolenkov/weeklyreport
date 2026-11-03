@@ -2,7 +2,7 @@
 
 ## Intent and decisions
 
-A Lead works within an existing Product or Activity and a three-week report. Keep the established paper visual system and timeline. Place one quiet add action per editable unit in each of Current and Next, including an empty unit. The chosen lane fixes the week and the unit fixes its parent. Input begins inline; the pencil continues to open the canonical detailed editor. The separate global toolbar creation flows remain available.
+A Lead works within an existing Product or Activity and a three-week report. Keep the established paper visual system and timeline. Place one quiet add action per editable unit in each of Current and Next, including an empty unit. The chosen lane fixes the week and the unit fixes its parent. Input begins inline; the pencil continues to open the canonical detailed editor. Display the Lead’s eligible product stages as directly selectable labels in the item context; apply a sole eligible stage by the existing default, and keep stale selections visible until the user explicitly resolves them. Selecting a stage for a report item does not alter product-stage assignments or grant administrative rights. The separate global toolbar creation flows remain available.
 
 Provide similarly compact inline risk and decision entry in the relevant unit context. Risks and decisions belong to the report section and parent rather than to an invented weekly item lane. Present the actual required fields before submission: risk, impact, mitigation and severity; decision, impact and server-derived/author-derived owner. Product stage choice follows owned eligible stages; Activity has no Product stages. Invalid or incomplete input stays in the editor and is not represented as saved.
 
