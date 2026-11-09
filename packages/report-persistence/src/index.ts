@@ -6,7 +6,9 @@ export {
   buildAssembledReportFromPrismaRow,
   computePortfolioOverviewFromReadSections,
   reportFullIncludeForSnapshot,
+  type SectionRecordOmissions,
   toPublishedSnapshotJson,
+  toSectionRecordOmissions,
 } from "./published-report-snapshot.js";
 export {
   parsePublishedSnapshot,

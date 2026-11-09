@@ -16,6 +16,7 @@ import {
   buildAssembledReportFromPrismaRow,
   reportFullIncludeForSnapshot,
   toPublishedSnapshotJson,
+  toSectionRecordOmissions,
 } from "../../report-sections/index.js";
 import { freezePublishedSnapshot } from "../../search/index.js";
 import {
@@ -136,6 +137,7 @@ export class PeriodPrismaRepository implements PeriodRepository {
               publishedById: userId,
               publishedBy: publisher,
             }),
+            toSectionRecordOmissions(candidate),
           )
         : {};
 

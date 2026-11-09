@@ -4,6 +4,7 @@ import {
   parsePublishedSnapshot,
   reportFullIncludeForSnapshot,
   toPublishedSnapshotJson,
+  toSectionRecordOmissions,
 } from "@weeklyreport/report-persistence";
 import { buildPublishedProjections } from "@weeklyreport/shared";
 
@@ -75,7 +76,10 @@ export async function finalizePublishedSnapshots(
         include: reportFullIncludeForSnapshot,
       });
       const snapshot = buildAssembledReportFromPrismaRow(report);
-      const snapshotJson = toPublishedSnapshotJson(snapshot);
+      const snapshotJson = toPublishedSnapshotJson(
+        snapshot,
+        toSectionRecordOmissions(report),
+      );
       await tx.report.update({
         where: { id },
         data: { publishedSnapshot: snapshotJson },

@@ -31,5 +31,6 @@ export {
   reportSectionFullInclude,
   requirePublishedSnapshot,
   toPublishedSnapshotJson,
+  toSectionRecordOmissions,
 } from "@weeklyreport/report-persistence";
 export { buildEscalationsFromReadSections } from "@weeklyreport/shared";

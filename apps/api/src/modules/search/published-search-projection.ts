@@ -9,6 +9,7 @@ import {
   reportFullIncludeForSnapshot,
   requirePublishedSnapshot,
   toPublishedSnapshotJson,
+  toSectionRecordOmissions,
 } from "../report-sections/index.js";
 
 interface ReplacePublishedProjectionInput {
@@ -72,7 +73,12 @@ export async function freezePublishedSnapshot(
   const snapshot = buildAssembledReportFromPrismaRow(row);
   await tx.report.update({
     where: { id: reportId },
-    data: { publishedSnapshot: toPublishedSnapshotJson(snapshot) },
+    data: {
+      publishedSnapshot: toPublishedSnapshotJson(
+        snapshot,
+        toSectionRecordOmissions(row),
+      ),
+    },
   });
   await replacePublishedProjections(tx, { reportId, snapshot });
   return snapshot;

@@ -8,9 +8,11 @@ import {
   type PublishedReportSectionReadModel,
   publishedReportSectionReadModelSchema,
   publishedReportSnapshotSchema,
+  type RecordOmission,
   type ReportSectionReadModel,
 } from "@weeklyreport/shared";
 
+import { toRecordOmission } from "./mappers/report-sections.record-omission.js";
 import { publishedSnapshotFailure } from "./published-snapshot.js";
 import { reportSectionFullInclude } from "./report-sections.include.js";
 import { mapPrismaToReportSection } from "./report-sections.mappers.js";
@@ -100,10 +102,46 @@ export function buildAssembledReportFromPrismaRow(
   });
 }
 
+/** Omission buckets of every section of one report, keyed by section id. */
+export type SectionRecordOmissions = ReadonlyMap<string, RecordOmission>;
+
+/**
+ * Counts what each section's complete projection leaves out. Call it with the
+ * same row passed to `buildAssembledReportFromPrismaRow`, so the frozen
+ * content and its omission counts describe one database read.
+ */
+export function toSectionRecordOmissions(
+  row: SnapshotReportRow,
+): SectionRecordOmissions {
+  return new Map(
+    row.sections.map((section) => [section.id, toRecordOmission(section)]),
+  );
+}
+
+/**
+ * Serializes the immutable publication payload. A freeze passes the omission
+ * buckets of its raw graph; without them the snapshot reads as "omissions
+ * unknown", never as "nothing omitted". The assembled report itself stays
+ * free of buckets because it is also a client-facing read model.
+ */
 export function toPublishedSnapshotJson(
   report: AssembledReport,
+  omissions?: SectionRecordOmissions,
 ): Prisma.InputJsonValue {
-  const parsed = publishedReportSnapshotSchema.parse(report);
+  const sections =
+    omissions === undefined
+      ? report.sections
+      : report.sections.map((section) => {
+          const recordOmission = omissions.get(section.reportSectionId);
+          if (recordOmission === undefined) {
+            throw publishedSnapshotFailure(
+              report.reportId,
+              `section ${section.reportSectionId} has no omission count.`,
+            );
+          }
+          return { ...section, recordOmission };
+        });
+  const parsed = publishedReportSnapshotSchema.parse({ ...report, sections });
   return JSON.parse(JSON.stringify(parsed)) as Prisma.InputJsonValue;
 }
 

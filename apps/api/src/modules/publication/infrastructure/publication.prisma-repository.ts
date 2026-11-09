@@ -13,6 +13,7 @@ import {
   buildAssembledReportFromPrismaRow,
   reportFullIncludeForSnapshot,
   toPublishedSnapshotJson,
+  toSectionRecordOmissions,
 } from "../../report-sections/index.js";
 import { freezePublishedSnapshot } from "../../search/index.js";
 import type {
@@ -107,7 +108,10 @@ export class PublicationPrismaRepository implements PublicationRepository {
           },
           data: {
             ...this.publishLifecycle(report),
-            publishedSnapshot: toPublishedSnapshotJson(candidate),
+            publishedSnapshot: toPublishedSnapshotJson(
+              candidate,
+              toSectionRecordOmissions(currentRow),
+            ),
           },
         });
 
