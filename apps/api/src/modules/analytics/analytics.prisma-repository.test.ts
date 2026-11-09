@@ -1,4 +1,8 @@
-import type { TrafficLightCell, UserSession } from "@weeklyreport/shared";
+import {
+  type TrafficLightCell,
+  UNCOUNTED_RECORD_OMISSIONS,
+  type UserSession,
+} from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
@@ -33,6 +37,13 @@ const emptyViewer: UserSession = {
   viewerGroupAccess: [],
 };
 
+// Period metadata as published; omission totals are not counted yet.
+const PERIOD = {
+  periodStart: "2026-04-15",
+  periodEnd: "2026-04-21",
+  omissions: UNCOUNTED_RECORD_OMISSIONS,
+};
+const DRIFTED_PERIOD = { ...PERIOD, periodStart: "2026-04-01" };
 const HISTORY_INPUT = { periodFrom: "2026-04-01", periodTo: "2026-04-30" };
 
 interface SnapshotSectionInput {
@@ -366,8 +377,7 @@ describe("AnalyticsPrismaRepository lead velocity", () => {
       repo.leadVelocity(HISTORY_INPUT, adminSession),
     ).resolves.toEqual([
       {
-        periodStart: "2026-04-15",
-        periodEnd: "2026-04-21",
+        ...PERIOD,
         leads: [
           {
             leadId: LEAD_A,
@@ -414,7 +424,7 @@ describe("AnalyticsPrismaRepository authoritative publication", () => {
       const velocity = await repo.leadVelocity(HISTORY_INPUT, adminSession);
 
       expect.soft(history).toEqual({
-        periods: [{ periodStart: "2026-04-15", periodEnd: "2026-04-21" }],
+        periods: [PERIOD],
         rows: [
           { projectId: PROJECT_A, projectName: "Latest", statuses: ["red"] },
         ],
@@ -426,8 +436,7 @@ describe("AnalyticsPrismaRepository authoritative publication", () => {
       });
       expect(velocity).toEqual([
         {
-          periodStart: "2026-04-15",
-          periodEnd: "2026-04-21",
+          ...PERIOD,
           leads: [{ leadId: LEAD_B, leadName: "Lead B", submittedSections: 1 }],
         },
       ]);
@@ -471,7 +480,7 @@ describe("AnalyticsPrismaRepository authoritative publication", () => {
     await expect(
       repo.trafficLightHistory(HISTORY_INPUT, adminSession),
     ).resolves.toEqual({
-      periods: [{ periodStart: "2026-04-15", periodEnd: "2026-04-21" }],
+      periods: [PERIOD],
       rows: [
         { projectId: PROJECT_B, projectName: "Project B", statuses: ["red"] },
       ],
@@ -543,7 +552,7 @@ describe("AnalyticsPrismaRepository authoritative publication", () => {
     await expect(
       repo.trafficLightHistory({ ...HISTORY_INPUT, leadId: LEAD_A }, headA),
     ).resolves.toEqual({
-      periods: [{ periodStart: "2026-04-15", periodEnd: "2026-04-21" }],
+      periods: [PERIOD],
       rows: [],
     });
   });
@@ -581,9 +590,7 @@ describe("AnalyticsPrismaRepository frozen period metadata", () => {
       );
       const submissions = await repo.leadVelocity(HISTORY_INPUT, adminSession);
       const comparison = await comparisonFor(rows, [], "2026-04-23");
-      expect(history.periods).toEqual([
-        { periodStart: "2026-04-01", periodEnd: "2026-04-21" },
-      ]);
+      expect(history.periods).toEqual([DRIFTED_PERIOD]);
       expect(history.rows[0]?.statuses).toEqual(["red"]);
       expect(submissions[0]).toMatchObject({
         periodStart: "2026-04-01",
@@ -591,7 +598,7 @@ describe("AnalyticsPrismaRepository frozen period metadata", () => {
         leads: [{ leadId: LEAD_B }],
       });
       expect(comparison).toMatchObject({
-        periodA: { periodStart: "2026-04-01", periodEnd: "2026-04-21" },
+        periodA: DRIFTED_PERIOD,
         periodB: null,
         rows: [{ statusA: "red", statusB: null }],
       });

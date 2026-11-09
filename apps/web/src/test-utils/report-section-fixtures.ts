@@ -140,6 +140,7 @@ export function makeWeeklyReportFixture(
       makeReportSectionFixture(section),
     ),
     escalations: [],
+    recordOmissions: { risks: 0, decisions: 0, unknown: false },
     ...reportOverrides,
   };
 }

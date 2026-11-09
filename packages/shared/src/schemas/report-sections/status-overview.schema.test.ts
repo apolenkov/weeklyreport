@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  publishedReportSectionReadModelSchema,
   reportSectionReadModelSchema,
   sharedReportSectionReadModelSchema,
 } from "./section.schema.js";
@@ -172,6 +173,26 @@ describe("leadStatusOverviewOutputSchema", () => {
       leadStatusOverviewOutputSchema.safeParse({ current, predecessor })
         .success,
     ).toBe(true);
+  });
+
+  it("reads a published section with, without and with malformed omission metadata", () => {
+    const published = {
+      ...section(PREVIOUS_REPORT_ID, PREVIOUS_SECTION_ID),
+      groupId: GROUP_ID,
+      groupName: "Delivery",
+    };
+    const parse = (recordOmission: unknown) =>
+      publishedReportSectionReadModelSchema.safeParse({
+        ...published,
+        recordOmission,
+      });
+
+    expect(
+      publishedReportSectionReadModelSchema.parse(published).recordOmission,
+    ).toBeUndefined();
+    expect(parse({ version: 1, buckets: [] }).success).toBe(true);
+    expect(parse({ version: 2, buckets: [] }).success).toBe(false);
+    expect(parse(null).success).toBe(false);
   });
 
   it("rejects a malformed published predecessor shape", () => {

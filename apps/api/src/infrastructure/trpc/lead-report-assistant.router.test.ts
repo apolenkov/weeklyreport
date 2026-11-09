@@ -24,6 +24,7 @@ const SUCCESSFUL_OUTCOME: ReportAssistantOutcome = {
   kind: "ok",
   answerMarkdown: "The report is ready.",
   citations: [],
+  coverage: { risks: 0, decisions: 0, unknown: false },
   metadata: { truncated: false, insufficientEvidence: false },
 };
 const AVAILABILITY: AiProviderAvailabilityRead = {

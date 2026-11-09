@@ -37,6 +37,22 @@ export const recordOmissionSchema = z
 /** Validated internal omission metadata. */
 export type RecordOmission = z.infer<typeof recordOmissionSchema>;
 
+/**
+ * Public omission disclosure: totals only, never bucket keys, identities or
+ * text. `unknown` marks a corpus with at least one legacy section that carries
+ * no omission metadata, so its totals are a lower bound rather than a count.
+ */
+export const recordOmissionSummarySchema = z
+  .strictObject({
+    risks: z.number().int().nonnegative(),
+    decisions: z.number().int().nonnegative(),
+    unknown: z.boolean(),
+  })
+  .readonly();
+
+/** Public omission totals carried beside search, assistant and report reads. */
+export type RecordOmissionSummary = z.infer<typeof recordOmissionSummarySchema>;
+
 /** Authorized subject and optional stage filter. */
 export interface RecordOmissionScope {
   readonly parentKind: "product" | "activity";
@@ -48,11 +64,7 @@ export interface RecordOmissionScope {
 export function summarizeRecordOmissions(
   sections: readonly (RecordOmission | undefined)[],
   scope?: RecordOmissionScope,
-): {
-  readonly risks: number;
-  readonly decisions: number;
-  readonly unknown: boolean;
-} {
+): RecordOmissionSummary {
   return sections.reduce<{
     risks: number;
     decisions: number;
@@ -84,7 +96,7 @@ export function summarizeRecordOmissions(
 export function summarizeRecordOmissionsForScopes(
   sections: readonly (RecordOmission | undefined)[],
   scopes: readonly RecordOmissionScope[],
-): ReturnType<typeof summarizeRecordOmissions> {
+): RecordOmissionSummary {
   if (scopes.length === 0) return summarizeRecordOmissions([]);
   return summarizeRecordOmissions(
     sections.map(
@@ -106,3 +118,13 @@ export function summarizeRecordOmissionsForScopes(
     ),
   );
 }
+
+/**
+ * Disclosure for a corpus whose omission totals have not been counted: it
+ * reads as "records may be missing", never as "nothing omitted".
+ */
+export const UNCOUNTED_RECORD_OMISSIONS: RecordOmissionSummary = {
+  risks: 0,
+  decisions: 0,
+  unknown: true,
+};

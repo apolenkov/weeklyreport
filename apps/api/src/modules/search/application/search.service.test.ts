@@ -71,13 +71,30 @@ describe("SearchService", () => {
     });
     const service = new SearchService(repo, createNullLogger());
 
-    const result = await service.query(
+    const { hits: result } = await service.query(
       { q: "PR", scope: "mine", limit: 20 },
       makeSession({ role: "lead" }),
     );
 
     expect(result).toHaveLength(1);
     expect(result[0]?.title).toBe("PR review");
+  });
+
+  it("discloses omissions beside zero hits instead of a bare list", async () => {
+    const service = new SearchService(
+      createRepository(() => []),
+      createNullLogger(),
+    );
+
+    const result = await service.query(
+      { q: "nothing", scope: "mine", limit: 20 },
+      makeSession({ role: "lead" }),
+    );
+
+    expect(result).toEqual({
+      hits: [],
+      omissions: { risks: 0, decisions: 0, unknown: true },
+    });
   });
 
   it('rejects scope="all" for lead role with SearchAuthorizationError', async () => {
@@ -119,7 +136,7 @@ describe("SearchService", () => {
     });
     const service = new SearchService(repo, createNullLogger());
 
-    const result = await service.query(
+    const { hits: result } = await service.query(
       { q: "release", scope: "all", limit: 20 },
       makeSession({ role: "head" }),
     );
@@ -134,7 +151,7 @@ describe("SearchService", () => {
     });
     const service = new SearchService(repo, createNullLogger());
 
-    const result = await service.query(
+    const { hits: result } = await service.query(
       { q: "release", scope: "all", limit: 20 },
       makeSession({ userId: otherUserId, role: "admin" }),
     );
@@ -174,7 +191,7 @@ describe("SearchService", () => {
     });
     const service = new SearchService(repo, createNullLogger());
 
-    const result = await service.query(
+    const { hits: result } = await service.query(
       { q: "CRM", scope: "mine", limit: 20 },
       makeSession({ role: "lead" }),
     );
@@ -203,7 +220,7 @@ describe("SearchService", () => {
     });
     const service = new SearchService(repo, createNullLogger());
 
-    const result = await service.query(
+    const { hits: result } = await service.query(
       { q: "CRM", scope: "all", limit: 20 },
       makeSession({ role: "head" }),
     );
@@ -218,7 +235,7 @@ describe("SearchService", () => {
       createNullLogger(),
     );
 
-    const result = await service.query(
+    const { hits: result } = await service.query(
       { q: "unmatched", scope: "mine", limit: 20 },
       makeSession({ role: "lead" }),
     );
@@ -246,7 +263,7 @@ describe("SearchService", () => {
     ]);
     const service = new SearchService(repo, createNullLogger());
 
-    const result = await service.query(
+    const { hits: result } = await service.query(
       { q: "rel", scope: "mine", limit: 20 },
       makeSession({ role: "lead" }),
     );
@@ -272,7 +289,7 @@ describe("SearchService", () => {
     ]);
     const service = new SearchService(repo, createNullLogger());
 
-    const result = await service.query(
+    const { hits: result } = await service.query(
       { q: "rel", scope: "mine", limit: 20 },
       makeSession({ role: "lead" }),
     );
@@ -287,7 +304,7 @@ describe("SearchService", () => {
     ]);
     const service = new SearchService(repo, createNullLogger());
 
-    const result = await service.query(
+    const { hits: result } = await service.query(
       { q: "rel", scope: "mine", limit: 20 },
       makeSession({ role: "lead" }),
     );
@@ -308,7 +325,7 @@ describe("SearchService", () => {
     );
     const service = new SearchService(repo, createNullLogger());
 
-    const result = await service.query(
+    const { hits: result } = await service.query(
       { q: "foo", scope: "mine", limit: 5 },
       makeSession({ role: "lead" }),
     );
@@ -423,7 +440,7 @@ describe("SearchService", () => {
     });
     const service = new SearchService(repo, createNullLogger());
 
-    const result = await service.query(
+    const { hits: result } = await service.query(
       { q: "release", scope: "published", limit: 20 },
       makeSession({ role: "viewer", viewerGroupAccess: [groupA] }),
     );
@@ -450,7 +467,7 @@ describe("SearchService", () => {
     });
     const service = new SearchService(repo, createNullLogger());
 
-    const result = await service.query(
+    const { hits: result } = await service.query(
       { q: "CRM", scope: "published", limit: 20 },
       makeSession({ role: "viewer", viewerGroupAccess: [groupA] }),
     );
@@ -466,7 +483,7 @@ describe("SearchService", () => {
       createNullLogger(),
     );
 
-    const result = await service.query(
+    const { hits: result } = await service.query(
       { q: "release", scope: "published", limit: 20 },
       makeSession({ role: "viewer", viewerGroupAccess: [] }),
     );
@@ -482,7 +499,7 @@ describe("SearchService", () => {
       createNullLogger(),
     );
 
-    const result = await service.query(
+    const { hits: result } = await service.query(
       { q: "release", scope: "mine", limit: 20 },
       makeSession({ role: "head", reportingGroupId: undefined }),
     );

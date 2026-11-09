@@ -128,6 +128,7 @@ export function queueReport(
     portfolioOverview: [],
     leadSections: [...leadSections],
     escalations: [],
+    recordOmissions: { risks: 0, decisions: 0, unknown: false },
   };
 }
 

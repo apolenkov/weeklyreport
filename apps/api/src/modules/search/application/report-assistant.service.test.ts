@@ -2,6 +2,7 @@ import type { ReportSectionReadModel, SearchPlan } from "@weeklyreport/shared";
 import {
   reportSectionReadModelSchema,
   searchPlanSchema,
+  UNCOUNTED_RECORD_OMISSIONS,
 } from "@weeklyreport/shared";
 import {
   afterEach,
@@ -423,6 +424,7 @@ describe("ReportAssistantService", () => {
 
     await expect(harness.service.answer(request, ACTOR_ID)).resolves.toEqual({
       kind: "no_results",
+      coverage: UNCOUNTED_RECORD_OMISSIONS,
     });
     expect(harness.answerer).not.toHaveBeenCalled();
   });
@@ -764,6 +766,7 @@ describe("ReportAssistantService", () => {
     });
     await expect(harness.service.answer(request, ACTOR_ID)).resolves.toEqual({
       kind: "no_results",
+      coverage: UNCOUNTED_RECORD_OMISSIONS,
     });
   });
 
@@ -776,6 +779,7 @@ describe("ReportAssistantService", () => {
 
     await expect(harness.service.answer(request, ACTOR_ID)).resolves.toEqual({
       kind: "no_results",
+      coverage: UNCOUNTED_RECORD_OMISSIONS,
     });
     expect(harness.answerer).not.toHaveBeenCalled();
   });

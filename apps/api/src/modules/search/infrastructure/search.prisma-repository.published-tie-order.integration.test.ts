@@ -140,12 +140,15 @@ describe("SearchService over published documents — tie at the LIMIT boundary (
 
   // Control: with room for all three the service order is id ASC.
   it("returns all tied records in id ascending order when the limit covers them", async () => {
-    expect((await query(3)).map((hit) => hit.id)).toEqual([...ITEMS]);
+    expect((await query(3)).hits.map((hit) => hit.id)).toEqual([...ITEMS]);
   });
 
   // C1805: a pre-LIMIT order that disagrees with the service order would keep
   // ITEMS[1] and ITEMS[2] here and lose the first record in service order.
   it("keeps the first records in service order when the tie straddles the limit", async () => {
-    expect((await query(2)).map((hit) => hit.id)).toEqual([ITEMS[0], ITEMS[1]]);
+    expect((await query(2)).hits.map((hit) => hit.id)).toEqual([
+      ITEMS[0],
+      ITEMS[1],
+    ]);
   });
 });

@@ -47,6 +47,8 @@ function makeRepo(
   };
 }
 
+const OMISSIONS = { risks: 0, decisions: 0, unknown: false };
+
 const headA: UserSession = {
   userId: "a0000000-0000-4000-8000-0000000000a1",
   email: "head-a@test.local",
@@ -82,8 +84,16 @@ describe("AnalyticsService.trafficLightHistory", () => {
       trafficLightHistory: vi.fn(() =>
         Promise.resolve({
           periods: [
-            { periodStart: "2026-04-15", periodEnd: "2026-04-21" },
-            { periodStart: "2026-04-22", periodEnd: "2026-04-28" },
+            {
+              periodStart: "2026-04-15",
+              periodEnd: "2026-04-21",
+              omissions: OMISSIONS,
+            },
+            {
+              periodStart: "2026-04-22",
+              periodEnd: "2026-04-28",
+              omissions: OMISSIONS,
+            },
           ],
           rows: [
             {
@@ -117,7 +127,13 @@ describe("AnalyticsService.trafficLightHistory", () => {
   it("cache hit short-circuits the repository on second call (same scope)", async () => {
     const trafficLightHistory = vi.fn(() =>
       Promise.resolve({
-        periods: [{ periodStart: "2026-04-22", periodEnd: "2026-04-28" }],
+        periods: [
+          {
+            periodStart: "2026-04-22",
+            periodEnd: "2026-04-28",
+            omissions: OMISSIONS,
+          },
+        ],
         rows: [],
       }),
     );
@@ -306,7 +322,13 @@ describe("AnalyticsService old nonempty cache shapes", () => {
   it("recomputes string history periods", async () => {
     const trafficLightHistory = vi.fn(() =>
       Promise.resolve({
-        periods: [{ periodStart: "2026-04-01", periodEnd: "2026-04-21" }],
+        periods: [
+          {
+            periodStart: "2026-04-01",
+            periodEnd: "2026-04-21",
+            omissions: OMISSIONS,
+          },
+        ],
         rows: [],
       }),
     );
@@ -316,7 +338,13 @@ describe("AnalyticsService old nonempty cache shapes", () => {
     for (const key of store.keys())
       store.set(key, { periods: ["2026-04-21"], rows: [] });
     expect(await svc.trafficLightHistory(input, headA)).toEqual({
-      periods: [{ periodStart: "2026-04-01", periodEnd: "2026-04-21" }],
+      periods: [
+        {
+          periodStart: "2026-04-01",
+          periodEnd: "2026-04-21",
+          omissions: OMISSIONS,
+        },
+      ],
       rows: [],
     });
     expect(trafficLightHistory).toHaveBeenCalledTimes(2);
@@ -324,7 +352,12 @@ describe("AnalyticsService old nonempty cache shapes", () => {
   it("recomputes submission labels without a range", async () => {
     const leadVelocity = vi.fn(() =>
       Promise.resolve([
-        { periodStart: "2026-04-01", periodEnd: "2026-04-21", leads: [] },
+        {
+          periodStart: "2026-04-01",
+          periodEnd: "2026-04-21",
+          omissions: OMISSIONS,
+          leads: [],
+        },
       ]),
     );
     const { cache, store } = makeCache();
@@ -333,14 +366,23 @@ describe("AnalyticsService old nonempty cache shapes", () => {
     for (const key of store.keys())
       store.set(key, [{ periodLabel: "2026-04-21", leads: [] }]);
     expect(await svc.leadVelocity(input, headA)).toEqual([
-      { periodStart: "2026-04-01", periodEnd: "2026-04-21", leads: [] },
+      {
+        periodStart: "2026-04-01",
+        periodEnd: "2026-04-21",
+        omissions: OMISSIONS,
+        leads: [],
+      },
     ]);
     expect(leadVelocity).toHaveBeenCalledTimes(2);
   });
   it("recomputes comparison rows without metadata", async () => {
     const periodComparison = vi.fn(() =>
       Promise.resolve({
-        periodA: { periodStart: "2026-04-01", periodEnd: "2026-04-21" },
+        periodA: {
+          periodStart: "2026-04-01",
+          periodEnd: "2026-04-21",
+          omissions: OMISSIONS,
+        },
         periodB: null,
         rows: [],
       }),
@@ -364,7 +406,11 @@ describe("AnalyticsService old nonempty cache shapes", () => {
         ],
       });
     expect(await svc.periodComparison(pair, headA)).toEqual({
-      periodA: { periodStart: "2026-04-01", periodEnd: "2026-04-21" },
+      periodA: {
+        periodStart: "2026-04-01",
+        periodEnd: "2026-04-21",
+        omissions: OMISSIONS,
+      },
       periodB: null,
       rows: [],
     });
