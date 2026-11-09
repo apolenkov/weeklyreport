@@ -66,6 +66,7 @@ const EARLIER_OPEN_WORK = /^\d+ earlier open items?$/u;
 const PENDING_REVIEW = "1 to review";
 const ARCHIVED_FILL_HINT =
   "No submitted reports in open periods. Show closed (archived) report periods to see more.";
+const NOTHING_OMITTED = { risks: 0, decisions: 0, unknown: false } as const;
 const ANSWER: ReportAssistantOutcome = {
   kind: "ok",
   answerMarkdown:
@@ -81,6 +82,7 @@ const ANSWER: ReportAssistantOutcome = {
     },
   ],
   metadata: { truncated: false, insufficientEvidence: false },
+  coverage: NOTHING_OMITTED,
 };
 
 function record(value: unknown): Record<string, unknown> {
@@ -1254,7 +1256,7 @@ const RECOVERIES = [
     retry: false,
   },
   {
-    outcome: { kind: "no_results" },
+    outcome: { kind: "no_results", coverage: NOTHING_OMITTED },
     action: "Ask another question",
     message: "No matching report records were found",
     retry: false,
