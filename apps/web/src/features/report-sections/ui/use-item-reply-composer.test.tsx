@@ -19,6 +19,9 @@ const RECORD_ID = "10000000-0000-4000-8000-000000000001";
 const STABLE_ID = "10000000-0000-4000-8000-000000000002";
 const SECTION_ID = "10000000-0000-4000-8000-000000000003";
 const REPLY_LABEL = /Reply to/;
+const RESEND = "Send again (may duplicate)";
+const UNAVAILABLE = "This discussion is no longer available.";
+const FORBIDDEN = { data: { code: "FORBIDDEN" } };
 const persisted: StatusOverviewItem = {
   ...baseItem,
   recordId: RECORD_ID,
@@ -36,11 +39,17 @@ function message(text: string): RecordCommentView {
   };
 }
 
-function Harness({ item }: { readonly item: StatusOverviewItem }) {
+function Harness({
+  item,
+  id = "comments",
+}: {
+  readonly item: StatusOverviewItem;
+  readonly id?: string;
+}) {
   const discussion = useItemDiscussion(item);
   return (
     <StatusOverviewCommentsView
-      id="comments"
+      id={id}
       itemLabel={item.text}
       comments={discussion.comments}
       onClose={() => undefined}
@@ -50,9 +59,9 @@ function Harness({ item }: { readonly item: StatusOverviewItem }) {
 }
 
 function renderWith(
-  send: ItemReplyPort["send"] | null,
+  send: ItemReplyPort["send"],
   server: () => unknown = () => ({ status: "available", comments: [] }),
-  item: StatusOverviewItem = persisted,
+  items: readonly StatusOverviewItem[] = [persisted],
 ) {
   const read = vi.fn(server);
   const { proxy } = createMockTRPC([
@@ -61,22 +70,39 @@ function renderWith(
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  render(
+  const port = { reportSectionId: SECTION_ID, send };
+  const tree = (open: readonly StatusOverviewItem[]) => (
     <QueryClientProvider client={client}>
       <TRPCProxyContext.Provider value={proxy}>
-        <ItemReplyProvider
-          value={send ? { reportSectionId: SECTION_ID, send } : null}
-        >
-          <Harness item={item} />
+        <ItemReplyProvider value={port}>
+          {open.map((item) => (
+            <Harness key={item.key} item={item} id={item.key} />
+          ))}
         </ItemReplyProvider>
       </TRPCProxyContext.Provider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
-  return read;
+  const view = render(tree(items));
+  return { read, show: (open: typeof items) => view.rerender(tree(open)) };
 }
 
 const sending = (outcome: ItemReplyOutcome) =>
   vi.fn(() => Promise.resolve(outcome));
+
+function deferred() {
+  let resolve: (outcome: ItemReplyOutcome) => void = () => undefined;
+  const promise = new Promise<ItemReplyOutcome>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
+async function clickAndSettle(name: string) {
+  await act(async () => {
+    fireEvent.click(screen.getByRole("button", { name }));
+    await Promise.resolve();
+  });
+}
 
 async function typeAndSend(text: string) {
   fireEvent.change(await screen.findByLabelText(REPLY_LABEL), {
@@ -92,7 +118,7 @@ describe("Lead item discussion", () => {
   it("shows the live discussion and re-reads only it after a confirmed reply", async () => {
     let server: RecordCommentView[] = [];
     const send = sending("sent");
-    const read = renderWith(send, () => ({
+    const { read } = renderWith(send, () => ({
       status: "available",
       comments: server,
     }));
@@ -112,35 +138,121 @@ describe("Lead item discussion", () => {
     expect(screen.getByLabelText(REPLY_LABEL)).toHaveValue("Reply");
   });
 
-  it("asks for a refresh instead of resending an uncertain reply", async () => {
+  it("keeps an uncertain reply unresolved until an explicit resend", async () => {
     const send = sending("uncertain");
-    const read = renderWith(send);
+    const { read } = renderWith(send);
     await typeAndSend("Reply");
     expect(screen.getByRole("alert")).toHaveTextContent("uncertain");
-    expect(screen.getByLabelText(REPLY_LABEL)).toHaveValue("Reply");
-    await act(async () => {
-      fireEvent.click(
-        screen.getByRole("button", { name: "Refresh discussion" }),
-      );
-      await Promise.resolve();
-    });
-    expect(await screen.findByLabelText(REPLY_LABEL)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: RESEND })).toBeNull();
+    await clickAndSettle("Refresh discussion");
     expect(read).toHaveBeenCalledTimes(2);
     expect(send).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("alert")).toHaveTextContent("uncertain");
+    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+    expect(screen.getByLabelText(REPLY_LABEL)).toHaveValue("Reply");
+    await clickAndSettle(RESEND);
+    expect(send).toHaveBeenCalledTimes(2);
   });
 
-  it("withholds the composer for an unavailable discussion or a local row", async () => {
-    renderWith(sending("sent"), () => ({ status: "unavailable" }));
-    expect(await screen.findByText("No comments yet.")).toBeInTheDocument();
-    await act(async () => Promise.resolve());
+  it("keeps text typed while the earlier reply was pending", async () => {
+    const pending = deferred();
+    renderWith(vi.fn(() => pending.promise));
+    await typeAndSend("First");
+    fireEvent.change(screen.getByLabelText(REPLY_LABEL), {
+      target: { value: "Second" },
+    });
+    await act(async () => {
+      pending.resolve("sent");
+      await Promise.resolve();
+    });
+    expect(screen.getByLabelText(REPLY_LABEL)).toHaveValue("Second");
+  });
+
+  it("keeps the unsent reply while the comments are closed", async () => {
+    const { show } = renderWith(sending("sent"));
+    fireEvent.change(await screen.findByLabelText(REPLY_LABEL), {
+      target: { value: "Draft" },
+    });
+    show([]);
+    expect(screen.queryByLabelText(REPLY_LABEL)).toBeNull();
+    show([persisted]);
+    expect(await screen.findByLabelText(REPLY_LABEL)).toHaveValue("Draft");
+  });
+
+  it("shares one draft and one pending send between Current and Next", async () => {
+    const pending = deferred();
+    const send = vi.fn(() => pending.promise);
+    const next = { ...persisted, key: "next:alias", source: "next" as const };
+    renderWith(send, undefined, [persisted, next]);
+    const [first, second] = await screen.findAllByLabelText(REPLY_LABEL);
+    if (!first) throw new Error("Expected two open composers");
+    fireEvent.change(first, { target: { value: "Once" } });
+    expect(second).toHaveValue("Once");
+    await act(async () => {
+      for (const button of screen.getAllByRole("button", { name: "Send" }))
+        fireEvent.click(button);
+      await Promise.resolve();
+    });
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(screen.getAllByRole("button", { name: "Sending…" })).toHaveLength(2);
+  });
+
+  it("offers the live discussion on a resolved own item", async () => {
+    renderWith(sending("sent"), undefined, [
+      { ...persisted, editTarget: null, canRestore: true },
+    ]);
+    expect(await screen.findByLabelText(REPLY_LABEL)).toBeInTheDocument();
+  });
+
+  it("hides messages and the composer once the discussion is unavailable", async () => {
+    renderWith(sending("sent"), () => ({ status: "unavailable" }), [
+      { ...persisted, comments: [message("Private")] },
+    ]);
+    expect(await screen.findByText(UNAVAILABLE)).toBeInTheDocument();
+    expect(screen.queryByText("Private")).toBeNull();
     expect(screen.queryByLabelText(REPLY_LABEL)).toBeNull();
   });
 
-  it("does not read a local row without a persisted identity", () => {
-    const read = renderWith(sending("sent"), undefined, {
-      ...persisted,
-      recordId: "local-row",
+  it("hides the discussion and drops the draft after an authorization error", async () => {
+    let denied = false;
+    const { show } = renderWith(sending("uncertain"), () => {
+      if (denied) throw Object.assign(new Error("no"), FORBIDDEN);
+      return { status: "available", comments: [message("Private")] };
     });
+    expect(await screen.findByText("Private")).toBeInTheDocument();
+    await typeAndSend("Draft");
+    denied = true;
+    await clickAndSettle("Refresh discussion");
+    expect(await screen.findByText(UNAVAILABLE)).toBeInTheDocument();
+    expect(screen.queryByText("Private")).toBeNull();
+    expect(screen.queryByLabelText(REPLY_LABEL)).toBeNull();
+    denied = false;
+    show([]);
+    show([persisted]);
+    expect(await screen.findByLabelText(REPLY_LABEL)).toHaveValue("");
+  });
+
+  it("keeps the last messages with a note after a transient read failure", async () => {
+    let failing = false;
+    renderWith(sending("uncertain"), () => {
+      if (failing) throw new Error("network");
+      return { status: "available", comments: [message("Earlier")] };
+    });
+    expect(await screen.findByText("Earlier")).toBeInTheDocument();
+    await typeAndSend("Draft");
+    failing = true;
+    await clickAndSettle("Refresh discussion");
+    expect(await screen.findByText(/Could not refresh/)).toBeInTheDocument();
+    expect(screen.getByText("Earlier")).toBeInTheDocument();
+    expect(screen.getByLabelText(REPLY_LABEL)).toHaveValue("Draft");
+    expect(screen.queryByRole("button", { name: RESEND })).toBeNull();
+  });
+
+  it("does not read a local row without a persisted identity", () => {
+    const { read } = renderWith(sending("sent"), undefined, [
+      { ...persisted, recordId: "local-row" },
+    ]);
     expect(screen.queryByLabelText(REPLY_LABEL)).toBeNull();
     expect(read).not.toHaveBeenCalled();
   });

@@ -194,3 +194,64 @@ it("shows authors and timestamps in the supplied chronological order", () => {
     reply.createdAt.toISOString(),
   );
 });
+
+it("blocks Send while delivery is uncertain and resends only explicitly", () => {
+  const onSend = vi.fn();
+  const onResend = vi.fn();
+  const composer = {
+    value: "Keep this",
+    onChange: vi.fn(),
+    onSend,
+    state: "uncertain" as const,
+    onRefresh: vi.fn(),
+  };
+  const view = (resend: boolean) => (
+    <StatusOverviewCommentsView
+      id="c"
+      itemLabel="Item"
+      comments={[]}
+      onClose={vi.fn()}
+      composer={resend ? { ...composer, onResend } : composer}
+    />
+  );
+  const { rerender } = render(view(false));
+  expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+  expect(screen.queryByRole("button", { name: /send again/i })).toBeNull();
+  rerender(view(true));
+  expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
+  screen.getByRole("button", { name: "Send again (may duplicate)" }).click();
+  expect(onResend).toHaveBeenCalledOnce();
+  expect(onSend).not.toHaveBeenCalled();
+});
+
+it("hides supplied messages when the discussion is unavailable", () => {
+  render(
+    <StatusOverviewCommentsView
+      id="c"
+      itemLabel="Item"
+      comments={[comment]}
+      onClose={vi.fn()}
+      notice="unavailable"
+    />,
+  );
+  expect(screen.getByRole("status")).toHaveTextContent(/no longer available/);
+  expect(screen.queryByText(comment.text)).toBeNull();
+});
+
+it("labels messages as possibly outdated after a failed read", () => {
+  const onRefresh = vi.fn();
+  render(
+    <StatusOverviewCommentsView
+      id="c"
+      itemLabel="Item"
+      comments={[comment]}
+      onClose={vi.fn()}
+      notice="stale"
+      onRefresh={onRefresh}
+    />,
+  );
+  expect(screen.getByText(comment.text)).toBeVisible();
+  expect(screen.getByRole("alert")).toHaveTextContent(/could not refresh/i);
+  screen.getByRole("button", { name: "Refresh discussion" }).click();
+  expect(onRefresh).toHaveBeenCalledOnce();
+});

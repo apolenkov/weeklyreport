@@ -6,6 +6,7 @@ import type {
   StatusOverviewEditTarget,
   StatusOverviewItem,
 } from "../model/status-overview";
+import { canDiscussItem } from "../model/status-overview-discussion";
 import { statusOverviewItemActions } from "../model/status-overview-items";
 import { ItemCommentsView } from "./item-comments-view";
 import {
@@ -203,7 +204,7 @@ function useItemComments(
     if (
       event.target === event.currentTarget &&
       item.comments.length > 0 &&
-      item.editTarget !== null
+      canDiscussItem(item)
     )
       setOpenCommentsKey(item.key);
   };
@@ -278,7 +279,7 @@ export function StatusOverviewItemPreview(props: ActionProps) {
           />
         ) : null}
         <OutcomeAudit item={item} />
-        {item.editTarget === null || decidedVerdict ? (
+        {!canDiscussItem(item) || decidedVerdict ? (
           <TrackedWorkComments item={item} />
         ) : comments.commentsOpen ? (
           <ItemCommentsView
