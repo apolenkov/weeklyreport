@@ -53,6 +53,7 @@ export function buildLeadLoadHarness(
       path: ["leadForm", "byPeriod"],
       queryByInput: sectionQuery,
     },
+    { path: ["review", "leadItemComment"], mutation: true },
     {
       path: ["leadForm", "statusOverview"],
       query: () => ({

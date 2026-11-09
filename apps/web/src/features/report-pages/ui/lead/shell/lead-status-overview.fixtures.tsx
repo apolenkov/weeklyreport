@@ -238,6 +238,7 @@ export function Wrapper({
       path: ["reports", "getActive"],
       query: () => sectionStore.read(),
     },
+    { path: ["review", "leadItemComment"], mutation: true },
     {
       path: ["leadForm", "statusOverview"],
       queryByInput: () => {

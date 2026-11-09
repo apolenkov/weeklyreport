@@ -40,6 +40,7 @@ function renderOverviewWithFailingActiveReport() {
         throw new Error("Active report unavailable");
       },
     },
+    { path: ["review", "leadItemComment"], mutation: true },
     { path: ["leadForm", "statusOverview"], queryByInput: () => never() },
     { path: ["leadForm", "openWork"], query: "pending" },
     { path: ["leadForm", "byPeriod"], queryByInput: () => never() },
