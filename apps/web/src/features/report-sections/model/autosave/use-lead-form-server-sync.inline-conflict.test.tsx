@@ -22,7 +22,7 @@ function section(version: number, otherText: string): ReportSectionReadModel {
     version,
     items: [
       {
-        id: itemId,
+        id: version > 1 ? "88888888-8888-8888-8888-888888888888" : itemId,
         stableId: "55555555-5555-5555-5555-555555555555",
         projectId,
         activityId: null,
@@ -107,6 +107,17 @@ it("keeps inline text recoverable after a conflicting save and later refetch", a
   });
   expect(calls).toHaveLength(1);
   expect(calls[0]?.items[0]?.text).toBe(localText);
+  act(() =>
+    result.current.setDraftSection(
+      (draft) =>
+        draft && {
+          ...draft,
+          items: draft.items.map((item) =>
+            item.id === itemId ? { ...item, text: "Latest typing" } : item,
+          ),
+        },
+    ),
+  );
   await act(async () => {
     rejectSave(new LeadFormWriteError("conflict", "stale version"));
     await saving;
@@ -123,7 +134,9 @@ it("keeps inline text recoverable after a conflicting save and later refetch", a
   expect.soft(result.current.sync.lastSaveReceipt).toBeNull();
   expect.soft(result.current.sync.autosave.state).not.toBe("saved");
   expect.soft(result.current.sync.autosave.state).toBe("error");
-  expect.soft(result.current.draftSection?.items[0]?.text).toBe(localText);
+  expect
+    .soft(result.current.draftSection?.items[0]?.text)
+    .toBe("Latest typing");
 
   // The Lead's next edit is the explicit reconciliation: autosave resumes.
   act(() => {
@@ -132,7 +145,9 @@ it("keeps inline text recoverable after a conflicting save and later refetch", a
         draft && {
           ...draft,
           items: draft.items.map((item) =>
-            item.id === itemId ? { ...item, text: `${localText}!` } : item,
+            item.stableId === "55555555-5555-5555-5555-555555555555"
+              ? { ...item, text: `${localText}!` }
+              : item,
           ),
         },
     );
@@ -190,13 +205,26 @@ it("retains the edited item if the newer server revision arrives before the conf
     saving = result.current.sync.autosave.forceSave();
   });
   act(() =>
+    result.current.setDraftSection(
+      (draft) =>
+        draft && {
+          ...draft,
+          items: draft.items.map((item) =>
+            item.id === itemId ? { ...item, text: "Latest typing" } : item,
+          ),
+        },
+    ),
+  );
+  act(() =>
     result.current.setServerSection(section(2, "Other updated on server")),
   );
   await act(async () => {
     rejectSave(new LeadFormWriteError("conflict", "stale version"));
     await saving;
   });
-  expect.soft(result.current.draftSection?.items[0]?.text).toBe(localText);
+  expect
+    .soft(result.current.draftSection?.items[0]?.text)
+    .toBe("Latest typing");
   expect
     .soft(result.current.draftSection?.items[1]?.text)
     .toBe("Other updated on server");
