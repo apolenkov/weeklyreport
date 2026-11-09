@@ -13,6 +13,7 @@ import type {
   StatusOverviewEditTarget,
   StatusOverviewItem,
 } from "../model/status-overview";
+import { canDiscussItem } from "../model/status-overview-discussion";
 import { statusOverviewItemActions } from "../model/status-overview-items";
 import type { PlanVerdict } from "../model/status-overview-verdict";
 import {
@@ -124,7 +125,7 @@ function CommentAction({
   readonly onToggle: () => void;
   readonly buttonRef: RefObject<HTMLButtonElement | null>;
 }) {
-  if (item.editTarget === null) return null;
+  if (!canDiscussItem(item)) return null;
   const label = `Comments on ${shortItemLabel(item.text)}`;
   return (
     <button

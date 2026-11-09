@@ -2,51 +2,45 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { RecordCommentView } from "@weeklyreport/shared";
-import { useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import type { StatusOverviewItem } from "../model/status-overview";
-import {
-  type ItemReplyOutcome,
-  type ItemReplyPort,
-  useItemReplyPort,
-} from "./item-reply-context";
+import { canDiscussItem } from "../model/status-overview-discussion";
+import type { ReplyDraft } from "./item-discussion-store";
+import { useItemReplyScope } from "./item-reply-context";
+import type { ItemReplyComposer } from "./status-overview-comments-view";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const UNCERTAIN = "uncertain";
+const DENIED_CODES: ReadonlySet<string> = new Set([
+  "FORBIDDEN",
+  "UNAUTHORIZED",
+]);
 const REFRESH_FAILED = "refresh-failed";
+const NO_COMMENTS: readonly RecordCommentView[] = [];
 
-type ComposerState =
-  "idle" | "pending" | "error" | typeof UNCERTAIN | typeof REFRESH_FAILED;
-
-interface Draft {
-  readonly key: string;
-  readonly value: string;
-  readonly state: ComposerState;
-}
-
-const SETTLED: Readonly<Record<ItemReplyOutcome, ComposerState>> = {
-  sent: "idle",
-  rejected: "error",
-  [UNCERTAIN]: UNCERTAIN,
-};
+type ReplyScope = NonNullable<ReturnType<typeof useItemReplyScope>>;
 
 interface DiscussionTarget {
-  readonly port: ItemReplyPort;
+  readonly scope: ReplyScope;
   readonly reportSectionId: string;
   readonly stableId: string;
+  /** One entry per section and lineage: Current and derived Next share it. */
+  readonly key: string;
 }
 
-// Only a persisted own editable record of the live section has a discussion
-// the Lead can read and answer; a local row has no proven server identity.
+// Only a persisted own record of the live section has a discussion the Lead
+// can read and answer; a local row has no proven server identity.
 function discussionTarget(
-  port: ItemReplyPort | null,
+  scope: ReplyScope | null,
   item: StatusOverviewItem,
 ): DiscussionTarget | null {
+  const reportSectionId = scope?.port.reportSectionId;
   if (
-    !port?.reportSectionId ||
-    item.editTarget === null ||
+    !scope ||
+    !reportSectionId ||
+    !canDiscussItem(item) ||
     item.recordId === null ||
     item.stableId === null ||
     !UUID_RE.test(item.recordId) ||
@@ -54,21 +48,82 @@ function discussionTarget(
   )
     return null;
   return {
-    port,
-    reportSectionId: port.reportSectionId,
+    scope,
+    reportSectionId,
     stableId: item.stableId,
+    key: `${reportSectionId}:${item.stableId}`,
   };
 }
 
+// The server or middleware said the Lead may no longer see this discussion.
+function isAccessDenied(error: unknown): boolean {
+  const code = (error as { data?: { code?: unknown } } | null)?.data?.code;
+  return typeof code === "string" && DENIED_CODES.has(code);
+}
+
+interface ReadState {
+  readonly isError: boolean;
+  readonly dataUpdatedAt: number;
+}
+
+// A confirmed reply whose follow-up read failed is "sent, refresh failed":
+// delivery is known, only the visible list is behind.
+function composerState(
+  draft: ReplyDraft,
+  read: ReadState,
+): ItemReplyComposer["state"] {
+  if (draft.delivery !== "idle") return draft.delivery;
+  return draft.sentAt !== null &&
+    read.isError &&
+    read.dataUpdatedAt < draft.sentAt
+    ? REFRESH_FAILED
+    : "idle";
+}
+
+interface ComposerActions {
+  readonly value: string;
+  readonly onChange: (value: string) => void;
+  readonly onSend: () => void;
+  readonly onRefresh: () => void;
+}
+
+function toComposer(
+  state: ItemReplyComposer["state"],
+  checked: boolean,
+  { onRefresh, ...base }: ComposerActions,
+): ItemReplyComposer {
+  if (state === "uncertain")
+    return {
+      ...base,
+      state,
+      onRefresh,
+      ...(checked ? { onResend: base.onSend } : {}),
+    };
+  return state === REFRESH_FAILED
+    ? { ...base, state, onRefresh }
+    : { ...base, state };
+}
+
+const noSubscription = () => () => undefined;
+
 /**
  * The live discussion of one open Overview item: an uncached read and the
- * Lead's reply composer. A failed or uncertain send keeps the typed text;
- * nothing is resent automatically, and discussion activity never reloads the
+ * Lead's reply composer. Draft text and the one delivery attempt live in the
+ * page's discussion store, so they survive a closed card and are shared by
+ * Current and its derived Next. Nothing is resent automatically, a read never
+ * resolves an uncertain delivery, and discussion activity never reloads the
  * editor.
  */
 export function useItemDiscussion(item: StatusOverviewItem) {
   const trpc = useTRPC();
-  const target = discussionTarget(useItemReplyPort(), item);
+  const target = discussionTarget(useItemReplyScope(), item);
+  const store = target?.scope.store;
+  const key = target?.key ?? "";
+  const draft = useSyncExternalStore(
+    store?.subscribe ?? noSubscription,
+    () => store?.read(key) ?? null,
+    () => null,
+  );
   const query = useQuery({
     ...trpc.review.leadItemDiscussion.queryOptions({
       reportSectionId: target?.reportSectionId ?? "",
@@ -78,58 +133,38 @@ export function useItemDiscussion(item: StatusOverviewItem) {
     staleTime: 0,
     gcTime: 0,
   });
-  const [draft, setDraft] = useState<Draft>({
-    key: item.key,
-    value: "",
-    state: "idle",
+  const denied =
+    query.data?.status === "unavailable" || isAccessDenied(query.error);
+  useEffect(() => {
+    if (denied) store?.drop(key);
+  }, [denied, store, key]);
+  if (!target || !draft) return { comments: item.comments, reply: {} };
+  // Known access loss hides the messages and the draft at once.
+  if (denied)
+    return { comments: NO_COMMENTS, reply: { notice: "unavailable" as const } };
+  const comments =
+    query.data?.status === "available" ? query.data.comments : item.comments;
+  const send = () =>
+    void target.scope.store
+      .send(key, (text) => target.scope.port.send(item, text))
+      .then((outcome) => (outcome === "sent" ? query.refetch() : null));
+  const onRefresh = () =>
+    void query.refetch().then((result) => {
+      if (result.isSuccess) target.scope.store.markChecked(key);
+    });
+  const state = composerState(draft, query);
+  const composer = toComposer(state, draft.checked, {
+    value: draft.value,
+    onChange: (value: string) => target.scope.store.edit(key, value),
+    onSend: send,
+    onRefresh,
   });
-  const current: Draft =
-    draft.key === item.key
-      ? draft
-      : { key: item.key, value: "", state: "idle" };
-  const live = query.data?.status === "available" ? query.data : null;
-  const comments: readonly RecordCommentView[] =
-    live?.comments ?? item.comments;
-  if (!target || query.data?.status === "unavailable")
-    return { comments, reply: {} };
-  const update = (next: Partial<Draft>) =>
-    setDraft((previous) => ({
-      ...(previous.key === item.key ? previous : current),
-      ...next,
-    }));
-  const reread = async () => (await query.refetch()).isSuccess;
-  const onSend = () => {
-    const text = current.value.trim();
-    if (!text || current.state === "pending") return;
-    update({ state: "pending" });
-    void target.port.send(item, text).then(async (outcome) => {
-      if (outcome !== "sent") {
-        update({ state: SETTLED[outcome] });
-        return;
-      }
-      update({
-        value: "",
-        state: (await reread()) ? "idle" : REFRESH_FAILED,
-      });
-    });
+  const stale = query.isError && state !== REFRESH_FAILED;
+  return {
+    comments,
+    reply: {
+      ...(stale ? { notice: "stale" as const, onRefresh } : {}),
+      composer,
+    },
   };
-  const onRefresh = () => {
-    void reread().then((ok) => {
-      if (ok) update({ state: "idle" });
-    });
-  };
-  const base = {
-    value: current.value,
-    onChange: (value: string) =>
-      update({
-        value,
-        ...(current.state === "error" ? { state: "idle" as const } : {}),
-      }),
-    onSend,
-  };
-  const composer =
-    current.state === UNCERTAIN || current.state === REFRESH_FAILED
-      ? { ...base, state: current.state, onRefresh }
-      : { ...base, state: current.state };
-  return { comments, reply: { composer } };
 }

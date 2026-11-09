@@ -170,3 +170,19 @@ it("shows only the selected item's comments once and offers no composer", async 
   expect(within(region).queryByText("Second item feedback")).toBeNull();
   expect(within(region).queryByRole("textbox")).toBeNull();
 });
+
+it("keeps the comments control on a resolved own item", async () => {
+  const user = userEvent.setup();
+  render(
+    <StatusOverviewItemPreview
+      item={{ ...item, editTarget: null, canRestore: true }}
+      onRestorePlan={vi.fn()}
+    />,
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Comments on First item" }),
+  );
+  expect(
+    screen.getByRole("region", { name: "Comments for First item" }),
+  ).toBeVisible();
+});
