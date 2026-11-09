@@ -122,7 +122,7 @@ function VerdictButtons({
         ref={rail}
         role="group"
         aria-label={`Verdict for ${item.text}`}
-        className="flex flex-wrap items-center gap-x-1"
+        className="flex flex-wrap items-center gap-x-0.5"
       >
         {RAIL_VERDICTS.map((verdict) => (
           <button
