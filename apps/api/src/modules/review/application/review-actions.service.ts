@@ -1,5 +1,8 @@
 import {
   type LeadItemCommentInput,
+  type LeadItemDiscussionInput,
+  type LeadItemDiscussionView,
+  leadItemDiscussionViewSchema,
   type PeriodStatus,
   type RecordCommentView,
   recordCommentViewSchema,
@@ -55,6 +58,10 @@ export interface PostVerdictParams {
 }
 
 export interface ReviewActionsRepository {
+  readLeadItemDiscussion(
+    actor: ReviewWriteActor,
+    input: LeadItemDiscussionInput,
+  ): Promise<LeadItemDiscussionView>;
   insertLeadItemComment(
     actor: ReviewWriteActor,
     itemId: string,
@@ -102,6 +109,16 @@ function toAnchor(input: ReviewCommentInput): RecordAnchor {
 // and reviewer designation on the write surface.
 export class ReviewActionsService {
   constructor(private readonly repository: ReviewActionsRepository) {}
+
+  async readOwnItemDiscussion(
+    session: ReviewSession,
+    input: LeadItemDiscussionInput,
+  ): Promise<LeadItemDiscussionView> {
+    if (session.role !== "lead") return { status: "unavailable" };
+    return leadItemDiscussionViewSchema.parse(
+      await this.repository.readLeadItemDiscussion(session, input),
+    );
+  }
 
   async commentOwnItem(
     session: ReviewSession,

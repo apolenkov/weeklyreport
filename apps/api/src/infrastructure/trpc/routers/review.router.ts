@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import {
   leadItemCommentInputSchema,
+  leadItemDiscussionInputSchema,
   reviewAcknowledgeInputSchema,
   reviewCommentInputSchema,
   reviewDeleteCommentInputSchema,
@@ -85,6 +86,15 @@ function createReviewActionProcedures(deps: ReviewRouterDeps) {
 
 export function createReviewRouter(deps: ReviewRouterDeps) {
   return router({
+    // Private live read: the ingress marks it no-store.
+    leadItemDiscussion: leadProcedure
+      .input(leadItemDiscussionInputSchema)
+      .query(({ input, ctx }) =>
+        withDomainErrorMapping(() =>
+          deps.reviewActionsService.readOwnItemDiscussion(ctx.session, input),
+        ),
+      ),
+
     leadItemComment: leadProcedure
       .input(leadItemCommentInputSchema)
       .use(captureMutationAuditInputMiddleware)

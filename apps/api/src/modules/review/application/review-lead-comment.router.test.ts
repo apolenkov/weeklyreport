@@ -30,6 +30,7 @@ function fixture(role: UserSession["role"] | null = "lead") {
   });
   const repo: ReviewActionsRepository = {
     insertLeadItemComment,
+    readLeadItemDiscussion: unused,
     acknowledge: unused,
     listAcknowledgements: unused,
     getRecordAnchorGroup: unused,

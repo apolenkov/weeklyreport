@@ -41,6 +41,10 @@ function renderOverviewWithFailingActiveReport() {
       },
     },
     { path: ["review", "leadItemComment"], mutation: true },
+    {
+      path: ["review", "leadItemDiscussion"],
+      query: { status: "available", comments: [] },
+    },
     { path: ["leadForm", "statusOverview"], queryByInput: () => never() },
     { path: ["leadForm", "openWork"], query: "pending" },
     { path: ["leadForm", "byPeriod"], queryByInput: () => never() },

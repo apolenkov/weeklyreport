@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useCallback, useContext } from "react";
+import { useContext } from "react";
 
 import { useQueryErrorHandler } from "../../../../../shared/hooks/query/use-query-error-handler";
 import { isHeadLike } from "../../../../../shared/lib/auth/role-predicates";
@@ -135,12 +135,8 @@ export function LeadStatusOverview({
     enabled: targetReportId !== null && !session?.isLoading && !shouldRouteAway,
     staleTime: 30_000,
   });
-  const { refetch: refetchOverview } = overviewQ;
   const replyPort = useLeadItemReplyPort(
-    useCallback(
-      () => refetchOverview({ throwOnError: true }),
-      [refetchOverview],
-    ),
+    editor.status === "ready" ? editor.draft.section.reportSectionId : null,
   );
 
   // The editor already reports a getActive failure (useLeadFormLoadErrors);

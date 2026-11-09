@@ -28,6 +28,11 @@ import {
 } from "../modules/product-feedback/index.js";
 import { PDF_DOWNLOAD_ROUTE } from "./http-access-log";
 
+// tRPC procedures whose private live answers must never be cached.
+const NO_STORE_TRPC_PATHS: ReadonlySet<string> = new Set([
+  "review.leadItemDiscussion",
+]);
+
 interface ApiIngressDeps {
   app: INestApplication;
   expressApp: Express;
@@ -138,6 +143,11 @@ export function mountApiIngress(deps: ApiIngressDeps): void {
         }
       },
       maxBodySize: TRPC_MAX_BODY_BYTES,
+      // Private live reads must not be stored by any cache on the way.
+      responseMeta: ({ info }) =>
+        info?.calls.some((call) => NO_STORE_TRPC_PATHS.has(call.path))
+          ? { headers: { "cache-control": "no-store, private" } }
+          : {},
     }),
   );
 

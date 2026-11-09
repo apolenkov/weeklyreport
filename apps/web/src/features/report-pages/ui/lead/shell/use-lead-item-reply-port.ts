@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import { TRPCClientError } from "@trpc/client";
 import { useMemo } from "react";
 
@@ -26,42 +26,29 @@ function isDefiniteRejection(error: unknown): boolean {
 
 /**
  * Lead replies on own items through the canonical `review.leadItemComment`
- * write. The server owns authorization; a confirmed reply re-reads the
- * Overview and the section so the draft merges the new comments in place.
+ * write; the server owns authorization. The discussion itself is re-read by
+ * its own uncached query, never by reloading the section editor.
  */
 export function useLeadItemReplyPort(
-  refreshOverview: () => Promise<unknown>,
+  reportSectionId: string | null,
 ): ItemReplyPort {
   const trpc = useTRPC();
-  const queryClient = useQueryClient();
   const { mutateAsync } = useMutation(
     trpc.review.leadItemComment.mutationOptions(),
   );
-  return useMemo(() => {
-    const refresh = async () => {
-      try {
-        await Promise.all([
-          refreshOverview(),
-          queryClient.invalidateQueries(trpc.leadForm.byPeriod.pathFilter(), {
-            throwOnError: true,
-          }),
-        ]);
-        return true;
-      } catch {
-        return false;
-      }
-    };
-    return {
-      refresh,
+  return useMemo(
+    () => ({
+      reportSectionId,
       send: async (item, text) => {
         if (item.recordId === null) return "rejected";
         try {
           await mutateAsync({ itemId: item.recordId, text });
+          return "sent";
         } catch (error: unknown) {
           return isDefiniteRejection(error) ? "rejected" : "uncertain";
         }
-        return (await refresh()) ? "sent" : "refresh-failed";
       },
-    };
-  }, [mutateAsync, queryClient, refreshOverview, trpc]);
+    }),
+    [mutateAsync, reportSectionId],
+  );
 }

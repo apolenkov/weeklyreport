@@ -36,6 +36,10 @@ function renderUnavailableOverview() {
     { path: ["reports", "getActive"], query: null },
     { path: ["review", "leadItemComment"], mutation: true },
     {
+      path: ["review", "leadItemDiscussion"],
+      query: { status: "available", comments: [] },
+    },
+    {
       path: ["leadForm", "statusOverview"],
       query: () => {
         throw badRequest();
