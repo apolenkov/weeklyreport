@@ -158,6 +158,7 @@ function saveFailed(
     args: live.args,
     sinks,
     contextual: Boolean(request.persistedAttempt),
+    request,
     retry:
       queuedSectionId !== null &&
       queuedSectionId === live.args.reportSectionId &&

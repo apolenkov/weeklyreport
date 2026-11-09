@@ -162,13 +162,42 @@ function shiftPeriod(date: Date): Date {
   return new Date(date.getTime() + MS_PER_WEEK);
 }
 
+// A frozen presentation shows the authorized source discussion, never what a
+// dirty editor still holds; the editor itself is left untouched.
+function withSourceComments(
+  draft: ReportSectionReadModel,
+  source: StatusOverviewSection,
+): ReportSectionReadModel {
+  const sourceComments = new Map(
+    source.items.map((item) => [item.stableId ?? item.id, item.comments]),
+  );
+  return {
+    ...draft,
+    items: draft.items.map((item) => ({
+      ...item,
+      comments: sourceComments.get(item.stableId ?? item.id) ?? [],
+    })),
+  };
+}
+
+function overviewCurrentSection(
+  output: LeadStatusOverviewOutput,
+  options: StatusOverviewProjectionOptions,
+): StatusOverviewSection {
+  const draft = options.currentSection;
+  if (!draft) return output.current.section;
+  return options.currentItemsEditable === true
+    ? draft
+    : withSourceComments(draft, output.current.section);
+}
+
 function normalizeOverviewInput(
   output: LeadStatusOverviewOutput,
   options: StatusOverviewProjectionOptions,
 ): StatusOverviewProjectionSource {
   const predecessor = output.predecessor;
   return {
-    currentSection: options.currentSection ?? output.current.section,
+    currentSection: overviewCurrentSection(output, options),
     currentItemsEditable: options.currentItemsEditable === true,
     previousPlan:
       predecessor.availability === "available"
