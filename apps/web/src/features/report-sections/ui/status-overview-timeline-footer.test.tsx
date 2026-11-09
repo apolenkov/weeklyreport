@@ -3,7 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import type { StatusOverviewUnit } from "../model/status-overview";
-import { UnitAddItemButton } from "./status-overview-timeline-footer";
+import {
+  StatusOverviewTimelineFooter,
+  UnitAddItemButton,
+} from "./status-overview-timeline-footer";
 
 function overviewUnit(
   overrides: Partial<StatusOverviewUnit> = {},
@@ -74,5 +77,37 @@ describe("unit creation controls", () => {
         name: "Add item to Incident duty, Current week",
       }),
     ).not.toBeInTheDocument();
+  });
+
+  it("says what the stage names do and starts an item in the chosen stage", async () => {
+    const user = userEvent.setup();
+    const onAddItem = vi.fn();
+    render(
+      <StatusOverviewTimelineFooter
+        unit={overviewUnit({
+          key: "product:product-1",
+          id: "product-1",
+          kind: "product",
+          name: "Internal BI",
+        })}
+        onAddItem={onAddItem}
+        ownedStageStarts={["Planning"]}
+      />,
+    );
+
+    expect(screen.getAllByText("Or start in a stage:")).toHaveLength(2);
+    const start = screen.getByRole("button", {
+      name: "Add item to Internal BI, Planning, Next week",
+    });
+    expect(start).toHaveTextContent("Planning");
+    expect(start).toHaveAccessibleDescription("Add item in Planning");
+
+    await user.click(start);
+    expect(onAddItem).toHaveBeenCalledWith({
+      source: "next",
+      unitKind: "product",
+      unitId: "product-1",
+      stageName: "Planning",
+    });
   });
 });
