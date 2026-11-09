@@ -35,6 +35,7 @@ const READ_MODEL = {
   portfolioOverview: [],
   leadSections: [],
   escalations: [],
+  recordOmissions: { risks: 0, decisions: 0, unknown: false },
 };
 
 function stubFetch(body: unknown, init?: { ok?: boolean; status?: number }) {
