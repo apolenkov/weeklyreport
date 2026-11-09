@@ -1,15 +1,15 @@
 import {
   aggregateTrafficLight,
-  type DraftSaveInput,
-  type ReportSectionReadModel,
-  reportSectionReadModelSchema,
+  type AuthorReportSectionReadModel,
+  authorReportSectionReadModelSchema,
+  type IncompleteDraftSaveInput,
   type ReportSectionStatus,
   type SubmitSectionInput,
   type TrafficLightStatus,
 } from "@weeklyreport/shared";
 
-type SectionWritePayload = DraftSaveInput | SubmitSectionInput;
-type SectionProject = ReportSectionReadModel["projects"][number];
+type SectionWritePayload = IncompleteDraftSaveInput | SubmitSectionInput;
+type SectionProject = AuthorReportSectionReadModel["projects"][number];
 
 // A stage is identified by (project, stage): the same stage id can be owned on
 // more than one project, so neither half alone is a key.
@@ -68,14 +68,17 @@ function withAggregatedTrafficLight(
   return { ...project, trafficLight };
 }
 
+// The merged model is the author's: a draft may carry risks and decisions with
+// missing details. A caller that must not persist one (submission) parses the
+// result with the complete read model.
 export function mergeSection(
-  section: ReportSectionReadModel,
+  section: AuthorReportSectionReadModel,
   input: SectionWritePayload,
   nextStatus: ReportSectionStatus,
   // Pending submit uses the request timestamp; persistence replaces it with
   // the authoritative time under the Report lock. Draft keeps its timestamp.
   now: Date,
-): ReportSectionReadModel {
+): AuthorReportSectionReadModel {
   const stageStatusByKey = new Map(
     input.stageStatuses.map((status) => [
       stageKey(status.projectId, status.stageId),
@@ -91,7 +94,7 @@ export function mergeSection(
     input.activityStatuses.map((status) => [status.activityId, status]),
   );
 
-  return reportSectionReadModelSchema.parse({
+  return authorReportSectionReadModelSchema.parse({
     ...section,
     status: nextStatus,
     submittedAt: nextStatus === "submitted" ? now : section.submittedAt,

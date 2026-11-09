@@ -1,4 +1,7 @@
-import type { ReportSectionReadModel } from "@weeklyreport/shared";
+import type {
+  AuthorReportSectionReadModel,
+  ReportSectionReadModel,
+} from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -104,7 +107,7 @@ describe("ReportSectionsService — product telemetry", () => {
       activities: [],
       reviews: [],
     };
-    let current = section;
+    let current: AuthorReportSectionReadModel = section;
     return {
       getSectionById(id) {
         return Promise.resolve(

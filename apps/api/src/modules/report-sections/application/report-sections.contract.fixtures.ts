@@ -1,4 +1,5 @@
 import type {
+  AuthorReportSectionReadModel,
   DraftSavePayload,
   PeriodStatus,
   ReportSectionReadModel,
@@ -68,7 +69,9 @@ export function createRepository(
   section: ReportSectionReadModel,
   periodStatus: PeriodStatus | null = "open",
 ): ReportSectionsRepository {
-  const currentSection = { value: structuredClone(section) };
+  const currentSection: { value: AuthorReportSectionReadModel } = {
+    value: structuredClone(section),
+  };
 
   return {
     getSectionById(reportSectionId) {

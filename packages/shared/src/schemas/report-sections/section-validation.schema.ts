@@ -1,9 +1,6 @@
-import type {
-  DraftSaveInput,
-  ProjectReadModel,
-  ReportSectionReadModel,
-  SubmitSectionInput,
-} from "./section.schema.js";
+import type { AuthorReportSectionReadModel } from "./author-section.schema.js";
+import type { IncompleteDraftSaveInput } from "./incomplete-record.schema.js";
+import type { ProjectReadModel, SubmitSectionInput } from "./section.schema.js";
 import type {
   DraftSaveValidationError,
   DraftSaveValidationErrorCode,
@@ -53,7 +50,7 @@ function validateProjectSubmission(
 
 /** Validates a section submit payload against project, activity, and owned-stage completeness rules. */
 export function validateSubmitInput(
-  section: ReportSectionReadModel,
+  section: AuthorReportSectionReadModel,
   input: SubmitSectionInput,
 ): readonly DraftSaveValidationError[] {
   if (section.status === "submitted") {
@@ -127,8 +124,8 @@ export function validateSubmitInput(
  * Product-parented rows (null activityId) are out of scope here.
  */
 export function validateRecordActivityIds(
-  section: ReportSectionReadModel,
-  input: DraftSaveInput | SubmitSectionInput,
+  section: AuthorReportSectionReadModel,
+  input: IncompleteDraftSaveInput | SubmitSectionInput,
 ): readonly DraftSaveValidationError[] {
   const seededIds = new Set(
     section.activities.map((activity) => activity.activityId),
@@ -153,8 +150,8 @@ export function validateRecordActivityIds(
 
 /** Rejects activity statuses that reference activities outside the section. */
 export function validateActivityStatuses(
-  section: ReportSectionReadModel,
-  input: DraftSaveInput | SubmitSectionInput,
+  section: AuthorReportSectionReadModel,
+  input: IncompleteDraftSaveInput | SubmitSectionInput,
 ): readonly DraftSaveValidationError[] {
   const seededIds = new Set(
     section.activities.map((activity) => activity.activityId),

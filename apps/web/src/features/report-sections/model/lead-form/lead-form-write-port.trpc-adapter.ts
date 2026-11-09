@@ -6,7 +6,14 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { TRPCClientError } from "@trpc/client";
-import { useCallback, useState } from "react";
+import {
+  type AuthorReportSectionReadModel,
+  type DraftSavePayload,
+  isCompleteDecision,
+  isCompleteRisk,
+  type ReportSectionReadModel,
+} from "@weeklyreport/shared";
+import { useCallback, useMemo, useState } from "react";
 
 import {
   invalidateDashboard,
@@ -22,6 +29,7 @@ import {
 } from "./lead-form-write-port";
 
 function normalizeWriteError(error: unknown): LeadFormWriteError {
+  if (error instanceof LeadFormWriteError) return error;
   const message =
     error instanceof Error && error.message ? error.message : "Write failed";
   return new LeadFormWriteError(
@@ -50,6 +58,41 @@ function normalizeDraftWriteError(error: unknown): LeadFormWriteError {
   return new LeadFormWriteError(
     definite ? "restriction" : "ambiguous",
     normalized.message,
+  );
+}
+
+// TODO(TASK-836): the form adopts the author's model, and this narrowing goes,
+// when it learns to edit incomplete risks and decisions. Until then it sends
+// complete records only, so an incomplete one can only come from another
+// client; the saved state is real, and a reload is the way to see it.
+function completeSectionOf(
+  section: AuthorReportSectionReadModel,
+): ReportSectionReadModel {
+  const risks = section.risks.filter(isCompleteRisk);
+  const decisions = section.decisions.filter(isCompleteDecision);
+  if (
+    risks.length !== section.risks.length ||
+    decisions.length !== section.decisions.length
+  ) {
+    throw new LeadFormWriteError(
+      "conflict",
+      "This section holds unfinished drafts from another session. Reload to continue.",
+    );
+  }
+  return { ...section, risks, decisions };
+}
+
+function useSaveDraftMutation() {
+  const trpc = useTRPC();
+  const { mutateAsync } = useMutation(
+    trpc.reports.saveDraft.mutationOptions({}),
+  );
+  return useMemo(
+    () => ({
+      mutateAsync: async (input: DraftSavePayload) =>
+        completeSectionOf(await mutateAsync(input)),
+    }),
+    [mutateAsync],
   );
 }
 
@@ -141,7 +184,7 @@ export function useLeadFormWritePort(
   );
 
   const saveDraft = useWrite(
-    useMutation(trpc.reports.saveDraft.mutationOptions({})),
+    useSaveDraftMutation(),
     invalidateForm,
     reportSectionOf,
     normalizeDraftWriteError,

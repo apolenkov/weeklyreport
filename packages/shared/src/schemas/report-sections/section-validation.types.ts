@@ -10,6 +10,8 @@ export type DraftSaveValidationErrorCode =
   | "PUBLISHED_RECORD_LOCKED"
   | "ITEM_RESOLUTION_LOCKED"
   | "INVALID_DECISION_PARENT"
+  | "INCOMPLETE_RECORD_OMITTED"
+  | "INCOMPLETE_RECORD_DELETION_INVALID"
   | "INVALID_HISTORY_CURSOR";
 
 /** Domain validation failure safe to return to section clients. */

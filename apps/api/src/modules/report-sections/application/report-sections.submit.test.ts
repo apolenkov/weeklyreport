@@ -1,4 +1,5 @@
 import type {
+  AuthorReportSectionReadModel,
   DraftSavePayload,
   PeriodStatus,
   ReportSectionReadModel,
@@ -79,7 +80,7 @@ function createRepository(
   section: ReportSectionReadModel,
   periodStatus: PeriodStatus | null = "open",
 ): ReportSectionsRepository {
-  let currentSection = structuredClone(section);
+  let currentSection: AuthorReportSectionReadModel = structuredClone(section);
 
   return {
     getSectionById(reportSectionId) {
@@ -649,32 +650,32 @@ describe("ReportSectionsService — risk/decision Zod validation", () => {
     ).rejects.toThrow();
   });
 
-  it("rejects risk with empty impact text", async () => {
+  it("keeps a draft risk whose impact is left empty as a missing detail", async () => {
     const service = new ReportSectionsService(
       createRepository(baseSection),
       NOOP_REPORT_SECTIONS_TELEMETRY,
       createNullLogger(),
     );
 
-    await expect(
-      service.saveDraft(
-        validDraft({
-          risks: [
-            {
-              projectId: PROJECT_ID_1,
-              risk: "A valid risk",
-              impact: "",
-              mitigation: "Some mitigation",
-              severity: "at-risk",
-              // keep stageNames valid so the rejection
-              // stays attributable to the empty impact under test.
-              stageNames: ["Development"],
-            },
-          ],
-        }),
-        AUTHOR_ID,
-      ),
-    ).rejects.toThrow();
+    const saved = await service.saveDraft(
+      validDraft({
+        risks: [
+          {
+            projectId: PROJECT_ID_1,
+            risk: "A valid risk",
+            impact: "",
+            mitigation: "Some mitigation",
+            severity: "at-risk",
+            stageNames: ["Development"],
+          },
+        ],
+      }),
+      AUTHOR_ID,
+    );
+
+    expect(saved.risks).toMatchObject([
+      { impact: null, mitigation: "Some mitigation" },
+    ]);
   });
 
   it("rejects risk without stageNames", async () => {

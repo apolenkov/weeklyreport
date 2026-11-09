@@ -114,6 +114,7 @@ function createSubmission(
       createMany: vi.fn(() => Promise.resolve({ count: 1 })),
     },
     risk: {
+      findMany: vi.fn(() => Promise.resolve([])),
       deleteMany: clear,
       createMany: vi.fn(() => Promise.resolve({ count: 0 })),
     },

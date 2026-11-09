@@ -1,11 +1,13 @@
 import { Inject, Injectable } from "@nestjs/common";
 import {
+  mapPrismaToAuthorReportSection,
   mapPrismaToReportSection,
   reportSectionFullInclude,
 } from "@weeklyreport/report-persistence";
 import {
+  type AuthorReportSectionReadModel,
+  type IncompleteRecordDeletion,
   type PublishedLineage,
-  type ReportSectionReadModel,
   type ReportStatus,
 } from "@weeklyreport/shared";
 
@@ -15,6 +17,7 @@ import {
   type ReportPeriodWriteGate,
   ReportSectionDomainError,
   type ReportSectionsRepository,
+  type SectionReadScope,
   SectionVersionConflictError,
 } from "../application/report-sections.service";
 import {
@@ -76,7 +79,8 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
 
   async getSectionById(
     reportSectionId: string,
-  ): Promise<ReportSectionReadModel | null> {
+    scope: SectionReadScope = "complete",
+  ): Promise<AuthorReportSectionReadModel | null> {
     const row = await this.prisma.reportSection.findUnique({
       where: { id: reportSectionId },
       include: reportSectionFullInclude,
@@ -86,13 +90,15 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
       return null;
     }
 
-    return mapPrismaToReportSection(row);
+    return scope === "author"
+      ? mapPrismaToAuthorReportSection(row)
+      : mapPrismaToReportSection(row);
   }
 
   // Reference set for the resolve-not-delete lock comes from immutable
   // published snapshots and their search documents.
   getPublishedLineage(
-    section: ReportSectionReadModel,
+    section: AuthorReportSectionReadModel,
   ): Promise<PublishedLineage> {
     return queryPublishedLineage(
       this.prisma,
@@ -101,12 +107,13 @@ export class ReportSectionsPrismaRepository implements ReportSectionsRepository 
   }
 
   async saveSection(
-    section: ReportSectionReadModel,
+    section: AuthorReportSectionReadModel,
     expectedVersion: number,
-  ): Promise<ReportSectionReadModel> {
+    deletions: readonly IncompleteRecordDeletion[] = [],
+  ): Promise<AuthorReportSectionReadModel> {
     try {
       return await this.prisma.$transaction(
-        (tx) => applySaveSection(tx, section, expectedVersion),
+        (tx) => applySaveSection(tx, section, expectedVersion, deletions),
         { timeout: SAVE_SECTION_TX_TIMEOUT_MS },
       );
     } catch (error) {

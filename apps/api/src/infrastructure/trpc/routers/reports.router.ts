@@ -1,7 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import {
   compiledHistoryInputSchema,
-  draftSaveSchema,
+  incompleteDraftSaveSchema,
   paginationInputSchema,
   submitSectionSchema,
   type UserSession,
@@ -91,7 +91,7 @@ function createSectionProcedures(deps: ReportsRouterDeps) {
       }),
 
     saveDraft: protectedProcedure
-      .input(draftSaveSchema)
+      .input(incompleteDraftSaveSchema)
       .use(captureMutationAuditInputMiddleware)
       .mutation(async ({ input, ctx }) => {
         try {

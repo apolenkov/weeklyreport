@@ -1,9 +1,10 @@
 import type {
+  AuthorReportSectionReadModel,
   DraftSaveValidationError,
+  IncompleteRecordDeletion,
   MyHistoryResult,
   PeriodStatus,
   PublishedLineage,
-  ReportSectionReadModel,
   ReportStatus,
 } from "@weeklyreport/shared";
 
@@ -46,10 +47,17 @@ export interface ReportPeriodWriteGate {
   archived: boolean;
 }
 
+/** Which risks and decisions a section read carries. */
+export type SectionReadScope = "complete" | "author";
+
 export interface ReportSectionsRepository {
+  // "complete", the default, hides incomplete risks and decisions and is the
+  // only scope a reader other than the section author may be served. "author"
+  // also carries the author's private incomplete drafts.
   getSectionById(
     reportSectionId: string,
-  ): Promise<ReportSectionReadModel | null>;
+    scope?: SectionReadScope,
+  ): Promise<AuthorReportSectionReadModel | null>;
   getReportPeriodWriteGateForSection(
     sectionId: string,
   ): Promise<ReportPeriodWriteGate | null>;
@@ -57,12 +65,17 @@ export interface ReportSectionsRepository {
     reportId: string,
   ): Promise<{ status: ReportStatus; deadline: Date | null } | null>;
   getPublishedLineage(
-    section: ReportSectionReadModel,
+    section: AuthorReportSectionReadModel,
   ): Promise<PublishedLineage>;
+  // Replaces the section's children. A stored incomplete risk or decision
+  // leaves only through `deletions`, and a save that names none deletes none:
+  // omitting the argument can never erase a draft. The result is the author's
+  // own view.
   saveSection(
-    section: ReportSectionReadModel,
+    section: AuthorReportSectionReadModel,
     expectedVersion: number,
-  ): Promise<ReportSectionReadModel>;
+    deletions?: readonly IncompleteRecordDeletion[],
+  ): Promise<AuthorReportSectionReadModel>;
   getMyHistoryPage(
     authorId: string,
     pagination: { cursor?: string | undefined; limit: number },

@@ -1,8 +1,8 @@
-import type {
-  DraftSaveInput,
-  DraftSaveValidationError,
-  SubmitSectionInput,
-} from "@weeklyreport/shared";
+import type { DraftSaveValidationError } from "@weeklyreport/shared";
+
+interface IdentifiedRecord {
+  readonly stableId?: string | undefined;
+}
 
 // Payload must retain every published item/decision stableId (rewrite = omit).
 // Risks excluded — re-raised, not carried. See openspec durable-record-identity.
@@ -11,7 +11,10 @@ export function findPublishedRecordViolation(
     itemStableIds: readonly string[];
     decisionStableIds: readonly string[];
   },
-  input: DraftSaveInput | SubmitSectionInput,
+  input: {
+    readonly items: readonly IdentifiedRecord[];
+    readonly decisions: readonly IdentifiedRecord[];
+  },
 ): DraftSaveValidationError | null {
   if (
     published.itemStableIds.length === 0 &&
