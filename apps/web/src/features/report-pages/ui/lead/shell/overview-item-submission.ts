@@ -4,6 +4,7 @@ import {
   createOverviewComposerState,
   type OverviewItemDialogState,
 } from "./lead-status-overview-item-editor";
+import { settleOriginalBeforeDiscard } from "./overview-discard-settlement";
 import {
   type AcknowledgedOverviewItem,
   overviewAcknowledgedItem,
@@ -16,6 +17,13 @@ type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
 type SetDialog = (
   action: SetStateAction<OverviewItemDialogState | null>,
 ) => void;
+
+export function shouldResetSubmittedInput(
+  submitted: unknown,
+  current: unknown,
+): boolean {
+  return JSON.stringify(submitted) === JSON.stringify(current);
+}
 
 interface SubmissionContext {
   readonly editor: ReadyEditor | null;
@@ -31,6 +39,14 @@ function driveDiscard(
 ): void {
   const discard = dialog.submission?.discard;
   if (!discard || discard.armed || discard.failed) return;
+  // The compensating write is only meaningful once the original request is
+  // settled: an ambiguous one is first re-sent verbatim, a conflicting or
+  // restricted one is reconciled by the owner and is never compensated here.
+  const recovery = editor.draft.saveRecovery;
+  if (recovery?.token === dialog.submission.token) {
+    settleOriginalBeforeDiscard(editor, recovery, discard, setDialog);
+    return;
+  }
   setDialog((current) =>
     current?.submission?.discard?.token === discard.token
       ? {
@@ -114,6 +130,62 @@ function rememberCreatedFocus(
   };
 }
 
+function finishAcknowledgedSubmission({
+  editor,
+  dialog,
+  setDialog,
+  createdFocus,
+  acknowledged,
+}: {
+  editor: ReadyEditor;
+  dialog: OverviewItemDialogState;
+  setDialog: SetDialog;
+  createdFocus: DriveRefs["createdFocus"];
+  acknowledged: AcknowledgedOverviewItem;
+}): void {
+  const submission = dialog.submission;
+  if (!submission) return;
+  if (
+    shouldResetSubmittedInput(
+      submission.inputSnapshot,
+      dialog.draftStore.getSnapshot(),
+    )
+  )
+    rememberCreatedFocus(createdFocus, dialog, acknowledged);
+  setDialog((current) => {
+    if (current?.submission?.attempt !== submission.attempt) return current;
+    // Typing after the dispatch is not covered by the acknowledged request.
+    if (
+      !shouldResetSubmittedInput(
+        submission.inputSnapshot,
+        current.draftStore.getSnapshot(),
+      )
+    )
+      // The acknowledged request becomes the edit baseline, so only the
+      // unsent typing remains as the lead's own pending change.
+      return current.mode === "edit"
+        ? {
+            ...current,
+            item: submission.item,
+            target: { ...current.target, source: current.week },
+            submission: null,
+          }
+        : { ...current, submission: null };
+    if (current.mode === "create") {
+      if (!submission.addAnother) return null;
+      const target = { ...current.target, source: current.week };
+      return {
+        ...createOverviewComposerState(editor, target, null),
+        mode: "create",
+        ...(current.contextual ? { contextual: true } : {}),
+        target,
+        seq: current.seq + 1,
+      };
+    }
+    return null;
+  });
+}
+
 // Plain function so the mutable attempt ref can be written outside a hook body.
 function driveOverviewSubmission({
   editor,
@@ -174,21 +246,12 @@ function driveOverviewSubmission({
   );
   if (acknowledged) {
     startedAttempt.current = null;
-    rememberCreatedFocus(createdFocus, dialog, acknowledged);
-    setDialog((current) => {
-      if (current?.submission?.attempt !== submission.attempt) return current;
-      if (submission.addAnother && current.mode === "create") {
-        // Keep creating in the week the lead actually saved to, not the week
-        // the dialog opened with.
-        const target = { ...current.target, source: current.week };
-        return {
-          ...createOverviewComposerState(editor, target, null),
-          mode: "create",
-          target,
-          seq: current.seq + 1,
-        };
-      }
-      return null;
+    finishAcknowledgedSubmission({
+      editor,
+      dialog,
+      setDialog,
+      createdFocus,
+      acknowledged,
     });
   }
 }
@@ -222,8 +285,10 @@ export function overviewSaveFailure(
     : null;
 }
 
-// Closing an abandoned save restores the pre-edit draft; recovery dialogs
-// never wrote anything, so they restore nothing.
+// Closing an abandoned save restores the pre-edit draft through a guarded
+// compensating write; recovery dialogs never wrote anything, so they restore
+// nothing. After possible dispatch the cancel is only intent until that write
+// is confirmed against the then-current state.
 export function closeOverviewDialog({
   editor,
   dialog,
@@ -238,9 +303,18 @@ export function closeOverviewDialog({
     if (dialog.submission.discard.failed) {
       editor?.draft.abandonPersisted(dialog.submission.discard.token);
       setDialog(null);
+      return;
     }
     return;
   }
+  // A write that may have landed is never dismissed from a detached context;
+  // only a conflict answer proves nothing is in flight any more.
+  if (
+    dialog?.submission &&
+    recoveryReason &&
+    editor?.draft.saveRecovery?.phase !== "reconciliation"
+  )
+    return;
   if (editor && dialog?.submission && restore) {
     editor.draft.apply(restore);
     setDialog({

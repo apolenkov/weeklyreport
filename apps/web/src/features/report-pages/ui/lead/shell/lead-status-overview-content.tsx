@@ -226,24 +226,19 @@ export function LeadStatusOverviewContent({
   refreshError,
   onRefresh,
 }: LeadStatusOverviewContentProps) {
+  const controller = useOverviewController({ targetReportId, output, editor });
   const {
     readyEditor,
     canEdit,
     canStartAction,
-    completion,
     model,
     dialog,
     plan,
     verdict,
     planPresentation,
+    itemSlot,
     itemEditor,
-    pendingInput,
-    saveStatus,
-    openWork,
-    openWorkBlocker,
-    onActivityFieldsChange,
-    onActivityFieldsPendingChange,
-  } = useOverviewController({ targetReportId, output, editor });
+  } = controller;
   const detailsHref = useOverviewDetailsHref(readyEditor, targetReportId);
   return (
     <SdlcTooltipProvider>
@@ -256,41 +251,47 @@ export function LeadStatusOverviewContent({
         >
           <OverviewHeader
             editor={readyEditor}
-            pendingInput={pendingInput}
-            completion={completion}
+            pendingInput={controller.pendingInput}
+            completion={controller.completion}
           />
           <EditorAvailabilityNotice editor={editor} />
           <OverviewRefreshWarning failed={refreshError} onRetry={onRefresh} />
           {planPresentation.recovery}
-          <OverviewEditorNotices
-            dialog={dialog}
-            error={dialog.error}
-            itemEditor={itemEditor}
-          />
+          {!itemSlot && (
+            <OverviewEditorNotices
+              dialog={dialog}
+              error={dialog.error}
+              itemEditor={itemEditor}
+            />
+          )}
           <StatusOverview
             model={model}
+            ownedStageStartsForProduct={controller.ownedStageStartsForProduct}
             health={projectReportHealthPulse(
               model.units,
               readyEditor?.draft.section ?? output.current.section,
             )}
-            editorSlot={planPresentation.slot}
+            editorSlot={itemSlot ?? planPresentation.slot}
             {...overviewItemActions(canStartAction, dialog, plan)}
+            onAddItem={itemSlot || canStartAction ? dialog.addItem : undefined}
             {...overviewDirectActions(canStartAction, dialog, verdict)}
             detailsHref={detailsHref}
             activityFieldsEditable={canEdit}
-            onActivityFieldsChange={onActivityFieldsChange}
-            onActivityFieldsPendingChange={onActivityFieldsPendingChange}
-            autosaveStatus={saveStatus}
+            onActivityFieldsChange={controller.onActivityFieldsChange}
+            onActivityFieldsPendingChange={
+              controller.onActivityFieldsPendingChange
+            }
+            autosaveStatus={controller.saveStatus}
           />
           <OverviewOpenWork
-            openWork={openWork}
+            openWork={controller.openWork}
             model={model}
-            blocker={openWorkBlocker}
+            blocker={controller.openWorkBlocker}
             onOpen={plan.openWork}
           />
           <LeadOverviewDetails
             editor={readyEditor}
-            pendingInput={pendingInput}
+            pendingInput={controller.pendingInput}
           />
         </div>
       </LeadCompletionLayout>

@@ -10,6 +10,7 @@ import { createAutosaveEngine } from "./autosave-live-state";
 import { useSaveDraftMutation } from "./autosave-mutation";
 import type {
   AutosaveController,
+  AutosaveRecovery,
   AutosaveState,
   UseLeadFormAutosaveArgs,
 } from "./autosave-types";
@@ -21,7 +22,11 @@ const DEFAULT_DEBOUNCE_MS = 5000;
 // live value and save rule lives behind the engine's operations.
 export function useLeadFormAutosave(
   args: UseLeadFormAutosaveArgs,
-): AutosaveController {
+): AutosaveController & {
+  retrySameAttempt: (token: string) => boolean;
+  isRecoveryBlocked: () => boolean;
+} {
+  const [recovery, setRecovery] = useState<AutosaveRecovery | null>(null);
   const [autosaveState, setAutosaveState] = useState<AutosaveState>("idle");
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [queuedRetryRevision, setQueuedRetryRevision] = useState(0);
@@ -31,6 +36,7 @@ export function useLeadFormAutosave(
   const [engine] = useState(() =>
     createAutosaveEngine(args, {
       setState: setAutosaveState,
+      setRecovery,
       setLastSavedAt,
       setLastSavedKey,
       rearmRetry: () => setQueuedRetryRevision((revision) => revision + 1),
@@ -87,10 +93,19 @@ export function useLeadFormAutosave(
 
   // A partially typed row is unsaved user content even though it cannot change
   // the payload yet, so leaving the page still warns about it.
-  useBeforeUnloadGuard(dirty || (args.localOnlyRows ?? 0) > 0);
+  useBeforeUnloadGuard(
+    recovery !== null || dirty || (args.localOnlyRows ?? 0) > 0,
+  );
 
   return {
-    state,
+    recovery,
+    retrySameAttempt: engine.retrySameAttempt,
+    isRecoveryBlocked: engine.isRecoveryBlocked,
+    state: recovery
+      ? recovery.phase === "pending"
+        ? "saving"
+        : "error"
+      : state,
     lastSavedAt,
     dirty,
     currentPayloadMatchesSavedBaseline,

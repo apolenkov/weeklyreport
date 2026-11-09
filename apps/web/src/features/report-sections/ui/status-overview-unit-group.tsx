@@ -158,6 +158,7 @@ export function UnitGroup({
             onEditItem={overview.onEditItem}
             onEditItemText={overview.onEditItemText}
             onAddItem={onAddItem}
+            ownedStageStarts={ownedStageStarts(unit, overview)}
             onPlanItem={overview.onPlanItem}
             onMoveItem={overview.onMoveItem}
             onConfirmItem={overview.onConfirmItem}
@@ -188,4 +189,13 @@ export function UnitGroup({
       ))}
     </section>
   );
+}
+
+function ownedStageStarts(
+  unit: StatusOverviewUnit,
+  overview: UnitGroupProps["overview"],
+) {
+  return unit.kind === "product" && !unit.historical
+    ? overview.ownedStageStartsForProduct?.(unit.id)
+    : undefined;
 }

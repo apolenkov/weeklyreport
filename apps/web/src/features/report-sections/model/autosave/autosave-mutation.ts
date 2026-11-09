@@ -44,15 +44,18 @@ export function useSaveDraftMutation(
   const mutateAsync = useCallback<AutosaveMutationHandle["mutateAsync"]>(
     async (request) => {
       setPendingCount((count) => count + 1);
+      // Capture at dispatch, after any queued rebase, without sharing nested
+      // draft objects with either the editor or the transport adapter.
+      const dispatched = request;
       try {
         const saved = await writePort.saveDraft({
-          ...request.payload,
-          version: request.version,
+          ...structuredClone(dispatched.payload),
+          version: dispatched.version,
         });
-        onSuccess(saved, request);
+        onSuccess(saved, dispatched);
         return saved;
       } catch (error: unknown) {
-        onError(error, request);
+        onError(error, dispatched);
         throw error;
       } finally {
         setPendingCount((count) => count - 1);

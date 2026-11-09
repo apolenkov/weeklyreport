@@ -210,6 +210,13 @@ function submissionScopeRecovery(
     dialog.submission.receiptScope !== editor.draft.receiptScope
   )
     return "The report activation changed. Your unsaved input is kept below and has not overwritten the new draft.";
+  const recovery = editor.draft.saveRecovery;
+  if (
+    dialog.submission &&
+    recovery?.phase === "reconciliation" &&
+    recovery.token === dialog.submission.token
+  )
+    return "This update changed while you were editing. Your unsaved input is kept below and has not overwritten those changes.";
   return null;
 }
 

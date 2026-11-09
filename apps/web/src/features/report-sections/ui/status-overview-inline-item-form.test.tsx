@@ -269,7 +269,6 @@ describe("StatusOverviewInlineItemForm", () => {
     const user = userEvent.setup();
     const p = props();
     render(<StatusOverviewInlineItemForm {...p} />);
-    await user.tab();
     expect(screen.getByLabelText("Description")).toHaveFocus();
     await user.tab();
     expect(screen.getByLabelText("Build")).toHaveFocus();

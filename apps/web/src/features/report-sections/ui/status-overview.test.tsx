@@ -33,6 +33,8 @@ function overviewItem(index: number) {
   };
 }
 
+const addTo = (w: string) => `Add item to Incident duty, ${w} week`;
+
 const model: StatusOverviewModel = {
   periods: {
     previouslyPlanned: "24–30 Aug 2026",
@@ -1065,7 +1067,7 @@ describe("StatusOverview", () => {
     );
   });
 
-  it("uses one Add item entry point in the unit header without an editor host in the grid", () => {
+  it("uses Add item entry points", () => {
     const unit = model.units[0];
     if (!unit) throw new Error("Expected one overview unit");
     const onAddItem = vi.fn();
@@ -1073,10 +1075,12 @@ describe("StatusOverview", () => {
     expect(screen.queryByTestId("report-unit-footer")).not.toBeInTheDocument();
     expect(screen.queryByRole("form")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Add item to Incident duty" }),
+      screen.getByRole("button", {
+        name: addTo("Current"),
+      }),
     ).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /Add item to/ })).toHaveLength(
-      1,
+      2,
     );
   });
 
@@ -1412,12 +1416,12 @@ describe("StatusOverview", () => {
 
     expect(
       screen.getByRole("button", {
-        name: `Add item to ${longProductName}`,
+        name: `Add item to ${longProductName}, Current week`,
       }),
     ).toBeVisible();
     expect(
       screen.getByRole("button", {
-        name: "Add item to Incident duty",
+        name: addTo("Current"),
       }),
     ).toBeVisible();
     expect(
@@ -1428,7 +1432,7 @@ describe("StatusOverview", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "Add item to Incident duty",
+        name: addTo("Current"),
       }),
     );
     expect(onAddItem).toHaveBeenCalledWith({
@@ -1453,22 +1457,13 @@ describe("StatusOverview", () => {
     );
 
     expect(screen.getByText("Work item 1")).toBeVisible();
-    expect(
-      screen.queryByRole("button", {
-        name: "Add current week update to Incident duty",
-      }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", {
-        name: "Add next week update to Incident duty",
-      }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Add item to/ })).toBeNull();
     expect(
       document.querySelectorAll("[data-overview-create-origin]"),
     ).toHaveLength(0);
   });
 
-  it("offers one labelled Add item in the unit header and no cell creation", async () => {
+  it("offers labelled Add item actions", async () => {
     const user = userEvent.setup();
     const onAddItem = vi.fn();
     render(<StatusOverview model={model} onAddItem={onAddItem} />);
@@ -1477,7 +1472,7 @@ describe("StatusOverview", () => {
       name: "Activity Incident duty",
     });
     const add = within(article).getByRole("button", {
-      name: "Add item to Incident duty",
+      name: addTo("Current"),
     });
     expect(add).toHaveTextContent("Add item");
     expect(add).not.toHaveClass("opacity-0");
@@ -1493,6 +1488,16 @@ describe("StatusOverview", () => {
     await user.click(add);
     expect(onAddItem).toHaveBeenLastCalledWith({
       source: "current",
+      unitKind: "activity",
+      unitId: "activity-1",
+    });
+    await user.click(
+      within(article).getByRole("button", {
+        name: addTo("Next"),
+      }),
+    );
+    expect(onAddItem).toHaveBeenLastCalledWith({
+      source: "next",
       unitKind: "activity",
       unitId: "activity-1",
     });

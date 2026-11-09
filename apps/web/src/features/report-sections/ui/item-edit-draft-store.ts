@@ -17,6 +17,7 @@ export interface ItemEditDraftSeed {
   readonly week: "current" | "next";
   readonly currentUserName?: string | undefined;
   readonly defaultProductId?: string | undefined;
+  readonly defaultStageName?: string | undefined;
   readonly defaultActivityId?: string | undefined;
   // Open-draft stage memory and the product stage ownership it is scoped by.
   readonly stageMemory?: DraftStageMemory | undefined;
@@ -32,6 +33,17 @@ interface ItemEditDraftFields {
   readonly parent: RecordParent;
   readonly priorityRank: number | null;
   readonly stageNames: string[];
+}
+
+function explicitStageSeed(
+  args: ItemEditDraftSeed,
+  productId: string | undefined,
+) {
+  return args.item === null &&
+    productId !== undefined &&
+    productId === args.defaultProductId
+    ? args.defaultStageName
+    : undefined;
 }
 
 function seedDraft(args: ItemEditDraftSeed) {
@@ -62,6 +74,7 @@ function seedDraft(args: ItemEditDraftSeed) {
     availableStages:
       productId === undefined ? [] : (args.stagesForProduct?.(productId) ?? []),
   });
+  const explicitStage = explicitStageSeed(args, productId);
   const snapshot: ItemEditDraftFields = {
     text: initial.text,
     nextStepText: initial.nextStepText ?? "",
@@ -69,7 +82,7 @@ function seedDraft(args: ItemEditDraftSeed) {
     pausedReason: args.item?.pausedReason ?? "",
     parent,
     priorityRank: args.item?.priorityRank ?? null,
-    stageNames: [...stageNames],
+    stageNames: explicitStage ? [explicitStage] : [...stageNames],
   };
   return { isCreate, initial, snapshot };
 }

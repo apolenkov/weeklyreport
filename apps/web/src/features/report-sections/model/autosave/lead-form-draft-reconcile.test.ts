@@ -116,6 +116,75 @@ describe("classifyReseed", () => {
   });
 });
 
+describe("authoritative stage ownership metadata", () => {
+  it("refreshes ownership without replacing local text or project status", () => {
+    const current = makeSection("Latest local text", "item", "stable");
+    const server = {
+      ...makeSection("Server text", "item", "stable"),
+      projects: current.projects.map((project) => ({
+        ...project,
+        trafficLight: "red" as const,
+        ownedStages: [],
+      })),
+    };
+    const local = {
+      ...current,
+      projects: current.projects.map((project) => ({
+        ...project,
+        ownedStages: [
+          { stageId: "stage", stageName: "Development", sortOrder: 0 },
+        ],
+      })),
+    };
+
+    const result = reconcileServerRecordMetadata(local, server);
+
+    expect(result?.projects[0]?.ownedStages).toEqual([]);
+    expect(result?.projects[0]?.trafficLight).toBe("green");
+    expect(result?.items).toBe(local.items);
+    expect(result?.items[0]?.text).toBe("Latest local text");
+    expect(reconcileServerRecordMetadata(result, server)).toBe(result);
+  });
+
+  it("keeps locally authored stage status when the server renames its ownership", () => {
+    const section = baseSection();
+    const current = {
+      ...section,
+      projects: section.projects.map((project) => ({
+        ...project,
+        ownedStages: [
+          {
+            stageId: "stage",
+            stageName: "Development",
+            sortOrder: 0,
+            status: "yellow" as const,
+          },
+        ],
+      })),
+    };
+    const server = {
+      ...section,
+      projects: section.projects.map((project) => ({
+        ...project,
+        ownedStages: [
+          {
+            stageId: "stage",
+            stageName: "Noncanonical stage",
+            sortOrder: 0,
+            status: "green" as const,
+          },
+        ],
+      })),
+    };
+    const result = reconcileServerRecordMetadata(current, server);
+    expect(result?.projects[0]?.ownedStages[0]).toMatchObject({
+      stageName: "Noncanonical stage",
+      status: "yellow",
+    });
+    expect(reconcileServerRecordMetadata(result, server)).toBe(result);
+  });
+});
+
 describe("reconcileSavedIdentities", () => {
   it("adopts the server id + stableId while preserving newer local content", () => {
     const tempId = "77777777-7777-4777-8777-777777777777";

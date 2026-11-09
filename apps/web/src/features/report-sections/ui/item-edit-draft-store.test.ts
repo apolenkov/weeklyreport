@@ -84,6 +84,29 @@ function remembered(stageName: string, productId = "p-multi") {
 }
 
 describe("open item draft store", () => {
+  it("seeds an explicitly selected owned stage as a clean baseline over remembered stage", () => {
+    const store = createItemEditDraftStore({
+      ...seed,
+      products: [MULTI_STAGE_PRODUCT],
+      defaultProductId: "p-multi",
+      defaultStageName: "Testing",
+      stageMemory: remembered("Development"),
+      stagesForProduct,
+    });
+    expect(store.getSnapshot().stageNames).toEqual(["Testing"]);
+    expect(store.isDirty()).toBe(false);
+  });
+  it("retains a stage that became stale before the editor opened", () => {
+    const store = createItemEditDraftStore({
+      ...seed,
+      products: [MULTI_STAGE_PRODUCT],
+      defaultProductId: "p-multi",
+      defaultStageName: "Testing",
+      stagesForProduct: () => ["Development"],
+    });
+    expect(store.getSnapshot().stageNames).toEqual(["Testing"]);
+    expect(store.isDirty()).toBe(false);
+  });
   it("keeps every authored field independently and leaves old snapshots immutable", () => {
     const store = createItemEditDraftStore(seed);
     const original = store.getSnapshot();

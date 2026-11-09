@@ -107,7 +107,9 @@ function useSaveEchoRecorder(args: SaveEchoRecorderArgs) {
       savedSection: ReportSectionReadModel,
       persistedPayload: DraftSaveContent,
       queuedPayload: DraftSaveContent | null,
-      attemptToken?: string,
+      attempt?: Parameters<
+        NonNullable<Parameters<typeof useLeadFormAutosave>[0]["onSaved"]>
+      >[3],
     ) => {
       const savedPayload = sectionToDraftPayload(savedSection);
       // The save's row mapping is what ties a pending stage choice to its own
@@ -128,7 +130,11 @@ function useSaveEchoRecorder(args: SaveEchoRecorderArgs) {
         generation: leadFormGenerationOf(savedSection),
         reportSectionId: savedSection.reportSectionId,
         version: savedSection.version,
-        attemptToken,
+        attemptToken: attempt?.token,
+        expectedVersion: attempt?.expectedVersion,
+        submittedPayload: structuredClone(persistedPayload),
+        persistedRisks: structuredClone(savedSection.risks),
+        persistedDecisions: structuredClone(savedSection.decisions),
         persistedItems: Object.freeze(
           savedSection.items.map((item) =>
             Object.freeze({
@@ -186,18 +192,21 @@ function useAutosaveWithStaleRevert({
   useEffect(() => {
     latestServerSectionRef.current = serverSection;
   });
-  const handleSaveConflict = useCallback(() => {
-    const section = latestServerSectionRef.current;
-    if (section) {
-      const serverDraftKey = encodeDraftSaveComparisonKey(
-        sectionToDraftPayload(section),
-      );
-      ledger.consume(serverDraftKey, sectionRevision(section));
-      autosaveRef.current?.adoptBaseline(serverDraftKey, "read");
-      setDraftSection(section);
-    }
-    handleConflict();
-  }, [handleConflict, ledger, setDraftSection]);
+  const handleSaveConflict = useCallback(
+    (contextualAttempt?: boolean) => {
+      const section = latestServerSectionRef.current;
+      if (section && !contextualAttempt) {
+        const serverDraftKey = encodeDraftSaveComparisonKey(
+          sectionToDraftPayload(section),
+        );
+        ledger.consume(serverDraftKey, sectionRevision(section));
+        autosaveRef.current?.adoptBaseline(serverDraftKey, "read");
+        setDraftSection(section);
+      }
+      handleConflict();
+    },
+    [handleConflict, ledger, setDraftSection],
+  );
   const autosave = useLeadFormAutosave({
     ...autosaveArgs,
     onConflict: handleSaveConflict,
@@ -287,6 +296,7 @@ export function useDraftServerSync({
   // was only ever pending and `recall` never reads a pending choice.
   const adoptServerSection = useCallback(
     (section: ReportSectionReadModel) => {
+      if (autosave.isRecoveryBlocked()) return;
       // An adopted section carries no draft-save row mapping, so only records
       // whose own id it already holds can confirm their pending choice.
       stageMemory.confirmPersisted(section);

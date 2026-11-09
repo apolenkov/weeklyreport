@@ -30,7 +30,8 @@ export interface LeadFormWritePending {
   readonly reopen: boolean;
 }
 
-export type LeadFormWriteErrorKind = "conflict" | "error";
+export type LeadFormWriteErrorKind =
+  "conflict" | "error" | "ambiguous" | "restriction";
 
 export class LeadFormWriteError extends Error {
   constructor(
