@@ -6,15 +6,10 @@ import { storedText } from "../primitives/stored-text.schema.js";
 /** Maximum length accepted for a review comment. */
 export const REVIEW_COMMENT_MAX_LENGTH = 2000;
 
-const reviewCommentTextSchema = safeText({ max: REVIEW_COMMENT_MAX_LENGTH });
-
-/** A Lead may write only to an item, under the authenticated identity. */
-export const leadItemCommentInputSchema = z
-  .strictObject({ itemId: z.uuid(), text: reviewCommentTextSchema })
-  .readonly();
-
-/** Strict item-only Lead reply command. */
-export type LeadItemCommentInput = z.infer<typeof leadItemCommentInputSchema>;
+/** Safe, bounded review and reply comment text. */
+export const reviewCommentTextSchema = safeText({
+  max: REVIEW_COMMENT_MAX_LENGTH,
+});
 
 /** Section verdict; requesting changes returns a submitted section to draft. */
 const reviewVerdictSchema = z.enum(["approved", "changes_requested"]);

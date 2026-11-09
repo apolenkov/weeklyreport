@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { leadItemCommentInputSchema } from "./lead-item-discussion.schema.js";
 import {
-  leadItemCommentInputSchema,
   recordCommentViewSchema,
   REVIEW_COMMENT_MAX_LENGTH,
   reviewVerdictInputSchema,

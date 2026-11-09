@@ -19,6 +19,10 @@ function renderLoadingOverview() {
   const { proxy } = createMockTRPC([
     { path: ["reports", "getActive"], query: null },
     { path: ["review", "leadItemComment"], mutation: true },
+    {
+      path: ["review", "leadItemDiscussion"],
+      query: { status: "available", comments: [] },
+    },
     { path: ["leadForm", "statusOverview"], query: null },
   ]);
   const queryClient = new QueryClient({

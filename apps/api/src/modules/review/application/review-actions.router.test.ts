@@ -119,6 +119,7 @@ function rosterCaller(
   const getViewerCanReview = vi.fn(() => Promise.resolve(false));
   const repo: ReviewActionsRepository = {
     insertLeadItemComment: unused,
+    readLeadItemDiscussion: unused,
     acknowledge: unused,
     listAcknowledgements,
     getRecordAnchorGroup: unused,

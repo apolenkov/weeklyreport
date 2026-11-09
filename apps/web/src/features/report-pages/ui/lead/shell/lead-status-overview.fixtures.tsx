@@ -240,6 +240,10 @@ export function Wrapper({
     },
     { path: ["review", "leadItemComment"], mutation: true },
     {
+      path: ["review", "leadItemDiscussion"],
+      query: { status: "available", comments: [] },
+    },
+    {
       path: ["leadForm", "statusOverview"],
       queryByInput: () => {
         if (failOverview?.()) throw new Error("Overview refresh failed");

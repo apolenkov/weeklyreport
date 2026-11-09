@@ -1,5 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type {
+  LeadItemDiscussionInput,
+  LeadItemDiscussionView,
   RecordCommentView,
   ReviewAcknowledgementView,
 } from "@weeklyreport/shared";
@@ -21,6 +23,7 @@ import {
   insertCoordinatedLeadItemComment,
 } from "./review-actions.comment-write.js";
 import { writeVerdict } from "./review-actions.verdict-write.js";
+import { readLeadItemDiscussion } from "./review-lead-discussion.read.js";
 import {
   assertAcknowledgementAccess,
   assertReviewEntitlement,
@@ -184,6 +187,13 @@ export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
     text: string,
   ): Promise<RecordCommentView> {
     return insertCoordinatedLeadItemComment(this.prisma, actor, itemId, text);
+  }
+
+  readLeadItemDiscussion(
+    actor: ReviewWriteActor,
+    input: LeadItemDiscussionInput,
+  ): Promise<LeadItemDiscussionView> {
+    return readLeadItemDiscussion(this.prisma, actor, input);
   }
 
   async getCommentContext(

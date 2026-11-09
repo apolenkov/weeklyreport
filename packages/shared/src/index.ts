@@ -102,7 +102,6 @@ export type {
   ItemResolution,
   ItemWorkflowStatus,
   LatestForViewerReport,
-  LeadItemCommentInput,
   MyHistoryEntry,
   MyHistoryResult,
   PaginatedResult,
@@ -193,7 +192,6 @@ export {
   itemResolutionSchema,
   itemWorkflowStatusSchema,
   latestForViewerReportSchema,
-  leadItemCommentInputSchema,
   MAX_ACTIVITY_NAME_LENGTH,
   MAX_RECORDS_PER_SECTION_SAVE,
   MAX_WEEK_LABEL_LENGTH,
@@ -273,6 +271,7 @@ export {
   leadOpenWorkHistoryOutputSchema,
 } from "./schemas/report-sections/open-work-history.schema.js";
 export * from "./schemas/report-sections/status-overview.schema.js";
+export * from "./schemas/review/lead-item-discussion.schema.js";
 export type {
   SearchHit,
   SearchQueryInput,
