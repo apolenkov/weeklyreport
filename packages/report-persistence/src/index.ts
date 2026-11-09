@@ -1,4 +1,8 @@
 export {
+  type CompleteSectionRow,
+  toCompleteSectionRow,
+} from "./mappers/report-sections.complete-projection.js";
+export {
   buildAssembledReportFromPrismaRow,
   computePortfolioOverviewFromReadSections,
   reportFullIncludeForSnapshot,
@@ -14,4 +18,7 @@ export {
   type PrismaReportSectionWithRelations,
   reportSectionFullInclude,
 } from "./report-sections.include.js";
-export { mapPrismaToReportSection } from "./report-sections.mappers.js";
+export {
+  mapPrismaToAuthorReportSection,
+  mapPrismaToReportSection,
+} from "./report-sections.mappers.js";

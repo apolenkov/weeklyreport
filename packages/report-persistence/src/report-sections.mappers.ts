@@ -1,9 +1,12 @@
 import {
+  type AuthorReportSectionReadModel,
+  authorReportSectionReadModelSchema,
   type ReportSectionReadModel,
   reportSectionReadModelSchema,
   type RiskSeverity,
 } from "@weeklyreport/shared";
 
+import { toCompleteSectionRow } from "./mappers/report-sections.complete-projection.js";
 import {
   toDecisionViews,
   toItemViews,
@@ -247,27 +250,56 @@ function assertProductRelationsLoaded(row: SectionRow): void {
   }
 }
 
+// `derived` feeds everything computed across records — status floors and
+// referenced Products; `visible` is the record set this reader may see.
+function toSectionFields(derived: SectionRow, visible: SectionRow) {
+  const owned = groupAuthorAssignmentsByProject(
+    visible.author.stageAssignments,
+  );
+  return {
+    reportSectionId: visible.id,
+    reportId: visible.reportId,
+    authorId: visible.authorId,
+    authorName: visible.author.name,
+    authorRole: visible.author.role,
+    version: visible.version,
+    status: visible.status,
+    submittedAt: visible.submittedAt,
+    late: visible.late,
+    projects: toProjectViews(derived, owned),
+    referencedProjects: toReferencedProjects(visible, owned),
+    items: toItemViews(visible.items, visible.itemOutcomeEvents),
+    risks: toRiskViews(visible.risks),
+    decisions: toDecisionViews(visible.decisions),
+    activities: toActivityViews(visible.activityStatuses, derived.risks),
+    reviews: toReviewViews(visible.sectionReviews, visible.version),
+  };
+}
+
+/**
+ * Maps a section for every reader except its author: incomplete risks and
+ * decisions are removed before floors, referenced Products and record views.
+ */
 export function mapPrismaToReportSection(
   row: SectionRow,
 ): ReportSectionReadModel {
   assertProductRelationsLoaded(row);
-  const owned = groupAuthorAssignmentsByProject(row.author.stageAssignments);
-  return reportSectionReadModelSchema.parse({
-    reportSectionId: row.id,
-    reportId: row.reportId,
-    authorId: row.authorId,
-    authorName: row.author.name,
-    authorRole: row.author.role,
-    version: row.version,
-    status: row.status,
-    submittedAt: row.submittedAt,
-    late: row.late,
-    projects: toProjectViews(row, owned),
-    referencedProjects: toReferencedProjects(row, owned),
-    items: toItemViews(row.items, row.itemOutcomeEvents),
-    risks: toRiskViews(row.risks),
-    decisions: toDecisionViews(row.decisions),
-    activities: toActivityViews(row.activityStatuses, row.risks),
-    reviews: toReviewViews(row.sectionReviews, row.version),
-  });
+  const complete = toCompleteSectionRow(row);
+  return reportSectionReadModelSchema.parse(
+    toSectionFields(complete, complete),
+  );
+}
+
+/**
+ * Maps a section for its own author. Incomplete risks and decisions stay
+ * visible with null details and keep their Product named, but only complete
+ * risks floor a Product or Activity status. The caller proves authorship.
+ */
+export function mapPrismaToAuthorReportSection(
+  row: SectionRow,
+): AuthorReportSectionReadModel {
+  assertProductRelationsLoaded(row);
+  return authorReportSectionReadModelSchema.parse(
+    toSectionFields(toCompleteSectionRow(row), row),
+  );
 }

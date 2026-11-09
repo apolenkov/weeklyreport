@@ -161,7 +161,8 @@ const referencedProjectSchema = z
   })
   .readonly();
 
-const reportSectionReadModelObjectSchema = z.object({
+/** Section read-model fields shared by the complete and author-private reads. */
+export const reportSectionReadModelObjectSchema = z.object({
   reportSectionId: z.uuid(),
   reportId: z.uuid(),
   authorId: z.uuid(),
