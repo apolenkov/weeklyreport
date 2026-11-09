@@ -79,3 +79,30 @@ export function summarizeRecordOmissions(
     { risks: 0, decisions: 0, unknown: false },
   );
 }
+
+/** Union authorized subject scopes before aggregating, without exposing buckets. */
+export function summarizeRecordOmissionsForScopes(
+  sections: readonly (RecordOmission | undefined)[],
+  scopes: readonly RecordOmissionScope[],
+): ReturnType<typeof summarizeRecordOmissions> {
+  if (scopes.length === 0) return summarizeRecordOmissions([]);
+  return summarizeRecordOmissions(
+    sections.map(
+      (section) =>
+        section && {
+          ...section,
+          buckets: section.buckets.filter((bucket) =>
+            scopes.some(
+              (scope) =>
+                bucket.parentKind === scope.parentKind &&
+                bucket.parentId === scope.parentId &&
+                (!scope.stageNames ||
+                  bucket.stageNames.some((stage) =>
+                    scope.stageNames?.includes(stage),
+                  )),
+            ),
+          ),
+        },
+    ),
+  );
+}
