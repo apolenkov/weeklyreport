@@ -1,8 +1,10 @@
 import { deriveEffectiveStageStatus } from "../../../../shared/lib/status/stage-status";
+import { hasCompleteRiskDetails } from "../alarms/risk-completeness";
 import { riskCoversStage } from "../stage-tags";
 import type { Product, RiskEntry } from "../types";
 
-// Own non-empty risks whose selected stages cover this stage.
+// Non-empty complete risks whose selected stages cover this stage. A risk
+// missing a detail stays a private draft and covers nothing.
 export function coveringRisksForStage(
   risks: readonly RiskEntry[],
   productId: string,
@@ -12,6 +14,7 @@ export function coveringRisksForStage(
     (r) =>
       r.productId === productId &&
       r.text.trim().length > 0 &&
+      hasCompleteRiskDetails(r) &&
       riskCoversStage(r, stageName),
   );
 }
@@ -38,7 +41,7 @@ export function applyRiskSeverityFloor(
 }
 
 // Re-derive coveredByOwnRisk from live risks (products stay stable mid-session).
-// Only own non-empty risks that explicitly name the stage set the flag.
+// Only own non-empty complete risks that explicitly name the stage set the flag.
 export function annotateOwnRiskCoverage(
   products: readonly Product[],
   risks: readonly RiskEntry[],
@@ -51,6 +54,7 @@ export function annotateOwnRiskCoverage(
         (r) =>
           r.productId === product.id &&
           r.text.trim().length > 0 &&
+          hasCompleteRiskDetails(r) &&
           Array.isArray(r.stageNames) &&
           r.stageNames.length > 0 &&
           riskCoversStage(r, stage.stageName),

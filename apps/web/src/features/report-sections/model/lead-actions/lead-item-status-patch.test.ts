@@ -38,6 +38,8 @@ const COVERING_RISK = {
   stageNames: ["Development"],
   severity: "at-risk",
   risk: "Slipping",
+  impact: "Slips",
+  mitigation: "Escalate",
 } as const;
 
 describe("buildSetItemStatusPatch", () => {

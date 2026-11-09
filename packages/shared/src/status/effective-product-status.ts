@@ -3,6 +3,7 @@ import {
   type TrafficLightStatus,
   trafficLightStatusSchema,
 } from "../schemas/primitives/report-primitives.schema.js";
+import { isCompleteRisk } from "../schemas/report-sections/incomplete-record.schema.js";
 import { riskCoversStage } from "../schemas/stages/stage-names.js";
 import {
   canonicalToTrafficLight,
@@ -22,7 +23,9 @@ export function asTrafficLight(
 
 /**
  * Derives a product's effective traffic light from its stored status, owned
- * stage statuses, and product-parented risks that cover those stages.
+ * stage statuses, and product-parented risks that cover those stages. Only a
+ * complete risk can floor a stage: a draft missing a detail is private to its
+ * author and never changes a status.
  */
 export function deriveEffectiveProductStatus(project: {
   readonly projectId: string;
@@ -37,12 +40,14 @@ export function deriveEffectiveProductStatus(project: {
     | readonly {
         readonly projectId?: string | null | undefined;
         readonly severity: RiskSeverity;
+        readonly impact: string | null;
+        readonly mitigation: string | null;
         readonly stageNames?: readonly string[] | undefined;
       }[]
     | undefined;
 }): TrafficLightStatus | null {
   const scopedRisks = (project.risks ?? []).filter(
-    (risk) => risk.projectId === project.projectId,
+    (risk) => risk.projectId === project.projectId && isCompleteRisk(risk),
   );
   const stageStatuses = (project.ownedStages ?? []).map((stage) => {
     const coveringSeverity = aggregateTrafficLight(

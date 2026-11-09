@@ -3,14 +3,20 @@ import { describe, expect, it } from "vitest";
 import { deriveActivityAlarmFloor } from "./activity-alarm";
 
 const ACT = "act-a";
+const DETAILS = { impact: "Slips", mitigation: "Escalate" };
 
 describe("deriveActivityAlarmFloor", () => {
   it("returns null with no covering risks", () => {
     expect(deriveActivityAlarmFloor(ACT, [])).toBeNull();
     expect(
       deriveActivityAlarmFloor(ACT, [
-        { activityId: "other", severity: "blocked", text: "x" },
-        { activityId: null, severity: "blocked", text: "product risk" },
+        { activityId: "other", severity: "blocked", text: "x", ...DETAILS },
+        {
+          activityId: null,
+          severity: "blocked",
+          text: "product risk",
+          ...DETAILS,
+        },
       ]),
     ).toBeNull();
   });
@@ -18,7 +24,7 @@ describe("deriveActivityAlarmFloor", () => {
   it("floors to yellow on a covering at-risk risk", () => {
     expect(
       deriveActivityAlarmFloor(ACT, [
-        { activityId: ACT, severity: "at-risk", text: "slipping" },
+        { activityId: ACT, severity: "at-risk", text: "slipping", ...DETAILS },
       ]),
     ).toBe("yellow");
   });
@@ -26,8 +32,8 @@ describe("deriveActivityAlarmFloor", () => {
   it("floors to red when any covering risk is blocked (worst wins)", () => {
     expect(
       deriveActivityAlarmFloor(ACT, [
-        { activityId: ACT, severity: "at-risk", text: "slipping" },
-        { activityId: ACT, severity: "blocked", text: "hard stop" },
+        { activityId: ACT, severity: "at-risk", text: "slipping", ...DETAILS },
+        { activityId: ACT, severity: "blocked", text: "hard stop", ...DETAILS },
       ]),
     ).toBe("red");
   });
@@ -35,8 +41,28 @@ describe("deriveActivityAlarmFloor", () => {
   it("ignores empty placeholder risks, like the stage floor does", () => {
     expect(
       deriveActivityAlarmFloor(ACT, [
-        { activityId: ACT, severity: "blocked", text: " ".repeat(3) },
+        {
+          activityId: ACT,
+          severity: "blocked",
+          text: " ".repeat(3),
+          ...DETAILS,
+        },
       ]),
     ).toBeNull();
+  });
+
+  it.each([
+    ["an empty impact", { impact: "", mitigation: "Escalate" }],
+    ["a blank mitigation", { impact: "Slips", mitigation: "  " }],
+    ["a null impact", { impact: null, mitigation: "Escalate" }],
+  ])("a blocked risk with %s floors nothing", (_label, details) => {
+    const draft = { activityId: ACT, severity: "blocked" as const, text: "x" };
+
+    expect(
+      deriveActivityAlarmFloor(ACT, [{ ...draft, ...details }]),
+    ).toBeNull();
+    expect(deriveActivityAlarmFloor(ACT, [{ ...draft, ...DETAILS }])).toBe(
+      "red",
+    );
   });
 });

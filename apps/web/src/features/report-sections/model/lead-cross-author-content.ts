@@ -92,6 +92,8 @@ export function mapForeignItems(
       stageNames: r.stageNames,
       severity: r.severity,
       text: r.risk,
+      impact: r.impact,
+      mitigation: r.mitigation,
     }));
     return ca.items
       .filter((i) => i.type === itemType)

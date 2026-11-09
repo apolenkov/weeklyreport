@@ -33,8 +33,8 @@ function makeRisk(
     productName: "CRM Platform",
     stageNames: ["Dev"],
     text: "risk",
-    impact: "",
-    mitigation: "",
+    impact: "Slips",
+    mitigation: "Escalate",
     ...overrides,
   };
 }

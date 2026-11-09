@@ -368,8 +368,8 @@ describe("LeadFormSyncBridge", () => {
       stageNames: ["Dev"],
       severity: "at-risk",
       text: "existing",
-      impact: "",
-      mitigation: "",
+      impact: "Slips",
+      mitigation: "Escalate",
     };
 
     render(
