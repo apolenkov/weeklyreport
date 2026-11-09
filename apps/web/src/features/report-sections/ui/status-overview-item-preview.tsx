@@ -21,6 +21,7 @@ import { canSetStages, StageControl } from "./status-overview-stage-control";
 import { StatusControl } from "./status-overview-status-control";
 import { StatusInput } from "./status-overview-status-input";
 import { VerdictRail } from "./status-overview-verdict-controls";
+import { useItemReplyProps } from "./use-item-reply-composer";
 import { useOverviewStatusInput } from "./use-overview-status-input";
 
 const LONG_UPDATE_LENGTH = 120;
@@ -232,6 +233,7 @@ export function StatusOverviewItemPreview(props: ActionProps) {
   const [expanded, setExpanded] = useState(false);
   const preview = useRef<HTMLDivElement>(null);
   const comments = useItemComments(item, preview);
+  const reply = useItemReplyProps(item);
   const statusFlow = useOverviewStatusInput(item, onSetStatus);
   const verdict = itemVerdict(item);
   const pendingVerdict = verdict === "pending" && onVerdict !== undefined;
@@ -286,6 +288,7 @@ export function StatusOverviewItemPreview(props: ActionProps) {
             itemLabel={item.text}
             comments={item.comments}
             onClose={comments.closeComments}
+            {...reply}
           />
         ) : null}
         <TextDisclosure

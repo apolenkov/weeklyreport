@@ -34,6 +34,7 @@ vi.mock("./use-lead-form-editor", () => ({
 function renderUnavailableOverview() {
   const { proxy } = createMockTRPC([
     { path: ["reports", "getActive"], query: null },
+    { path: ["review", "leadItemComment"], mutation: true },
     {
       path: ["leadForm", "statusOverview"],
       query: () => {

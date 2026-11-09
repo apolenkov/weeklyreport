@@ -148,6 +148,7 @@ export {
   type ItemEditDraftStore,
 } from "./ui/item-edit-draft-store";
 export { ItemInlineEditor } from "./ui/item-inline-editor";
+export { type ItemReplyPort, ItemReplyProvider } from "./ui/item-reply-context";
 export { NextWeekSection } from "./ui/next-week/next-week-section";
 export { ParentPicker } from "./ui/parent-picker";
 export { PortfolioOverviewTable } from "./ui/portfolio/portfolio-overview-table";

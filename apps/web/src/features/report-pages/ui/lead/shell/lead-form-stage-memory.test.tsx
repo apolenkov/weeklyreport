@@ -86,6 +86,7 @@ function makePageHarness(section = makeSection()): PageHarness {
   });
   const { proxy, captured } = createMockTRPC([
     { path: ["reports", "getActive"], query: section },
+    { path: ["review", "leadItemComment"], mutation: true },
     {
       path: ["leadForm", "statusOverview"],
       query: {

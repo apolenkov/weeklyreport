@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useContext } from "react";
+import { useCallback, useContext } from "react";
 
 import { useQueryErrorHandler } from "../../../../../shared/hooks/query/use-query-error-handler";
 import { isHeadLike } from "../../../../../shared/lib/auth/role-predicates";
@@ -10,7 +10,10 @@ import { SessionContext } from "../../../../../shared/lib/auth/session-provider"
 import { formatClientErrorMessage } from "../../../../../shared/lib/errors/client-error-reporting";
 import { useTRPC } from "../../../../../shared/lib/trpc/trpc-context";
 import { LEAD_REPORT_ROUTE } from "../../../../../shared/ui/navigation/nav-links";
-import { DraftStageMemoryProvider } from "../../../../report-sections";
+import {
+  DraftStageMemoryProvider,
+  ItemReplyProvider,
+} from "../../../../report-sections";
 import { LeadFormEmptyState } from "./lead-form-empty-state";
 import { LeadFormLoadError } from "./lead-form-load-error";
 import { LeadStatusOverviewContent } from "./lead-status-overview-content";
@@ -22,6 +25,7 @@ import {
   type LeadFormEditorHandle,
   useLeadFormEditor,
 } from "./use-lead-form-editor";
+import { useLeadItemReplyPort } from "./use-lead-item-reply-port";
 
 export { buildStatusOverviewDetailsHref } from "./lead-status-overview-content";
 
@@ -131,6 +135,13 @@ export function LeadStatusOverview({
     enabled: targetReportId !== null && !session?.isLoading && !shouldRouteAway,
     staleTime: 30_000,
   });
+  const { refetch: refetchOverview } = overviewQ;
+  const replyPort = useLeadItemReplyPort(
+    useCallback(
+      () => refetchOverview({ throwOnError: true }),
+      [refetchOverview],
+    ),
+  );
 
   // The editor already reports a getActive failure (useLeadFormLoadErrors);
   // a second handler on the same query would toast and log it twice.
@@ -170,14 +181,16 @@ export function LeadStatusOverview({
     <DraftStageMemoryProvider
       memory={editor.status === "ready" ? editor.draft.stageMemory : null}
     >
-      <LeadStatusOverviewContent
-        key={targetReportId}
-        targetReportId={targetReportId}
-        output={overviewQ.data}
-        editor={editor}
-        refreshError={overviewQ.isError}
-        onRefresh={() => void overviewQ.refetch()}
-      />
+      <ItemReplyProvider value={replyPort}>
+        <LeadStatusOverviewContent
+          key={targetReportId}
+          targetReportId={targetReportId}
+          output={overviewQ.data}
+          editor={editor}
+          refreshError={overviewQ.isError}
+          onRefresh={() => void overviewQ.refetch()}
+        />
+      </ItemReplyProvider>
     </DraftStageMemoryProvider>
   );
 }
