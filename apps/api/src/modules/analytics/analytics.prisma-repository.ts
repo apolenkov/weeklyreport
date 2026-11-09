@@ -1,15 +1,16 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { Prisma } from "@prisma/client";
-import type {
-  AnalyticsPeriod,
-  LeadVelocityInput,
-  LeadVelocityOutput,
-  PeriodComparisonInput,
-  PeriodComparisonOutput,
-  TrafficLightCell,
-  TrafficLightHistoryInput,
-  TrafficLightHistoryOutput,
-  UserSession,
+import {
+  type AnalyticsPeriod,
+  type LeadVelocityInput,
+  type LeadVelocityOutput,
+  type PeriodComparisonInput,
+  type PeriodComparisonOutput,
+  type TrafficLightCell,
+  type TrafficLightHistoryInput,
+  type TrafficLightHistoryOutput,
+  UNCOUNTED_RECORD_OMISSIONS,
+  type UserSession,
 } from "@weeklyreport/shared";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
@@ -101,6 +102,9 @@ function analyticsPeriod(report: {
   return {
     periodStart: isoDateOnly(report.periodStart),
     periodEnd: isoDateOnly(report.periodEnd),
+    // TODO(TASK-836): summarize the winning snapshot's frozen omission buckets
+    // through the same section, lead and Product filter as the facts.
+    omissions: UNCOUNTED_RECORD_OMISSIONS,
   };
 }
 

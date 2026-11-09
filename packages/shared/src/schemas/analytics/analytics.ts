@@ -1,12 +1,22 @@
 import { z } from "zod";
 
 import { trafficLightStatusSchema } from "../primitives/report-primitives.schema.js";
+import { recordOmissionSummarySchema } from "../report-sections/record-omission.schema.js";
 
 const isoDateOnly = z.iso.date();
 
-/** Frozen publication period dates in UTC. */
+/**
+ * Frozen publication period dates in UTC with the omission disclosure of its
+ * winning snapshot, scoped by the same admitted sections and requested lead or
+ * Product filter as the facts. Required: a cached response without it is stale
+ * and fails validation instead of reading as "nothing omitted".
+ */
 export const analyticsPeriodSchema = z
-  .object({ periodStart: isoDateOnly, periodEnd: isoDateOnly })
+  .object({
+    periodStart: isoDateOnly,
+    periodEnd: isoDateOnly,
+    omissions: recordOmissionSummarySchema,
+  })
   .readonly();
 /** Readonly frozen publication period range. */
 export type AnalyticsPeriod = z.infer<typeof analyticsPeriodSchema>;

@@ -129,6 +129,7 @@ function makeWeeklyReport(
       }),
     ],
     escalations: [],
+    recordOmissions: { risks: 0, decisions: 0, unknown: false },
     ...overrides,
   });
 }

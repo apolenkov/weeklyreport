@@ -5,6 +5,7 @@ import {
   type PublishedReportSnapshot,
   type ReportProgress,
   type ReportSectionReadModel,
+  UNCOUNTED_RECORD_OMISSIONS,
   type UserSession,
   type WeeklyReportReadModel,
   weeklyReportReadModelSchema,
@@ -22,6 +23,11 @@ import {
   buildPortfolioOverview,
   scopeWhere,
 } from "./weekly-report-portfolio.js";
+
+// TODO(TASK-836): count omissions through the caller's group and shared-product
+// lens (frozen buckets when published, the live partition otherwise). Until
+// then both paths disclose that the totals are not known.
+const PENDING_RECORD_OMISSIONS = UNCOUNTED_RECORD_OMISSIONS;
 
 // The report row as fetched by `getWeeklyReport`, derived from the same
 // `reportSectionFullInclude` every other report-section read shares — never a
@@ -171,6 +177,7 @@ export function buildPublishedReadModelFromSnapshot(
     portfolioOverview: buildPortfolioProductsFromSnapshotSections(leadSections),
     leadSections,
     escalations: buildEscalationsFromReadSections(leadSections),
+    recordOmissions: PENDING_RECORD_OMISSIONS,
   });
 }
 
@@ -209,6 +216,7 @@ export function buildLiveResult(
       portfolioOverview,
       leadSections,
       escalations,
+      recordOmissions: PENDING_RECORD_OMISSIONS,
     }),
     crossGroup,
   };

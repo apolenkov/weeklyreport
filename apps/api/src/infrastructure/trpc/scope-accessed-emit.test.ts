@@ -34,6 +34,7 @@ function makeReadModel() {
     portfolioOverview: [],
     leadSections: [],
     escalations: [],
+    recordOmissions: { risks: 0, decisions: 0, unknown: false },
   });
 }
 

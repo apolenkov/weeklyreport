@@ -5,7 +5,8 @@ interface TableSeries {
   readonly name: string;
 }
 
-type TableData = AnalyticsPeriod & Readonly<Record<string, number | string>>;
+type TableData = Pick<AnalyticsPeriod, "periodStart" | "periodEnd"> &
+  Readonly<Record<string, number | string>>;
 
 export function buildLeadSubmissionsTableData(rows: LeadVelocityOutput): {
   readonly data: readonly TableData[];

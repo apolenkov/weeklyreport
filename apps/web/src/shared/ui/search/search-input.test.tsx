@@ -3,7 +3,24 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { makeQueryState } from "../../../test-utils/query-state";
+import {
+  makeQueryState,
+  type QueryStateInput,
+} from "../../../test-utils/query-state";
+
+// The search response carries hits beside an omission disclosure; tests name
+// the hits and this wraps them in the response shape.
+const searchState = ({
+  data,
+  ...state
+}: QueryStateInput<readonly unknown[] | undefined>) =>
+  makeQueryState({
+    ...state,
+    data: data && {
+      hits: data,
+      omissions: { risks: 0, decisions: 0, unknown: false },
+    },
+  });
 
 type QueryResult = QueryObserverResult;
 
@@ -75,7 +92,7 @@ describe("SearchInput", () => {
     pushMock.mockClear();
     useSessionMock.mockReset();
     useSessionMock.mockReturnValue({ user: { role: "head" } });
-    useQueryMock.mockReturnValue(makeQueryState({ data: [] }));
+    useQueryMock.mockReturnValue(searchState({ data: [] }));
   });
 
   afterEach(() => {
@@ -191,7 +208,7 @@ describe("SearchInput", () => {
 
   it("renders results returned by useQuery and converts <<…>> markers to <mark>", () => {
     useQueryMock.mockReturnValue(
-      makeQueryState({
+      searchState({
         data: [
           {
             type: "item",
@@ -225,7 +242,7 @@ describe("SearchInput", () => {
   });
 
   it("renders the empty state when the data array is empty", () => {
-    useQueryMock.mockReturnValue(makeQueryState({ data: [] }));
+    useQueryMock.mockReturnValue(searchState({ data: [] }));
     render(<SearchInput scope="mine" />);
 
     const input = screen.getByRole("combobox");
@@ -243,7 +260,7 @@ describe("SearchInput", () => {
 
   it("renders an error state when search fails", () => {
     useQueryMock.mockReturnValue(
-      makeQueryState({ data: undefined, error: new Error("search failed") }),
+      searchState({ data: undefined, error: new Error("search failed") }),
     );
     render(<SearchInput scope="all" />);
 
@@ -261,7 +278,7 @@ describe("SearchInput", () => {
 
   it("navigates via router.push on Enter when a hit is highlighted", () => {
     useQueryMock.mockReturnValue(
-      makeQueryState({
+      searchState({
         data: [
           {
             type: "item",
@@ -301,7 +318,7 @@ describe("SearchInput", () => {
 
   it("prevents result mousedown from blurring search before navigation", () => {
     useQueryMock.mockReturnValue(
-      makeQueryState({
+      searchState({
         data: [
           {
             type: "item",
@@ -332,7 +349,7 @@ describe("SearchInput", () => {
 
   it("clears the input and closes the dropdown on Escape", () => {
     useQueryMock.mockReturnValue(
-      makeQueryState({
+      searchState({
         data: [
           {
             type: "item",
@@ -374,7 +391,7 @@ describe("SearchInput", () => {
 
   it("treats search as one Tab stop and closes the popup when focus leaves", async () => {
     useQueryMock.mockReturnValue(
-      makeQueryState({
+      searchState({
         data: [
           {
             type: "item",
@@ -423,7 +440,7 @@ describe("SearchInput", () => {
       .spyOn(Element.prototype, "scrollIntoView")
       .mockImplementation(() => undefined);
     useQueryMock.mockReturnValue(
-      makeQueryState({
+      searchState({
         data: [
           itemHit(ITEM_ID, "Release blocked"),
           itemHit(REPORT_ID, "Release plan"),
@@ -472,7 +489,7 @@ describe("SearchInput", () => {
 
   it("routes a project hit to /admin?tab=products", () => {
     useQueryMock.mockReturnValue(
-      makeQueryState({
+      searchState({
         data: [
           {
             type: "project",
@@ -510,7 +527,7 @@ describe("SearchInput", () => {
   it("routes a viewer's item hit to /reports/[reportId], not /lead/report", () => {
     useSessionMock.mockReturnValue({ user: { role: "viewer" } });
     useQueryMock.mockReturnValue(
-      makeQueryState({
+      searchState({
         data: [
           {
             type: "item",
@@ -550,7 +567,7 @@ describe("SearchInput", () => {
   it("suppresses a project hit for a viewer", () => {
     useSessionMock.mockReturnValue({ user: { role: "viewer" } });
     useQueryMock.mockReturnValue(
-      makeQueryState({
+      searchState({
         data: [
           {
             type: "project",
@@ -597,7 +614,7 @@ describe("SearchInput", () => {
 
   it("badge span has no aria-label attribute", () => {
     useQueryMock.mockReturnValue(
-      makeQueryState({
+      searchState({
         data: [
           {
             type: "item",
@@ -647,7 +664,7 @@ describe("SearchInput", () => {
 
     for (const { type, expectedLabel, id } of hitTypes) {
       useQueryMock.mockReturnValue(
-        makeQueryState({
+        searchState({
           data: [
             {
               type,
@@ -688,7 +705,7 @@ describe("SearchInput", () => {
 
   it("badge span is first child of its flex container", () => {
     useQueryMock.mockReturnValue(
-      makeQueryState({
+      searchState({
         data: [
           {
             type: "risk",
@@ -730,7 +747,7 @@ describe("SearchInput", () => {
   it("restores focus to search combobox when Retry ('Try again') is activated", () => {
     const refetchMock = vi.fn();
     useQueryMock.mockReturnValue(
-      makeQueryState({
+      searchState({
         data: undefined,
         error: new Error("search failed"),
         refetch: refetchMock,

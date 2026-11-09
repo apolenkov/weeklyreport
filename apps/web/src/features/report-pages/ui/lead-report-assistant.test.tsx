@@ -37,6 +37,7 @@ const successOutcome = {
       recordKind: "item",
     },
   ],
+  coverage: { risks: 0, decisions: 0, unknown: false },
   metadata: { truncated: false, insufficientEvidence: false },
 };
 

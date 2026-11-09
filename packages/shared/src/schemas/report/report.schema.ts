@@ -8,6 +8,7 @@ import {
   reportStatusSchema,
   trafficLightStatusSchema,
 } from "../primitives/report-primitives.schema.js";
+import { recordOmissionSummarySchema } from "../report-sections/record-omission.schema.js";
 import {
   publishedReportSectionReadModelSchema,
   reportSectionReadModelSchema,
@@ -330,6 +331,9 @@ export const weeklyReportReadModelSchema = z
     portfolioOverview: z.array(portfolioProductOverviewSchema).readonly(),
     leadSections: z.array(reportSectionReadModelSchema).readonly(),
     escalations: z.array(escalationSchema).readonly(),
+    // Incomplete risks and decisions left out of `leadSections`, counted in
+    // the caller's authorized scope only.
+    recordOmissions: recordOmissionSummarySchema,
   })
   .readonly();
 

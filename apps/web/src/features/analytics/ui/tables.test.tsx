@@ -12,9 +12,11 @@ import { LeadSubmissionsTable } from "./lead-submissions.table";
 import { PeriodComparisonTable } from "./period-comparison.table";
 import { TrafficLightHistoryTable } from "./traffic-light-history.table";
 
+const OMISSIONS = { risks: 0, decisions: 0, unknown: false };
+
 const periods = [
-  { periodStart: "2026-08-17", periodEnd: "2026-08-23" },
-  { periodStart: "2026-08-24", periodEnd: "2026-08-30" },
+  { periodStart: "2026-08-17", periodEnd: "2026-08-23", omissions: OMISSIONS },
+  { periodStart: "2026-08-24", periodEnd: "2026-08-30", omissions: OMISSIONS },
 ] as const;
 
 describe("TrafficLightHistoryTable", () => {
@@ -142,9 +144,21 @@ describe("TrafficLightHistoryTable", () => {
   it("shows the latest period first while keeping statuses and changes tied to their original periods", () => {
     const history: TrafficLightHistoryOutput = {
       periods: [
-        { periodStart: "2026-08-17", periodEnd: "2026-08-23" },
-        { periodStart: "2026-08-24", periodEnd: "2026-08-30" },
-        { periodStart: "2026-08-31", periodEnd: "2026-09-06" },
+        {
+          periodStart: "2026-08-17",
+          periodEnd: "2026-08-23",
+          omissions: OMISSIONS,
+        },
+        {
+          periodStart: "2026-08-24",
+          periodEnd: "2026-08-30",
+          omissions: OMISSIONS,
+        },
+        {
+          periodStart: "2026-08-31",
+          periodEnd: "2026-09-06",
+          omissions: OMISSIONS,
+        },
       ],
       rows: [
         {
@@ -193,6 +207,7 @@ describe("LeadSubmissionsTable", () => {
             {
               periodStart: "2026-08-17",
               periodEnd: "2026-08-23",
+              omissions: OMISSIONS,
               leads: [
                 { leadId: "lead-a", leadName: "Alex", submittedSections: 3 },
               ],
@@ -200,6 +215,7 @@ describe("LeadSubmissionsTable", () => {
             {
               periodStart: "2026-08-24",
               periodEnd: "2026-08-30",
+              omissions: OMISSIONS,
               leads: [
                 { leadId: "lead-b", leadName: "Alex", submittedSections: 5 },
               ],
@@ -240,6 +256,7 @@ describe("LeadSubmissionsTable", () => {
       {
         periodStart: "2026-08-17",
         periodEnd: "2026-08-23",
+        omissions: OMISSIONS,
         leads: [
           { leadId: "alex", leadName: "Alex", submittedSections: 1 },
           { leadId: "blair", leadName: "Blair", submittedSections: 0 },
@@ -248,11 +265,13 @@ describe("LeadSubmissionsTable", () => {
       {
         periodStart: "2026-08-24",
         periodEnd: "2026-08-30",
+        omissions: OMISSIONS,
         leads: [{ leadId: "alex", leadName: "Alex", submittedSections: 0 }],
       },
       {
         periodStart: "2026-08-31",
         periodEnd: "2026-09-06",
+        omissions: OMISSIONS,
         leads: [{ leadId: "blair", leadName: "Blair", submittedSections: 1 }],
       },
     ];
@@ -291,6 +310,7 @@ describe("LeadSubmissionsTable", () => {
           {
             periodStart: "2026-08-17",
             periodEnd: "2026-08-23",
+            omissions: OMISSIONS,
             leads: [{ leadId: "alex", leadName: "Alex", submittedSections: 1 }],
           },
         ]}
@@ -313,6 +333,7 @@ describe("buildLeadSubmissionsTableData", () => {
       {
         periodStart: "2026-04-15",
         periodEnd: "2026-04-21",
+        omissions: OMISSIONS,
         leads: [
           { leadId: idA, leadName: "Alex", submittedSections: 3 },
           { leadId: idB, leadName: "Alex", submittedSections: 5 },
@@ -337,11 +358,13 @@ describe("buildLeadSubmissionsTableData", () => {
       {
         periodStart: "2026-07-14",
         periodEnd: "2026-07-20",
+        omissions: OMISSIONS,
         leads: [{ leadId: "lead-a", leadName: "Lead A", submittedSections: 2 }],
       },
       {
         periodStart: "2026-07-21",
         periodEnd: "2026-07-27",
+        omissions: OMISSIONS,
         leads: [{ leadId: "lead-b", leadName: "Lead B", submittedSections: 3 }],
       },
     ]);
@@ -369,8 +392,16 @@ describe("PeriodComparisonTable", () => {
       <PeriodComparisonTable
         headingId="comparison-heading"
         rows={[]}
-        periodA={{ periodStart: "2026-08-17", periodEnd: "2026-08-23" }}
-        periodB={{ periodStart: "2026-08-24", periodEnd: "2026-08-30" }}
+        periodA={{
+          periodStart: "2026-08-17",
+          periodEnd: "2026-08-23",
+          omissions: OMISSIONS,
+        }}
+        periodB={{
+          periodStart: "2026-08-24",
+          periodEnd: "2026-08-30",
+          omissions: OMISSIONS,
+        }}
       />,
     );
     expect(screen.getByText(/no comparison data/i)).toBeInTheDocument();
@@ -380,8 +411,16 @@ describe("PeriodComparisonTable", () => {
     render(
       <PeriodComparisonTable
         headingId="comparison-heading"
-        periodA={{ periodStart: "2026-08-17", periodEnd: "2026-08-23" }}
-        periodB={{ periodStart: "2026-08-24", periodEnd: "2026-08-30" }}
+        periodA={{
+          periodStart: "2026-08-17",
+          periodEnd: "2026-08-23",
+          omissions: OMISSIONS,
+        }}
+        periodB={{
+          periodStart: "2026-08-24",
+          periodEnd: "2026-08-30",
+          omissions: OMISSIONS,
+        }}
         rows={[
           {
             projectId: "11111111-1111-4111-8111-111111111111",
@@ -407,14 +446,30 @@ describe("PeriodComparisonTable", () => {
 
   it.each([
     {
-      periodA: { periodStart: "2026-08-17", periodEnd: "2026-08-23" },
-      periodB: { periodStart: "2026-08-24", periodEnd: "2026-08-30" },
+      periodA: {
+        periodStart: "2026-08-17",
+        periodEnd: "2026-08-23",
+        omissions: OMISSIONS,
+      },
+      periodB: {
+        periodStart: "2026-08-24",
+        periodEnd: "2026-08-30",
+        omissions: OMISSIONS,
+      },
       explanation:
         "Latest period Aug 24–30, 2026 compared with previous period Aug 17–23, 2026. Risk change is latest minus previous.",
     },
     {
-      periodA: { periodStart: "2026-08-24", periodEnd: "2026-08-30" },
-      periodB: { periodStart: "2026-08-31", periodEnd: "2026-09-06" },
+      periodA: {
+        periodStart: "2026-08-24",
+        periodEnd: "2026-08-30",
+        omissions: OMISSIONS,
+      },
+      periodB: {
+        periodStart: "2026-08-31",
+        periodEnd: "2026-09-06",
+        omissions: OMISSIONS,
+      },
       explanation:
         "Latest period Aug 31–Sep 6, 2026 compared with previous period Aug 24–30, 2026. Risk change is latest minus previous.",
     },
@@ -707,31 +762,37 @@ describe("Trends real frozen ranges", () => {
     {
       periodStart: "2026-06-17",
       periodEnd: "2026-06-17",
+      omissions: OMISSIONS,
       label: "Jun 17, 2026",
     },
     {
       periodStart: "2026-06-17",
       periodEnd: "2026-06-23",
+      omissions: OMISSIONS,
       label: "Jun 17–23, 2026",
     },
     {
       periodStart: "2026-06-17",
       periodEnd: "2026-07-16",
+      omissions: OMISSIONS,
       label: "Jun 17–Jul 16, 2026",
     },
     {
       periodStart: "2026-06-17",
       periodEnd: "2026-07-17",
+      omissions: OMISSIONS,
       label: "Jun 17–Jul 17, 2026",
     },
     {
       periodStart: "2026-12-20",
       periodEnd: "2027-01-19",
+      omissions: OMISSIONS,
       label: "Dec 20, 2026–Jan 19, 2027",
     },
     {
       periodStart: "2026-06-17",
       periodEnd: "2027-06-17",
+      omissions: OMISSIONS,
       label: "Jun 17, 2026–Jun 17, 2027",
     },
   ];
@@ -793,8 +854,16 @@ describe("Trends real frozen ranges", () => {
 
 describe("Trends table layout", () => {
   const periodPair = {
-    periodA: { periodStart: "2026-08-17", periodEnd: "2026-08-23" },
-    periodB: { periodStart: "2026-08-24", periodEnd: "2026-08-30" },
+    periodA: {
+      periodStart: "2026-08-17",
+      periodEnd: "2026-08-23",
+      omissions: OMISSIONS,
+    },
+    periodB: {
+      periodStart: "2026-08-24",
+      periodEnd: "2026-08-30",
+      omissions: OMISSIONS,
+    },
   };
   const row = (
     projectName: string,

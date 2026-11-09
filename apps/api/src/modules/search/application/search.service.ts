@@ -4,6 +4,7 @@ import {
   searchQueryInputSchema,
   type SearchQueryOutput,
   searchQueryOutputSchema,
+  UNCOUNTED_RECORD_OMISSIONS,
   type UserSession,
 } from "@weeklyreport/shared";
 
@@ -85,7 +86,10 @@ export class SearchService {
 
     const groupIds = resolveSearchGroupIds(session);
     if (groupIds !== null && groupIds.length === 0) {
-      return searchQueryOutputSchema.parse([]);
+      return searchQueryOutputSchema.parse({
+        hits: [],
+        omissions: UNCOUNTED_RECORD_OMISSIONS,
+      });
     }
 
     const hits = await this.repository.search({
@@ -112,6 +116,11 @@ export class SearchService {
       role: session.role,
       hits: limited.length,
     });
-    return searchQueryOutputSchema.parse(limited);
+    // TODO(TASK-836): count omissions over the authorized corpus once the
+    // publication package freezes them; until then the totals are not known.
+    return searchQueryOutputSchema.parse({
+      hits: limited,
+      omissions: UNCOUNTED_RECORD_OMISSIONS,
+    });
   }
 }

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { safeText } from "./primitives/report-primitives.schema.js";
 import { searchPlanSchema } from "./report-assistant-search-plan.js";
+import { recordOmissionSummarySchema } from "./report-sections/record-omission.schema.js";
 
 /** Longest retry delay the report-assistant resource guard may expose. */
 export const REPORT_ASSISTANT_RESOURCE_RETRY_MAX_SECONDS = 120;
@@ -50,12 +51,16 @@ export const answerMetadataSchema = z
   })
   .strict();
 
+// `coverage` describes the selected authorized corpus before text or semantic
+// matching: how many incomplete records it leaves out, not how many would have
+// matched the question.
 const okOutcomeSchema = z
   .object({
     kind: z.literal("ok"),
     answerMarkdown: z.string(),
     citations: z.array(sourceCitationSchema),
     metadata: answerMetadataSchema,
+    coverage: recordOmissionSummarySchema,
   })
   .strict();
 
@@ -70,7 +75,12 @@ export const reportAssistantOutcomeSchema = z.discriminatedUnion("kind", [
       truncated: z.boolean(),
     })
     .strict(),
-  z.object({ kind: z.literal("no_results") }).strict(),
+  z
+    .object({
+      kind: z.literal("no_results"),
+      coverage: recordOmissionSummarySchema,
+    })
+    .strict(),
   z.object({ kind: z.literal("semantic_index_pending") }).strict(),
   z
     .object({

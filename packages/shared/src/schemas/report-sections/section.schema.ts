@@ -15,6 +15,7 @@ import {
   publishedItemReadModelSchema,
   publishedRiskReadModelSchema,
 } from "./published-section-record.schema.js";
+import { recordOmissionSchema } from "./record-omission.schema.js";
 import {
   activityStatusInputSchema,
   decisionReadModelSchema,
@@ -229,6 +230,9 @@ export const publishedReportSectionReadModelSchema =
       items: z.array(publishedItemReadModelSchema).readonly(),
       risks: z.array(publishedRiskReadModelSchema).readonly(),
       decisions: z.array(publishedDecisionReadModelSchema).readonly(),
+      // Absent on snapshots frozen before omission metadata existed: readers
+      // treat absence as unknown. A present but malformed value is rejected.
+      recordOmission: recordOmissionSchema.optional(),
     })
     .superRefine((section, context) => {
       const firstIndexes = new Map(

@@ -1,4 +1,7 @@
-import type { UserSession } from "@weeklyreport/shared";
+import {
+  UNCOUNTED_RECORD_OMISSIONS,
+  type UserSession,
+} from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { PrismaService } from "../../infrastructure/prisma/prisma.service";
@@ -128,7 +131,11 @@ describe("AnalyticsPrismaRepository reopened-period floor", () => {
 
     expect(reopened).toEqual({ periods: [], rows: [] });
     expect(republished.periods).toEqual([
-      { periodStart: "2026-04-15", periodEnd: PERIOD },
+      {
+        periodStart: "2026-04-15",
+        periodEnd: PERIOD,
+        omissions: UNCOUNTED_RECORD_OMISSIONS,
+      },
     ]);
     expect(republished.rows[0]).toMatchObject({
       projectId: PROJECT_ID,
@@ -170,6 +177,7 @@ describe("AnalyticsPrismaRepository reopened-period floor", () => {
     expect(republished.periodA).toEqual({
       periodStart: "2026-04-15",
       periodEnd: PERIOD,
+      omissions: UNCOUNTED_RECORD_OMISSIONS,
     });
     expect(republished.rows[0]).toMatchObject({
       projectId: PROJECT_ID,

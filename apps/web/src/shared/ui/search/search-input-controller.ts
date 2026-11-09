@@ -59,7 +59,7 @@ function useSearchHits(q: string, scope: SearchScope, isViewer: boolean) {
   });
 
   const hits = useMemo<readonly SearchHit[]>(() => {
-    const all = data ?? [];
+    const all = data?.hits ?? [];
     // Defensive: the server already excludes project hits for a viewer; drop
     // any that slip through so a viewer never sees a product dead-end row.
     return isViewer ? all.filter((hit) => hit.type !== "project") : all;

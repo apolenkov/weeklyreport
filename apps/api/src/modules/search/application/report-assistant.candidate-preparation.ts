@@ -1,4 +1,8 @@
-import type { ReportAssistantOutcome, SearchPlan } from "@weeklyreport/shared";
+import {
+  type ReportAssistantOutcome,
+  type SearchPlan,
+  UNCOUNTED_RECORD_OMISSIONS,
+} from "@weeklyreport/shared";
 
 import {
   type CandidateLimitOutcome,
@@ -16,6 +20,20 @@ import { resolveReportAssistantCandidates } from "./report-assistant.retrieval.j
 import type { ReportAssistantTrace } from "./report-assistant.telemetry.js";
 import type { ReportSearchRepository } from "./report-search.repository.js";
 import type { SemanticRetrievalService } from "./semantic-retrieval.service.js";
+
+// TODO(TASK-836): summarize the authorized corpus's omission buckets before
+// text or semantic matching; until then coverage totals are not known.
+export const UNCOUNTED_COVERAGE = UNCOUNTED_RECORD_OMISSIONS;
+
+const NO_RESULTS_OUTCOME: ReportAssistantOutcome = {
+  kind: "no_results",
+  coverage: UNCOUNTED_COVERAGE,
+};
+
+const terminalOutcome = (
+  kind: "no_results" | "result_set_too_large",
+): ReportAssistantOutcome =>
+  kind === "no_results" ? NO_RESULTS_OUTCOME : { kind };
 
 type ResolvedCandidates = Extract<
   Awaited<ReturnType<typeof resolveReportAssistantCandidates>>,
@@ -105,7 +123,10 @@ const rankCandidates = async ({
   if (semantic.kind !== "ranked") {
     return {
       kind: "terminal",
-      outcome: { kind: semantic.kind },
+      outcome:
+        semantic.kind === "no_results"
+          ? NO_RESULTS_OUTCOME
+          : { kind: semantic.kind },
       trace: cacheTrace,
     };
   }
@@ -168,7 +189,7 @@ export const prepareReportAssistantCandidates = async ({
               total: resolved.total,
               truncated: resolved.truncated,
             }
-          : resolved,
+          : terminalOutcome(resolved.kind),
       trace: { ...trace, candidateCount: 0 },
     };
   }

@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { safeText } from "../primitives/report-primitives.schema.js";
+import { recordOmissionSummarySchema } from "../report-sections/record-omission.schema.js";
 
 /** Search result kinds supported by the unified full-text endpoint. */
 const searchHitTypeSchema = z.enum(["item", "risk", "decision", "project"]);
@@ -57,7 +58,17 @@ export const searchQueryInputSchema = z
 /** Caller-authorized search scope with a bounded result limit. */
 export type SearchQueryInput = z.infer<typeof searchQueryInputSchema>;
 
-/** Describes the ordered result list returned by full-text search. */
-export const searchQueryOutputSchema = z.array(searchHitSchema).readonly();
-/** Ordered result list returned by full-text search. */
+/**
+ * Ordered hits plus the omission disclosure for the authorized corpus the
+ * query ran over. `omissions` is counted before text matching and limits, so a
+ * zero-hit response still carries it; it never claims an omitted row matched.
+ * The object is strict: a bare hit array from an older server is rejected.
+ */
+export const searchQueryOutputSchema = z
+  .strictObject({
+    hits: z.array(searchHitSchema).readonly(),
+    omissions: recordOmissionSummarySchema,
+  })
+  .readonly();
+/** Ordered hits and corpus omission disclosure returned by full-text search. */
 export type SearchQueryOutput = z.infer<typeof searchQueryOutputSchema>;

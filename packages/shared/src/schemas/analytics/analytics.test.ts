@@ -8,6 +8,8 @@ import {
   trafficLightHistoryOutputSchema,
 } from "./analytics.js";
 
+const OMISSIONS = { risks: 0, decisions: 0, unknown: false };
+
 // The ISO date rule is unexported; exercise it through every public alias that
 // uses it, including both dates in response periods.
 const parseByAlias = {
@@ -28,13 +30,14 @@ const parseByAlias = {
     }),
   "periods[]": (v: unknown) =>
     trafficLightHistoryOutputSchema.safeParse({
-      periods: [{ periodStart: v, periodEnd: v }],
+      periods: [{ periodStart: v, periodEnd: v, omissions: OMISSIONS }],
       rows: [],
     }),
   periodStart: (v: unknown) =>
     leadVelocityRowSchema.safeParse({
       periodStart: v,
       periodEnd: v,
+      omissions: OMISSIONS,
       leads: [],
     }),
 } as const;
@@ -142,8 +145,16 @@ describe("trafficLightHistoryOutputSchema", () => {
     expect(
       trafficLightHistoryOutputSchema.safeParse({
         periods: [
-          { periodStart: "2026-06-13", periodEnd: "2026-06-19" },
-          { periodStart: "2026-06-20", periodEnd: "2026-06-26" },
+          {
+            periodStart: "2026-06-13",
+            periodEnd: "2026-06-19",
+            omissions: OMISSIONS,
+          },
+          {
+            periodStart: "2026-06-20",
+            periodEnd: "2026-06-26",
+            omissions: OMISSIONS,
+          },
         ],
         rows: [{ ...row, statuses: ["green", null] }],
       }).success,
@@ -156,8 +167,16 @@ describe("trafficLightHistoryOutputSchema", () => {
   ])("rejects a row with $label status cells", ({ statuses }) => {
     const result = trafficLightHistoryOutputSchema.safeParse({
       periods: [
-        { periodStart: "2026-06-13", periodEnd: "2026-06-19" },
-        { periodStart: "2026-06-20", periodEnd: "2026-06-26" },
+        {
+          periodStart: "2026-06-13",
+          periodEnd: "2026-06-19",
+          omissions: OMISSIONS,
+        },
+        {
+          periodStart: "2026-06-20",
+          periodEnd: "2026-06-26",
+          omissions: OMISSIONS,
+        },
       ],
       rows: [{ ...row, statuses }],
     });
@@ -205,7 +224,8 @@ describe("frozen analytics period contracts", () => {
     { periodStart: "2026-06-17", periodEnd: "2027-06-17" },
   ])(
     "accepts a manual frozen range $periodStart through $periodEnd",
-    (period) => {
+    (dates) => {
+      const period = { ...dates, omissions: OMISSIONS };
       expect(
         trafficLightHistoryOutputSchema.safeParse({
           periods: [period],
