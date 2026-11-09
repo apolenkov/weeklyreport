@@ -30,15 +30,17 @@ interface RetainedEdits {
 // Only the item texts the Lead changed relative to the revision the failed save
 // was based on; anything else in the stale payload is not the Lead's edit.
 function changedItemTexts(
-  failed: AutosaveRequest,
+  payload: DraftSaveContent,
   base: ReportSectionReadModel,
 ): Map<string, string> {
-  const baseTexts = new Map(base.items.map((item) => [item.id, item.text]));
+  const baseTexts = new Map(
+    base.items.map((item) => [item.stableId, item.text]),
+  );
   const changed = new Map<string, string>();
-  for (const item of failed.payload.items) {
-    const baseText = item.id ? baseTexts.get(item.id) : undefined;
-    if (item.id && baseText !== undefined && baseText !== item.text)
-      changed.set(item.id, item.text);
+  for (const item of payload.items) {
+    const baseText = item.stableId ? baseTexts.get(item.stableId) : undefined;
+    if (item.stableId && baseText !== undefined && baseText !== item.text)
+      changed.set(item.stableId, item.text);
   }
   return changed;
 }
@@ -49,12 +51,12 @@ function overlayItemTexts(
 ): ReportSectionReadModel {
   const textOf = (id: string | undefined) =>
     id === undefined ? undefined : texts.get(id);
-  if (!section.items.some((item) => textOf(item.id) !== undefined))
+  if (!section.items.some((item) => textOf(item.stableId) !== undefined))
     return section;
   return {
     ...section,
     items: section.items.map((item) => {
-      const text = textOf(item.id);
+      const text = textOf(item.stableId);
       return text === undefined ? item : { ...item, text };
     }),
   };
@@ -99,6 +101,10 @@ export function useConflictRetainedEdits({
     [payload],
   );
   const historyRef = useRef(new Map<string, ReportSectionReadModel>());
+  const payloadRef = useRef(payload);
+  useEffect(() => {
+    payloadRef.current = payload;
+  }, [payload]);
   const retainedRef = useRef<RetainedEdits | null>(null);
   const heldKeyRef = useRef<string | null>(null);
   const [heldKey, setHeldKey] = useState<string | null>(null);
@@ -118,7 +124,11 @@ export function useConflictRetainedEdits({
   const capture = useCallback((failed: AutosaveRequest) => {
     const { reportSectionId } = failed.payload;
     const base = historyRef.current.get(`${reportSectionId}:${failed.version}`);
-    const texts = base ? changedItemTexts(failed, base) : new Map();
+    const current = payloadRef.current;
+    const texts =
+      base && current?.reportSectionId === reportSectionId
+        ? changedItemTexts(current, base)
+        : new Map<string, string>();
     retainedRef.current =
       texts.size > 0
         ? { reportSectionId, baseVersion: failed.version, texts }
