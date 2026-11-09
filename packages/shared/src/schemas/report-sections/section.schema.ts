@@ -7,6 +7,10 @@ import {
 } from "../primitives/report-primitives.schema.js";
 import { sectionReviewViewSchema } from "../review/review.schema.js";
 import {
+  addDeletionIntentIssues,
+  deletedIncompleteRecordsField,
+} from "./incomplete-record-deletion.schema.js";
+import {
   publishedDecisionReadModelSchema,
   publishedItemReadModelSchema,
   publishedRiskReadModelSchema,
@@ -46,7 +50,8 @@ export {
 /** Maximum number of records accepted for any one section-save collection. */
 export const MAX_RECORDS_PER_SECTION_SAVE = 100;
 
-const draftSaveObjectSchema = z.object({
+/** Fields of a draft save before the deletion-intent rule is attached. */
+export const draftSaveObjectSchema = z.object({
   reportSectionId: z.uuid(),
   // Optimistic-concurrency expected version: the row revision the client
   // loaded. The repository compare-and-sets on it and 409s a stale write.
@@ -73,10 +78,13 @@ const draftSaveObjectSchema = z.object({
     .array(decisionWriteSchema)
     .max(MAX_RECORDS_PER_SECTION_SAVE)
     .readonly(),
+  deletedIncompleteRecords: deletedIncompleteRecordsField,
 });
 
 /** Accepts the complete editable state persisted by a section draft save. */
-export const draftSaveSchema = draftSaveObjectSchema.readonly();
+export const draftSaveSchema = draftSaveObjectSchema
+  .superRefine(addDeletionIntentIssues)
+  .readonly();
 
 /** Accepts a complete section submission with required status confirmations. */
 export const submitSectionSchema = draftSaveObjectSchema
@@ -101,6 +109,7 @@ export const submitSectionSchema = draftSaveObjectSchema
       .readonly()
       .default([]),
   })
+  .superRefine(addDeletionIntentIssues)
   .readonly();
 
 // Display-only stage grid metadata; saveSection writes status only from ownedStages.
