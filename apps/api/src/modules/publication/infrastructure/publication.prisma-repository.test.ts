@@ -10,6 +10,7 @@ import { PublicationPrismaRepository } from "./publication.prisma-repository";
 vi.mock("../../report-sections/index.js", () => ({
   reportFullIncludeForSnapshot: {},
   toPublishedSnapshotJson: vi.fn(() => ({ snapshot: true })),
+  toSectionRecordOmissions: vi.fn(() => new Map()),
   buildAssembledReportFromPrismaRow: vi.fn(() => ({
     reportId: "rep-1",
     status: "published",

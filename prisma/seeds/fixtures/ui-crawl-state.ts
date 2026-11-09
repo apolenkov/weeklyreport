@@ -12,6 +12,7 @@ import {
   parsePublishedSnapshot,
   reportFullIncludeForSnapshot,
   toPublishedSnapshotJson,
+  toSectionRecordOmissions,
 } from "@weeklyreport/report-persistence";
 import {
   buildPublishedProjections,
@@ -61,7 +62,10 @@ async function freezeSnapshot(tx: Prisma.TransactionClient): Promise<void> {
     include: reportFullIncludeForSnapshot,
   });
   const snapshot = buildAssembledReportFromPrismaRow(row);
-  const snapshotJson = toPublishedSnapshotJson(snapshot);
+  const snapshotJson = toPublishedSnapshotJson(
+    snapshot,
+    toSectionRecordOmissions(row),
+  );
   const parsed = parsePublishedSnapshot(snapshotJson);
   assert(parsed !== null, "Publication assembly must produce a valid snapshot");
   const projections = buildPublishedProjections(parsed);

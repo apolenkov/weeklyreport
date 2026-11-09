@@ -10,6 +10,7 @@ import {
   buildAssembledReportFromPrismaRow,
   reportFullIncludeForSnapshot,
   toPublishedSnapshotJson,
+  toSectionRecordOmissions,
 } from "../report-sections/index.js";
 import {
   freezePublishedSnapshot,
@@ -22,6 +23,7 @@ vi.mock("../report-sections/index.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../report-sections/index.js")>()),
   buildAssembledReportFromPrismaRow: vi.fn(),
   toPublishedSnapshotJson: vi.fn(),
+  toSectionRecordOmissions: vi.fn(),
 }));
 
 const REPORT_ID = "20000000-0000-4000-8000-000000000001";
@@ -355,6 +357,8 @@ describe("published projections", () => {
     const json = { frozen: true };
     vi.mocked(buildAssembledReportFromPrismaRow).mockReturnValue(frozen);
     vi.mocked(toPublishedSnapshotJson).mockReturnValue(json);
+    const omissions = new Map();
+    vi.mocked(toSectionRecordOmissions).mockReturnValue(omissions);
     const tx = {
       ...transaction(),
       report: {
@@ -382,7 +386,8 @@ describe("published projections", () => {
       include: reportFullIncludeForSnapshot,
     });
     expect(buildAssembledReportFromPrismaRow).toHaveBeenCalledWith(row);
-    expect(toPublishedSnapshotJson).toHaveBeenCalledWith(frozen);
+    expect(toSectionRecordOmissions).toHaveBeenCalledWith(row);
+    expect(toPublishedSnapshotJson).toHaveBeenCalledWith(frozen, omissions);
     expect(tx.report.update).toHaveBeenCalledWith({
       where: { id: REPORT_ID },
       data: { publishedSnapshot: json },
