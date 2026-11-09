@@ -52,7 +52,12 @@ export const getVitestReporters = (
 // suite still writes its own `<project>/coverage`.
 export default defineConfig({
   test: {
-    exclude: [...configDefaults.exclude, ".worktrees/**", "**/.next/**"],
+    exclude: [
+      ...configDefaults.exclude,
+      ".worktrees/**",
+      ".claude/worktrees/**",
+      "**/.next/**",
+    ],
     maxWorkers: 2,
     // Keep GitHub annotations without letting every Vitest invocation append
     // its own generic "Vitest Test Report" to the job summary. CI owns the
