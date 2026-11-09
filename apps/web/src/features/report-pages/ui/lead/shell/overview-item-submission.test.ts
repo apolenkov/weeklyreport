@@ -28,6 +28,29 @@ describe("unresolved receipt barrier at the shell boundary", () => {
     expect(setDialog).not.toHaveBeenCalled();
   });
 
+  it("releases the save barrier when a conflicted original is dismissed", () => {
+    const setDialog = vi.fn();
+    const abandonPersisted = vi.fn();
+    const editor = {
+      draft: {
+        autosave: { state: "error" },
+        saveRecovery: { phase: "reconciliation" },
+        abandonPersisted,
+      },
+    } as unknown as ReadyEditor;
+    const dialog = {
+      submission: { token: "original" },
+    } as OverviewItemDialogState;
+    closeOverviewDialog({
+      editor,
+      dialog,
+      recoveryReason: "Conflict",
+      setDialog,
+    });
+    expect(abandonPersisted).toHaveBeenCalledWith("original");
+    expect(setDialog).toHaveBeenCalledWith(null);
+  });
+
   it("does not treat another Save as a reconstructed retry", () => {
     const setDialog = vi.fn();
     const setError = vi.fn();

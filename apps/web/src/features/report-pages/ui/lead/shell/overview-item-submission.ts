@@ -285,36 +285,41 @@ export function overviewSaveFailure(
     : null;
 }
 
+function closeRecoveryDialog({
+  editor,
+  dialog,
+  setDialog,
+}: SubmissionContext): void {
+  if (dialog?.submission) {
+    // A write that may have landed is never dismissed from a detached context;
+    // only a reconciliation answer proves nothing is in flight any more.
+    if (editor?.draft.saveRecovery?.phase !== "reconciliation") return;
+    // Dismissal releases the save barrier when every copy answered a conflict,
+    // so the Lead's next edits autosave again; other answers keep it.
+    editor.draft.abandonPersisted(dialog.submission.token);
+  }
+  setDialog(null);
+}
+
 // Closing an abandoned save restores the pre-edit draft through a guarded
 // compensating write; recovery dialogs never wrote anything, so they restore
 // nothing. After possible dispatch the cancel is only intent until that write
 // is confirmed against the then-current state.
-export function closeOverviewDialog({
-  editor,
-  dialog,
-  recoveryReason,
-  setDialog,
-}: SubmissionContext): void {
-  const restore =
-    editor && dialog && !recoveryReason
-      ? abandonedSaveRestorePatch(editor, dialog)
-      : null;
+export function closeOverviewDialog(context: SubmissionContext): void {
+  const { editor, dialog, recoveryReason, setDialog } = context;
   if (dialog?.submission?.discard) {
     if (dialog.submission.discard.failed) {
       editor?.draft.abandonPersisted(dialog.submission.discard.token);
       setDialog(null);
-      return;
     }
     return;
   }
-  // A write that may have landed is never dismissed from a detached context;
-  // only a conflict answer proves nothing is in flight any more.
-  if (
-    dialog?.submission &&
-    recoveryReason &&
-    editor?.draft.saveRecovery?.phase !== "reconciliation"
-  )
+  if (recoveryReason) {
+    closeRecoveryDialog(context);
     return;
+  }
+  const restore =
+    editor && dialog ? abandonedSaveRestorePatch(editor, dialog) : null;
   if (editor && dialog?.submission && restore) {
     editor.draft.apply(restore);
     setDialog({
