@@ -270,6 +270,7 @@ export {
   leadOpenWorkHistoryOccurrenceSchema,
   leadOpenWorkHistoryOutputSchema,
 } from "./schemas/report-sections/open-work-history.schema.js";
+export * from "./schemas/report-sections/record-omission.schema.js";
 export * from "./schemas/report-sections/status-overview.schema.js";
 export * from "./schemas/review/lead-item-discussion.schema.js";
 export type {
