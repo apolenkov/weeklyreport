@@ -172,3 +172,48 @@ describe("myHistoryEntrySchema — Report period date format", () => {
     expect(result.submittedAt?.toISOString()).toBe("1999-12-31T23:59:59.999Z");
   });
 });
+
+describe("myHistoryEntrySchema — omitted and retained drafts", () => {
+  const entry = {
+    sectionId: "10000000-0000-4000-8000-000000000001",
+    reportId: "10000000-0000-4000-8000-000000000002",
+    periodStart: "2026-05-11T00:00:00.000Z",
+    periodEnd: "2026-05-17T00:00:00.000Z",
+    reportStatus: "published",
+    sectionStatus: "submitted",
+    submittedAt: null,
+    publishedAt: null,
+  };
+  const accepts = (extra: object): boolean =>
+    myHistoryEntrySchema.safeParse({ ...entry, ...extra }).success;
+
+  it("carries the frozen count and the current count as separate facts", () => {
+    const parsed = myHistoryEntrySchema.parse({
+      ...entry,
+      publishedOmissions: { risks: 2, decisions: 0, unknown: false },
+      retainedDrafts: { risks: 1, decisions: 0, readOnlyReason: "published" },
+    });
+
+    expect(parsed.publishedOmissions?.risks).toBe(2);
+    expect(parsed.retainedDrafts?.risks).toBe(1);
+  });
+
+  it("allows a frozen omission notice with nothing left to recover", () => {
+    expect(
+      accepts({
+        publishedOmissions: { risks: 2, decisions: 1, unknown: false },
+      }),
+    ).toBe(true);
+  });
+
+  it.each([
+    ["an empty count", { risks: 0, decisions: 0, readOnlyReason: "published" }],
+    ["a count without its reason", { risks: 1, decisions: 0 }],
+    [
+      "record text beside the count",
+      { risks: 1, decisions: 0, readOnlyReason: "archived", text: "Draft" },
+    ],
+  ])("rejects retained drafts with %s", (_name, retainedDrafts) => {
+    expect(accepts({ retainedDrafts })).toBe(false);
+  });
+});

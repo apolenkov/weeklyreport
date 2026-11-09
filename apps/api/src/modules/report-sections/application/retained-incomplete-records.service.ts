@@ -8,6 +8,11 @@ import {
   retainedIncompleteRecordsOutputSchema,
 } from "@weeklyreport/shared";
 
+import {
+  recoveryReadOnlyReason,
+  type RecoverySourceLifecycle,
+} from "../domain/retained-recovery.js";
+
 export const RETAINED_SOURCE_READER = Symbol("RetainedSourceReader");
 
 /** One recovery read: the authenticated actor and the source they name. */
@@ -21,11 +26,7 @@ export interface RetainedSource {
   readonly reportSectionId: string;
   readonly periodStart: Date;
   readonly periodEnd: Date;
-  readonly lifecycle: {
-    readonly status: "draft" | "published";
-    readonly periodStatus: "open" | "published" | "reopened";
-    readonly archived: boolean;
-  };
+  readonly lifecycle: RecoverySourceLifecycle;
   /** True when the lead form already shows this section for editing. */
   readonly onCurrentForm: boolean;
   readonly risks: readonly DraftRiskRecord[];
@@ -37,22 +38,7 @@ export interface RetainedSourceReader {
   readOwnSource(request: RetainedSourceRequest): Promise<RetainedSource | null>;
 }
 
-type ReadOnlyReason = Extract<
-  RetainedIncompleteRecordsOutput,
-  { status: "available" }
->["readOnlyReason"];
-
 const UNAVAILABLE: RetainedIncompleteRecordsOutput = { status: "unavailable" };
-
-// Why recovery shows this source read-only. An archived report stays archived
-// whatever it was before; a reopened one is editable again, but only through
-// the normal form.
-function readOnlyReasonOf(source: RetainedSource): ReadOnlyReason {
-  const { archived, periodStatus, status } = source.lifecycle;
-  if (archived) return "archived";
-  if (periodStatus === "reopened") return "reopened";
-  return status === "published" ? "published" : "not-current";
-}
 
 // Recovery shows the text only; reviewer discussion stays with the source.
 const withoutComments = <T extends { readonly comments?: unknown }>({
@@ -75,10 +61,11 @@ export class RetainedIncompleteRecordsService {
   ): Promise<RetainedIncompleteRecordsOutput> {
     const source = await this.reader.readOwnSource({ ...input, actorId });
     if (!source) return UNAVAILABLE;
-    // An open current section keeps its drafts on the form itself, where they
-    // are editable; a read-only copy here would misstate their status.
-    const reason = readOnlyReasonOf(source);
-    if (reason === "not-current" && source.onCurrentForm) return UNAVAILABLE;
+    const reason = recoveryReadOnlyReason(
+      source.lifecycle,
+      source.onCurrentForm,
+    );
+    if (!reason) return UNAVAILABLE;
 
     const risks = source.risks.filter((risk) => !isCompleteRisk(risk));
     const decisions = source.decisions.filter(

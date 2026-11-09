@@ -20,6 +20,33 @@ export const retainedIncompleteRecordsInputSchema = z
   })
   .readonly();
 
+/**
+ * Why recovery shows a source read-only. `reopened`: the source is editable
+ * again, but only through the normal form.
+ */
+export const retainedReadOnlyReasonSchema = z.enum([
+  "published",
+  "archived",
+  "not-current",
+  "reopened",
+]);
+
+/**
+ * Unfinished records an author's source section holds now. It is a current
+ * count, not a publication fact: it shrinks when the author completes or
+ * deletes a draft, and is absent when recovery has nothing to show.
+ */
+export const retainedDraftCountsSchema = z
+  .strictObject({
+    risks: z.number().int().nonnegative(),
+    decisions: z.number().int().nonnegative(),
+    readOnlyReason: retainedReadOnlyReasonSchema,
+  })
+  .refine((counts) => counts.risks + counts.decisions > 0, {
+    message: "Retained draft counts name at least one record.",
+  })
+  .readonly();
+
 const NOT_INCOMPLETE = "Recovery returns incomplete records only.";
 
 // Recovery is a read of the source text. Comments stay with the source and
@@ -61,13 +88,7 @@ export const retainedIncompleteRecordsOutputSchema = z.discriminatedUnion(
         reportSectionId: z.uuid(),
         periodStart: reportDate(),
         periodEnd: reportDate(),
-        // `reopened`: the source is editable again through the normal form.
-        readOnlyReason: z.enum([
-          "published",
-          "archived",
-          "not-current",
-          "reopened",
-        ]),
+        readOnlyReason: retainedReadOnlyReasonSchema,
         risks: z.array(retainedRiskSchema).readonly(),
         decisions: z.array(retainedDecisionSchema).readonly(),
       })
@@ -83,3 +104,9 @@ export type RetainedIncompleteRecordsInput = z.infer<
 export type RetainedIncompleteRecordsOutput = z.infer<
   typeof retainedIncompleteRecordsOutputSchema
 >;
+/** Why a recovery source is read-only. */
+export type RetainedReadOnlyReason = z.infer<
+  typeof retainedReadOnlyReasonSchema
+>;
+/** Current unfinished-record counts of one own source section. */
+export type RetainedDraftCounts = z.infer<typeof retainedDraftCountsSchema>;
