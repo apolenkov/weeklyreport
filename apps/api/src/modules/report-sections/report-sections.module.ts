@@ -17,9 +17,15 @@ import {
   REPORT_SECTIONS_TELEMETRY,
   type ReportSectionsTelemetry,
 } from "./application/report-sections-telemetry.port.js";
+import {
+  RETAINED_SOURCE_READER,
+  RetainedIncompleteRecordsService,
+  type RetainedSourceReader,
+} from "./application/retained-incomplete-records.service.js";
 import { LeadFormPrismaRepository } from "./infrastructure/lead-form.prisma-repository.js";
 import { ReportSectionsPrismaRepository } from "./infrastructure/report-sections.prisma-repository.js";
 import { ReportSectionsPrometheusTelemetry } from "./infrastructure/report-sections-prometheus-telemetry.adapter.js";
+import { RetainedSourcePrismaReader } from "./infrastructure/retained-incomplete-records.query.js";
 
 @Module({
   imports: [ConfigModule],
@@ -60,7 +66,18 @@ import { ReportSectionsPrometheusTelemetry } from "./infrastructure/report-secti
       ) => new LeadFormService(repo, telemetry),
       inject: [LEAD_FORM_REPOSITORY, REPORT_SECTIONS_TELEMETRY],
     },
+    { provide: RETAINED_SOURCE_READER, useClass: RetainedSourcePrismaReader },
+    {
+      provide: RetainedIncompleteRecordsService,
+      useFactory: (reader: RetainedSourceReader) =>
+        new RetainedIncompleteRecordsService(reader),
+      inject: [RETAINED_SOURCE_READER],
+    },
   ],
-  exports: [ReportSectionsService, LeadFormService],
+  exports: [
+    ReportSectionsService,
+    LeadFormService,
+    RetainedIncompleteRecordsService,
+  ],
 })
 export class ReportSectionsModule {}

@@ -36,8 +36,12 @@ import {
   protectedProcedure,
   router,
 } from "../trpc.middleware.js";
+import {
+  retainedIncompleteRecordsProcedure,
+  type RetainedRecordsRouterDeps,
+} from "./lead-form-retained-records.procedure.js";
 
-export interface LeadFormRouterDeps {
+export interface LeadFormRouterDeps extends RetainedRecordsRouterDeps {
   snapshotAdminService: SnapshotAdminService;
   leadFormService: LeadFormService;
   reportAssistantService: ReportAssistantService;
@@ -320,5 +324,6 @@ export function createLeadFormRouter(deps: LeadFormRouterDeps) {
     requestReopen: requestReopenProcedure(deps),
     crossAuthors: crossAuthorsProcedure(deps),
     crossAuthorContent: crossAuthorContentProcedure(deps),
+    retainedIncompleteRecords: retainedIncompleteRecordsProcedure(deps),
   });
 }

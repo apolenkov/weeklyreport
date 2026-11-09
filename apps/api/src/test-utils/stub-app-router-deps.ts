@@ -38,6 +38,7 @@ export function createStubAppRouterDeps(
     periodService: stub(),
     weeklyReportService: stub(),
     leadFormService: stub(),
+    retainedIncompleteRecordsService: stub(),
     analyticsService: stub(),
     searchService: stub(),
     reportAssistantService: stub(),
