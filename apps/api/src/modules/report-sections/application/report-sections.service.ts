@@ -1,7 +1,10 @@
 import {
-  type DraftSaveInput,
-  type DraftSavePayload,
-  draftSaveSchema,
+  type AuthorReportSectionReadModel,
+  authorReportSectionReadModelSchema,
+  deletedIncompleteRecordsOf,
+  type IncompleteDraftSaveInput,
+  type IncompleteDraftSavePayload,
+  incompleteDraftSaveSchema,
   MS_PER_SECOND,
   type ReportSectionReadModel,
   reportSectionReadModelSchema,
@@ -33,6 +36,7 @@ export {
   ReportSectionDomainError,
   ReportSectionNotFoundError,
   type ReportSectionsRepository,
+  type SectionReadScope,
   SectionVersionConflictError,
 } from "./report-sections.contract.js";
 
@@ -44,7 +48,7 @@ export class ReportSectionsService {
   ) {}
 
   private assertCanEditSection(
-    section: ReportSectionReadModel,
+    section: AuthorReportSectionReadModel,
     actorUserId: string,
   ): void {
     if (section.authorId !== actorUserId) {
@@ -56,8 +60,8 @@ export class ReportSectionsService {
   // AUTHOR does not own on that product. Runs on both write paths before
   // persistence; the author's server-loaded ownedStages is the reference.
   private assertStageOwnership(
-    section: ReportSectionReadModel,
-    input: DraftSaveInput | SubmitSectionInput,
+    section: AuthorReportSectionReadModel,
+    input: IncompleteDraftSaveInput | SubmitSectionInput,
   ): void {
     const violation = validateStageOwnership(section, input).at(0);
     if (violation) {
@@ -69,8 +73,8 @@ export class ReportSectionsService {
   // attached/seeded for the author. The server-loaded seeded set is the
   // reference — the delete-recreate never trusts client-supplied ids.
   private assertActivityAttachment(
-    section: ReportSectionReadModel,
-    input: DraftSaveInput | SubmitSectionInput,
+    section: AuthorReportSectionReadModel,
+    input: IncompleteDraftSaveInput | SubmitSectionInput,
   ): void {
     // Two client-trust gaps, same seeded-set reference, same reject: the
     // status-slice guard plus the record-parent guard for rows parented by an
@@ -87,8 +91,8 @@ export class ReportSectionsService {
   // from the section — stableId is client-authoritative on the payload, so
   // preservation is verified server-side (comparison in published-record-guard).
   private async assertPublishedRecordsPreserved(
-    section: ReportSectionReadModel,
-    input: DraftSaveInput | SubmitSectionInput,
+    section: AuthorReportSectionReadModel,
+    input: IncompleteDraftSaveInput | SubmitSectionInput,
   ): Promise<void> {
     const published = await this.repository.getPublishedLineage(section);
     const violation = findPublishedRecordViolation(published, input);
@@ -128,15 +132,35 @@ export class ReportSectionsService {
     return reportSectionReadModelSchema.parse(section);
   }
 
+  // The section a write replaces, with its author's incomplete drafts: the
+  // ownership checks must see every stored record. Only a write path may call
+  // this, and it proves the actor is the author before using or returning it.
+  private async getSectionForWrite(
+    reportSectionId: string,
+  ): Promise<AuthorReportSectionReadModel> {
+    const section = await this.repository.getSectionById(
+      reportSectionId,
+      "author",
+    );
+
+    if (!section) {
+      throw new ReportSectionNotFoundError(
+        `Report section ${reportSectionId} was not found.`,
+      );
+    }
+
+    return authorReportSectionReadModelSchema.parse(section);
+  }
+
   async saveDraft(
-    input: DraftSavePayload,
+    input: IncompleteDraftSavePayload,
     // Writing actor is mandatory: the authenticated caller, never an optional
     // identity that would let a write slip through unowned. The router passes
     // `ctx.session.userId` (reports.router.ts).
     actorUserId: string,
-  ): Promise<ReportSectionReadModel> {
-    const parsedInput = draftSaveSchema.parse(input);
-    const section = await this.getActiveSection(parsedInput.reportSectionId);
+  ): Promise<AuthorReportSectionReadModel> {
+    const parsedInput = incompleteDraftSaveSchema.parse(input);
+    const section = await this.getSectionForWrite(parsedInput.reportSectionId);
     this.assertCanEditSection(section, actorUserId);
 
     const writeGate = await this.repository.getReportPeriodWriteGateForSection(
@@ -163,6 +187,7 @@ export class ReportSectionsService {
       // row's — otherwise the compare-and-set always matches and the lock is a
       // no-op.
       parsedInput.version,
+      deletedIncompleteRecordsOf(parsedInput),
     );
     this.logger.info("section draft saved", {
       reportSectionId: parsedInput.reportSectionId,
@@ -177,7 +202,7 @@ export class ReportSectionsService {
     actorUserId: string,
   ): Promise<ReportSectionReadModel> {
     const parsedInput = submitSectionSchema.parse(input);
-    const section = await this.getActiveSection(parsedInput.reportSectionId);
+    const section = await this.getSectionForWrite(parsedInput.reportSectionId);
     this.assertCanEditSection(section, actorUserId);
 
     // Gate the destructive delete-recreate on the canonical period status, not
@@ -206,9 +231,17 @@ export class ReportSectionsService {
       }
     }
 
-    const saved = await this.repository.saveSection(
-      mergeSection(section, parsedInput, "submitted", new Date()),
-      parsedInput.version,
+    // A submitted section holds complete records only: the payload is strict,
+    // and the save rejects any stored incomplete draft it would silently drop,
+    // so both the merged and the saved section parse as the complete model.
+    const saved = reportSectionReadModelSchema.parse(
+      await this.repository.saveSection(
+        reportSectionReadModelSchema.parse(
+          mergeSection(section, parsedInput, "submitted", new Date()),
+        ),
+        parsedInput.version,
+        deletedIncompleteRecordsOf(parsedInput),
+      ),
     );
 
     // Always bump the submission counter, labelled by the same `late` flag

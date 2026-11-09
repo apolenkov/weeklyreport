@@ -1,8 +1,8 @@
+import { reportSectionReadModelSchema } from "@weeklyreport/shared";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { createNullLogger } from "../../../lib/logger.js";
-import { expectDefined } from "../../../test-utils/expect-defined.js";
 import {
   cleanDatabase,
   createTestPrisma,
@@ -66,7 +66,9 @@ describe("lead plan verdicts through the draft save (real database)", () => {
   }
 
   async function loadSection() {
-    return expectDefined(await repository.getSectionById(testData.section.id));
+    return reportSectionReadModelSchema.parse(
+      await repository.getSectionById(testData.section.id),
+    );
   }
 
   it("confirms every carried continuation in one save without adding or dropping records", async () => {

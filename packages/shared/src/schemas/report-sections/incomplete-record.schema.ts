@@ -133,6 +133,10 @@ export type SubmittedDecisionRecord = z.infer<typeof decisionReadModelSchema>;
 export type IncompleteDraftSaveInput = z.infer<
   typeof incompleteDraftSaveSchema
 >;
+/** The same save as a client sends it, before parsing normalises details. */
+export type IncompleteDraftSavePayload = z.input<
+  typeof incompleteDraftSaveSchema
+>;
 
 interface RiskDetails {
   readonly impact: string | null;

@@ -1,4 +1,7 @@
-import type { ReportSectionReadModel } from "@weeklyreport/shared";
+import type {
+  AuthorReportSectionReadModel,
+  ReportSectionReadModel,
+} from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import { createNullLogger } from "../../../lib/logger.js";
@@ -64,7 +67,7 @@ const baseSection: ReportSectionReadModel = {
 function createRepository(
   section: ReportSectionReadModel,
 ): ReportSectionsRepository {
-  let currentSection = structuredClone(section);
+  let currentSection: AuthorReportSectionReadModel = structuredClone(section);
 
   return {
     getSectionById(reportSectionId) {

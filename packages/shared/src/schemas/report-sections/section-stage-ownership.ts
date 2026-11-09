@@ -1,8 +1,6 @@
-import type {
-  DraftSaveInput,
-  ReportSectionReadModel,
-  SubmitSectionInput,
-} from "./section.schema.js";
+import type { AuthorReportSectionReadModel } from "./author-section.schema.js";
+import type { IncompleteDraftSaveInput } from "./incomplete-record.schema.js";
+import type { SubmitSectionInput } from "./section.schema.js";
 import type { DraftSaveValidationError } from "./section-validation.types.js";
 
 interface StageOwnershipRow {
@@ -42,7 +40,7 @@ const keepsStoredStages = (
   );
 
 const authorOwnedStages = (
-  section: ReportSectionReadModel,
+  section: AuthorReportSectionReadModel,
   projectId: string | undefined,
 ): readonly string[] =>
   (projectId === undefined
@@ -52,7 +50,7 @@ const authorOwnedStages = (
 
 const stageNotOwnedMessage = (
   stage: string,
-  section: ReportSectionReadModel,
+  section: AuthorReportSectionReadModel,
   projectId: string | undefined,
 ): string => {
   const productName =
@@ -68,7 +66,7 @@ const stageNotOwnedMessage = (
 const validateStageRows = (
   payloadRows: readonly StageOwnershipRow[],
   storedRows: readonly StageOwnershipRow[],
-  section: ReportSectionReadModel,
+  section: AuthorReportSectionReadModel,
 ): readonly DraftSaveValidationError[] => {
   return Object.freeze(
     payloadRows.flatMap((row) => {
@@ -88,7 +86,7 @@ const validateStageRows = (
 };
 
 const recordRows = (
-  records: Pick<DraftSaveInput, "items" | "risks" | "decisions">,
+  records: Pick<IncompleteDraftSaveInput, "items" | "risks" | "decisions">,
 ) =>
   [
     records.items.map((row) => toRow(row, row.projectId)),
@@ -98,8 +96,8 @@ const recordRows = (
 
 /** Rejects new or changed payload record stages that the section author does not own. */
 export function validateStageOwnership(
-  section: ReportSectionReadModel,
-  input: DraftSaveInput | SubmitSectionInput,
+  section: AuthorReportSectionReadModel,
+  input: IncompleteDraftSaveInput | SubmitSectionInput,
 ): readonly DraftSaveValidationError[] {
   const [items, risks, decisions] = recordRows(input);
   const [storedItems, storedRisks, storedDecisions] = recordRows(section);

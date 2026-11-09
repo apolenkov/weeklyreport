@@ -1,4 +1,5 @@
 import {
+  type AuthorReportSectionReadModel,
   type DraftSaveInput,
   draftSaveSchema,
   type ReportSectionReadModel,
@@ -23,36 +24,12 @@ import {
   OWNED_PROJECT,
   SECTION_ID,
 } from "./__tests__/report-sections-prisma-harness";
+import {
+  type LifecycleGateRow,
+  makeSaveTx as makeTx,
+  OPEN_LIFECYCLE_ROW,
+} from "./__tests__/save-section-tx";
 import { ReportSectionsPrismaRepository } from "./report-sections.prisma-repository";
-
-interface LifecycleGateRow {
-  status: string;
-  periodState: string;
-  periodStatus: string;
-  archived: boolean;
-  autoPublished: boolean;
-  autoArchived: boolean;
-  publishedAt: Date | null;
-  publishedById: string | null;
-  reopenedAt: Date | null;
-}
-
-interface PublishedLineageDocumentRow {
-  recordType: "item" | "decision";
-  stableId: string;
-}
-
-const OPEN_LIFECYCLE_ROW: LifecycleGateRow = {
-  status: "draft",
-  periodState: "open",
-  periodStatus: "open",
-  archived: false,
-  autoPublished: false,
-  autoArchived: false,
-  publishedAt: null,
-  publishedById: null,
-  reopenedAt: null,
-};
 
 describe("ReportSectionsPrismaRepository.getReportPeriodWriteGateForSection", () => {
   it("returns periodStatus and archived from the owning report", async () => {
@@ -81,63 +58,6 @@ describe("ReportSectionsPrismaRepository.getReportPeriodWriteGateForSection", ()
 describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set", () => {
   const ACTIVITY_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
   const CATALOGUE_NAME = "Catalogue duty";
-
-  function makeTx(
-    updateCount: number,
-    reReadResult: FabricatedRow | null,
-    lifecycleRows: LifecycleGateRow[] = [OPEN_LIFECYCLE_ROW],
-  ) {
-    const noop = vi.fn(() => Promise.resolve({ count: 0 }));
-    return {
-      // The publish/save row lock (SELECT ... FOR UPDATE on the parent
-      // report) runs before the version compare-and-set; an open period lets
-      // these characterizations exercise the version lock itself.
-      // The canonical status-graph advisory lock is part of every save
-      // transaction and must remain observable in this harness.
-      $executeRaw: vi.fn(() => Promise.resolve(0)),
-      $queryRaw: vi.fn<() => Promise<LifecycleGateRow[]>>(() =>
-        Promise.resolve(lifecycleRows),
-      ),
-      reportSection: {
-        updateMany: vi.fn(() => Promise.resolve({ count: updateCount })),
-        // The re-read happens INSIDE the transaction (on `tx`, not the outer
-        // `prisma` client) — it carries the row's NEW version, so the returned
-        // model reflects this fresh fetch rather than the stale input.
-        findUnique: vi.fn(() => Promise.resolve(reReadResult)),
-      },
-      projectStatus: { deleteMany: noop, createMany: noop },
-      stageStatus: { deleteMany: noop, createMany: noop },
-      activityStatus: {
-        deleteMany: vi.fn(() => Promise.resolve({ count: 0 })),
-        createMany: vi.fn(() => Promise.resolve({ count: 0 })),
-      },
-      item: {
-        findMany: vi.fn(() => Promise.resolve([])),
-        deleteMany: vi.fn(() => Promise.resolve({ count: 0 })),
-        createMany: noop,
-      },
-      risk: { deleteMany: noop, createMany: noop },
-      decision: {
-        findMany: vi.fn(() => Promise.resolve([])),
-        deleteMany: noop,
-        createMany: noop,
-      },
-      report: {
-        findMany: vi.fn(() => Promise.resolve([])),
-        findUnique: vi.fn(() => Promise.resolve({ deadline: null })),
-      },
-      publishedSearchDocument: {
-        findMany: vi.fn((): Promise<PublishedLineageDocumentRow[]> =>
-          Promise.resolve([]),
-        ),
-      },
-      // No comments → re-insert skipped (no findMany stubs needed).
-      recordComment: {
-        findMany: vi.fn(() => Promise.resolve([])),
-        createMany: noop,
-      },
-    };
-  }
 
   function buildRepo(
     updateCount: number,
@@ -226,7 +146,7 @@ describe("ReportSectionsPrismaRepository.saveSection — version compare-and-set
     async function save(
       activityInput: DraftSaveInput["activityStatuses"],
       expectedVersion = version,
-    ): Promise<ReportSectionReadModel> {
+    ): Promise<AuthorReportSectionReadModel> {
       const current = read();
       const parsed = draftSaveSchema.parse({
         reportSectionId: current.reportSectionId,

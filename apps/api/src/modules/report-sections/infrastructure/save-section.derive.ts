@@ -1,12 +1,12 @@
 // Row-builders for saveSection's delete-recreate; load-bearing orchestration
 // (FOR UPDATE, version CAS, comment reinsert, conflict/P2002) stays in the caller.
 import type { Prisma } from "@prisma/client";
-import type { ReportSectionReadModel } from "@weeklyreport/shared";
+import type { AuthorReportSectionReadModel } from "@weeklyreport/shared";
 
 import { ReportSectionDomainError } from "../application/report-sections.service";
 
 export function toProjectStatusRows(
-  section: ReportSectionReadModel,
+  section: AuthorReportSectionReadModel,
   sectionId: string,
 ) {
   return section.projects.map((p) => ({
@@ -17,7 +17,7 @@ export function toProjectStatusRows(
 }
 
 export function toStageStatusRows(
-  section: ReportSectionReadModel,
+  section: AuthorReportSectionReadModel,
   sectionId: string,
 ) {
   return section.projects.flatMap((project) =>
@@ -31,7 +31,7 @@ export function toStageStatusRows(
 }
 
 export function toActivityStatusRows(
-  section: ReportSectionReadModel,
+  section: AuthorReportSectionReadModel,
   sectionId: string,
 ) {
   return section.activities.map((activity) => ({
@@ -44,7 +44,7 @@ export function toActivityStatusRows(
 }
 
 export function toItemRows(
-  section: ReportSectionReadModel,
+  section: AuthorReportSectionReadModel,
   sectionId: string,
   resolutionByStableId: ReadonlyMap<string, Prisma.InputJsonValue> = new Map(),
 ) {
@@ -82,7 +82,10 @@ export function toItemRows(
   });
 }
 
-export function toRiskRows(section: ReportSectionReadModel, sectionId: string) {
+export function toRiskRows(
+  section: AuthorReportSectionReadModel,
+  sectionId: string,
+) {
   return section.risks.map((r) => ({
     reportSectionId: sectionId,
     // Preserve the durable lineage key (see items above).
@@ -99,7 +102,7 @@ export function toRiskRows(section: ReportSectionReadModel, sectionId: string) {
 }
 
 export function assertPersistableDecisionParents(
-  decisions: readonly ReportSectionReadModel["decisions"][number][],
+  decisions: readonly AuthorReportSectionReadModel["decisions"][number][],
 ): void {
   for (const decision of decisions) {
     const hasProduct = decision.productId != null;
@@ -114,7 +117,7 @@ export function assertPersistableDecisionParents(
 }
 
 export function toDecisionRows(
-  decisions: readonly ReportSectionReadModel["decisions"][number][],
+  decisions: readonly AuthorReportSectionReadModel["decisions"][number][],
   sectionId: string,
 ) {
   return decisions.map((d) => ({

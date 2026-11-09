@@ -1,9 +1,14 @@
 import type { Prisma } from "@prisma/client";
 import {
-  mapPrismaToReportSection,
+  mapPrismaToAuthorReportSection,
   reportSectionFullInclude,
 } from "@weeklyreport/report-persistence";
-import { type ReportSectionReadModel } from "@weeklyreport/shared";
+import {
+  type AuthorReportSectionReadModel,
+  type IncompleteRecordDeletion,
+  isCompleteDecision,
+  isCompleteRisk,
+} from "@weeklyreport/shared";
 
 import { lockCurrentEditableReport } from "../../../lib/report-lifecycle.js";
 import { lockStatusGraph } from "../../../lib/status-graph-lock.js";
@@ -14,6 +19,7 @@ import {
   ReportSectionNotFoundError,
   SectionVersionConflictError,
 } from "../application/report-sections.service";
+import { findIncompleteRecordViolation } from "../domain/incomplete-record-guard.js";
 import { findPublishedRecordViolation } from "../domain/published-record-guard.js";
 import { evaluateSubmissionDeadline } from "../domain/submission-deadline.js";
 import { querySectionPublishedLineageTx } from "./published-lineage.transaction.js";
@@ -38,8 +44,8 @@ import {
 
 async function checkSubmissionDeadline(
   tx: Prisma.TransactionClient,
-  section: ReportSectionReadModel,
-): Promise<ReportSectionReadModel> {
+  section: AuthorReportSectionReadModel,
+): Promise<AuthorReportSectionReadModel> {
   if (section.status !== "submitted") return section;
   const report = await tx.report.findUnique({
     where: { id: section.reportId },
@@ -100,7 +106,7 @@ async function lockReportForSave(
 // client-loaded version, NOT the freshly-fetched row's, so a stale writer 409s.
 async function bumpSectionVersion(
   tx: Prisma.TransactionClient,
-  section: ReportSectionReadModel,
+  section: AuthorReportSectionReadModel,
   sectionId: string,
   expectedVersion: number,
 ): Promise<void> {
@@ -124,23 +130,13 @@ async function bumpSectionVersion(
 
 async function assertPublishedLineagePreserved(
   tx: Prisma.TransactionClient,
-  section: ReportSectionReadModel,
+  section: AuthorReportSectionReadModel,
 ): Promise<void> {
   const published = await querySectionPublishedLineageTx(tx, {
     reportId: section.reportId,
     reportSectionId: section.reportSectionId,
   });
-  const violation = findPublishedRecordViolation(published, {
-    reportSectionId: section.reportSectionId,
-    version: section.version,
-    status: "draft",
-    projectStatuses: [],
-    stageStatuses: [],
-    activityStatuses: [],
-    items: section.items,
-    risks: section.risks,
-    decisions: section.decisions,
-  });
+  const violation = findPublishedRecordViolation(published, section);
   if (violation) {
     throw new ReportSectionDomainError(violation.code, violation.message);
   }
@@ -148,7 +144,7 @@ async function assertPublishedLineagePreserved(
 
 async function recreateChildRows(
   tx: Prisma.TransactionClient,
-  section: ReportSectionReadModel,
+  section: AuthorReportSectionReadModel,
   sectionId: string,
   resolutionByStableId: ReadonlyMap<string, Prisma.InputJsonValue>,
 ): Promise<void> {
@@ -198,7 +194,7 @@ async function recreateChildRows(
 async function readBackSavedSection(
   tx: Prisma.TransactionClient,
   sectionId: string,
-): Promise<ReportSectionReadModel> {
+): Promise<AuthorReportSectionReadModel> {
   const saved = await tx.reportSection.findUnique({
     where: { id: sectionId },
     include: reportSectionFullInclude,
@@ -213,14 +209,54 @@ async function readBackSavedSection(
     );
   }
 
-  return mapPrismaToReportSection(saved);
+  return mapPrismaToAuthorReportSection(saved);
+}
+
+// A whole-collection replacement may not erase an incomplete draft by leaving
+// it out. Read after the version CAS, so the rows are this writer's to judge
+// and a rejection rolls the version bump back with everything else.
+async function assertIncompleteRecordsReleased(
+  tx: Prisma.TransactionClient,
+  section: AuthorReportSectionReadModel,
+  deletions: readonly IncompleteRecordDeletion[],
+): Promise<void> {
+  const where = { reportSectionId: section.reportSectionId };
+  const risks = await tx.risk.findMany({
+    where,
+    select: { stableId: true, impact: true, mitigation: true },
+  });
+  const decisions = await tx.decision.findMany({
+    where,
+    select: { stableId: true, impact: true },
+  });
+  const violation = findIncompleteRecordViolation(
+    [
+      ...risks.map((risk) => ({
+        kind: "risk" as const,
+        stableId: risk.stableId,
+        complete: isCompleteRisk(risk),
+      })),
+      ...decisions.map((decision) => ({
+        kind: "decision" as const,
+        stableId: decision.stableId,
+        complete: isCompleteDecision(decision),
+      })),
+    ],
+    section,
+    deletions,
+  );
+  if (violation) {
+    throw new ReportSectionDomainError(violation.code, violation.message);
+  }
 }
 
 export async function applySaveSection(
   tx: Prisma.TransactionClient,
-  section: ReportSectionReadModel,
+  section: AuthorReportSectionReadModel,
   expectedVersion: number,
-): Promise<ReportSectionReadModel> {
+  // No intent deletes nothing, so an omitted argument cannot erase a draft.
+  deletions: readonly IncompleteRecordDeletion[] = [],
+): Promise<AuthorReportSectionReadModel> {
   await lockStatusGraph(tx);
   const sectionId = section.reportSectionId;
 
@@ -228,6 +264,7 @@ export async function applySaveSection(
   const checkedSection = await checkSubmissionDeadline(tx, section);
   await assertPublishedLineagePreserved(tx, checkedSection);
   await bumpSectionVersion(tx, checkedSection, sectionId, expectedVersion);
+  await assertIncompleteRecordsReleased(tx, checkedSection, deletions);
 
   // The version CAS holds the section row before we inspect the rows that a
   // delete-recreate would otherwise erase. Client read metadata is ignored;

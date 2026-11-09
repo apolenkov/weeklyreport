@@ -1,8 +1,8 @@
 import type { Prisma } from "@prisma/client";
 import { requirePublishedSnapshot } from "@weeklyreport/report-persistence";
 import type {
+  AuthorReportSectionReadModel,
   PublishedLineage,
-  ReportSectionReadModel,
 } from "@weeklyreport/shared";
 
 import {
@@ -78,7 +78,7 @@ async function loadFrozenLineage(
 }
 
 export function publishedLineageCandidates(
-  section: ReportSectionReadModel,
+  section: AuthorReportSectionReadModel,
 ): LineageCandidates {
   return {
     reportId: section.reportId,
