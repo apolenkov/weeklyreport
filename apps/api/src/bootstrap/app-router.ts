@@ -31,6 +31,7 @@ import { RemindersService } from "../modules/reminders/index.js";
 import {
   LeadFormService,
   ReportSectionsService,
+  RetainedIncompleteRecordsService,
 } from "../modules/report-sections/index.js";
 import {
   ReviewActionsService,
@@ -85,6 +86,7 @@ export function buildAppRouter(deps: AppRouterAssemblyDeps): AppRouter {
     periodService: app.get(PeriodService),
     weeklyReportService: app.get(WeeklyReportService),
     leadFormService: app.get(LeadFormService),
+    retainedIncompleteRecordsService: app.get(RetainedIncompleteRecordsService),
     analyticsService: app.get(AnalyticsService),
     searchService: app.get(SearchService),
     reportAssistantService: app.get(ReportAssistantService),

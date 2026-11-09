@@ -13,6 +13,7 @@ export {
   ReportSectionsService,
   SectionVersionConflictError,
 } from "./application/report-sections.service.js";
+export { RetainedIncompleteRecordsService } from "./application/retained-incomplete-records.service.js";
 export { applyRevokeTransition } from "./application/revoke-transition.js";
 export { filterSectionToSharedProducts } from "./domain/lead-form-cross-author-scope.js";
 export { LeadFormPrismaRepository } from "./infrastructure/lead-form.prisma-repository.js";

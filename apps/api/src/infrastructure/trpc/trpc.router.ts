@@ -24,6 +24,7 @@ import type { PublicationService } from "../../modules/publication/index.js";
 import type { RemindersService } from "../../modules/reminders/index.js";
 import type { LeadFormService } from "../../modules/report-sections/index.js";
 import type { ReportSectionsService } from "../../modules/report-sections/index.js";
+import type { RetainedIncompleteRecordsService } from "../../modules/report-sections/index.js";
 import type { ReviewService } from "../../modules/review/index.js";
 import type { ReviewActionsService } from "../../modules/review/index.js";
 import type {
@@ -83,6 +84,7 @@ export interface AppRouterDeps {
   readonly periodService: PeriodService;
   readonly weeklyReportService: WeeklyReportService;
   readonly leadFormService: LeadFormService;
+  readonly retainedIncompleteRecordsService: RetainedIncompleteRecordsService;
   // Redis prefix invalidation on period publish/reopen.
   readonly analyticsService: AnalyticsService;
   readonly searchService: SearchService;
