@@ -342,6 +342,65 @@ describe("immutable persisted recovery", () => {
     },
   );
 
+  it("releases a conflicted original when the Lead dismisses it", async () => {
+    const h = setup();
+    await act(async () => {
+      await Promise.resolve();
+      void h.result.current.savePersisted("attempt");
+    });
+    await h.finish(0, new LeadFormWriteError("conflict", "other writer won"));
+    expect(h.result.current.isRecoveryBlocked()).toBe(true);
+    act(() => {
+      h.result.current.abandonPersisted("other-token");
+    });
+    expect(h.result.current.isRecoveryBlocked()).toBe(true);
+    act(() => {
+      h.result.current.abandonPersisted("attempt");
+    });
+    expect(h.result.current.isRecoveryBlocked()).toBe(false);
+    h.rerender({
+      payload: makeAutosavePayload("edit after dismissing the conflict"),
+      version: 2,
+      sectionId: AUTOSAVE_SECTION_ID,
+    });
+    await act(async () => {
+      void h.result.current.forceSave();
+      await Promise.resolve();
+    });
+    expect(h.calls).toHaveLength(2);
+  });
+
+  it("keeps the barrier after a dismissed restriction", async () => {
+    const h = setup();
+    await act(async () => {
+      await Promise.resolve();
+      void h.result.current.savePersisted("attempt");
+    });
+    await h.finish(0, new LeadFormWriteError("restriction", "editing revoked"));
+    act(() => {
+      h.result.current.abandonPersisted("attempt");
+    });
+    expect(h.result.current.isRecoveryBlocked()).toBe(true);
+  });
+
+  it("keeps the barrier when only one competitor answered a conflict", async () => {
+    const h = setup();
+    await act(async () => {
+      await Promise.resolve();
+      void h.result.current.savePersisted("attempt");
+    });
+    await h.finish(0, new Error("lost ACK"));
+    await act(async () => {
+      await Promise.resolve();
+      h.result.current.retrySameAttempt("attempt");
+    });
+    await h.finish(1, new LeadFormWriteError("conflict", "first copy won"));
+    act(() => {
+      h.result.current.abandonPersisted("attempt");
+    });
+    expect(h.result.current.isRecoveryBlocked()).toBe(true);
+  });
+
   it("fences an old activation and refuses retry after navigation", async () => {
     const h = setup();
     await act(async () => {

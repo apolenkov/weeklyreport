@@ -299,7 +299,7 @@ export function createAutosaveEngine(
     isRecoveryBlocked: live.recovery.blocked,
     retrySameAttempt: (token: string) => retrySameAttempt(live, token),
     abandonPersisted: (token: string) => {
-      if (live.recovery.blocked()) return;
+      if (!live.recovery.admitsAbandon(token)) return;
       if (live.persisted.abandon(token)) sinks.rearmRetry();
     },
     primeBaseline: (savedKey: string) => {
