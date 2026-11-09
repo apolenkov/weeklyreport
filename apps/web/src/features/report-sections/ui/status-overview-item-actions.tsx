@@ -41,7 +41,7 @@ const FOCUS_RING =
 const HOVER_FILL = "hover:bg-[var(--color-muted)]";
 export const ICON_BUTTON_CLASS = `inline-flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-primary)] ${HOVER_FILL} ${FOCUS_RING}`;
 /** A rail control that pairs its icon with a visible text label. */
-export const LABELLED_BUTTON_CLASS = `inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-sm)] px-1.5 text-xs font-semibold text-[var(--color-foreground)] ${HOVER_FILL} ${FOCUS_RING}`;
+export const LABELLED_BUTTON_CLASS = `inline-flex min-h-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-sm)] px-1 text-xs font-semibold text-[var(--color-foreground)] ${HOVER_FILL} ${FOCUS_RING}`;
 // Card row actions are compact on hoverable pointers, inside the column the
 // card reserves, and take the full touch target where a finger has no hover.
 export const ROW_BUTTON_CLASS = `inline-flex h-7 w-7 items-center justify-center rounded-[var(--radius-sm)] text-[var(--color-primary)] ${HOVER_FILL} [@media(hover:none)]:min-h-[var(--touch-target-min)] [@media(hover:none)]:min-w-[var(--touch-target-min)] ${FOCUS_RING}`;
