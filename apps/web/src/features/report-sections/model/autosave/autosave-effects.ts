@@ -46,7 +46,7 @@ const AUTOSAVE_FAILURE_MESSAGE =
   "Autosave failed. Check your connection and use Save to retry.";
 
 // A bare browser transport message ("Failed to fetch") is not actionable.
-export function autosaveFailureMessage(error: unknown): string {
+function autosaveFailureMessage(error: unknown): string {
   return (
     mutationErrorMessage(error, AUTOSAVE_FAILURE_MESSAGE) ||
     AUTOSAVE_FAILURE_MESSAGE
