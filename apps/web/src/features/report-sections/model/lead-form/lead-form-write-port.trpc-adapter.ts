@@ -5,6 +5,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
+import { TRPCClientError } from "@trpc/client";
 import { useCallback, useState } from "react";
 
 import {
@@ -29,6 +30,29 @@ function normalizeWriteError(error: unknown): LeadFormWriteError {
   );
 }
 
+const HTTP_CLIENT_ERROR_MIN = 400;
+const HTTP_SERVER_ERROR_MIN = 500;
+
+// A whole-section draft write may have been committed even when the caller
+// sees a failure, so only a definite 4xx rejection is settled; a transport
+// failure or server error is ambiguous and may be retried verbatim.
+function normalizeDraftWriteError(error: unknown): LeadFormWriteError {
+  const normalized = normalizeWriteError(error);
+  if (normalized.kind === "conflict") return normalized;
+  const status =
+    error instanceof TRPCClientError
+      ? (error.data as { httpStatus?: number } | undefined)?.httpStatus
+      : undefined;
+  const definite =
+    status !== undefined &&
+    status >= HTTP_CLIENT_ERROR_MIN &&
+    status < HTTP_SERVER_ERROR_MIN;
+  return new LeadFormWriteError(
+    definite ? "restriction" : "ambiguous",
+    normalized.message,
+  );
+}
+
 type Invalidate = (
   queryClient: QueryClient,
   trpc: ReturnType<typeof useTRPC>,
@@ -49,6 +73,7 @@ function useWrite<Input, Output>(
   mutation: { readonly mutateAsync: (input: Input) => Promise<Output> },
   invalidate: Invalidate,
   sectionOf: (input: Input) => string,
+  normalize: (error: unknown) => LeadFormWriteError = normalizeWriteError,
 ) {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
@@ -67,14 +92,14 @@ function useWrite<Input, Output>(
         invalidate(queryClient, trpc);
         return result;
       } catch (error: unknown) {
-        throw normalizeWriteError(error);
+        throw normalize(error);
       } finally {
         setRequests((current) =>
           current.filter((request) => request.token !== attempt.token),
         );
       }
     },
-    [invalidate, mutation, queryClient, sectionOf, trpc],
+    [invalidate, mutation, normalize, queryClient, sectionOf, trpc],
   );
   const pendingIn = (sectionId: string | null): boolean =>
     requests.some(
@@ -119,6 +144,7 @@ export function useLeadFormWritePort(
     useMutation(trpc.reports.saveDraft.mutationOptions({})),
     invalidateForm,
     reportSectionOf,
+    normalizeDraftWriteError,
   );
   const submit = useWrite(
     submitMutation,

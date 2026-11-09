@@ -6,14 +6,14 @@ Allow Leads to quickly create validated records in an authorized Product or Acti
 
 ### Requirement: Risk and decision entry preserves owner context and required data
 
-A Lead MUST be able to enter risks and decisions inline in an eligible Product or Activity context, using the canonical required fields, ownership, stage and draft rules. Incomplete records MUST NOT be presented as saved, and detailed editing MUST remain available.
+A Lead MUST be able to enter minimum-input risk and decision drafts inline under `lead-incomplete-record-drafts`. One action focuses primary text; details expand on demand. Only matching persistence confirms a saved incomplete draft. Parent, stage, severity and owner rules remain authoritative; section submission requires completion or explicit deletion.
 
 #### Scenario: Required fields and product ownership
 
 - **WHEN** a Lead creates a contextual risk
-- **THEN** risk text, impact, mitigation and severity are required
+- **THEN** risk text, eligible context and explicit severity are required for draft save; missing impact and mitigation are null
 - **WHEN** a Lead creates a contextual decision
-- **THEN** decision text, impact and the authoritative section author are required; deadline follows the canonical date rules
+- **THEN** decision text, eligible context and the authoritative section author are required for draft save; missing impact is null and deadline follows the canonical date rules
 - **AND** a Product record requires at least one currently owned eligible stage, with canonical text limits
 
 #### Scenario: Ownership changes before submission
@@ -34,8 +34,9 @@ A Lead MUST be able to enter risks and decisions inline in an eligible Product o
 
 #### Scenario: Decision input is incomplete
 
-- **WHEN** the Lead attempts to submit an incomplete decision
-- **THEN** the relevant fields identify what is required, the draft remains available for correction and no successful save is announced
+- **WHEN** the Lead saves valid decision text and context without impact
+- **THEN** a matching receipt confirms “Saved draft — needs details” and reload retains null impact
+- **AND** attempting section submission identifies missing impact and preserves the draft without claiming submission success
 
 #### Scenario: Responsive and keyboard operation
 

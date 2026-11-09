@@ -51,6 +51,7 @@ export interface ItemHandlers {
   readonly onSetStatus?: SetStatusHandler | undefined;
   readonly onSetStages?: SetStagesHandler | undefined;
   readonly ownedStages?: readonly string[] | undefined;
+  readonly ownedStageStarts?: readonly string[] | undefined;
   readonly onResolvePlan?:
     ((item: StatusOverviewItem, focusKey?: string) => void) | undefined;
   readonly onRestorePlan?:

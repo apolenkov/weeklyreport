@@ -69,6 +69,8 @@ export type LeadFormEditorHandle =
       readonly view: LeadFormLoadedProps;
     };
 
+type AutosaveRecovery =
+  import("../../../../report-sections/model/autosave/autosave-types").AutosaveRecovery;
 type PersistedSaveResult =
   import("../../../../report-sections/model/autosave/autosave-types").PersistedSaveResult;
 
@@ -76,6 +78,8 @@ interface LeadFormEditorDraftHandle extends LeadFormDraftHandle {
   // Open-draft stage memory: one instance per draft generation.
   readonly stageMemory: DraftStageMemory;
   readonly abandonPersisted: (token: string) => void;
+  readonly saveRecovery: AutosaveRecovery | null;
+  readonly retrySameAttempt: ((token: string) => boolean) | undefined;
   readonly savePersisted: (token: string) => Promise<PersistedSaveResult>;
   readonly section: ReportSectionReadModel;
   readonly dirty: boolean;
@@ -142,6 +146,8 @@ function buildEditorDraftHandle(
     save: draft.save,
     savePersisted: draft.savePersisted,
     abandonPersisted: draft.abandonPersisted,
+    saveRecovery: draft.saveRecovery,
+    retrySameAttempt: draft.retrySameAttempt,
     submit: draft.submit,
     routeToBlocker: draft.routeToBlocker,
     quickAdd: draft.quickAdd,

@@ -27,13 +27,19 @@ function overviewUnit(
 }
 
 describe("unit creation controls", () => {
-  it("keeps the unit-header Add item action on Current week", async () => {
+  it("targets the selected Current week", async () => {
     const user = userEvent.setup();
     const onAddItem = vi.fn();
-    render(<UnitAddItemButton unit={overviewUnit()} onAddItem={onAddItem} />);
+    render(
+      <UnitAddItemButton
+        unit={overviewUnit()}
+        source="current"
+        onAddItem={onAddItem}
+      />,
+    );
 
     const add = screen.getByRole("button", {
-      name: "Add item to Incident duty",
+      name: "Add item to Incident duty, Current week",
     });
     expect(add).toHaveAttribute(
       "data-overview-focus",
@@ -58,12 +64,15 @@ describe("unit creation controls", () => {
     render(
       <UnitAddItemButton
         unit={overviewUnit({ historical: true })}
+        source="current"
         onAddItem={onAddItem}
       />,
     );
 
     expect(
-      screen.queryByRole("button", { name: "Add item to Incident duty" }),
+      screen.queryByRole("button", {
+        name: "Add item to Incident duty, Current week",
+      }),
     ).not.toBeInTheDocument();
   });
 });

@@ -1,9 +1,13 @@
 import { useId, useState } from "react";
 
 import type { ItemComposerProps } from "../model/contextual-entry-contract";
+import {
+  control,
+  fieldHelpers,
+  type FieldProps,
+  TextFields,
+} from "./status-overview-inline-item-text-field";
 
-const control =
-  "min-h-11 w-full min-w-0 rounded border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm";
 const button =
   "min-h-11 rounded border border-[var(--color-border)] px-3 py-2 text-sm disabled:opacity-50";
 
@@ -126,42 +130,6 @@ function Actions({
         Save and add another
       </button>
     </div>
-  );
-}
-
-type FieldProps = ItemComposerProps & { readonly id: string };
-function fieldHelpers(view: ItemComposerProps["view"], id: string) {
-  const error = (field: string) => view.errors[field];
-  const describedBy = (field: string) =>
-    error(field) ? `${id}-${field}-error` : undefined;
-  const fieldError = (field: string) =>
-    error(field) ? (
-      <p id={`${id}-${field}-error`} className="text-sm text-red-700">
-        {error(field)}
-      </p>
-    ) : null;
-  return { error, describedBy, fieldError };
-}
-
-function TextFields(props: FieldProps) {
-  const { value, view, onChange, id } = props;
-  const { error, describedBy, fieldError } = fieldHelpers(view, id);
-  return (
-    <>
-      <label className="block space-y-1 text-sm">
-        Description
-        <textarea
-          name="text"
-          className={control}
-          required
-          value={value.text}
-          aria-invalid={!!error("text")}
-          aria-describedby={describedBy("text")}
-          onChange={(event) => onChange({ ...value, text: event.target.value })}
-        />
-      </label>
-      {fieldError("text")}
-    </>
   );
 }
 

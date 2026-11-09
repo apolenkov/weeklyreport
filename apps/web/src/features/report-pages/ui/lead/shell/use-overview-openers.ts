@@ -213,9 +213,6 @@ export function useOverviewEditOpeners({
       }),
     );
   };
-  const editItem = (target: StatusOverviewEditTarget): void => {
-    openEditItem(target, target.source);
-  };
   const moveItem = (
     item: StatusOverviewItem,
     target: "current" | "next",
@@ -243,7 +240,8 @@ export function useOverviewEditOpeners({
     applyItemTextEdit(whenIdle, target, text);
   };
   return {
-    editItem,
+    editItem: (target: StatusOverviewEditTarget) =>
+      openEditItem(target, target.source),
     editItemText,
     moveItem,
     confirmItem,
@@ -274,6 +272,7 @@ export function useOverviewCreateOpeners({
     setDialog({
       ...createOverviewComposerState(editor, target, null),
       mode: "create",
+      contextual: true,
       target,
     });
   };

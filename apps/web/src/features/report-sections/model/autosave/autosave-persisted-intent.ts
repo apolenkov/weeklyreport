@@ -5,6 +5,7 @@ import type {
   AutosaveRequest,
   PersistedSaveAttempt,
   PersistedSaveResult,
+  UseLeadFormAutosaveArgs,
 } from "./autosave-types";
 import { encodeDraftSaveComparisonKey } from "./draft-save-comparison-key";
 import {
@@ -12,6 +13,27 @@ import {
   reconcileQueuedRequest,
   reconcileSavedPayloadIdentities,
 } from "./lead-form-draft-reconcile";
+
+export function reconcileCurrentSave(
+  owner: ReturnType<typeof createPersistedIntentOwner>,
+  onSaved: UseLeadFormAutosaveArgs["onSaved"],
+  saved: ReportSectionReadModel,
+  request: AutosaveRequest,
+): string {
+  const queued = owner.queuedFor(request.generation);
+  const reconciliation = onSaved?.(
+    saved,
+    request.payload,
+    queued?.payload ?? null,
+    {
+      token: request.persistedAttempt?.token,
+      expectedVersion: request.version,
+    },
+  );
+  if (reconciliation && queued)
+    owner.rebaseQueued(queued, reconciliation.queuedPayload, saved.version);
+  return reconciliation?.savedKey ?? request.key;
+}
 
 export function settleDropped(
   request: AutosaveRequest | null,
@@ -23,29 +45,37 @@ export function settleDropped(
   });
 }
 
-function settlePersistedSuccess(
+export function persistedResponseMatches(
   request: AutosaveRequest,
   saved: ReportSectionReadModel,
 ): boolean | null {
-  const attempt = request.persistedAttempt;
-  if (!attempt) return null;
   const savedPayload = sectionToDraftPayload(saved);
   const expected = reconcileSavedPayloadIdentities(
     request.payload,
     savedPayload,
     request.payload,
   );
-  const accepted =
+  return (
     saved.reportSectionId === request.payload.reportSectionId &&
     saved.version > request.version &&
     encodeDraftSaveComparisonKey(expected) ===
-      encodeDraftSaveComparisonKey(savedPayload);
+      encodeDraftSaveComparisonKey(savedPayload)
+  );
+}
+
+function settlePersistedSuccess(
+  request: AutosaveRequest,
+  saved: ReportSectionReadModel,
+): boolean | null {
+  const attempt = request.persistedAttempt;
+  if (!attempt) return null;
+  const accepted = persistedResponseMatches(request, saved);
   attempt.settle(
     accepted
       ? {
           status: "accepted",
           token: attempt.token,
-          payload: savedPayload,
+          payload: sectionToDraftPayload(saved),
           reportSectionId: saved.reportSectionId,
           version: saved.version,
         }

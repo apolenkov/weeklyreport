@@ -56,6 +56,7 @@ export interface StatusOverviewCreateTarget {
   readonly source: "current" | "next";
   readonly unitKind: "product" | "activity";
   readonly unitId: string;
+  readonly stageName?: string | undefined;
 }
 
 export interface StatusOverviewItem {

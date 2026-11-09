@@ -13,6 +13,7 @@ export function canSetStages({
     ownedStages?.length &&
     item.editTarget &&
     item.source !== "previous" &&
+    item.workflowStatus !== "done" &&
     !item.editTarget.focusNextStep &&
     !item.needsConfirmation,
   );

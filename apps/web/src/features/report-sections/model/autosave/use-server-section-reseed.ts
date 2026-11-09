@@ -56,6 +56,16 @@ function reconcileWithEcho(echo: PendingSaveEcho) {
       : current;
 }
 
+// An unsettled original write keeps the draft frozen; once the server has
+// answered with a conflict the authoritative section may be shown again, while
+// the lead's submitted input stays in the owning editor.
+function recoveryBlocked(autosave: AutosaveController): boolean {
+  return (
+    (autosave.isRecoveryBlocked?.() ?? false) &&
+    autosave.recovery?.phase !== "reconciliation"
+  );
+}
+
 interface ServerSectionReseedArgs {
   readonly serverSection: ReportSectionReadModel | null | undefined;
   // "Local edits exist": the payload difference OR a partially typed row the
@@ -83,7 +93,7 @@ export function useServerSectionReseed({
   handleConflict,
 }: ServerSectionReseedArgs) {
   useEffect(() => {
-    if (!serverSection) return;
+    if (!serverSection || recoveryBlocked(autosave)) return;
     if (!acceptVersion(serverSection.reportSectionId, serverSection.version)) {
       return;
     }

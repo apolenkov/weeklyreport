@@ -1,9 +1,46 @@
 "use client";
 
 import { useEffect } from "react";
+import { toast } from "sonner";
 
 import { mutationErrorMessage } from "../../../../shared/lib/errors/mutation-error-message";
+import { isLeadFormWriteConflict } from "../lead-form/lead-form-write-port";
 import type { AutosaveState } from "./autosave-types";
+import type { AutosaveSinks, UseLeadFormAutosaveArgs } from "./autosave-types";
+
+export function reportSaveFailure(
+  error: unknown,
+  options: {
+    args: UseLeadFormAutosaveArgs;
+    sinks: AutosaveSinks;
+    contextual: boolean;
+    retry: boolean;
+  },
+): void {
+  options.sinks.setState("error");
+  if (options.args.onConflict && isLeadFormWriteConflict(error)) {
+    options.args.onConflict(options.contextual);
+    return;
+  }
+  if (options.retry) options.sinks.rearmRetry();
+  toast.error(autosaveFailureMessage(error));
+}
+
+// The frozen original request is reconciled against a fresh authoritative
+// read on conflict, never replayed.
+export function reportOwnedFailure(
+  args: UseLeadFormAutosaveArgs,
+  sinks: AutosaveSinks,
+  error: unknown,
+): void {
+  sinks.setState("error");
+  if (isLeadFormWriteConflict(error)) args.onConflict?.(true);
+}
+
+export function armSaveTimer(callback: () => void, delay: number) {
+  const timer = setTimeout(callback, delay);
+  return { timer, cancel: () => clearTimeout(timer) };
+}
 
 const AUTOSAVE_FAILURE_MESSAGE =
   "Autosave failed. Check your connection and use Save to retry.";

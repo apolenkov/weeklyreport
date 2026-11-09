@@ -11,6 +11,7 @@ import {
   type StatusOverviewEditTarget,
 } from "../../../../report-sections";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
+import { useStageStartSave } from "./use-stage-start-save";
 
 type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
 
@@ -36,6 +37,7 @@ interface OverviewItemSubmission {
         readonly token: string;
         readonly armed: boolean;
         readonly failed: boolean;
+        readonly retried?: boolean | undefined;
       }
     | undefined;
   readonly item: KanbanItem;
@@ -67,6 +69,7 @@ interface OverviewEditDialogState extends OverviewComposerState {
 
 interface OverviewCreateDialogState extends OverviewComposerState {
   readonly mode: "create";
+  readonly contextual?: boolean;
   readonly target: StatusOverviewCreateTarget;
 }
 
@@ -95,6 +98,10 @@ export function createOverviewComposerState(
       currentUserName: view.currentUser.name,
       defaultProductId:
         createTarget?.unitKind === "product" ? createTarget.unitId : undefined,
+      defaultStageName:
+        createTarget?.unitKind === "product"
+          ? createTarget.stageName
+          : undefined,
       defaultActivityId:
         createTarget?.unitKind === "activity" ? createTarget.unitId : undefined,
       stageMemory: editor.draft.stageMemory,
@@ -167,45 +174,55 @@ function OverviewItemDialog({
 }) {
   const viewModel = editor.view.viewModel;
   const createTarget = dialog.mode === "create" ? dialog.target : null;
+  const { stageError, save } = useStageStartSave(editor, createTarget);
   return (
-    <ItemInlineEditor
-      key={
-        dialog.mode === "edit"
-          ? `edit:${dialog.week}:${dialog.target.recordId}`
-          : `create:${dialog.week}:${dialog.target.unitKind}:${dialog.target.unitId}:${dialog.seq}`
-      }
-      item={dialog.mode === "edit" ? dialog.item : null}
-      draftStore={dialog.draftStore}
-      saveDisabled={saveDisabled}
-      products={viewModel.products}
-      activities={viewModel.activityOptions}
-      week={dialog.week}
-      onWeekChange={onWeekChange}
-      // C4929: while a submission exists the host drops every week change, so
-      // the radios stay visible but honestly disabled instead of silently inert.
-      weekChangeDisabled={dialog.submission !== null}
-      showNextStep={false}
-      showPriority={false}
-      confirmationOnly={
-        (dialog.mode === "edit" && dialog.promotion != null) || saveDisabled
-      }
-      currentUserName={viewModel.currentUser.name}
-      defaultProductId={
-        createTarget?.unitKind === "product" ? createTarget.unitId : undefined
-      }
-      defaultActivityId={
-        createTarget?.unitKind === "activity" ? createTarget.unitId : undefined
-      }
-      stagesForProduct={(productId) =>
-        ownedStagesForProject(editor.draft.section, productId)
-      }
-      ownPeriodRanks={viewModel.ownPeriodRanks}
-      risks={viewModel.ownRisks}
-      onSave={onSave}
-      onSaveAndAddAnother={onSaveAndAddAnother}
-      onCancel={onCancel}
-      requestCloseRef={requestCloseRef}
-    />
+    <>
+      {stageError ? <p role="alert">{stageError}</p> : null}
+      <ItemInlineEditor
+        key={
+          dialog.mode === "edit"
+            ? `edit:${dialog.week}:${dialog.target.recordId}`
+            : `create:${dialog.week}:${dialog.target.unitKind}:${dialog.target.unitId}:${dialog.seq}`
+        }
+        item={dialog.mode === "edit" ? dialog.item : null}
+        draftStore={dialog.draftStore}
+        saveDisabled={saveDisabled}
+        products={viewModel.products}
+        activities={viewModel.activityOptions}
+        week={dialog.week}
+        onWeekChange={onWeekChange}
+        // C4929: while a submission exists the host drops every week change, so
+        // the radios stay visible but honestly disabled instead of silently inert.
+        weekChangeDisabled={dialog.submission !== null}
+        showNextStep={false}
+        showPriority={false}
+        confirmationOnly={
+          (dialog.mode === "edit" && dialog.promotion != null) || saveDisabled
+        }
+        currentUserName={viewModel.currentUser.name}
+        defaultProductId={
+          createTarget?.unitKind === "product" ? createTarget.unitId : undefined
+        }
+        defaultActivityId={
+          createTarget?.unitKind === "activity"
+            ? createTarget.unitId
+            : undefined
+        }
+        stagesForProduct={(productId) =>
+          ownedStagesForProject(editor.draft.section, productId)
+        }
+        ownPeriodRanks={viewModel.ownPeriodRanks}
+        risks={viewModel.ownRisks}
+        onSave={(item) => save(item, onSave)}
+        onSaveAndAddAnother={
+          onSaveAndAddAnother
+            ? (item) => save(item, onSaveAndAddAnother)
+            : undefined
+        }
+        onCancel={onCancel}
+        requestCloseRef={requestCloseRef}
+      />
+    </>
   );
 }
 
@@ -219,16 +236,10 @@ export function OverviewEditorDialog({
   onCancel,
   onWeekChange,
   requestCloseRef,
-}: {
+}: Omit<Parameters<typeof OverviewItemDialog>[0], "editor" | "dialog"> & {
   readonly editor: ReadyEditor | null;
   readonly dialog: OverviewItemDialogState | null;
   readonly isReadOnly: boolean;
-  readonly saveDisabled: boolean;
-  readonly onSave: (item: KanbanItem) => void;
-  readonly onSaveAndAddAnother?: ((item: KanbanItem) => void) | undefined;
-  readonly onCancel: () => void;
-  readonly onWeekChange: (week: "current" | "next") => void;
-  readonly requestCloseRef: RefObject<(() => void) | null>;
 }) {
   if (!editor || !dialog || isReadOnly) return null;
   if (dialog.generation !== editor.generation) return null;

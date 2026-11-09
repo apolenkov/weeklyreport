@@ -188,21 +188,20 @@ describe("lead report stage memory across view switches", () => {
       const { rerender } = render(page(harness, "overview"));
 
       await user.click(
-        await screen.findByRole("button", { name: "Add item to Payments" }),
+        await screen.findByRole("button", {
+          name: "Add item to Payments, Current week",
+        }),
       );
-      await user.type(
-        screen.getByLabelText(/Description \*/i),
-        "Ship importer",
-      );
+      await user.type(screen.getByLabelText("Description"), "Ship importer");
       await user.click(screen.getByRole("checkbox", { name: "Testing" }));
-      await user.click(screen.getByRole("button", { name: "Save update" }));
+      await user.click(screen.getByRole("button", { name: "Save" }));
 
       // The accepted save closes the composer and confirms the remembered stage.
       await vi.waitFor(
         () =>
           expect(
             screen.queryByRole("form", {
-              name: "Current week update for Payments",
+              name: "Add item for Payments, current week",
             }),
           ).not.toBeInTheDocument(),
         { timeout: 15_000 },
@@ -213,14 +212,18 @@ describe("lead report stage memory across view switches", () => {
       rerender(page(harness, "slides"));
       await vi.waitFor(() =>
         expect(
-          screen.queryByRole("button", { name: "Add item to Payments" }),
+          screen.queryByRole("button", {
+            name: "Add item to Payments, Current week",
+          }),
         ).not.toBeInTheDocument(),
       );
 
       rerender(page(harness, "overview"));
 
       const addItem = expectDefined(
-        await screen.findByRole("button", { name: "Add item to Payments" }),
+        await screen.findByRole("button", {
+          name: "Add item to Payments, Current week",
+        }),
       );
       await user.click(addItem);
       expect(

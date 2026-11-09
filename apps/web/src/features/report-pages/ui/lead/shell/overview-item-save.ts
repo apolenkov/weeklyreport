@@ -15,6 +15,7 @@ import {
   overviewSubmittedItemIsCurrent,
 } from "./overview-editor-recovery";
 import { restorePatchFor } from "./overview-save-restore";
+import { retryOriginalSave } from "./overview-save-retry";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
 
 type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
@@ -256,6 +257,10 @@ export function saveOverviewItem(
 ): void {
   const { dialog, editor } = context;
   if (!editor || !dialog || context.isReadOnly) return;
+  if (dialog.submission) {
+    retryOriginalSave(context, editor, dialog.submission.token);
+    return;
+  }
   if (context.recoveryReason) {
     context.setError(context.recoveryReason);
     return;
@@ -266,7 +271,6 @@ export function saveOverviewItem(
   }
   const unchanged =
     dialog.mode === "edit" &&
-    dialog.submission === null &&
     dialog.week === dialog.target.source &&
     overviewItemFieldsUnchanged(dialog.item, updatedItem);
   // A carried item still writes on Save: the confirmation patch that clears

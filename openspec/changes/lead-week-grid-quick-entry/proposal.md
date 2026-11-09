@@ -7,7 +7,7 @@ A Lead currently creates an Overview item from the unit's left header, then choo
 ## What Changes
 
 - Place quick item creation within each editable Current and Next context for a Product or Activity, opening an inline editor with the correct owner and week. Retain the existing full editor for detailed edits and existing global creation flows where applicable.
-- Offer inline contextual risk and decision creation, retaining their required fields, explicit parent and owned-stage rules; never pretend an incomplete record was saved.
+- Offer minimum-input inline risk and decision drafts under `lead-incomplete-record-drafts` (TASK-836), retaining explicit parent, owned stages, severity and authoritative owner. Missing details are null; only a matching receipt confirms “saved draft — needs details”. Complete or explicitly delete before section submit.
 - Make it clear that actions on a previous plan update the selected week's occurrence, not the previous snapshot. Reuse existing verdicts, stable identity, duplicate prevention and conflict handling.
 - Make the item comments control open an accessible discussion, including an empty state and a Lead reply on their own eligible item, with server-enforced ownership and lifecycle rules.
 - Preserve unsaved inline text and a truthful conflict indication across refetch; retain newer server data until explicit reconciliation.

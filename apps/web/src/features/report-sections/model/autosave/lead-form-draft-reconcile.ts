@@ -111,13 +111,53 @@ export function reconcileServerRecordMetadata(
     current.decisions,
     serverSection.decisions,
   );
+  const projects = reconcileStageOwnership(
+    current.projects,
+    serverSection.projects,
+  );
   const itemsChanged = items.some(
     (item, index) => item !== current.items[index],
   );
   return itemsChanged ||
     risks !== current.risks ||
-    decisions !== current.decisions
-    ? { ...current, items, risks, decisions }
+    decisions !== current.decisions ||
+    projects !== current.projects
+    ? {
+        ...current,
+        items: itemsChanged ? items : current.items,
+        risks,
+        decisions,
+        projects,
+      }
+    : current;
+}
+
+// Ownership is server metadata, not authored status. Refresh it even when the
+// save payload is unchanged, without replacing any local project or item text.
+function reconcileStageOwnership(
+  current: ReportSectionReadModel["projects"],
+  server: ReportSectionReadModel["projects"],
+): ReportSectionReadModel["projects"] {
+  const byId = new Map(server.map((project) => [project.projectId, project]));
+  const projects = current.map((project) => {
+    const incoming = byId.get(project.projectId);
+    if (!incoming) return project;
+    const localStages = new Map(
+      project.ownedStages.map((stage) => [stage.stageId, stage]),
+    );
+    const ownedStages = incoming.ownedStages.map((stage) => {
+      const local = localStages.get(stage.stageId);
+      return local ? { ...stage, status: local.status } : stage;
+    });
+    if (
+      encodeAutosaveComparisonKey(project.ownedStages) ===
+      encodeAutosaveComparisonKey(ownedStages)
+    )
+      return project;
+    return { ...project, ownedStages };
+  });
+  return projects.some((project, index) => project !== current[index])
+    ? projects
     : current;
 }
 

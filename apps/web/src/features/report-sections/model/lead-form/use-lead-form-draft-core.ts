@@ -101,6 +101,8 @@ export function useLeadFormDraftCore({
     save: serverSync.autosave.forceSave,
     savePersisted: serverSync.autosave.savePersisted,
     abandonPersisted: serverSync.autosave.abandonPersisted,
+    saveRecovery: serverSync.autosave.recovery ?? null,
+    retrySameAttempt: serverSync.autosave.retrySameAttempt,
     submit,
     reloadAfterConflict: handleConflict,
     apply,
