@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Product, RiskEntry } from "../types";
 import {
   annotateOwnRiskCoverage,
+  applyRiskSeverityFloor,
   coveringRisksForStage,
 } from "./lead-form-risk-coverage";
 
@@ -27,8 +28,8 @@ function makeRisk(overrides: Partial<RiskEntry> = {}): RiskEntry {
     productName: "CRM Platform",
     stageNames: ["Dev"],
     text: "risk",
-    impact: "",
-    mitigation: "",
+    impact: "Slips",
+    mitigation: "Escalate",
     severity: "at-risk",
     ...overrides,
   };
@@ -57,12 +58,30 @@ describe("coveringRisksForStage", () => {
   it("includes an own, non-empty, covering risk", () => {
     expect(coveringRisksForStage([makeRisk()], "crm", "Dev")).toHaveLength(1);
   });
+
+  it.each([
+    ["impact", { impact: "" }],
+    ["mitigation", { mitigation: " ".repeat(2) }],
+  ])("excludes a risk without %s until it is completed", (_label, missing) => {
+    expect(
+      coveringRisksForStage([makeRisk(missing)], "crm", "Dev"),
+    ).toHaveLength(0);
+  });
 });
 
 describe("annotateOwnRiskCoverage", () => {
   it("sets coveredByOwnRisk when an own risk explicitly names the stage", () => {
     const result = annotateOwnRiskCoverage([makeProduct()], [makeRisk()]);
     expect(result[0]?.stages[0]?.coveredByOwnRisk).toBe(true);
+  });
+
+  it("does NOT set the flag or floor the stage for an incomplete risk", () => {
+    const draft = makeRisk({ severity: "blocked", mitigation: "" });
+    const annotated = annotateOwnRiskCoverage([makeProduct()], [draft]);
+    const floored = applyRiskSeverityFloor([makeProduct()], [draft]);
+
+    expect(annotated[0]?.stages[0]?.coveredByOwnRisk).toBe(false);
+    expect(floored[0]?.stages[0]?.status).toBe(makeProduct().stages[0]?.status);
   });
 
   it("does NOT set the flag for a risk without an explicit stage", () => {

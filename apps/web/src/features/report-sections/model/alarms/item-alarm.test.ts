@@ -13,12 +13,17 @@ function risk(overrides: {
   stageNames: string[];
   severity: "at-risk" | "blocked";
   text?: string;
+  impact?: string | null;
+  mitigation?: string | null;
 }) {
   return {
     productId: overrides.productId ?? "p1",
     stageNames: overrides.stageNames,
     severity: overrides.severity,
     text: overrides.text ?? "A real risk",
+    impact: overrides.impact === undefined ? "Slips" : overrides.impact,
+    mitigation:
+      overrides.mitigation === undefined ? "Escalate" : overrides.mitigation,
   };
 }
 
@@ -102,5 +107,26 @@ describe("deriveItemAlarmFromRisks", () => {
         risk({ stageNames: ["Development"], severity: "blocked" }),
       ]),
     ).toBeNull();
+  });
+
+  it.each([
+    ["impact", { impact: "" }],
+    ["mitigation", { mitigation: null }],
+  ])("a blocked risk without %s floors nothing", (_label, missing) => {
+    const draft = { stageNames: ["Development"], severity: "blocked" as const };
+
+    expect(
+      deriveItemAlarmFromRisks(inProgress, [risk({ ...draft, ...missing })]),
+    ).toBeNull();
+    expect(deriveItemAlarmFromRisks(inProgress, [risk(draft)])).toBe("blocked");
+  });
+
+  it("an incomplete blocked risk does not hide a complete at-risk one", () => {
+    expect(
+      deriveItemAlarmFromRisks(inProgress, [
+        risk({ stageNames: ["Development"], severity: "blocked", impact: "" }),
+        risk({ stageNames: ["Development"], severity: "at-risk" }),
+      ]),
+    ).toBe("at-risk");
   });
 });

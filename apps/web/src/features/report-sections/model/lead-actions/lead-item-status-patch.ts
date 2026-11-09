@@ -30,6 +30,8 @@ export function itemStatusRiskText(
       stageNames: risk.stageNames,
       severity: risk.severity,
       text: risk.risk,
+      impact: risk.impact,
+      mitigation: risk.mitigation,
     })),
   );
   return risks.length > 0 ? risks.map((risk) => risk.text).join("; ") : null;

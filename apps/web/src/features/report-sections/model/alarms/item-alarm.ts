@@ -5,6 +5,10 @@ import {
 
 import type { ItemStatus } from "../item-status";
 import { riskCoversStage } from "../stage-tags";
+import {
+  hasCompleteRiskDetails,
+  type RiskDetailText,
+} from "./risk-completeness";
 
 // Item-card alarm is the roll-up of covering risk/blocker rows — never a free
 // per-item choice. See openspec/specs/record-status-derivation and
@@ -18,7 +22,7 @@ export interface AlarmItem {
   readonly status: ItemStatus;
 }
 
-export interface AlarmRisk {
+export interface AlarmRisk extends RiskDetailText {
   readonly productId: string;
   readonly stageNames: readonly string[];
   readonly severity: "at-risk" | "blocked";
@@ -26,8 +30,8 @@ export interface AlarmRisk {
   readonly text: string;
 }
 
-// Coverage: same product + explicit stage overlap. Only `in-progress` is
-// floored — finished/not-in-flight work is not.
+// Coverage: same product + explicit stage overlap, complete risks only. Only
+// `in-progress` is floored — finished/not-in-flight work is not.
 export function coveringRisksForItem<T extends AlarmRisk>(
   item: AlarmItem,
   risks: readonly T[],
@@ -37,6 +41,7 @@ export function coveringRisksForItem<T extends AlarmRisk>(
   return risks.filter((risk) => {
     if (risk.productId !== item.productId) return false;
     if (risk.text.trim().length === 0) return false;
+    if (!hasCompleteRiskDetails(risk)) return false;
     if (stages.length === 0) return false;
     return stages.some((stage) => riskCoversStage(risk, stage));
   });

@@ -16,6 +16,8 @@ const BLOCKING_RISK = {
   stageNames: ["Development"],
   severity: "blocked" as const,
   text: "Release is blocked",
+  impact: "Release slips",
+  mitigation: "Escalate",
 };
 
 const PROGRESS_PAIRS: readonly (readonly [

@@ -119,6 +119,8 @@ export function groupItemsByProject(
       stageNames: risk.stageNames,
       severity: risk.severity,
       text: risk.risk,
+      impact: risk.impact,
+      mitigation: risk.mitigation,
     }));
     return section.items
       .filter(

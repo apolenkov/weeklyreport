@@ -143,6 +143,8 @@ function toProjectView(group: AuthorProjectGroup, ctx: ProjectViewContext) {
       risks: ctx.sectionRisks.map((r) => ({
         projectId: r.projectId,
         severity: r.severity as RiskSeverity,
+        impact: r.impact,
+        mitigation: r.mitigation,
         stageNames: r.stageNames,
       })),
     }),
@@ -198,7 +200,11 @@ function toActivityViews(
         asTraffic(status.status),
         sectionRisks
           .filter((risk) => risk.activityId === status.activityId)
-          .map((risk) => ({ severity: risk.severity as RiskSeverity })),
+          .map((risk) => ({
+            severity: risk.severity as RiskSeverity,
+            impact: risk.impact,
+            mitigation: risk.mitigation,
+          })),
       ),
     }))
     .sort(

@@ -9,6 +9,8 @@ import {
 // Grid of the status-derivation rules: a diff in these assertions means a
 // behavior change, not a test that needs updating.
 const PROJECT_ID = "44444444-4444-4444-8444-444444444444";
+// Every grid risk is complete; incomplete drafts have their own cases below.
+const DETAILS = { impact: "Delivery slips", mitigation: "Escalate" } as const;
 
 describe("deriveEffectiveProductStatus — characterization grid", () => {
   const trafficLights: readonly (TrafficLightStatus | null)[] = [
@@ -93,7 +95,7 @@ describe("deriveEffectiveProductStatus — characterization grid", () => {
         projectId: PROJECT_ID,
         trafficLight,
         ownedStages: [{ stageName: "Development", status: stageStatus }],
-        risks: risks.map((r) => ({ ...r, projectId: PROJECT_ID })),
+        risks: risks.map((r) => ({ ...r, ...DETAILS, projectId: PROJECT_ID })),
       });
       expect(status).toBe(expected);
     },
@@ -105,7 +107,7 @@ describe("deriveEffectiveProductStatus — characterization grid", () => {
         projectId: PROJECT_ID,
         trafficLight: "yellow",
         ownedStages: [],
-        risks: [{ projectId: PROJECT_ID, severity: "blocked" }],
+        risks: [{ projectId: PROJECT_ID, severity: "blocked", ...DETAILS }],
       }),
     ).toBe("yellow");
   });
@@ -121,6 +123,7 @@ describe("deriveEffectiveProductStatus — characterization grid", () => {
             projectId: "other-project",
             severity: "blocked",
             stageNames: ["Development"],
+            ...DETAILS,
           },
         ],
       }),
@@ -191,7 +194,27 @@ describe("deriveActivityStatus — characterization grid", () => {
   it.each(cases)(
     "stored=$stored risks=$riskLabel",
     ({ stored, risks, expected: expectedResult }) => {
-      expect(deriveActivityStatus(stored, risks)).toEqual(expectedResult);
+      expect(
+        deriveActivityStatus(
+          stored,
+          risks.map((r) => ({ ...r, ...DETAILS })),
+        ),
+      ).toEqual(expectedResult);
     },
   );
+
+  it.each([
+    ["impact", { impact: null, mitigation: "Escalate" }],
+    ["mitigation", { impact: "Delivery slips", mitigation: null }],
+  ])("a blocked risk without %s floors nothing", (_detail, details) => {
+    expect(
+      deriveActivityStatus("green", [{ severity: "blocked", ...details }]),
+    ).toEqual({ derivedStatus: "green", alarmFloor: null });
+  });
+
+  it("the same risk floors the Activity once both details are present", () => {
+    expect(
+      deriveActivityStatus("green", [{ severity: "blocked", ...DETAILS }]),
+    ).toEqual({ derivedStatus: "red", alarmFloor: "red" });
+  });
 });
