@@ -365,6 +365,26 @@ describe("leadForm.fillFrom content role and ownership", () => {
     );
   });
 
+  it("passes the target's deletion intents to the fill and rejects a malformed one", async () => {
+    const { caller, repository } = fillCaller("lead");
+    const fill = vi.spyOn(repository, "fillFromSection");
+    const deletedIncompleteRecords = [
+      { kind: "decision" as const, stableId: OTHER_USER_ID },
+    ];
+
+    await caller.fillFrom({ ...fillInput, deletedIncompleteRecords });
+    await expect(
+      caller.fillFrom({
+        ...fillInput,
+        deletedIncompleteRecords: [{ kind: "item", stableId: OTHER_USER_ID }],
+      } as never),
+    ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+
+    expect(fill.mock.calls).toEqual([
+      [SECTION_ID, SOURCE_SECTION_ID, 1, deletedIncompleteRecords],
+    ]);
+  });
+
   it("retains unauthenticated rejection without copying content", async () => {
     const { caller, repository } = fillCaller(null);
     const before = await repository.getSectionById(SECTION_ID);

@@ -31,11 +31,17 @@ interface StoredRows {
   readonly risks?: readonly object[];
   readonly decisions?: readonly object[];
   readonly updateCount?: number;
+  readonly source?: {
+    readonly risks: readonly object[];
+    readonly decisions: readonly object[];
+  };
 }
 
 function setup(stored: StoredRows) {
   const deleteMany = vi.fn().mockResolvedValue({ count: 0 });
-  const createMany = vi.fn().mockResolvedValue({ count: 0 });
+  const createMany = vi.fn((_rows: { data: Record<string, unknown>[] }) =>
+    Promise.resolve({ count: 0 }),
+  );
   const riskFindMany = vi.fn().mockResolvedValue(stored.risks ?? []);
   const tx = {
     $queryRaw: vi.fn().mockResolvedValue([OPEN_REPORT]),
@@ -53,6 +59,7 @@ function setup(stored: StoredRows) {
     decision: {
       findMany: vi.fn().mockResolvedValue(stored.decisions ?? []),
       deleteMany,
+      createMany,
     },
     activityStatus: { findMany: vi.fn().mockResolvedValue([]) },
   };
@@ -60,8 +67,7 @@ function setup(stored: StoredRows) {
     reportSection: {
       findUnique: vi.fn().mockResolvedValue({
         items: [],
-        risks: [COMPLETE_SOURCE_RISK],
-        decisions: [],
+        ...(stored.source ?? { risks: [COMPLETE_SOURCE_RISK], decisions: [] }),
       }),
     },
     $transaction: vi.fn((callback: (client: typeof tx) => Promise<unknown>) =>
@@ -69,7 +75,7 @@ function setup(stored: StoredRows) {
     ),
   };
   const repo = new LeadFormPrismaRepository(prisma as never);
-  return { createMany, deleteMany, repo, riskFindMany };
+  return { createMany, deleteMany, repo, riskFindMany, tx };
 }
 
 describe("fillFromSection — stored incomplete target records", () => {
@@ -109,6 +115,42 @@ describe("fillFromSection — stored incomplete target records", () => {
     expect(deleteMany).not.toHaveBeenCalled();
   });
 
+  it("erases an unfinished draft the author named for deletion", async () => {
+    const { deleteMany, repo } = setup({
+      risks: [{ stableId: "draft", impact: null, mitigation: null }],
+    });
+
+    await expect(
+      repo.fillFromSection("target", "source", 1, [
+        { kind: "risk", stableId: "draft" },
+      ]),
+    ).resolves.toBe(1);
+
+    expect(deleteMany).toHaveBeenCalledTimes(3);
+  });
+
+  it.each([
+    ["a complete record", { kind: "risk", stableId: "done" }],
+    ["an unknown identity", { kind: "risk", stableId: "missing" }],
+    ["the other record kind", { kind: "decision", stableId: "draft" }],
+  ] as const)("rejects a deletion intent naming %s", async (_name, intent) => {
+    const { deleteMany, repo } = setup({
+      risks: [
+        { stableId: "draft", impact: null, mitigation: null },
+        { stableId: "done", impact: "Slips", mitigation: "Escalate" },
+      ],
+    });
+
+    await expect(
+      repo.fillFromSection("target", "source", 1, [
+        { kind: "risk", stableId: "draft" },
+        intent,
+      ]),
+    ).rejects.toMatchObject({ code: "INCOMPLETE_RECORD_DELETION_INVALID" });
+
+    expect(deleteMany).not.toHaveBeenCalled();
+  });
+
   it("replaces a target whose stored records are all complete", async () => {
     const { createMany, deleteMany, repo } = setup({
       risks: [{ stableId: "done", impact: "Slips", mitigation: "Escalate" }],
@@ -119,5 +161,46 @@ describe("fillFromSection — stored incomplete target records", () => {
 
     expect(deleteMany).toHaveBeenCalledTimes(3);
     expect(createMany).toHaveBeenCalledOnce();
+  });
+
+  it("copies only the source's complete records, as new records", async () => {
+    const resolvedAt = new Date("2026-11-02T10:00:00.000Z");
+    const decision = {
+      id: "source-decision",
+      stableId: "source-decision-stable",
+      productId: COMPLETE_SOURCE_RISK.projectId,
+      activityId: null,
+      text: "Pick a vendor",
+      owner: "Lead 1",
+      deadline: null,
+      impact: "Scope moves",
+      resolvedAt,
+      stageNames: ["Development"],
+    };
+    const source = {
+      risks: [
+        COMPLETE_SOURCE_RISK,
+        { ...COMPLETE_SOURCE_RISK, id: "draft-risk", mitigation: null },
+        // Complete, but its Activity is no longer attached to the target.
+        { ...COMPLETE_SOURCE_RISK, projectId: null, activityId: "removed" },
+      ],
+      decisions: [decision, { ...decision, id: "draft", impact: null }],
+    };
+    const before = structuredClone(source);
+    const { createMany, repo, tx } = setup({ source });
+
+    await expect(repo.fillFromSection("target", "source", 1)).resolves.toBe(2);
+
+    const created = createMany.mock.calls.flatMap(([rows]) => rows.data);
+    expect(created).toMatchObject([
+      { risk: "Vendor may slip", mitigation: "Escalate" },
+      { text: "Pick a vendor", impact: "Scope moves", resolvedAt },
+    ]);
+    // No carried identity: the database mints a fresh stableId per copy.
+    expect(created.some((row) => "stableId" in row || "id" in row)).toBe(false);
+    expect(source).toEqual(before);
+    expect(tx.reportSection.updateMany).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ where: { id: "target", version: 1 } }),
+    );
   });
 });

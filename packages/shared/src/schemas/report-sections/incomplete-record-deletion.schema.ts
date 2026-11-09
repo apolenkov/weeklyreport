@@ -26,6 +26,18 @@ export const deletedIncompleteRecordsField = z
   .readonly()
   .optional();
 
+/**
+ * Fill From request: the target at its client-loaded version (the fill's
+ * optimistic-concurrency check), the source, and the target's unfinished
+ * drafts the author agreed to lose.
+ */
+export const fillFromInputSchema = z.object({
+  targetSectionId: z.uuid(),
+  sourceSectionId: z.uuid(),
+  version: z.number().int().min(1),
+  deletedIncompleteRecords: deletedIncompleteRecordsField,
+});
+
 /** One explicit deletion of an incomplete risk or decision. */
 export type IncompleteRecordDeletion = z.infer<
   typeof incompleteRecordDeletionSchema

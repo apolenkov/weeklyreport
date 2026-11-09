@@ -1,4 +1,5 @@
 import {
+  type IncompleteRecordDeletion,
   type LeadOpenWorkHistoryInput,
   type PromotePlanInput,
   promotePlanInputSchema,
@@ -47,6 +48,14 @@ export {
 } from "../domain/lead-form-shared";
 
 export const LEAD_FORM_REPOSITORY = Symbol("LeadFormRepository");
+
+/** What a fill may do to its target. */
+export interface FillTargetWrite {
+  /** Client-loaded target version for OCC; fresh-fetch would no-op the lock. */
+  readonly expectedVersion: number;
+  /** The target's unfinished drafts the author agreed to lose; none by default. */
+  readonly deletions?: readonly IncompleteRecordDeletion[] | undefined;
+}
 
 export class LeadFormService {
   constructor(
@@ -125,8 +134,7 @@ export class LeadFormService {
     targetSectionId: string,
     sourceSectionId: string,
     userId: string,
-    // Client-loaded target version for OCC; fresh-fetch would no-op the lock.
-    expectedVersion: number,
+    { expectedVersion, deletions = [] }: FillTargetWrite,
   ): Promise<{
     success: true;
     copiedItems: number;
@@ -149,6 +157,7 @@ export class LeadFormService {
       targetSectionId,
       sourceSectionId,
       expectedVersion,
+      deletions,
     );
 
     const section = await this.repository.getSectionById(targetSectionId);
