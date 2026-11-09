@@ -13,6 +13,7 @@ import type { StatusOverviewItem } from "../model/status-overview";
 import type { PlanVerdict } from "../model/status-overview-verdict";
 import {
   ICON_BUTTON_CLASS,
+  LABELLED_BUTTON_CLASS,
   MENU_ITEM_CLASS,
 } from "./status-overview-item-actions";
 import type { VerdictHandler } from "./status-overview-item-handlers";
@@ -28,6 +29,16 @@ const VERDICT_LABEL: Readonly<Record<PlanVerdict, string>> = {
 };
 
 const RAIL_VERDICTS = ["done", "continue", "next", "paused"] as const;
+
+// What each verdict does to the selected week, read before the Lead commits.
+const VERDICT_CONSEQUENCE: Readonly<Record<PlanVerdict, string>> = {
+  done: "Marks it done in the current week.",
+  continue: "Keeps it as work in the current week.",
+  next: "Moves it to next week's plan.",
+  paused: "Pauses it in the current week; asks for a reason.",
+  wont_do: "Closes it as not done; asks for a reason.",
+};
+const RAIL_QUESTION = "What happened to this plan?";
 type ReasonVerdict = "paused" | "wont_do";
 
 const REASON_PROMPT: Readonly<Record<ReasonVerdict, string>> = {
@@ -71,7 +82,7 @@ function WontDoMenu({
           type="button"
           disabled={disabled}
           aria-label={`More actions for ${item.text}`}
-          title="More actions"
+          title={`More actions: ${VERDICT_LABEL.wont_do}`}
           data-verdict="wont_do"
           className={`${ICON_BUTTON_CLASS} disabled:opacity-50`}
         >
@@ -103,32 +114,47 @@ function VerdictButtons({
   readonly rail: React.RefObject<HTMLDivElement | null>;
   readonly onChoose: (verdict: PlanVerdict) => void;
 }) {
+  const [hinted, setHinted] = useState<PlanVerdict | null>(null);
+  const clearHint = () => setHinted(null);
   return (
-    <div
-      ref={rail}
-      role="group"
-      aria-label={`Verdict for ${item.text}`}
-      className="flex flex-wrap items-center"
-    >
-      {RAIL_VERDICTS.map((verdict) => (
-        <button
-          key={verdict}
-          type="button"
+    <div className="min-w-0">
+      <div
+        ref={rail}
+        role="group"
+        aria-label={`Verdict for ${item.text}`}
+        className="flex flex-wrap items-center gap-x-1"
+      >
+        {RAIL_VERDICTS.map((verdict) => (
+          <button
+            key={verdict}
+            type="button"
+            disabled={busy}
+            aria-label={`${VERDICT_LABEL[verdict]} — ${item.text}`}
+            title={VERDICT_CONSEQUENCE[verdict]}
+            data-verdict={verdict}
+            onClick={() => onChoose(verdict)}
+            onMouseEnter={() => setHinted(verdict)}
+            onMouseLeave={clearHint}
+            onFocus={() => setHinted(verdict)}
+            onBlur={clearHint}
+            className={`${LABELLED_BUTTON_CLASS} disabled:opacity-50`}
+          >
+            <VerdictIcon verdict={verdict} />
+            <span>{VERDICT_LABEL[verdict]}</span>
+          </button>
+        ))}
+        <WontDoMenu
+          item={item}
           disabled={busy}
-          aria-label={`${VERDICT_LABEL[verdict]} — ${item.text}`}
-          title={VERDICT_LABEL[verdict]}
-          data-verdict={verdict}
-          onClick={() => onChoose(verdict)}
-          className={`${ICON_BUTTON_CLASS} disabled:opacity-50`}
-        >
-          <VerdictIcon verdict={verdict} />
-        </button>
-      ))}
-      <WontDoMenu
-        item={item}
-        disabled={busy}
-        onChoose={() => onChoose("wont_do")}
-      />
+          onChoose={() => onChoose("wont_do")}
+        />
+      </div>
+      <p
+        data-verdict-hint={hinted ?? "rest"}
+        className="text-xs text-[var(--color-muted-foreground)]"
+      >
+        {hinted === null ? RAIL_QUESTION : VERDICT_CONSEQUENCE[hinted]}
+      </p>
     </div>
   );
 }

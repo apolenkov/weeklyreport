@@ -60,6 +60,32 @@ describe("verdict rail on a pending Previously planned item", () => {
     ).toBeVisible();
   });
 
+  it("labels every rail verdict with visible text", () => {
+    setup();
+    for (const [verdict, name] of Object.entries(NAMES)) {
+      const button = screen.getByRole("button", { name });
+      expect(button).toHaveAttribute("data-verdict", verdict);
+      expect(button).toHaveTextContent(name.split(" — ")[0] ?? "");
+    }
+  });
+
+  it("asks what happened at rest and states the consequence on hover and focus", async () => {
+    const { user, onVerdict } = setup();
+    expect(screen.getByText("What happened to this plan?")).toBeVisible();
+    await user.hover(screen.getByRole("button", { name: NAMES.next }));
+    expect(screen.getByText("Moves it to next week's plan.")).toBeVisible();
+    await user.unhover(screen.getByRole("button", { name: NAMES.next }));
+    expect(screen.getByText("What happened to this plan?")).toBeVisible();
+    await user.tab();
+    expect(
+      screen.getByText("Marks it done in the current week."),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: NAMES.done }),
+    ).toHaveAccessibleDescription("Marks it done in the current week.");
+    expect(onVerdict).not.toHaveBeenCalled();
+  });
+
   it("tells the verdicts apart by shape, not by colour", () => {
     setup();
     const shapes = Object.values(NAMES).map(
