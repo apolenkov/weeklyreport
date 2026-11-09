@@ -133,6 +133,10 @@ describe("useLeadFormAutosave", () => {
     expect(result.current.lastSaveReceipt).toMatchObject({
       reportSectionId: server.reportSectionId,
       version: saved.version,
+      expectedVersion: request.version,
+      submittedPayload: { risks: [] },
+      persistedRisks: [],
+      persistedDecisions: [],
     });
     expect(
       result.current.lastSaveReceipt?.persistedItems?.find(
@@ -900,7 +904,7 @@ describe("persisted autosave intent", () => {
     "stale-version",
     "nonadvancing-version",
   ] as const)(
-    "retains an unconfirmed %s and requires explicit retry",
+    "retains an unconfirmed %s without constructing a newer retry",
     async (fault) => {
       let server = persistedSection("baseline");
       let attempts = 0;
@@ -935,25 +939,33 @@ describe("persisted autosave intent", () => {
       );
       let outcome: PersistedSaveResult | undefined;
       await act(async () => {
-        outcome = await result.current.savePersisted("first");
+        void result.current.savePersisted("first").then((value) => {
+          outcome = value;
+        });
+        await vi.advanceTimersByTimeAsync(0);
       });
-      expect(outcome?.status).toBe(
-        fault === "stale-version" ? "obsolete" : "failed",
-      );
+      expect(outcome).toBeUndefined();
       await act(async () => {
         await vi.advanceTimersByTimeAsync(6000);
       });
       expect(calls).toHaveLength(1);
       await act(async () => {
-        outcome = await result.current.savePersisted("retry");
+        expect(await result.current.savePersisted("retry")).toEqual({
+          status: "failed",
+          token: "retry",
+        });
+        result.current.retrySameAttempt("first");
+        await vi.advanceTimersByTimeAsync(0);
       });
-      expect(outcome?.status).toBe("accepted");
-      expect(calls).toHaveLength(2);
+      expect(outcome?.status).toBe(
+        fault === "rejection" ? "accepted" : undefined,
+      );
+      expect(calls).toHaveLength(fault === "rejection" ? 2 : 1);
     },
   );
 });
 
-it.each(["adopt", "dispose", "A-B-A"] as const)(
+it.each(["dispose", "A-B-A"] as const)(
   "invalidates an in-flight persisted intent exactly once on %s",
   async (transition) => {
     const first = persistedSection("captured A");
@@ -987,13 +999,6 @@ it.each(["adopt", "dispose", "A-B-A"] as const)(
       forced = result.current.savePersisted("old-activation").then(settled);
     });
     if (transition === "dispose") unmount();
-    if (transition === "adopt")
-      act(() =>
-        result.current.adoptBaseline(
-          encodeDraftSaveComparisonKey(sectionToDraftPayload(first)),
-          "read",
-        ),
-      );
     if (transition === "A-B-A") {
       const sectionB = "99999999-9999-4999-8999-999999999999";
       rerender({
@@ -1009,7 +1014,7 @@ it.each(["adopt", "dispose", "A-B-A"] as const)(
       await forced;
     });
     expect(settled).toHaveBeenCalledExactlyOnceWith({
-      status: transition === "adopt" ? "superseded" : "obsolete",
+      status: "obsolete",
       token: "old-activation",
     });
     const request = calls[0];

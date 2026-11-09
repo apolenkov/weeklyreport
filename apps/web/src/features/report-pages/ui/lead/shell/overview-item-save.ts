@@ -256,6 +256,12 @@ export function saveOverviewItem(
 ): void {
   const { dialog, editor } = context;
   if (!editor || !dialog || context.isReadOnly) return;
+  if (dialog.submission) {
+    context.setError(
+      "The original save has not been confirmed. Your input is retained; another Save cannot resolve this outcome.",
+    );
+    return;
+  }
   if (context.recoveryReason) {
     context.setError(context.recoveryReason);
     return;
@@ -266,7 +272,6 @@ export function saveOverviewItem(
   }
   const unchanged =
     dialog.mode === "edit" &&
-    dialog.submission === null &&
     dialog.week === dialog.target.source &&
     overviewItemFieldsUnchanged(dialog.item, updatedItem);
   // A carried item still writes on Save: the confirmation patch that clears

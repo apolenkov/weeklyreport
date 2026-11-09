@@ -1652,7 +1652,7 @@ describe("LeadForm Overview", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Add item to Payments",
+        name: "Add item to Payments, Current week",
       }),
     );
 
@@ -1753,7 +1753,7 @@ describe("LeadForm Overview", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Add item to Payments",
+        name: "Add item to Payments, Current week",
       }),
     );
     await user.type(
@@ -1784,7 +1784,9 @@ describe("LeadForm Overview", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", { name: "Add item to Payments" }),
+      await screen.findByRole("button", {
+        name: "Add item to Payments, Current week",
+      }),
     );
     const form = await screen.findByRole("form", {
       name: "Current week update for Payments",
@@ -1830,7 +1832,9 @@ describe("LeadForm Overview", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", { name: "Add item to Payments" }),
+      await screen.findByRole("button", {
+        name: "Add item to Payments, Current week",
+      }),
     );
     await user.click(screen.getByRole("radio", { name: "Next week" }));
     await user.type(
@@ -1868,7 +1872,7 @@ describe("LeadForm Overview", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Add item to Payments",
+        name: "Add item to Payments, Current week",
       }),
     );
     // Non-empty input that fails client validation: one character over the
@@ -1903,7 +1907,7 @@ describe("LeadForm Overview", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Add item to Payments",
+        name: "Add item to Payments, Current week",
       }),
     );
     const description = screen.getByLabelText(/Description \*/i);
@@ -1925,7 +1929,7 @@ describe("LeadForm Overview", () => {
     );
   });
 
-  it("creates a Next item from the header Add item with Planned progress and focuses the new item", async () => {
+  it("creates a Next item from the Next week Add item with Planned progress and focuses the new item", async () => {
     const user = userEvent.setup();
     const serverItemId = "a0000000-0000-4000-8000-000000000030";
     const serverStableId = "a0000000-0000-4000-8000-000000000031";
@@ -1956,14 +1960,9 @@ describe("LeadForm Overview", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", { name: "Add item to Payments" }),
-    );
-    await user.click(
-      within(
-        await screen.findByRole("form", {
-          name: "Current week update for Payments",
-        }),
-      ).getByRole("radio", { name: "Next week" }),
+      await screen.findByRole("button", {
+        name: "Add item to Payments, Next week",
+      }),
     );
 
     const form = await screen.findByRole("form", {
@@ -2052,7 +2051,9 @@ describe("LeadForm Overview", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", { name: "Add item to Payments" }),
+      await screen.findByRole("button", {
+        name: "Add item to Payments, Current week",
+      }),
     );
     await user.type(
       screen.getByLabelText(/Description \*/i),
@@ -2109,7 +2110,9 @@ describe("LeadForm Overview", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", { name: "Add item to Payments" }),
+      await screen.findByRole("button", {
+        name: "Add item to Payments, Current week",
+      }),
     );
     await user.type(
       screen.getByLabelText(/Description \*/i),
@@ -2142,7 +2145,157 @@ describe("LeadForm Overview", () => {
     });
   });
 
-  it("creates a Current item from the header Add item and returns focus there on Cancel", async () => {
+  it.each(["current", "next"] as const)(
+    "starts a singleton owned stage in %s inline with a clean baseline and keyboard focus return",
+    async (week) => {
+      const user = userEvent.setup();
+      const saveDraft = vi.fn();
+      render(
+        <Wrapper saveDraft={saveDraft}>
+          <LeadForm reportId={REPORT_ID} mode="overview" />
+        </Wrapper>,
+      );
+      const trigger = await screen.findByRole("button", {
+        name: `Add item to Payments, Development, ${week === "current" ? "Current" : "Next"} week`,
+      });
+      trigger.focus();
+      await user.keyboard("{Enter}");
+      const form = await screen.findByRole("form", {
+        name: `Add item for Payments, ${week} week`,
+      });
+      expect(form.closest("[data-overview-create-lane]")).toHaveAttribute(
+        "data-overview-create-lane",
+        week,
+      );
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+      expect(
+        within(form).getByRole("checkbox", { name: "Development" }),
+      ).toBeChecked();
+      await user.click(within(form).getByRole("button", { name: "Cancel" }));
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+      expect(saveDraft).not.toHaveBeenCalled();
+      await pollUntil(() => expect(trigger).toHaveFocus());
+    },
+  );
+
+  it("retains stage-start input and blocks a stale owned stage through the mounted host", async () => {
+    const user = userEvent.setup();
+    const saveDraft = vi.fn();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    render(
+      <Wrapper client={client} saveDraft={saveDraft}>
+        <LeadForm reportId={REPORT_ID} mode="overview" />
+      </Wrapper>,
+    );
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Add item to Payments, Development, Next week",
+      }),
+    );
+    const form = await screen.findByRole("form", {
+      name: "Add item for Payments, next week",
+    });
+    await user.type(
+      within(form).getByRole("textbox", { name: /Description/ }),
+      "Retained stage work",
+    );
+    const queryKey = [["leadForm", "byPeriod"], { reportId: REPORT_ID }];
+    const loaded = client.getQueryData<{ section: ReportSectionReadModel }>(
+      queryKey,
+    );
+    if (!loaded) throw new Error("Expected a loaded section");
+    act(() => {
+      client.setQueryData(queryKey, {
+        ...loaded,
+        section: {
+          ...loaded.section,
+          version: loaded.section.version + 1,
+          projects: loaded.section.projects.map((project) => ({
+            ...project,
+            ownedStages: [],
+          })),
+        },
+      });
+    });
+    await user.click(within(form).getByRole("button", { name: "Save" }));
+    expect(
+      within(form).getByRole("textbox", { name: /Description/ }),
+    ).toHaveValue("Retained stage work");
+    expect(
+      within(form).getByRole("group", { name: "Stages (required)" }),
+    ).toHaveAccessibleDescription(
+      "No eligible stages available. Select currently eligible stages.",
+    );
+    expect(
+      within(form).getByRole("button", {
+        name: "Remove unavailable stage Development",
+      }),
+    ).toBeInTheDocument();
+    expect(saveDraft).not.toHaveBeenCalled();
+  });
+
+  it.each(["foreign", "invalid", "read-only"] as const)(
+    "offers no stage start for %s current ownership",
+    async (reason) => {
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      render(
+        <Wrapper client={client}>
+          <LeadForm reportId={REPORT_ID} mode="overview" />
+        </Wrapper>,
+      );
+      await screen.findByRole("button", {
+        name: "Add item to Payments, Development, Current week",
+      });
+      const queryKey = [["leadForm", "byPeriod"], { reportId: REPORT_ID }];
+      const loaded = client.getQueryData<{ section: ReportSectionReadModel }>(
+        queryKey,
+      );
+      if (!loaded) throw new Error("Expected a loaded section");
+      act(() => {
+        client.setQueryData(queryKey, {
+          ...loaded,
+          readOnly: reason === "read-only",
+          section: {
+            ...loaded.section,
+            version: loaded.section.version + 1,
+            projects:
+              reason === "foreign"
+                ? []
+                : loaded.section.projects.map((project) => ({
+                    ...project,
+                    ownedStages: project.ownedStages.map((stage) => ({
+                      ...stage,
+                      stageName: "Noncanonical stage",
+                    })),
+                  })),
+          },
+        });
+      });
+      await pollUntil(() =>
+        expect(
+          screen.queryByRole("button", {
+            name: "Add item to Payments, Development, Current week",
+          }),
+        ).not.toBeInTheDocument(),
+      );
+      expect(
+        screen.queryByRole("button", {
+          name: /Add item to .*Noncanonical stage/,
+        }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", {
+          name: "Add item to Payments, Development, Next week",
+        }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it("creates a Current item from the Current week Add item and returns focus there on Cancel", async () => {
     const user = userEvent.setup();
     const saveDraft = vi.fn();
     render(
@@ -2152,27 +2305,27 @@ describe("LeadForm Overview", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", { name: "Add item to Payments" }),
+      await screen.findByRole("button", {
+        name: "Add item to Payments, Current week",
+      }),
     );
 
     const form = await screen.findByRole("form", {
-      name: "Current week update for Payments",
+      name: "Add item for Payments, current week",
     });
     expect(screen.getAllByRole("form")).toHaveLength(1);
-    expect(screen.getByRole("dialog")).toContainElement(form);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(
-      within(form).getByRole("button", { name: "In progress" }),
-    ).toHaveAttribute("aria-pressed", "true");
-    expect(
-      within(form).getByRole("radio", { name: "Current week" }),
-    ).toBeChecked();
+      form.closest('[data-overview-create-lane="current"]'),
+    ).not.toBeNull();
+    expect(within(form).getByText("Progress: In progress")).toBeInTheDocument();
 
     await user.click(within(form).getByRole("button", { name: "Cancel" }));
 
     await pollUntil(() =>
       expect(
         screen.queryByRole("form", {
-          name: "Current week update for Payments",
+          name: "Add item for Payments, current week",
         }),
       ).not.toBeInTheDocument(),
     );
@@ -2375,7 +2528,9 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
     await user.click(
-      await screen.findByRole("button", { name: "Add item to Payments" }),
+      await screen.findByRole("button", {
+        name: "Add item to Payments, Current week",
+      }),
     );
     await user.type(screen.getByLabelText(/Description \*/i), "Phantom item");
     await user.click(screen.getByRole("button", { name: "Save update" }));
@@ -3224,7 +3379,9 @@ it.each(["pending", "failed"] as const)(
         <LeadForm reportId={reportB} mode="overview" />
       </Wrapper>,
     );
-    await screen.findByRole("button", { name: "Add item to Payments" });
+    await screen.findByRole("button", {
+      name: "Add item to Payments, Current week",
+    });
     warm.unmount();
     const pending = Promise.withResolvers<unknown>();
     const resolvePlan = vi.fn(() =>
@@ -3258,7 +3415,9 @@ it.each(["pending", "failed"] as const)(
     await pollUntil(() => expect(resolvePlan).toHaveBeenCalledOnce());
     if (phase === "failed") await screen.findByText("Report A plan failed");
     rendered.rerender(<RenderReport reportId={reportB} />);
-    await screen.findByRole("button", { name: "Add item to Payments" });
+    await screen.findByRole("button", {
+      name: "Add item to Payments, Current week",
+    });
     expect(screen.queryByText("Report A plan failed")).not.toBeInTheDocument();
     const bAction = screen.getByRole("button", {
       name: /^Replan deferred work: Report scoped deferred work, /,
@@ -3572,7 +3731,9 @@ it.each(["success", "error"] as const)(
     expect(toast.success).toHaveBeenCalledWith("Plan outcome saved");
     await itemPreview("Only B's authored commitment");
     expect(
-      screen.getByRole("button", { name: "Add item to Payments" }),
+      screen.getByRole("button", {
+        name: "Add item to Payments, Current week",
+      }),
     ).toBeEnabled();
     rendered.unmount();
     client.clear();

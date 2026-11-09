@@ -96,7 +96,8 @@ export function useOverviewItemEditor(
       saveOverviewItem(saveContext, updatedItem),
     saveAndAddAnother,
     close: () => {
-      closeOverviewDialog({ editor, dialog, recoveryReason, setDialog });
+      if (!closeOverviewDialog({ editor, dialog, recoveryReason, setDialog }))
+        return;
       startedAttempt.current = null;
       promotionAttempt.current = null;
       setError(null);

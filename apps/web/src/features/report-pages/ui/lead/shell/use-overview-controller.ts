@@ -1,8 +1,12 @@
 import { useCallback, useState } from "react";
 
-import { projectStatusOverview } from "../../../../report-sections";
+import {
+  ownedStagesForProject,
+  projectStatusOverview,
+} from "../../../../report-sections";
 import { openWorkDisabledReason } from "./open-work-register-model";
 import { buildActivityFieldsChange } from "./overview-activity-fields";
+import { overviewInlineItemSlot } from "./overview-inline-item-slot";
 import { overviewPlanPresentation } from "./overview-plan-presentation";
 import { useCompletionPresentation } from "./presentation/use-completion-presentation";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
@@ -101,17 +105,8 @@ export function useOverviewController({
   );
   const verdict = useOverviewVerdictActions(readyEditor, output);
   const planPresentation = overviewPlanPresentation(plan, model);
-  const itemEditor = buildOverviewEditor(
-    readyEditor,
-    dialog.recoveryReason ? null : dialog.dialog,
-    {
-      onSave: dialog.save,
-      onSaveAndAddAnother: dialog.saveAndAddAnother,
-      onCancel: dialog.close,
-      onWeekChange: dialog.changeWeek,
-      requestCloseRef: dialog.requestCloseRef,
-    },
-  );
+  const itemSlot = overviewInlineItemSlot(readyEditor, model, dialog);
+  const itemEditor = overviewEditor(readyEditor, dialog);
   const pendingInput =
     dialog.dialog !== null ||
     plan.dialog !== null ||
@@ -129,6 +124,10 @@ export function useOverviewController({
   );
   return {
     readyEditor,
+    ownedStageStartsForProduct: canEdit
+      ? (productId: string) =>
+          ownedStagesForProject(readyEditor.draft.section, productId)
+      : undefined,
     canEdit,
     canStartAction,
     completion,
@@ -137,6 +136,7 @@ export function useOverviewController({
     plan,
     verdict,
     planPresentation,
+    itemSlot,
     itemEditor,
     pendingInput,
     saveStatus,
@@ -145,4 +145,23 @@ export function useOverviewController({
     onActivityFieldsChange: buildActivityFieldsChange(readyEditor),
     onActivityFieldsPendingChange,
   };
+}
+
+function overviewEditor(
+  editor: ReadyEditor | null,
+  dialog: Parameters<typeof overviewInlineItemSlot>[2] & {
+    readonly changeWeek: (week: "current" | "next") => void;
+  },
+) {
+  return buildOverviewEditor(
+    editor,
+    dialog.recoveryReason ? null : dialog.dialog,
+    {
+      onSave: dialog.save,
+      onSaveAndAddAnother: dialog.saveAndAddAnother,
+      onCancel: dialog.close,
+      onWeekChange: dialog.changeWeek,
+      requestCloseRef: dialog.requestCloseRef,
+    },
+  );
 }

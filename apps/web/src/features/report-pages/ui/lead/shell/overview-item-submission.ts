@@ -8,7 +8,6 @@ import {
   type AcknowledgedOverviewItem,
   overviewAcknowledgedItem,
 } from "./overview-editor-recovery";
-import { abandonedSaveRestorePatch } from "./overview-save-restore";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
 import type { OverviewCreatedFocus } from "./use-overview-focus-return";
 
@@ -16,6 +15,13 @@ type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
 type SetDialog = (
   action: SetStateAction<OverviewItemDialogState | null>,
 ) => void;
+
+export function shouldResetSubmittedInput(
+  submitted: unknown,
+  current: unknown,
+): boolean {
+  return JSON.stringify(submitted) === JSON.stringify(current);
+}
 
 interface SubmissionContext {
   readonly editor: ReadyEditor | null;
@@ -114,6 +120,53 @@ function rememberCreatedFocus(
   };
 }
 
+function finishAcknowledgedSubmission({
+  editor,
+  dialog,
+  setDialog,
+  createdFocus,
+  acknowledged,
+}: {
+  editor: ReadyEditor;
+  dialog: OverviewItemDialogState;
+  setDialog: SetDialog;
+  createdFocus: DriveRefs["createdFocus"];
+  acknowledged: AcknowledgedOverviewItem;
+}): void {
+  const submission = dialog.submission;
+  if (!submission) return;
+  if (
+    dialog.mode !== "create" ||
+    shouldResetSubmittedInput(
+      submission.inputSnapshot,
+      dialog.draftStore.getSnapshot(),
+    )
+  )
+    rememberCreatedFocus(createdFocus, dialog, acknowledged);
+  setDialog((current) => {
+    if (current?.submission?.attempt !== submission.attempt) return current;
+    if (current.mode === "create") {
+      if (
+        !shouldResetSubmittedInput(
+          submission.inputSnapshot,
+          current.draftStore.getSnapshot(),
+        )
+      ) {
+        return { ...current, submission: null };
+      }
+      if (!submission.addAnother) return null;
+      const target = { ...current.target, source: current.week };
+      return {
+        ...createOverviewComposerState(editor, target, null),
+        mode: "create",
+        target,
+        seq: current.seq + 1,
+      };
+    }
+    return null;
+  });
+}
+
 // Plain function so the mutable attempt ref can be written outside a hook body.
 function driveOverviewSubmission({
   editor,
@@ -174,21 +227,12 @@ function driveOverviewSubmission({
   );
   if (acknowledged) {
     startedAttempt.current = null;
-    rememberCreatedFocus(createdFocus, dialog, acknowledged);
-    setDialog((current) => {
-      if (current?.submission?.attempt !== submission.attempt) return current;
-      if (submission.addAnother && current.mode === "create") {
-        // Keep creating in the week the lead actually saved to, not the week
-        // the dialog opened with.
-        const target = { ...current.target, source: current.week };
-        return {
-          ...createOverviewComposerState(editor, target, null),
-          mode: "create",
-          target,
-          seq: current.seq + 1,
-        };
-      }
-      return null;
+    finishAcknowledgedSubmission({
+      editor,
+      dialog,
+      setDialog,
+      createdFocus,
+      acknowledged,
     });
   }
 }
@@ -218,39 +262,18 @@ export function overviewSaveFailure(
   dialog: OverviewItemDialogState | null,
 ): string | null {
   return dialog?.submission && editor?.draft.autosave.state === "error"
-    ? "Save failed. Your update is still here; try saving again."
+    ? "The original save has not been confirmed. Your input is retained; saving again or discarding is blocked until the outcome is resolved."
     : null;
 }
 
-// Closing an abandoned save restores the pre-edit draft; recovery dialogs
-// never wrote anything, so they restore nothing.
+// Before dispatch the composer is local. After dispatch, closing requires a
+// reconciliation protocol; a local rollback cannot establish cancellation.
 export function closeOverviewDialog({
-  editor,
   dialog,
-  recoveryReason,
   setDialog,
-}: SubmissionContext): void {
-  const restore =
-    editor && dialog && !recoveryReason
-      ? abandonedSaveRestorePatch(editor, dialog)
-      : null;
-  if (dialog?.submission?.discard) {
-    if (dialog.submission.discard.failed) {
-      editor?.draft.abandonPersisted(dialog.submission.discard.token);
-      setDialog(null);
-    }
-    return;
-  }
-  if (editor && dialog?.submission && restore) {
-    editor.draft.apply(restore);
-    setDialog({
-      ...dialog,
-      submission: {
-        ...dialog.submission,
-        discard: { token: crypto.randomUUID(), armed: false, failed: false },
-      },
-    });
-    return;
-  }
+}: SubmissionContext): boolean {
+  // An obsolete editor is not evidence that its dispatched write was cancelled.
+  if (dialog?.submission) return false;
   setDialog(null);
+  return true;
 }

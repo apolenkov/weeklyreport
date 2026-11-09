@@ -24,6 +24,8 @@ export interface StatusOverviewProps {
     ((item: StatusOverviewItem, text: string) => void) | undefined;
   readonly onAddItem?:
     ((target: StatusOverviewCreateTarget) => void) | undefined;
+  readonly ownedStageStartsForProduct?:
+    ((productId: string) => readonly string[]) | undefined;
   readonly onPlanItem?: ((item: StatusOverviewItem) => void) | undefined;
   readonly onMoveItem?:
     | ((

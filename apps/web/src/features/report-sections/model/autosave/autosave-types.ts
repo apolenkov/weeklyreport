@@ -64,6 +64,10 @@ export interface AutosaveSaveReceipt {
   readonly reportSectionId: string;
   readonly version: number;
   readonly itemIdentities: readonly SavedDraftRecordIdentity[];
+  readonly expectedVersion?: number | undefined;
+  readonly submittedPayload?: DraftSaveContent | undefined;
+  readonly persistedRisks?: ReportSectionReadModel["risks"] | undefined;
+  readonly persistedDecisions?: ReportSectionReadModel["decisions"] | undefined;
   readonly persistedItems?: ReportSectionReadModel["items"] | undefined;
   readonly attemptToken?: string | undefined;
 }
@@ -72,6 +76,9 @@ export interface AutosaveSaveReceipt {
 // snapshot above; authoritative non-autosave commands use these controls to
 // replace the saved baseline without scheduling a redundant draft save.
 export interface AutosaveController extends AutosaveSnapshot {
+  readonly recovery?: AutosaveRecovery | null;
+  readonly retrySameAttempt?: (token: string) => boolean;
+  readonly isRecoveryBlocked?: () => boolean;
   /** Explicit, guarded write even when the payload equals the saved baseline. */
   readonly savePersisted: (token: string) => Promise<PersistedSaveResult>;
   readonly abandonPersisted: (token: string) => void;
@@ -97,10 +104,13 @@ export interface UseLeadFormAutosaveArgs {
     section: ReportSectionReadModel,
     payload: DraftSaveContent,
     queuedPayload: DraftSaveContent | null,
-    attemptToken?: string,
+    attempt?: {
+      readonly token: string | undefined;
+      readonly expectedVersion: number;
+    },
   ) => SavedDraftReconciliation;
   // Conflict handler lets the caller refetch and suppress the generic toast.
-  readonly onConflict?: () => void;
+  readonly onConflict?: (contextualAttempt?: boolean) => void;
   // Partially typed rows the payload cannot carry yet. They arm the unload
   // guard without scheduling a save, because that save would send the same
   // payload and mint a new version for nothing.
@@ -114,8 +124,17 @@ interface SavedDraftReconciliation {
 
 // Internal engine types; the live object stays private to its owning module.
 export interface AutosaveSinks {
+  readonly setRecovery?: (state: AutosaveRecovery | null) => void;
   readonly setState: Dispatch<SetStateAction<AutosaveState>>;
   readonly setLastSavedAt: (savedAt: Date | null) => void;
   readonly setLastSavedKey: (savedKey: string) => void;
   readonly rearmRetry: () => void;
+}
+
+export interface AutosaveRecovery {
+  readonly token: string;
+  readonly reportSectionId: string;
+  readonly expectedVersion: number;
+  readonly phase: "pending" | "ambiguous" | "reconciliation";
+  readonly pendingTransports: number;
 }

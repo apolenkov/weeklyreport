@@ -7,10 +7,14 @@ import { describe, expect, it } from "vitest";
 import { makeReportSectionFixture } from "../../../../../test-utils/report-section-fixtures";
 import {
   createDraftStageMemory,
+  ownedStagesForProject,
   type Product,
   type StatusOverviewCreateTarget,
 } from "../../../../report-sections";
-import { createOverviewComposerState } from "./lead-status-overview-item-editor";
+import {
+  createOverviewComposerState,
+  stageStartStillEligible,
+} from "./lead-status-overview-item-editor";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
 
 type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
@@ -119,6 +123,42 @@ const CREATE_TARGET: StatusOverviewCreateTarget = {
 };
 
 describe("createOverviewComposerState — draft stage default", () => {
+  it("filters noncanonical and foreign product stages from current section ownership", () => {
+    const section = makeSection();
+    const project = section.projects[0];
+    if (!project) throw new Error("Expected an owned project fixture");
+    const stage = project.ownedStages[0];
+    if (!stage) throw new Error("Expected an owned stage fixture");
+    const withNoncanonical = {
+      ...section,
+      projects: [
+        {
+          ...project,
+          ownedStages: [
+            ...project.ownedStages,
+            { ...stage, stageName: "Old stage" },
+          ],
+        },
+      ],
+    };
+    expect(ownedStagesForProject(withNoncanonical, PROJECT_ID)).toEqual([
+      "Development",
+      "Testing",
+    ]);
+    expect(ownedStagesForProject(withNoncanonical, "foreign-product")).toEqual(
+      [],
+    );
+  });
+  it("rejects stale selected stages and accepts an explicitly corrected selection", () => {
+    const section = makeSection();
+    expect(stageStartStillEligible(section, PROJECT_ID, ["Testing"])).toBe(
+      true,
+    );
+    expect(stageStartStillEligible(section, PROJECT_ID, ["Old stage"])).toBe(
+      false,
+    );
+    expect(stageStartStillEligible(section, PROJECT_ID, [])).toBe(false);
+  });
   it("seeds a new Overview item with the remembered stage", () => {
     const state = createOverviewComposerState(
       readyEditor(rememberedStageMemory("Testing")),
