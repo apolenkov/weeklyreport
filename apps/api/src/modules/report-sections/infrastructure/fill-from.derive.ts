@@ -2,6 +2,7 @@
 // LeadFormPrismaRepository.fillFromSection. No Prisma import: these build the
 // plain createMany payloads and the carry/remap decisions, leaving the
 // transaction/lock-order/CAS/P2002 handling in the repository method.
+import { isCompleteDecision, isCompleteRisk } from "@weeklyreport/shared";
 
 // Fill From maps copied next-period suggestions into current work.
 export function remapNextToCurrentStatus<WF extends string>(
@@ -18,6 +19,28 @@ export function isCarryable(
   targetActivityIds: ReadonlySet<string>,
 ): boolean {
   return row.activityId === null || targetActivityIds.has(row.activityId);
+}
+
+// An incomplete risk or decision is its author's private draft of the source
+// week: Fill From never copies it, whatever the target holds. The source keeps it.
+export function carryableRisks<
+  T extends {
+    activityId: string | null;
+    impact: string | null;
+    mitigation: string | null;
+  },
+>(rows: readonly T[], targetActivityIds: ReadonlySet<string>) {
+  return rows
+    .filter(isCompleteRisk)
+    .filter((row) => isCarryable(row, targetActivityIds));
+}
+
+export function carryableDecisions<
+  T extends { activityId: string | null; impact: string | null },
+>(rows: readonly T[], targetActivityIds: ReadonlySet<string>) {
+  return rows
+    .filter(isCompleteDecision)
+    .filter((row) => isCarryable(row, targetActivityIds));
 }
 
 interface SourceItem<WF extends string> {

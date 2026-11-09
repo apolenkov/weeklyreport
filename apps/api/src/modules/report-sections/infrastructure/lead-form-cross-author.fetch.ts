@@ -45,7 +45,10 @@ export function fetchForeignStatusSections(
     where: { reportId, authorId: { in: otherUserIds } },
     select: {
       authorId: true,
+      // Complete risks only: an incomplete risk is its author's private
+      // draft and colours no stage for a co-owner.
       risks: {
+        where: { impact: { not: null }, mitigation: { not: null } },
         select: { projectId: true, severity: true, stageNames: true },
       },
       stageStatuses: {
