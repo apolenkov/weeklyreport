@@ -6,8 +6,9 @@ import {
   safeText,
 } from "../primitives/report-primitives.schema.js";
 import { storedText } from "../primitives/stored-text.schema.js";
+import { addDeletionIntentIssues } from "./incomplete-record-deletion.schema.js";
 import {
-  draftSaveSchema,
+  draftSaveObjectSchema,
   MAX_RECORDS_PER_SECTION_SAVE,
 } from "./section.schema.js";
 import {
@@ -98,8 +99,7 @@ export const draftDecisionReadModelSchema = z
  * Accepts a section draft save whose risks and decisions may be incomplete.
  * `draftSaveSchema` and `submitSectionSchema` stay strict: every detail present.
  */
-export const incompleteDraftSaveSchema = draftSaveSchema
-  .unwrap()
+export const incompleteDraftSaveSchema = draftSaveObjectSchema
   .extend({
     risks: z
       .array(draftRiskWriteSchema)
@@ -110,6 +110,7 @@ export const incompleteDraftSaveSchema = draftSaveSchema
       .max(MAX_RECORDS_PER_SECTION_SAVE)
       .readonly(),
   })
+  .superRefine(addDeletionIntentIssues)
   .readonly();
 
 /** Risk draft as the author's form sends it; details may be null. */
