@@ -47,6 +47,7 @@ describe("LeadFormPrismaRepository.fillFromSection write lock", () => {
         deleteMany,
       },
       decision: { findMany: vi.fn().mockResolvedValue([]) },
+      risk: { findMany: vi.fn().mockResolvedValue([]) },
       activityStatus: { findMany: vi.fn().mockResolvedValue([]) },
     };
     const prisma = {
@@ -177,10 +178,15 @@ describe("LeadFormPrismaRepository.fillFromSection write lock", () => {
         deleteMany: itemDeleteMany,
       },
       decision: {
-        findMany: vi.fn().mockResolvedValue([{ stableId: "draft-decision" }]),
+        findMany: vi
+          .fn()
+          .mockResolvedValue([{ stableId: "draft-decision", impact: "Scope" }]),
         deleteMany: decisionDeleteMany,
       },
-      risk: { deleteMany: riskDeleteMany },
+      risk: {
+        findMany: vi.fn().mockResolvedValue([]),
+        deleteMany: riskDeleteMany,
+      },
       activityStatus: { findMany: activityStatusFindMany },
     };
     const prisma = {

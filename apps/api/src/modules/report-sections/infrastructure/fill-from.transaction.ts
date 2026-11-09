@@ -23,7 +23,10 @@ import {
   toFilledItemRows,
   toFilledRiskRows,
 } from "./fill-from.derive.js";
+import { assertIncompleteRecordsReleased } from "./incomplete-records.transaction.js";
 import { querySectionPublishedLineageTx } from "./published-lineage.transaction.js";
+
+const FILL_KEEPS_NO_RECORD = { risks: [], decisions: [] } as const;
 
 interface CarryableChildRows {
   itemsToCopy: PrismaReportSectionWithRelations["items"];
@@ -215,6 +218,15 @@ export async function fillFromSectionTx(
           carryable.decisionsToCopy.length;
         await assertTargetHasNoPublishedLineage(tx, reportId, targetSectionId);
         await bumpTargetSectionVersion(tx, targetSectionId, expectedVersion);
+        // Copies take fresh identities, so the fill keeps no stored record:
+        // an unfinished target draft stops it. Excluding incomplete source
+        // rows is not consent to erase one in the target.
+        await assertIncompleteRecordsReleased(
+          tx,
+          targetSectionId,
+          FILL_KEEPS_NO_RECORD,
+          [],
+        );
         const cancelledItem = await tx.item.findFirst({
           where: {
             reportSectionId: targetSectionId,

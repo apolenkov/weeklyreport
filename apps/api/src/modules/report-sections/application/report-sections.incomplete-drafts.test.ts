@@ -118,6 +118,24 @@ describe("ReportSectionsService — incomplete risk and decision drafts", () => 
     expect(save).not.toHaveBeenCalled();
   });
 
+  it.each([
+    { name: "risk", records: { risks: [{ ...DRAFT_RISK, risk: " " }] } },
+    {
+      name: "decision",
+      records: { decisions: [{ ...DRAFT_DECISION, text: "" }] },
+    },
+  ])(
+    "rejects a draft $name whose primary text is blank before any save",
+    async ({ records }) => {
+      const { save, service } = setup();
+
+      await expect(
+        service.saveDraft(draftOf(records), AUTHOR_ID),
+      ).rejects.toThrow();
+      expect(save).not.toHaveBeenCalled();
+    },
+  );
+
   it("reads the author's own records for a write and complete ones otherwise", async () => {
     const { read, service } = setup();
 
