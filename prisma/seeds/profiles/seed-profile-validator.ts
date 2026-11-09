@@ -37,8 +37,8 @@ interface SeedItemIdentity extends SeedRecordIdentity {
 
 interface SeedRiskIdentity extends SeedRecordIdentity {
   readonly risk: string;
-  readonly impact: string;
-  readonly mitigation: string;
+  readonly impact: string | null;
+  readonly mitigation: string | null;
 }
 
 interface SeedDecisionIdentity extends SeedRecordIdentity {

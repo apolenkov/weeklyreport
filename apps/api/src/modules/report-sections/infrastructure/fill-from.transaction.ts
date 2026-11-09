@@ -16,6 +16,8 @@ import {
   LeadFormDomainError,
 } from "../domain/lead-form-shared";
 import {
+  carryableDecisions,
+  carryableRisks,
   isCarryable,
   toFilledDecisionRows,
   toFilledItemRows,
@@ -25,8 +27,13 @@ import { querySectionPublishedLineageTx } from "./published-lineage.transaction.
 
 interface CarryableChildRows {
   itemsToCopy: PrismaReportSectionWithRelations["items"];
-  risksToCopy: PrismaReportSectionWithRelations["risks"];
-  decisionsToCopy: PrismaReportSectionWithRelations["decisions"];
+  risksToCopy: readonly (PrismaReportSectionWithRelations["risks"][number] & {
+    impact: string;
+    mitigation: string;
+  })[];
+  decisionsToCopy: readonly (PrismaReportSectionWithRelations["decisions"][number] & {
+    impact: string;
+  })[];
 }
 
 // Select the source's own past rows that carry forward. Fill From honours the
@@ -49,12 +56,8 @@ async function selectCarryableChildRows(
     itemsToCopy: source.items.filter(
       (row) => row.resolution == null && isCarryable(row, targetActivityIds),
     ),
-    risksToCopy: source.risks.filter((row) =>
-      isCarryable(row, targetActivityIds),
-    ),
-    decisionsToCopy: source.decisions.filter((row) =>
-      isCarryable(row, targetActivityIds),
-    ),
+    risksToCopy: carryableRisks(source.risks, targetActivityIds),
+    decisionsToCopy: carryableDecisions(source.decisions, targetActivityIds),
   };
 }
 

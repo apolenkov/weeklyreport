@@ -5,6 +5,8 @@ import { draftSaveSchema } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
 
 import {
+  carryableDecisions,
+  carryableRisks,
   isCarryable,
   remapNextToCurrentStatus,
   toFilledDecisionRows,
@@ -44,6 +46,34 @@ describe("isCarryable", () => {
   });
   it("excludes any activity row when the target has no activities", () => {
     expect(isCarryable({ activityId: ACTIVITY }, new Set())).toBe(false);
+  });
+});
+
+describe("carryable risks and decisions", () => {
+  const targetIds = new Set([ACTIVITY]);
+  const risk = { activityId: null, impact: "delay", mitigation: "add QA" };
+
+  it("never copies an incomplete source risk and keeps complete ones", () => {
+    const rows = [
+      { id: "complete", ...risk },
+      { id: "no-impact", ...risk, impact: null },
+      { id: "no-mitigation", ...risk, mitigation: null },
+      { id: "detached", ...risk, activityId: "other" },
+    ];
+    expect(carryableRisks(rows, targetIds).map(({ id }) => id)).toEqual([
+      "complete",
+    ]);
+  });
+
+  it("never copies an incomplete source decision, resolved or not", () => {
+    const rows = [
+      { id: "complete", activityId: ACTIVITY, impact: "scope" },
+      { id: "draft", activityId: null, impact: null },
+      { id: "resolved-draft", activityId: null, impact: null, resolvedAt: 1 },
+    ];
+    expect(carryableDecisions(rows, targetIds).map(({ id }) => id)).toEqual([
+      "complete",
+    ]);
   });
 });
 

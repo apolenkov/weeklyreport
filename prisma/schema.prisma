@@ -424,11 +424,15 @@ model Report {
 // frozen report without that live graph, and later ownership changes must not
 // rewrite historical visibility.
 model PublishedSectionScope {
-  reportId        String
-  reportSectionId String
-  authorId        String
-  groupId         String
-  report          Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  reportId         String
+  reportSectionId  String
+  authorId         String
+  groupId          String
+  // Incomplete risks/decisions left out of this frozen section. Both null on a
+  // section frozen before omissions were counted: unknown, never zero.
+  omittedRisks     Int?
+  omittedDecisions Int?
+  report           Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
 
   @@id([reportId, reportSectionId])
   @@index([groupId, reportId])
@@ -696,8 +700,10 @@ model Risk {
   projectId       String?
   activityId      String?
   risk            String
-  impact          String
-  mitigation      String
+  // Null marks a detail its author has not written yet: the risk is an
+  // author-private draft until both are present (lead-incomplete-record-drafts).
+  impact          String?
+  mitigation      String?
   // Mandatory, no default — every write must carry an explicit
   // at-risk/blocked value (Risk_severity_check CHECK enforces the vocabulary).
   severity        String
@@ -733,7 +739,8 @@ model Decision {
   text            String
   owner           String
   deadline        DateTime?
-  impact          String
+  // Null marks an author-private draft decision whose impact is not written yet.
+  impact          String?
   resolvedAt      DateTime?
   createdAt       DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt

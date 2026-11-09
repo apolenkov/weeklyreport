@@ -1,5 +1,7 @@
 import {
   type DbRole,
+  isCompleteDecision,
+  isCompleteRisk,
   itemWorkflowStatusSchema,
   riskSeveritySchema,
 } from "@weeklyreport/shared";
@@ -93,8 +95,8 @@ interface ForeignContentSection {
     id: string;
     projectId: string | null;
     risk: string;
-    impact: string;
-    mitigation: string;
+    impact: string | null;
+    mitigation: string | null;
     severity: string;
     stageNames: string[];
   }[];
@@ -104,7 +106,7 @@ interface ForeignContentSection {
     text: string;
     owner: string;
     deadline: Date | null;
-    impact: string;
+    impact: string | null;
     resolvedAt: Date | null;
     stageNames: string[];
   }[];
@@ -138,6 +140,9 @@ export function buildCrossAuthorContentRows(
     const authorEntry = authorEntries.get(section.authorId);
     if (!authorEntry) return [];
     const sharedIds = authorEntry.sharedProjectIds;
+    // An incomplete risk or decision is its author's private draft: a co-owner
+    // sees neither its text nor a stage status derived from it.
+    const risks = section.risks.filter(isCompleteRisk);
 
     // Foreign chips are risk-derived; persisted status is only the empty/non-empty base.
     const persistedStatus = indexNonNullStageStatuses(
@@ -150,7 +155,7 @@ export function buildCrossAuthorContentRows(
       status: deriveForeignStageStatus(
         sa.stageName,
         sa.projectId,
-        section.risks,
+        risks,
         persistedStatus.get(`${sa.projectId}::${sa.stageId}`) ?? null,
       ),
     }));
@@ -166,7 +171,7 @@ export function buildCrossAuthorContentRows(
         // activity-parented row (null product FK) belongs to no shared product,
         // so the type-guard filter both narrows the type and excludes it.
         items: selectSharedItems(section.items, sharedIds),
-        risks: section.risks
+        risks: risks
           .filter(
             (r): r is typeof r & { projectId: string } =>
               r.projectId != null && sharedIds.has(r.projectId),
@@ -177,10 +182,12 @@ export function buildCrossAuthorContentRows(
             ...r,
             severity: riskSeveritySchema.parse(r.severity),
           })),
-        decisions: section.decisions.filter(
-          (d): d is typeof d & { productId: string } =>
-            d.productId != null && sharedIds.has(d.productId),
-        ),
+        decisions: section.decisions
+          .filter(isCompleteDecision)
+          .filter(
+            (d): d is typeof d & { productId: string } =>
+              d.productId != null && sharedIds.has(d.productId),
+          ),
       },
     ];
   });
