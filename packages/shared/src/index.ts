@@ -260,16 +260,8 @@ export {
 } from "./schemas/report/report-progress.js";
 export * from "./schemas/report-assistant.js";
 export * from "./schemas/report-assistant-search-plan.js";
-export type {
-  LeadOpenWorkHistoryInput,
-  LeadOpenWorkHistoryOccurrence,
-  LeadOpenWorkHistoryOutput,
-} from "./schemas/report-sections/open-work-history.schema.js";
-export {
-  leadOpenWorkHistoryInputSchema,
-  leadOpenWorkHistoryOccurrenceSchema,
-  leadOpenWorkHistoryOutputSchema,
-} from "./schemas/report-sections/open-work-history.schema.js";
+export * from "./schemas/report-sections/incomplete-record.schema.js";
+export * from "./schemas/report-sections/open-work-history.schema.js";
 export * from "./schemas/report-sections/record-omission.schema.js";
 export * from "./schemas/report-sections/status-overview.schema.js";
 export * from "./schemas/review/lead-item-discussion.schema.js";
