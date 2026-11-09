@@ -15,7 +15,7 @@ export interface ItemTarget {
   readonly week: "current" | "next";
 }
 
-export interface RecordTarget {
+interface RecordTarget {
   readonly kind: "risk" | "decision";
   readonly parent: Parent;
 }
@@ -43,7 +43,7 @@ export interface DecisionInput {
   readonly stageNames: readonly string[];
 }
 
-export interface CommonView {
+interface CommonView {
   readonly eligibleStages: readonly string[];
   readonly authorName: string;
   readonly errors: Readonly<Record<string, string>>;

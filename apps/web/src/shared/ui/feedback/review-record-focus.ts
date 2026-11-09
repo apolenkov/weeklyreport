@@ -5,9 +5,7 @@ export function reviewRecordAnchor(kind: string, id: string): string {
 }
 
 /** Reveal the existing disclosure before focusing the anchored element, without editing it. */
-export function focusReviewAnchor(
-  target: HTMLElement | null | undefined,
-): void {
+function focusReviewAnchor(target: HTMLElement | null | undefined): void {
   revealAndFocus(target, {
     focusOptions: { preventScroll: true },
     scrollOptions: { block: "nearest" },
