@@ -19,14 +19,14 @@ import { OverviewInputProvider } from "./overview-input-provider";
 
 export const REPORT_ID = "a0000000-0000-4000-8000-000000000001";
 export const PROJECT_ID = "a0000000-0000-4000-8000-000000000002";
-export const STAGE_ID = "a0000000-0000-4000-8000-000000000003";
+const STAGE_ID = "a0000000-0000-4000-8000-000000000003";
 export const SECOND_PROJECT_ID = "a0000000-0000-4000-8000-000000000004";
-export const SECOND_STAGE_ID = "a0000000-0000-4000-8000-000000000005";
+const SECOND_STAGE_ID = "a0000000-0000-4000-8000-000000000005";
 export const ACTIVITY_ID = "a0000000-0000-4000-8000-000000000006";
 export const PREDECESSOR_REPORT_ID = "a0000000-0000-4000-8000-000000000007";
 const HEAD_REVIEWER_ID = "a0000000-0000-4000-8000-000000000099";
 
-export function createSectionStore(initial: ReportSectionReadModel) {
+function createSectionStore(initial: ReportSectionReadModel) {
   let current = initial;
   return {
     read: () => current,
