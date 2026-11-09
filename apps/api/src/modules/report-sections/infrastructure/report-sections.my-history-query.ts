@@ -4,9 +4,10 @@ import {
   reportSectionFullInclude,
   requirePublishedSnapshot,
 } from "@weeklyreport/report-persistence";
-import type {
-  MyHistoryResult,
-  PublishedReportSectionReadModel,
+import {
+  type MyHistoryResult,
+  type PublishedReportSectionReadModel,
+  summarizeRecordOmissions,
 } from "@weeklyreport/shared";
 import { z } from "zod";
 
@@ -16,6 +17,7 @@ import {
   buildMyHistoryEntries,
   type MyHistorySectionRow,
 } from "../domain/my-history.js";
+import { withRetainedDrafts } from "./my-history-retained.query.js";
 import { requireScopedPublishedSnapshot } from "./published-report-scope.js";
 
 const cursorIdSchema = z.uuid();
@@ -182,6 +184,8 @@ function publishedHistoryRows(
       stageStatuses: section.projects.flatMap((project) =>
         publishedStageStatusRows(project, timestamp),
       ),
+      // The author's own section, so the frozen count needs no scope lens.
+      publishedOmissions: summarizeRecordOmissions([section.recordOmission]),
       // Published rows are ordered by the owning report id in SQL; keep
       // that same coordinate for the merged keyset (section ids differ).
       cursorId: report.id,
@@ -282,7 +286,10 @@ async function queryMyHistoryPageInTransaction(
   const rows = candidates.slice(0, limit);
   const last = rows.at(-1);
   return {
-    items: buildMyHistoryEntries(rows),
+    // Read in the same snapshot as the page, after the frozen facts are fixed.
+    items: buildMyHistoryEntries(
+      await withRetainedDrafts(prisma, authorId, rows),
+    ),
     nextCursor:
       hasMore && last
         ? encodeCursor({

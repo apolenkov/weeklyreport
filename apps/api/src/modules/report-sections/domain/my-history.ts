@@ -1,8 +1,10 @@
 import {
   type MyHistoryEntry,
   myHistoryEntrySchema,
+  type RecordOmissionSummary,
   type ReportSectionStatus,
   type ReportStatus,
+  type RetainedDraftCounts,
   type TrafficLightStatus,
 } from "@weeklyreport/shared";
 
@@ -47,6 +49,10 @@ export interface MyHistorySectionRow {
     readonly projectId: string;
     readonly updatedAt: Date;
   }[];
+  // Frozen with a publication; absent on live rows.
+  readonly publishedOmissions?: RecordOmissionSummary;
+  // What the entitled author's source holds now; absent when nothing to recover.
+  readonly retainedDrafts?: RetainedDraftCounts;
 }
 
 function countTrafficLights(s: MyHistorySectionRow): {
@@ -108,6 +114,8 @@ function toHistoryEntry(s: MyHistorySectionRow) {
     priorityCount: s.items.filter((i) => i.priorityRank != null).length,
     productCount: countDistinctProducts(s),
     trafficLights: countTrafficLights(s),
+    publishedOmissions: s.publishedOmissions,
+    retainedDrafts: s.retainedDrafts,
   };
 }
 

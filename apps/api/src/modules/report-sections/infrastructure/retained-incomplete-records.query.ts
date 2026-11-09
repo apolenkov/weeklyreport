@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 import {
   mapPrismaToAuthorReportSection,
   reportSectionFullInclude,
@@ -21,18 +22,20 @@ const sourceReportSelect = {
   archived: true,
 } as const;
 
-// Same pick as the lead form's route (newest started editable report, id as
-// the tie-break), so "on the current form" means the same report in both.
-async function isOnCurrentForm(
-  prisma: PrismaService,
-  reportId: string,
-): Promise<boolean> {
+/**
+ * The report the lead form edits now. Same pick as the form's route (newest
+ * started editable report, id as the tie-break), so "on the current form"
+ * means the same report in recovery, history and the form.
+ */
+export async function queryCurrentFormReportId(
+  prisma: Prisma.TransactionClient,
+): Promise<string | null> {
   const current = await prisma.report.findFirst({
     where: currentEditableReportWhere(),
     orderBy: [{ periodStart: "desc" }, { id: "desc" }],
     select: { id: true },
   });
-  return current?.id === reportId;
+  return current?.id ?? null;
 }
 
 /**
@@ -72,7 +75,8 @@ export async function queryRetainedSource(
       periodStatus: report.periodStatus,
       archived: report.archived,
     },
-    onCurrentForm: await isOnCurrentForm(prisma, section.reportId),
+    onCurrentForm:
+      (await queryCurrentFormReportId(prisma)) === section.reportId,
     risks: section.risks,
     decisions: section.decisions,
   };

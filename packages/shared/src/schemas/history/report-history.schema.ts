@@ -7,6 +7,8 @@ import {
   trafficLightStatusSchema,
 } from "../primitives/report-primitives.schema.js";
 import { assembledReportSchema } from "../report/report.schema.js";
+import { recordOmissionSummarySchema } from "../report-sections/record-omission.schema.js";
+import { retainedDraftCountsSchema } from "../report-sections/retained-incomplete-records.schema.js";
 
 const MAX_PAGE_SIZE = 100;
 
@@ -133,6 +135,13 @@ export const myHistoryEntrySchema = z
     updatedAt: z.coerce.date().optional(),
     lastEditAt: z.coerce.date().nullable().optional(),
     ...historyTotalsSchema.partial().shape,
+    // Frozen with the publication: how many unfinished records it left out
+    // (`unknown` for a snapshot older than the count). Absent on live rows.
+    publishedOmissions: recordOmissionSummarySchema.optional(),
+    // What the source holds now, for its entitled author only. Never derived
+    // from `publishedOmissions`: frozen omissions without this field mean the
+    // drafts are no longer available to recover.
+    retainedDrafts: retainedDraftCountsSchema.optional(),
   })
   .readonly();
 

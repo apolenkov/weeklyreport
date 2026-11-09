@@ -6,7 +6,7 @@ import type { Role } from "@weeklyreport/shared";
  * (openspec/specs/report-section-write-gates): a viewer may still own a
  * section after demotion, but no longer reads its private drafts.
  */
-export const AUTHORING_ROLES = [
+const AUTHORING_ROLES = [
   "lead",
   "head",
   "admin",
