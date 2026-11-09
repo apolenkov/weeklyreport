@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { requirePublishedSnapshot } from "@weeklyreport/report-persistence";
+import type { PublishedReportSectionReadModel } from "@weeklyreport/shared";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import {
@@ -8,6 +9,26 @@ import {
   type SectionForPeriodResult,
 } from "./lead-form-reopen-eligibility.query.js";
 import { requireScopedPublishedSnapshot } from "./published-report-scope.js";
+
+// A frozen section carries its omission buckets inline. They are internal
+// scope keys, so they leave the section here and travel beside it; the caller
+// publishes only totals scoped to its lens.
+function publishedSectionResult(
+  { recordOmission, ...section }: PublishedReportSectionReadModel,
+  archived: boolean,
+): SectionForPeriodResult {
+  return {
+    section,
+    readOnly: true,
+    reopenFacts: {
+      sectionStatus: section.status,
+      periodStatus: "published",
+      archived,
+      hasPendingReopen: false,
+    },
+    recordOmission,
+  };
+}
 
 export async function getSectionForPeriodRead(
   prisma: PrismaService,
@@ -49,18 +70,7 @@ async function getSectionForPeriodInSnapshot(
         candidate.reportSectionId === admitted.reportSectionId &&
         candidate.authorId === userId,
     );
-    return section
-      ? {
-          section,
-          readOnly: true,
-          reopenFacts: {
-            sectionStatus: section.status,
-            periodStatus: "published",
-            archived: report.archived,
-            hasPendingReopen: false,
-          },
-        }
-      : null;
+    return section ? publishedSectionResult(section, report.archived) : null;
   }
   return getSectionForPeriod(tx, reportId, userId);
 }
@@ -104,16 +114,7 @@ export async function getSectionForPeriodAsGroupPeerRead(
             )
           : undefined;
         return section
-          ? {
-              section,
-              readOnly: true,
-              reopenFacts: {
-                sectionStatus: section.status,
-                periodStatus: "published",
-                archived: report.archived,
-                hasPendingReopen: false,
-              },
-            }
+          ? publishedSectionResult(section, report.archived)
           : null;
       }
       return getSectionForPeriodAsGroupPeer(tx, reportId, authorId, peerUserId);

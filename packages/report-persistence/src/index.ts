@@ -2,6 +2,7 @@ export {
   type CompleteSectionRow,
   toCompleteSectionRow,
 } from "./mappers/report-sections.complete-projection.js";
+export { toRecordOmission } from "./mappers/report-sections.record-omission.js";
 export {
   buildAssembledReportFromPrismaRow,
   computePortfolioOverviewFromReadSections,

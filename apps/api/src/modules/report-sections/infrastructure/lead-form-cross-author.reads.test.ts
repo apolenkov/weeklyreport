@@ -93,6 +93,67 @@ describe("lead-form cross-author atomic reads", () => {
     expect(transactionOptions()).toEqual({ isolationLevel: "RepeatableRead" });
   });
 
+  it.each([
+    [
+      "counts frozen omissions on the shared product only",
+      {
+        version: 1,
+        buckets: [
+          {
+            kind: "risk",
+            parentKind: "product",
+            parentId: SHARED_PROJECT_ID,
+            stageNames: ["Build"],
+            count: 2,
+          },
+          {
+            kind: "decision",
+            parentKind: "product",
+            parentId: UNSHARED_PROJECT_ID,
+            stageNames: ["Test"],
+            count: 4,
+          },
+        ],
+      },
+      { risks: 2, decisions: 0, unknown: false },
+    ],
+    [
+      "answers unknown for a snapshot frozen before counts existed",
+      undefined,
+      { risks: 0, decisions: 0, unknown: true },
+    ],
+  ] as const)(
+    "published Everyone read %s",
+    async (_name, recordOmission, expected) => {
+      const snapshot = frozenCrossAuthorSnapshot();
+      const { prisma } = prismaReader({
+        reportSectionFindUnique: vi.fn(),
+        stageAssignmentFindMany: vi.fn(),
+        report: {
+          periodStatus: "published",
+          publishedSnapshot: {
+            ...snapshot,
+            sections: snapshot.sections.map((section) =>
+              section.authorId === OTHER_AUTHOR_ID && recordOmission
+                ? { ...section, recordOmission }
+                : section,
+            ),
+          },
+        },
+      });
+
+      const { rows } = await getCrossAuthorContentRead(
+        prisma,
+        REPORT_ID,
+        USER_ID,
+      );
+
+      expect(rows.map((row) => row.recordOmissions)).toEqual([expected]);
+      // Totals only: the author's unshared product never names itself here.
+      expect(JSON.stringify(rows)).not.toContain(UNSHARED_PROJECT_ID);
+    },
+  );
+
   it("dispatches the report-scoped shared-product read to the frozen snapshot inside RepeatableRead", async () => {
     const stageAssignmentFindMany = vi.fn();
     const { prisma, transactionOptions } = prismaReader({

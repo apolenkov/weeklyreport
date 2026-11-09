@@ -9,7 +9,7 @@ import {
   LeadFormAccessError,
   LeadFormDomainError,
   type LeadFormRepository,
-  type ReopenEligibilityFacts,
+  type SectionForPeriodRead,
 } from "./lead-form-shared";
 
 export interface ByPeriodRequest {
@@ -76,11 +76,7 @@ export async function readSectionForByPeriod(
   request: ByPeriodRequest,
   sectionAuthorId: string,
   isHeadCrossRead: boolean,
-): Promise<{
-  section: ReportSectionReadModel;
-  readOnly: boolean;
-  reopenFacts: ReopenEligibilityFacts;
-}> {
+): Promise<SectionForPeriodRead> {
   const { reportId, userId } = request;
   const result = isHeadCrossRead
     ? await repository.getSectionForPeriodAsGroupPeer(
