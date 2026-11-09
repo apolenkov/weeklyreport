@@ -172,11 +172,9 @@ function toOverviewItem(
     ...statusInputFields(item, source, nextStep, input),
     resolution,
     outcomeHistory: item.outcomeHistory ?? [],
-    // Only the derived Next projection is a second rendering of the same
-    // record's commitment; the Previous lane is that record's only projection,
-    // so its comments stay.
-    comments:
-      source === "next" && nextStep !== null ? [] : (item.comments ?? []),
+    // A derived Next projection shares its record's one discussion; showing an
+    // empty list there would claim the discussion has no messages.
+    comments: item.comments ?? [],
     canResolve: canResolvePlan(facts, input, currentByStableId),
     canRestore: canRestorePlan(facts, input),
     workflowStatus: overviewWorkflowStatus(item, nextStep),

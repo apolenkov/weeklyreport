@@ -841,10 +841,9 @@ describe("projectStatusOverview", () => {
     );
 
     expect(currentRow?.comments).toHaveLength(1);
-    // The linked Next projection resolves to the same record, so the lineage's
-    // comments stay on the owning lane instead of rendering twice in one row.
+    // The linked Next projection shares the same record's discussion.
     expect(linkedRow?.stableId).toBe(second.stableId);
-    expect(linkedRow?.comments).toEqual([]);
+    expect(linkedRow?.comments).toEqual(currentRow?.comments);
   });
 
   it("keeps previous-lane comments, the only projection of that record", () => {

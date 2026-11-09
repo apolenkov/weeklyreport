@@ -110,7 +110,13 @@ export interface UseLeadFormAutosaveArgs {
     },
   ) => SavedDraftReconciliation;
   // Conflict handler lets the caller refetch and suppress the generic toast.
-  readonly onConflict?: (contextualAttempt?: boolean) => void;
+  readonly onConflict?: (
+    contextualAttempt?: boolean,
+    failed?: AutosaveRequest,
+  ) => void;
+  // A draft equal to this key holds conflict-retained text: it is unsaved and
+  // must wait for the Lead instead of autosaving over the newer revision.
+  readonly heldKey?: string | null;
   // Partially typed rows the payload cannot carry yet. They arm the unload
   // guard without scheduling a save, because that save would send the same
   // payload and mint a new version for nothing.

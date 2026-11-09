@@ -38,4 +38,6 @@
 ## Status 2026-11-09
 
 - Done: inline item form and shell integration; failed draft writes are classified as ambiguous (transport/5xx) or restricted (4xx) at the tRPC adapter; Save after an ambiguous failure re-sends the identical immutable request (`retrySameAttempt`), later typing stays in the editor for its own Save; Cancel after possible dispatch retries the original first and only then sends the compensating restoration at the settled state; a conflict answer freezes the original, reads the authoritative section and keeps the submitted input in the recovery region.
-- Open (packages 5 and 9): item discussion UI with Lead replies; retention of inline text edits (debounced autosave, not the contextual editor) after a 409 followed by a newer server revision; incomplete-record dependency work; browser evidence at 1280/375, guarded DB integration and E2E; final independent review.
+- Done (package 9, code and focused regression): after an autosave 409 the Lead's changed item text (against the failed save's base revision) is laid over the first newer authoritative section in either arrival order; unrelated server edits stay; the held draft reports an error and does not autosave until the Lead edits or saves.
+- Done (package 5, projection): a derived Next shares its record's comments; a read-only presentation takes comments from the authoritative source, never the dirty editor.
+- Open: package 5 discussion UI with Lead replies; incomplete-record dependency work; browser evidence at 1280/375, guarded DB integration and E2E; final independent review.

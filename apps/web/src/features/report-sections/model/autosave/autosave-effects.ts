@@ -6,7 +6,13 @@ import { toast } from "sonner";
 import { mutationErrorMessage } from "../../../../shared/lib/errors/mutation-error-message";
 import { isLeadFormWriteConflict } from "../lead-form/lead-form-write-port";
 import type { AutosaveState } from "./autosave-types";
-import type { AutosaveSinks, UseLeadFormAutosaveArgs } from "./autosave-types";
+import type {
+  AutosaveRequest,
+  AutosaveSinks,
+  DraftSaveContent,
+  UseLeadFormAutosaveArgs,
+} from "./autosave-types";
+import { encodeDraftSaveComparisonKey } from "./draft-save-comparison-key";
 
 export function reportSaveFailure(
   error: unknown,
@@ -15,11 +21,12 @@ export function reportSaveFailure(
     sinks: AutosaveSinks;
     contextual: boolean;
     retry: boolean;
+    request: AutosaveRequest;
   },
 ): void {
   options.sinks.setState("error");
   if (options.args.onConflict && isLeadFormWriteConflict(error)) {
-    options.args.onConflict(options.contextual);
+    options.args.onConflict(options.contextual, options.request);
     return;
   }
   if (options.retry) options.sinks.rearmRetry();
@@ -57,7 +64,7 @@ function autosaveFailureMessage(error: unknown): string {
 // races the baseline-priming effect; undo restores saved content). Undoing a
 // failed change to the confirmed baseline clears its error. Derived so the
 // debounce effect never needs a synchronous setState for the reset.
-export function reportedAutosaveState(
+function reportedAutosaveState(
   current: AutosaveState,
   armed: boolean,
   failedBaselineRestored: boolean,
@@ -66,6 +73,42 @@ export function reportedAutosaveState(
   if (current === "pending") return "idle";
   if (current === "error" && failedBaselineRestored) return "idle";
   return current;
+}
+
+// Render-visible save status of the current draft. A draft equal to the held
+// conflict key is unsaved and waits for the Lead, so it reports an error and
+// never arms the debounce.
+export function autosaveDraftView(view: {
+  readonly payload: DraftSaveContent | null;
+  readonly heldKey: string | null;
+  readonly lastSavedKey: string;
+  readonly enabled: boolean;
+  readonly reportSectionId: string | null;
+  readonly autosaveState: AutosaveState;
+}) {
+  const payloadKey =
+    view.payload === null ? "" : encodeDraftSaveComparisonKey(view.payload);
+  const hasPayload = payloadKey !== "";
+  const currentPayloadMatchesSavedBaseline =
+    hasPayload && payloadKey === view.lastSavedKey;
+  const dirty =
+    view.enabled && hasPayload && !currentPayloadMatchesSavedBaseline;
+  const held = dirty && payloadKey === view.heldKey;
+  const armed = dirty && !held && Boolean(view.reportSectionId);
+  const state: AutosaveState = held
+    ? "error"
+    : reportedAutosaveState(
+        view.autosaveState,
+        armed,
+        !dirty && view.lastSavedKey === payloadKey,
+      );
+  return {
+    payloadKey,
+    currentPayloadMatchesSavedBaseline,
+    dirty,
+    armed,
+    state,
+  };
 }
 
 export function useBeforeUnloadGuard(dirty: boolean): void {

@@ -2,10 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import {
-  reportedAutosaveState,
-  useBeforeUnloadGuard,
-} from "./autosave-effects";
+import { autosaveDraftView, useBeforeUnloadGuard } from "./autosave-effects";
 import { createAutosaveEngine } from "./autosave-live-state";
 import { useSaveDraftMutation } from "./autosave-mutation";
 import type {
@@ -14,7 +11,6 @@ import type {
   AutosaveState,
   UseLeadFormAutosaveArgs,
 } from "./autosave-types";
-import { encodeDraftSaveComparisonKey } from "./draft-save-comparison-key";
 
 const DEFAULT_DEBOUNCE_MS = 5000;
 
@@ -61,31 +57,28 @@ export function useLeadFormAutosave(
     if (initialSavedKey !== null) engine.primeBaseline(initialSavedKey);
   }, [engine, initialSavedKey]);
 
-  const payloadKey =
-    args.payload === null ? "" : encodeDraftSaveComparisonKey(args.payload);
-  const hasPayload = args.payload !== null && payloadKey !== "";
-  const currentPayloadMatchesSavedBaseline =
-    hasPayload && payloadKey === lastSavedKey;
-  const dirty = enabled && hasPayload && !currentPayloadMatchesSavedBaseline;
-  const debounceMs = args.debounceMs ?? DEFAULT_DEBOUNCE_MS;
-  const armed = dirty && Boolean(reportSectionId);
-  const state = reportedAutosaveState(
+  const view = autosaveDraftView({
+    payload: args.payload,
+    heldKey: args.heldKey ?? null,
+    lastSavedKey,
+    enabled,
+    reportSectionId,
     autosaveState,
-    armed,
-    !dirty && lastSavedKey === payloadKey,
-  );
+  });
+  const debounceMs = args.debounceMs ?? DEFAULT_DEBOUNCE_MS;
 
   // Every effect dep must be a primitive or a stable identity — never the args
   // object — or an unrelated re-render restarts the timer and stretches the
   // debounce window indefinitely.
   // armDebounce announces "pending" and owns the timer: its setState belongs to this effect on purpose.
+  const { payloadKey, armed, dirty } = view;
   useEffect(() => {
-    if (!dirty || !reportSectionId) return;
+    if (!armed || !reportSectionId) return;
     return engine.armDebounce(payloadKey, reportSectionId, debounceMs);
   }, [
     engine,
     payloadKey,
-    dirty,
+    armed,
     reportSectionId,
     debounceMs,
     queuedRetryRevision,
@@ -105,10 +98,10 @@ export function useLeadFormAutosave(
       ? recovery.phase === "pending"
         ? "saving"
         : "error"
-      : state,
+      : view.state,
     lastSavedAt,
     dirty,
-    currentPayloadMatchesSavedBaseline,
+    currentPayloadMatchesSavedBaseline: view.currentPayloadMatchesSavedBaseline,
     isInFlight: saveDraft.isPending,
     forceSave: engine.forceSave,
     savePersisted: engine.savePersisted,
