@@ -66,6 +66,19 @@ function recoveryBlocked(autosave: AutosaveController): boolean {
   );
 }
 
+function inFlightForSection(
+  autosave: AutosaveController,
+  hasLocalEdits: boolean,
+  ledger: SaveEchoLedger,
+  section: ReportSectionReadModel,
+): boolean {
+  return Boolean(
+    autosave.isInFlight &&
+    hasLocalEdits &&
+    ledger.lastRevision()?.startsWith(`${section.reportSectionId}:`),
+  );
+}
+
 interface ServerSectionReseedArgs {
   readonly serverSection: ReportSectionReadModel | null | undefined;
   // "Local edits exist": the payload difference OR a partially typed row the
@@ -93,7 +106,12 @@ export function useServerSectionReseed({
   handleConflict,
 }: ServerSectionReseedArgs) {
   useEffect(() => {
-    if (!serverSection || recoveryBlocked(autosave)) return;
+    if (
+      !serverSection ||
+      recoveryBlocked(autosave) ||
+      inFlightForSection(autosave, hasLocalEdits, ledger, serverSection)
+    )
+      return;
     if (!acceptVersion(serverSection.reportSectionId, serverSection.version)) {
       return;
     }
