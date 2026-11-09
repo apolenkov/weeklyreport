@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import {
+  fillFromInputSchema,
   itemOutcomeResultSchema,
   leadOpenWorkHistoryInputSchema,
   leadOpenWorkHistoryOutputSchema,
@@ -176,14 +177,7 @@ function promotePlanProcedure(deps: LeadFormRouterDeps) {
 
 function fillFromProcedure(deps: LeadFormRouterDeps) {
   return protectedProcedure
-    .input(
-      z.object({
-        targetSectionId: z.uuid(),
-        sourceSectionId: z.uuid(),
-        // Optimistic-concurrency expected version of the TARGET section.
-        version: z.number().int().min(1),
-      }),
-    )
+    .input(fillFromInputSchema)
     .use(captureMutationAuditInputMiddleware)
     .mutation(({ input, ctx }) =>
       withDomainErrorMapping(() => {
@@ -205,7 +199,10 @@ function fillFromProcedure(deps: LeadFormRouterDeps) {
           input.targetSectionId,
           input.sourceSectionId,
           ctx.session.userId,
-          input.version,
+          {
+            expectedVersion: input.version,
+            deletions: input.deletedIncompleteRecords,
+          },
         );
       }),
     );

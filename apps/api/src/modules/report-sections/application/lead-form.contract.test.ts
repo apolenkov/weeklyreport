@@ -128,7 +128,9 @@ describe("LeadFormService — fillFrom authorization", () => {
     const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
-      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
+      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, {
+        expectedVersion: 1,
+      }),
     ).rejects.toBeInstanceOf(LeadFormAccessError);
   });
 
@@ -150,7 +152,9 @@ describe("LeadFormService — fillFrom authorization", () => {
     const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
-      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
+      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, {
+        expectedVersion: 1,
+      }),
     ).rejects.toBeInstanceOf(LeadFormAccessError);
   });
 });
@@ -175,7 +179,9 @@ describe("LeadFormService — fillFrom published-lineage lock", () => {
     const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
-      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
+      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, {
+        expectedVersion: 1,
+      }),
     ).rejects.toMatchObject({ code: "PUBLISHED_RECORD_LOCKED" });
     // The reject happens before the delete-recreate — no copy is attempted.
     expect(repo.fillFromSection).not.toHaveBeenCalled();
@@ -197,7 +203,7 @@ describe("LeadFormService — fillFrom published-lineage lock", () => {
       SECTION_ID,
       SOURCE_SECTION_ID,
       AUTHOR_ID,
-      1,
+      { expectedVersion: 1 },
     );
     expect(result).toMatchObject({ success: true, copiedItems: 5 });
     expect(result.section).toBeDefined();
@@ -475,7 +481,7 @@ describe("LeadFormService — fillFrom", () => {
       SECTION_ID,
       SOURCE_SECTION_ID,
       AUTHOR_ID,
-      1,
+      { expectedVersion: 1 },
     );
 
     expect(result).toMatchObject({ success: true, copiedItems: 7 });
@@ -484,6 +490,28 @@ describe("LeadFormService — fillFrom", () => {
       SECTION_ID,
       SOURCE_SECTION_ID,
       1,
+      [],
+    );
+  });
+
+  it("hands the author's deletion intents to the fill", async () => {
+    const repo = createMockRepository({
+      getSectionById: vi.fn().mockResolvedValue(structuredClone(draftSection)),
+      fillFromSection: vi.fn().mockResolvedValue(0),
+    });
+    const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
+    const deletions = [{ kind: "risk" as const, stableId: SOURCE_SECTION_ID }];
+
+    await service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, {
+      expectedVersion: 1,
+      deletions,
+    });
+
+    expect(repo.fillFromSection).toHaveBeenCalledWith(
+      SECTION_ID,
+      SOURCE_SECTION_ID,
+      1,
+      deletions,
     );
   });
 
@@ -494,7 +522,9 @@ describe("LeadFormService — fillFrom", () => {
     const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
-      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, OTHER_USER_ID, 1),
+      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, OTHER_USER_ID, {
+        expectedVersion: 1,
+      }),
     ).rejects.toThrow("Can only fill your own section.");
   });
 
@@ -508,7 +538,9 @@ describe("LeadFormService — fillFrom", () => {
     const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
-      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
+      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, {
+        expectedVersion: 1,
+      }),
     ).rejects.toThrow("Cannot fill a section of a published report.");
     // The mutating repo call must never be reached.
     expect(repo.fillFromSection).not.toHaveBeenCalled();
@@ -526,7 +558,7 @@ describe("LeadFormService — fillFrom", () => {
       SECTION_ID,
       SOURCE_SECTION_ID,
       AUTHOR_ID,
-      1,
+      { expectedVersion: 1 },
     );
 
     expect(result).toMatchObject({ success: true, copiedItems: 3 });
@@ -542,7 +574,9 @@ describe("LeadFormService — fillFrom", () => {
     const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
-      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
+      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, {
+        expectedVersion: 1,
+      }),
     ).rejects.toThrow("Cannot fill a submitted section.");
   });
 
@@ -551,7 +585,9 @@ describe("LeadFormService — fillFrom", () => {
     const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
-      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
+      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, {
+        expectedVersion: 1,
+      }),
     ).rejects.toThrow(`Target section ${SECTION_ID} not found.`);
   });
 
@@ -566,7 +602,9 @@ describe("LeadFormService — fillFrom", () => {
     const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
-      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, 1),
+      service.fillFrom(SECTION_ID, SOURCE_SECTION_ID, AUTHOR_ID, {
+        expectedVersion: 1,
+      }),
     ).rejects.toThrow(`Source section ${SOURCE_SECTION_ID} not found.`);
     expect(repo.fillFromSection).not.toHaveBeenCalled();
   });
@@ -582,10 +620,14 @@ describe("LeadFormService — fillFrom", () => {
     const service = new LeadFormService(repo, NOOP_REPORT_SECTIONS_TELEMETRY);
 
     await expect(
-      service.fillFrom(SECTION_ID, SECTION_ID, AUTHOR_ID, 1),
+      service.fillFrom(SECTION_ID, SECTION_ID, AUTHOR_ID, {
+        expectedVersion: 1,
+      }),
     ).rejects.toBeInstanceOf(LeadFormConstraintError);
     await expect(
-      service.fillFrom(SECTION_ID, SECTION_ID, AUTHOR_ID, 1),
+      service.fillFrom(SECTION_ID, SECTION_ID, AUTHOR_ID, {
+        expectedVersion: 1,
+      }),
     ).rejects.toThrow("Cannot fill a section from itself.");
     expect(repo.getSectionById).not.toHaveBeenCalled();
     expect(repo.fillFromSection).not.toHaveBeenCalled();

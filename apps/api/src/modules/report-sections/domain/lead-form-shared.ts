@@ -1,5 +1,6 @@
 import type {
   DbRole,
+  IncompleteRecordDeletion,
   ItemOutcomeResult,
   ItemWorkflowStatus,
   LeadOpenWorkHistoryOutput,
@@ -138,6 +139,8 @@ export interface LeadFormRepository {
     targetSectionId: string,
     sourceSectionId: string,
     expectedVersion: number,
+    // No intent deletes nothing, so an omitted argument cannot erase a draft.
+    deletions?: readonly IncompleteRecordDeletion[],
   ): Promise<number>;
   createReopenRequest(
     sectionId: string,

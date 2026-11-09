@@ -4,6 +4,7 @@ import {
   reportSectionFullInclude,
 } from "@weeklyreport/report-persistence";
 import type {
+  IncompleteRecordDeletion,
   PromotePlanInput,
   PublishedLineage,
   ReportSectionReadModel,
@@ -198,13 +199,14 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     targetSectionId: string,
     sourceSectionId: string,
     expectedVersion: number,
+    deletions: readonly IncompleteRecordDeletion[] = [],
   ): Promise<number> {
-    return fillFromSectionTx(
-      this.prisma,
+    return fillFromSectionTx(this.prisma, {
       targetSectionId,
       sourceSectionId,
       expectedVersion,
-    );
+      deletions,
+    });
   }
 
   async createReopenRequest(

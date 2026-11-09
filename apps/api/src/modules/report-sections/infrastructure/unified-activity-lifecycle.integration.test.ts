@@ -390,7 +390,7 @@ describe("unified-activity lifecycle (integration)", () => {
         testData.section.id,
         sourceSection.id,
         testData.lead.id,
-        1,
+        { expectedVersion: 1 },
       ),
     ).rejects.toMatchObject({ code: "PUBLISHED_RECORD_LOCKED" });
 

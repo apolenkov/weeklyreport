@@ -3,6 +3,7 @@ import {
   type PrismaReportSectionWithRelations,
   reportSectionFullInclude,
 } from "@weeklyreport/report-persistence";
+import type { IncompleteRecordDeletion } from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service";
 import { isUniqueViolation } from "../../../lib/prisma-unique-violation.js";
@@ -27,6 +28,15 @@ import { assertIncompleteRecordsReleased } from "./incomplete-records.transactio
 import { querySectionPublishedLineageTx } from "./published-lineage.transaction.js";
 
 const FILL_KEEPS_NO_RECORD = { risks: [], decisions: [] } as const;
+
+/** One fill of a target, at its client-loaded version, from a source. */
+export interface FillRequest {
+  readonly targetSectionId: string;
+  readonly sourceSectionId: string;
+  readonly expectedVersion: number;
+  /** The target's unfinished drafts the author agreed to lose. */
+  readonly deletions: readonly IncompleteRecordDeletion[];
+}
 
 interface CarryableChildRows {
   itemsToCopy: PrismaReportSectionWithRelations["items"];
@@ -186,9 +196,7 @@ async function rebuildOwnedChildRows(
 // bearing (archive leaves periodStatus untouched; mid-flight deletion → NOT_FOUND).
 export async function fillFromSectionTx(
   prisma: PrismaService,
-  targetSectionId: string,
-  sourceSectionId: string,
-  expectedVersion: number,
+  { targetSectionId, sourceSectionId, expectedVersion, deletions }: FillRequest,
 ): Promise<number> {
   const source = await prisma.reportSection.findUnique({
     where: { id: sourceSectionId },
@@ -219,13 +227,13 @@ export async function fillFromSectionTx(
         await assertTargetHasNoPublishedLineage(tx, reportId, targetSectionId);
         await bumpTargetSectionVersion(tx, targetSectionId, expectedVersion);
         // Copies take fresh identities, so the fill keeps no stored record:
-        // an unfinished target draft stops it. Excluding incomplete source
-        // rows is not consent to erase one in the target.
+        // an unfinished target draft stops it unless the author named it for
+        // deletion. Excluding incomplete source rows is not that consent.
         await assertIncompleteRecordsReleased(
           tx,
           targetSectionId,
           FILL_KEEPS_NO_RECORD,
-          [],
+          deletions,
         );
         const cancelledItem = await tx.item.findFirst({
           where: {
