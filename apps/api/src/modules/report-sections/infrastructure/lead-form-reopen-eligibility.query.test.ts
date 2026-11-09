@@ -65,4 +65,43 @@ describe("getSectionForPeriod readOnly", () => {
 
     expect(result?.readOnly).toBe(false);
   });
+
+  it("carries the live section's omission buckets beside the complete content", async () => {
+    const draftRisk = {
+      id: "a0000000-0000-4000-8000-000000000020",
+      stableId: "a0000000-0000-4000-8000-000000000021",
+      projectId: "a0000000-0000-4000-8000-000000000030",
+      activityId: null,
+      risk: "Vendor may slip",
+      impact: null,
+      mitigation: null,
+      severity: "at-risk",
+      stageNames: ["Development"],
+      comments: [],
+    };
+    const result = await getSectionForPeriod(
+      readerFor(
+        sectionRow(
+          { periodStatus: "open", archived: false },
+          { risks: [draftRisk] },
+        ),
+      ),
+      REPORT_ID,
+      AUTHOR_ID,
+    );
+
+    expect(result?.section.risks).toEqual([]);
+    expect(result?.recordOmission).toEqual({
+      version: 1,
+      buckets: [
+        {
+          kind: "risk",
+          parentKind: "product",
+          parentId: draftRisk.projectId,
+          stageNames: ["Development"],
+          count: 1,
+        },
+      ],
+    });
+  });
 });

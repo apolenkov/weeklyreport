@@ -2,10 +2,13 @@ import { Prisma } from "@prisma/client";
 import {
   mapPrismaToReportSection,
   reportSectionFullInclude,
+  toRecordOmission,
 } from "@weeklyreport/report-persistence";
-import type { ReportSectionReadModel } from "@weeklyreport/shared";
 
-import type { ReopenEligibilityFacts } from "../domain/lead-form-shared";
+import type {
+  ReopenEligibilityFacts,
+  SectionForPeriodRead,
+} from "../domain/lead-form-shared";
 
 type PrismaReader = Prisma.TransactionClient;
 
@@ -28,11 +31,7 @@ type SectionForPeriodRow = Prisma.ReportSectionGetPayload<{
   include: typeof sectionForPeriodInclude;
 }>;
 
-export interface SectionForPeriodResult {
-  section: ReportSectionReadModel;
-  readOnly: boolean;
-  reopenFacts: ReopenEligibilityFacts;
-}
+export type SectionForPeriodResult = SectionForPeriodRead;
 
 // Shared mapping for `getSectionForPeriod` and its group-scoped twin — both
 // share `sectionForPeriodInclude`, so the row shape and derived
@@ -57,7 +56,14 @@ function mapSectionForPeriodRow(
     hasPendingReopen: reopenRequests.length > 0,
   };
 
-  return { section, readOnly, reopenFacts };
+  // Counted from the same row the complete projection came from, so the
+  // content and what it leaves out describe one read.
+  return {
+    section,
+    readOnly,
+    reopenFacts,
+    recordOmission: toRecordOmission(row),
+  };
 }
 
 export async function getSectionForPeriod(

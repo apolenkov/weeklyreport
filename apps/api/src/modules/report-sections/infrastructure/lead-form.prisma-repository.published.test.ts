@@ -21,7 +21,15 @@ const ownSection = {
 function publishedReadPrisma(options: {
   sectionOwners: readonly (typeof ownSection)[];
   admittedSectionId: string | null;
+  recordOmission?: object;
 }) {
+  const snapshot = publishedSnapshotFixture({
+    reportId,
+    periodStart: "2026-04-27",
+    periodEnd: "2026-05-01",
+    publishedAt: "2026-05-04T09:30:00.000Z",
+    sectionOwners: options.sectionOwners,
+  }) as { sections: object[] };
   const liveFindUnique = vi
     .fn()
     .mockRejectedValue(
@@ -35,13 +43,14 @@ function publishedReadPrisma(options: {
       findUnique: vi.fn().mockResolvedValue({
         periodStatus: "published",
         archived: false,
-        publishedSnapshot: publishedSnapshotFixture({
-          reportId,
-          periodStart: "2026-04-27",
-          periodEnd: "2026-05-01",
-          publishedAt: "2026-05-04T09:30:00.000Z",
-          sectionOwners: options.sectionOwners,
-        }),
+        publishedSnapshot: {
+          ...snapshot,
+          sections: snapshot.sections.map((section) =>
+            options.recordOmission
+              ? { ...section, recordOmission: options.recordOmission }
+              : section,
+          ),
+        },
       }),
     },
     reportSection: { findUnique: liveFindUnique },
@@ -72,6 +81,33 @@ describe("LeadFormPrismaRepository published by-period read", () => {
     expect(result?.section.authorName).toBe("Published Lead");
     expect(result?.readOnly).toBe(true);
     expect(liveFindUnique).not.toHaveBeenCalled();
+  });
+
+  it("hands the frozen omission buckets over beside the section, not inside it", async () => {
+    const recordOmission = {
+      version: 1,
+      buckets: [
+        {
+          kind: "risk",
+          parentKind: "product",
+          parentId: "a0000000-0000-4000-8000-000000000020",
+          stageNames: ["Development"],
+          count: 2,
+        },
+      ],
+    };
+    const { prisma } = publishedReadPrisma({
+      sectionOwners: [ownSection],
+      admittedSectionId: sectionId,
+      recordOmission,
+    });
+
+    const result = await new LeadFormPrismaRepository(
+      prisma as never,
+    ).getSectionForPeriod(reportId, authorId);
+
+    expect(result?.recordOmission).toEqual(recordOmission);
+    expect(result?.section).not.toHaveProperty("recordOmission");
   });
 
   it("raises a snapshot-integrity error when the admitted section is absent from the snapshot", async () => {

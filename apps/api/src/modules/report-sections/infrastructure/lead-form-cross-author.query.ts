@@ -6,6 +6,7 @@ import {
   type PublishedReportSectionReadModel,
   riskSeveritySchema,
   shortNameFromName,
+  summarizeRecordOmissionsForScopes,
 } from "@weeklyreport/shared";
 
 import type {
@@ -109,6 +110,15 @@ function crossAuthorSectionRow(
     authorName: section.authorName,
     authorRole: section.authorRole,
     sharedProductIds: [...sharedIds],
+    // Frozen counts, narrowed to the shared products; a snapshot older than
+    // the counts answers "unknown", never zero.
+    recordOmissions: summarizeRecordOmissionsForScopes(
+      [section.recordOmission],
+      [...sharedIds].map((parentId) => ({
+        parentKind: "product" as const,
+        parentId,
+      })),
+    ),
     stages: [...frozenOwnedProjects(section).values()]
       .filter((project) => sharedIds.has(project.projectId))
       .flatMap((project) =>

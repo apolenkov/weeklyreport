@@ -143,6 +143,8 @@ export function buildCrossAuthorContentRows(
     // An incomplete risk or decision is its author's private draft: a co-owner
     // sees neither its text nor a stage status derived from it.
     const risks = section.risks.filter(isCompleteRisk);
+    const onSharedProduct = (productId: string | null): boolean =>
+      productId !== null && sharedIds.has(productId);
 
     // Foreign chips are risk-derived; persisted status is only the empty/non-empty base.
     const persistedStatus = indexNonNullStageStatuses(
@@ -166,6 +168,18 @@ export function buildCrossAuthorContentRows(
         authorName: authorEntry.authorName,
         authorRole: authorEntry.authorRole,
         sharedProductIds: [...sharedIds],
+        // Counted on the shared products only, like the content below: an
+        // unfinished record on the author's other products or on an Activity
+        // adds nothing here.
+        recordOmissions: {
+          risks: section.risks.filter(
+            (r) => !isCompleteRisk(r) && onSharedProduct(r.projectId),
+          ).length,
+          decisions: section.decisions.filter(
+            (d) => !isCompleteDecision(d) && onSharedProduct(d.productId),
+          ).length,
+          unknown: false,
+        },
         stages,
         // activity-first-class: the cross-lead grid is product-scoped — an
         // activity-parented row (null product FK) belongs to no shared product,

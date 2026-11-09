@@ -1,9 +1,12 @@
 import {
   type PublishedLineage,
   publishedLineageSchema,
+  type RecordOmissionSummary,
   type ReopenBlockedReason,
   type ReportSectionReadModel,
   type Role,
+  summarizeRecordOmissions,
+  summarizeRecordOmissionsForScopes,
 } from "@weeklyreport/shared";
 
 import {
@@ -28,6 +31,11 @@ export interface GetByPeriodResult {
   // form can mark locked records and hide Delete. Advisory for the UI only —
   // the save-path guard enforces the lock.
   publishedLineage: PublishedLineage;
+  // Another author's section only: how many unfinished risks and decisions
+  // the shown content leaves out, within the reader's lens. Totals only, kept
+  // apart from the complete content and the statuses derived from it. Absent
+  // on the own form, where the author works with the drafts themselves.
+  recordOmissions?: RecordOmissionSummary;
 }
 
 const isHeadLikeRole = (role: Role | undefined): boolean =>
@@ -115,6 +123,24 @@ async function resolveSectionAuthor(
   return { sharedScope, sectionAuthorId, isHeadCrossRead };
 }
 
+// A head or admin is shown the whole section, so the whole section is counted.
+// A co-owner is shown the shared Products, so only those are counted: nothing
+// about the author's other Products or Activities reaches the total.
+function scopedRecordOmissions(
+  result: Awaited<ReturnType<typeof readSectionForByPeriod>>,
+  sharedScope: Awaited<ReturnType<typeof resolveCrossAuthorScope>>,
+): RecordOmissionSummary {
+  return sharedScope === null
+    ? summarizeRecordOmissions([result.recordOmission])
+    : summarizeRecordOmissionsForScopes(
+        [result.recordOmission],
+        [...sharedScope].map((parentId) => ({
+          parentKind: "product" as const,
+          parentId,
+        })),
+      );
+}
+
 async function buildByPeriodResult(
   repository: LeadFormRepository,
   result: Awaited<ReturnType<typeof readSectionForByPeriod>>,
@@ -147,5 +173,8 @@ async function buildByPeriodResult(
     canRequestReopen: isOwnSection && canRequestReopen,
     reopenBlockedReason: isOwnSection ? reason : null,
     publishedLineage,
+    ...(isOwnSection
+      ? {}
+      : { recordOmissions: scopedRecordOmissions(result, sharedScope) }),
   };
 }

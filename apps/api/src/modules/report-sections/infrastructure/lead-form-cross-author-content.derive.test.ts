@@ -8,6 +8,7 @@ import { buildCrossAuthorContentRows } from "./lead-form-cross-author-content.de
 
 const AUTHOR = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const PROJECT = "11111111-1111-4111-8111-111111111111";
+const OTHER_PROJECT = "11111111-1111-4111-8111-222222222222";
 const STAGE = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 const STAGE_NAME = "Development";
 
@@ -71,6 +72,32 @@ describe("buildCrossAuthorContentRows with incomplete records", () => {
 
     expect(row?.risks.map(({ id }) => id)).toEqual(["complete"]);
     expect(row?.decisions.map(({ id }) => id)).toEqual(["complete"]);
+  });
+
+  it("counts the unfinished records it hides, on shared products only", () => {
+    const [row] = rowsFor(
+      [
+        { id: "complete", ...risk },
+        { id: "no-impact", ...risk, impact: null },
+        { id: "no-mitigation", ...risk, mitigation: null },
+        { id: "elsewhere", ...risk, projectId: OTHER_PROJECT, impact: null },
+      ],
+      [
+        { id: "draft", ...decision, impact: null },
+        {
+          id: "elsewhere",
+          ...decision,
+          productId: OTHER_PROJECT,
+          impact: null,
+        },
+      ],
+    );
+
+    expect(row?.recordOmissions).toEqual({
+      risks: 2,
+      decisions: 1,
+      unknown: false,
+    });
   });
 
   it("derives the co-owner's stage status from complete risks only", () => {

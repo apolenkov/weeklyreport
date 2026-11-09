@@ -7,6 +7,8 @@ import type {
   LeadStatusOverviewPredecessor,
   PromotePlanInput,
   PublishedLineage,
+  RecordOmission,
+  RecordOmissionSummary,
   ReopenBlockedReason,
   ReportSectionReadModel,
   ResolvePlanInput,
@@ -96,22 +98,13 @@ export interface LeadFormRepository {
   getSectionForPeriod(
     reportId: string,
     userId: string,
-  ): Promise<{
-    section: ReportSectionReadModel;
-    readOnly: boolean;
-    // archived is the Report flag, not a periodStatus value.
-    reopenFacts: ReopenEligibilityFacts;
-  } | null>;
+  ): Promise<SectionForPeriodRead | null>;
   // Atomic group+section snapshot for head cross-read (no race window).
   getSectionForPeriodAsGroupPeer(
     reportId: string,
     authorId: string,
     peerUserId: string,
-  ): Promise<{
-    section: ReportSectionReadModel;
-    readOnly: boolean;
-    reopenFacts: ReopenEligibilityFacts;
-  } | null>;
+  ): Promise<SectionForPeriodRead | null>;
   // One read of selected period identity plus its immediate predecessor.
   // The implementation applies the same author/report scope as byPeriod.
   getStatusOverviewPeriods(
@@ -189,11 +182,26 @@ export interface CrossAuthorStatusRow {
   }[];
 }
 
+/** One section as a period read loads it, before the caller's lens. */
+export interface SectionForPeriodRead {
+  section: ReportSectionReadModel;
+  readOnly: boolean;
+  // archived is the Report flag, not a periodStatus value.
+  reopenFacts: ReopenEligibilityFacts;
+  // What the complete projection of this section leaves out, as internal
+  // buckets. Absent for a snapshot frozen before the counts existed, which
+  // reads as "unknown". Never serialized: callers publish scoped totals only.
+  recordOmission?: RecordOmission | undefined;
+}
+
 export interface CrossAuthorSectionRow {
   readonly authorId: string;
   readonly authorName: string;
   readonly authorRole: DbRole;
   readonly sharedProductIds: string[];
+  // Unfinished risks and decisions on the shared products only: totals, no
+  // text or identity, and nothing about the author's other work.
+  readonly recordOmissions: RecordOmissionSummary;
   readonly stages: readonly {
     projectId: string;
     stageName: string;
