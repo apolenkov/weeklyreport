@@ -98,6 +98,14 @@ export function DecisionCard(props: DecisionCardProps) {
     >
       <DecisionCardHeader {...props} />
       <DecisionCardBody text={decision.text} impact={decision.impact} />
+      {decision.impact.trim().length === 0 && (
+        <p
+          data-testid="decision-unfinished-note"
+          className="mt-2 text-xs font-semibold text-[var(--color-status-at-risk-fg)]"
+        >
+          Saved, unfinished — only you see it. Add its impact before you submit.
+        </p>
+      )}
       <MetaRow
         authorName={decision.owner}
         stageTags={stageTags}

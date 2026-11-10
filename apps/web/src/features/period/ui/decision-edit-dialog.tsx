@@ -33,6 +33,8 @@ interface DecisionEditDialogProps {
   readonly onSave: (next: DecisionEntry) => void;
   readonly onCancel: () => void;
   readonly onDelete?: (() => void) | undefined;
+  /** The author's own form: a decision may be saved before its impact. */
+  readonly unfinishedAllowed?: boolean | undefined;
 }
 
 // Unmounts when closed; each open remounts fresh from props (no reset effect).
@@ -88,6 +90,7 @@ function DecisionEditDialogContent({
   onSave,
   onCancel,
   onDelete,
+  unfinishedAllowed,
 }: DecisionEditDialogProps) {
   const dialog = useDecisionEditDialog({
     decision,
@@ -99,6 +102,7 @@ function DecisionEditDialogContent({
     onSave,
     onCancel,
     isPending,
+    unfinishedAllowed,
   });
 
   return (

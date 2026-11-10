@@ -30,6 +30,8 @@ interface DecisionsSectionProps {
   readonly addSignal?: number | undefined;
   // Published-lineage rows stay resolvable but cannot be deleted.
   readonly publishedLockedIds?: ReadonlySet<string> | undefined;
+  /** The author's own form: a decision may be saved before its impact. */
+  readonly unfinishedAllowed?: boolean | undefined;
 }
 
 // A decision created from this section keeps the parent label the dialog
@@ -171,6 +173,7 @@ export function DecisionsSection(props: DecisionsSectionProps) {
         products={props.products}
         activities={props.activities}
         defaultProductId={props.defaultProductId}
+        unfinishedAllowed={props.unfinishedAllowed}
         onSave={editing.saveDecision}
         onCancel={editing.cancelDialog}
       />
