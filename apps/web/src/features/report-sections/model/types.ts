@@ -144,4 +144,7 @@ export interface ReportPeriod {
   readonly itemCount?: number | undefined;
   readonly riskCount?: number | undefined;
   readonly productCount?: number | undefined;
+  // Unfinished risks and decisions the own source section still keeps.
+  // Fill From never copies them; the count only says so.
+  readonly retainedDraftCount?: number | undefined;
 }
