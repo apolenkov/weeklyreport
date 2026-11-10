@@ -103,6 +103,7 @@ describe("weekly read model over stored text the write rule now rejects", () => 
       ...metadata,
       periodState: "open",
       periodStatus: "open",
+      sections: [],
     } as unknown as WeeklyReportRow;
 
     const { readModel } = buildLiveResult(

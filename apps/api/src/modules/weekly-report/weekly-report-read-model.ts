@@ -1,11 +1,12 @@
 import type { Prisma } from "@prisma/client";
+import { toRecordOmission } from "@weeklyreport/report-persistence";
 import {
   buildPortfolioProductsFromSnapshotSections,
   computeReportProgress,
   type PublishedReportSnapshot,
   type ReportProgress,
   type ReportSectionReadModel,
-  UNCOUNTED_RECORD_OMISSIONS,
+  summarizeRecordOmissions,
   type UserSession,
   type WeeklyReportReadModel,
   weeklyReportReadModelSchema,
@@ -23,11 +24,6 @@ import {
   buildPortfolioOverview,
   scopeWhere,
 } from "./weekly-report-portfolio.js";
-
-// TODO(TASK-836): count omissions through the caller's group and shared-product
-// lens (frozen buckets when published, the live partition otherwise). Until
-// then both paths disclose that the totals are not known.
-const PENDING_RECORD_OMISSIONS = UNCOUNTED_RECORD_OMISSIONS;
 
 // The report row as fetched by `getWeeklyReport`, derived from the same
 // `reportSectionFullInclude` every other report-section read shares — never a
@@ -177,7 +173,11 @@ export function buildPublishedReadModelFromSnapshot(
     portfolioOverview: buildPortfolioProductsFromSnapshotSections(leadSections),
     leadSections,
     escalations: buildEscalationsFromReadSections(leadSections),
-    recordOmissions: PENDING_RECORD_OMISSIONS,
+    // Counted over the sections this caller is shown, from the buckets frozen
+    // with them; a section frozen before counts existed makes the total unknown.
+    recordOmissions: summarizeRecordOmissions(
+      leadSections.map((section) => section.recordOmission),
+    ),
   });
 }
 
@@ -216,7 +216,10 @@ export function buildLiveResult(
       portfolioOverview,
       leadSections,
       escalations,
-      recordOmissions: PENDING_RECORD_OMISSIONS,
+      // Counted from the same scoped rows `leadSections` is projected from.
+      recordOmissions: summarizeRecordOmissions(
+        report.sections.map(toRecordOmission),
+      ),
     }),
     crossGroup,
   };
