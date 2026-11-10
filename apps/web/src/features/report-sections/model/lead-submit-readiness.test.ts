@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { expectDefined } from "../../../test-utils/expect-defined.js";
 import { makeReportSectionFixture } from "../../../test-utils/report-section-fixtures";
 import type { DraftSaveContent } from "./lead-section-draft-payload";
+import { buildLeadSubmitPayload } from "./lead-submit-payload";
 import {
-  buildLeadSubmitPayload,
   deriveLeadSubmitReadiness,
   type LeadSubmitReadinessInput,
   pendingReviewLabel,
@@ -131,6 +131,57 @@ describe("deriveLeadSubmitReadiness", () => {
       },
     ]);
     expect(readiness.autosaveState).toBe("error");
+    expect(readiness.canOpenConfirmation).toBe(false);
+  });
+
+  it("blocks confirmation by name while a saved risk or decision is unfinished", () => {
+    const RISK_ID = "10000000-0000-4000-8000-000000000009";
+    const DECISION_ID = "10000000-0000-4000-8000-00000000000a";
+    const readiness = deriveLeadSubmitReadiness({
+      ...baseInput,
+      draftPayload: {
+        ...draft,
+        risks: [
+          {
+            stableId: RISK_ID,
+            projectId: PRODUCT_ID,
+            activityId: null,
+            risk: "Vendor may slip",
+            impact: null,
+            mitigation: "Second vendor",
+            severity: "at-risk",
+            stageNames: ["Development"],
+          },
+        ],
+        decisions: [
+          {
+            stableId: DECISION_ID,
+            productId: PRODUCT_ID,
+            activityId: null,
+            text: "Choose a vendor",
+            owner: "Test Lead",
+            impact: null,
+            deadline: null,
+            resolvedAt: null,
+            stageNames: [],
+          },
+        ],
+      },
+    });
+
+    expect(readiness.blockingIssues).toEqual([
+      {
+        id: `unfinished-risk:${RISK_ID}`,
+        label:
+          'Finish the risk "Vendor may slip": add its impact and mitigation.',
+        overviewFocus: "report-details",
+      },
+      {
+        id: `unfinished-decision:${DECISION_ID}`,
+        label: 'Finish the decision "Choose a vendor": add its impact.',
+        overviewFocus: "report-details",
+      },
+    ]);
     expect(readiness.canOpenConfirmation).toBe(false);
   });
 

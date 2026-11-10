@@ -266,6 +266,8 @@ describe("draft rows the payload cannot carry", () => {
     };
   }
 
+  // A risk is saved once it is named, so only a row still missing its name
+  // stays out of the payload.
   function addHalfTypedRisk(result: {
     current: ReturnType<typeof useLeadFormDraftCore>;
   }) {
@@ -280,7 +282,7 @@ describe("draft rows the payload cannot carry", () => {
             activityId: null,
             stageNames: [],
             severity: "at-risk",
-            text: "Half typed risk",
+            text: "",
             impact: "",
             mitigation: "Mitigate later",
           },

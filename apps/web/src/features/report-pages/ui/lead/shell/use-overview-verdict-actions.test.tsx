@@ -1,6 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
 import type {
-  ItemOutcomeResult,
   LeadStatusOverviewOutput,
   ReportSectionReadModel,
 } from "@weeklyreport/shared";
@@ -8,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { makeReportSectionFixture } from "../../../../../test-utils/report-section-fixtures";
 import type { StatusOverviewItem } from "../../../../report-sections";
+import type { LeadFormOutcomeResult } from "../../../../report-sections/client";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
 import { useOverviewVerdictActions } from "./use-overview-verdict-actions";
 
@@ -92,7 +92,7 @@ function setup({
   readonly resolve?: (
     state: EditorState,
     commit: (next: Partial<EditorState>) => void,
-  ) => Promise<ItemOutcomeResult>;
+  ) => Promise<LeadFormOutcomeResult>;
   readonly pendingReviewCount?: number;
   readonly initial?: Partial<EditorState>;
   readonly save?: (commit: (next: Partial<EditorState>) => void) => void;
@@ -168,7 +168,7 @@ function setup({
               projects,
               items: [record({ id: CREATED_ID, type: "current" })],
             }),
-          } satisfies ItemOutcomeResult;
+          } satisfies LeadFormOutcomeResult;
           commit({ section: result.section });
           return Promise.resolve(result);
         },

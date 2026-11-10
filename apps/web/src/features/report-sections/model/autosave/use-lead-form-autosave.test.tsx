@@ -1,6 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
 import {
-  type DraftSavePayload,
   draftSaveSchema,
   type ReportSectionReadModel,
   reportSectionReadModelSchema,
@@ -15,6 +14,7 @@ import {
   PROJECT_ID,
   RISK_ID,
 } from "../lead-form/draft/lead-form-draft-merge-test-fixtures";
+import type { LeadFormDraftSaveInput } from "../lead-form/lead-form-write-port";
 import { useLeadFormDraftCore } from "../lead-form/use-lead-form-draft-core";
 import {
   countLocalOnlyRows,
@@ -170,7 +170,7 @@ describe("useLeadFormAutosave", () => {
     const edited = makePayload("unsaved N");
     const { result, rerender } = renderHook<
       ReturnType<typeof useLeadFormAutosave>,
-      { payload: DraftSavePayload | null; enabled: boolean }
+      { payload: LeadFormDraftSaveInput | null; enabled: boolean }
     >(
       ({ payload, enabled }) =>
         useLeadFormAutosave({
@@ -221,7 +221,7 @@ describe("useLeadFormAutosave", () => {
   it("starts idle with no payload, transitions to pending then saving", async () => {
     const { wrapper, calls, writePort } = buildHarness();
     const { result, rerender } = renderHook(
-      ({ payload }: { payload: DraftSavePayload | null }) =>
+      ({ payload }: { payload: LeadFormDraftSaveInput | null }) =>
         useLeadFormAutosave({
           writePort,
           reportSectionId: SECTION_ID,
@@ -231,7 +231,10 @@ describe("useLeadFormAutosave", () => {
           onVersionChange: vi.fn(),
           debounceMs: 3000,
         }),
-      { wrapper, initialProps: { payload: null as DraftSavePayload | null } },
+      {
+        wrapper,
+        initialProps: { payload: null as LeadFormDraftSaveInput | null },
+      },
     );
 
     expect(result.current.state).toBe("idle");
@@ -255,7 +258,7 @@ describe("useLeadFormAutosave", () => {
   it("coalesces two rapid changes within the debounce window into a single mutation call", async () => {
     const { wrapper, calls, writePort } = buildHarness();
     const { result, rerender } = renderHook(
-      ({ payload }: { payload: DraftSavePayload | null }) =>
+      ({ payload }: { payload: LeadFormDraftSaveInput | null }) =>
         useLeadFormAutosave({
           writePort,
           reportSectionId: SECTION_ID,
@@ -293,7 +296,7 @@ describe("useLeadFormAutosave", () => {
   it("does not restart the debounce window on a re-render that leaves the payload unchanged", async () => {
     const { wrapper, calls, writePort } = buildHarness();
     const { rerender } = renderHook(
-      ({ payload }: { payload: DraftSavePayload | null }) =>
+      ({ payload }: { payload: LeadFormDraftSaveInput | null }) =>
         useLeadFormAutosave({
           writePort,
           reportSectionId: SECTION_ID,
@@ -349,7 +352,7 @@ describe("useLeadFormAutosave", () => {
     const { wrapper, calls, writePort } = buildHarness();
     const initial = makePayload("same");
     const { result, rerender } = renderHook(
-      ({ payload }: { payload: DraftSavePayload | null }) =>
+      ({ payload }: { payload: LeadFormDraftSaveInput | null }) =>
         useLeadFormAutosave({
           writePort,
           reportSectionId: SECTION_ID,
@@ -446,7 +449,7 @@ describe("useLeadFormAutosave", () => {
       },
     });
     const { result, rerender } = renderHook(
-      ({ payload }: { payload: DraftSavePayload }) =>
+      ({ payload }: { payload: LeadFormDraftSaveInput }) =>
         useLeadFormAutosave({
           writePort,
           reportSectionId: SECTION_ID,
@@ -724,7 +727,7 @@ function persistedSection(text: string, sectionId = SECTION_ID) {
 }
 
 function persistedReply(
-  request: DraftSavePayload,
+  request: LeadFormDraftSaveInput,
   current: ReportSectionReadModel,
 ) {
   const item = current.items[0];

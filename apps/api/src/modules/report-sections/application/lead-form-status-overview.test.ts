@@ -73,6 +73,8 @@ describe("LeadFormService — getStatusOverview", () => {
       AUTHOR_ID,
       "lead",
     );
+    // The overview shows finished records only, to the author as well.
+    expect(repo.getOwnDraftSection).not.toHaveBeenCalled();
   });
 
   it("does not read a predecessor when selected cross-author access is denied", async () => {

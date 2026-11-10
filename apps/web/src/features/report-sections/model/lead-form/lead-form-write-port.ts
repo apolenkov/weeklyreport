@@ -1,5 +1,4 @@
 import type {
-  DraftSavePayload,
   ItemOutcomeResult,
   PromotePlanInput,
   ReportSectionReadModel,
@@ -7,6 +6,21 @@ import type {
   RestorePlanInput,
   SubmitSectionPayload,
 } from "@weeklyreport/shared";
+
+import type { DraftSaveContent } from "../lead-section-draft-payload";
+
+/**
+ * A draft save as the form issues it: an unfinished risk or decision travels
+ * with its missing detail as null. The transport adds the deletion intents.
+ */
+export type LeadFormDraftSaveInput = DraftSaveContent & {
+  readonly version: number;
+};
+
+/** An outcome command's result with its section in the form's shape. */
+export type LeadFormOutcomeResult = Omit<ItemOutcomeResult, "section"> & {
+  readonly section: ReportSectionReadModel;
+};
 
 export interface LeadFormFillFromInput {
   readonly targetSectionId: string;
@@ -46,14 +60,20 @@ export class LeadFormWriteError extends Error {
 export interface LeadFormWritePort {
   readonly pending: LeadFormWritePending;
   readonly saveDraft: (
-    input: DraftSavePayload,
+    input: LeadFormDraftSaveInput,
   ) => Promise<ReportSectionReadModel>;
   readonly submit: (
     input: SubmitSectionPayload,
   ) => Promise<ReportSectionReadModel>;
-  readonly resolvePlan: (input: ResolvePlanInput) => Promise<ItemOutcomeResult>;
-  readonly restorePlan: (input: RestorePlanInput) => Promise<ItemOutcomeResult>;
-  readonly promotePlan: (input: PromotePlanInput) => Promise<ItemOutcomeResult>;
+  readonly resolvePlan: (
+    input: ResolvePlanInput,
+  ) => Promise<LeadFormOutcomeResult>;
+  readonly restorePlan: (
+    input: RestorePlanInput,
+  ) => Promise<LeadFormOutcomeResult>;
+  readonly promotePlan: (
+    input: PromotePlanInput,
+  ) => Promise<LeadFormOutcomeResult>;
   readonly fillFrom: (input: LeadFormFillFromInput) => Promise<{
     readonly success: true;
     readonly copiedItems: number;

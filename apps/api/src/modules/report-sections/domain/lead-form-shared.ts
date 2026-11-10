@@ -1,4 +1,5 @@
 import type {
+  AuthorReportSectionReadModel,
   DbRole,
   IncompleteRecordDeletion,
   ItemOutcomeResult,
@@ -99,6 +100,12 @@ export interface LeadFormRepository {
     reportId: string,
     userId: string,
   ): Promise<SectionForPeriodRead | null>;
+  // The actor's own live section with its unfinished risks and decisions;
+  // null unless the actor is its author, active and in an authoring role.
+  getOwnDraftSection(
+    reportId: string,
+    actorId: string,
+  ): Promise<AuthorReportSectionReadModel | null>;
   // Atomic group+section snapshot for head cross-read (no race window).
   getSectionForPeriodAsGroupPeer(
     reportId: string,
@@ -121,7 +128,7 @@ export interface LeadFormRepository {
   getReportPeriodStatusForSection(sectionId: string): Promise<string | null>;
   // Published stableIds for lock marker; empty for never-published drafts.
   getPublishedLineage(
-    section: ReportSectionReadModel,
+    section: AuthorReportSectionReadModel,
   ): Promise<PublishedLineage>;
   revokeSectionSubmission(
     sectionId: string,

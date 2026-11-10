@@ -1,20 +1,18 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type {
-  DraftSavePayload,
-  ReportSectionReadModel,
-} from "@weeklyreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import type { ReactNode } from "react";
 
 import { invalidateLeadForm } from "../../../../shared/lib/query/cache-keys";
 import { TRPCProxyContext } from "../../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../../test-utils/mock-trpc";
 import { makeReportSectionFixture } from "../../../../test-utils/report-section-fixtures";
+import type { LeadFormDraftSaveInput } from "../lead-form/lead-form-write-port";
 import { InMemoryLeadFormWriteAdapter } from "../lead-form/lead-form-write-port.in-memory";
 
 export const AUTOSAVE_SECTION_ID = "11111111-1111-1111-1111-111111111111";
 const PROJECT_ID = "22222222-2222-2222-2222-222222222222";
 
-export function makeAutosavePayload(text = "first"): DraftSavePayload {
+export function makeAutosavePayload(text = "first"): LeadFormDraftSaveInput {
   return {
     reportSectionId: AUTOSAVE_SECTION_ID,
     // The hook replaces this with its live version at mutate time.
@@ -42,12 +40,12 @@ export function makeAutosavePayload(text = "first"): DraftSavePayload {
 export function makeAutosavePayloadFor(
   sectionId: string,
   text: string,
-): DraftSavePayload {
+): LeadFormDraftSaveInput {
   return { ...makeAutosavePayload(text), reportSectionId: sectionId };
 }
 
 export function makeAutosaveResponse(
-  request: DraftSavePayload,
+  request: LeadFormDraftSaveInput,
   version = request.version + 1,
 ): ReportSectionReadModel {
   return makeReportSectionFixture({
@@ -58,13 +56,15 @@ export function makeAutosaveResponse(
 
 export function buildAutosaveHarness(
   opts: {
-    mutationFn?: (vars: DraftSavePayload) => Promise<ReportSectionReadModel>;
+    mutationFn?: (
+      vars: LeadFormDraftSaveInput,
+    ) => Promise<ReportSectionReadModel>;
   } = {},
 ) {
-  const calls: DraftSavePayload[] = [];
+  const calls: LeadFormDraftSaveInput[] = [];
   const userMutationFn =
     opts.mutationFn ??
-    ((request: DraftSavePayload) =>
+    ((request: LeadFormDraftSaveInput) =>
       Promise.resolve(makeAutosaveResponse(request)));
   const { proxy } = createMockTRPC([
     { path: ["reports", "getActive"] },

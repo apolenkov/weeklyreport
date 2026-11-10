@@ -1,3 +1,5 @@
+import { hasVisibleText } from "@weeklyreport/shared";
+
 import type { LeadFormGeneration } from "../lead-form/lead-form-generation";
 import { encodeAutosaveComparisonKey } from "./autosave-stable-stringify";
 import type { AutosaveSaveReceipt } from "./autosave-types";
@@ -10,6 +12,11 @@ interface RecordTarget {
   readonly reportSectionId: string;
   readonly attemptToken: string;
 }
+
+// The save sends a detail not written yet as null and the form holds it as an
+// empty field; both mean the same stored value.
+const detail = (value: unknown): string | null =>
+  typeof value === "string" && hasVisibleText(value) ? value : null;
 
 function scopeMatches(
   receipt: AutosaveSaveReceipt,
@@ -45,12 +52,12 @@ export function confirmSavedRecord(
     const [b] = returned;
     if (submitted.length !== 1 || returned.length !== 1 || !a || !b)
       return false;
-    const fields = (r: typeof a) => ({
+    const fields = (r: typeof a | typeof b) => ({
       projectId: r.projectId ?? null,
       activityId: r.activityId ?? null,
       risk: r.risk,
-      impact: r.impact,
-      mitigation: r.mitigation,
+      impact: detail(r.impact),
+      mitigation: detail(r.mitigation),
       severity: r.severity,
       stageNames: r.stageNames,
     });
@@ -68,13 +75,13 @@ export function confirmSavedRecord(
   const [a] = submitted;
   const [b] = returned;
   if (submitted.length !== 1 || returned.length !== 1 || !a || !b) return false;
-  const fields = (d: typeof a) => ({
+  const fields = (d: typeof a | typeof b) => ({
     productId: d.productId ?? null,
     activityId: d.activityId ?? null,
     text: d.text,
     owner: d.owner,
     deadline: d.deadline ?? null,
-    impact: d.impact,
+    impact: detail(d.impact),
     resolvedAt: d.resolvedAt ?? null,
     stageNames: d.stageNames,
   });

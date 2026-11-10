@@ -100,7 +100,7 @@ export function useLeadSlidesData({
       foreignContentPending,
     isError: period.isError || queries.byPeriodQ.isError,
     slides,
-    section: queries.byPeriodQ.data?.section ?? null,
+    section: queries.byPeriodQ.data?.editableSection ?? null,
     formData,
     canInlineEdit: canEditInlineRecord({
       targetReportId,

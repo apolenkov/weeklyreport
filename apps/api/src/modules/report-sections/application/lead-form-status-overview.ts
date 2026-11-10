@@ -11,7 +11,7 @@ import {
   LeadFormDomainError,
   type LeadFormRepository,
 } from "../domain/lead-form-shared.js";
-import { readByPeriod } from "./lead-form-by-period.js";
+import { readCompleteByPeriod } from "./lead-form-by-period.js";
 
 /**
  * Deep read module for the compact Overview. Selected-section authorization,
@@ -23,7 +23,7 @@ export async function readStatusOverview(
   request: ByPeriodRequest & { readonly role: Role },
 ): Promise<LeadStatusOverviewOutput> {
   const { reportId, userId: viewerId, role, requestedAuthorId } = request;
-  const selected = await readByPeriod(repository, request);
+  const selected = await readCompleteByPeriod(repository, request);
   const periods = await repository.getStatusOverviewPeriods(
     reportId,
     selected.section.authorId,

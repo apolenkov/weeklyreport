@@ -1,14 +1,14 @@
 import { act, renderHook } from "@testing-library/react";
-import type {
-  DraftSavePayload,
-  ReportSectionReadModel,
-} from "@weeklyreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { makeReportSectionFixture } from "../../../../test-utils/report-section-fixtures";
 import type { KanbanItem } from "../types";
 import type { LeadFormGeneration } from "./lead-form-generation";
-import type { LeadFormWritePort } from "./lead-form-write-port";
+import type {
+  LeadFormDraftSaveInput,
+  LeadFormWritePort,
+} from "./lead-form-write-port";
 import { InMemoryLeadFormWriteAdapter } from "./lead-form-write-port.in-memory";
 import { useLeadFormDraftCore } from "./use-lead-form-draft-core";
 
@@ -46,7 +46,7 @@ function productItem(stageNames: readonly string[]): KanbanItem {
 }
 
 function savedSectionFor(
-  payload: DraftSavePayload,
+  payload: LeadFormDraftSaveInput,
   stageNamesOf: (stageNames: readonly string[]) => readonly string[] = (
     stageNames,
   ) => stageNames,

@@ -45,6 +45,22 @@ describe("record confirmation", () => {
       false,
     );
   });
+  it("confirms an unfinished record whose missing detail the form shows blank", () => {
+    const unfinished = { ...risk, impact: "" };
+    expect(
+      confirmSavedRecord(
+        {
+          ...receipt,
+          submittedPayload: sectionToDraftPayload({
+            ...section,
+            risks: [unfinished],
+          }),
+          persistedRisks: [{ ...unfinished, id: "reminted" }],
+        },
+        target,
+      ),
+    ).toBe(true);
+  });
   it("rejects changed fields, duplicate identities and locally filtered records", () => {
     expect(
       confirmSavedRecord(

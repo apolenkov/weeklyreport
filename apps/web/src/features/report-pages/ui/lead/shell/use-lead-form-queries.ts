@@ -6,6 +6,7 @@ import { useQueryErrorHandler } from "../../../../../shared/hooks/query/use-quer
 import type { SessionUser } from "../../../../../shared/lib/auth/session-provider";
 import { getClientErrorDetails } from "../../../../../shared/lib/errors/client-error-reporting";
 import { useTRPC } from "../../../../../shared/lib/trpc/trpc-context";
+import { withFormSection } from "../../../../report-sections";
 import { buildLeadFormReportsView } from "./presentation/lead-form-report-view";
 import {
   deriveActiveIds,
@@ -107,6 +108,8 @@ function useLeadFormReportQueries({
       reportId: targetReportId ?? "",
     }),
     enabled: targetReportId !== null && sectionFetchEnabled,
+    // The form edits a missing detail as an empty field.
+    select: withFormSection,
     staleTime: 30_000,
     refetchOnWindowFocus: true,
   });

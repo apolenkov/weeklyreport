@@ -1,11 +1,15 @@
 import { z } from "zod";
 
-import { reportSectionReadModelSchema } from "./section.schema.js";
+import { authorReportSectionReadModelSchema } from "./author-section.schema.js";
 
-/** Describes the reconciled section returned by an item outcome command. */
+/**
+ * Describes the reconciled section returned by an item outcome command. It
+ * goes back to the author's own form, so it carries their unfinished risks
+ * and decisions (a missing detail is null).
+ */
 export const itemOutcomeResultSchema = z
   .object({
-    section: reportSectionReadModelSchema,
+    section: authorReportSectionReadModelSchema,
     stableId: z.uuid(),
     replayed: z.boolean(),
   })

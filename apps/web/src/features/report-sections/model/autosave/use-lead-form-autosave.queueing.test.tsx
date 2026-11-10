@@ -1,12 +1,10 @@
 import { act, renderHook } from "@testing-library/react";
-import type {
-  DraftSavePayload,
-  ReportSectionReadModel,
-} from "@weeklyreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { toast } from "sonner";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { expectDefined } from "../../../../test-utils/expect-defined.js";
+import type { LeadFormDraftSaveInput } from "../lead-form/lead-form-write-port";
 import { LeadFormWriteError } from "../lead-form/lead-form-write-port";
 import { encodeAutosaveComparisonKey } from "./autosave-stable-stringify";
 import { useLeadFormAutosave } from "./use-lead-form-autosave";
@@ -61,7 +59,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
     const payloadP3 = makePayload("payload-p3");
 
     const { result, rerender } = renderHook(
-      ({ payload }: { payload: DraftSavePayload }) =>
+      ({ payload }: { payload: LeadFormDraftSaveInput }) =>
         useLeadFormAutosave({
           writePort,
           reportSectionId: SECTION_ID,
@@ -152,7 +150,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
       },
     });
     const { result, rerender } = renderHook(
-      ({ payload }: { payload: DraftSavePayload }) =>
+      ({ payload }: { payload: LeadFormDraftSaveInput }) =>
         useLeadFormAutosave({
           writePort,
           reportSectionId: SECTION_ID,
@@ -212,7 +210,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
       },
     });
     const { result, rerender } = renderHook(
-      ({ payload }: { payload: DraftSavePayload }) =>
+      ({ payload }: { payload: LeadFormDraftSaveInput }) =>
         useLeadFormAutosave({
           writePort,
           reportSectionId: SECTION_ID,
@@ -273,7 +271,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
         },
       });
       const { result, rerender } = renderHook(
-        ({ payload }: { payload: DraftSavePayload }) =>
+        ({ payload }: { payload: LeadFormDraftSaveInput }) =>
           useLeadFormAutosave({
             writePort,
             reportSectionId: SECTION_ID,
@@ -339,7 +337,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
         initialSavedKey,
       }: {
         reportSectionId: string;
-        payload: DraftSavePayload;
+        payload: LeadFormDraftSaveInput;
         initialSavedKey: string | null;
       }) =>
         useLeadFormAutosave({
@@ -419,7 +417,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
         initialSavedKey,
       }: {
         reportSectionId: string;
-        payload: DraftSavePayload;
+        payload: LeadFormDraftSaveInput;
         initialSavedKey: string | null;
       }) =>
         useLeadFormAutosave({
@@ -474,7 +472,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
         payload,
         version,
       }: {
-        payload: DraftSavePayload | null;
+        payload: LeadFormDraftSaveInput | null;
         version: number;
       }) =>
         useLeadFormAutosave({
@@ -489,7 +487,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
       {
         wrapper,
         initialProps: {
-          payload: null as DraftSavePayload | null,
+          payload: null as LeadFormDraftSaveInput | null,
           version: 42,
         },
       },
@@ -511,7 +509,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
       mutationFn: (request) => Promise.resolve(makeResponse(request, 7)),
     });
     const { rerender } = renderHook(
-      ({ payload }: { payload: DraftSavePayload | null }) =>
+      ({ payload }: { payload: LeadFormDraftSaveInput | null }) =>
         useLeadFormAutosave({
           writePort,
           reportSectionId: SECTION_ID,
@@ -521,7 +519,10 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
           onVersionChange,
           debounceMs: 3000,
         }),
-      { wrapper, initialProps: { payload: null as DraftSavePayload | null } },
+      {
+        wrapper,
+        initialProps: { payload: null as LeadFormDraftSaveInput | null },
+      },
     );
 
     rerender({ payload: makePayload("first") });
@@ -540,7 +541,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
       mutationFn: () => Promise.reject(failure),
     });
     const { rerender } = renderHook(
-      ({ payload }: { payload: DraftSavePayload | null }) =>
+      ({ payload }: { payload: LeadFormDraftSaveInput | null }) =>
         useLeadFormAutosave({
           writePort,
           reportSectionId: SECTION_ID,
@@ -550,7 +551,10 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
           onVersionChange: vi.fn(),
           debounceMs: 3000,
         }),
-      { wrapper, initialProps: { payload: null as DraftSavePayload | null } },
+      {
+        wrapper,
+        initialProps: { payload: null as LeadFormDraftSaveInput | null },
+      },
     );
 
     rerender({ payload: makePayload("first") });
@@ -570,7 +574,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
       mutationFn: () => Promise.reject(conflictError),
     });
     const { rerender } = renderHook(
-      ({ payload }: { payload: DraftSavePayload | null }) =>
+      ({ payload }: { payload: LeadFormDraftSaveInput | null }) =>
         useLeadFormAutosave({
           writePort,
           reportSectionId: SECTION_ID,
@@ -581,7 +585,10 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
           onConflict,
           debounceMs: 3000,
         }),
-      { wrapper, initialProps: { payload: null as DraftSavePayload | null } },
+      {
+        wrapper,
+        initialProps: { payload: null as LeadFormDraftSaveInput | null },
+      },
     );
 
     rerender({ payload: makePayload("first") });
@@ -606,7 +613,7 @@ describe("useLeadFormAutosave — queueing, versioning & conflicts", () => {
         }),
     });
     const { rerender } = renderHook(
-      ({ payload }: { payload: DraftSavePayload }) =>
+      ({ payload }: { payload: LeadFormDraftSaveInput }) =>
         useLeadFormAutosave({
           writePort,
           reportSectionId: SECTION_ID,

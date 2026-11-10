@@ -2,7 +2,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type {
-  ItemOutcomeResult,
   LeadOpenWorkHistoryOccurrence,
   ReportSectionReadModel,
 } from "@weeklyreport/shared";
@@ -14,6 +13,7 @@ import { SessionContext } from "../../../../../shared/lib/auth/session-provider"
 import { TRPCProxyContext } from "../../../../../shared/lib/trpc/trpc-context";
 import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
 import { makeReportSectionFixture } from "../../../../../test-utils/report-section-fixtures";
+import type { LeadFormOutcomeResult } from "../../../../report-sections/client";
 import { LeadReportAssistantStore } from "../../lead-report-assistant-store";
 import { OverviewInputProvider } from "./overview-input-provider";
 
@@ -68,7 +68,7 @@ export function Wrapper({
   readonly promotePlan?: (
     input: unknown,
     current: ReportSectionReadModel,
-  ) => Promise<ItemOutcomeResult>;
+  ) => Promise<LeadFormOutcomeResult>;
   readonly saveDraft?: (
     input: unknown,
     current: ReportSectionReadModel,

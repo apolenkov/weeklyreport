@@ -6,10 +6,11 @@ import {
 
 import type { AutosaveState } from "./autosave/autosave-types";
 import { isUnconfirmedCarried } from "./lead-actions/lead-item-actions";
+import type { DraftSaveContent } from "./lead-section-draft-payload";
 import {
-  type DraftSaveContent,
-  toActivityStatusPayload,
-} from "./lead-section-draft-payload";
+  buildLeadSubmitPayload,
+  unfinishedDraftRecords,
+} from "./lead-submit-payload";
 import { computeCoupling, validateCoupling } from "./status-risk/coupling";
 import type { Product, RiskEntry } from "./types";
 
@@ -80,11 +81,25 @@ function couplingIssues(
     }));
 }
 
+// Unfinished risks and decisions are saved but cannot be submitted.
+function unfinishedRecordIssues(
+  draftPayload: DraftSaveContent,
+): LeadSubmitBlockingIssue[] {
+  return unfinishedDraftRecords(draftPayload).map((record) => ({
+    id: `unfinished-${record.kind}:${record.key}`,
+    label: record.label,
+    overviewFocus: "report-details",
+  }));
+}
+
 function submissionIssues(
   input: LeadSubmitReadinessInput,
 ): LeadSubmitBlockingIssue[] {
   const draftPayload = input.draftPayload;
   if (!input.draftSection || !draftPayload) return [];
+
+  const unfinished = unfinishedRecordIssues(draftPayload);
+  if (unfinished.length > 0) return unfinished;
 
   const submitInput = submitSectionSchema.safeParse(
     buildLeadSubmitPayload(draftPayload, input.draftSection.version),
@@ -248,27 +263,5 @@ export function deriveLeadSubmitReadiness(
     autosaveState: input.autosaveState,
     submitPending: input.submitPending,
     canOpenConfirmation: blockingIssues.length === 0 && !input.submitPending,
-  };
-}
-
-export function buildLeadSubmitPayload(
-  draftPayload: DraftSaveContent,
-  version: number,
-) {
-  return {
-    ...draftPayload,
-    version,
-    projectStatuses: draftPayload.projectStatuses.map((status) => ({
-      projectId: status.projectId,
-      status: status.status ?? ("green" as const),
-    })),
-    activityStatuses: (draftPayload.activityStatuses ?? []).map((status) =>
-      toActivityStatusPayload({ ...status, status: status.status ?? "green" }),
-    ),
-    stageStatuses: (draftPayload.stageStatuses ?? []).map((status) => ({
-      ...status,
-      status: status.status ?? ("green" as const),
-    })),
-    confirmed: true as const,
   };
 }
