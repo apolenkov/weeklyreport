@@ -149,6 +149,7 @@ function SlidesQuickAddRiskDialog({
       key={dialog.dialogKey}
       open={state.open}
       risk={null}
+      unfinishedAllowed
       products={viewModel.products}
       activities={viewModel.activityOptions}
       defaultProductId={createState?.seedProductId}

@@ -26,6 +26,8 @@ interface RisksSectionProps {
     ((productId: string) => readonly string[]) | undefined;
   readonly sectionAuthorName?: string | undefined;
   readonly addSignal?: number | undefined;
+  // The author's own form lets a named risk be saved before its details.
+  readonly unfinishedAllowed?: boolean | undefined;
 }
 
 interface RiskListProps {
@@ -84,6 +86,7 @@ interface RisksSectionDialogsProps {
   readonly activities?: readonly ParentActivityOption[] | undefined;
   readonly stagesForProduct?:
     ((productId: string) => readonly string[]) | undefined;
+  readonly unfinishedAllowed?: boolean | undefined;
 }
 
 function RisksSectionDialogs({
@@ -91,6 +94,7 @@ function RisksSectionDialogs({
   products,
   activities,
   stagesForProduct,
+  unfinishedAllowed,
 }: RisksSectionDialogsProps) {
   const { pendingDelete } = editing;
 
@@ -102,6 +106,7 @@ function RisksSectionDialogs({
         products={products ?? []}
         activities={activities}
         stagesForProduct={stagesForProduct}
+        unfinishedAllowed={unfinishedAllowed}
         onSave={editing.saveFromDialog}
         onCancel={editing.cancelDialog}
         {...deriveRiskDialogSeedProps(
@@ -138,6 +143,7 @@ export function RisksSection({
   stagesForProduct,
   sectionAuthorName,
   addSignal = 0,
+  unfinishedAllowed,
 }: RisksSectionProps) {
   const editing = useRiskListEditing({
     risks,
@@ -165,6 +171,7 @@ export function RisksSection({
         products={products}
         activities={activities}
         stagesForProduct={stagesForProduct}
+        unfinishedAllowed={unfinishedAllowed}
       />
     </div>
   );

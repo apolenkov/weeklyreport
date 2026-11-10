@@ -1,6 +1,7 @@
 import { reviewRecordAnchor } from "../../../shared/ui/feedback/review-record-focus";
 import { MetaRow } from "../../../shared/ui/report-shell/meta-row";
 import type { RiskEntry, StageStatus } from "../../report-sections";
+import { hasCompleteRiskDetails } from "../../report-sections";
 import {
   RiskCardActions,
   RiskCardSummary,
@@ -165,6 +166,15 @@ export function RiskCard({
         onToggleSeverity={onToggleSeverity}
       />
       <RiskCardSummary risk={risk} />
+      {!hasCompleteRiskDetails(risk) && (
+        <p
+          data-testid="risk-unfinished-note"
+          className="mt-2 text-xs font-semibold text-[var(--color-status-at-risk-fg)]"
+        >
+          Saved, unfinished — only you see it. Add its impact and mitigation
+          before you submit.
+        </p>
+      )}
       {state.needsStage && (
         <p className="mt-2 text-xs font-semibold text-[var(--color-status-at-risk-fg)]">
           ⚠ Select at least one stage — required for at-risk/blocked products.

@@ -30,6 +30,7 @@ interface RiskEditDialogFieldsProps {
   readonly onMitigationChange: (value: string) => void;
   readonly mitigationError: string | undefined;
   readonly mitigationRef: RefObject<HTMLTextAreaElement | null>;
+  readonly detailsOptional: boolean;
   readonly parent: RecordParent;
   readonly parentError: string | undefined;
   readonly products: readonly Product[];
@@ -65,7 +66,15 @@ type RiskProseColumnProps = Pick<
   | "onMitigationChange"
   | "mitigationError"
   | "mitigationRef"
+  | "detailsOptional"
 >;
+
+const DETAILS_LATER_HINT = (
+  <p className="mb-1 text-xs text-[var(--color-muted-foreground)]">
+    Optional for now. Only you see this risk until both are filled in, and the
+    report cannot be submitted without them.
+  </p>
+);
 
 // Risk → Impact → Mitigation, the order a reader needs them.
 function RiskProseColumn(props: RiskProseColumnProps) {
@@ -87,7 +96,8 @@ function RiskProseColumn(props: RiskProseColumnProps) {
       <RecordTextareaField
         id={`${props.idPrefix}-risk-impact`}
         label="Impact"
-        required
+        required={!props.detailsOptional}
+        hint={props.detailsOptional ? DETAILS_LATER_HINT : undefined}
         value={props.impact}
         onChange={props.onImpactChange}
         error={props.impactError}
@@ -99,7 +109,7 @@ function RiskProseColumn(props: RiskProseColumnProps) {
       <RecordTextareaField
         id={`${props.idPrefix}-risk-mitigation`}
         label="Mitigation"
-        required
+        required={!props.detailsOptional}
         value={props.mitigation}
         onChange={props.onMitigationChange}
         error={props.mitigationError}

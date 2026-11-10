@@ -7,6 +7,7 @@ import type {
   Product,
   RiskEntry,
 } from "../../report-sections";
+import { hasCompleteRiskDetails } from "../../report-sections";
 import type { RiskSeverity } from "./risk-edit-dialog-helpers";
 import {
   type RiskEditFields,
@@ -33,6 +34,7 @@ interface UseRiskEditDialogArgs {
   readonly initialSeverity?: RiskSeverity | undefined;
   readonly stagesForProduct?:
     ((productId: string) => readonly string[]) | undefined;
+  readonly unfinishedAllowed?: boolean | undefined;
 }
 
 // The prose fields are exposed verbatim; only the error-routing entry points
@@ -68,6 +70,10 @@ function toParentStageView({
 export function useRiskEditDialog(args: UseRiskEditDialogArgs) {
   const { risk, products, onSave, onCancel } = args;
   const isCreate = risk === null;
+  // A finished risk stays finished: its details may be reworded, not removed.
+  const detailsOptional =
+    args.unfinishedAllowed === true &&
+    (risk === null || !hasCompleteRiskDetails(risk));
 
   const fields = useRiskEditFields({
     initialText: risk?.text ?? "",
@@ -102,6 +108,7 @@ export function useRiskEditDialog(args: UseRiskEditDialogArgs) {
       onSave,
       dialogSurfaceRef,
       idPrefix: args.idPrefix,
+      detailsOptional,
     });
   }
 
@@ -123,6 +130,7 @@ export function useRiskEditDialog(args: UseRiskEditDialogArgs) {
   return {
     dialogSurfaceRef,
     headerVerb: isCreate ? "Add risk" : "Edit risk",
+    detailsOptional,
     ...toFieldView(fields),
     ...toParentStageView(parentStage),
     handleSave,
