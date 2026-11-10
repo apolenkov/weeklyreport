@@ -67,6 +67,27 @@ describe("runProjectActivityTransaction", () => {
     expect(transaction).toHaveBeenCalledTimes(2);
   });
 
+  it("retries a conflict a raw-query lock reports inside its failure", async () => {
+    const rawQueryConflict = Object.assign(new Error("Raw query failed"), {
+      code: "P2010",
+      meta: {
+        driverAdapterError: {
+          name: "DriverAdapterError",
+          cause: { originalCode: "40001", kind: "TransactionWriteConflict" },
+        },
+      },
+    });
+    const transaction = vi
+      .fn()
+      .mockRejectedValueOnce(rawQueryConflict)
+      .mockResolvedValueOnce("committed");
+
+    await expect(
+      runProjectActivityTransaction(fakePrisma(transaction), vi.fn()),
+    ).resolves.toBe("committed");
+    expect(transaction).toHaveBeenCalledTimes(2);
+  });
+
   it("does not retry unrelated failures", async () => {
     const failure = new Error("connection lost");
     const transaction = vi.fn(() => Promise.reject(failure));

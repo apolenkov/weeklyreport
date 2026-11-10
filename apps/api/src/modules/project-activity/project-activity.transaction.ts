@@ -13,14 +13,23 @@ function isObject(value: unknown): value is Record<PropertyKey, unknown> {
   return typeof value === "object" && value !== null;
 }
 
+function isWriteConflict(value: unknown): boolean {
+  return (
+    isObject(value) &&
+    value.name === "DriverAdapterError" &&
+    isObject(value.cause) &&
+    value.cause.kind === "TransactionWriteConflict"
+  );
+}
+
 function isSerializationConflict(error: unknown): boolean {
   if (!isObject(error)) return false;
   if (error.code === "P2034") return true;
-
+  // A lock taken through a raw query reports the same conflict as a raw-query
+  // failure that wraps the adapter error.
   return (
-    error.name === "DriverAdapterError" &&
-    isObject(error.cause) &&
-    error.cause.kind === "TransactionWriteConflict"
+    isWriteConflict(error) ||
+    (isObject(error.meta) && isWriteConflict(error.meta.driverAdapterError))
   );
 }
 
