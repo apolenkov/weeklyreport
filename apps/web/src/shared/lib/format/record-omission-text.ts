@@ -63,3 +63,19 @@ export function searchOmissionNote(
   const counted = `Search leaves out ${summary.unknown ? "at least " : ""}${kinds.join(" and ")}, still being written.`;
   return summary.unknown ? `${counted} ${SEARCH_UNCOUNTED}` : counted;
 }
+
+const ASSISTANT_UNCOUNTED =
+  "Some reports were published before unfinished records were counted, so the answer may miss a few.";
+
+/**
+ * What the report assistant is told it cannot read. Like the search note it
+ * describes the readable corpus and never says an omitted record matched.
+ */
+export function assistantOmissionNote(
+  summary: RecordOmissionSummary,
+): string | null {
+  const kinds = omittedKinds(summary);
+  if (kinds.length === 0) return summary.unknown ? ASSISTANT_UNCOUNTED : null;
+  const counted = `The assistant does not read ${summary.unknown ? "at least " : ""}${kinds.join(" and ")}, still being written.`;
+  return summary.unknown ? `${counted} ${ASSISTANT_UNCOUNTED}` : counted;
+}

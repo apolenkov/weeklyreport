@@ -41,6 +41,11 @@ const successOutcome = {
   metadata: { truncated: false, insufficientEvidence: false },
 };
 
+// An empty answer always says what the readable corpus leaves out.
+const NOTHING_OMITTED = { risks: 0, decisions: 0, unknown: false };
+const productState = (kind: string) =>
+  kind === "no_results" ? { kind, coverage: NOTHING_OMITTED } : { kind };
+
 function renderAssistant(
   availability:
     | "available"
@@ -732,7 +737,7 @@ describe("LeadReportAssistant", () => {
     ["ai_not_configured", "not configured yet"],
   ] as const)("renders the %s product state", async (kind, message) => {
     const mutation = renderAssistant();
-    mutation.mutationFn.mockResolvedValue({ kind });
+    mutation.mutationFn.mockResolvedValue(productState(kind));
     await openAssistant();
     submitQuestion();
     expect(
@@ -748,7 +753,7 @@ describe("LeadReportAssistant", () => {
     "returns focus to the editor for the %s outcome without retrying",
     async (kind, actionLabel) => {
       const mutation = renderAssistant();
-      mutation.mutationFn.mockResolvedValue({ kind });
+      mutation.mutationFn.mockResolvedValue(productState(kind));
       await openAssistant();
       submitQuestion("Original question");
 
