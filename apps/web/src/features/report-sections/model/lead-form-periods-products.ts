@@ -157,5 +157,8 @@ export function mapLeadPeriods(
       itemCount: e.itemCount,
       riskCount: e.riskCount,
       productCount: e.productCount,
+      retainedDraftCount: e.retainedDrafts
+        ? e.retainedDrafts.risks + e.retainedDrafts.decisions
+        : undefined,
     }));
 }

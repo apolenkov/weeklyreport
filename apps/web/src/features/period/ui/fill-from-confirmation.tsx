@@ -1,8 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
+import { countLabel } from "../../../shared/lib/format/pluralize";
 import { ConfirmationDialog } from "../../../shared/ui/dialogs/confirmation-dialog";
+import { REPORTS_ROUTE } from "../../../shared/ui/navigation/nav-links";
 import type { ReportPeriod } from "../../report-sections";
 
 export type FillFromHandler = (sourceSectionId: string) => void | Promise<void>;
@@ -63,6 +66,25 @@ export function useFillFromConfirmation(
   };
 }
 
+// Fill From copies finished records only. The source week's unfinished drafts
+// stay there; the note points at History, where their author can read them.
+function UncopiedDraftsNote({ count }: { readonly count: number }) {
+  if (count === 0) return null;
+  return (
+    <p className="mb-2 text-sm text-[var(--color-muted-foreground)]">
+      {countLabel(count, "unfinished draft", "unfinished drafts")} from that
+      week will not be copied. You can read {count === 1 ? "it" : "them"} in{" "}
+      <Link
+        href={REPORTS_ROUTE}
+        className="font-semibold text-[var(--color-starbucks-accent)] underline underline-offset-2"
+      >
+        History
+      </Link>
+      .
+    </p>
+  );
+}
+
 export function FillFromConfirmDialog({
   period,
   open,
@@ -98,6 +120,7 @@ export function FillFromConfirmDialog({
       onConfirm={onConfirm}
       onClose={onClose}
     >
+      <UncopiedDraftsNote count={period.retainedDraftCount ?? 0} />
       {error ? (
         <p role="alert" className="text-sm text-[var(--color-destructive)]">
           {error}
