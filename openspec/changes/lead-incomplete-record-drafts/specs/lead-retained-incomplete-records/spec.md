@@ -91,6 +91,27 @@ Incomplete text, identities, comments and current retained-count discovery MUST 
 - **AND** no stale server cache serves protected draft data or retained discovery; private client caches are cleared on observed entitlement loss
 - **AND** this does not claim to retract text already delivered before demotion
 
+#### Scenario: An open recovery view observes entitlement loss
+
+- **GIVEN** private drafts are already cached and visible in an open recovery view
+- **WHEN** the client observes a current session without authoring entitlement, an anonymous session or a different authenticated identity
+- **THEN** the old private content is removed from mounted views and private query caches
+- **AND** a response from a query started before that observation cannot restore the old private content
+- **AND** a private cache already present when a viewer session is first observed receives the same treatment
+
+#### Scenario: Complete history survives demotion of the same actor
+
+- **WHEN** an active author becomes a viewer while ordinary or paginated own-history responses are cached
+- **THEN** private retained-count discovery is removed from every cached page
+- **AND** complete history metadata, pagination and authorized public publication-omission notices remain available
+- **AND** a different identity or an anonymous session does not inherit the previous actor's own-history cache
+
+#### Scenario: Refreshing an entitled author's group or role preserves private access
+
+- **WHEN** a session refresh changes group metadata or switches between canonical authoring roles for the same active actor
+- **THEN** this alone does not revoke the actor's private draft access or clear their cached drafts
+- **AND** existing current server ownership and assignment checks still govern subsequent reads and writes
+
 #### Scenario: Inactive user and stale section pointer
 
 - **WHEN** a user becomes inactive, or a cached activeReportSectionId points to a section not authored by the current actor

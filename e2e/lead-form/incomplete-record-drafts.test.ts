@@ -4,7 +4,9 @@
 // leaves out (openspec: lead-incomplete-record-drafts).
 import assert from "node:assert/strict";
 import test from "node:test";
+import { setTimeout } from "node:timers/promises";
 
+import { withDemotedFixtureAuthor } from "../setup/demoted-fixture-author.js";
 import { loginAsHead, openLeadReport } from "./access.js";
 import {
   command,
@@ -122,7 +124,7 @@ void test("Head publication names the unfinished risk it leaves out and never sh
   assert.equal(refsByRole(published, "button", "Publish & lock").length, 0);
 });
 
-void test("after publication the Lead reads the kept unfinished risk in History", async () => {
+void test("History recovery clears an open private draft when the same page observes author demotion", async () => {
   await saveUnfinishedRisk();
   const session = headSession();
   await loginAsHead(session);
@@ -154,4 +156,26 @@ void test("after publication the Lead reads the kept unfinished risk in History"
     refsByRole(await snapshot(), "button", `Copy risk text: ${NAME}`).length,
     1,
   );
+
+  const documentBefore = await command(["eval", "performance.timeOrigin"]);
+  await withDemotedFixtureAuthor(async () => {
+    // auth.me is fresh for 30 seconds. A visibility refresh must update the
+    // existing QueryClient; reloading would discard the stale cache by itself.
+    await setTimeout(31_000);
+    await command([
+      "eval",
+      "window.dispatchEvent(new Event('visibilitychange'))",
+    ]);
+    await waitSnapshot(
+      (data) =>
+        !data.snapshot.includes(NAME) &&
+        refsByRole(data, "button", view).length === 0,
+      "Observed demotion must remove the mounted draft and its History discovery link",
+    );
+    assert.deepEqual(
+      await command(["eval", "performance.timeOrigin"]),
+      documentBefore,
+      "Entitlement refresh must keep the same browser document",
+    );
+  });
 });
