@@ -9,11 +9,14 @@ import type {
 import type { StagesForProduct } from "../bridges/lead-form-sync-bridge";
 import { LeadFormAddButton } from "./lead-form-add-button";
 import { ChatIcon } from "./lead-form-icons";
+import type { DecisionSeed } from "./use-lead-form-add-signals";
 
 export interface LeadFormDecisionsActions {
   readonly onDecisionsChange: (next: readonly DecisionEntry[]) => void;
   readonly addDecision: () => void;
   readonly decisionsAddSignal: number;
+  readonly decisionSeed: DecisionSeed | null;
+  readonly addDecisionFor: (seed: DecisionSeed) => void;
 }
 
 interface LeadFormDecisionsSectionProps {
@@ -68,7 +71,12 @@ export function LeadFormDecisionsSection({
         stagesForProduct={stagesForProduct}
         products={products}
         activities={activityOptions}
-        defaultProductId={products[0]?.id}
+        defaultProductId={
+          actions.decisionSeed
+            ? actions.decisionSeed.productId
+            : products[0]?.id
+        }
+        defaultActivityId={actions.decisionSeed?.activityId}
         addSignal={actions.decisionsAddSignal}
         publishedLockedIds={publishedLockedDecisionIds}
         unfinishedAllowed

@@ -91,6 +91,7 @@ export type {
   StatusOverviewEditTarget,
   StatusOverviewItem,
   StatusOverviewModel,
+  StatusOverviewRecordTarget,
 } from "./model/status-overview";
 export { projectStatusOverview } from "./model/status-overview";
 export type { PlanVerdict } from "./model/status-overview-verdict";

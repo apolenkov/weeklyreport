@@ -158,6 +158,7 @@ export function UnitGroup({
             onEditItem={overview.onEditItem}
             onEditItemText={overview.onEditItemText}
             onAddItem={onAddItem}
+            onAddRecord={overview.onAddRecord}
             ownedStageStarts={ownedStageStarts(unit, overview)}
             onPlanItem={overview.onPlanItem}
             onMoveItem={overview.onMoveItem}

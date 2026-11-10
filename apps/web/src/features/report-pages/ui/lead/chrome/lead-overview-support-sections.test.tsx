@@ -80,6 +80,8 @@ function Harness({
     addRisk: () => setRisksAddSignal((value) => value + 1),
     onDecisionsChange: () => undefined,
     addDecision: () => undefined,
+    decisionSeed: null,
+    addDecisionFor: () => undefined,
     decisionsAddSignal: 0,
   };
 

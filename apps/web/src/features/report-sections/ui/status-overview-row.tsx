@@ -95,6 +95,7 @@ export function StatusOverviewUnitRow({
           <StatusOverviewTimelineFooter
             unit={unit}
             onAddItem={handlers.onAddItem}
+            onAddRecord={handlers.onAddRecord}
             ownedStageStarts={handlers.ownedStageStarts}
             editorSlot={editorSlot}
           />

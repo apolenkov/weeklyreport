@@ -30,6 +30,7 @@ interface DecisionEditDialogProps {
   readonly products?: readonly Product[] | undefined;
   readonly activities?: readonly ParentActivityOption[] | undefined;
   readonly defaultProductId?: string | undefined;
+  readonly defaultActivityId?: string | undefined;
   readonly onSave: (next: DecisionEntry) => void;
   readonly onCancel: () => void;
   readonly onDelete?: (() => void) | undefined;
@@ -87,6 +88,7 @@ function DecisionEditDialogContent({
   products,
   activities = EMPTY_ACTIVITIES,
   defaultProductId,
+  defaultActivityId,
   onSave,
   onCancel,
   onDelete,
@@ -99,6 +101,7 @@ function DecisionEditDialogContent({
     products,
     activities,
     defaultProductId,
+    defaultActivityId,
     onSave,
     onCancel,
     isPending,

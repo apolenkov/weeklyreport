@@ -4,6 +4,7 @@ import type {
   StatusOverviewEditTarget,
   StatusOverviewItem,
   StatusOverviewModel,
+  StatusOverviewRecordTarget,
 } from "../model/status-overview";
 import type { StatusOverviewActivityFieldsChange } from "./status-overview-activity-editor";
 import type { StatusOverviewEditorSlot } from "./status-overview-editor-slot";
@@ -24,6 +25,9 @@ export interface StatusOverviewProps {
     ((item: StatusOverviewItem, text: string) => void) | undefined;
   readonly onAddItem?:
     ((target: StatusOverviewCreateTarget) => void) | undefined;
+  /** Starts a risk or decision already bound to the unit it was raised from. */
+  readonly onAddRecord?:
+    ((target: StatusOverviewRecordTarget) => void) | undefined;
   readonly ownedStageStartsForProduct?:
     ((productId: string) => readonly string[]) | undefined;
   readonly onPlanItem?: ((item: StatusOverviewItem) => void) | undefined;
