@@ -5,6 +5,8 @@ import {
   requirePublishedSnapshot,
 } from "@weeklyreport/report-persistence";
 import {
+  isCompleteDecision,
+  isCompleteRisk,
   type MyHistoryResult,
   type PublishedReportSectionReadModel,
   summarizeRecordOmissions,
@@ -263,6 +265,10 @@ async function queryMyHistoryPageInTransaction(
   const candidates: HistoryCandidate[] = [
     ...liveRows.map((row) => ({
       ...row,
+      // Unfinished drafts are private: the card counts what the report
+      // shows; the entitled author's own count travels as retainedDrafts.
+      risks: row.risks.filter(isCompleteRisk),
+      decisions: row.decisions.filter(isCompleteDecision),
       report: {
         ...row.report,
         reopened: row.report.periodStatus === "reopened",

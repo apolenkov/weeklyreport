@@ -26,7 +26,7 @@ describe("ReportSectionsService — getActiveSection", () => {
       NOOP_REPORT_SECTIONS_TELEMETRY,
       createNullLogger(),
     );
-    const section = await service.getActiveSection(SECTION_ID);
+    const section = await service.getActiveSection(SECTION_ID, AUTHOR_ID);
 
     expect(section.reportSectionId).toBe(SECTION_ID);
     expect(section.authorName).toBe("Lead 1");
@@ -40,7 +40,10 @@ describe("ReportSectionsService — getActiveSection", () => {
     );
 
     await expect(
-      service.getActiveSection("99999999-9999-4999-8999-999999999999"),
+      service.getActiveSection(
+        "99999999-9999-4999-8999-999999999999",
+        AUTHOR_ID,
+      ),
     ).rejects.toBeInstanceOf(ReportSectionNotFoundError);
   });
 
@@ -58,7 +61,7 @@ describe("ReportSectionsService — getActiveSection", () => {
       NOOP_REPORT_SECTIONS_TELEMETRY,
       createNullLogger(),
     );
-    const result = await service.getActiveSection(SECTION_ID);
+    const result = await service.getActiveSection(SECTION_ID, AUTHOR_ID);
 
     expect(result.status).toBe("submitted");
     expect(result.submittedAt).toBeInstanceOf(Date);
@@ -70,7 +73,7 @@ describe("ReportSectionsService — getActiveSection", () => {
       NOOP_REPORT_SECTIONS_TELEMETRY,
       createNullLogger(),
     );
-    const result = await service.getActiveSection(SECTION_ID);
+    const result = await service.getActiveSection(SECTION_ID, AUTHOR_ID);
 
     expect(typeof result.reportSectionId).toBe("string");
     expect(typeof result.reportId).toBe("string");

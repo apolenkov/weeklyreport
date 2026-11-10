@@ -172,7 +172,10 @@ describe("saveSection (integration) — stored incomplete records", () => {
     await expect(
       repo.saveSection(
         {
-          ...(await service.getActiveSection(testData.section.id)),
+          ...(await service.getActiveSection(
+            testData.section.id,
+            testData.section.authorId,
+          )),
           status: "submitted",
         },
         1,

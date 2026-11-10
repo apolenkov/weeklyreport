@@ -27,7 +27,8 @@ describe("missing initial report section error mapping", () => {
 
       await expect(
         withDomainErrorMapping(() => {
-          if (operation === "read") return service.getActiveSection(missingId);
+          if (operation === "read")
+            return service.getActiveSection(missingId, AUTHOR_ID);
           if (operation === "save") return service.saveDraft(draft, AUTHOR_ID);
           return service.submitSection(
             {

@@ -279,7 +279,9 @@ describe("ReportSectionsService — submitSection validation errors", () => {
       code: "MISSING_TRAFFIC_LIGHT",
     });
     expect(save).not.toHaveBeenCalled();
-    expect(await service.getActiveSection(SECTION_ID)).toEqual(baseSection);
+    expect(await service.getActiveSection(SECTION_ID, AUTHOR_ID)).toEqual(
+      baseSection,
+    );
   });
 
   it("rejects when the period lookup returns null", async () => {
