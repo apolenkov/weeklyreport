@@ -4,6 +4,16 @@
 
 Reviewer comment creation and deletion MUST reject nonauthor writes against currently incomplete risk or decision anchors after locked lineage re-resolution. Creation MUST use the existing inaccessible-record not-found response; deletion MUST use the existing inaccessible-comment not-found response. Head/admin and comment ownership MUST NOT bypass this boundary. Item, complete-record and section-level review permissions remain unchanged.
 
+Service prechecks MUST also apply the current anchor completeness and exact section-author boundary using the authenticated actor identity, before reviewer/group-specific checks or invoking a writer. A successful precheck MUST NOT replace the locked recheck.
+
+#### Scenario: An already incomplete anchor is inaccessible at the service boundary
+
+- **GIVEN** a risk or decision is incomplete before the comment command starts
+- **WHEN** a nonauthor Head, admin or designated reviewer attempts creation or deletion, including deletion of their own existing comment
+- **THEN** the service returns the inaccessible-record or inaccessible-comment response before invoking the coordinated writer
+- **AND** moving the reviewer to another group does not disclose the private anchor through a different permission error
+- **AND** the stored anchor and comment identities, text, authors and timestamps remain unchanged
+
 #### Scenario: Save wins before a reviewer comment
 
 - **GIVEN** a reviewer resolved a complete risk or never-published decision before its author cleared a detail
