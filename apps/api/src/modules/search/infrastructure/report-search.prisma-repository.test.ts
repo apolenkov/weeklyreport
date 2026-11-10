@@ -249,6 +249,7 @@ describe("ReportSearchPrismaRepository", () => {
         periodStart: live.periodStart,
         source: "live",
         sections: [],
+        recordOmissions: new Map(),
       },
     ]);
     expect(findUnique).toHaveBeenCalledWith(

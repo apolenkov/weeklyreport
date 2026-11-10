@@ -1,5 +1,6 @@
 import type {
   CanonicalStatus,
+  RecordOmission,
   ReportSectionReadModel,
   SearchPlan,
 } from "@weeklyreport/shared";
@@ -20,6 +21,10 @@ export type ReportOccurrence = Readonly<{
   periodStart: Date;
   source: ReportSourceKind;
   sections: readonly ReportSectionReadModel[];
+  // Unfinished risks and decisions each section leaves out, by section id. A
+  // section without an entry was frozen before the counts existed: readers
+  // answer "unknown" for it, never zero.
+  recordOmissions?: ReadonlyMap<string, RecordOmission>;
 }>;
 
 export type SectionScope = Readonly<{

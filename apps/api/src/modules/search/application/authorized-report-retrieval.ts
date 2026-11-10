@@ -1,3 +1,9 @@
+import {
+  type RecordOmissionSummary,
+  summarizeRecordOmissions,
+  summarizeRecordOmissionsForScopes,
+} from "@weeklyreport/shared";
+
 import { filterSectionToSharedProducts } from "../../report-sections/index.js";
 import { uniqueStrings } from "../domain/entity-resolver.catalog.js";
 import type {
@@ -9,7 +15,36 @@ import type { ReportSearchAccessRepository } from "./report-search.repository.js
 export type AuthorizedReportRetrieval = Readonly<{
   occurrences: readonly ReportOccurrence[];
   sectionScopes: readonly SectionScope[];
+  // What the authorized corpus leaves out, counted under the same lens as its
+  // content: the whole own section, only the shared Products of a foreign one.
+  coverage: RecordOmissionSummary;
 }>;
+
+const scopeCoverage = (
+  occurrence: ReportOccurrence,
+  scope: SectionScope,
+  sharedProducts: ReadonlyMap<string, ReadonlySet<string>>,
+): RecordOmissionSummary => {
+  const omission = occurrence.recordOmissions?.get(scope.sectionId);
+  return scope.visibility === "own"
+    ? summarizeRecordOmissions([omission])
+    : summarizeRecordOmissionsForScopes(
+        [omission],
+        [...(sharedProducts.get(scope.authorId) ?? [])].map((parentId) => ({
+          parentKind: "product" as const,
+          parentId,
+        })),
+      );
+};
+
+const addCoverage = (
+  left: RecordOmissionSummary,
+  right: RecordOmissionSummary,
+): RecordOmissionSummary => ({
+  risks: left.risks + right.risks,
+  decisions: left.decisions + right.decisions,
+  unknown: left.unknown || right.unknown,
+});
 
 const sharedProductsByAuthor = (
   entries: readonly (readonly [string, readonly string[]])[],
@@ -133,5 +168,12 @@ export async function authorizeReportOccurrences(
   return {
     occurrences: authorized.map(({ occurrence }) => occurrence),
     sectionScopes: authorized.flatMap(({ scopes }) => scopes),
+    coverage: authorized
+      .flatMap(({ occurrence, scopes }) =>
+        scopes.map((scope) =>
+          scopeCoverage(occurrence, scope, sharedProductsByAuthorIndex),
+        ),
+      )
+      .reduce(addCoverage, summarizeRecordOmissions([])),
   };
 }

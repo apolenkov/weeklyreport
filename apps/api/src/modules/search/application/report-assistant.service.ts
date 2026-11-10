@@ -20,7 +20,6 @@ import { createClarificationTokenCodec } from "./clarification-token.js";
 import {
   type CandidatePreparation,
   prepareReportAssistantCandidates,
-  UNCOUNTED_COVERAGE,
 } from "./report-assistant.candidate-preparation.js";
 import {
   type AnswerPort,
@@ -279,7 +278,7 @@ export class ReportAssistantService {
         kind: "ok",
         answerMarkdown: answered.answer.answerMarkdown,
         citations: [...answered.citations],
-        coverage: UNCOUNTED_COVERAGE,
+        coverage: preparation.coverage,
         metadata: {
           truncated: grounding.truncated || preparation.limited.truncated,
           insufficientEvidence: answered.answer.insufficientEvidence,

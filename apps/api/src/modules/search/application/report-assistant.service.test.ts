@@ -770,6 +770,46 @@ describe("ReportAssistantService", () => {
     });
   });
 
+  it("reports what the readable corpus leaves out with an answer and with none", async () => {
+    const counted = {
+      ...occurrence(),
+      recordOmissions: new Map([
+        [
+          SECTION_ID,
+          {
+            version: 1 as const,
+            buckets: [
+              {
+                kind: "risk" as const,
+                parentKind: "product" as const,
+                parentId: PRODUCT_ID,
+                stageNames: ["Development"],
+                count: 2,
+              },
+            ],
+          },
+        ],
+      ]),
+    };
+    const coverage = { risks: 2, decisions: 0, unknown: false };
+    const answered = createHarness(basePlan);
+    vi.mocked(answered.repository.loadOccurrences).mockResolvedValue([counted]);
+    const empty = createHarness({
+      ...basePlan,
+      recordKinds: ["risk"],
+      filters: { ...basePlan.filters, riskSeverities: ["at-risk"] },
+    });
+    vi.mocked(empty.repository.loadOccurrences).mockResolvedValue([counted]);
+
+    await expect(
+      answered.service.answer(request, ACTOR_ID),
+    ).resolves.toMatchObject({ kind: "ok", coverage });
+    await expect(empty.service.answer(request, ACTOR_ID)).resolves.toEqual({
+      kind: "no_results",
+      coverage,
+    });
+  });
+
   it("returns no results instead of broadening an incompatible record filter", async () => {
     const harness = createHarness({
       ...basePlan,

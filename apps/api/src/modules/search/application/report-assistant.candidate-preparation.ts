@@ -1,7 +1,7 @@
-import {
-  type ReportAssistantOutcome,
-  type SearchPlan,
-  UNCOUNTED_RECORD_OMISSIONS,
+import type {
+  RecordOmissionSummary,
+  ReportAssistantOutcome,
+  SearchPlan,
 } from "@weeklyreport/shared";
 
 import {
@@ -21,19 +21,15 @@ import type { ReportAssistantTrace } from "./report-assistant.telemetry.js";
 import type { ReportSearchRepository } from "./report-search.repository.js";
 import type { SemanticRetrievalService } from "./semantic-retrieval.service.js";
 
-// TODO(TASK-836): summarize the authorized corpus's omission buckets before
-// text or semantic matching; until then coverage totals are not known.
-export const UNCOUNTED_COVERAGE = UNCOUNTED_RECORD_OMISSIONS;
-
-const NO_RESULTS_OUTCOME: ReportAssistantOutcome = {
+// Coverage describes the authorized corpus before text or semantic matching,
+// so an empty answer carries it too and never hints that a hidden record
+// matched (openspec: search-contract-precision).
+const noResults = (
+  coverage: RecordOmissionSummary,
+): ReportAssistantOutcome => ({
   kind: "no_results",
-  coverage: UNCOUNTED_COVERAGE,
-};
-
-const terminalOutcome = (
-  kind: "no_results" | "result_set_too_large",
-): ReportAssistantOutcome =>
-  kind === "no_results" ? NO_RESULTS_OUTCOME : { kind };
+  coverage,
+});
 
 type ResolvedCandidates = Extract<
   Awaited<ReturnType<typeof resolveReportAssistantCandidates>>,
@@ -46,6 +42,7 @@ export type CandidatePreparation =
       plan: ResolvedCandidates["plan"];
       sorted: readonly SearchCandidate[];
       limited: Extract<CandidateLimitOutcome, { kind: "ok" }>;
+      coverage: RecordOmissionSummary;
       trace: ReportAssistantTrace;
     }>
   | Readonly<{
@@ -125,7 +122,7 @@ const rankCandidates = async ({
       kind: "terminal",
       outcome:
         semantic.kind === "no_results"
-          ? NO_RESULTS_OUTCOME
+          ? noResults(resolved.coverage)
           : { kind: semantic.kind },
       trace: cacheTrace,
     };
@@ -153,6 +150,7 @@ const rankCandidates = async ({
     plan: resolved.plan,
     sorted,
     limited,
+    coverage: resolved.coverage,
     trace: cacheTrace,
   };
 };
@@ -189,7 +187,9 @@ export const prepareReportAssistantCandidates = async ({
               total: resolved.total,
               truncated: resolved.truncated,
             }
-          : terminalOutcome(resolved.kind),
+          : resolved.kind === "no_results"
+            ? noResults(resolved.coverage)
+            : { kind: resolved.kind },
       trace: { ...trace, candidateCount: 0 },
     };
   }
