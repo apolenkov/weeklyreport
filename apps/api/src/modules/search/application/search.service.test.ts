@@ -48,8 +48,11 @@ function makeHit(overrides: Partial<SearchHit> = {}): SearchHit {
 
 function createRepository(
   handler: (params: Parameters<SearchRepository["search"]>[0]) => SearchHit[],
+  countOmissions: SearchRepository["countOmissions"] = () =>
+    Promise.resolve({ risks: 0, decisions: 0, unknown: false }),
 ): SearchRepository {
   return {
+    countOmissions,
     search(params) {
       // Faithfully model the real repository, which omits excluded-type chunks
       // from the query entirely, so service tests exercise the true contract.
@@ -80,21 +83,54 @@ describe("SearchService", () => {
     expect(result[0]?.title).toBe("PR review");
   });
 
-  it("discloses omissions beside zero hits instead of a bare list", async () => {
+  it("discloses the corpus's omissions beside zero hits", async () => {
+    const countOmissions = vi
+      .fn<SearchRepository["countOmissions"]>()
+      .mockResolvedValue({ risks: 2, decisions: 0, unknown: false });
     const service = new SearchService(
-      createRepository(() => []),
+      createRepository(() => [], countOmissions),
       createNullLogger(),
     );
+    const session = makeSession({ role: "lead" });
 
     const result = await service.query(
       { q: "nothing", scope: "mine", limit: 20 },
-      makeSession({ role: "lead" }),
+      session,
     );
 
     expect(result).toEqual({
       hits: [],
-      omissions: { risks: 0, decisions: 0, unknown: true },
+      omissions: { risks: 2, decisions: 0, unknown: false },
     });
+    // Same corpus as the query: scope, caller, groups and excluded kinds —
+    // and no text, so the count never says an omitted row matched.
+    expect(countOmissions).toHaveBeenCalledExactlyOnceWith({
+      scope: "mine",
+      userId: session.userId,
+      groupIds: [session.reportingGroupId],
+      excludeTypes: ["project"],
+    });
+  });
+
+  it("discloses nothing and reads nothing when no group is granted", async () => {
+    const countOmissions = vi.fn<SearchRepository["countOmissions"]>();
+    const service = new SearchService(
+      createRepository(() => {
+        throw new Error("search must not run");
+      }, countOmissions),
+      createNullLogger(),
+    );
+
+    const result = await service.query(
+      { q: "anything", scope: "published", limit: 20 },
+      makeSession({ role: "viewer", viewerGroupAccess: [] }),
+    );
+
+    expect(result).toEqual({
+      hits: [],
+      omissions: { risks: 0, decisions: 0, unknown: false },
+    });
+    expect(countOmissions).not.toHaveBeenCalled();
   });
 
   it('rejects scope="all" for lead role with SearchAuthorizationError', async () => {

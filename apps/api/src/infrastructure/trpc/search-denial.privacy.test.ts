@@ -43,6 +43,8 @@ describe("search denial privacy", () => {
       const searchService = new SearchService(
         {
           search: () => Promise.resolve([]),
+          countOmissions: () =>
+            Promise.resolve({ risks: 0, decisions: 0, unknown: false }),
         },
         createNullLogger(),
       );
