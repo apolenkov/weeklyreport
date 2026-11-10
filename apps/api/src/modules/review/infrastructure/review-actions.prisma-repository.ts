@@ -7,10 +7,7 @@ import type {
 } from "@weeklyreport/shared";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
-import {
-  ReviewAccessError,
-  ReviewNotFoundError,
-} from "../application/review.service.js";
+import { ReviewNotFoundError } from "../application/review.service.js";
 import type {
   PostVerdictParams,
   RecordAnchor,
@@ -18,6 +15,7 @@ import type {
   ReviewWriteActor,
   VerdictContext,
 } from "../application/review-actions.service.js";
+import { deleteCoordinatedComment } from "./review-actions.comment-delete.js";
 import {
   insertCoordinatedComment,
   insertCoordinatedLeadItemComment,
@@ -26,7 +24,6 @@ import { writeVerdict } from "./review-actions.verdict-write.js";
 import { readLeadItemDiscussion } from "./review-lead-discussion.read.js";
 import {
   assertAcknowledgementAccess,
-  assertReviewEntitlement,
   lockEditableReport,
   lockReviewUsers,
 } from "./review-write-gate.js";
@@ -45,25 +42,6 @@ interface SectionGroupRow {
 const groupIdOf = (row: SectionGroupRow | null): string | null | undefined =>
   row === null ? undefined : row.reportSection.author.reportingGroupId;
 const REVIEW_GROUP_NOT_FOUND = "Review group not found.";
-
-const deleteTargetSelect = {
-  reportSection: {
-    select: {
-      reportId: true,
-      authorId: true,
-      author: { select: { reportingGroupId: true } },
-    },
-  },
-} as const;
-
-const currentTargetSelect = {
-  reportSection: {
-    select: {
-      reportId: true,
-      author: { select: { reportingGroupId: true } },
-    },
-  },
-} as const;
 
 @Injectable()
 export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
@@ -215,74 +193,8 @@ export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
     return { reviewerId: comment.reviewerId, groupId: groupId ?? null };
   }
 
-  async deleteComment(
-    commentId: string,
-    actor: ReviewWriteActor,
-  ): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      const comment = await tx.recordComment.findUnique({
-        where: { id: commentId },
-        select: {
-          reviewerId: true,
-          item: {
-            select: deleteTargetSelect,
-          },
-          risk: {
-            select: deleteTargetSelect,
-          },
-          decision: {
-            select: deleteTargetSelect,
-          },
-        },
-      });
-      if (!comment) throw new ReviewNotFoundError("Comment not found.");
-      const target = comment.item ?? comment.risk ?? comment.decision;
-      if (!target) throw new ReviewNotFoundError("Comment target not found.");
-      const groupId = target.reportSection.author.reportingGroupId;
-      await lockReviewUsers(tx, [
-        actor.userId,
-        comment.reviewerId,
-        target.reportSection.authorId,
-      ]);
-      await lockEditableReport(tx, target.reportSection.reportId);
-      const current = await tx.recordComment.findUnique({
-        where: { id: commentId },
-        select: {
-          reviewerId: true,
-          item: {
-            select: currentTargetSelect,
-          },
-          risk: {
-            select: currentTargetSelect,
-          },
-          decision: {
-            select: currentTargetSelect,
-          },
-        },
-      });
-      if (!current) throw new ReviewNotFoundError("Comment not found.");
-      const currentTarget = current.item ?? current.risk ?? current.decision;
-      if (
-        currentTarget?.reportSection.reportId !== target.reportSection.reportId
-      ) {
-        throw new ReviewNotFoundError("Comment target not found.");
-      }
-      const currentGroupId =
-        currentTarget.reportSection.author.reportingGroupId;
-      if (currentGroupId !== groupId)
-        throw new ReviewNotFoundError(REVIEW_GROUP_NOT_FOUND);
-      if (!groupId) throw new ReviewNotFoundError(REVIEW_GROUP_NOT_FOUND);
-      await assertReviewEntitlement(tx, actor, groupId);
-      const allowed =
-        actor.role === "admin" ||
-        actor.userId === current.reviewerId ||
-        (actor.role === "head" && actor.reportingGroupId === groupId);
-      if (!allowed)
-        throw new ReviewAccessError(
-          "You can only delete your own review comment.",
-        );
-      await tx.recordComment.delete({ where: { id: commentId } });
-    });
+  deleteComment(commentId: string, actor: ReviewWriteActor): Promise<void> {
+    return deleteCoordinatedComment(this.prisma, commentId, actor);
   }
 
   async getVerdictContext(sectionId: string): Promise<VerdictContext | null> {

@@ -1,5 +1,9 @@
 import type { Prisma } from "@prisma/client";
-import type { RecordCommentView } from "@weeklyreport/shared";
+import {
+  isCompleteDecision,
+  isCompleteRisk,
+  type RecordCommentView,
+} from "@weeklyreport/shared";
 
 import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import { isForeignKeyViolation } from "../../../lib/prisma-foreign-key-violation.js";
@@ -92,24 +96,43 @@ async function loadAnchorLineage(
   throwAnchorNotFound();
 }
 
-async function loadCurrentAnchorId(
+interface CurrentAnchor {
+  readonly id: string;
+  /** False only for a risk or decision whose required details are missing. */
+  readonly complete: boolean;
+}
+
+// Re-read under the locks: the row that now carries the lineage, and whether
+// a risk or decision is finished. Items have no unfinished state.
+async function loadCurrentAnchor(
   tx: Prisma.TransactionClient,
   lineage: AnchorLineage,
-): Promise<string> {
+): Promise<CurrentAnchor> {
   const where = {
     reportSectionId_stableId: {
       reportSectionId: lineage.reportSectionId,
       stableId: lineage.stableId,
     },
   };
-  const row =
-    lineage.kind === "item"
-      ? await tx.item.findUnique({ where, select: { id: true } })
-      : lineage.kind === "risk"
-        ? await tx.risk.findUnique({ where, select: { id: true } })
-        : await tx.decision.findUnique({ where, select: { id: true } });
+  if (lineage.kind === "item") {
+    const row = await tx.item.findUnique({ where, select: { id: true } });
+    if (row === null) throwAnchorNotFound();
+    return { id: row.id, complete: true };
+  }
+  if (lineage.kind === "risk") {
+    const row = await tx.risk.findUnique({
+      where,
+      select: { id: true, impact: true, mitigation: true },
+    });
+    if (row === null) throwAnchorNotFound();
+    return { id: row.id, complete: isCompleteRisk(row) };
+  }
+  const row = await tx.decision.findUnique({
+    where,
+    select: { id: true, impact: true },
+  });
   if (row === null) throwAnchorNotFound();
-  return row.id;
+  return { id: row.id, complete: isCompleteDecision(row) };
 }
 
 // The anchor FK a P2003 can trip — only a violation on THIS constraint means
@@ -183,8 +206,14 @@ export function insertCoordinatedComment(
     const groupId = section.author.reportingGroupId;
     if (!groupId) throw new ReviewNotFoundError("Review group not found.");
     await assertReviewEntitlement(tx, actor, groupId);
-    const currentAnchorId = await loadCurrentAnchorId(tx, lineage);
-    return createComment(tx, lineage, currentAnchorId, {
+    const current = await loadCurrentAnchor(tx, lineage);
+    // An unfinished risk or decision is its author's private draft (openspec:
+    // record-comment-save-coordination): to anyone else it is not found, with
+    // the same answer as a record that does not exist.
+    if (!current.complete && actor.userId !== lineage.authorId) {
+      throwAnchorNotFound();
+    }
+    return createComment(tx, lineage, current.id, {
       reviewerId: actor.userId,
       text,
     });
@@ -228,7 +257,7 @@ export function insertCoordinatedLeadItemComment(
     if (!user?.isActive || user.role !== "lead" || actor.role !== "lead") {
       throwAnchorNotFound();
     }
-    const currentAnchorId = await loadCurrentAnchorId(tx, lineage);
+    const { id: currentAnchorId } = await loadCurrentAnchor(tx, lineage);
     return createComment(tx, lineage, currentAnchorId, {
       reviewerId: actor.userId,
       text,
