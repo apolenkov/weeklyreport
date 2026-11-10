@@ -2,6 +2,7 @@
 // What a Head or viewer is told about unfinished risks and decisions that are
 // left out of the report they read (openspec: viewer-report-navigation).
 import { screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -16,9 +17,6 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
   usePathname: () => "/head/report",
 }));
-
-const UNCOUNTED =
-  "Part of this report was published before unfinished records were counted, so some may be missing here.";
 
 describe("recordOmissionNoticeText", () => {
   it("says nothing when every record is shown", () => {
@@ -40,17 +38,19 @@ describe("recordOmissionNoticeText", () => {
     );
   });
 
-  it("calls an uncounted report unknown instead of passing it off as complete", () => {
+  // Unfinished records could not be stored before counting shipped, so a
+  // report frozen earlier left nothing out and earns no warning.
+  it("stays silent on a report frozen before counting", () => {
     expect(
       recordOmissionNoticeText({ risks: 0, decisions: 0, unknown: true }),
-    ).toBe(UNCOUNTED);
+    ).toBeNull();
   });
 
-  it("gives a known count as a lower bound when part of the report is uncounted", () => {
+  it("names only what was counted when older sections sit beside it", () => {
     expect(
       recordOmissionNoticeText({ risks: 1, decisions: 0, unknown: true }),
     ).toBe(
-      `Not shown: at least 1 unfinished risk, still being written. This report may be incomplete. ${UNCOUNTED}`,
+      "Not shown: 1 unfinished risk, still being written. This report may be incomplete.",
     );
   });
 });
@@ -75,7 +75,7 @@ describe("WeeklyReportPage — records not shown", () => {
   });
 
   it.each(["head", "viewer"] as const)(
-    "tells a %s how many unfinished records the report leaves out",
+    "tells a %s how many unfinished records the report leaves out once drafts are shown",
     async (role) => {
       renderWeeklyReportPage(
         makeWeeklyReportData("open", {
@@ -83,6 +83,15 @@ describe("WeeklyReportPage — records not shown", () => {
         }),
         { role },
       );
+
+      // Submitted sections hold no unfinished records, so the default
+      // submitted-only view has nothing to disclose.
+      await screen.findByRole("heading", { name: "Status Report" });
+      expect(
+        screen.queryByRole("note", { name: "Records not shown" }),
+      ).not.toBeInTheDocument();
+
+      await userEvent.click(await screen.findByRole("button", { name: "All" }));
 
       expect(
         await screen.findByRole("note", { name: "Records not shown" }),

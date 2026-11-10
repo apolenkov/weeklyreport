@@ -285,7 +285,7 @@ export function WeeklyReportPage({
         contextControls={contextControls}
         contextControlsLeading={contextControlsLeading}
       />
-      <RecordOmissionNotice summary={page.recordOmissions} />
+      <RecordOmissionNotice summary={page.shownRecordOmissions} />
       <WeeklyReportBody
         page={page}
         scope={scope}

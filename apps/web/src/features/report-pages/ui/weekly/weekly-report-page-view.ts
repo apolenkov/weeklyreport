@@ -53,9 +53,15 @@ export interface WeeklyReportPageView {
   readonly hasAnyContent: boolean;
   readonly canPublishReport: boolean;
   readonly showPublishHint: boolean;
-  /** Unfinished risks and decisions left out of the sections this reader sees. */
+  /** Unfinished risks and decisions left out of every section in the reader's scope. */
   readonly recordOmissions: WeeklyReportReadModel["recordOmissions"];
+  /** The same, for the sections on screen under the current filter. */
+  readonly shownRecordOmissions: WeeklyReportReadModel["recordOmissions"];
 }
+
+// A section cannot be submitted while it holds an unfinished record and is
+// read-only afterwards, so the submitted-only view leaves nothing out.
+const NOTHING_OMITTED = { risks: 0, decisions: 0, unknown: false } as const;
 
 type MappedWeeklyReport = ReturnType<typeof mapWeeklyReport>;
 
@@ -214,6 +220,9 @@ export function buildWeeklyReportPageView(
     portfolio: view.portfolio,
     activitySections: reportData.leadSections,
     recordOmissions: reportData.recordOmissions,
+    shownRecordOmissions: reviewSurface.submittedOnly
+      ? NOTHING_OMITTED
+      : reportData.recordOmissions,
     focusedProductId,
     // Same content filter as focusedProductId (reportHasContent).
     scrollTargetProductId: focusedProductId,
