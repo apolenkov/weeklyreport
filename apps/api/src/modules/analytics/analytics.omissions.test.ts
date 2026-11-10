@@ -78,32 +78,49 @@ function section(input: SectionInput) {
   };
 }
 
-function repositoryFor(sections: readonly SectionInput[]) {
-  const row = {
+const LATER_REPORT = "30000000-0000-4000-8000-000000000002";
+
+function publicationRow(
+  sections: readonly SectionInput[],
+  publication: { id: string; publishedAt: string } = {
     id: REPORT,
+    publishedAt: "2026-04-21T13:00:00.000Z",
+  },
+) {
+  return {
+    id: publication.id,
     periodEnd: new Date("2026-04-21T12:00:00.000Z"),
     createdAt: new Date("2026-04-22T12:00:00.000Z"),
     publishedSnapshot: {
-      reportId: REPORT,
+      reportId: publication.id,
       periodStart: "2026-04-15T00:00:00.000Z",
       periodEnd: "2026-04-21T12:00:00.000Z",
       deadline: "2026-04-20T00:00:00.000Z",
       status: "published",
-      publishedAt: "2026-04-21T13:00:00.000Z",
+      publishedAt: publication.publishedAt,
       publishedById: null,
       publishedByName: null,
       portfolioOverview: {
         status: "green",
         totals: { green: 0, yellow: 0, red: 0 },
       },
-      sections: sections.map(section),
+      sections: sections.map((input) => ({
+        ...section(input),
+        reportId: publication.id,
+      })),
     },
   };
+}
+
+function repositoryOver(rows: readonly ReturnType<typeof publicationRow>[]) {
   const prisma = {
-    report: { findMany: vi.fn().mockResolvedValue([row]) },
+    report: { findMany: vi.fn().mockResolvedValue(rows) },
   } as unknown as PrismaService;
   return new AnalyticsPrismaRepository(prisma);
 }
+
+const repositoryFor = (sections: readonly SectionInput[]) =>
+  repositoryOver([publicationRow(sections)]);
 
 const ownSection: SectionInput = {
   index: 1,
@@ -161,6 +178,50 @@ describe("AnalyticsPrismaRepository omission totals", () => {
     });
     expect(byLead.periods[0]?.omissions).toEqual({
       risks: 5,
+      decisions: 0,
+      unknown: false,
+    });
+  });
+
+  it("reports a Product that only has unfinished records without inventing its cell", async () => {
+    // The own section never reports on PROJECT_B, yet holds an unfinished
+    // decision under it: the total is told, no status row appears for it.
+    const repo = repositoryFor([ownSection]);
+
+    const history = await repo.trafficLightHistory(
+      { ...INPUT, projectId: PROJECT_B },
+      head,
+    );
+
+    expect(history.rows).toEqual([]);
+    expect(history.periods[0]?.omissions).toEqual({
+      risks: 0,
+      decisions: 1,
+      unknown: false,
+    });
+  });
+
+  it("takes the totals of the later publication of the same period", async () => {
+    const later = {
+      ...ownSection,
+      recordOmission: {
+        version: 1 as const,
+        buckets: [bucket("risk", PROJECT_A, 9)],
+      },
+    };
+    const repo = repositoryOver([
+      publicationRow([later], {
+        id: LATER_REPORT,
+        publishedAt: "2026-04-21T15:00:00.000Z",
+      }),
+      publicationRow([ownSection]),
+    ]);
+
+    const history = await repo.trafficLightHistory(INPUT, head);
+
+    expect(history.periods).toHaveLength(1);
+    expect(history.periods[0]?.omissions).toEqual({
+      risks: 9,
       decisions: 0,
       unknown: false,
     });

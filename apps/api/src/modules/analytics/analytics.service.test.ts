@@ -349,6 +349,18 @@ describe("AnalyticsService old nonempty cache shapes", () => {
     });
     expect(trafficLightHistory).toHaveBeenCalledTimes(2);
   });
+  it("recomputes history periods cached before omission totals", async () => {
+    const period = { periodStart: "2026-04-01", periodEnd: "2026-04-21" };
+    const fresh = { periods: [{ ...period, omissions: OMISSIONS }], rows: [] };
+    const trafficLightHistory = vi.fn(() => Promise.resolve(fresh));
+    const { cache, store } = makeCache();
+    const svc = new AnalyticsService(makeRepo({ trafficLightHistory }), cache);
+    await svc.trafficLightHistory(input, headA);
+    for (const key of store.keys())
+      store.set(key, { periods: [period], rows: [] });
+    expect(await svc.trafficLightHistory(input, headA)).toEqual(fresh);
+    expect(trafficLightHistory).toHaveBeenCalledTimes(2);
+  });
   it("recomputes submission labels without a range", async () => {
     const leadVelocity = vi.fn(() =>
       Promise.resolve([
