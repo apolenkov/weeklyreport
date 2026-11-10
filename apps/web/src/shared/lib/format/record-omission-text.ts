@@ -79,3 +79,20 @@ export function assistantOmissionNote(
   const counted = `The assistant does not read ${summary.unknown ? "at least " : ""}${kinds.join(" and ")}, still being written.`;
   return summary.unknown ? `${counted} ${ASSISTANT_UNCOUNTED}` : counted;
 }
+
+/**
+ * One period's line in the analytics disclosure (openspec:
+ * analytics-query-correctness): what its figures leave out, or that it was
+ * never counted. Null when the period leaves nothing out.
+ */
+export function periodOmissionNote(
+  summary: RecordOmissionSummary,
+): string | null {
+  const kinds = omittedKinds(summary);
+  if (kinds.length === 0) {
+    return summary.unknown
+      ? "not counted, published before unfinished records were counted"
+      : null;
+  }
+  return `${summary.unknown ? "at least " : ""}${kinds.join(" and ")}`;
+}

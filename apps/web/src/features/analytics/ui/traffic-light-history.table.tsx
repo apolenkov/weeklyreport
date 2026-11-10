@@ -13,6 +13,7 @@ import { formatPeriodRangeWithYear } from "../../../shared/lib/format/format-dat
 import { compareBySeverityThenName } from "../../../shared/lib/status/status-order";
 import { statusLabel } from "../../../shared/lib/status/status-presentation";
 import { SlideStatusBadge } from "../../../shared/ui/feedback/slide-status-badge";
+import { AnalyticsOmissionNotes } from "./analytics-omission-notes";
 import {
   AnalyticsTable,
   ColumnHeader,
@@ -106,9 +107,12 @@ export function TrafficLightHistoryTable({
   const latestPeriod = periods.at(-1);
   if (latestPeriod === undefined || rows.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
-        No published periods in range.
-      </p>
+      <>
+        <p className="text-sm text-muted-foreground">
+          No published periods in range.
+        </p>
+        <AnalyticsOmissionNotes periods={periods} />
+      </>
     );
   }
 
@@ -172,6 +176,7 @@ export function TrafficLightHistoryTable({
           ))}
         </tbody>
       </AnalyticsTable>
+      <AnalyticsOmissionNotes periods={displayPeriods.map((p) => p.period)} />
     </>
   );
 }

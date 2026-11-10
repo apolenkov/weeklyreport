@@ -8,6 +8,7 @@ import type { ReactNode } from "react";
 import { formatPeriodRangeWithYear } from "../../../shared/lib/format/format-date";
 import { compareBySeverityThenName } from "../../../shared/lib/status/status-order";
 import { SlideStatusBadge } from "../../../shared/ui/feedback/slide-status-badge";
+import { AnalyticsOmissionNotes } from "./analytics-omission-notes";
 import {
   AnalyticsTable,
   ColumnHeader,
@@ -79,7 +80,12 @@ export function PeriodComparisonTable({
   readonly headingId: string;
 }) {
   if (rows.length === 0) {
-    return <p className="text-sm text-muted-foreground">No comparison data.</p>;
+    return (
+      <>
+        <p className="text-sm text-muted-foreground">No comparison data.</p>
+        <AnalyticsOmissionNotes periods={[periodB, periodA]} />
+      </>
+    );
   }
 
   const sortedRows = rows
@@ -127,6 +133,7 @@ export function PeriodComparisonTable({
         Risk change is latest minus previous.
       </p>
       {unchanged ? <UnchangedFold>{table}</UnchangedFold> : table}
+      <AnalyticsOmissionNotes periods={[periodB, periodA]} />
     </>
   );
 }
