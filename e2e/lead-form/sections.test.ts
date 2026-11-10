@@ -7,7 +7,6 @@ import {
   type BrowserSnapshot,
   command,
   fill as fillField,
-  findRole,
   getAttr,
   headSession,
   isVisible,
@@ -82,8 +81,6 @@ const PUBLISHED_RECORD_LOCKED =
   "This record is part of the published report. Mark it done or carry it forward — it cannot be deleted.";
 const NO_MODALS =
   "!Array.from(document.getElementsByTagName('div')).some(element => ['dialog', 'alertdialog'].includes(element.getAttribute('role')) && element.getAttribute('aria-modal') === 'true')";
-const NO_INLINE_EDITORS =
-  "!Array.from(document.getElementsByTagName('form')).some(form => form.getAttribute('aria-label')?.includes('week update for'))";
 
 async function ref(role: string, name: string): Promise<string> {
   const matches = refsByRole(await snapshot(), role, name);
@@ -242,38 +239,34 @@ async function selectProductStages(): Promise<void> {
   assert.equal(await checked("Testing"), true);
 }
 
+// "Add item" in a week lane opens the short contextual form for that week;
+// Next week starts as Planned (lead-status-overview-actions).
 async function createItem(
   parent: ParentCase,
   week: Week,
   text: string,
 ): Promise<void> {
   await waitText(parent.name);
-  await click(`Add item to ${parent.name}, Current week`);
-  await waitScope({
+  await click(`Add item to ${parent.name}, ${week} week`);
+  const form: Scope = {
     role: "form",
-    name: `Current week update for ${parent.name}`,
-  });
-  if (week === "Next") {
-    await findRole("radio", "Next week", "click");
-    await waitScope({
-      role: "form",
-      name: `Next week update for ${parent.name}`,
-    });
-    // Switching weeks preserves the open draft's progress choice.
-    await click("Planned");
-    assert.equal(
-      await getAttr(await ref("button", "Planned"), "aria-pressed"),
-      "true",
+    name: `Add item for ${parent.name}, ${week.toLowerCase()} week`,
+  };
+  await waitScope(form);
+  await command([
+    "fill",
+    await scopedRef(form, "textbox", "Description"),
+    text,
+  ]);
+  if (week === "Next")
+    assert.match(
+      scopeSnapshot(await snapshot(), "form", form.name).snapshot,
+      /Planned/u,
     );
-  }
-  await fill("Description *", text);
   if (parent.kind === "product") await selectProductStages();
   else assert.equal(scopeCount(await snapshot(), "group", "SDLC Stages"), 0);
-  await click("Save update");
-  await waitClosed({
-    role: "form",
-    name: `${week} week update for ${parent.name}`,
-  });
+  await scopedClick(form, "Save");
+  await waitClosed(form);
   await expandOverviewParent(parent);
   await waitText(text);
   await saveDraft();
@@ -890,15 +883,24 @@ async function createPublishedLineageDraft(
   decisionText: string,
 ): Promise<void> {
   const nextText = "E2E published next commitment";
-  await click(`Add item to ${PRODUCT.name}, Current week`);
-  await waitText("Description *");
-  assert.ok((await roleText("group", "SDLC Stages")).includes("Planning"));
-  await waitText("Applied automatically");
-  await findRole("radio", "Next week", "click");
-  await click("Planned");
-  await fill("Description *", nextText);
-  await click("Save update");
-  await command(["wait", "--fn", NO_INLINE_EDITORS]);
+  // A Next item starts in the Next lane's short form, Planned by default.
+  await click(`Add item to ${PRODUCT.name}, Next week`);
+  const form: Scope = {
+    role: "form",
+    name: `Add item for ${PRODUCT.name}, next week`,
+  };
+  await waitScope(form);
+  assert.match(
+    scopeSnapshot(await snapshot(), "form", form.name).snapshot,
+    /Planning/u,
+  );
+  await command([
+    "fill",
+    await scopedRef(form, "textbox", "Description"),
+    nextText,
+  ]);
+  await scopedClick(form, "Save");
+  await waitClosed(form);
   await saveChanges();
   await click("+ Add decision");
   await assertModal("Add decision");

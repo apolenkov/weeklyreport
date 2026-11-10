@@ -9,9 +9,12 @@ names it. It is outside the historical case counts below. Remaining task 6.2
 journeys (both publication paths, private recovery and copy, scope-negative
 search/analytics/PDF) are not written.
 
-Known stale cases, outside this change's edits: `lifecycle.test.ts` item text
-limit cases still expect the removed inline `Current week update for …` form;
-other cases may drift the same way until a full run is recorded.
+Item creation in every file drives the short, non-modal contextual form
+(`Add item for <unit>, <week> week`); an existing item's details still open the
+canonical `Edit item` dialog. `Slides density, pagination and fullscreen
+controls work` fails in this environment while waiting for fullscreen to end;
+fullscreen code is untouched by TASK-836 and the case stays open until it is
+reproduced in a headed browser.
 
 ## Head form clarity journey
 

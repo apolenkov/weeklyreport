@@ -741,7 +741,9 @@ async function assertOwnSavePayload(marker: string): Promise<void> {
 void test("Everyone saves only the Lead records and preserves foreign content", async () => {
   await openReadOnlyReport();
   await waitCompletionActions();
-  await waitButton(`Add item to ${LEAD_FORM_FIXTURE.activityName}`);
+  await waitButton(
+    `Add item to ${LEAD_FORM_FIXTURE.activityName}, Current week`,
+  );
   await openSupportingSections();
   const ownEditing = supportEditingNames(await snapshot());
   assert.ok(ownEditing.length > 0);
@@ -754,16 +756,27 @@ void test("Everyone saves only the Lead records and preserves foreign content", 
   await waitText(LEAD_FORM_FIXTURE.currentText);
   await waitScope({ role: "region", name: "Status overview" });
   await waitCompletionActions();
-  await waitButton(`Add item to ${LEAD_FORM_FIXTURE.activityName}`);
+  await waitButton(
+    `Add item to ${LEAD_FORM_FIXTURE.activityName}, Current week`,
+  );
   const marker = "E2E Everyone own activity progress";
   await command(["network", "requests", "--clear"]);
   await findRole(
     "button",
-    `Add item to ${LEAD_FORM_FIXTURE.activityName}`,
+    `Add item to ${LEAD_FORM_FIXTURE.activityName}, Current week`,
     "click",
   );
-  await fill("Description *", marker);
-  await findRole("button", "Save update", "click");
+  const form = {
+    role: "form",
+    name: `Add item for ${LEAD_FORM_FIXTURE.activityName}, current week`,
+  };
+  await waitScope(form);
+  await command([
+    "fill",
+    await scopedRef(form, "textbox", "Description"),
+    marker,
+  ]);
+  await command(["click", await scopedRef(form, "button", "Save")]);
   await waitText(marker);
   await saveDraft();
   await assertOwnSavePayload(marker);
@@ -796,7 +809,10 @@ void test("Status overview initial read failure recovers through Try again", asy
   await assertScope("region", "Status overview");
   assert.ok(
     await isVisible(
-      await roleRef("button", `Add item to ${LEAD_FORM_FIXTURE.activityName}`),
+      await roleRef(
+        "button",
+        `Add item to ${LEAD_FORM_FIXTURE.activityName}, Current week`,
+      ),
     ),
   );
   await assertNoReportWrites();
@@ -901,7 +917,10 @@ void test("Overview editing read failure preserves data and recovers through Ret
   await assertScope("region", "Status overview");
   assert.ok(
     await isVisible(
-      await roleRef("button", `Add item to ${LEAD_FORM_FIXTURE.activityName}`),
+      await roleRef(
+        "button",
+        `Add item to ${LEAD_FORM_FIXTURE.activityName}, Current week`,
+      ),
     ),
   );
   assert.equal(
