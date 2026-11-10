@@ -1,6 +1,6 @@
 import type { RecordOmissionSummary } from "@weeklyreport/shared";
 
-import { countLabel } from "../../../shared/lib/format/pluralize";
+import { countLabel } from "./pluralize";
 
 const UNCOUNTED =
   "Part of this report was published before unfinished records were counted, so some may be missing here.";
@@ -46,4 +46,20 @@ export function publishOmissionNote(
   return kinds.length === 0
     ? undefined
     : `${kinds.join(" and ")} will be left out of the published report.`;
+}
+
+const SEARCH_UNCOUNTED =
+  "Some reports were published before unfinished records were counted, so search may miss a few.";
+
+/**
+ * What a search is told it cannot reach (openspec: search-contract-precision).
+ * It describes the searched corpus and never says an omitted record matched.
+ */
+export function searchOmissionNote(
+  summary: RecordOmissionSummary,
+): string | null {
+  const kinds = omittedKinds(summary);
+  if (kinds.length === 0) return summary.unknown ? SEARCH_UNCOUNTED : null;
+  const counted = `Search leaves out ${summary.unknown ? "at least " : ""}${kinds.join(" and ")}: their authors are still working on them.`;
+  return summary.unknown ? `${counted} ${SEARCH_UNCOUNTED}` : counted;
 }

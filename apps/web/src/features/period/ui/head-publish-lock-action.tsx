@@ -9,9 +9,10 @@ import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-erro
 import { isHeadLike } from "../../../shared/lib/auth/role-predicates";
 import { SessionContext } from "../../../shared/lib/auth/session-provider";
 import { mutationErrorMessage } from "../../../shared/lib/errors/mutation-error-message";
+import { publishOmissionNote } from "../../../shared/lib/format/record-omission-text";
 import { invalidatePeriodLifecycle } from "../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
-import { mapWeeklyReport, publishOmissionNote } from "../../report-sections";
+import { mapWeeklyReport } from "../../report-sections";
 import { PublishLockButton } from "./publish-lock-button";
 
 interface HeadPublishLockActionProps {
