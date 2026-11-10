@@ -22,6 +22,7 @@ interface DecisionEditDialogFieldsProps {
   readonly onImpactChange: (value: string) => void;
   readonly impactError: string | undefined;
   readonly impactRef: RefObject<HTMLTextAreaElement | null>;
+  readonly impactOptional: boolean;
   readonly parent: RecordParent;
   readonly products: readonly Product[];
   readonly activities: readonly ParentActivityOption[];
@@ -47,6 +48,7 @@ type DecisionProseColumnProps = Pick<
   | "onImpactChange"
   | "impactError"
   | "impactRef"
+  | "impactOptional"
 >;
 
 type DecisionClassificationColumnProps = Pick<
@@ -135,6 +137,13 @@ function DecisionDeadlineField({
   );
 }
 
+const IMPACT_LATER_HINT = (
+  <p className="mb-1 text-xs text-[var(--color-muted-foreground)]">
+    Optional for now. Only you see this decision until its impact is filled in,
+    and the report cannot be submitted without it.
+  </p>
+);
+
 function DecisionProseColumn({
   text,
   onTextChange,
@@ -146,6 +155,7 @@ function DecisionProseColumn({
   onImpactChange,
   impactError,
   impactRef,
+  impactOptional,
 }: DecisionProseColumnProps) {
   return (
     <div className="flex flex-1 flex-col gap-4">
@@ -164,7 +174,8 @@ function DecisionProseColumn({
       <RecordTextareaField
         id="dec-impact"
         label="Impact"
-        required
+        required={!impactOptional}
+        hint={impactOptional ? IMPACT_LATER_HINT : undefined}
         value={impact}
         onChange={onImpactChange}
         error={impactError}

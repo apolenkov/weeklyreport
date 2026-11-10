@@ -194,6 +194,7 @@ function SlidesQuickAddDecisionDialog({
       products={viewModel.products}
       activities={viewModel.activityOptions}
       defaultProductId={viewModel.products[0]?.id}
+      unfinishedAllowed
       onSave={(saved) => {
         quickAdd.onDecisionsChange([...viewModel.ownDecisions, saved]);
         dialog.close();

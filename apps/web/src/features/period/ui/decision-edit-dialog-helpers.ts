@@ -19,12 +19,16 @@ export function collectDecisionErrors(args: {
   readonly impact: string;
   readonly availableStages: readonly string[];
   readonly effectiveStageNames: readonly string[];
+  // An author's unfinished decision may be saved before its impact is written.
+  readonly impactOptional?: boolean;
 }): DecisionFieldErrors {
   const stageRequired =
     args.availableStages.length > 0 && args.effectiveStageNames.length === 0;
   return {
     ...decisionProseError("Decision text", args.text, "text"),
-    ...decisionProseError("Impact", args.impact, "impact"),
+    ...(args.impactOptional === true && args.impact.trim().length === 0
+      ? {}
+      : decisionProseError("Impact", args.impact, "impact")),
     ...(stageRequired ? { stageNames: "Select at least one stage." } : {}),
   };
 }

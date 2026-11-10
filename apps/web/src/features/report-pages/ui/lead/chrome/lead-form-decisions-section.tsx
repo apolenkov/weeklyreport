@@ -71,6 +71,7 @@ export function LeadFormDecisionsSection({
         defaultProductId={products[0]?.id}
         addSignal={actions.decisionsAddSignal}
         publishedLockedIds={publishedLockedDecisionIds}
+        unfinishedAllowed
       />
     </AccordionSection>
   );

@@ -13,10 +13,11 @@ import {
   type DecisionFieldErrors,
   type DecisionFormSeed,
 } from "./decision-edit-dialog-helpers";
-import type {
-  DecisionDialogModel,
-  DecisionFormState,
-  UseDecisionEditDialogArgs,
+import {
+  type DecisionDialogModel,
+  type DecisionFormState,
+  isDecisionImpactOptional,
+  type UseDecisionEditDialogArgs,
 } from "./decision-edit-dialog-model";
 
 export interface DecisionFocusTargets {
@@ -105,6 +106,7 @@ export function runDecisionSave(args: {
     impact: args.fields.impact,
     availableStages: args.model.availableStages,
     effectiveStageNames: args.model.effectiveStageNames,
+    impactOptional: isDecisionImpactOptional(args.input),
   });
   if (Object.keys(errors).length > 0) {
     args.fields.setErrors(errors);

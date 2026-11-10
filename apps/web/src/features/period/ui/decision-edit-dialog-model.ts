@@ -29,6 +29,19 @@ export interface UseDecisionEditDialogArgs {
   readonly onSave: (next: DecisionEntry) => void;
   readonly onCancel: () => void;
   readonly isPending?: boolean | undefined;
+  /** The author's own form: a decision may be saved before its impact. */
+  readonly unfinishedAllowed?: boolean | undefined;
+}
+
+// Impact may stay blank only on the author's form, and only for a decision that
+// is new or still unfinished: a finished decision never loses its impact.
+export function isDecisionImpactOptional(
+  args: Pick<UseDecisionEditDialogArgs, "decision" | "unfinishedAllowed">,
+): boolean {
+  return (
+    args.unfinishedAllowed === true &&
+    (args.decision === null || args.decision.impact.trim().length === 0)
+  );
 }
 
 export interface DecisionDialogModel {

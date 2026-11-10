@@ -7,6 +7,7 @@ import { resolveDecisionFormSeed } from "./decision-edit-dialog-helpers";
 import {
   deriveDecisionDialogModel,
   initialDecisionParent,
+  isDecisionImpactOptional,
   resolveInitialDecisionStageNames,
   type UseDecisionEditDialogArgs,
 } from "./decision-edit-dialog-model";
@@ -84,6 +85,7 @@ export function useDecisionEditDialog(args: UseDecisionEditDialogArgs) {
     isActivityParent: model.isActivityParent,
     availableStages: model.availableStages,
     isDeadEnd: model.isDeadEnd,
+    impactOptional: isDecisionImpactOptional(args),
     headerProductName: model.headerProductName,
     handleSave,
     handleKeyDown,
