@@ -24,9 +24,12 @@ const main = (): void => {
   const environmentSource = existsSync(environmentPath)
     ? readFileSync(environmentPath, "utf8")
     : undefined;
+  // A cold webpack production build outgrows Node's default 4 GB heap.
+  const heap = process.argv[2] === "build" ? ["--max-old-space-size=8192"] : [];
   const child = spawn(
     process.execPath,
     [
+      ...heap,
       join(webRoot, "node_modules/next/dist/bin/next"),
       ...process.argv.slice(2),
     ],
