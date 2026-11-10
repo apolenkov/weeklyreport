@@ -3,7 +3,7 @@ import { promisify } from "node:util";
 
 const execute = promisify(execFile);
 
-export const AGENT_BROWSER_VERSION = "0.41.1";
+export const AGENT_BROWSER_VERSION = "0.41.2";
 
 /** Accepts only the exact pinned release; prereleases such as 0.39.0-rc.1 fail. */
 export function assertAgentBrowserVersion(output: string): void {

@@ -306,7 +306,7 @@ async function signOutToLogin(): Promise<void> {
 async function addMarker(text: string): Promise<void> {
   await findRole(
     "button",
-    `Add item to ${LEAD_FORM_FIXTURE.activityName}`,
+    `Add item to ${LEAD_FORM_FIXTURE.activityName}, Current week`,
     "click",
   );
   await fill("Description *", text);
@@ -362,8 +362,8 @@ async function createUnsavedRisk(): Promise<void> {
     LEAD_FORM_FIXTURE.activityName,
   ]);
   await fill("Risk *", "E2E unsaved fill risk");
-  await fill("Impact *", "E2E unsaved fill impact");
-  await fill("Mitigation *", "E2E unsaved fill mitigation");
+  await fill("Impact", "E2E unsaved fill impact");
+  await fill("Mitigation", "E2E unsaved fill mitigation");
   await findRole("button", "Save risk", "click");
   await waitButton("Retry saving draft");
   await findRole("button", "Retry saving draft", "text");
@@ -396,7 +396,7 @@ async function focusMissingCurrent(): Promise<void> {
     "Project CRM-Customer 360 needs at least one Current Week item.",
   );
   await command(["click", link]);
-  const buttonName = "Add item to CRM-Customer 360";
+  const buttonName = "Add item to CRM-Customer 360, Current week";
   await command([
     "wait",
     "--fn",
