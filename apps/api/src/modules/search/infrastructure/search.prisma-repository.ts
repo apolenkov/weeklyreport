@@ -33,6 +33,12 @@ type SearchParams = Parameters<SearchRepository["search"]>[0];
 // Cap for hit titles in SQL (substring ... for N); keep UI snippets short.
 const TITLE_TRUNCATE_LENGTH = 120;
 
+// An unfinished risk or decision is its author's private draft (openspec:
+// search-contract-precision): it is filtered out in the WHERE clause, before
+// ranking, snippets and limits, for every scope — the author's own included.
+const COMPLETE_RISK_ONLY = Prisma.sql`AND r."impact" IS NOT NULL AND r."mitigation" IS NOT NULL`;
+const COMPLETE_DECISION_ONLY = Prisma.sql`AND d."impact" IS NOT NULL`;
+
 // `q` is Prisma.sql-bound only; plainto_tsquery sanitises operators so
 // `q='foo & bar'` becomes two tokens, not injected SQL operators.
 function buildSqlContext(params: SearchParams): SearchSqlContext {
@@ -96,6 +102,7 @@ function buildRiskChunk(context: SearchSqlContext): Prisma.Sql {
     FROM "Risk" r
     INNER JOIN "ReportSection" rs ON rs."id" = r."reportSectionId"
     WHERE r."searchTsv" @@ plainto_tsquery('russian', ${q})
+    ${COMPLETE_RISK_ONLY}
     ${context.sectionMineFilter} ${context.sectionGroupFilter}
     ORDER BY "rank" DESC, r."createdAt" DESC, "id" ASC
     LIMIT ${perType}
@@ -115,6 +122,7 @@ function buildDecisionChunk(context: SearchSqlContext): Prisma.Sql {
     FROM "Decision" d
     INNER JOIN "ReportSection" rs ON rs."id" = d."reportSectionId"
     WHERE d."searchTsv" @@ plainto_tsquery('russian', ${q})
+    ${COMPLETE_DECISION_ONLY}
     ${context.sectionMineFilter} ${context.sectionGroupFilter}
     ORDER BY "rank" DESC, d."createdAt" DESC, "id" ASC
     LIMIT ${perType}

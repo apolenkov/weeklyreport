@@ -208,8 +208,17 @@ export class ActivityPrismaRepository implements ActivityRepository {
               },
               include: {
                 items: { select: { updatedAt: true, priorityRank: true } },
-                risks: { select: { updatedAt: true } },
-                decisions: { select: { updatedAt: true } },
+                // Unfinished risks and decisions are the author's private
+                // drafts (openspec: lead-incomplete-record-drafts): the
+                // board counts finished records only.
+                risks: {
+                  where: { impact: { not: null }, mitigation: { not: null } },
+                  select: { updatedAt: true },
+                },
+                decisions: {
+                  where: { impact: { not: null } },
+                  select: { updatedAt: true },
+                },
               },
             }),
           ]);
