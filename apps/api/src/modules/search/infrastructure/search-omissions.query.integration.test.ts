@@ -9,7 +9,7 @@ import {
   disconnectTestPrisma,
   publishedSnapshotFixture,
 } from "../../../test-utils/prisma-test-helper";
-import { SearchPrismaRepository } from "./search.prisma-repository";
+import { countSearchOmissions } from "./search-omissions.query.js";
 
 const GROUP_A = "d0000000-0000-4000-a000-000000000001";
 const GROUP_B = "d0000000-0000-4000-a000-000000000002";
@@ -27,7 +27,6 @@ const LEGACY_A = "d0000000-0000-4000-a000-00000000000d";
 
 describe("search corpus omissions (integration)", () => {
   const prisma = createTestPrisma();
-  const repository = new SearchPrismaRepository(prisma as never);
 
   async function createLead(id: string, groupId: string): Promise<void> {
     await prisma.user.create({
@@ -142,7 +141,7 @@ describe("search corpus omissions (integration)", () => {
 
   it("counts only the author's own unfinished rows for mine", async () => {
     await expect(
-      repository.countOmissions({
+      countSearchOmissions(prisma, {
         scope: "mine",
         userId: LEAD_A,
         groupIds: [GROUP_A],
@@ -155,16 +154,16 @@ describe("search corpus omissions (integration)", () => {
     const all = { scope: "all", userId: LEAD_A, excludeTypes: [] } as const;
 
     await expect(
-      repository.countOmissions({ ...all, groupIds: [GROUP_B] }),
+      countSearchOmissions(prisma, { ...all, groupIds: [GROUP_B] }),
     ).resolves.toEqual({ risks: 1, decisions: 1, unknown: false });
     await expect(
-      repository.countOmissions({ ...all, groupIds: null }),
+      countSearchOmissions(prisma, { ...all, groupIds: null }),
     ).resolves.toEqual({ risks: 3, decisions: 2, unknown: false });
   });
 
   it("adds nothing for an excluded record kind", async () => {
     await expect(
-      repository.countOmissions({
+      countSearchOmissions(prisma, {
         scope: "mine",
         userId: LEAD_A,
         groupIds: [GROUP_A],
@@ -203,10 +202,10 @@ describe("search corpus omissions (integration)", () => {
 
     // Live unfinished rows of the open report never reach the published count.
     await expect(
-      repository.countOmissions({ ...published, groupIds: [GROUP_A] }),
+      countSearchOmissions(prisma, { ...published, groupIds: [GROUP_A] }),
     ).resolves.toEqual({ risks: 2, decisions: 0, unknown: false });
     await expect(
-      repository.countOmissions({ ...published, groupIds: null }),
+      countSearchOmissions(prisma, { ...published, groupIds: null }),
     ).resolves.toEqual({ risks: 7, decisions: 4, unknown: false });
   });
 
@@ -222,12 +221,20 @@ describe("search corpus omissions (integration)", () => {
     });
 
     await expect(
-      repository.countOmissions({
+      countSearchOmissions(prisma, {
         scope: "published",
         userId: LEAD_A,
         groupIds: [GROUP_A],
         excludeTypes: ["project"],
       }),
     ).resolves.toEqual({ risks: 0, decisions: 0, unknown: true });
+    await expect(
+      countSearchOmissions(prisma, {
+        scope: "published",
+        userId: LEAD_A,
+        groupIds: [GROUP_A],
+        excludeTypes: ["risk", "decision"],
+      }),
+    ).resolves.toEqual({ risks: 0, decisions: 0, unknown: false });
   });
 });

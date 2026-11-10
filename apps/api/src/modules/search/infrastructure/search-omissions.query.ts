@@ -1,10 +1,12 @@
 import { Prisma } from "@prisma/client";
 import type { RecordOmissionSummary } from "@weeklyreport/shared";
 
-import type { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import type { SearchRepository } from "../application/search.service.js";
 
-type OmissionParams = Parameters<SearchRepository["countOmissions"]>[0];
+type OmissionParams = Omit<
+  Parameters<SearchRepository["search"]>[0],
+  "q" | "limit"
+>;
 
 interface RawOmissionTotals {
   readonly risks: number;
@@ -69,9 +71,15 @@ function buildPublishedOmissionQuery(params: OmissionParams): Prisma.Sql {
  * excluded record kind contributes nothing, as it is not part of the corpus.
  */
 export async function countSearchOmissions(
-  prisma: PrismaService,
+  prisma: Prisma.TransactionClient,
   params: OmissionParams,
 ): Promise<RecordOmissionSummary> {
+  if (
+    params.excludeTypes.includes("risk") &&
+    params.excludeTypes.includes("decision")
+  ) {
+    return { risks: 0, decisions: 0, unknown: false };
+  }
   const query =
     params.scope === "published"
       ? buildPublishedOmissionQuery(params)

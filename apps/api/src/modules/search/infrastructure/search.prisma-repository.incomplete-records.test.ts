@@ -18,7 +18,10 @@ async function liveSearchSql(
   overrides: Partial<SearchParams> = {},
 ): Promise<string> {
   const queryRaw = vi.fn().mockResolvedValue([]);
-  const repo = new SearchPrismaRepository({ $queryRaw: queryRaw } as never);
+  const tx = { $queryRaw: queryRaw };
+  const repo = new SearchPrismaRepository({
+    $transaction: (read: (client: typeof tx) => Promise<unknown>) => read(tx),
+  } as never);
   await repo.search({
     q: "delay",
     scope: "all",

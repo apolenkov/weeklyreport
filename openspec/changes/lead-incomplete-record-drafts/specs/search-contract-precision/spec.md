@@ -13,6 +13,20 @@ Live `mine` and `all` search MUST exclude incomplete risks and decisions before 
 
 Search responses MUST carry omission metadata separately from hits, including zero-hit results. The corpus MUST use the same authorized scope, lifecycle domain and included record kinds as the query, before text matching and result limits. Published scope uses frozen indexed metadata; live scope uses current rows. The notice MUST NOT assert an omitted row matched the text query.
 
+Hits and omission metadata MUST share one database observation, including when a concurrent save or republication commits between their reads.
+
+#### Scenario: Both incomplete-capable record kinds are excluded
+
+- **WHEN** search excludes both risks and decisions
+- **THEN** omission totals are known zero even if the published corpus includes legacy sections without omission metadata
+
+#### Scenario: A save commits between content and omission reads
+
+- **GIVEN** a live search has read matching complete content
+- **WHEN** another transaction changes that content and adds an incomplete record before the omission read
+- **THEN** the in-flight response contains the original content and original omission totals
+- **AND** the next search observes the committed content and new totals together
+
 #### Scenario: Live mine returns no text matches
 
 - **WHEN** a Lead searches `mine` and their accessible search corpus contains two incomplete risks but no complete text matches

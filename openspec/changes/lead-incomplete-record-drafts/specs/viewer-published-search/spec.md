@@ -22,6 +22,13 @@ The viewer published search response and History search surface MUST disclose om
 - **WHEN** a reopened report is republished with changed omissions
 - **THEN** published search uses the newly frozen scoped omission information and the existing atomic projection replacement rules
 
+#### Scenario: Republish commits during search
+
+- **GIVEN** published search has read matching documents from publication P1
+- **WHEN** P2 commits before that search reads omission metadata
+- **THEN** the response retains P1 documents and P1 omission totals together
+- **AND** a subsequent search returns P2 documents and P2 omission totals together
+
 ### Requirement: Published omission lookup stays indexed and hit-independent
 
 Published search MUST obtain omission metadata from a scope-indexed frozen projection replaced atomically with snapshot and search documents, including restore. It MUST NOT load snapshots or mutable sections for disclosure. Corpus scope is admitted published sections before text matching or hit limits; missing legacy metadata is unknown, not zero.

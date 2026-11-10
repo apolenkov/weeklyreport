@@ -27,15 +27,7 @@ export interface SearchRepository {
     // they never consume a slot in the `limit` budget.
     readonly excludeTypes: readonly SearchHit["type"][];
     readonly limit: number;
-  }) => Promise<readonly SearchHit[]>;
-  // Unfinished risks and decisions in the same authorized corpus, counted
-  // before text matching and limits; an excluded kind contributes nothing.
-  readonly countOmissions: (params: {
-    readonly scope: "mine" | "all" | "published";
-    readonly userId: string;
-    readonly groupIds: readonly string[] | null;
-    readonly excludeTypes: readonly SearchHit["type"][];
-  }) => Promise<RecordOmissionSummary>;
+  }) => Promise<SearchQueryOutput>;
 }
 
 // No corpus was read, so nothing can have been left out of it.
@@ -113,10 +105,11 @@ export class SearchService {
       groupIds,
       excludeTypes: resolveSearchExcludeTypes(session),
     };
-    const [hits, omissions] = await Promise.all([
-      this.repository.search({ ...corpus, q: parsed.q, limit: parsed.limit }),
-      this.repository.countOmissions(corpus),
-    ]);
+    const { hits, omissions } = await this.repository.search({
+      ...corpus,
+      q: parsed.q,
+      limit: parsed.limit,
+    });
 
     // Server-side ordering: rank desc, then createdAt desc, then id asc as a
     // stable tie-breaker so equal-rank rows don't shuffle between calls.
