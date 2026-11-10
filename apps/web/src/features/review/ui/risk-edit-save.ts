@@ -25,6 +25,7 @@ export interface RiskSaveArgs {
   readonly dialogSurfaceRef: RefObject<HTMLDivElement | null>;
   // Field ids are dialog-scoped, so the picker id is derived, not literal.
   readonly idPrefix: string;
+  readonly detailsOptional: boolean;
 }
 
 interface TrimmedProse {
@@ -105,6 +106,7 @@ export function saveRisk(args: RiskSaveArgs): void {
     mitigation: fields.mitigation,
     isActivityParent: parentStage.isActivityParent,
     effectiveStageNames: parentStage.effectiveStageNames,
+    detailsOptional: args.detailsOptional,
   });
   if (parentMissing) {
     errors.parent = "No product available";

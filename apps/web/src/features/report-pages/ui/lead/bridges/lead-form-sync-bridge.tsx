@@ -251,6 +251,7 @@ function Risks() {
       risks={renderRisks}
       readOnly={ctx.readOnly}
       onChange={ctx.handleRisksChange}
+      unfinishedAllowed
       {...(ctx.riskPrefill ? { addPrefill: ctx.riskPrefill } : {})}
       products={ctx.products}
       {...(ctx.activities ? { activities: ctx.activities } : {})}

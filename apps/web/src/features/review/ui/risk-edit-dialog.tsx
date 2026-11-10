@@ -36,6 +36,9 @@ interface RiskEditDialogProps {
   readonly stagesForProduct?:
     ((productId: string) => readonly string[]) | undefined;
   readonly onDelete?: (() => void) | undefined;
+  // The author's own form: a named risk may be saved before its impact and
+  // mitigation are written (openspec: lead-incomplete-record-drafts).
+  readonly unfinishedAllowed?: boolean | undefined;
 }
 
 // Unmount closed dialogs so each open starts from the supplied seed values.
@@ -124,6 +127,7 @@ function RiskDialogBody({
         onMitigationChange={dialog.onMitigationChange}
         mitigationError={dialog.mitigationError}
         mitigationRef={mitigationRef}
+        detailsOptional={dialog.detailsOptional}
         parent={dialog.parent}
         parentError={dialog.parentError}
         products={products}
@@ -215,6 +219,7 @@ function RiskEditDialogContent(props: RiskEditDialogProps) {
       initialStageNames: props.initialStageNames,
       initialSeverity: props.initialSeverity,
       stagesForProduct: props.stagesForProduct,
+      unfinishedAllowed: props.unfinishedAllowed,
     });
 
   return (

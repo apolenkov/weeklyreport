@@ -1,3 +1,4 @@
+export { hasCompleteRiskDetails } from "./model/alarms/risk-completeness";
 export type {
   CommentsViewProps,
   DecisionComposerProps,

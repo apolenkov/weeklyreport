@@ -56,13 +56,17 @@ export function collectRiskErrors(args: {
   readonly mitigation: string;
   readonly isActivityParent: boolean;
   readonly effectiveStageNames: readonly string[];
+  // An author may save a named risk and add its details later; a blank detail
+  // is then no error, while a written one is still checked.
+  readonly detailsOptional?: boolean | undefined;
 }): RiskFieldErrors {
+  const optional = args.detailsOptional === true;
   // Only the failing fields get a key, so `Object.keys(...).length === 0`
   // still reads as "valid".
   return {
     ...proseError("Risk description", args.text, "text"),
-    ...proseError("Impact", args.impact, "impact"),
-    ...proseError("Mitigation", args.mitigation, "mitigation"),
+    ...detailError("Impact", args.impact, "impact", optional),
+    ...detailError("Mitigation", args.mitigation, "mitigation", optional),
     ...(!args.isActivityParent && args.effectiveStageNames.length === 0
       ? { stageNames: "Select at least one stage." }
       : {}),
@@ -76,6 +80,16 @@ function proseError(
 ): RiskFieldErrors {
   const error = getRequiredProseError(value, label, SAFE_TEXT_MAX_LENGTH);
   return error ? { [field]: error } : {};
+}
+
+function detailError(
+  label: string,
+  value: string,
+  field: "impact" | "mitigation",
+  optional: boolean,
+): RiskFieldErrors {
+  if (optional && value.trim().length === 0) return {};
+  return proseError(label, value, field);
 }
 
 export function resolveRiskParentName(args: {

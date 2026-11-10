@@ -447,8 +447,8 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
     await user.click(blockedBtn);
 
     await user.type(screen.getByLabelText(/^Risk \*/i), "Infra outage");
-    await user.type(screen.getByLabelText(/^Impact \*/i), "Work stopped");
-    await user.type(screen.getByLabelText(/^Mitigation \*/i), "Escalate");
+    await user.type(screen.getByLabelText(/^Impact/i), "Work stopped");
+    await user.type(screen.getByLabelText(/^Mitigation/i), "Escalate");
 
     // Dev is not pre-selected (no pipeline flags). Click it.
     const devCheckbox = screen.getByRole("checkbox", { name: "Dev" });
@@ -502,8 +502,8 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
     await user.click(addBtn);
 
     await user.type(screen.getByLabelText(/^Risk \*/i), "Risk");
-    await user.type(screen.getByLabelText(/^Impact \*/i), "Impact");
-    await user.type(screen.getByLabelText(/^Mitigation \*/i), "Mitigation");
+    await user.type(screen.getByLabelText(/^Impact/i), "Impact");
+    await user.type(screen.getByLabelText(/^Mitigation/i), "Mitigation");
 
     // Dev is the only mine-owned stage — computeInitialStageNames auto-selects it.
     // StageMultiSelect renders "Applied automatically" (non-interactive) for
@@ -567,8 +567,8 @@ describe("LeadFormSyncBridge — risk-derived chip severity (no persisted write-
     // Add a product-wide risk: every owned stage checked by default.
     await user.click(screen.getByRole("button", { name: /\+ Add risk/i }));
     await user.type(screen.getByLabelText(/^Risk \*/i), "Product-wide risk");
-    await user.type(screen.getByLabelText(/^Impact \*/i), "Broad impact");
-    await user.type(screen.getByLabelText(/^Mitigation \*/i), "Escalate");
+    await user.type(screen.getByLabelText(/^Impact/i), "Broad impact");
+    await user.type(screen.getByLabelText(/^Mitigation/i), "Escalate");
     await user.click(screen.getByRole("button", { name: /Save risk/i }));
 
     // The risk floors the empty chips for DISPLAY, but completeness reads raw —
