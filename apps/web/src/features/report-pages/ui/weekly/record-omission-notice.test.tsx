@@ -31,12 +31,12 @@ describe("recordOmissionNoticeText", () => {
     expect(
       recordOmissionNoticeText({ risks: 2, decisions: 1, unknown: false }),
     ).toBe(
-      "Not shown: 2 unfinished risks and 1 unfinished decision. Authors are still working on them, so this report may be incomplete.",
+      "Not shown: 2 unfinished risks and 1 unfinished decision, still being written. This report may be incomplete.",
     );
     expect(
       recordOmissionNoticeText({ risks: 0, decisions: 3, unknown: false }),
     ).toBe(
-      "Not shown: 3 unfinished decisions. Authors are still working on them, so this report may be incomplete.",
+      "Not shown: 3 unfinished decisions, still being written. This report may be incomplete.",
     );
   });
 
@@ -50,7 +50,7 @@ describe("recordOmissionNoticeText", () => {
     expect(
       recordOmissionNoticeText({ risks: 1, decisions: 0, unknown: true }),
     ).toBe(
-      `Not shown: at least 1 unfinished risk. Authors are still working on them, so this report may be incomplete. ${UNCOUNTED}`,
+      `Not shown: at least 1 unfinished risk, still being written. This report may be incomplete. ${UNCOUNTED}`,
     );
   });
 });
@@ -87,7 +87,7 @@ describe("WeeklyReportPage — records not shown", () => {
       expect(
         await screen.findByRole("note", { name: "Records not shown" }),
       ).toHaveTextContent(
-        "Not shown: 2 unfinished risks and 1 unfinished decision.",
+        "Not shown: 2 unfinished risks and 1 unfinished decision, still being written.",
       );
       // The pending-section count keeps its own place in the header.
       expect(screen.getByText(/4\/6\s+Submitted/u)).toBeInTheDocument();
