@@ -1,16 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import type { Role } from "@weeklyreport/shared";
-
-/**
- * Roles that may author report content. Mirrors the content-write gate
- * (openspec/specs/report-section-write-gates): a viewer may still own a
- * section after demotion, but no longer reads its private drafts.
- */
-const AUTHORING_ROLES = [
-  "lead",
-  "head",
-  "admin",
-] as const satisfies readonly Role[];
+import { AUTHORING_ROLES } from "@weeklyreport/shared";
 
 /**
  * The one private-draft entitlement: the actor is the section's exact author

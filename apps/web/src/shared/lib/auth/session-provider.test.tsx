@@ -42,7 +42,13 @@ function buildHarness(
     retry: false,
   },
 ) {
-  const { proxy } = createMockTRPC([{ path: ["auth", "me"], query: queryFn }]);
+  const { proxy } = createMockTRPC([
+    { path: ["auth", "me"], query: queryFn },
+    { path: ["reports", "getActive"] },
+    { path: ["reports", "myHistory"] },
+    { path: ["leadForm", "byPeriod"] },
+    { path: ["leadForm", "retainedIncompleteRecords"] },
+  ]);
   const queryClient = new QueryClient({
     defaultOptions: { queries: queryOptions, mutations: { retry: false } },
   });

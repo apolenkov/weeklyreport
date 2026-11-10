@@ -8,6 +8,7 @@ export {
   computeReminderFireAt,
   reminderPolicyAppliesTo,
 } from "./admin/reminder-policy-time.js";
+export * from "./auth/authoring-roles.js";
 export * from "./auth/cookie-name.js";
 export * from "./auth/index.js";
 export * from "./constants.js";

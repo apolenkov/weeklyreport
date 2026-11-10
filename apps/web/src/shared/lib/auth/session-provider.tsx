@@ -20,6 +20,7 @@ import { useQueryErrorHandler } from "../../hooks/query/use-query-error-handler"
 import { webEnv } from "../runtime/web-env";
 import { useTRPC } from "../trpc/trpc-context";
 import { writeLastRole } from "./last-role";
+import { usePrivateDraftCacheBoundary } from "./use-private-draft-cache-boundary";
 
 // auth.me is publicProcedure so a null session does not trip the 401 redirect;
 // the loading boundary stays on this provider rather than on routing.
@@ -126,6 +127,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const trpc = useTRPC();
   const query = useQuery(trpc.auth.me.queryOptions());
   const { data } = query;
+  const clearingPrivateDrafts = usePrivateDraftCacheBoundary(data);
   useQueryErrorHandler(query, {
     component: "SessionProvider",
     event: "auth.session.load_failed",
@@ -152,6 +154,16 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           void query.refetch().catch(() => undefined);
         }}
       />
+    );
+  }
+
+  if (clearingPrivateDrafts) {
+    return (
+      <main id="main-content" tabIndex={-1} className="p-6">
+        <p role="status" className="text-sm">
+          Updating access…
+        </p>
+      </main>
     );
   }
 
