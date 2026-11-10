@@ -5,6 +5,7 @@ import type {
   StatusOverviewCreateTarget,
   StatusOverviewEditTarget,
   StatusOverviewItem,
+  StatusOverviewRecordTarget,
 } from "../model/status-overview";
 import type { PlanVerdict } from "../model/status-overview-verdict";
 import type { StatusOverviewEditorSlot } from "./status-overview-editor-slot";
@@ -39,6 +40,8 @@ export interface ItemHandlers {
     ((item: StatusOverviewItem, text: string) => void) | undefined;
   readonly onAddItem?:
     ((target: StatusOverviewCreateTarget) => void) | undefined;
+  readonly onAddRecord?:
+    ((target: StatusOverviewRecordTarget) => void) | undefined;
   readonly onPlanItem?: ((item: StatusOverviewItem) => void) | undefined;
   readonly onMoveItem?:
     | ((

@@ -2,6 +2,7 @@ import { Plus } from "lucide-react";
 
 import type {
   StatusOverviewCreateTarget,
+  StatusOverviewRecordTarget,
   StatusOverviewUnit,
 } from "../model/status-overview";
 import type { StatusOverviewEditorSlot } from "./status-overview-editor-slot";
@@ -82,22 +83,64 @@ function StageStarts({
   );
 }
 
+const RECORD_STARTS = [
+  { kind: "risk", label: "Risk" },
+  { kind: "decision", label: "Decision" },
+] as const;
+
+// A risk or decision raised where the work is: it opens the usual editor with
+// this Product or Activity already chosen, so only the text is left to write.
+function UnitRecordStarts({
+  unit,
+  onAddRecord,
+}: {
+  readonly unit: StatusOverviewUnit;
+  readonly onAddRecord: (target: StatusOverviewRecordTarget) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-0.5">
+      {RECORD_STARTS.map(({ kind, label }) => (
+        <button
+          key={kind}
+          type="button"
+          data-overview-focus={`add-${kind}:${unit.key}`}
+          aria-label={`Add ${kind} to ${unit.name}`}
+          onClick={() =>
+            onAddRecord({ kind, unitKind: unit.kind, unitId: unit.id })
+          }
+          className="inline-flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center gap-1 rounded-[var(--radius-sm)] px-2 text-sm font-semibold text-[var(--color-primary)] hover:bg-[var(--color-muted)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--color-primary)]"
+        >
+          <Plus aria-hidden="true" className="size-4" />
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function StatusOverviewTimelineFooter({
   unit,
   onAddItem,
+  onAddRecord,
   editorSlot,
   ownedStageStarts,
 }: {
   readonly unit: StatusOverviewUnit;
   readonly onAddItem?:
     ((target: StatusOverviewCreateTarget) => void) | undefined;
+  readonly onAddRecord?:
+    ((target: StatusOverviewRecordTarget) => void) | undefined;
   readonly editorSlot?: StatusOverviewEditorSlot | undefined;
   readonly ownedStageStarts?: readonly string[] | undefined;
 }) {
   if (!onAddItem || unit.historical) return null;
   return (
     <div className={TIMELINE_GRID}>
-      <div className="max-md:hidden" />
+      <div className={onAddRecord ? "min-w-0 px-3" : "max-md:hidden"}>
+        {onAddRecord ? (
+          <UnitRecordStarts unit={unit} onAddRecord={onAddRecord} />
+        ) : null}
+      </div>
       {(["current", "next"] as const).map((source) => (
         <div
           key={source}

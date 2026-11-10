@@ -8,6 +8,7 @@ import { openWorkDisabledReason } from "./open-work-register-model";
 import { buildActivityFieldsChange } from "./overview-activity-fields";
 import { overviewInlineItemSlot } from "./overview-inline-item-slot";
 import { overviewPlanPresentation } from "./overview-plan-presentation";
+import { unitRecordStarter } from "./overview-unit-record";
 import { useCompletionPresentation } from "./presentation/use-completion-presentation";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
 import { useOpenWorkRegister } from "./use-open-work-register";
@@ -134,7 +135,7 @@ export function useOverviewController({
     model,
     dialog,
     plan,
-    verdict,
+    verdict: { ...verdict, onAddRecord: unitRecordStarter(readyEditor) },
     planPresentation,
     itemSlot,
     itemEditor,

@@ -171,7 +171,7 @@ function OverviewOpenWork({
 
 type OverviewVerdictSlice = Pick<
   ComponentProps<typeof StatusOverview>,
-  "onVerdict" | "onConfirmAll" | "pendingReviewCount"
+  "onVerdict" | "onConfirmAll" | "pendingReviewCount" | "onAddRecord"
 >;
 
 function overviewDirectActions(
@@ -181,6 +181,7 @@ function overviewDirectActions(
 ) {
   return enabled
     ? {
+        onAddRecord: verdict.onAddRecord,
         onMoveItem: dialog.moveItem,
         onConfirmItem: dialog.confirmItem,
         onSetStatus: dialog.setItemStatus,

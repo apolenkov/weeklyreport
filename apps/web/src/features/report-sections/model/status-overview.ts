@@ -59,6 +59,13 @@ export interface StatusOverviewCreateTarget {
   readonly stageName?: string | undefined;
 }
 
+/** A risk or decision started from one reporting unit of the Overview. */
+export interface StatusOverviewRecordTarget {
+  readonly kind: "risk" | "decision";
+  readonly unitKind: "product" | "activity";
+  readonly unitId: string;
+}
+
 export interface StatusOverviewItem {
   readonly key: string;
   readonly recordId: string | null;

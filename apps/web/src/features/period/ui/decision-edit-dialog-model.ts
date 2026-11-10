@@ -26,6 +26,7 @@ export interface UseDecisionEditDialogArgs {
   readonly products?: readonly Product[] | undefined;
   readonly activities: readonly ParentActivityOption[];
   readonly defaultProductId?: string | undefined;
+  readonly defaultActivityId?: string | undefined;
   readonly onSave: (next: DecisionEntry) => void;
   readonly onCancel: () => void;
   readonly isPending?: boolean | undefined;
@@ -76,7 +77,9 @@ export function initialDecisionParent(
 ): RecordParent {
   return resolveRecordParent(
     args.decision ?? {},
-    { productId: args.defaultProductId || args.products?.[0]?.id },
+    args.defaultActivityId
+      ? { activityId: args.defaultActivityId }
+      : { productId: args.defaultProductId || args.products?.[0]?.id },
     args.activities,
     args.products ?? [],
   );

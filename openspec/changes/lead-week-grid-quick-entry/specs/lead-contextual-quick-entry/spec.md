@@ -16,6 +16,12 @@ A Lead MUST be able to enter minimum-input risk and decision drafts inline under
 - **THEN** decision text, eligible context and the authoritative section author are required for draft save; missing impact is null and deadline follows the canonical date rules
 - **AND** a Product record requires at least one currently owned eligible stage, with canonical text limits
 
+#### Scenario: A record is started from its reporting unit
+
+- **WHEN** a Lead uses the Risk or Decision start of an editable Product or Activity in the Overview
+- **THEN** the record editor opens with that Product or Activity as the parent, without a guessed stage, and nothing is created until the Lead saves
+- **AND** a read-only or historical unit offers no such start
+
 #### Scenario: Ownership changes before submission
 
 - **WHEN** the selected Product, Activity or stage is no longer eligible before submission

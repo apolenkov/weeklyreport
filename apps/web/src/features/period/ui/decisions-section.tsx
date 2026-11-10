@@ -27,6 +27,8 @@ interface DecisionsSectionProps {
   // Lets a decision use an attached activity rather than a product as parent.
   readonly activities?: readonly ParentActivityOption[] | undefined;
   readonly defaultProductId?: string | undefined;
+  // A decision raised from an Activity starts in that Activity.
+  readonly defaultActivityId?: string | undefined;
   readonly addSignal?: number | undefined;
   // Published-lineage rows stay resolvable but cannot be deleted.
   readonly publishedLockedIds?: ReadonlySet<string> | undefined;
@@ -173,6 +175,7 @@ export function DecisionsSection(props: DecisionsSectionProps) {
         products={props.products}
         activities={props.activities}
         defaultProductId={props.defaultProductId}
+        defaultActivityId={props.defaultActivityId}
         unfinishedAllowed={props.unfinishedAllowed}
         onSave={editing.saveDecision}
         onCancel={editing.cancelDialog}
