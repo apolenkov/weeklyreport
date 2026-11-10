@@ -283,7 +283,10 @@ describe("ReportSectionsService — activity statuses on saveDraft", () => {
       },
       sectionB.authorId,
     );
-    const savedA = await service.getActiveSection(baseSection.reportSectionId);
+    const savedA = await service.getActiveSection(
+      baseSection.reportSectionId,
+      AUTHOR_ID,
+    );
 
     expect(savedA.activities[0]?.status).toBe("red");
     expect(savedB.activities[0]?.status).toBe("green");

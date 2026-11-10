@@ -140,7 +140,7 @@ describe("ReportSectionsService — incomplete risk and decision drafts", () => 
     const { read, service } = setup();
 
     await service.saveDraft(validDraft(), AUTHOR_ID);
-    await service.getActiveSection(SECTION_ID);
+    await service.getActiveSection(SECTION_ID, AUTHOR_ID);
 
     expect(read.mock.calls).toEqual([[SECTION_ID, "author"], [SECTION_ID]]);
   });

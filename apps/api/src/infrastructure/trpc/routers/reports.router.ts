@@ -71,6 +71,7 @@ function createSectionProcedures(deps: ReportsRouterDeps) {
 
         return await deps.reportSectionsService.getActiveSection(
           ctx.session.activeReportSectionId,
+          ctx.session.userId,
         );
       } catch (error) {
         throw mapDomainError(error);

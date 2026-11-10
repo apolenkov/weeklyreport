@@ -139,7 +139,10 @@ describe("ReportSectionsService", () => {
     );
 
     await expect(
-      service.getActiveSection(baseSection.reportSectionId),
+      service.getActiveSection(
+        baseSection.reportSectionId,
+        baseSection.authorId,
+      ),
     ).resolves.toMatchObject({
       reportSectionId: baseSection.reportSectionId,
       version: 1,

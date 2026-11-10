@@ -118,12 +118,15 @@ export class ReportSectionsService {
     );
   }
 
+  // The session's section pointer is a cache, not proof: only the stored
+  // author is served, and a foreign pointer answers like a missing section.
   async getActiveSection(
     reportSectionId: string,
+    actorId: string,
   ): Promise<ReportSectionReadModel> {
     const section = await this.repository.getSectionById(reportSectionId);
 
-    if (!section) {
+    if (section?.authorId !== actorId) {
       throw new ReportSectionNotFoundError(
         `Report section ${reportSectionId} was not found.`,
       );

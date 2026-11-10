@@ -163,3 +163,12 @@ it("retains the authenticated Viewer active-section read", async () => {
     version: 1,
   });
 });
+
+it("answers a stale section pointer to another author's section as missing", async () => {
+  // The session still carries SECTION_ID, but the stored author is someone else.
+  const { caller } = setup("lead", FOREIGN_USER_ID);
+
+  await expect(caller.getActive()).rejects.toMatchObject({
+    code: "NOT_FOUND",
+  });
+});
