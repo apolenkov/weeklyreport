@@ -34,7 +34,7 @@ export function recordOmissionNoticeText(
 ): string | null {
   const kinds = omittedKinds(summary);
   if (kinds.length === 0) return summary.unknown ? UNCOUNTED : null;
-  const counted = `Not shown: ${summary.unknown ? "at least " : ""}${kinds.join(" and ")}. Authors are still working on them, so this report may be incomplete.`;
+  const counted = `Not shown: ${summary.unknown ? "at least " : ""}${kinds.join(" and ")}, still being written. This report may be incomplete.`;
   return summary.unknown ? `${counted} ${UNCOUNTED}` : counted;
 }
 
@@ -60,6 +60,6 @@ export function searchOmissionNote(
 ): string | null {
   const kinds = omittedKinds(summary);
   if (kinds.length === 0) return summary.unknown ? SEARCH_UNCOUNTED : null;
-  const counted = `Search leaves out ${summary.unknown ? "at least " : ""}${kinds.join(" and ")}: their authors are still working on them.`;
+  const counted = `Search leaves out ${summary.unknown ? "at least " : ""}${kinds.join(" and ")}, still being written.`;
   return summary.unknown ? `${counted} ${SEARCH_UNCOUNTED}` : counted;
 }

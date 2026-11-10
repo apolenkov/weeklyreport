@@ -54,7 +54,7 @@ describe("searchOmissionNote", () => {
 
   it("names the kinds without claiming any of them matched", () => {
     expect(searchOmissionNote({ risks: 2, decisions: 1, unknown: false })).toBe(
-      "Search leaves out 2 unfinished risks and 1 unfinished decision: their authors are still working on them.",
+      "Search leaves out 2 unfinished risks and 1 unfinished decision, still being written.",
     );
   });
 
@@ -63,7 +63,7 @@ describe("searchOmissionNote", () => {
       UNCOUNTED,
     );
     expect(searchOmissionNote({ risks: 1, decisions: 0, unknown: true })).toBe(
-      `Search leaves out at least 1 unfinished risk: their authors are still working on them. ${UNCOUNTED}`,
+      `Search leaves out at least 1 unfinished risk, still being written. ${UNCOUNTED}`,
     );
   });
 });
