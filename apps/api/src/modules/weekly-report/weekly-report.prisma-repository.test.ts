@@ -20,7 +20,14 @@ const adminSession: UserSession = {
   role: "admin",
 };
 
-function interactivePrisma<T extends object>(tx: T): T & PrismaService {
+// A Head or admin read also counts the report's unfinished records for the
+// publication confirmation; these fixtures hold none.
+function interactivePrisma<T extends object>(given: T): T & PrismaService {
+  const tx = {
+    risk: { findMany: vi.fn().mockResolvedValue([]) },
+    decision: { findMany: vi.fn().mockResolvedValue([]) },
+    ...given,
+  };
   return {
     ...tx,
     $transaction: vi.fn(

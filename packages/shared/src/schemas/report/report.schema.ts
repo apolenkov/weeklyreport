@@ -334,6 +334,10 @@ export const weeklyReportReadModelSchema = z
     // Incomplete risks and decisions left out of `leadSections`, counted in
     // the caller's authorized scope only.
     recordOmissions: recordOmissionSummarySchema,
+    // What publishing would leave out across every group's sections, since a
+    // publication freezes them all. Totals only, and only on a live report
+    // read by a role that runs the period lifecycle.
+    publicationOmissions: recordOmissionSummarySchema.optional(),
   })
   .readonly();
 

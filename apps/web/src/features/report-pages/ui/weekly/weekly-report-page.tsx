@@ -63,7 +63,7 @@ function PeriodLifecycleActions({
             onReopen={page.handlers.reopen}
             isPending={page.mutationState.isLifecyclePending}
             canPublish={page.canPublishReport}
-            omittedRecordsNote={publishOmissionNote(page.recordOmissions)}
+            omittedRecordsNote={publishOmissionNote(page.publicationOmissions)}
           />
         )}
     </>

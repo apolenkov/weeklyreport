@@ -66,6 +66,11 @@ describe("publishOmissionNote", () => {
       publishOmissionNote({ risks: 0, decisions: 0, unknown: false }),
     ).toBeUndefined();
   });
+
+  // Only a reader who can publish is given the every-group total.
+  it("says nothing without a publication total", () => {
+    expect(publishOmissionNote(undefined)).toBeUndefined();
+  });
 });
 
 describe("WeeklyReportPage — records not shown", () => {
@@ -102,6 +107,28 @@ describe("WeeklyReportPage — records not shown", () => {
       expect(screen.getByText(/4\/6\s+Submitted/u)).toBeInTheDocument();
     },
   );
+
+  // Publishing freezes every group's sections, so its confirmation names the
+  // every-group total, not the reader's own group's.
+  it("names every group's unfinished records before a Head publishes", async () => {
+    renderWeeklyReportPage(
+      makeWeeklyReportData("open", {
+        recordOmissions: { risks: 1, decisions: 0, unknown: false },
+        publicationOmissions: { risks: 2, decisions: 0, unknown: false },
+      }),
+      { role: "head" },
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /publish/iu }),
+    );
+
+    expect(
+      await screen.findByText(
+        /2 unfinished risks will be left out of the published report\./u,
+      ),
+    ).toBeInTheDocument();
+  });
 
   it("shows no notice when nothing is left out", async () => {
     renderWeeklyReportPage(makeWeeklyReportData("open"), { role: "head" });

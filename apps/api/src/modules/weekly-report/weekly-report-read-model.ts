@@ -4,6 +4,7 @@ import {
   buildPortfolioProductsFromSnapshotSections,
   computeReportProgress,
   type PublishedReportSnapshot,
+  type RecordOmissionSummary,
   type ReportProgress,
   type ReportSectionReadModel,
   summarizeRecordOmissions,
@@ -189,6 +190,7 @@ export function buildLiveResult(
     readonly crossGroup: WeeklyReportRepositoryResult["crossGroup"];
     readonly progress: ReportProgress;
     readonly activeDeadlineRuleId: string | null;
+    readonly publicationOmissions?: RecordOmissionSummary | undefined;
   },
 ): WeeklyReportRepositoryResult {
   const { crossGroup, progress, activeDeadlineRuleId } = summary;
@@ -220,6 +222,9 @@ export function buildLiveResult(
       recordOmissions: summarizeRecordOmissions(
         report.sections.map(toRecordOmission),
       ),
+      ...(summary.publicationOmissions === undefined
+        ? {}
+        : { publicationOmissions: summary.publicationOmissions }),
     }),
     crossGroup,
   };

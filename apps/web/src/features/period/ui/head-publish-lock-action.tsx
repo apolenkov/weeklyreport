@@ -135,7 +135,9 @@ export function HeadPublishLockAction({
       }
       isPending={publishMut.isPending || reopenMut.isPending}
       canPublish={canPublishReport}
-      omittedRecordsNote={publishOmissionNote(weeklyQ.data.recordOmissions)}
+      omittedRecordsNote={publishOmissionNote(
+        weeklyQ.data.publicationOmissions,
+      )}
     />
   );
 }

@@ -2,6 +2,9 @@ import type { Prisma } from "@prisma/client";
 import {
   computeReminderFireAt,
   computeReportProgress,
+  isCompleteDecision,
+  isCompleteRisk,
+  type RecordOmissionSummary,
   reminderPolicyAppliesTo,
   type ReportSectionReadModel,
   type UserSession,
@@ -52,7 +55,35 @@ export async function buildLiveReportResult(
     crossGroup,
     progress,
     activeDeadlineRuleId,
+    publicationOmissions: isOrgWideProgressRole(session)
+      ? await countPublicationOmissions(db, report.id)
+      : undefined,
   });
+}
+
+// A publication freezes every group's sections, so the role that publishes is
+// told the unfinished records of all of them: two totals, with no text, author
+// or group behind them (openspec: lead-incomplete-record-drafts).
+async function countPublicationOmissions(
+  db: WeeklyReportDb,
+  reportId: string,
+): Promise<RecordOmissionSummary> {
+  const [risks, decisions] = await Promise.all([
+    db.risk.findMany({
+      where: { reportSection: { reportId } },
+      select: { impact: true, mitigation: true },
+    }),
+    db.decision.findMany({
+      where: { reportSection: { reportId } },
+      select: { impact: true },
+    }),
+  ]);
+  return {
+    risks: risks.filter((risk) => !isCompleteRisk(risk)).length,
+    decisions: decisions.filter((decision) => !isCompleteDecision(decision))
+      .length,
+    unknown: false,
+  };
 }
 
 async function fetchReportDependencies(
