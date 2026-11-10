@@ -377,10 +377,12 @@ describe("Analytics day-range matching (integration)", () => {
     });
 
     const history = await repo.trafficLightHistory(MAY, adminDR);
-    expect(history.periods).toContainEqual({
-      periodStart: "2026-05-25",
-      periodEnd: "2026-05-31",
-    });
+    expect(history.periods).toContainEqual(
+      expect.objectContaining({
+        periodStart: "2026-05-25",
+        periodEnd: "2026-05-31",
+      }),
+    );
     expect(history.rows.some((r) => r.projectId === DR_PROJECT)).toBe(true);
 
     const velocity = await repo.leadVelocity(MAY, adminDR);

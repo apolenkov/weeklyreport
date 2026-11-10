@@ -37,7 +37,8 @@ const emptyViewer: UserSession = {
   viewerGroupAccess: [],
 };
 
-// Period metadata as published; omission totals are not counted yet.
+// Period metadata as published; these legacy snapshots carry no omission
+// counts, so their totals read as unknown.
 const PERIOD = {
   periodStart: "2026-04-15",
   periodEnd: "2026-04-21",
@@ -552,7 +553,13 @@ describe("AnalyticsPrismaRepository authoritative publication", () => {
     await expect(
       repo.trafficLightHistory({ ...HISTORY_INPUT, leadId: LEAD_A }, headA),
     ).resolves.toEqual({
-      periods: [PERIOD],
+      // No section of that lead is in effect, so nothing of theirs is omitted.
+      periods: [
+        {
+          ...PERIOD,
+          omissions: { risks: 0, decisions: 0, unknown: false },
+        },
+      ],
       rows: [],
     });
   });

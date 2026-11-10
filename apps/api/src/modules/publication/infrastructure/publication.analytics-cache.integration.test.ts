@@ -103,7 +103,12 @@ describe("PublicationService analytics invalidation (integration)", () => {
     expect(beforePublish).toEqual({ periods: [], rows: [] });
     expect(compute).toHaveBeenCalledTimes(2);
     expect(afterPublish.periods).toEqual([
-      { periodStart: "2026-04-07", periodEnd: "2026-04-13" },
+      {
+        periodStart: "2026-04-07",
+        periodEnd: "2026-04-13",
+        // A real publication counts its omissions: none here, and known.
+        omissions: { risks: 0, decisions: 0, unknown: false },
+      },
     ]);
     expect(afterPublish.rows).toEqual([
       {
