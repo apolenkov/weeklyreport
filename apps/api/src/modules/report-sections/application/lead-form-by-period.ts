@@ -1,9 +1,9 @@
 import {
+  type AuthorReportSectionReadModel,
   type PublishedLineage,
   publishedLineageSchema,
   type RecordOmissionSummary,
   type ReopenBlockedReason,
-  type ReportSectionReadModel,
   type Role,
   summarizeRecordOmissions,
   summarizeRecordOmissionsForScopes,
@@ -23,7 +23,9 @@ import {
 } from "../domain/lead-form-shared";
 
 export interface GetByPeriodResult {
-  section: ReportSectionReadModel;
+  // The author's own live form may carry unfinished risks and decisions (a
+  // missing detail is null). Every other read is the complete projection.
+  section: AuthorReportSectionReadModel;
   readOnly: boolean;
   canRequestReopen: boolean;
   reopenBlockedReason: ReopenBlockedReason | null;
@@ -56,9 +58,30 @@ const selectSectionAuthor = (
     ? requestedAuthorId
     : userId;
 
-export async function readByPeriod(
+/** The form read: the author's own section carries their unfinished drafts. */
+export function readByPeriod(
   repository: LeadFormRepository,
   request: ByPeriodRequest,
+): Promise<GetByPeriodResult> {
+  return readSection(repository, request, readOwnDrafts);
+}
+
+/**
+ * The same authorization and lifecycle, with the complete projection for
+ * every reader, the author included. For reads whose output never carries an
+ * unfinished record (status overview, open-work authorization).
+ */
+export function readCompleteByPeriod(
+  repository: LeadFormRepository,
+  request: ByPeriodRequest,
+): Promise<GetByPeriodResult> {
+  return readSection(repository, request, () => Promise.resolve(NO_DRAFTS));
+}
+
+async function readSection(
+  repository: LeadFormRepository,
+  request: ByPeriodRequest,
+  readOwn: typeof readOwnDrafts,
 ): Promise<GetByPeriodResult> {
   const { sharedScope, sectionAuthorId, isHeadCrossRead } =
     await resolveSectionAuthor(repository, request);
@@ -71,13 +94,38 @@ export async function readByPeriod(
     sectionAuthorId,
     isHeadCrossRead,
   );
+  const isOwnSection = sectionAuthorId === request.userId;
   return buildByPeriodResult(
     repository,
     result,
     sharedScope,
-    sectionAuthorId === request.userId,
+    isOwnSection ? await readOwn(repository, request, result) : null,
   );
 }
+
+// The own form shows the author's unfinished drafts too. A published period
+// is read from its frozen snapshot, which holds none; what the live section
+// still retains there is offered by recovery, not by the form. Null also when
+// the author lost the entitlement: the complete read stands.
+async function readOwnDrafts(
+  repository: LeadFormRepository,
+  request: ByPeriodRequest,
+  result: Awaited<ReturnType<typeof readSectionForByPeriod>>,
+): Promise<OwnRead> {
+  const live = result.reopenFacts.periodStatus !== "published";
+  return {
+    drafts: live
+      ? await repository.getOwnDraftSection(request.reportId, request.userId)
+      : null,
+  };
+}
+
+/** Marks the own-form read; `drafts` is the entitled author's live section. */
+interface OwnRead {
+  readonly drafts: AuthorReportSectionReadModel | null;
+}
+
+const NO_DRAFTS: OwnRead = { drafts: null };
 
 async function resolveSectionAuthor(
   repository: LeadFormRepository,
@@ -145,14 +193,16 @@ async function buildByPeriodResult(
   repository: LeadFormRepository,
   result: Awaited<ReturnType<typeof readSectionForByPeriod>>,
   sharedScope: Awaited<ReturnType<typeof resolveCrossAuthorScope>>,
-  isOwnSection: boolean,
+  ownRead: OwnRead | null,
 ): Promise<GetByPeriodResult> {
+  const isOwnSection = ownRead !== null;
   // A lead cross-author read returns only the records on products the two
   // leads share; the own-section and head/admin reads return the full section.
-  const section =
+  const visible =
     sharedScope !== null
       ? filterSectionToSharedProducts(result.section, sharedScope)
       : result.section;
+  const section: AuthorReportSectionReadModel = ownRead?.drafts ?? visible;
 
   // The lead-only Request-Reopen affordance uses the same `computeReopenEligibility`
   // as the write guard, so the button shows exactly when `requestReopen` would

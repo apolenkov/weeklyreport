@@ -15,7 +15,10 @@ import { toast } from "sonner";
 
 import { mutationErrorMessage } from "../../../../shared/lib/errors/mutation-error-message";
 import { sectionToDraftPayload } from "../lead-section-draft-payload";
-import { buildLeadSubmitPayload } from "../lead-submit-readiness";
+import {
+  buildLeadSubmitPayload,
+  unfinishedDraftRecords,
+} from "../lead-submit-payload";
 import {
   applyDraftPatch,
   type DraftPatch,
@@ -178,6 +181,8 @@ export function useDraftSubmit({
   return useCallback(async (): Promise<SubmitOutcome> => {
     if (isOutcomeLocked()) return "not-ready";
     if (!draftPayload) return "no-draft";
+    // Readiness names each unfinished record; a submission never drops one.
+    if (unfinishedDraftRecords(draftPayload).length > 0) return "not-ready";
     const isCurrent = captureGeneration();
     if (
       !isCurrent ||

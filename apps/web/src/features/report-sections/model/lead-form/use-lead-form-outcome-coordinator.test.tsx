@@ -1,8 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import type {
-  ItemOutcomeResult,
-  ReportSectionReadModel,
-} from "@weeklyreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { useLayoutEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it, vi } from "vitest";
@@ -11,7 +8,10 @@ import { makeReportSectionFixture } from "../../../../test-utils/report-section-
 import type { AutosaveSnapshot } from "../autosave/autosave-types";
 import { leadFormGenerationOf } from "./lead-form-generation";
 import type { OutcomeCoordinatorArgs } from "./lead-form-outcome-coordinator-helpers";
-import { LeadFormWriteError } from "./lead-form-write-port";
+import {
+  type LeadFormOutcomeResult,
+  LeadFormWriteError,
+} from "./lead-form-write-port";
 import { InMemoryLeadFormWriteAdapter } from "./lead-form-write-port.in-memory";
 import { useLeadFormOutcomeCoordinator } from "./use-lead-form-outcome-coordinator";
 
@@ -76,7 +76,7 @@ function resolveInput(commandId = COMMAND_ID) {
   };
 }
 
-function outcome(section: ReportSectionReadModel): ItemOutcomeResult {
+function outcome(section: ReportSectionReadModel): LeadFormOutcomeResult {
   return { section, stableId: STABLE_ID, replayed: false };
 }
 
@@ -191,7 +191,7 @@ describe("useLeadFormOutcomeCoordinator", () => {
 
   it("locks synchronously so a duplicate click cannot start a second command", async () => {
     const section = makeSection();
-    let finish!: (value: ItemOutcomeResult) => void;
+    let finish!: (value: LeadFormOutcomeResult) => void;
     const writePort = new InMemoryLeadFormWriteAdapter({
       saveDraft: () => Promise.resolve(section),
       submit: () => Promise.resolve(section),
@@ -203,7 +203,7 @@ describe("useLeadFormOutcomeCoordinator", () => {
     const args = buildArgs({ writePort, draftSection: section });
     const { result } = renderHook(() => useLeadFormOutcomeCoordinator(args));
 
-    let first!: Promise<ItemOutcomeResult>;
+    let first!: Promise<LeadFormOutcomeResult>;
     act(() => {
       first = result.current.resolve(resolveInput(), STABLE_ID);
     });
@@ -292,9 +292,9 @@ describe("useLeadFormOutcomeCoordinator", () => {
         reportSectionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         reportId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
       });
-      let finish!: (value: ItemOutcomeResult) => void;
+      let finish!: (value: LeadFormOutcomeResult) => void;
       const waitForReply = () =>
-        new Promise<ItemOutcomeResult>((resolve) => {
+        new Promise<LeadFormOutcomeResult>((resolve) => {
           finish = resolve;
         });
       const writePort = new InMemoryLeadFormWriteAdapter({
@@ -316,7 +316,7 @@ describe("useLeadFormOutcomeCoordinator", () => {
           useLeadFormOutcomeCoordinator(args),
         { initialProps: { args: initial } },
       );
-      let request!: Promise<ItemOutcomeResult>;
+      let request!: Promise<LeadFormOutcomeResult>;
       act(() => {
         request =
           operation === "resolve"
@@ -368,12 +368,12 @@ describe("useLeadFormOutcomeCoordinator", () => {
         reportSectionId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         reportId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
       });
-      let finish!: (value: ItemOutcomeResult) => void;
+      let finish!: (value: LeadFormOutcomeResult) => void;
       const writePort = new InMemoryLeadFormWriteAdapter({
         saveDraft: () => Promise.resolve(sectionA),
         submit: () => Promise.resolve(sectionA),
         resolvePlan: () =>
-          new Promise<ItemOutcomeResult>((resolve) => {
+          new Promise<LeadFormOutcomeResult>((resolve) => {
             finish = resolve;
           }),
         restorePlan: () => Promise.reject(new Error("restore is not used")),
@@ -421,7 +421,7 @@ describe("useLeadFormOutcomeCoordinator", () => {
       act(() => {
         root.render(view(argsA));
       });
-      let request!: Promise<ItemOutcomeResult>;
+      let request!: Promise<LeadFormOutcomeResult>;
       act(() => {
         request = actions.resolve(resolveInput(), STABLE_ID);
       });

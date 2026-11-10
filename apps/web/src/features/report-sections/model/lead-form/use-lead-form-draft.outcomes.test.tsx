@@ -1,12 +1,10 @@
 import { act, renderHook } from "@testing-library/react";
-import type {
-  ItemOutcomeResult,
-  ReportSectionReadModel,
-} from "@weeklyreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeReportSectionFixture } from "../../../../test-utils/report-section-fixtures";
 import { leadFormGenerationOf } from "./lead-form-generation";
+import type { LeadFormOutcomeResult } from "./lead-form-write-port";
 import { InMemoryLeadFormWriteAdapter } from "./lead-form-write-port.in-memory";
 import { useLeadFormDraftCore } from "./use-lead-form-draft-core";
 
@@ -62,7 +60,7 @@ function commandInput() {
 }
 
 function buildHarness(
-  resolvePlan: (input: unknown) => Promise<ItemOutcomeResult>,
+  resolvePlan: (input: unknown) => Promise<LeadFormOutcomeResult>,
   saveDraft?: () => Promise<ReportSectionReadModel>,
 ) {
   const initial = makeSection();
@@ -205,14 +203,14 @@ describe("useLeadFormDraftCore outcome coordination", () => {
   });
 
   it("blocks local apply and submit synchronously while an outcome command is pending", async () => {
-    let finish!: (result: ItemOutcomeResult) => void;
+    let finish!: (result: LeadFormOutcomeResult) => void;
     const harness = buildHarness(
       () =>
         new Promise((resolve) => {
           finish = resolve;
         }),
     );
-    let request!: Promise<ItemOutcomeResult>;
+    let request!: Promise<LeadFormOutcomeResult>;
     act(() => {
       request = harness.result.current.outcomes.resolve(
         commandInput(),

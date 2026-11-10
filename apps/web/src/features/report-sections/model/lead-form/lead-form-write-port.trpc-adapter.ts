@@ -6,13 +6,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { TRPCClientError } from "@trpc/client";
-import {
-  type AuthorReportSectionReadModel,
-  type DraftSavePayload,
-  isCompleteDecision,
-  isCompleteRisk,
-  type ReportSectionReadModel,
-} from "@weeklyreport/shared";
+import type { ItemOutcomeResult } from "@weeklyreport/shared";
 import { useCallback, useMemo, useState } from "react";
 
 import {
@@ -23,10 +17,14 @@ import {
 } from "../../../../shared/lib/query/cache-keys";
 import { isConflictError } from "../../../../shared/lib/trpc/trpc";
 import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
+import { formSectionOf } from "../form-section";
 import {
+  type LeadFormDraftSaveInput,
+  type LeadFormOutcomeResult,
   LeadFormWriteError,
   type LeadFormWritePort,
 } from "./lead-form-write-port";
+import { useStoredDraftLedger } from "./stored-draft-ledger";
 
 function normalizeWriteError(error: unknown): LeadFormWriteError {
   if (error instanceof LeadFormWriteError) return error;
@@ -61,39 +59,50 @@ function normalizeDraftWriteError(error: unknown): LeadFormWriteError {
   );
 }
 
-// TODO(TASK-836): the form adopts the author's model, and this narrowing goes,
-// when it learns to edit incomplete risks and decisions. Until then it sends
-// complete records only, so an incomplete one can only come from another
-// client; the saved state is real, and a reload is the way to see it.
-function completeSectionOf(
-  section: AuthorReportSectionReadModel,
-): ReportSectionReadModel {
-  const risks = section.risks.filter(isCompleteRisk);
-  const decisions = section.decisions.filter(isCompleteDecision);
-  if (
-    risks.length !== section.risks.length ||
-    decisions.length !== section.decisions.length
-  ) {
-    throw new LeadFormWriteError(
-      "conflict",
-      "This section holds unfinished drafts from another session. Reload to continue.",
-    );
-  }
-  return { ...section, risks, decisions };
-}
-
-function useSaveDraftMutation() {
+// Every section a write returns goes back to the form in the form's shape and
+// into the ledger, which tells the next save what the server still holds.
+function useFormSectionWrites() {
   const trpc = useTRPC();
-  const { mutateAsync } = useMutation(
+  const ledger = useStoredDraftLedger();
+  const { mutateAsync: saveDraft } = useMutation(
     trpc.reports.saveDraft.mutationOptions({}),
   );
-  return useMemo(
-    () => ({
-      mutateAsync: async (input: DraftSavePayload) =>
-        completeSectionOf(await mutateAsync(input)),
-    }),
-    [mutateAsync],
+  const { mutateAsync: resolvePlan } = useMutation(
+    trpc.leadForm.resolvePlan.mutationOptions({}),
   );
+  const { mutateAsync: restorePlan } = useMutation(
+    trpc.leadForm.restorePlan.mutationOptions({}),
+  );
+  const { mutateAsync: promotePlan } = useMutation(
+    trpc.leadForm.promotePlan.mutationOptions({}),
+  );
+  return useMemo(() => {
+    const outcome =
+      <Input>(run: (input: Input) => Promise<ItemOutcomeResult>) =>
+      async (input: Input): Promise<LeadFormOutcomeResult> => {
+        const result = await run(input);
+        ledger.record(result.section);
+        return { ...result, section: formSectionOf(result.section) };
+      };
+    return {
+      saveDraft: {
+        mutateAsync: async (input: LeadFormDraftSaveInput) => {
+          const deleted = ledger.deletionsFor(input);
+          const saved = await saveDraft({
+            ...input,
+            ...(deleted.length > 0
+              ? { deletedIncompleteRecords: deleted }
+              : {}),
+          });
+          ledger.record(saved);
+          return formSectionOf(saved);
+        },
+      },
+      resolvePlan: { mutateAsync: outcome(resolvePlan) },
+      restorePlan: { mutateAsync: outcome(restorePlan) },
+      promotePlan: { mutateAsync: outcome(promotePlan) },
+    };
+  }, [ledger, promotePlan, resolvePlan, restorePlan, saveDraft]);
 }
 
 type Invalidate = (
@@ -166,15 +175,7 @@ export function useLeadFormWritePort(
 ): LeadFormWritePort {
   const trpc = useTRPC();
   const submitMutation = useMutation(trpc.reports.submit.mutationOptions({}));
-  const resolvePlanMutation = useMutation(
-    trpc.leadForm.resolvePlan.mutationOptions({}),
-  );
-  const restorePlanMutation = useMutation(
-    trpc.leadForm.restorePlan.mutationOptions({}),
-  );
-  const promotePlanMutation = useMutation(
-    trpc.leadForm.promotePlan.mutationOptions({}),
-  );
+  const sectionWrites = useFormSectionWrites();
   const fillFromMutation = useMutation(
     trpc.leadForm.fillFrom.mutationOptions({}),
   );
@@ -184,7 +185,7 @@ export function useLeadFormWritePort(
   );
 
   const saveDraft = useWrite(
-    useSaveDraftMutation(),
+    sectionWrites.saveDraft,
     invalidateForm,
     reportSectionOf,
     normalizeDraftWriteError,
@@ -195,17 +196,17 @@ export function useLeadFormWritePort(
     reportSectionOf,
   );
   const resolvePlan = useWrite(
-    resolvePlanMutation,
+    sectionWrites.resolvePlan,
     invalidateLeadPlanOutcome,
     reportSectionOf,
   );
   const restorePlan = useWrite(
-    restorePlanMutation,
+    sectionWrites.restorePlan,
     invalidateLeadPlanOutcome,
     reportSectionOf,
   );
   const promotePlan = useWrite(
-    promotePlanMutation,
+    sectionWrites.promotePlan,
     invalidateLeadPlanOutcome,
     reportSectionOf,
   );

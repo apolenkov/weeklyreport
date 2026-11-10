@@ -55,6 +55,10 @@ vi.mock("../model/lead-slides-deck-model", () => ({
 
 vi.mock("../../report-sections", () => ({
   mapLeadFormData: () => ({ readOnly: false }),
+  withSlideSections: <T extends { section: unknown }>(read: T) => ({
+    ...read,
+    editableSection: read.section,
+  }),
 }));
 
 const pending = new Promise<never>(() => undefined);

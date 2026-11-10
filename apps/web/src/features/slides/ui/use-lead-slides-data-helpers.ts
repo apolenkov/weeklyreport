@@ -10,6 +10,7 @@ import { SessionContext } from "../../../shared/lib/auth/session-provider";
 import { getScalarSearchParam } from "../../../shared/lib/navigation/scalar-search-param";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
 import { LEAD_REPORT_ROUTE } from "../../../shared/ui/navigation/nav-links";
+import { withSlideSections } from "../../report-sections";
 import {
   buildLeadSlidePeriodOptions,
   resolveLeadSlideReportId,
@@ -109,6 +110,8 @@ export function useLeadSlideSectionQueries(
       reportId: targetReportId,
       authorId,
     }),
+    // Slides show finished records only; an inline save still needs the rest.
+    select: withSlideSections,
     enabled: targetReportId !== "",
   });
   const crossAuthorsQ = useQuery({

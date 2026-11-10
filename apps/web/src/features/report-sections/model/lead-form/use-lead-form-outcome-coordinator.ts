@@ -1,6 +1,5 @@
 "use client";
 
-import type { ItemOutcomeResult } from "@weeklyreport/shared";
 import {
   useCallback,
   useEffect,
@@ -28,6 +27,7 @@ import {
   resultMatchesScope,
   WAIT_FOR_OUTCOME,
 } from "./lead-form-outcome-coordinator-helpers";
+import type { LeadFormOutcomeResult } from "./lead-form-write-port";
 
 export interface LeadFormOutcomeActions {
   readonly pending: boolean;
@@ -36,15 +36,15 @@ export interface LeadFormOutcomeActions {
   readonly resolve: (
     input: ResolvePlanCommandInput,
     sourceStableId: string | null,
-  ) => Promise<ItemOutcomeResult>;
+  ) => Promise<LeadFormOutcomeResult>;
   readonly restore: (
     input: RestorePlanCommandInput,
     stableId: string,
-  ) => Promise<ItemOutcomeResult>;
+  ) => Promise<LeadFormOutcomeResult>;
   readonly promote: (
     input: PromotePlanCommandInput,
     stableId: string,
-  ) => Promise<ItemOutcomeResult>;
+  ) => Promise<LeadFormOutcomeResult>;
 }
 
 interface ActiveCommand {
@@ -134,7 +134,11 @@ function useOutcomeGate(
   }, []);
 
   const adoptIfCurrent = useCallback(
-    (result: ItemOutcomeResult, commandScope: OutcomeScope, token: symbol) => {
+    (
+      result: LeadFormOutcomeResult,
+      commandScope: OutcomeScope,
+      token: symbol,
+    ) => {
       if (
         activeRef.current?.token !== token ||
         liveScopeRef.current?.key !== commandScope.key ||
@@ -142,14 +146,8 @@ function useOutcomeGate(
       ) {
         return;
       }
-      if (
-        !args.acceptVersion(
-          result.section.reportSectionId,
-          result.section.version,
-        )
-      ) {
-        return;
-      }
+      const { reportSectionId, version } = result.section;
+      if (!args.acceptVersion(reportSectionId, version)) return;
       args.adoptServerSection(result.section);
     },
     [args],
@@ -182,8 +180,8 @@ function useOutcomeExecutor(
         registry: Map<string, PreparedOutcomeCommand>,
         context: OutcomeCommandContext,
       ) => Prepared,
-      send: (prepared: Prepared) => Promise<ItemOutcomeResult>,
-    ): Promise<ItemOutcomeResult> => {
+      send: (prepared: Prepared) => Promise<LeadFormOutcomeResult>,
+    ): Promise<LeadFormOutcomeResult> => {
       if (scope === null || args.draftSection === null) {
         throw commandError(SECTION_UNAVAILABLE);
       }

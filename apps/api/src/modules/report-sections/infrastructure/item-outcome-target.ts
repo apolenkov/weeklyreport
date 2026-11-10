@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import {
+  mapPrismaToAuthorReportSection,
   mapPrismaToReportSection,
   reportSectionFullInclude,
 } from "@weeklyreport/report-persistence";
@@ -21,6 +22,7 @@ import {
   outcomeCommandHash,
   type OutcomeCommandOperation,
 } from "./item-outcome-command-hash.js";
+import { privateDraftOwnerWhere } from "./private-draft-entitlement.js";
 
 type Command = ResolvePlanInput | RestorePlanInput | PromotePlanInput;
 const SECTION_UNAVAILABLE = "The report section is not available.";
@@ -97,7 +99,7 @@ export async function loadOutcomeTarget(
       actor,
       requestHash,
       replay: {
-        section,
+        section: await authorFormSectionOf(tx, row, userId),
         stableId: receipt.stableId,
         replayed: true,
       } satisfies ItemOutcomeResult,
@@ -131,15 +133,40 @@ export async function advanceOutcomeVersion(
   }
 }
 
+// The result re-bases the author's form, which holds their unfinished risks
+// and decisions: the complete projection would make the form drop them and
+// the next autosave would then be refused for omitting them. Anyone without
+// the private-draft entitlement keeps the complete projection.
+async function authorFormSectionOf(
+  tx: Prisma.TransactionClient,
+  row: Prisma.ReportSectionGetPayload<{
+    include: typeof reportSectionFullInclude;
+  }>,
+  actorId: string,
+): Promise<ItemOutcomeResult["section"]> {
+  const entitled = await tx.reportSection.findFirst({
+    where: { id: row.id, ...privateDraftOwnerWhere(actorId) },
+    select: { id: true },
+  });
+  return entitled
+    ? mapPrismaToAuthorReportSection(row)
+    : mapPrismaToReportSection(row);
+}
+
 export async function readOutcomeResult(
   tx: Prisma.TransactionClient,
   reportSectionId: string,
   stableId: string,
+  actorId: string,
 ): Promise<ItemOutcomeResult> {
   const row = await tx.reportSection.findUnique({
     where: { id: reportSectionId },
     include: reportSectionFullInclude,
   });
   if (!row) throw new LeadFormDomainError(SECTION_UNAVAILABLE);
-  return { section: mapPrismaToReportSection(row), stableId, replayed: false };
+  return {
+    section: await authorFormSectionOf(tx, row, actorId),
+    stableId,
+    replayed: false,
+  };
 }

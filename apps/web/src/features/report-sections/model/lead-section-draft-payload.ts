@@ -1,18 +1,25 @@
 import {
-  type DraftSavePayload,
   hasVisibleText,
+  type IncompleteDraftSavePayload,
   type ReportSectionReadModel,
   type TrafficLightStatus,
 } from "@weeklyreport/shared";
 
 // The draft producer owns content without optimistic-lock metadata; writers
-// inject the current version only when they issue a mutation.
-export type DraftSaveContent = Omit<DraftSavePayload, "version">;
+// inject the current version only when they issue a mutation, and the
+// transport names the stored unfinished records the content leaves out.
+export type DraftSaveContent = Omit<
+  IncompleteDraftSavePayload,
+  "version" | "deletedIncompleteRecords"
+>;
 
 // Filter required text safeText would reject (blank or invisible-only): one such
 // row would fail the whole autosave. Those rows stay local-only until filled.
 const hasText = (s: string | null | undefined) =>
   typeof s === "string" && hasVisibleText(s);
+
+// A detail the author has not written yet is saved as missing, not as text.
+const detailOrNull = (s: string): string | null => (hasText(s) ? s : null);
 
 function toItemDrafts(items: ReportSectionReadModel["items"]) {
   return items
@@ -35,19 +42,20 @@ function toItemDrafts(items: ReportSectionReadModel["items"]) {
     }));
 }
 
+// A risk is saved as soon as it is named: impact and mitigation may follow
+// later, and until then the record stays an unfinished draft only its author
+// sees.
 function toRiskDrafts(risks: ReportSectionReadModel["risks"]) {
   return risks
-    .filter(
-      (r) => hasText(r.risk) && hasText(r.impact) && hasText(r.mitigation),
-    )
+    .filter((r) => hasText(r.risk))
     .map((r) => ({
       id: r.id,
       stableId: r.stableId,
       projectId: r.projectId ?? null,
       activityId: r.activityId ?? null,
       risk: r.risk,
-      impact: r.impact,
-      mitigation: r.mitigation,
+      impact: detailOrNull(r.impact),
+      mitigation: detailOrNull(r.mitigation),
       severity: r.severity,
       stageNames: r.stageNames,
     }));
@@ -55,20 +63,21 @@ function toRiskDrafts(risks: ReportSectionReadModel["risks"]) {
 
 // The server stores every decision under the section author (see
 // report-section-merge.ts); mirroring that keeps the draft key equal to the
-// saved key, otherwise autosave re-saves forever.
+// saved key, otherwise autosave re-saves forever. Like a risk, a decision is
+// saved once it has its text; its impact may still be missing.
 function toDecisionDrafts(
   decisions: ReportSectionReadModel["decisions"],
   authorName: string,
 ) {
   return decisions
-    .filter((d) => hasText(d.text) && hasText(d.owner) && hasText(d.impact))
+    .filter((d) => hasText(d.text) && hasText(d.owner))
     .map((d) => ({
       id: d.id,
       stableId: d.stableId,
       text: d.text,
       owner: authorName,
       deadline: d.deadline ?? null,
-      impact: d.impact,
+      impact: detailOrNull(d.impact),
       resolvedAt: d.resolvedAt ?? null,
       stageNames: d.stageNames,
       productId: d.productId ?? null,
@@ -109,9 +118,8 @@ export function sectionToDraftPayload(
  * are not counted.
  */
 export function countLocalOnlyRows(section: ReportSectionReadModel): number {
-  const partiallyFilled = (values: readonly (string | null | undefined)[]) =>
-    values.some((value) => hasText(value)) &&
-    !values.every((value) => hasText(value));
+  const anyText = (values: readonly (string | null | undefined)[]) =>
+    values.some((value) => hasText(value));
   // Items need only `text`; the other fields are optional, so a row is local-only
   // exactly when the payload drops it while the user typed text into it anyway.
   const itemsAwaitingText = section.items.filter(
@@ -119,13 +127,17 @@ export function countLocalOnlyRows(section: ReportSectionReadModel): number {
       !hasText(it.text) &&
       (hasText(it.nextStepText) || hasText(it.pausedReason)),
   ).length;
+  // A risk waits for its name, a decision for its text and owner; details
+  // typed ahead of them are the only content the payload cannot carry.
   return (
     itemsAwaitingText +
-    section.risks.filter((r) =>
-      partiallyFilled([r.risk, r.impact, r.mitigation]),
+    section.risks.filter(
+      (r) => !hasText(r.risk) && anyText([r.impact, r.mitigation]),
     ).length +
-    section.decisions.filter((d) =>
-      partiallyFilled([d.text, d.owner, d.impact]),
+    section.decisions.filter(
+      (d) =>
+        !(hasText(d.text) && hasText(d.owner)) &&
+        anyText([d.text, d.owner, d.impact]),
     ).length
   );
 }

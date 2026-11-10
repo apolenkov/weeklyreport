@@ -1,5 +1,4 @@
 import type {
-  DraftSavePayload,
   PromotePlanInput,
   ReportSectionReadModel,
   ResolvePlanInput,
@@ -8,6 +7,7 @@ import type {
 } from "@weeklyreport/shared";
 
 import type {
+  LeadFormDraftSaveInput,
   LeadFormFillFromInput,
   LeadFormReopenInput,
   LeadFormWritePending,
@@ -16,7 +16,7 @@ import type {
 
 export interface InMemoryLeadFormWriteHandlers {
   readonly saveDraft: (
-    input: DraftSavePayload,
+    input: LeadFormDraftSaveInput,
   ) => Promise<ReportSectionReadModel>;
   readonly submit: (
     input: SubmitSectionPayload,
@@ -30,7 +30,7 @@ export interface InMemoryLeadFormWriteHandlers {
 }
 
 export interface InMemoryLeadFormWriteCalls {
-  readonly saveDraft: DraftSavePayload[];
+  readonly saveDraft: LeadFormDraftSaveInput[];
   readonly submit: SubmitSectionPayload[];
   readonly resolvePlan: ResolvePlanInput[];
   readonly restorePlan: RestorePlanInput[];
@@ -72,7 +72,7 @@ export class InMemoryLeadFormWriteAdapter implements LeadFormWritePort {
     this.pending = { ...IDLE, ...pending };
   }
 
-  saveDraft = async (input: DraftSavePayload) => {
+  saveDraft = async (input: LeadFormDraftSaveInput) => {
     this.calls.saveDraft.push(input);
     return this.handlers.saveDraft(input);
   };

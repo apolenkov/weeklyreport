@@ -1,5 +1,4 @@
 import type {
-  ItemOutcomeResult,
   PromotePlanInput,
   ReportSectionReadModel,
   ResolvePlanInput,
@@ -10,6 +9,7 @@ import type { AutosaveSnapshot } from "../autosave/autosave-types";
 import type { LeadFormGeneration } from "./lead-form-generation";
 import { leadFormGenerationOf } from "./lead-form-generation";
 import {
+  type LeadFormOutcomeResult,
   LeadFormWriteError,
   type LeadFormWritePort,
 } from "./lead-form-write-port";
@@ -249,7 +249,7 @@ export function preparePromoteCommand(
 }
 
 export function resultMatchesScope(
-  result: ItemOutcomeResult,
+  result: LeadFormOutcomeResult,
   scope: OutcomeScope,
 ): boolean {
   return (

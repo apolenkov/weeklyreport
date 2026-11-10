@@ -176,6 +176,8 @@ function makeProviders() {
               section: {
                 reportSectionId: "section-a",
                 marker: "Report A marker",
+                risks: [],
+                decisions: [],
               },
               readOnly: false,
               canRequestReopen: false,

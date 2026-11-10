@@ -1,5 +1,6 @@
 import {
   draftSaveSchema,
+  incompleteDraftSaveSchema,
   type ReportSectionReadModel,
 } from "@weeklyreport/shared";
 import { describe, expect, it } from "vitest";
@@ -12,7 +13,7 @@ import {
   countLocalOnlyRows,
   sectionToDraftPayload,
 } from "./lead-section-draft-payload";
-import { buildLeadSubmitPayload } from "./lead-submit-readiness";
+import { buildLeadSubmitPayload } from "./lead-submit-payload";
 
 const PROJECT_ID = "11111111-1111-4111-8111-111111111111";
 const ITEM_ID = "99999999-9999-4999-8999-999999999999";
@@ -175,9 +176,24 @@ describe("sectionToDraftPayload", () => {
     ]);
   });
 
-  it("excludes a risk whose impact is whitespace-only", () => {
+  it("saves a named risk with a blank impact as an unfinished draft", () => {
+    const risk = makeRisk(" ".repeat(3));
+    const payload = sectionToDraftPayload(makeSection({ risks: [risk] }));
+
+    expect(payload.risks).toEqual([{ ...risk, impact: null }]);
+    expect(payload.risks[0]?.stableId).toBe(RISK_STABLE_ID);
+  });
+
+  it("saves a named risk with no mitigation yet", () => {
+    const risk = { ...makeRisk("Schedule slips"), mitigation: "" };
+    const payload = sectionToDraftPayload(makeSection({ risks: [risk] }));
+
+    expect(payload.risks).toEqual([{ ...risk, mitigation: null }]);
+  });
+
+  it("keeps a risk without a name local", () => {
     const payload = sectionToDraftPayload(
-      makeSection({ risks: [makeRisk(" ".repeat(3))] }),
+      makeSection({ risks: [{ ...makeRisk("Schedule slips"), risk: " " }] }),
     );
 
     expect(payload.risks).toEqual([]);
@@ -207,13 +223,40 @@ describe("sectionToDraftPayload", () => {
   it.each([
     ["text", " ".repeat(3)],
     ["owner", ""],
-    ["impact", "\t"],
   ])("continues excluding a decision missing %s", (field, value) => {
     const payload = sectionToDraftPayload(
       makeSection({ decisions: [makeDecision({ [field]: value })] }),
     );
 
     expect(payload.decisions).toEqual([]);
+  });
+
+  it("saves a decision with a blank impact as an unfinished draft", () => {
+    const decision = makeDecision({ impact: "\t" });
+    const payload = sectionToDraftPayload(
+      makeSection({ decisions: [decision] }),
+    );
+
+    expect(payload.decisions).toEqual([{ ...decision, impact: null }]);
+    expect(payload.decisions[0]?.stableId).toBe(DECISION_STABLE_ID);
+  });
+
+  it("produces a payload the draft save contract accepts", () => {
+    const payload = sectionToDraftPayload(
+      makeSection({
+        risks: [{ ...makeRisk(""), stageNames: ["Development"] }],
+        decisions: [
+          { ...makeDecision({ impact: "" }), stageNames: ["Development"] },
+        ],
+      }),
+    );
+
+    const parsed = incompleteDraftSaveSchema.safeParse({
+      ...payload,
+      version: 1,
+    });
+
+    expect(parsed.error?.issues ?? []).toEqual([]);
   });
 });
 
@@ -281,11 +324,20 @@ describe("activityStatuses projection shared by draft save and submit", () => {
 });
 
 describe("countLocalOnlyRows", () => {
-  it("counts a partially typed risk the payload cannot carry", () => {
-    const section = makeSection({ risks: [makeRisk("")] });
+  it("counts a risk whose details are typed ahead of its name", () => {
+    const section = makeSection({
+      risks: [{ ...makeRisk("Schedule slips"), risk: "" }],
+    });
 
     expect(sectionToDraftPayload(section).risks).toEqual([]);
     expect(countLocalOnlyRows(section)).toBe(1);
+  });
+
+  it("does not count a named risk that still misses its impact", () => {
+    const section = makeSection({ risks: [makeRisk("")] });
+
+    expect(sectionToDraftPayload(section).risks).toHaveLength(1);
+    expect(countLocalOnlyRows(section)).toBe(0);
   });
 
   it("ignores fully blank rows and rows the payload already carries", () => {
@@ -358,7 +410,7 @@ describe("invisible-only text follows the server visible-text rule", () => {
   );
 
   it.each(INVISIBLE_ONLY)(
-    "keeps risks and decisions with a %j field local",
+    "saves a %j detail as missing and keeps such a name local",
     (text) => {
       const section = makeSection({
         risks: [makeRisk(text)],
@@ -366,9 +418,17 @@ describe("invisible-only text follows the server visible-text rule", () => {
       });
       const payload = sectionToDraftPayload(section);
 
-      expect(payload.risks).toEqual([]);
-      expect(payload.decisions).toEqual([]);
-      expect(countLocalOnlyRows(section)).toBe(2);
+      expect(payload.risks.map((risk) => risk.impact)).toEqual([null]);
+      expect(payload.decisions.map((d) => d.impact)).toEqual([null]);
+      expect(countLocalOnlyRows(section)).toBe(0);
+
+      const unnamed = makeSection({
+        risks: [{ ...makeRisk("Schedule slips"), risk: text }],
+        decisions: [makeDecision({ text })],
+      });
+      expect(sectionToDraftPayload(unnamed).risks).toEqual([]);
+      expect(sectionToDraftPayload(unnamed).decisions).toEqual([]);
+      expect(countLocalOnlyRows(unnamed)).toBe(2);
     },
   );
 

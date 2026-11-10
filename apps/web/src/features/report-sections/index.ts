@@ -10,6 +10,7 @@ export type {
 export { crossAuthorContentFetchEnabled } from "./model/cross-author/cross-author-content-gate";
 export type { DraftStageMemory } from "./model/draft-stage-memory";
 export { createDraftStageMemory } from "./model/draft-stage-memory";
+export { withFormSection, withSlideSections } from "./model/form-section";
 export { STATUS_BADGE } from "./model/item-card-style";
 export { buildItemDialogProps } from "./model/item-dialog-props";
 export { persistableItemStatusToWorkflow } from "./model/item-status";

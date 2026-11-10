@@ -1,7 +1,7 @@
 import type { Prisma, PrismaClient } from "@prisma/client";
 import type {
+  AuthorReportSectionReadModel,
   DraftSavePayload,
-  ReportSectionReadModel,
   ResolvePlanInput,
 } from "@weeklyreport/shared";
 
@@ -244,7 +244,7 @@ export function outcomeCommand(
 }
 
 export function unchangedDraftPayload(
-  section: ReportSectionReadModel,
+  section: AuthorReportSectionReadModel,
 ): DraftSavePayload {
   return {
     reportSectionId: section.reportSectionId,

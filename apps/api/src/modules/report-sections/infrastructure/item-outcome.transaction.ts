@@ -131,7 +131,12 @@ export async function resolvePlanTx(
         transition,
         candidate,
       });
-      return readOutcomeResult(tx, target.section.reportSectionId, stableId);
+      return readOutcomeResult(
+        tx,
+        target.section.reportSectionId,
+        stableId,
+        target.actor.id,
+      );
     },
     { timeout: 15_000 },
   );
@@ -192,6 +197,7 @@ export async function restorePlanTx(
         tx,
         target.section.reportSectionId,
         source.stableId,
+        target.actor.id,
       );
     },
     { timeout: 15_000 },
@@ -257,6 +263,7 @@ export async function promotePlanTx(
         tx,
         target.section.reportSectionId,
         source.stableId,
+        target.actor.id,
       );
     },
     { timeout: 15_000 },

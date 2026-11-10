@@ -84,6 +84,7 @@ export function createMockRepository(
     getSectionByIdScoped: vi.fn().mockResolvedValue(null),
     getUserReportingGroupId: vi.fn().mockResolvedValue(null),
     getSectionForPeriod: vi.fn().mockResolvedValue(null),
+    getOwnDraftSection: vi.fn().mockResolvedValue(null),
     getSectionForPeriodAsGroupPeer: vi.fn().mockResolvedValue(null),
     getStatusOverviewPeriods: vi.fn().mockResolvedValue(null),
     getSectionReopenContext: vi.fn().mockResolvedValue(null),

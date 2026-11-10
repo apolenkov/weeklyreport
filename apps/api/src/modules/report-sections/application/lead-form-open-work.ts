@@ -9,7 +9,7 @@ import {
   LeadFormDomainError,
   type LeadFormRepository,
 } from "../domain/lead-form-shared.js";
-import { readByPeriod } from "./lead-form-by-period.js";
+import { readCompleteByPeriod } from "./lead-form-by-period.js";
 
 /** Authorizes the target report, then reads only the session lead's history. */
 export async function readLeadOpenWork(
@@ -18,7 +18,7 @@ export async function readLeadOpenWork(
   userId: string,
 ): Promise<LeadOpenWorkHistoryOutput> {
   const parsed = leadOpenWorkHistoryInputSchema.parse(input);
-  await readByPeriod(repository, {
+  await readCompleteByPeriod(repository, {
     reportId: parsed.reportId,
     userId,
     role: "lead",

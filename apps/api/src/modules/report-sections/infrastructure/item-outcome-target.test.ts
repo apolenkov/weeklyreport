@@ -86,6 +86,8 @@ function createTransaction({
       return Promise.resolve([report]);
     }),
     reportSection: {
+      // The author keeps the private-draft entitlement in every scenario.
+      findFirst: vi.fn().mockResolvedValue({ id: SECTION_ID }),
       findUnique: vi.fn(() => {
         calls.push("section");
         return Promise.resolve(row);

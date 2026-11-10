@@ -31,6 +31,8 @@ describe("LeadFormService — getOpenWork", () => {
 
     expect(result).toEqual({ occurrences: [], nextCursor: "next-page" });
     expect(getSectionForPeriod).toHaveBeenCalledWith(REPORT_ID, AUTHOR_ID);
+    // Authorization needs no unfinished drafts.
+    expect(repository.getOwnDraftSection).not.toHaveBeenCalled();
     expect(getOpenWorkHistoryPage).toHaveBeenCalledWith(REPORT_ID, AUTHOR_ID, {
       cursor: undefined,
       limit: 10,

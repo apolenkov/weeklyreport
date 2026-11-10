@@ -4,6 +4,7 @@ import {
   reportSectionFullInclude,
 } from "@weeklyreport/report-persistence";
 import type {
+  AuthorReportSectionReadModel,
   IncompleteRecordDeletion,
   PromotePlanInput,
   PublishedLineage,
@@ -42,6 +43,7 @@ import {
 } from "./lead-form-period.reads.js";
 import { getSectionReopenContext } from "./lead-form-reopen-eligibility.query.js";
 import { getStatusOverviewPeriodsRead } from "./lead-form-status-overview.read.js";
+import { queryOwnDraftSection } from "./own-draft-section.query.js";
 import {
   publishedLineageCandidates,
   queryPublishedLineage,
@@ -123,7 +125,7 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
   // reference set the save guard uses, surfaced so the form can mark locked
   // records. One shared query definition, no second copy.
   getPublishedLineage(
-    section: ReportSectionReadModel,
+    section: AuthorReportSectionReadModel,
   ): Promise<PublishedLineage> {
     return queryPublishedLineage(
       this.prisma,
@@ -144,6 +146,13 @@ export class LeadFormPrismaRepository implements LeadFormRepository {
     userId: string,
   ): ReturnType<LeadFormRepository["getSectionForPeriod"]> {
     return getSectionForPeriodRead(this.prisma, reportId, userId);
+  }
+
+  getOwnDraftSection(
+    reportId: string,
+    actorId: string,
+  ): Promise<AuthorReportSectionReadModel | null> {
+    return queryOwnDraftSection(this.prisma, reportId, actorId);
   }
 
   async getSectionForPeriodAsGroupPeer(
