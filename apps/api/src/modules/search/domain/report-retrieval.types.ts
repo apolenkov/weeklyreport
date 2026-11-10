@@ -31,9 +31,15 @@ export type SectionScope = Readonly<{
   reportId: string;
   sectionId: string;
   authorId: string;
-  visibility: "own" | "shared_products";
   section: ReportSectionReadModel;
-}>;
+}> &
+  (
+    | Readonly<{ visibility: "own" }>
+    | Readonly<{
+        visibility: "shared_products";
+        sharedProductIds: readonly string[];
+      }>
+  );
 
 export type ResolvedSearchPlan = Readonly<{
   plan: SearchPlan;

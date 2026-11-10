@@ -1,7 +1,7 @@
 import type { SearchPlan } from "@weeklyreport/shared";
 
+import { matchesCandidateScope } from "./candidate-scope.js";
 import { classifyDecision } from "./decision-classification.js";
-import { normalizeEntityReference } from "./entity-alias-index.js";
 import type {
   ResolvedSearchPlan,
   SearchCandidate,
@@ -42,84 +42,6 @@ export const checkCandidateSetLimit = (
 
 const sortText = (left: string, right: string): number =>
   left.localeCompare(right, "en", { sensitivity: "base" });
-
-const includesNormalized = (
-  values: readonly string[],
-  candidate: string,
-): boolean =>
-  values.some(
-    (value) =>
-      normalizeEntityReference(value) === normalizeEntityReference(candidate),
-  );
-
-const matchesAuthor = (
-  candidate: SearchCandidate,
-  plan: ResolvedSearchPlan,
-): boolean => {
-  if (plan.plan.authors.mode === "all_visible" && plan.authorIds.length === 0) {
-    return false;
-  }
-  return plan.authorIds.includes(candidate.context.authorId);
-};
-
-const matchesSubject = (
-  candidate: SearchCandidate,
-  plan: ResolvedSearchPlan,
-): boolean => {
-  const { subjects } = plan.plan;
-  if (
-    subjects.parentKinds.length > 0 &&
-    !subjects.parentKinds.includes(candidate.context.subject.kind)
-  ) {
-    return false;
-  }
-
-  const hasProductFilter = plan.productIds.length > 0;
-  const hasActivityFilter = plan.activityIds.length > 0;
-  const hasReferenceFilter = hasProductFilter || hasActivityFilter;
-  if (!hasReferenceFilter) return true;
-
-  const { subject } = candidate.context;
-  const directMatch =
-    (subject.kind === "product" && plan.productIds.includes(subject.id)) ||
-    (subject.kind === "activity" && plan.activityIds.includes(subject.id));
-  const linkedProductMatch =
-    subject.kind === "activity" &&
-    candidate.context.linkedProductIds.some((id) =>
-      plan.productIds.includes(id),
-    );
-
-  if (subjects.linkedActivityMode === "only") {
-    return subject.kind === "activity" && linkedProductMatch;
-  }
-  if (subjects.linkedActivityMode === "include") {
-    return directMatch || linkedProductMatch;
-  }
-  return directMatch;
-};
-
-const matchesStages = (
-  candidate: SearchCandidate,
-  plan: ResolvedSearchPlan,
-): boolean =>
-  plan.stageIds.length === 0 ||
-  plan.stageIds.some((stage) =>
-    includesNormalized(candidate.context.stageIds, stage),
-  );
-
-const matchesPeriods = (
-  candidate: SearchCandidate,
-  plan: ResolvedSearchPlan,
-): boolean =>
-  plan.periodIds.length === 0 ||
-  plan.periodIds.includes(candidate.context.periodId);
-
-const matchesRecordKind = (
-  candidate: SearchCandidate,
-  plan: ResolvedSearchPlan,
-): boolean =>
-  plan.plan.recordKinds.length === 0 ||
-  plan.plan.recordKinds.includes(candidate.kind);
 
 const matchesItemFilters = (
   candidate: Extract<SearchCandidate, { kind: "item" }>,
@@ -188,11 +110,7 @@ export function filterCandidates(
 ): readonly SearchCandidate[] {
   return candidates.filter(
     (candidate) =>
-      matchesAuthor(candidate, plan) &&
-      matchesSubject(candidate, plan) &&
-      matchesStages(candidate, plan) &&
-      matchesPeriods(candidate, plan) &&
-      matchesRecordKind(candidate, plan) &&
+      matchesCandidateScope(candidate, plan) &&
       matchesRecordFilters(candidate, plan.plan.filters, clock),
   );
 }
