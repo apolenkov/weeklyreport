@@ -4,11 +4,16 @@ import type {
 } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
-import type { ReportOccurrence } from "../domain/report-retrieval.types.js";
+import type {
+  ReportOccurrence,
+  ResolvedSearchPlan,
+} from "../domain/report-retrieval.types.js";
 import {
   type AuthorizedReportRetrieval,
   authorizeReportOccurrences,
 } from "./authorized-report-retrieval.js";
+import { summarizeAssistantCoverage } from "./report-assistant.coverage.js";
+import { basePlan } from "./report-assistant.test-support.js";
 import type { ReportSearchAccessRepository } from "./report-search.repository.js";
 
 const ACTOR_ID = "659b2767-0f86-41e2-b025-49730ca010e4";
@@ -184,7 +189,6 @@ describe("authorizeReportOccurrences", () => {
     expect(result).toEqual({
       occurrences: [],
       sectionScopes: [],
-      coverage: { risks: 0, decisions: 0, unknown: false },
     });
     expect(access.getAuthorizationSnapshot).toHaveBeenCalledOnce();
   });
@@ -201,6 +205,25 @@ describe("authorizeReportOccurrences", () => {
     expect(result.sectionScopes[0]?.visibility).toBe("own");
   });
 });
+
+const coverage = (
+  retrieval: AuthorizedReportRetrieval,
+  overrides: Partial<ResolvedSearchPlan> = {},
+) =>
+  summarizeAssistantCoverage({
+    plan: {
+      ...basePlan,
+      authors: { mode: "all_visible", references: [], includeSelf: true },
+    },
+    occurrences: retrieval.occurrences,
+    sectionScopes: retrieval.sectionScopes,
+    authorIds: retrieval.sectionScopes.map((scope) => scope.authorId),
+    productIds: [],
+    activityIds: [],
+    stageIds: [],
+    periodIds: [],
+    ...overrides,
+  });
 
 const omission = (
   ...buckets: readonly (readonly [
@@ -222,6 +245,159 @@ const omission = (
 const sectionId = (authorId: string) => section(authorId).reportSectionId;
 
 describe("authorizeReportOccurrences coverage", () => {
+  it.each(["live", "snapshot"] as const)(
+    "scopes %s buckets by subjects, stage union and readable Activity links",
+    async (source) => {
+      const own = section(ACTOR_ID);
+      const linkedOwn = {
+        ...own,
+        activities: own.activities.map((activity) => ({
+          ...activity,
+          linkedProducts: [
+            { productId: SHARED_PRODUCT_ID, productName: "Shared Product" },
+          ],
+        })),
+      };
+      const metadata: RecordOmission = {
+        version: 1,
+        buckets: [
+          {
+            kind: "risk",
+            parentKind: "product",
+            parentId: SHARED_PRODUCT_ID,
+            stageNames: ["Development", "Testing"],
+            count: 2,
+          },
+          {
+            kind: "decision",
+            parentKind: "product",
+            parentId: UNSHARED_PRODUCT_ID,
+            stageNames: ["Development"],
+            count: 3,
+          },
+          {
+            kind: "risk",
+            parentKind: "activity",
+            parentId: ACTIVITY_ID,
+            stageNames: [],
+            count: 5,
+          },
+        ],
+      };
+      const result = await authorizeReportOccurrences(
+        accessRepository(true, [SHARED_PRODUCT_ID]).repository,
+        ACTOR_ID,
+        [
+          {
+            ...occurrence(
+              [linkedOwn, section(FOREIGN_ID)],
+              new Map([
+                [sectionId(ACTOR_ID), metadata],
+                [sectionId(FOREIGN_ID), metadata],
+              ]),
+            ),
+            source,
+          },
+        ],
+      );
+      expect(coverage(result)).toEqual({
+        risks: 9,
+        decisions: 3,
+        unknown: false,
+      });
+      expect(
+        coverage(result, {
+          authorIds: [ACTOR_ID],
+          productIds: [SHARED_PRODUCT_ID],
+          stageIds: ["Development", "Testing"],
+        }),
+      ).toEqual({ risks: 2, decisions: 0, unknown: false });
+      expect(
+        coverage(result, {
+          authorIds: [FOREIGN_ID],
+          productIds: [UNSHARED_PRODUCT_ID],
+        }),
+      ).toEqual({ risks: 0, decisions: 0, unknown: false });
+      for (const [linkedActivityMode, risks] of [
+        ["exclude", 4],
+        ["include", 9],
+        ["only", 5],
+      ] as const) {
+        expect(
+          coverage(result, {
+            productIds: [SHARED_PRODUCT_ID],
+            plan: {
+              ...basePlan,
+              subjects: {
+                ...basePlan.subjects,
+                productReferences: ["Shared Product"],
+                linkedActivityMode,
+              },
+            },
+          }),
+        ).toEqual({ risks, decisions: 0, unknown: false });
+      }
+      expect(coverage(result, { activityIds: [ACTIVITY_ID] })).toEqual({
+        risks: 5,
+        decisions: 0,
+        unknown: false,
+      });
+      expect(
+        coverage(result, {
+          activityIds: [ACTIVITY_ID],
+          stageIds: ["Development"],
+        }),
+      ).toEqual({ risks: 0, decisions: 0, unknown: false });
+    },
+  );
+
+  it("keeps legacy unknown only inside the resolved authorized corpus", async () => {
+    const result = await authorizeReportOccurrences(
+      accessRepository(true, [SHARED_PRODUCT_ID]).repository,
+      ACTOR_ID,
+      [occurrence([section(ACTOR_ID), section(FOREIGN_ID)])],
+    );
+    const zero = { risks: 0, decisions: 0, unknown: false };
+    expect(
+      coverage(result, {
+        authorIds: [FOREIGN_ID],
+        productIds: [UNSHARED_PRODUCT_ID],
+      }),
+    ).toEqual(zero);
+    expect(
+      coverage(result, { authorIds: [], productIds: [SHARED_PRODUCT_ID] }),
+    ).toEqual(zero);
+    expect(coverage(result, { periodIds: ["not-a-selected-period"] })).toEqual(
+      zero,
+    );
+    expect(
+      coverage(result, { plan: { ...basePlan, recordKinds: ["item"] } }),
+    ).toEqual(zero);
+    expect(
+      coverage(result, { authorIds: [FOREIGN_ID], activityIds: [ACTIVITY_ID] }),
+    ).toEqual(zero);
+    expect(
+      coverage(result, {
+        authorIds: [ACTOR_ID],
+        stageIds: ["Development"],
+        plan: {
+          ...basePlan,
+          subjects: { ...basePlan.subjects, parentKinds: ["activity"] },
+        },
+      }),
+    ).toEqual(zero);
+    expect(
+      coverage(result, {
+        authorIds: [FOREIGN_ID],
+        productIds: [SHARED_PRODUCT_ID],
+        stageIds: ["Development"],
+      }),
+    ).toEqual({ ...zero, unknown: true });
+    expect(
+      coverage(result, { authorIds: [ACTOR_ID], activityIds: [ACTIVITY_ID] }),
+    ).toEqual({ ...zero, unknown: true });
+  });
+
   it("counts an own section whole and a foreign one through its shared products", async () => {
     const result = await authorizeReportOccurrences(
       accessRepository(true, [SHARED_PRODUCT_ID]).repository,
@@ -243,7 +419,11 @@ describe("authorizeReportOccurrences coverage", () => {
       ],
     );
 
-    expect(result.coverage).toEqual({ risks: 2, decisions: 1, unknown: false });
+    expect(coverage(result)).toEqual({
+      risks: 2,
+      decisions: 1,
+      unknown: false,
+    });
   });
 
   it("says unknown for a section frozen before the counts existed", async () => {
@@ -260,7 +440,7 @@ describe("authorizeReportOccurrences coverage", () => {
       ],
     );
 
-    expect(result.coverage).toEqual({ risks: 1, decisions: 0, unknown: true });
+    expect(coverage(result)).toEqual({ risks: 1, decisions: 0, unknown: true });
   });
 
   it("discloses nothing about sections the actor may not read", async () => {
@@ -278,6 +458,10 @@ describe("authorizeReportOccurrences coverage", () => {
       ],
     );
 
-    expect(result.coverage).toEqual({ risks: 0, decisions: 0, unknown: false });
+    expect(coverage(result)).toEqual({
+      risks: 0,
+      decisions: 0,
+      unknown: false,
+    });
   });
 });

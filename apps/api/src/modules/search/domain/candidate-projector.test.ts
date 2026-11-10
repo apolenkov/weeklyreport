@@ -188,6 +188,7 @@ describe("projectSectionCandidates", () => {
     const candidates = projectSectionCandidates(occurrence(), {
       ...scope(filtered),
       visibility: "shared_products",
+      sharedProductIds: [PRODUCT_ID],
     });
 
     expect(
@@ -208,6 +209,7 @@ describe("projectSectionCandidates", () => {
       projectSectionCandidates(occurrence(), {
         ...scope(),
         visibility: "shared_products",
+        sharedProductIds: [PRODUCT_ID],
       }),
     ).toThrow(CandidateProjectionAccessError);
   });

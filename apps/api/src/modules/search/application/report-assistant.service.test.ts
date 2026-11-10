@@ -1,4 +1,4 @@
-import type { ReportSectionReadModel, SearchPlan } from "@weeklyreport/shared";
+import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import {
   reportSectionReadModelSchema,
   searchPlanSchema,
@@ -42,6 +42,7 @@ import type {
   ReportAssistantTelemetryEvent,
 } from "./report-assistant.telemetry.js";
 import { NOOP_REPORT_ASSISTANT_TELEMETRY } from "./report-assistant.telemetry.js";
+import { basePlan } from "./report-assistant.test-support.js";
 import type { ReportSearchRepository } from "./report-search.repository.js";
 import { SemanticRetrievalService } from "./semantic-retrieval.service.js";
 
@@ -57,40 +58,6 @@ const SECTION_ID = "2a223d8b-c4b2-473c-8a7b-15ecc52195c7";
 const PERIOD_ID = "4ff69d14-ec8c-4f1c-b62b-73bee530fc7d";
 const PRODUCT_ID = "eeb16c80-2f85-48a0-b838-d8096981ddba";
 const FOREIGN_AUTHOR_ID = "9f57f7b0-5c30-4d16-b5b0-07cfb3beab6c";
-
-const basePlan: SearchPlan = searchPlanSchema.parse({
-  periods: {
-    includeCurrent: true,
-    published: { mode: "none", count: null, references: [] },
-  },
-  authors: { mode: "self", references: [], includeSelf: true },
-  subjects: {
-    parentKinds: [],
-    productReferences: [],
-    activityReferences: [],
-    linkedActivityMode: "exclude",
-  },
-  stages: { references: [] },
-  recordKinds: [],
-  filters: {
-    itemTypes: [],
-    itemWorkflowStatuses: [],
-    riskSeverities: [],
-    decisionStates: [],
-    decisionTiming: [],
-    canonicalHealth: [],
-    carriedOver: null,
-    hasPriority: null,
-    priorityRanks: [],
-  },
-  retrieval: { mode: "structured", semanticQuery: null },
-  output: {
-    mode: "summary",
-    groupBy: ["record_kind"],
-    requestedLimit: null,
-    exhaustive: false,
-  },
-});
 
 const section = (
   itemText = "Ship the release",
@@ -424,7 +391,7 @@ describe("ReportAssistantService", () => {
 
     await expect(harness.service.answer(request, ACTOR_ID)).resolves.toEqual({
       kind: "no_results",
-      coverage: UNCOUNTED_RECORD_OMISSIONS,
+      coverage: { risks: 0, decisions: 0, unknown: false },
     });
     expect(harness.answerer).not.toHaveBeenCalled();
   });
@@ -808,6 +775,132 @@ describe("ReportAssistantService", () => {
       kind: "no_results",
       coverage,
     });
+  });
+
+  it.each([
+    ["author", {}, { risks: 10, decisions: 7, unknown: false }],
+    [
+      "product",
+      { subjects: { ...basePlan.subjects, productReferences: ["CRM Portal"] } },
+      { risks: 5, decisions: 7, unknown: false },
+    ],
+    [
+      "stage",
+      { stages: { references: ["Development"] } },
+      { risks: 7, decisions: 7, unknown: false },
+    ],
+    [
+      "kind",
+      { recordKinds: ["decision"] },
+      { risks: 0, decisions: 7, unknown: false },
+    ],
+    [
+      "excluded kinds",
+      { recordKinds: ["item"] },
+      { risks: 0, decisions: 0, unknown: false },
+    ],
+  ] as const)(
+    "narrows omission disclosure by resolved %s scope",
+    async (_label, filters, coverage) => {
+      const otherProduct = "f0000000-0000-4000-a000-000000000001";
+      const foreignSection = "f0000000-0000-4000-a000-000000000002";
+      const bucket = (
+        kind: "risk" | "decision",
+        parentId: string,
+        stage: string,
+        count: number,
+      ) => ({
+        kind,
+        parentKind: "product" as const,
+        parentId,
+        stageNames: [stage],
+        count,
+      });
+      const counted: ReportOccurrence = {
+        ...occurrence(),
+        sections: [
+          section(),
+          {
+            ...section("Foreign item", FOREIGN_AUTHOR_ID, "Foreign Lead"),
+            reportSectionId: foreignSection,
+          },
+        ],
+        recordOmissions: new Map([
+          [
+            SECTION_ID,
+            {
+              version: 1,
+              buckets: [
+                bucket("risk", PRODUCT_ID, "Development", 2),
+                bucket("risk", PRODUCT_ID, "Testing", 3),
+                bucket("risk", otherProduct, "Development", 5),
+                bucket("decision", PRODUCT_ID, "Development", 7),
+              ],
+            },
+          ],
+          [
+            foreignSection,
+            {
+              version: 1,
+              buckets: [bucket("risk", PRODUCT_ID, "Development", 11)],
+            },
+          ],
+        ]),
+      };
+      const harness = createHarness(
+        searchPlanSchema.parse({ ...basePlan, ...filters }),
+        { sharedProductIds: [PRODUCT_ID] },
+      );
+      vi.mocked(harness.repository.loadOccurrences).mockResolvedValue([
+        counted,
+      ]);
+      await expect(
+        harness.service.answer(request, ACTOR_ID),
+      ).resolves.toMatchObject({ coverage });
+    },
+  );
+
+  it("does not resolve a private-only Product or embed an empty exact corpus", async () => {
+    const privateProduct = "f0000000-0000-4000-a000-000000000001";
+    const retrieve = vi.fn();
+    const harness = createHarness(
+      {
+        ...basePlan,
+        subjects: { ...basePlan.subjects, productReferences: [privateProduct] },
+        retrieval: { mode: "semantic_ranked", semanticQuery: "Private work" },
+      },
+      {
+        semanticRetrieval: { retrieve } as unknown as SemanticRetrievalService,
+      },
+    );
+    vi.mocked(harness.repository.loadOccurrences).mockResolvedValue([
+      {
+        ...occurrence(),
+        recordOmissions: new Map([
+          [
+            SECTION_ID,
+            {
+              version: 1,
+              buckets: [
+                {
+                  kind: "risk",
+                  parentKind: "product",
+                  parentId: privateProduct,
+                  stageNames: ["Development"],
+                  count: 9,
+                },
+              ],
+            },
+          ],
+        ]),
+      },
+    ]);
+    await expect(harness.service.answer(request, ACTOR_ID)).resolves.toEqual({
+      kind: "no_results",
+      coverage: { risks: 0, decisions: 0, unknown: false },
+    });
+    expect(retrieve).not.toHaveBeenCalled();
+    expect(harness.answerer).not.toHaveBeenCalled();
   });
 
   it("returns no results instead of broadening an incompatible record filter", async () => {

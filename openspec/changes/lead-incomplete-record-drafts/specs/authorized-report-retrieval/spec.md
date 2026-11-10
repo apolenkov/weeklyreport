@@ -40,3 +40,22 @@ Assistant disclosure MUST use selected periods and authorized author/subject/sta
 - **WHEN** exact filters yield no complete candidates in an authorized selected corpus with incomplete decisions
 - **THEN** the response retains `no_results`, adds the corpus coverage notice and makes no semantic or answer claim about those decisions
 - **AND** no inaccessible subjects become entity clarification options from omission metadata
+
+#### Scenario: Resolved filters narrow coverage independently of matches
+
+- **WHEN** a request selects an author, Product or Activity, stage set, or record kind
+- **THEN** coverage includes only omission buckets admitted by those same resolved filters and the current authorization lens
+- **AND** a record covering multiple selected stages contributes once
+- **AND** linked Activity inclusion uses the same readable Activity links as candidate filtering
+
+#### Scenario: No incomplete-capable kind or no resolved corpus
+
+- **WHEN** the request excludes both risks and decisions, or a requested entity cannot be resolved from the readable catalog
+- **THEN** the response carries known-zero omission coverage
+- **AND** private omission buckets do not supply an entity or broaden the request
+
+#### Scenario: Legacy unknown respects the selected authorization scope
+
+- **WHEN** a selected readable scope predates omission metadata
+- **THEN** its omission coverage remains unknown
+- **AND** an author or foreign Product outside the selected authorized scope contributes neither counts nor unknown state

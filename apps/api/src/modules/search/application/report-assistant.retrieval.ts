@@ -1,4 +1,8 @@
-import type { RecordOmissionSummary, SearchPlan } from "@weeklyreport/shared";
+import {
+  type RecordOmissionSummary,
+  type SearchPlan,
+  summarizeRecordOmissions,
+} from "@weeklyreport/shared";
 
 import { filterCandidates } from "../domain/candidate-filter.js";
 import { projectSectionCandidates } from "../domain/candidate-projector.js";
@@ -16,6 +20,7 @@ import type {
 } from "../domain/report-retrieval.types.js";
 import { authorizeReportOccurrences } from "./authorized-report-retrieval.js";
 import { buildReportAssistantEntityCatalog } from "./report-assistant.catalog.js";
+import { summarizeAssistantCoverage } from "./report-assistant.coverage.js";
 import {
   type ReportSearchRepository,
   ReportSearchResultSetTooLargeError,
@@ -105,17 +110,20 @@ export const resolveReportAssistantCandidates = async (
     actorId,
     occurrences,
   );
-  // An empty answer still says what the readable corpus leaves out.
-  const { coverage } = authorized;
   if (authorized.occurrences.length === 0) {
-    return { kind: "no_results", coverage };
+    return { kind: "no_results", coverage: summarizeRecordOmissions([]) };
   }
 
   const resolved = resolveSearchPlanEntities(
     resolutionInput(plan, authorized, context),
   );
-  if (resolved.kind === "no_results") return { kind: "no_results", coverage };
+  if (resolved.kind === "no_results")
+    return { kind: "no_results", coverage: summarizeRecordOmissions([]) };
   if (resolved.kind !== "resolved") return resolved;
+
+  // Resolve only from readable content, then narrow coverage with the same
+  // corpus coordinates as candidates. Private buckets never resolve entities.
+  const coverage = summarizeAssistantCoverage(resolved.plan);
 
   const candidates = filterCandidates(
     projectCandidates(resolved.plan.occurrences, resolved.plan.sectionScopes),
