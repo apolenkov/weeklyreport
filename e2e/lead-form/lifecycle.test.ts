@@ -210,7 +210,7 @@ async function clickDisabledButton(data: BrowserSnapshot, name: string) {
 async function startActivityUpdate(text: string): Promise<void> {
   await findRole(
     "button",
-    `Add item to ${LEAD_FORM_FIXTURE.activityName}`,
+    `Add item to ${LEAD_FORM_FIXTURE.activityName}, Current week`,
     "click",
   );
   await fillIn(ACTIVITY_FORM, "Description *", text);
@@ -410,7 +410,11 @@ async function prepareSubmission(): Promise<void> {
       role: "form",
       name: `Current week update for ${productName}`,
     };
-    await findRole("button", `Add item to ${productName}`, "click");
+    await findRole(
+      "button",
+      `Add item to ${productName}, Current week`,
+      "click",
+    );
     await fillIn(
       form,
       "Description *",
@@ -487,8 +491,11 @@ async function assertSubmitted(): Promise<void> {
   assert.equal(refsByRole(data, "button", "Submit").length, 0);
   assert.equal(refsByRole(data, "button", "Submit report").length, 0);
   assert.equal(
-    refsByRole(data, "button", `Add item to ${LEAD_FORM_FIXTURE.activityName}`)
-      .length,
+    refsByRole(
+      data,
+      "button",
+      `Add item to ${LEAD_FORM_FIXTURE.activityName}, Current week`,
+    ).length,
     0,
   );
   assert.equal(
@@ -968,7 +975,9 @@ void test("submit, reopen and resubmit restore editability", async () => {
   await respondToReopen("E2E reopen approval", "Approve");
   await reload();
   await waitDraftSaved();
-  await waitButton(`Add item to ${LEAD_FORM_FIXTURE.activityName}`);
+  await waitButton(
+    `Add item to ${LEAD_FORM_FIXTURE.activityName}, Current week`,
+  );
   assert.equal(
     scopeCount(completionActions(await snapshot()), "button", "Submit"),
     1,
@@ -1415,8 +1424,8 @@ for (const kind of ["risk", "decision"] as const) {
     };
     const fields =
       kind === "risk"
-        ? ["Risk *", "Impact *", "Mitigation *"]
-        : ["Decision *", "Impact *"];
+        ? ["Risk *", "Impact", "Mitigation"]
+        : ["Decision *", "Impact"];
     for (const label of fields)
       await fillIn(dialog, label, `E2E ${kind} ${label}`);
     const boundaries = fields.map((label) =>

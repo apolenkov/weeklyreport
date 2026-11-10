@@ -1,5 +1,18 @@
 # Lead form regression coverage
 
+## Unfinished record drafts
+
+`incomplete-record-drafts.test.ts` (openspec `lead-incomplete-record-drafts`,
+task 6.2) saves a risk with its name only, reloads and expects the record to
+survive, to be marked unfinished and to keep Submit disabled with a message that
+names it. It is outside the historical case counts below. Remaining task 6.2
+journeys (both publication paths, private recovery and copy, scope-negative
+search/analytics/PDF) are not written.
+
+Known stale cases, outside this change's edits: `lifecycle.test.ts` item text
+limit cases still expect the removed inline `Current week update for …` form;
+other cases may drift the same way until a full run is recorded.
+
 ## Head form clarity journey
 
 `head-form-clarity.test.ts` uses the same Node-test/agent-browser runner and
@@ -14,7 +27,7 @@ They are separate from the historical Lead-only case counts below.
 Targeted invocation: `pnpm exec node --import tsx --test e2e/lead-form/head-form-clarity.test.ts`.
 `pnpm test:e2e` also discovers the file. Typecheck: `pnpm exec tsc --noEmit -p e2e/tsconfig.json`.
 
-The suite is node:test driving the pinned agent-browser CLI 0.41.1 (verified at
+The suite is node:test driving the pinned agent-browser CLI 0.41.2 (verified at
 start-up by `e2e/setup/agent-browser-version.ts`). Run it with `pnpm test:e2e`
 against the running web/API; it resets and seeds `weeklyreport_e2e` with Redis
 DB 15 before every test, so exactly one e2e process may use that database at a

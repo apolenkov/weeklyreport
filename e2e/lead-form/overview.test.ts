@@ -358,7 +358,7 @@ async function saveUpdate(
 }
 
 async function startActivity(text: string, week: Week = "Current week") {
-  await clickRole("button", `Add item to ${ACTIVITY}`);
+  await clickRole("button", `Add item to ${ACTIVITY}, Current week`);
   await namedBlock("form", `Current week update for ${ACTIVITY}`);
   await fill("Description *", text);
   if (week === "Next week") {
@@ -867,7 +867,7 @@ for (const [width, height] of [
 ] as const) {
   void test(`cancelling header Add restores visible focus at ${width}×${height}`, async () => {
     await openLeadReport();
-    const addName = `Add item to ${PRODUCT}`;
+    const addName = `Add item to ${PRODUCT}, Current week`;
     const editor = { role: "form", name: `Current week update for ${PRODUCT}` };
     await command(["set", "viewport", String(width), String(height)]);
     await centerControl(await namedRef("button", addName));
@@ -916,7 +916,7 @@ void test("the item editor saves current and next week through the canonical for
   }
   await clickRole(
     "button",
-    `Add item to ${LEAD_FORM_FIXTURE.singleStageProductName}`,
+    `Add item to ${LEAD_FORM_FIXTURE.singleStageProductName}, Current week`,
   );
   await fill("Description *", "E2E canonical product stages");
   await saveUpdate("Current week", LEAD_FORM_FIXTURE.singleStageProductName);

@@ -834,8 +834,8 @@ async function addRecoveryRisk(text: string): Promise<void> {
     name: `Add risk — ${LEAD_FORM_FIXTURE.activityName}`,
   });
   await fill("Risk *", text);
-  await fill("Impact *", "E2E editing recovery impact");
-  await fill("Mitigation *", "E2E editing recovery mitigation");
+  await fill("Impact", "E2E editing recovery impact");
+  await fill("Mitigation", "E2E editing recovery mitigation");
   await findRole("button", "Save risk", "click");
 }
 

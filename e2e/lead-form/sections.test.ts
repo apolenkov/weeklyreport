@@ -248,7 +248,7 @@ async function createItem(
   text: string,
 ): Promise<void> {
   await waitText(parent.name);
-  await click(`Add item to ${parent.name}`);
+  await click(`Add item to ${parent.name}, Current week`);
   await waitScope({
     role: "form",
     name: `Current week update for ${parent.name}`,
@@ -593,13 +593,15 @@ async function validateSupportingDialog(
     "true",
   );
   assert.equal(await firstInvalidLabel(), field);
-  assert.equal(
-    await getAttr(await ref("textbox", "Impact *"), "aria-invalid"),
+  // On the author's own form the details may follow later: only the name or
+  // text is required to save a new record.
+  assert.notEqual(
+    await getAttr(await ref("textbox", "Impact"), "aria-invalid"),
     "true",
   );
   if (kind === "Risk")
-    assert.equal(
-      await getAttr(await ref("textbox", "Mitigation *"), "aria-invalid"),
+    assert.notEqual(
+      await getAttr(await ref("textbox", "Mitigation"), "aria-invalid"),
       "true",
     );
   await discardDirtyDialog(
@@ -688,8 +690,8 @@ async function createRisk(parent: ParentCase, text: string): Promise<void> {
   await waitModal();
   await select("Parent", parent.name);
   await fill("Risk *", text);
-  await fill("Impact *", `${text} impact`);
-  await fill("Mitigation *", `${text} mitigation`);
+  await fill("Impact", `${text} impact`);
+  await fill("Mitigation", `${text} mitigation`);
   await selectRiskSeverity("At risk");
   if (parent.kind === "product") await selectProductStages();
   else assert.equal(scopeCount(await snapshot(), "group", "SDLC Stages"), 0);
@@ -818,7 +820,12 @@ async function deadlineSegmentNames(): Promise<ReadonlyMap<string, string>> {
   return ranges;
 }
 
-async function setDeadline(deadline: "2000-01-01" | ""): Promise<void> {
+// `impactLabel` is the label of the Impact field the dialog shows: a new
+// decision on the author's form has it optional, a saved one required.
+async function setDeadline(
+  deadline: "2000-01-01" | "",
+  impactLabel: "Impact" | "Impact *",
+): Promise<void> {
   // Native date segment names follow the browser locale; their ranges are stable.
   const names = await deadlineSegmentNames();
   for (const segment of DEADLINE_SEGMENTS) {
@@ -832,10 +839,9 @@ async function setDeadline(deadline: "2000-01-01" | ""): Promise<void> {
     for (const digit of deadline === "" ? "" : segment.digits)
       await command(["press", digit]);
   }
-  await command([
-    "click",
-    await scopedRef(DECISION_DIALOG, "textbox", "Impact *"),
-  ]);
+  const impact = await scopedRef(DECISION_DIALOG, "textbox", impactLabel);
+  await command(["scrollintoview", impact]);
+  await command(["click", impact]);
   assert.equal(await deadlineValue(), deadline);
 }
 
@@ -844,8 +850,8 @@ async function createDecision(parent: ParentCase, text: string): Promise<void> {
   await waitModal("Add decision");
   await select("Parent", parent.name);
   await fill("Decision *", text);
-  await fill("Impact *", `${text} impact`);
-  await setDeadline("2000-01-01");
+  await fill("Impact", `${text} impact`);
+  await setDeadline("2000-01-01", "Impact");
   await waitText("Deadline is in the past.");
   if (parent.kind === "product") await selectProductStages();
   else assert.equal(scopeCount(await snapshot(), "group", "SDLC Stages"), 0);
@@ -870,7 +876,7 @@ for (const parent of PARENTS) {
       assert.equal(await checked("Testing"), true);
     }
     await fill("Impact *", `${text} changed impact`);
-    await setDeadline("");
+    await setDeadline("", "Impact *");
     await saveSlide("Save decision");
     await persistedReload(text);
     await openSlideRecord(record);
@@ -884,7 +890,7 @@ async function createPublishedLineageDraft(
   decisionText: string,
 ): Promise<void> {
   const nextText = "E2E published next commitment";
-  await click(`Add item to ${PRODUCT.name}`);
+  await click(`Add item to ${PRODUCT.name}, Current week`);
   await waitText("Description *");
   assert.ok((await roleText("group", "SDLC Stages")).includes("Planning"));
   await waitText("Applied automatically");
@@ -899,7 +905,7 @@ async function createPublishedLineageDraft(
   assert.equal(scopeCount(await snapshot(), "combobox", "Product"), 1);
   assert.ok((await roleText("group", "SDLC Stages")).includes("Planning"));
   await fill("Decision *", decisionText);
-  await fill("Impact *", "E2E original published impact");
+  await fill("Impact", "E2E original published impact");
   await click("Save decision");
   await waitNoModals();
   await saveChanges();
@@ -945,8 +951,11 @@ async function publishAndReopenPeriod(): Promise<void> {
   await openLeadReport();
   await waitText(MINIMAL_CURRENT_TEXT);
   assert.equal(
-    refsByRole(await snapshot(), "button", `Add item to ${PRODUCT.name}`)
-      .length,
+    refsByRole(
+      await snapshot(),
+      "button",
+      `Add item to ${PRODUCT.name}, Current week`,
+    ).length,
     1,
   );
 }
