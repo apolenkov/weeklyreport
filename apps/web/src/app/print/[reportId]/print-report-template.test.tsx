@@ -1,6 +1,9 @@
 // @vitest-environment jsdom
 
+import "@testing-library/jest-dom/vitest";
+
 import { render, screen } from "@testing-library/react";
+import type { RecordOmissionSummary } from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import type { MapWeeklyReportResult } from "../../../features/report-sections/model/weekly-report";
@@ -76,6 +79,7 @@ vi.mock("../../../features/report-sections/model/weekly-report", () => ({
 import { PrintReportTemplate } from "./print-report-template";
 
 const DATA = {
+  recordOmissions: { risks: 0, decisions: 0, unknown: false },
   leadSections: [
     {
       reportSectionId: "section-activity",
@@ -120,8 +124,12 @@ const DATA = {
   ],
 } as never;
 
-function renderPage() {
-  return render(<PrintReportTemplate data={DATA} />);
+function renderPage(recordOmissions?: RecordOmissionSummary) {
+  const data =
+    recordOmissions === undefined
+      ? DATA
+      : ({ ...(DATA as object), recordOmissions } as never);
+  return render(<PrintReportTemplate data={data} />);
 }
 
 describe("PrintReportTemplate — static CSS safety", () => {
@@ -210,5 +218,46 @@ describe("PrintReportTemplate render outcome", () => {
       screen.getByText("At-risk products / activities").parentElement,
     ).toHaveTextContent("2");
     expect(screen.getByText("Decisions").parentElement).toHaveTextContent("2");
+  });
+});
+
+describe("PrintReportTemplate record omissions", () => {
+  it("prints nothing when no record is left out", () => {
+    renderPage();
+
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
+  });
+
+  it("prints the frozen totals apart from the submitted count", () => {
+    const { container } = renderPage({
+      risks: 2,
+      decisions: 1,
+      unknown: false,
+    });
+
+    expect(
+      screen.getByRole("note", { name: "Records not shown" }),
+    ).toHaveTextContent(
+      "Not shown: 2 unfinished risks and 1 unfinished decision, still being written. This report may be incomplete.",
+    );
+    expect(container.querySelector("header")).toHaveTextContent(
+      "1/2 leads submitted",
+    );
+  });
+
+  it("says unknown, never zero, for a publication frozen before counts", () => {
+    renderPage({ risks: 0, decisions: 0, unknown: true });
+
+    expect(screen.getByRole("note")).toHaveTextContent(
+      "published before unfinished records were counted",
+    );
+  });
+
+  it("prints counted totals as a floor when part of the report is uncounted", () => {
+    renderPage({ risks: 1, decisions: 0, unknown: true });
+
+    expect(screen.getByRole("note")).toHaveTextContent(
+      "Not shown: at least 1 unfinished risk",
+    );
   });
 });

@@ -1,9 +1,13 @@
+import type { RecordOmissionSummary } from "@weeklyreport/shared";
 import type { CSSProperties, ReactNode } from "react";
 
+import { recordOmissionNoticeText } from "../../../shared/lib/format/record-omission-text";
 import {
+  ATTENTION_BG,
   BORDER_LIGHT,
   DECISION_ACCENT,
   printStatusColor,
+  TEXT_PRIMARY,
   TEXT_SECONDARY,
 } from "./print-report-theme";
 
@@ -83,5 +87,36 @@ export function PrintExecutiveSummary({
         </SummaryCard>
       </div>
     </section>
+  );
+}
+
+/**
+ * Says which unfinished risks and decisions the printed publication leaves
+ * out, from the totals frozen with it (openspec: pdf-export-integrity). Kept
+ * apart from the submitted count so neither reads as the other.
+ */
+export function PrintRecordOmissionNotice({
+  summary,
+}: {
+  readonly summary: RecordOmissionSummary;
+}) {
+  const text = recordOmissionNoticeText(summary);
+  if (text === null) return null;
+  return (
+    <p
+      role="note"
+      aria-label="Records not shown"
+      style={{
+        margin: "0 0 20px",
+        padding: "8px 12px",
+        border: BORDER_LIGHT,
+        borderRadius: "8px",
+        background: ATTENTION_BG,
+        color: TEXT_PRIMARY,
+        fontSize: "11px",
+      }}
+    >
+      {text}
+    </p>
   );
 }
