@@ -1,4 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
+import type { Prisma } from "@prisma/client";
 import type {
   LeadItemDiscussionInput,
   LeadItemDiscussionView,
@@ -42,6 +43,18 @@ interface SectionGroupRow {
 const groupIdOf = (row: SectionGroupRow | null): string | null | undefined =>
   row === null ? undefined : row.reportSection.author.reportingGroupId;
 const REVIEW_GROUP_NOT_FOUND = "Review group not found.";
+
+// Completeness is stored as nullable details. Refuse private foreign anchors
+// before group-specific errors; the locked writer still rechecks after races.
+const readableRisk = (actorUserId: string): Prisma.RiskWhereInput => ({
+  OR: [
+    { reportSection: { authorId: actorUserId } },
+    { impact: { not: null }, mitigation: { not: null } },
+  ],
+});
+const readableDecision = (actorUserId: string): Prisma.DecisionWhereInput => ({
+  OR: [{ reportSection: { authorId: actorUserId } }, { impact: { not: null } }],
+});
 
 @Injectable()
 export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
@@ -115,14 +128,16 @@ export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
 
   async getRecordAnchorGroup(
     anchor: RecordAnchor,
+    actorUserId: string,
   ): Promise<{ groupId: string | null } | null> {
-    const row = await this.loadAnchorSectionGroup(anchor);
+    const row = await this.loadAnchorSectionGroup(anchor, actorUserId);
     const groupId = groupIdOf(row);
     return groupId === undefined ? null : { groupId };
   }
 
   private async loadAnchorSectionGroup(
     anchor: RecordAnchor,
+    actorUserId: string,
   ): Promise<SectionGroupRow | null> {
     if (anchor.itemId !== undefined) {
       return this.prisma.item.findUnique({
@@ -132,13 +147,13 @@ export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
     }
     if (anchor.riskId !== undefined) {
       return this.prisma.risk.findUnique({
-        where: { id: anchor.riskId },
+        where: { id: anchor.riskId, AND: readableRisk(actorUserId) },
         select: sectionGroupSelect,
       });
     }
     if (anchor.decisionId === undefined) return null;
     return this.prisma.decision.findUnique({
-      where: { id: anchor.decisionId },
+      where: { id: anchor.decisionId, AND: readableDecision(actorUserId) },
       select: sectionGroupSelect,
     });
   }
@@ -176,9 +191,17 @@ export class ReviewActionsPrismaRepository implements ReviewActionsRepository {
 
   async getCommentContext(
     commentId: string,
+    actorUserId: string,
   ): Promise<{ reviewerId: string; groupId: string | null } | null> {
     const comment = await this.prisma.recordComment.findUnique({
-      where: { id: commentId },
+      where: {
+        id: commentId,
+        OR: [
+          { item: { isNot: null } },
+          { risk: readableRisk(actorUserId) },
+          { decision: readableDecision(actorUserId) },
+        ],
+      },
       select: {
         reviewerId: true,
         item: { select: sectionGroupSelect },

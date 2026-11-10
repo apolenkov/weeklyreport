@@ -78,6 +78,7 @@ export interface ReviewActionsRepository {
   ): Promise<ReviewAcknowledgementView[]>;
   getRecordAnchorGroup(
     anchor: RecordAnchor,
+    actorUserId: string,
   ): Promise<{ groupId: string | null } | null>;
   getViewerCanReview(userId: string, groupId: string): Promise<boolean>;
   insertComment(
@@ -87,6 +88,7 @@ export interface ReviewActionsRepository {
   ): Promise<RecordCommentView>;
   getCommentContext(
     commentId: string,
+    actorUserId: string,
   ): Promise<{ reviewerId: string; groupId: string | null } | null>;
   deleteComment(commentId: string, actor: ReviewWriteActor): Promise<void>;
   getVerdictContext(sectionId: string): Promise<VerdictContext | null>;
@@ -177,7 +179,10 @@ export class ReviewActionsService {
     input: ReviewCommentInput,
   ): Promise<RecordCommentView> {
     const anchor = toAnchor(input);
-    const context = await this.repository.getRecordAnchorGroup(anchor);
+    const context = await this.repository.getRecordAnchorGroup(
+      anchor,
+      session.userId,
+    );
     if (!context) {
       throw new ReviewNotFoundError("Record not found.");
     }
@@ -194,7 +199,10 @@ export class ReviewActionsService {
     session: ReviewSession,
     input: { commentId: string },
   ): Promise<{ success: true }> {
-    const context = await this.repository.getCommentContext(input.commentId);
+    const context = await this.repository.getCommentContext(
+      input.commentId,
+      session.userId,
+    );
     if (!context) {
       throw new ReviewNotFoundError("Comment not found.");
     }
