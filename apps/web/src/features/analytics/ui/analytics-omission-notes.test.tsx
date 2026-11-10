@@ -62,7 +62,7 @@ describe("analytics omission notes", () => {
     expect(screen.queryByRole("note")).not.toBeInTheDocument();
   });
 
-  it("names each period with its own totals, unknown never read as zero", () => {
+  it("names only the periods that leave something out", () => {
     render(
       <TrafficLightHistoryTable
         headingId="h"
@@ -77,12 +77,9 @@ describe("analytics omission notes", () => {
     const lines = within(note())
       .getAllByRole("listitem")
       .map((item) => item.textContent);
-    expect(lines).toHaveLength(2);
+    expect(lines).toHaveLength(1);
     expect(lines[0]).toMatch(
       /30.*2026: 2 unfinished risks and 1 unfinished decision$/,
-    );
-    expect(lines[1]).toMatch(
-      /23.*2026: not counted, published before unfinished records were counted$/,
     );
   });
 
@@ -96,7 +93,7 @@ describe("analytics omission notes", () => {
     );
 
     expect(screen.getByText(/no published periods/i)).toBeInTheDocument();
-    expect(note()).toHaveTextContent("at least 1 unfinished risk");
+    expect(note()).toHaveTextContent("1 unfinished risk");
   });
 
   it("discloses both compared periods and skips a missing one", () => {

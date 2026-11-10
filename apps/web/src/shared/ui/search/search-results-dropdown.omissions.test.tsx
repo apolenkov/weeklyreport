@@ -19,9 +19,6 @@ const HIT: SearchHit = {
   createdAt: "2026-07-05T12:00:00.000Z",
 };
 
-const UNCOUNTED =
-  "Some reports were published before unfinished records were counted, so search may miss a few.";
-
 function renderDropdown(
   omissions: RecordOmissionSummary | undefined,
   state: { hits?: SearchHit[]; isFetching?: boolean; isError?: boolean } = {},
@@ -58,12 +55,12 @@ describe("searchOmissionNote", () => {
     );
   });
 
-  it("says unknown, never zero, for reports published before the counts", () => {
-    expect(searchOmissionNote({ risks: 0, decisions: 0, unknown: true })).toBe(
-      UNCOUNTED,
-    );
+  it("stays silent about reports published before counting", () => {
+    expect(
+      searchOmissionNote({ risks: 0, decisions: 0, unknown: true }),
+    ).toBeNull();
     expect(searchOmissionNote({ risks: 1, decisions: 0, unknown: true })).toBe(
-      `Search leaves out at least 1 unfinished risk, still being written. ${UNCOUNTED}`,
+      "Search leaves out 1 unfinished risk, still being written.",
     );
   });
 });
