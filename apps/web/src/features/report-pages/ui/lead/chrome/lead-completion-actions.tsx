@@ -83,7 +83,7 @@ export function LeadCompletionActions({
         <p
           id={reasonId}
           data-testid="lead-completion-disabled-reason"
-          className="w-full min-w-0 break-words text-sm text-[var(--color-muted-foreground)]"
+          className="w-full min-w-0 break-words text-sm text-[var(--color-muted-foreground)] md:max-w-[52ch] md:text-right"
         >
           {reason}
         </p>
