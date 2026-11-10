@@ -1,4 +1,8 @@
 import {
+  type RecordOmission,
+  summarizeRecordOmissions,
+} from "../report-sections/record-omission.schema.js";
+import {
   type PublishedReportSnapshot,
   publishedReportSnapshotSchema,
 } from "./report.schema.js";
@@ -9,6 +13,9 @@ interface PublishedSectionScopeProjection {
   readonly reportSectionId: string;
   readonly authorId: string;
   readonly groupId: string;
+  /** Both null for a section frozen before omissions were counted. */
+  readonly omittedRisks: number | null;
+  readonly omittedDecisions: number | null;
 }
 
 /** Immutable full-text search row derived from a published report snapshot. */
@@ -79,6 +86,17 @@ function documentsForSection(
   ];
 }
 
+// A section without omission metadata is "unknown", never "nothing omitted".
+function omittedTotals(
+  recordOmission: RecordOmission | undefined,
+): Pick<PublishedSectionScopeProjection, "omittedRisks" | "omittedDecisions"> {
+  if (recordOmission === undefined) {
+    return { omittedRisks: null, omittedDecisions: null };
+  }
+  const { risks, decisions } = summarizeRecordOmissions([recordOmission]);
+  return { omittedRisks: risks, omittedDecisions: decisions };
+}
+
 /** Derives immutable authorization and full-text rows from one parsed snapshot. */
 export function buildPublishedProjections(
   snapshot: PublishedReportSnapshot,
@@ -105,6 +123,7 @@ export function buildPublishedProjections(
       reportSectionId: section.reportSectionId,
       authorId: section.authorId,
       groupId: section.groupId,
+      ...omittedTotals(section.recordOmission),
     })),
     searchDocuments,
   };
