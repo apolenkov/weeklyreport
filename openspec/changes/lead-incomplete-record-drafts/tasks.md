@@ -71,7 +71,7 @@ Ownership prefixes below are exact repository roots. Colocated tests belong to t
 
 ## 4–6. Publication, web authoring and rollout
 
-- [ ] 4–6. Complete the packages in [tasks/01-publication-web-rollout.md](tasks/01-publication-web-rollout.md).
+- [ ] 4–6. Complete the packages in [tasks/01-publication-web-rollout.md](tasks/01-publication-web-rollout.md) (4–5) and [tasks/02-rollout-gates.md](tasks/02-rollout-gates.md) (6).
 
 ## Workflow follow-up
 
