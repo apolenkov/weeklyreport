@@ -27,6 +27,7 @@ import {
   scopedRef,
   waitClosed,
   waitScope,
+  waitSnapshot,
 } from "./helpers.js";
 
 registerE2eHooks();
@@ -111,4 +112,38 @@ void test("Head publication names the unfinished risk it leaves out and never sh
   const published = await snapshot(session);
   assert.ok(!published.snapshot.includes(NAME));
   assert.equal(refsByRole(published, "button", "Publish & lock").length, 0);
+});
+
+void test("after publication the Lead reads the kept unfinished risk in History", async () => {
+  await saveUnfinishedRisk();
+  const session = headSession();
+  await loginAsHead(session);
+  await open(`/head/report/${LEAD_FORM_FIXTURE.reportId}`, session);
+  await waitText("Publish & lock", session);
+  await findRole("button", "Publish & lock", "click", { session });
+  await waitScope(PUBLISH_DIALOG, session);
+  await command(
+    [
+      "click",
+      await scopedRef(PUBLISH_DIALOG, "button", "Publish anyway", session),
+    ],
+    session,
+  );
+  await waitText("Period published & locked", session);
+
+  // The author alone is told the draft was kept and can read it back.
+  await open("/reports");
+  const view = /^View 1 unfinished draft kept in /u;
+  await waitSnapshot(
+    (data) => refsByRole(data, "button", view).length === 1,
+    "Expected the History card to name the kept unfinished draft",
+  );
+  await command(["click", oneRef(await snapshot(), "button", view)]);
+  const dialog = { role: "dialog", name: "Unfinished drafts" } as const;
+  await waitScope(dialog);
+  assert.ok((await roleText(dialog.role, dialog.name)).includes(NAME));
+  assert.equal(
+    refsByRole(await snapshot(), "button", `Copy risk text: ${NAME}`).length,
+    1,
+  );
 });
