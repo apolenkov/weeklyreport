@@ -58,6 +58,12 @@ const ACTIVITY_FORM = {
   role: "form",
   name: `Current week update for ${LEAD_FORM_FIXTURE.activityName}`,
 };
+// "Add item" opens the short contextual form; an existing item's details open
+// the canonical editor (ACTIVITY_FORM).
+const ADD_FORM = {
+  role: "form",
+  name: `Add item for ${LEAD_FORM_FIXTURE.activityName}, current week`,
+};
 const WEEKLY_FORM = {
   role: "form",
   name: `Weekly fields for ${LEAD_FORM_FIXTURE.activityName}`,
@@ -213,7 +219,7 @@ async function startActivityUpdate(text: string): Promise<void> {
     `Add item to ${LEAD_FORM_FIXTURE.activityName}, Current week`,
     "click",
   );
-  await fillIn(ACTIVITY_FORM, "Description *", text);
+  await fillIn(ADD_FORM, "Description", text);
 }
 
 async function reportActionsDisabled(): Promise<boolean> {
@@ -229,8 +235,8 @@ async function reportActionsDisabled(): Promise<boolean> {
 }
 
 async function saveActivityUpdate(text: string): Promise<void> {
-  await clickIn(ACTIVITY_FORM, "Save update");
-  await waitClosed(ACTIVITY_FORM);
+  await clickIn(ADD_FORM, "Save");
+  await waitClosed(ADD_FORM);
   assert.equal(
     refsByRole(await snapshot(), "button", statusName(text)).length,
     1,
@@ -408,7 +414,7 @@ async function prepareSubmission(): Promise<void> {
   ]) {
     const form = {
       role: "form",
-      name: `Current week update for ${productName}`,
+      name: `Add item for ${productName}, current week`,
     };
     await findRole(
       "button",
@@ -417,7 +423,7 @@ async function prepareSubmission(): Promise<void> {
     );
     await fillIn(
       form,
-      "Description *",
+      "Description",
       `E2E current commitment for ${productName}`,
     );
     if (productName === "CRM-Customer 360") {
@@ -429,13 +435,10 @@ async function prepareSubmission(): Promise<void> {
       await centerControl(development);
       await command(["check", development]);
     } else {
+      // A single owned stage is preselected in the short form.
       assert.match(namedScope(await snapshot(), form).snapshot, /Development/);
-      assert.match(
-        namedScope(await snapshot(), form).snapshot,
-        /Applied automatically/,
-      );
     }
-    await clickIn(form, "Save update");
+    await clickIn(form, "Save");
     await waitClosed(form);
   }
   await confirmCarriedItem();
@@ -624,9 +627,9 @@ void test("save failure preserves local changes and recovers", async () => {
   await command(["network", "requests"]);
   await command(["network", "route", SAVE_ROUTE, "--abort"]);
   try {
-    await clickIn(ACTIVITY_FORM, "Save update");
+    await clickIn(ADD_FORM, "Save");
     await waitText("Save failed. Your update is still here; try saving again.");
-    assert.equal(await inputValue(ACTIVITY_FORM, "Description *"), text);
+    assert.equal(await inputValue(ADD_FORM, "Description"), text);
     await assertPendingSubmissionActions(await snapshot());
     assert.equal(await reportActionsDisabled(), true);
   } finally {
@@ -701,32 +704,32 @@ void test("pending canonical save locks write actions until connectivity returns
   await command(["network", "requests", "--clear"]);
   try {
     await setOffline(true);
-    await clickIn(ACTIVITY_FORM, "Save update");
+    await clickIn(ADD_FORM, "Save");
     await waitAutosaveStatus(
       "You’re offline — changes will save when the connection returns",
     );
     // The live status, not a healthy manual Save button, proves the write is
     // paused. Busy/disabled Retry presentation is asserted in error recovery.
-    const editor = namedScope(await snapshot(), ACTIVITY_FORM);
-    disabledRef(editor, "button", "Save update");
+    const editor = namedScope(await snapshot(), ADD_FORM);
+    disabledRef(editor, "button", "Save");
     assert.equal(
       (await command(["is", "enabled", oneRef(editor, "button", "Cancel")]))
         .enabled,
       true,
       "Cancel must remain reachable while the canonical save is paused",
     );
+    // The short add form is not modal: other units stay reachable, but the
+    // report cannot be submitted while this save waits.
     const pending = await snapshot();
-    assert.equal(refsByRole(pending, "button", /^Add item to /).length, 0);
-    assert.equal(refsByRole(pending, "button", /^Status of /).length, 0);
     await assertPendingSubmissionActions(pending);
     assert.equal(await reportActionsDisabled(), true);
+    // Escape while the save waits closes nothing: the input stays.
     await command(["press", "Escape"]);
-    // Focus moved to Cancel when the save locked Save, so Escape reaches the form.
-    await clickIn(
-      { role: "alertdialog", name: "Discard changes?" },
-      "Keep editing",
+    assert.equal(
+      refsByRole(await snapshot(), "alertdialog", "Discard changes?").length,
+      0,
     );
-    assert.equal(await inputValue(ACTIVITY_FORM, "Description *"), text);
+    assert.equal(await inputValue(ADD_FORM, "Description"), text);
     assert.equal(
       await postCount("reports.saveDraft"),
       0,
@@ -735,7 +738,7 @@ void test("pending canonical save locks write actions until connectivity returns
   } finally {
     await setOffline(false);
   }
-  await waitClosed(ACTIVITY_FORM);
+  await waitClosed(ADD_FORM);
   assert.equal(
     refsByRole(await snapshot(), "alertdialog", "Discard changes?").length,
     0,
@@ -756,7 +759,7 @@ void test("pending edits guard navigation and competing write actions", async ()
   );
   await assertPendingSubmissionActions(await snapshot());
   assert.equal(await reportActionsDisabled(), true);
-  await injectSlidesNavigation();
+  await injectSlidesNavigation("reachable");
   const dialog = await waitForBrowserDialog();
   assert.equal(dialog.hasDialog, true);
   assert.equal(dialog.type, "confirm");
@@ -766,16 +769,16 @@ void test("pending edits guard navigation and competing write actions", async ()
   );
   await command(["dialog", "dismiss"]);
   assert.equal(await getUrl(), originalUrl);
-  assert.equal(await inputValue(ACTIVITY_FORM, "Description *"), text);
-  await clickIn(ACTIVITY_FORM, "Cancel");
+  assert.equal(await inputValue(ADD_FORM, "Description"), text);
+  await clickIn(ADD_FORM, "Cancel");
   await clickIn(
     { role: "alertdialog", name: "Discard changes?" },
     "Keep editing",
   );
-  assert.equal(await inputValue(ACTIVITY_FORM, "Description *"), text);
-  await clickIn(ACTIVITY_FORM, "Cancel");
+  assert.equal(await inputValue(ADD_FORM, "Description"), text);
+  await clickIn(ADD_FORM, "Cancel");
   await clickIn({ role: "alertdialog", name: "Discard changes?" }, "Discard");
-  await waitClosed(ACTIVITY_FORM);
+  await waitClosed(ADD_FORM);
   assert.equal(await reportActionsDisabled(), false);
 });
 
@@ -790,7 +793,7 @@ void test("accepted navigation retains pending input without changing the saved 
   await startActivityUpdate(text);
   await command(["network", "requests"]);
   await command(["network", "requests", "--clear"]);
-  await injectSlidesNavigation();
+  await injectSlidesNavigation("reachable");
   const dialog = await waitForBrowserDialog();
   assert.equal(dialog.hasDialog, true);
   assert.equal(dialog.type, "confirm");
@@ -815,22 +818,22 @@ void test("accepted navigation retains pending input without changing the saved 
   await command(["wait", "--url", `**${path}`]);
   assert.equal(new URL(await getUrl()).pathname, path);
   assert.equal(new URL(await getUrl()).search, "");
-  await waitScope(ACTIVITY_FORM);
+  await waitScope(ADD_FORM);
   await waitClosed({ role: "region", name: "Unsaved update recovery" });
-  assert.equal(await inputValue(ACTIVITY_FORM, "Description *"), text);
+  assert.equal(await inputValue(ADD_FORM, "Description"), text);
   assert.equal(
     scopeCount(await snapshot(), "region", "Unsaved update recovery"),
     0,
   );
-  await clickIn(ACTIVITY_FORM, "Cancel");
+  await clickIn(ADD_FORM, "Cancel");
   await clickIn({ role: "alertdialog", name: "Discard changes?" }, "Discard");
-  await waitClosed(ACTIVITY_FORM);
+  await waitClosed(ADD_FORM);
   await reload();
   await waitButton(WEEKLY_EDIT);
   const persisted = await snapshot();
   assert(persisted.snapshot.includes(LEAD_FORM_FIXTURE.currentText));
   assert(!persisted.snapshot.includes(text));
-  assert.equal(scopeCount(persisted, "form", ACTIVITY_FORM.name), 0);
+  assert.equal(scopeCount(persisted, "form", ADD_FORM.name), 0);
   assert.equal(refsByRole(persisted, "button", statusName(text)).length, 0);
   assert.equal(await postCount("reports.saveDraft"), 0);
 });
@@ -873,7 +876,7 @@ void test("concurrent Lead edits recover unsaved input without overwriting the s
         scopeCount(
           scopeSnapshot(data, recovery.role, recovery.name),
           "StaticText",
-          "Your submitted update was not confirmed. It is kept below and has not overwritten the current draft.",
+          "This update changed while you were editing. Your unsaved input is kept below and has not overwritten those changes.",
         ) > 0,
       "Expected unconfirmed update in Unsaved update recovery",
     );
@@ -920,8 +923,18 @@ void test("concurrent Lead edits recover unsaved input without overwriting the s
       previous.period.replaceAll(/\s+/g, "").toLowerCase(),
     );
     assert(typeof state.priorText === "string");
-    for (const value of previous.values)
-      assert(state.priorText.includes(value));
+    // The verdict prompt belongs to the verdict controls, which the open
+    // recovery suspends; the plan's own text must stay.
+    const missing = previous.values.filter(
+      (value) =>
+        value !== "What happened to this plan?" &&
+        !(state.priorText as string).includes(value),
+    );
+    assert.deepEqual(
+      missing,
+      [],
+      `Prior plan text lost: ${JSON.stringify(missing)}`,
+    );
     assert(Array.isArray(state.priorButtons));
     assert(
       !state.priorButtons.some(
@@ -1299,6 +1312,23 @@ void test("pending reopen request preserves reason and blocks dismissal and dupl
   }
 });
 
+/** The short add form checks length when the Lead saves, not while typing. */
+async function checkAddFormLimit(prefix: string): Promise<string> {
+  const boundary = prefix.padEnd(SAFE_TEXT_MAX_LENGTH, "x");
+  await fillIn(ADD_FORM, "Description", `${boundary}x`);
+  await clickIn(ADD_FORM, "Save");
+  assert.equal(
+    await getAttr(
+      await scopedRef(ADD_FORM, "textbox", "Description"),
+      "aria-invalid",
+    ),
+    "true",
+  );
+  assert.equal(await inputValue(ADD_FORM, "Description"), `${boundary}x`);
+  await fillIn(ADD_FORM, "Description", boundary);
+  return boundary;
+}
+
 async function checkRecordLimit(
   scope: Scope,
   label: string,
@@ -1332,12 +1362,11 @@ async function checkRecordLimit(
 void test("item description and pause reason limits accept corrected boundary values", async () => {
   await openLeadReport();
   await startActivityUpdate("E2E item description limit");
-  const description = await checkRecordLimit(
-    ACTIVITY_FORM,
-    "Description *",
-    "E2E boundary item ",
-    "Save update",
-  );
+  const description = await checkAddFormLimit("E2E boundary item ");
+  await saveActivityUpdate(description);
+  await assertPersistedItem(description);
+  // The pause reason belongs to the item's details, edited canonically.
+  await openItemEditor(description);
   await command([
     "click",
     oneRef(namedScope(await snapshot(), ACTIVITY_FORM), "button", "Paused"),
@@ -1348,8 +1377,8 @@ void test("item description and pause reason limits accept corrected boundary va
     "E2E boundary pause ",
     "Save update",
   );
-  await saveActivityUpdate(description);
-  await assertPersistedItem(description);
+  await clickIn(ACTIVITY_FORM, "Save update");
+  await waitClosed(ACTIVITY_FORM);
   await openItemEditor(description);
   assert.equal(await inputValue(ACTIVITY_FORM, "Description *"), description);
   assert.equal(await inputValue(ACTIVITY_FORM, "Pause reason *"), reason);
@@ -1487,8 +1516,12 @@ for (const kind of ["risk", "decision"] as const) {
           ? `Edit risk — ${LEAD_FORM_FIXTURE.activityName}`
           : "Edit decision",
     };
+    // Saved complete, the record's details are required again.
     for (const [index, label] of fields.entries())
-      assert.equal(await inputValue(edited, label), boundaries[index]);
+      assert.equal(
+        await inputValue(edited, label.endsWith(" *") ? label : `${label} *`),
+        boundaries[index],
+      );
     await clickIn(edited, "Cancel");
     await waitClosed(edited);
   });

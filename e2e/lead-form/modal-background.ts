@@ -30,8 +30,14 @@ export async function assertBackgroundSubmissionLocked(): Promise<void> {
   });
 }
 
-/** Inject SPA navigation to test the guard while user controls are modal-hidden. */
-export async function injectSlidesNavigation(): Promise<void> {
+/**
+ * Inject SPA navigation to test the leave guard. Behind a modal editor the
+ * link is hidden; beside the non-modal short add form it stays reachable.
+ */
+export async function injectSlidesNavigation(
+  background: "hidden" | "reachable" = "hidden",
+): Promise<void> {
+  const hiddenExpected = background === "hidden";
   const state = await command([
     "eval",
     `(() => {
@@ -39,11 +45,11 @@ export async function injectSlidesNavigation(): Promise<void> {
         .filter(link => new URL(link.href).searchParams.get('mode') === 'slides');
       const link = links[0];
       const hidden = Boolean(link?.closest('[inert], [aria-hidden="true"]'));
-      if (links.length === 1 && hidden) setTimeout(() => link.click(), 1500);
+      if (links.length === 1 && hidden === ${hiddenExpected}) setTimeout(() => link.click(), 1500);
       return { links: links.length, hidden };
     })()`,
   ]);
-  assert.deepEqual(state.result, { links: 1, hidden: true });
+  assert.deepEqual(state.result, { links: 1, hidden: hiddenExpected });
 }
 
 export async function waitForBrowserDialog(): Promise<Record<string, unknown>> {
