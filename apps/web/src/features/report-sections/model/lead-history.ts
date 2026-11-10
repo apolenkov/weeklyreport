@@ -4,6 +4,8 @@
 import type {
   CompiledHistoryEntry,
   MyHistoryEntry,
+  RecordOmissionSummary,
+  RetainedDraftCounts,
 } from "@weeklyreport/shared";
 
 import {
@@ -42,6 +44,10 @@ export interface HistoryEntry {
   decisionCount: number;
   priorityCount: number;
   productCount?: number | undefined;
+  // What the publication left out, frozen with it.
+  publishedOmissions?: RecordOmissionSummary | undefined;
+  // Unfinished records the own source section still keeps, for its author.
+  retainedDrafts?: RetainedDraftCounts | undefined;
 }
 
 function formatHistoryTimestamp(
@@ -89,6 +95,8 @@ export function mapHistoryEntries(
     decisionCount: e.decisionCount ?? 0,
     priorityCount: e.priorityCount ?? 0,
     productCount: e.productCount,
+    publishedOmissions: e.publishedOmissions,
+    retainedDrafts: e.retainedDrafts,
   }));
 }
 
