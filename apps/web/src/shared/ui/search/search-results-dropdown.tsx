@@ -1,7 +1,8 @@
-import type { SearchHit } from "@weeklyreport/shared";
+import type { RecordOmissionSummary, SearchHit } from "@weeklyreport/shared";
 import { type ReactNode, useEffect } from "react";
 
 import { formatDateWithYear } from "../../lib/format/format-date";
+import { searchOmissionNote } from "../../lib/format/record-omission-text";
 import {
   renderSnippet,
   searchOptionId,
@@ -12,6 +13,7 @@ import {
 export interface SearchResultsDropdownProps {
   readonly resultsId: string;
   readonly hits: readonly SearchHit[];
+  readonly omissions?: RecordOmissionSummary | undefined;
   readonly activeIndex: number;
   readonly isError: boolean;
   readonly isFetching: boolean;
@@ -152,6 +154,7 @@ function useRevealActiveOption(resultsId: string, activeIndex: number): void {
 export function SearchResultsDropdown({
   resultsId,
   hits,
+  omissions,
   activeIndex,
   isError,
   isFetching,
@@ -161,6 +164,9 @@ export function SearchResultsDropdown({
   onSelectHit,
 }: SearchResultsDropdownProps) {
   const showEmpty = !isError && !isFetching && hits.length === 0;
+  // Said beside the results, zero hits included, once a search has answered.
+  const omissionNote =
+    omissions && !isError && !isFetching ? searchOmissionNote(omissions) : null;
   useRevealActiveOption(resultsId, activeIndex);
 
   return (
@@ -197,6 +203,16 @@ export function SearchResultsDropdown({
           />
         ))}
       </div>
+
+      {omissionNote && (
+        <p
+          role="note"
+          aria-label="Records search leaves out"
+          className="border-t border-[var(--color-border)] bg-[var(--color-muted)] px-3 py-2 text-xs text-[var(--color-muted-foreground)]"
+        >
+          {omissionNote}
+        </p>
+      )}
     </div>
   );
 }

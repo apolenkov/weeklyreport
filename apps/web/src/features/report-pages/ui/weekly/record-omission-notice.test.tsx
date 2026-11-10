@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   publishOmissionNote,
   recordOmissionNoticeText,
-} from "../../../report-sections";
+} from "../../../../shared/lib/format/record-omission-text";
 import { makeWeeklyReportData } from "./__tests__/weekly-report-page-harness";
 import { renderWeeklyReportPage } from "./weekly-report-page-test-harness";
 

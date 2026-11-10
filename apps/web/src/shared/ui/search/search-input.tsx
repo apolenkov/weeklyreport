@@ -143,6 +143,7 @@ function SearchResults({
 }) {
   const {
     hits,
+    omissions,
     activeIndex,
     isError,
     isFetching,
@@ -155,6 +156,7 @@ function SearchResults({
     <SearchResultsDropdown
       resultsId={resultsId}
       hits={hits}
+      omissions={omissions}
       activeIndex={activeIndex}
       isError={isError}
       isFetching={isFetching}

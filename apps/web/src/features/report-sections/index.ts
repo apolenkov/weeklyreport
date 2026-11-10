@@ -70,10 +70,6 @@ export type { LeadSubmitReadiness } from "./model/lead-submit-readiness";
 export { pendingReviewLabel } from "./model/lead-submit-readiness";
 export { isBoardEmpty, splitItemBoard } from "./model/next-week-columns";
 export { sortByPriorityRank } from "./model/priority/priority-sort";
-export {
-  publishOmissionNote,
-  recordOmissionNoticeText,
-} from "./model/record-omission-text";
 export type { ParentActivityOption, RecordParent } from "./model/record-parent";
 export { resolveRecordParent } from "./model/record-parent";
 export { reportHasContent } from "./model/report-content";

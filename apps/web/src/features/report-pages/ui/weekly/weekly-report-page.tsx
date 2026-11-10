@@ -2,6 +2,7 @@
 
 import { type ReactNode, useState } from "react";
 
+import { publishOmissionNote } from "../../../../shared/lib/format/record-omission-text";
 import { ReportBreadcrumb } from "../../../../shared/ui/report-shell/report-breadcrumb";
 import {
   DocumentActionGroup,
@@ -12,7 +13,6 @@ import {
   PUBLISH_REQUIREMENT_HINT,
   PublishLockButton,
 } from "../../../period";
-import { publishOmissionNote } from "../../../report-sections";
 import { ArchiveRestoreActions } from "./archive-restore-actions";
 import { RecordOmissionNotice } from "./record-omission-notice";
 import { useWeeklyReportPage } from "./use-weekly-report-page";

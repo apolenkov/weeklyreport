@@ -51,7 +51,6 @@ vi.mock("../../report-sections", () => ({
     },
   }),
   reportHasContent: () => false,
-  publishOmissionNote: () => undefined,
 }));
 
 vi.mock("./publish-lock-button", () => ({
@@ -61,6 +60,8 @@ vi.mock("./publish-lock-button", () => ({
     </button>
   ),
 }));
+
+const NOTHING_OMITTED = { risks: 0, decisions: 0, unknown: false };
 
 const pending = new Promise<never>(() => undefined);
 
@@ -76,7 +77,11 @@ function makeBadRequestError(): TRPCClientError<never> {
 function reportQueryFixture(input: unknown) {
   const reportId = (input as { reportId: string }).reportId;
   if (reportId === "report-a") {
-    return { status: "active", reportId: "report-a" };
+    return {
+      status: "active",
+      recordOmissions: NOTHING_OMITTED,
+      reportId: "report-a",
+    };
   }
   if (reportId === "report-error") {
     return Promise.reject(makeBadRequestError());
@@ -224,7 +229,11 @@ async function requiresExplicitRetryAfterTerminalError(): Promise<void> {
     if (reportId !== "report-error") return pending;
     return queryByInput.mock.calls.length === 1
       ? Promise.reject(makeBadRequestError())
-      : Promise.resolve({ status: "active", reportId });
+      : Promise.resolve({
+          status: "active",
+          recordOmissions: NOTHING_OMITTED,
+          reportId,
+        });
   });
   const { Providers } = makeHarness(queryByInput);
   const user = userEvent.setup();

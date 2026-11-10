@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { SearchHit } from "@weeklyreport/shared";
+import type { RecordOmissionSummary, SearchHit } from "@weeklyreport/shared";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState } from "react";
 
@@ -29,6 +29,8 @@ export interface SearchController {
   readonly containerRef: React.RefObject<HTMLDivElement | null>;
   readonly enabled: boolean;
   readonly hits: readonly SearchHit[];
+  // What the searched corpus leaves out; undefined until a search answers.
+  readonly omissions: RecordOmissionSummary | undefined;
   readonly isError: boolean;
   readonly isFetching: boolean;
   readonly isViewer: boolean;
@@ -65,7 +67,14 @@ function useSearchHits(q: string, scope: SearchScope, isViewer: boolean) {
     return isViewer ? all.filter((hit) => hit.type !== "project") : all;
   }, [data, isViewer]);
 
-  return { enabled, hits, isError, isFetching, retry: () => void refetch() };
+  return {
+    enabled,
+    hits,
+    omissions: data?.omissions,
+    isError,
+    isFetching,
+    retry: () => void refetch(),
+  };
 }
 
 interface KeyDownArgs {
@@ -144,11 +153,8 @@ export function useSearchController(scope: SearchScope): SearchController {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
 
-  const { enabled, hits, isError, isFetching, retry } = useSearchHits(
-    q,
-    scope,
-    isViewer,
-  );
+  const { enabled, hits, omissions, isError, isFetching, retry } =
+    useSearchHits(q, scope, isViewer);
   const containerRef = useRef<HTMLDivElement | null>(null);
   useDismissOnOutsidePointer({
     open,
@@ -177,6 +183,7 @@ export function useSearchController(scope: SearchScope): SearchController {
     containerRef,
     enabled,
     hits,
+    omissions,
     isError,
     isFetching,
     isViewer,
