@@ -309,8 +309,18 @@ async function addMarker(text: string): Promise<void> {
     `Add item to ${LEAD_FORM_FIXTURE.activityName}, Current week`,
     "click",
   );
-  await fill("Description *", text);
-  await findRole("button", "Save update", "click");
+  const form = {
+    role: "form",
+    name: `Add item for ${LEAD_FORM_FIXTURE.activityName}, current week`,
+  };
+  await waitScope(form);
+  await command([
+    "fill",
+    await scopedRef(form, "textbox", "Description"),
+    text,
+  ]);
+  await command(["click", await scopedRef(form, "button", "Save")]);
+  await waitClosed(form);
   await waitButton(`Edit item: ${text}`);
   await findRole("button", `Edit item: ${text}`, "text");
   await saveDraft();
