@@ -5,6 +5,10 @@ import Link from "next/link";
 import { joinPeriodLabel } from "../../../shared/lib/format/format-date";
 import { LEAD_REPORT_ROUTE } from "../../../shared/ui/navigation/nav-links";
 import type { HistoryEntry } from "../../report-sections";
+import {
+  RetainedDraftsHost,
+  UnfinishedDraftsRow,
+} from "./history/unfinished-drafts-row";
 
 interface LeadHistoryListProps {
   readonly entries: readonly HistoryEntry[];
@@ -235,10 +239,17 @@ export function LeadHistoryList({ entries }: LeadHistoryListProps) {
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      {entries.map((entry) => (
-        <HistoryCard key={entry.id} entry={entry} />
-      ))}
-    </div>
+    <RetainedDraftsHost>
+      {(onView) => (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {entries.map((entry) => (
+            <div key={entry.id} className="flex min-w-0 flex-col">
+              <HistoryCard entry={entry} />
+              <UnfinishedDraftsRow entry={entry} onView={onView} />
+            </div>
+          ))}
+        </div>
+      )}
+    </RetainedDraftsHost>
   );
 }
