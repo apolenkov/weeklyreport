@@ -122,4 +122,33 @@ describe("findPublishedRecordViolation", () => {
     expect(findPublishedRecordViolation(published, withDraftRow)).toBeNull();
     expect(findPublishedRecordViolation(published, base)).toBeNull();
   });
+
+  it("rejects a kept published decision whose Impact was cleared, naming the field", () => {
+    const base = payload();
+    const violation = findPublishedRecordViolation(published, {
+      ...base,
+      decisions: base.decisions.map((decision) => ({
+        ...decision,
+        impact: null,
+      })),
+    });
+
+    expect(violation?.code).toBe("PUBLISHED_RECORD_LOCKED");
+    expect(violation?.message).toContain("Impact");
+    // Guidance only: the message carries none of the decision's own text.
+    expect(violation?.message).not.toContain("Published decision");
+  });
+
+  it("lets a never-published decision stay without Impact", () => {
+    const base = payload();
+    const withDraft = {
+      ...base,
+      decisions: base.decisions.flatMap((decision) => [
+        decision,
+        { ...decision, stableId: OTHER_LINEAGE, impact: null },
+      ]),
+    };
+
+    expect(findPublishedRecordViolation(published, withDraft)).toBeNull();
+  });
 });

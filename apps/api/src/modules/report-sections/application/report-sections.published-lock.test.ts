@@ -206,3 +206,53 @@ describe("resolve-not-delete save guard", () => {
     ).toBe("done");
   });
 });
+
+describe("published decision keeps its Impact", () => {
+  const DECISION_LINEAGE = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+  const decision = {
+    stableId: DECISION_LINEAGE,
+    productId: PROJECT_ID,
+    text: "Published decision",
+    owner: "Head",
+    deadline: null,
+    impact: "Scope moves" as string | null,
+    resolvedAt: null,
+    stageNames: ["Development"],
+  };
+
+  function serviceWithPublishedDecision() {
+    return new ReportSectionsService(
+      {
+        ...createRepository([]),
+        getPublishedLineage: () =>
+          Promise.resolve({
+            itemStableIds: [],
+            decisionStableIds: [DECISION_LINEAGE],
+          }),
+      },
+      NOOP_REPORT_SECTIONS_TELEMETRY,
+      createNullLogger(),
+    );
+  }
+
+  it("rejects a saveDraft that clears the Impact of a published decision", async () => {
+    await expect(
+      serviceWithPublishedDecision().saveDraft(
+        { ...basePayload(), decisions: [{ ...decision, impact: null }] },
+        section.authorId,
+      ),
+    ).rejects.toMatchObject({
+      code: "PUBLISHED_RECORD_LOCKED",
+      message: expect.stringContaining("Impact") as unknown,
+    });
+  });
+
+  it("saves the published decision when its Impact is kept", async () => {
+    await expect(
+      serviceWithPublishedDecision().saveDraft(
+        { ...basePayload(), decisions: [decision] },
+        section.authorId,
+      ),
+    ).resolves.toBeDefined();
+  });
+});
