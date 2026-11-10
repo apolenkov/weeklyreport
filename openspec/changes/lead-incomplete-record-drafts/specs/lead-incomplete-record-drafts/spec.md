@@ -52,7 +52,7 @@ Live reviewer-facing projections and published snapshots MUST exclude incomplete
 
 ### Requirement: Scoped omission disclosure
 
-Live Head and viewer reports and publication confirmation MUST disclose scoped incomplete-record omission counts separately from pending section counts. Published snapshots MUST freeze scoped counts from the same publication state and report unknown rather than zero for legacy snapshots without metadata. Counts MUST obey existing section scope and never expose draft text to nonauthors.
+Live Head and viewer reports MUST disclose scoped incomplete-record omission counts separately from pending section counts. Publication confirmation MUST disclose the counts over every section the publication freezes, in every group, as totals only and only to a role that can publish. Published snapshots MUST freeze scoped counts from the same publication state and report unknown rather than zero for legacy snapshots without metadata. Counts MUST obey existing section scope and never expose draft text to nonauthors.
 
 #### Scenario: Old snapshot
 
@@ -63,6 +63,13 @@ Live Head and viewer reports and publication confirmation MUST disclose scoped i
 
 - **WHEN** a viewer lacks scope for a section
 - **THEN** neither that section's omission count nor its incomplete draft content is disclosed
+
+#### Scenario: Publication confirmation covers every group
+
+- **GIVEN** a Head's own group holds one unfinished risk and another group holds one more
+- **WHEN** the Head opens the publication confirmation
+- **THEN** it names two unfinished risks, while the report notice still names only the Head's own group's one
+- **AND** no text, author or group of the other group's record is disclosed
 
 ### Requirement: Completeness is derived from honest stored details
 

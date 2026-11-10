@@ -38,10 +38,14 @@ export function recordOmissionNoticeText(
     : `Not shown: ${kinds.join(" and ")}, still being written. This report may be incomplete.`;
 }
 
-/** What publishing leaves behind, said before the Head confirms it. */
+/**
+ * What publishing leaves behind, said before the Head confirms it. The total
+ * covers every group, as the publication does; without one nothing is said.
+ */
 export function publishOmissionNote(
-  summary: RecordOmissionSummary,
+  summary: RecordOmissionSummary | undefined,
 ): string | undefined {
+  if (summary === undefined) return undefined;
   const kinds = omittedKinds(summary);
   return kinds.length === 0
     ? undefined

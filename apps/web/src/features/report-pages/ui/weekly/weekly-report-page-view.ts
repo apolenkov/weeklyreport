@@ -53,9 +53,9 @@ export interface WeeklyReportPageView {
   readonly hasAnyContent: boolean;
   readonly canPublishReport: boolean;
   readonly showPublishHint: boolean;
-  /** Unfinished risks and decisions left out of every section in the reader's scope. */
-  readonly recordOmissions: WeeklyReportReadModel["recordOmissions"];
-  /** The same, for the sections on screen under the current filter. */
+  /** What publishing leaves out across every group; absent when the reader cannot publish. */
+  readonly publicationOmissions: WeeklyReportReadModel["publicationOmissions"];
+  /** Unfinished risks and decisions left out of the sections on screen. */
   readonly shownRecordOmissions: WeeklyReportReadModel["recordOmissions"];
 }
 
@@ -219,7 +219,7 @@ export function buildWeeklyReportPageView(
     ...reviewSurface,
     portfolio: view.portfolio,
     activitySections: reportData.leadSections,
-    recordOmissions: reportData.recordOmissions,
+    publicationOmissions: reportData.publicationOmissions,
     shownRecordOmissions: reviewSurface.submittedOnly
       ? NOTHING_OMITTED
       : reportData.recordOmissions,
