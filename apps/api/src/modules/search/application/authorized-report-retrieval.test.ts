@@ -1,4 +1,7 @@
-import type { ReportSectionReadModel } from "@weeklyreport/shared";
+import type {
+  RecordOmission,
+  ReportSectionReadModel,
+} from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ReportOccurrence } from "../domain/report-retrieval.types.js";
@@ -102,6 +105,7 @@ function section(authorId: string): ReportSectionReadModel {
 
 function occurrence(
   sections: readonly ReportSectionReadModel[],
+  recordOmissions?: ReportOccurrence["recordOmissions"],
 ): ReportOccurrence {
   return {
     reportId: REPORT_ID,
@@ -110,6 +114,7 @@ function occurrence(
     periodStart: new Date("2026-08-01T00:00:00.000Z"),
     source: "snapshot",
     sections,
+    ...(recordOmissions ? { recordOmissions } : {}),
   };
 }
 
@@ -176,7 +181,11 @@ describe("authorizeReportOccurrences", () => {
       [occurrence([section(FOREIGN_ID)])],
     );
 
-    expect(result).toEqual({ occurrences: [], sectionScopes: [] });
+    expect(result).toEqual({
+      occurrences: [],
+      sectionScopes: [],
+      coverage: { risks: 0, decisions: 0, unknown: false },
+    });
     expect(access.getAuthorizationSnapshot).toHaveBeenCalledOnce();
   });
 
@@ -190,5 +199,85 @@ describe("authorizeReportOccurrences", () => {
 
     expect(result.sectionScopes).toHaveLength(1);
     expect(result.sectionScopes[0]?.visibility).toBe("own");
+  });
+});
+
+const omission = (
+  ...buckets: readonly (readonly [
+    RecordOmission["buckets"][number]["kind"],
+    string,
+    number,
+  ])[]
+): RecordOmission => ({
+  version: 1,
+  buckets: buckets.map(([kind, parentId, count]) => ({
+    kind,
+    parentKind: "product",
+    parentId,
+    stageNames: ["Development"],
+    count,
+  })),
+});
+
+const sectionId = (authorId: string) => section(authorId).reportSectionId;
+
+describe("authorizeReportOccurrences coverage", () => {
+  it("counts an own section whole and a foreign one through its shared products", async () => {
+    const result = await authorizeReportOccurrences(
+      accessRepository(true, [SHARED_PRODUCT_ID]).repository,
+      ACTOR_ID,
+      [
+        occurrence(
+          [section(ACTOR_ID), section(FOREIGN_ID)],
+          new Map([
+            [sectionId(ACTOR_ID), omission(["risk", UNSHARED_PRODUCT_ID, 2])],
+            [
+              sectionId(FOREIGN_ID),
+              omission(
+                ["decision", SHARED_PRODUCT_ID, 1],
+                ["risk", UNSHARED_PRODUCT_ID, 5],
+              ),
+            ],
+          ]),
+        ),
+      ],
+    );
+
+    expect(result.coverage).toEqual({ risks: 2, decisions: 1, unknown: false });
+  });
+
+  it("says unknown for a section frozen before the counts existed", async () => {
+    const result = await authorizeReportOccurrences(
+      accessRepository(true, [SHARED_PRODUCT_ID]).repository,
+      ACTOR_ID,
+      [
+        occurrence(
+          [section(ACTOR_ID), section(FOREIGN_ID)],
+          new Map([
+            [sectionId(ACTOR_ID), omission(["risk", SHARED_PRODUCT_ID, 1])],
+          ]),
+        ),
+      ],
+    );
+
+    expect(result.coverage).toEqual({ risks: 1, decisions: 0, unknown: true });
+  });
+
+  it("discloses nothing about sections the actor may not read", async () => {
+    const result = await authorizeReportOccurrences(
+      accessRepository(true, []).repository,
+      ACTOR_ID,
+      [
+        occurrence(
+          [section(ACTOR_ID), section(FOREIGN_ID)],
+          new Map([
+            [sectionId(ACTOR_ID), omission()],
+            [sectionId(FOREIGN_ID), omission(["risk", SHARED_PRODUCT_ID, 4])],
+          ]),
+        ),
+      ],
+    );
+
+    expect(result.coverage).toEqual({ risks: 0, decisions: 0, unknown: false });
   });
 });

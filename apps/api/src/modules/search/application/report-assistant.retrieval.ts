@@ -1,4 +1,4 @@
-import type { SearchPlan } from "@weeklyreport/shared";
+import type { RecordOmissionSummary, SearchPlan } from "@weeklyreport/shared";
 
 import { filterCandidates } from "../domain/candidate-filter.js";
 import { projectSectionCandidates } from "../domain/candidate-projector.js";
@@ -34,9 +34,10 @@ export type CandidateResolution =
       kind: "resolved";
       plan: ResolvedSearchPlan;
       candidates: readonly SearchCandidate[];
+      coverage: RecordOmissionSummary;
     }>
   | Readonly<{ kind: "clarification_required" } & ClarificationSet>
-  | Readonly<{ kind: "no_results" }>
+  | Readonly<{ kind: "no_results"; coverage: RecordOmissionSummary }>
   | Readonly<{ kind: "result_set_too_large" }>;
 
 const occurrenceByReport = (
@@ -104,11 +105,16 @@ export const resolveReportAssistantCandidates = async (
     actorId,
     occurrences,
   );
-  if (authorized.occurrences.length === 0) return { kind: "no_results" };
+  // An empty answer still says what the readable corpus leaves out.
+  const { coverage } = authorized;
+  if (authorized.occurrences.length === 0) {
+    return { kind: "no_results", coverage };
+  }
 
   const resolved = resolveSearchPlanEntities(
     resolutionInput(plan, authorized, context),
   );
+  if (resolved.kind === "no_results") return { kind: "no_results", coverage };
   if (resolved.kind !== "resolved") return resolved;
 
   const candidates = filterCandidates(
@@ -117,6 +123,6 @@ export const resolveReportAssistantCandidates = async (
     { now: clock.now, timeZone },
   );
   return candidates.length === 0
-    ? { kind: "no_results" }
-    : { kind: "resolved", plan: resolved.plan, candidates };
+    ? { kind: "no_results", coverage }
+    : { kind: "resolved", plan: resolved.plan, candidates, coverage };
 };

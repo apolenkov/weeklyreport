@@ -4,10 +4,7 @@ import { parsePublishedSnapshot } from "@weeklyreport/report-persistence";
 import { MAX_PUBLISHED_PERIODS } from "@weeklyreport/shared";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
-import {
-  mapPrismaToReportSection,
-  reportSectionFullInclude,
-} from "../../report-sections/index.js";
+import { reportSectionFullInclude } from "../../report-sections/index.js";
 import {
   type ReportSearchRepository,
   ReportSearchResultSetTooLargeError,
@@ -16,6 +13,10 @@ import {
 import { normalizeEntityReference } from "../domain/entity-alias-index.js";
 import type { SelectableReportSource } from "../domain/period-source-selection.js";
 import type { ReportOccurrence } from "../domain/report-retrieval.types.js";
+import {
+  liveOccurrence,
+  snapshotOccurrence,
+} from "./report-occurrence.mapper.js";
 interface ReportSourceRow {
   readonly id: string;
   readonly periodStart: Date;
@@ -85,19 +86,6 @@ function toSource(row: ReportSourceRow): SelectableReportSource | null {
         source: "snapshot",
       }
     : null;
-}
-function toOccurrence(
-  source: SelectableReportSource,
-  sections: ReportOccurrence["sections"],
-): ReportOccurrence {
-  return {
-    reportId: source.reportId,
-    periodId: source.periodId,
-    periodLabel: source.periodLabel,
-    periodStart: source.periodStart,
-    source: source.source,
-    sections,
-  };
 }
 const REPORT_SOURCE_METADATA_SELECT = {
   id: true,
@@ -269,9 +257,7 @@ export class ReportSearchPrismaRepository implements ReportSearchRepository {
         },
       },
     });
-    return report
-      ? toOccurrence(source, report.sections.map(mapPrismaToReportSection))
-      : null;
+    return report ? liveOccurrence(source, report.sections) : null;
   }
   private async loadSnapshotOccurrence(
     source: SelectableReportSource,
@@ -285,7 +271,7 @@ export class ReportSearchPrismaRepository implements ReportSearchRepository {
     });
     const snapshot = parsePublishedSnapshot(report?.publishedSnapshot);
     return snapshot?.reportId === source.reportId
-      ? toOccurrence(source, snapshot.sections)
+      ? snapshotOccurrence(source, snapshot)
       : null;
   }
 }
