@@ -1,10 +1,10 @@
 import {
+  type RecordOmissionSummary,
   type SearchHit,
   type SearchQueryInput,
   searchQueryInputSchema,
   type SearchQueryOutput,
   searchQueryOutputSchema,
-  UNCOUNTED_RECORD_OMISSIONS,
   type UserSession,
 } from "@weeklyreport/shared";
 
@@ -28,7 +28,22 @@ export interface SearchRepository {
     readonly excludeTypes: readonly SearchHit["type"][];
     readonly limit: number;
   }) => Promise<readonly SearchHit[]>;
+  // Unfinished risks and decisions in the same authorized corpus, counted
+  // before text matching and limits; an excluded kind contributes nothing.
+  readonly countOmissions: (params: {
+    readonly scope: "mine" | "all" | "published";
+    readonly userId: string;
+    readonly groupIds: readonly string[] | null;
+    readonly excludeTypes: readonly SearchHit["type"][];
+  }) => Promise<RecordOmissionSummary>;
 }
+
+// No corpus was read, so nothing can have been left out of it.
+const NOTHING_OMITTED: RecordOmissionSummary = {
+  risks: 0,
+  decisions: 0,
+  unknown: false,
+};
 
 export class SearchAuthorizationError extends Error {
   constructor(message: string) {
@@ -88,18 +103,20 @@ export class SearchService {
     if (groupIds !== null && groupIds.length === 0) {
       return searchQueryOutputSchema.parse({
         hits: [],
-        omissions: UNCOUNTED_RECORD_OMISSIONS,
+        omissions: NOTHING_OMITTED,
       });
     }
 
-    const hits = await this.repository.search({
-      q: parsed.q,
+    const corpus = {
       scope: parsed.scope,
       userId: session.userId,
       groupIds,
       excludeTypes: resolveSearchExcludeTypes(session),
-      limit: parsed.limit,
-    });
+    };
+    const [hits, omissions] = await Promise.all([
+      this.repository.search({ ...corpus, q: parsed.q, limit: parsed.limit }),
+      this.repository.countOmissions(corpus),
+    ]);
 
     // Server-side ordering: rank desc, then createdAt desc, then id asc as a
     // stable tie-breaker so equal-rank rows don't shuffle between calls.
@@ -116,11 +133,6 @@ export class SearchService {
       role: session.role,
       hits: limited.length,
     });
-    // TODO(TASK-836): count omissions over the authorized corpus once the
-    // publication package freezes them; until then the totals are not known.
-    return searchQueryOutputSchema.parse({
-      hits: limited,
-      omissions: UNCOUNTED_RECORD_OMISSIONS,
-    });
+    return searchQueryOutputSchema.parse({ hits: limited, omissions });
   }
 }

@@ -5,6 +5,7 @@ import type { SearchHit } from "@weeklyreport/shared";
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import type { SearchRepository } from "../application/search.service.js";
 import { searchPublishedDocuments } from "../published-search-query.js";
+import { countSearchOmissions } from "./search-omissions.query.js";
 
 interface RawHit {
   readonly type: "item" | "risk" | "decision" | "project";
@@ -202,4 +203,7 @@ export class SearchPrismaRepository implements SearchRepository {
     const rows = await this.prisma.$queryRaw<RawHit[]>(query);
     return rows.map(toSearchHit);
   };
+
+  readonly countOmissions: SearchRepository["countOmissions"] = (params) =>
+    countSearchOmissions(this.prisma, params);
 }
