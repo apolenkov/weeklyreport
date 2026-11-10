@@ -242,6 +242,8 @@ describe("published projections", () => {
         reportSectionId: SECTION_ID,
         authorId: AUTHOR_ID,
         groupId: GROUP_ID,
+        omittedRisks: null,
+        omittedDecisions: null,
       },
     ]);
     expect(projections.searchDocuments).toEqual([
@@ -277,6 +279,8 @@ describe("published projections", () => {
         reportSectionId: SECTION_ID,
         authorId: AUTHOR_ID,
         groupId: GROUP_ID,
+        omittedRisks: null,
+        omittedDecisions: null,
       },
     ]);
     expect(projections.searchDocuments).toEqual([]);
@@ -354,7 +358,7 @@ describe("published projections", () => {
     const order: string[] = [];
     const row = { id: REPORT_ID };
     const frozen = snapshot();
-    const json = { frozen: true };
+    const json = JSON.parse(JSON.stringify(frozen)) as never;
     vi.mocked(buildAssembledReportFromPrismaRow).mockReturnValue(frozen);
     vi.mocked(toPublishedSnapshotJson).mockReturnValue(json);
     const omissions = new Map();

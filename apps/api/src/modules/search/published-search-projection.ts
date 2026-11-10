@@ -71,15 +71,19 @@ export async function freezePublishedSnapshot(
     include: reportFullIncludeForSnapshot,
   });
   const snapshot = buildAssembledReportFromPrismaRow(row);
+  // The projections are derived from the stored payload itself, so the frozen
+  // omission totals always match the snapshot they were published with.
+  const publishedSnapshot = toPublishedSnapshotJson(
+    snapshot,
+    toSectionRecordOmissions(row),
+  );
   await tx.report.update({
     where: { id: reportId },
-    data: {
-      publishedSnapshot: toPublishedSnapshotJson(
-        snapshot,
-        toSectionRecordOmissions(row),
-      ),
-    },
+    data: { publishedSnapshot },
   });
-  await replacePublishedProjections(tx, { reportId, snapshot });
+  await replacePublishedProjections(tx, {
+    reportId,
+    snapshot: publishedSnapshot,
+  });
   return snapshot;
 }
