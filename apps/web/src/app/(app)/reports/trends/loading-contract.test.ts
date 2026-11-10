@@ -42,6 +42,8 @@ function renderPage(client: QueryClient) {
   );
 }
 
+const NOTHING_OMITTED = { risks: 0, decisions: 0, unknown: false };
+
 describe("Trends query loading", () => {
   it("renders local skeletons for pending queries", () => {
     const client = new QueryClient({
@@ -64,8 +66,16 @@ describe("Trends query loading", () => {
     });
     client.setQueryData(["history"], {
       periods: [
-        { periodStart: "2026-08-17", periodEnd: "2026-08-23" },
-        { periodStart: "2026-08-24", periodEnd: "2026-08-30" },
+        {
+          periodStart: "2026-08-17",
+          periodEnd: "2026-08-23",
+          omissions: NOTHING_OMITTED,
+        },
+        {
+          periodStart: "2026-08-24",
+          periodEnd: "2026-08-30",
+          omissions: NOTHING_OMITTED,
+        },
       ],
       rows: [
         {
@@ -76,8 +86,16 @@ describe("Trends query loading", () => {
       ],
     });
     client.setQueryData(["comparison"], {
-      periodA: { periodStart: "2026-08-01", periodEnd: "2026-08-23" },
-      periodB: { periodStart: "2026-08-20", periodEnd: "2026-08-30" },
+      periodA: {
+        periodStart: "2026-08-01",
+        periodEnd: "2026-08-23",
+        omissions: NOTHING_OMITTED,
+      },
+      periodB: {
+        periodStart: "2026-08-20",
+        periodEnd: "2026-08-30",
+        omissions: NOTHING_OMITTED,
+      },
       rows: [
         {
           projectId: "alpha",
