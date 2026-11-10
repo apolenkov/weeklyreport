@@ -6,7 +6,10 @@ import {
   joinPeriodLabel,
 } from "../../../shared/lib/format/format-date";
 import { buildPrintActivityReports } from "./print-activity-projection";
-import { PrintExecutiveSummary } from "./print-executive-summary";
+import {
+  PrintExecutiveSummary,
+  PrintRecordOmissionNotice,
+} from "./print-executive-summary";
 import {
   PrintActivityReports,
   PrintPortfolioOverview,
@@ -62,6 +65,7 @@ export function PrintReportTemplate({ data }: PrintReportTemplateProps) {
           atRiskCount={atRiskCount}
           decisionCount={decisionCount}
         />
+        <PrintRecordOmissionNotice summary={data.recordOmissions} />
         <PrintPortfolioOverview view={view} />
         <PrintProductReports view={view} />
         <PrintActivityReports reports={activityReports} />
