@@ -1,5 +1,6 @@
 import type {
   ClarificationOption,
+  RecordOmissionSummary,
   ReportAssistantOutcome,
   SourceCitation,
 } from "@weeklyreport/shared";
@@ -12,6 +13,7 @@ import { Button } from "@weeklyreport/ui/components/ui/button";
 import { AlertCircle, ArrowRight } from "lucide-react";
 import Link from "next/link";
 
+import { assistantOmissionNote } from "../../../shared/lib/format/record-omission-text";
 import { LEAD_REPORT_ROUTE } from "../../../shared/ui/navigation/nav-links";
 import { LeadReportAssistantMarkdown } from "./lead-report-assistant-markdown";
 
@@ -91,6 +93,25 @@ const outcomeMessage = (outcome: AssistantOutcome): string => {
   }
   return "The semantic index is still catching up. Try again in a moment.";
 };
+
+// Said with an answer and with none, so an empty answer never reads as proof
+// that nothing exists (openspec: search-contract-precision).
+function AssistantOmissionNote({
+  coverage,
+}: {
+  readonly coverage: RecordOmissionSummary;
+}) {
+  const note = assistantOmissionNote(coverage);
+  return note === null ? null : (
+    <p
+      role="note"
+      aria-label="Records the assistant leaves out"
+      className="text-sm text-[var(--color-muted-foreground)]"
+    >
+      {note}
+    </p>
+  );
+}
 
 function AssistantOutcomeMessage({
   outcome,
@@ -215,6 +236,7 @@ function AssistantAnswer({
         </Alert>
       )}
       <AssistantSources citations={outcome.citations} />
+      <AssistantOmissionNote coverage={outcome.coverage} />
     </div>
   );
 }
@@ -246,6 +268,9 @@ export function LeadReportAssistantContent({
   return (
     <div className="space-y-3">
       <AssistantOutcomeMessage outcome={outcome} />
+      {outcome.kind === "no_results" && (
+        <AssistantOmissionNote coverage={outcome.coverage} />
+      )}
       {action && (
         <Button
           type="button"
