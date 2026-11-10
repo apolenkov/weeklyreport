@@ -41,9 +41,11 @@ export function storedIncompleteRecords(
 }
 
 /**
- * The stored unfinished records a save no longer carries. The author removed
- * them (or emptied their text) on the form, and the server deletes an
- * unfinished record only when the save names it.
+ * The stored unfinished records a save no longer carries: the author deleted
+ * them on the form, and the server deletes an unfinished record only when the
+ * save names it. A saved row cannot leave the payload any other way, because
+ * the risk and decision editors refuse an empty name or text before they
+ * write to the form.
  */
 export function deletionIntentsFor(
   stored: readonly IncompleteRecordDeletion[],
