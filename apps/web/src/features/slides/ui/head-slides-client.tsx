@@ -5,6 +5,7 @@ import { type ReactElement, type RefObject, useMemo, useState } from "react";
 
 import { useQueryErrorHandler } from "../../../shared/hooks/query/use-query-error-handler";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
+import { RecordOmissionNotice } from "../../../shared/ui/feedback/record-omission-notice";
 import { buildActivitySlideModel } from "../model/activity-slide-model";
 import { buildProductScopedSlides } from "../model/product-scoped-slides";
 import type { SectionSlideModel } from "../model/section-slide-contracts";
@@ -225,19 +226,28 @@ export function HeadSlidesClient({
   );
   if (fallback) return fallback;
 
+  // Slides show finished records only; the reader is told what that leaves out.
+  const recordOmissions =
+    weeklyQ.data?.status === "active" ? weeklyQ.data.recordOmissions : null;
+
   return (
-    <StatusSlideDeck
-      slides={slides}
-      selectedIndex={selectedIndex}
-      onSelect={(index) => {
-        const slide = slides[index];
-        setSelectedKey(slide === undefined ? null : slideArticleKey(slide));
-      }}
-      mode="head"
-      deckRef={deckRef}
-      fullscreenToggleRef={fullscreenToggleRef}
-      isFullscreen={isFullscreen}
-      onToggle={onToggle}
-    />
+    <>
+      {recordOmissions === null ? null : (
+        <RecordOmissionNotice summary={recordOmissions} />
+      )}
+      <StatusSlideDeck
+        slides={slides}
+        selectedIndex={selectedIndex}
+        onSelect={(index) => {
+          const slide = slides[index];
+          setSelectedKey(slide === undefined ? null : slideArticleKey(slide));
+        }}
+        mode="head"
+        deckRef={deckRef}
+        fullscreenToggleRef={fullscreenToggleRef}
+        isFullscreen={isFullscreen}
+        onToggle={onToggle}
+      />
+    </>
   );
 }

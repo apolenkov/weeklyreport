@@ -10,6 +10,7 @@ import {
 } from "react";
 
 import { useFullscreen } from "../../../shared/hooks/browser/use-fullscreen";
+import { RecordOmissionNotice } from "../../../shared/ui/feedback/record-omission-notice";
 import type { CrossAuthorContentRow } from "../../report-sections";
 import {
   type SlideDensity,
@@ -148,6 +149,7 @@ function useLeadSlidesDeck({
   return {
     slides,
     hasOpenDialog: inlineEditor.hasOpenDialog,
+    recordOmissions: leadSlides.recordOmissions,
     dialogs: inlineEditor.dialogs,
     onRowActivate: inlineEditor.onRowActivate,
     showFullscreenControls: !leadSlides.inReportMode,
@@ -215,16 +217,21 @@ export function LeadSlidesClient({
   }
 
   return (
-    <LeadSlidesDeckView
-      deckRef={externalDeckRef ?? internalDeckRef}
-      toggleRef={toggleButtonRef}
-      fullscreen={fullscreen}
-      deck={deck}
-      density={activeDensity}
-      showDensityControl={showDensityControl}
-      onDensityChange={handleDensityChange}
-      selectedIndex={clampSelectedIndex(rawSelectedIndex, deck.slides.length)}
-      onSelect={setSelectedIndex}
-    />
+    <>
+      {deck.recordOmissions === undefined ? null : (
+        <RecordOmissionNotice summary={deck.recordOmissions} />
+      )}
+      <LeadSlidesDeckView
+        deckRef={externalDeckRef ?? internalDeckRef}
+        toggleRef={toggleButtonRef}
+        fullscreen={fullscreen}
+        deck={deck}
+        density={activeDensity}
+        showDensityControl={showDensityControl}
+        onDensityChange={handleDensityChange}
+        selectedIndex={clampSelectedIndex(rawSelectedIndex, deck.slides.length)}
+        onSelect={setSelectedIndex}
+      />
+    </>
   );
 }

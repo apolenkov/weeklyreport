@@ -285,6 +285,29 @@ describe("HeadSlidesClient with real query and deck boundaries", () => {
   });
 });
 
+describe("HeadSlidesClient record omissions", () => {
+  it("tells the reader which unfinished records the deck leaves out", async () => {
+    setup({
+      weekly: () => ({
+        ...report(true),
+        recordOmissions: { risks: 2, decisions: 1, unknown: false },
+      }),
+    });
+    await screen.findByTestId("head-slide-card-0");
+    expect(
+      screen.getByRole("note", { name: "Records not shown" }),
+    ).toHaveTextContent(
+      "Not shown: 2 unfinished risks and 1 unfinished decision, still being written.",
+    );
+  });
+
+  it("stays silent when the deck leaves nothing out", async () => {
+    setup({ weekly: () => report(true) });
+    await screen.findByTestId("head-slide-card-0");
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
+  });
+});
+
 describe("HeadSlidesClient query error policy", () => {
   it("logs an active activity failure once, remains log-only, and logs again after recovery", async () => {
     const first = new Error("Activity unavailable");
