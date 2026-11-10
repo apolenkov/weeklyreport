@@ -53,6 +53,8 @@ export interface WeeklyReportPageView {
   readonly hasAnyContent: boolean;
   readonly canPublishReport: boolean;
   readonly showPublishHint: boolean;
+  /** Unfinished risks and decisions left out of the sections this reader sees. */
+  readonly recordOmissions: WeeklyReportReadModel["recordOmissions"];
 }
 
 type MappedWeeklyReport = ReturnType<typeof mapWeeklyReport>;
@@ -211,6 +213,7 @@ export function buildWeeklyReportPageView(
     ...reviewSurface,
     portfolio: view.portfolio,
     activitySections: reportData.leadSections,
+    recordOmissions: reportData.recordOmissions,
     focusedProductId,
     // Same content filter as focusedProductId (reportHasContent).
     scrollTargetProductId: focusedProductId,

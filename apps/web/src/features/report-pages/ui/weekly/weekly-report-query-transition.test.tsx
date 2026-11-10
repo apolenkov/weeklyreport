@@ -53,6 +53,7 @@ function makeReport(reportId: string, weekLabel: string) {
     portfolioOverview: [],
     leadSections: [],
     escalations: [],
+    recordOmissions: { risks: 0, decisions: 0, unknown: false },
   };
 }
 

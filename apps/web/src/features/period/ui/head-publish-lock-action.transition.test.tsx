@@ -51,6 +51,7 @@ vi.mock("../../report-sections", () => ({
     },
   }),
   reportHasContent: () => false,
+  publishOmissionNote: () => undefined,
 }));
 
 vi.mock("./publish-lock-button", () => ({

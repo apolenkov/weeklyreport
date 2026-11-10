@@ -27,6 +27,8 @@ interface PublishLockButtonProps {
   readonly isPending?: boolean;
   readonly canPublish?: boolean;
   readonly publishDisabledReason?: string;
+  // Unfinished risks and decisions that publishing leaves out, already worded.
+  readonly omittedRecordsNote?: string | undefined;
 }
 
 // Published periods expose reopen instead of publish; the confirm state lives
@@ -100,12 +102,14 @@ function PublishConfirmDialog({
   open,
   pendingCount,
   totalLeads,
+  omittedRecordsNote,
   onConfirm,
   onCancel,
 }: {
   readonly open: boolean;
   readonly pendingCount: number;
   readonly totalLeads: number;
+  readonly omittedRecordsNote: string | undefined;
   readonly onConfirm: () => void;
   readonly onCancel: () => void;
 }) {
@@ -119,9 +123,12 @@ function PublishConfirmDialog({
           : `All ${totalLeads} leads have submitted. The report is ready to publish.`
       }
       subtitle={
-        pendingCount > 0
-          ? "Their sections will appear empty in the published report."
-          : undefined
+        [
+          ...(pendingCount > 0
+            ? ["Their sections will appear empty in the published report."]
+            : []),
+          ...(omittedRecordsNote === undefined ? [] : [omittedRecordsNote]),
+        ].join(" ") || undefined
       }
       consequence="Leads can no longer edit this period."
       confirmLabel={pendingCount > 0 ? "Publish anyway" : "Publish & lock"}
@@ -142,6 +149,7 @@ export function PublishLockButton({
   isPending = false,
   canPublish = true,
   publishDisabledReason = PUBLISH_REQUIREMENT_HINT,
+  omittedRecordsNote,
 }: PublishLockButtonProps) {
   const [showDialog, setShowDialog] = useState(false);
   const publishButtonRef = useRef<HTMLButtonElement>(null);
@@ -214,6 +222,7 @@ export function PublishLockButton({
         open={showDialog && canPublish}
         pendingCount={pendingCount}
         totalLeads={totalLeads}
+        omittedRecordsNote={omittedRecordsNote}
         onConfirm={handleConfirm}
         onCancel={() => setShowDialog(false)}
       />

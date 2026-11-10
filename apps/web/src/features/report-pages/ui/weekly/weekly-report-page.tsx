@@ -12,7 +12,9 @@ import {
   PUBLISH_REQUIREMENT_HINT,
   PublishLockButton,
 } from "../../../period";
+import { publishOmissionNote } from "../../../report-sections";
 import { ArchiveRestoreActions } from "./archive-restore-actions";
+import { RecordOmissionNotice } from "./record-omission-notice";
 import { useWeeklyReportPage } from "./use-weekly-report-page";
 import { ReportContent } from "./weekly-report-content";
 import type {
@@ -61,6 +63,7 @@ function PeriodLifecycleActions({
             onReopen={page.handlers.reopen}
             isPending={page.mutationState.isLifecyclePending}
             canPublish={page.canPublishReport}
+            omittedRecordsNote={publishOmissionNote(page.recordOmissions)}
           />
         )}
     </>
@@ -282,6 +285,7 @@ export function WeeklyReportPage({
         contextControls={contextControls}
         contextControlsLeading={contextControlsLeading}
       />
+      <RecordOmissionNotice summary={page.recordOmissions} />
       <WeeklyReportBody
         page={page}
         scope={scope}
