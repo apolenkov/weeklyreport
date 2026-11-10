@@ -11,7 +11,7 @@ import { SessionContext } from "../../../shared/lib/auth/session-provider";
 import { mutationErrorMessage } from "../../../shared/lib/errors/mutation-error-message";
 import { invalidatePeriodLifecycle } from "../../../shared/lib/query/cache-keys";
 import { useTRPC } from "../../../shared/lib/trpc/trpc-context";
-import { mapWeeklyReport } from "../../report-sections";
+import { mapWeeklyReport, publishOmissionNote } from "../../report-sections";
 import { PublishLockButton } from "./publish-lock-button";
 
 interface HeadPublishLockActionProps {
@@ -134,6 +134,7 @@ export function HeadPublishLockAction({
       }
       isPending={publishMut.isPending || reopenMut.isPending}
       canPublish={canPublishReport}
+      omittedRecordsNote={publishOmissionNote(weeklyQ.data.recordOmissions)}
     />
   );
 }

@@ -154,6 +154,7 @@ vi.mock("../../report-pages/ui/weekly/use-weekly-report-page", () => ({
     submitted: 6,
     total: 8,
     canMutatePeriod: false,
+    recordOmissions: { risks: 0, decisions: 0, unknown: false },
     periods: [],
     handlers: { setSubmissionFilter: vi.fn() },
     accordion: { products: [] },
