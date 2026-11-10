@@ -718,10 +718,27 @@ void test("pending canonical save locks write actions until connectivity returns
       true,
       "Cancel must remain reachable while the canonical save is paused",
     );
-    // The short add form is not modal: other units stay reachable, but the
-    // report cannot be submitted while this save waits.
+    // The short add form is not modal (lead-status-overview-actions: creation
+    // is inline), but only one item editor may be open: starting another
+    // unit's item while this save waits must not open a second editor or drop
+    // the waiting input.
     const pending = await snapshot();
     await assertPendingSubmissionActions(pending);
+    const other = refsByRole(pending, "button", /^Add item to /).at(0);
+    assert(other, "Another unit's Add item stays reachable");
+    await command(["scrollintoview", other]);
+    await command(["click", other]);
+    const afterOther = await snapshot();
+    assert.equal(
+      scopeSnapshots(
+        afterOther,
+        "form",
+        /^(?:Add item for |.* week update for )/u,
+      ).length,
+      1,
+      "Exactly one item editor is open while a save waits",
+    );
+    assert.equal(await inputValue(ADD_FORM, "Description"), text);
     assert.equal(await reportActionsDisabled(), true);
     // Escape while the save waits closes nothing: the input stays.
     await command(["press", "Escape"]);

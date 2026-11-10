@@ -357,19 +357,27 @@ async function saveUpdate(
   await saveDraft();
 }
 
+// "Add item" opens the short, non-modal contextual form for that week.
+function addForm(week: Week, parent: string = ACTIVITY): Scope {
+  return {
+    role: "form",
+    name: `Add item for ${parent}, ${week.toLowerCase()}`,
+  };
+}
+
 async function startActivity(text: string, week: Week = "Current week") {
-  await clickRole("button", `Add item to ${ACTIVITY}, Current week`);
-  await namedBlock("form", `Current week update for ${ACTIVITY}`);
-  await fill("Description *", text);
-  if (week === "Next week") {
-    await clickRole("radio", week);
-    await clickRole("button", "Planned");
-  }
+  await clickRole("button", `Add item to ${ACTIVITY}, ${week}`);
+  const form = addForm(week);
+  await waitScope(form);
+  await command(["fill", await namedRef("textbox", "Description", form), text]);
 }
 
 async function addActivity(text: string, week: Week = "Current week") {
   await startActivity(text, week);
-  await saveUpdate(week);
+  const form = addForm(week);
+  await clickRef(await namedRef("button", "Save", form));
+  await waitClosed(form);
+  await saveDraft();
 }
 
 async function pressSaveShortcut(label: string): Promise<void> {
@@ -615,9 +623,10 @@ void test("Overview shows product and activity lineage in all three weeks", asyn
       )
     ).includes(LEAD_FORM_FIXTURE.previousText),
   );
+  // Owned stages sit on the item as direct toggles (lead-status-overview-actions).
   assert.match(
     await weekBlock("Current week", LEAD_FORM_FIXTURE.currentText, PRODUCT),
-    /image "Stages: Development/u,
+    /group "Stages for [^"]*"[\s\S]*button "Development"/u,
   );
   assert.ok(
     (
@@ -650,7 +659,10 @@ void test("items rest as a status icon, text and stage badge", async () => {
     0,
     `Text action buttons at rest: ${names.join(" | ")}`,
   );
-  assert.match(current.snapshot, /image "Stages: Development/u);
+  assert.match(
+    current.snapshot,
+    /group "Stages for [^"]*"[\s\S]*button "Development"/u,
+  );
   assert.equal(
     refsByRole(await snapshot(), "button", /^Update progress/u).length,
     0,
@@ -868,12 +880,12 @@ for (const [width, height] of [
   void test(`cancelling header Add restores visible focus at ${width}×${height}`, async () => {
     await openLeadReport();
     const addName = `Add item to ${PRODUCT}, Current week`;
-    const editor = { role: "form", name: `Current week update for ${PRODUCT}` };
+    const editor = addForm("Current week", PRODUCT);
     await command(["set", "viewport", String(width), String(height)]);
     await centerControl(await namedRef("button", addName));
     await clickRole("button", addName);
     await waitScope(editor);
-    await cancelUpdate("Current week", PRODUCT);
+    await clickRef(await namedRef("button", "Cancel", editor));
     await waitClosed(editor);
     await assertFocused(addName);
     const visible = await command([
@@ -918,8 +930,19 @@ void test("the item editor saves current and next week through the canonical for
     "button",
     `Add item to ${LEAD_FORM_FIXTURE.singleStageProductName}, Current week`,
   );
-  await fill("Description *", "E2E canonical product stages");
-  await saveUpdate("Current week", LEAD_FORM_FIXTURE.singleStageProductName);
+  const singleStage = addForm(
+    "Current week",
+    LEAD_FORM_FIXTURE.singleStageProductName,
+  );
+  await waitScope(singleStage);
+  await command([
+    "fill",
+    await namedRef("textbox", "Description", singleStage),
+    "E2E canonical product stages",
+  ]);
+  await clickRef(await namedRef("button", "Save", singleStage));
+  await waitClosed(singleStage);
+  await saveDraft();
   await reloadOverview();
   assert.ok(
     (
@@ -1013,7 +1036,8 @@ for (const week of ["Current week", "Next week"] as const) {
     void test(`status persists ${week} ${status}`, async () => {
       await openLeadReport();
       const text = `E2E ${week} ${status} status`;
-      await startActivity(text, week);
+      await addActivity(text, week);
+      await openEditor(week, text);
       await clickRole("button", status);
       if (status === "Paused") {
         await clickRole("button", "Save update");
@@ -1069,7 +1093,8 @@ void test("the status icon menu changes status in place and Paused asks for a re
 void test("leaving Paused clears the saved reason", async () => {
   await openLeadReport();
   const text = "E2E pause reason is cleared";
-  await startActivity(text);
+  await addActivity(text);
+  await openEditor("Current week", text);
   await clickRole("button", "Paused");
   await fill("Pause reason *", "E2E reason to clear");
   await saveUpdate("Current week");
@@ -1707,30 +1732,39 @@ for (const week of ["Current week", "Next week"] as const) {
   });
 }
 
-void test("own reviewer record feedback is readable without a Lead comment editor", async () => {
+void test("own reviewer record feedback opens from the item's comment control", async () => {
+  // lead-item-comment-access: the comment control reveals the record's
+  // authorized comments; the Lead's own item may be replied to.
   await openLeadReport();
   const row = await weekBlock(
     "Current week",
     LEAD_FORM_FIXTURE.currentText,
     PRODUCT,
   );
-  assert.ok(row.includes("Reviewer comments"));
-  assert.ok(row.includes(LEAD_FORM_FIXTURE.ownReviewComment));
-  const article = scopeSnapshot(
-    await snapshot(),
-    "article",
-    `Product ${PRODUCT}`,
+  assert.ok(!row.includes(LEAD_FORM_FIXTURE.ownReviewComment));
+  const toggle = `Comments on ${shortItemLabel(LEAD_FORM_FIXTURE.currentText)}`;
+  // Row actions are clipped until the item is hovered or focused.
+  await revealClick(
+    await weekControl(
+      "Current week",
+      LEAD_FORM_FIXTURE.currentText,
+      "button",
+      toggle,
+      PRODUCT,
+    ),
   );
-  const matches = scopeSnapshots(article, "group", /^CURRENT WEEK/u).filter(
-    (group) => group.snapshot.includes(LEAD_FORM_FIXTURE.currentText),
-  );
-  assert.equal(matches.length, 1);
-  const current = matches[0];
-  assert.ok(current);
-  assert.equal(refsByRole(current, "textbox", /comment/i).length, 0);
+  const view = {
+    role: "region",
+    name: `Comments for ${shortItemLabel(LEAD_FORM_FIXTURE.currentText)}`,
+  };
+  await waitText(LEAD_FORM_FIXTURE.ownReviewComment);
   assert.equal(
-    refsByRole(current, "button", /(?:Add|Save|Edit|Delete) comment/i).length,
-    0,
+    await getAttr(await namedRef("button", toggle), "aria-expanded"),
+    "true",
+  );
+  assert.ok(
+    (await snapshot()).snapshot.includes(LEAD_FORM_FIXTURE.ownReviewComment),
+    `Expected the reviewer comment in ${view.name}`,
   );
 });
 
