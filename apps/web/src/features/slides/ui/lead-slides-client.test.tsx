@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type {
   MyHistoryEntry,
+  RecordOmissionSummary,
   ReportSectionReadModel,
 } from "@weeklyreport/shared";
 import type { ReactNode } from "react";
@@ -225,7 +226,9 @@ function renderHarness({
   search = "",
   density,
   onDensityChange,
+  recordOmissions,
 }: {
+  readonly recordOmissions?: RecordOmissionSummary;
   readonly section?: ReportSectionReadModel;
   readonly readOnly?: boolean;
   readonly search?: string;
@@ -253,6 +256,7 @@ function renderHarness({
         section,
         readOnly,
         canRequestReopen: false,
+        ...(recordOmissions === undefined ? {} : { recordOmissions }),
       }),
     },
     { path: ["leadForm", "crossAuthors"], query: [] },
@@ -390,6 +394,25 @@ describe("LeadSlidesClient inline slide editing", () => {
     );
     fireEvent.click(screen.getByTestId("activate-row"));
     expect(screen.queryByTestId("item-dialog")).not.toBeInTheDocument();
+  });
+
+  it("tells the reader of a foreign deck which unfinished records it leaves out", async () => {
+    renderHarness({
+      search: `authorId=${OTHER_AUTHOR_ID}`,
+      recordOmissions: { risks: 1, decisions: 0, unknown: false },
+    });
+    await screen.findByTestId("status-slide-deck");
+
+    expect(
+      screen.getByRole("note", { name: "Records not shown" }),
+    ).toHaveTextContent("Not shown: 1 unfinished risk, still being written.");
+  });
+
+  it("shows no omission notice on the lead's own deck", async () => {
+    renderHarness();
+    await screen.findByTestId("status-slide-deck");
+
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
   });
 
   it("does not bind row activation when byPeriod marks the section read-only", async () => {

@@ -1,6 +1,6 @@
 import type { RecordOmissionSummary } from "@weeklyreport/shared";
 
-import { recordOmissionNoticeText } from "../../../../shared/lib/format/record-omission-text";
+import { recordOmissionNoticeText } from "../../lib/format/record-omission-text";
 
 /** The notice sits apart from the pending-section count and the status alarms. */
 export function RecordOmissionNotice({

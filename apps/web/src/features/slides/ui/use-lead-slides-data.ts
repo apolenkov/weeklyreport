@@ -1,6 +1,9 @@
 "use client";
 
-import type { ReportSectionReadModel } from "@weeklyreport/shared";
+import type {
+  RecordOmissionSummary,
+  ReportSectionReadModel,
+} from "@weeklyreport/shared";
 import { useMemo } from "react";
 
 import {
@@ -34,6 +37,8 @@ interface LeadSlidesData {
   readonly formData: MappedLeadForm | null;
   readonly canInlineEdit: boolean;
   readonly refetchSection: () => Promise<unknown>;
+  /** What another author's deck leaves out; absent on the reader's own deck. */
+  readonly recordOmissions: RecordOmissionSummary | undefined;
 }
 
 function canEditInlineRecord({
@@ -108,5 +113,6 @@ export function useLeadSlidesData({
       formData,
     }),
     refetchSection: () => queries.byPeriodQ.refetch({ throwOnError: true }),
+    recordOmissions: queries.byPeriodQ.data?.recordOmissions,
   };
 }
