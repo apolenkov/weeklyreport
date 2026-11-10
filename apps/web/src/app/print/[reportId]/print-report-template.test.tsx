@@ -245,19 +245,9 @@ describe("PrintReportTemplate record omissions", () => {
     );
   });
 
-  it("says unknown, never zero, for a publication frozen before counts", () => {
+  it("prints no warning on a publication frozen before counts", () => {
     renderPage({ risks: 0, decisions: 0, unknown: true });
 
-    expect(screen.getByRole("note")).toHaveTextContent(
-      "published before unfinished records were counted",
-    );
-  });
-
-  it("prints counted totals as a floor when part of the report is uncounted", () => {
-    renderPage({ risks: 1, decisions: 0, unknown: true });
-
-    expect(screen.getByRole("note")).toHaveTextContent(
-      "Not shown: at least 1 unfinished risk",
-    );
+    expect(screen.queryByRole("note")).not.toBeInTheDocument();
   });
 });

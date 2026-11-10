@@ -19,7 +19,7 @@ explicit id MUST be rejected, so the live read cannot probe arbitrary periods. A
 viewer with no group access MUST see nothing (zero-row scope), never another group's
 content.
 
-The read-only Head and viewer report surfaces MUST exclude incomplete risks and decisions before deriving statuses and aggregates, including when Show all displays unsubmitted sections. They MUST display an omission notice scoped to the sections shown and authorized, separate from pending-section counts. Published notices use frozen metadata; legacy snapshots without it show unknown rather than zero. No inaccessible section’s omissions or draft text are disclosed.
+The read-only Head and viewer report surfaces MUST exclude incomplete risks and decisions before deriving statuses and aggregates, including when Show all displays unsubmitted sections. They MUST display an omission notice scoped to the sections shown and authorized, separate from pending-section counts. Published notices use frozen metadata; legacy snapshots without it keep an unknown state rather than zero and show no notice, because incomplete records could not be stored before the metadata existed. No inaccessible section’s omissions or draft text are disclosed.
 
 #### Scenario: Viewer sees a submitted section in the current open period
 
@@ -118,4 +118,4 @@ The read-only Head and viewer report surfaces MUST exclude incomplete risks and 
 #### Scenario: Published legacy omission state
 
 - **WHEN** a viewer reads a legacy snapshot without omission metadata
-- **THEN** the omission state is unknown, not zero, and the snapshot is unchanged
+- **THEN** the omission state is unknown, not zero, the snapshot is unchanged and no omission notice is shown

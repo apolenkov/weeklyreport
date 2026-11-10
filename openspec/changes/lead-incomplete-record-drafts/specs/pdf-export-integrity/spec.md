@@ -2,7 +2,7 @@
 
 ### Requirement: Printed publication discloses scoped incomplete-record omissions
 
-The job-bound PDF and print template MUST disclose frozen omission metadata about incomplete risks and decisions for the job's authorized scope, separate from pending section counts, without draft text. It MUST NOT present omitted records as complete or imply an all-clear. If legacy snapshot omission metadata is absent, the disclosure MUST say unknown rather than zero.
+The job-bound PDF and print template MUST disclose frozen omission metadata about incomplete risks and decisions for the job's authorized scope, separate from pending section counts, without draft text. It MUST NOT present omitted records as complete or imply an all-clear. If legacy snapshot omission metadata is absent, the omission state MUST stay unknown rather than zero in the data, and the printed document MUST NOT carry an omission warning: incomplete records could not be stored before the metadata existed, so such a publication left nothing out.
 
 #### Scenario: Scoped omission is printed without private text
 
@@ -16,7 +16,7 @@ The job-bound PDF and print template MUST disclose frozen omission metadata abou
 
 - **GIVEN** the job-bound snapshot predates omission metadata
 - **WHEN** the print template renders it
-- **THEN** the omission state is shown as unknown, not as zero or an all-clear
+- **THEN** its omission state is unknown, not zero, and no omission warning is printed
 
 #### Scenario: Queued disclosure remains bound to its publication
 

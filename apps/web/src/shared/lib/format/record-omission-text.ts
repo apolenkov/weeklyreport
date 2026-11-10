@@ -2,9 +2,6 @@ import type { RecordOmissionSummary } from "@weeklyreport/shared";
 
 import { countLabel } from "./pluralize";
 
-const UNCOUNTED =
-  "Part of this report was published before unfinished records were counted, so some may be missing here.";
-
 // The kinds left out, each with its count: "2 unfinished risks".
 function omittedKinds(summary: RecordOmissionSummary): readonly string[] {
   return [
@@ -26,16 +23,19 @@ function omittedKinds(summary: RecordOmissionSummary): readonly string[] {
 /**
  * What a reader is told about risks and decisions their authors have not
  * finished: such records stay with the author and never appear in the report
- * (openspec: viewer-report-navigation). Null when nothing is left out. An
- * uncounted section is said to be unknown, never passed off as zero.
+ * (openspec: viewer-report-navigation). Null when nothing is left out.
+ *
+ * A report frozen before counting is `unknown` in the data and silent here:
+ * unfinished records could not be stored until counting shipped with them, so
+ * such a report left nothing out and a warning on it would be false.
  */
 export function recordOmissionNoticeText(
   summary: RecordOmissionSummary,
 ): string | null {
   const kinds = omittedKinds(summary);
-  if (kinds.length === 0) return summary.unknown ? UNCOUNTED : null;
-  const counted = `Not shown: ${summary.unknown ? "at least " : ""}${kinds.join(" and ")}, still being written. This report may be incomplete.`;
-  return summary.unknown ? `${counted} ${UNCOUNTED}` : counted;
+  return kinds.length === 0
+    ? null
+    : `Not shown: ${kinds.join(" and ")}, still being written. This report may be incomplete.`;
 }
 
 /** What publishing leaves behind, said before the Head confirms it. */
@@ -48,9 +48,6 @@ export function publishOmissionNote(
     : `${kinds.join(" and ")} will be left out of the published report.`;
 }
 
-const SEARCH_UNCOUNTED =
-  "Some reports were published before unfinished records were counted, so search may miss a few.";
-
 /**
  * What a search is told it cannot reach (openspec: search-contract-precision).
  * It describes the searched corpus and never says an omitted record matched.
@@ -59,13 +56,10 @@ export function searchOmissionNote(
   summary: RecordOmissionSummary,
 ): string | null {
   const kinds = omittedKinds(summary);
-  if (kinds.length === 0) return summary.unknown ? SEARCH_UNCOUNTED : null;
-  const counted = `Search leaves out ${summary.unknown ? "at least " : ""}${kinds.join(" and ")}, still being written.`;
-  return summary.unknown ? `${counted} ${SEARCH_UNCOUNTED}` : counted;
+  return kinds.length === 0
+    ? null
+    : `Search leaves out ${kinds.join(" and ")}, still being written.`;
 }
-
-const ASSISTANT_UNCOUNTED =
-  "Some reports were published before unfinished records were counted, so the answer may miss a few.";
 
 /**
  * What the report assistant is told it cannot read. Like the search note it
@@ -75,24 +69,19 @@ export function assistantOmissionNote(
   summary: RecordOmissionSummary,
 ): string | null {
   const kinds = omittedKinds(summary);
-  if (kinds.length === 0) return summary.unknown ? ASSISTANT_UNCOUNTED : null;
-  const counted = `The assistant does not read ${summary.unknown ? "at least " : ""}${kinds.join(" and ")}, still being written.`;
-  return summary.unknown ? `${counted} ${ASSISTANT_UNCOUNTED}` : counted;
+  return kinds.length === 0
+    ? null
+    : `The assistant does not read ${kinds.join(" and ")}, still being written.`;
 }
 
 /**
  * One period's line in the analytics disclosure (openspec:
- * analytics-query-correctness): what its figures leave out, or that it was
- * never counted. Null when the period leaves nothing out.
+ * analytics-query-correctness): what its figures leave out. Null when the
+ * period leaves nothing out.
  */
 export function periodOmissionNote(
   summary: RecordOmissionSummary,
 ): string | null {
   const kinds = omittedKinds(summary);
-  if (kinds.length === 0) {
-    return summary.unknown
-      ? "not counted, published before unfinished records were counted"
-      : null;
-  }
-  return `${summary.unknown ? "at least " : ""}${kinds.join(" and ")}`;
+  return kinds.length === 0 ? null : kinds.join(" and ");
 }

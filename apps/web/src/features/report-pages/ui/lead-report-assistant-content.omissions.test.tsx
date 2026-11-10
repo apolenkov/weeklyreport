@@ -54,12 +54,10 @@ describe("LeadReportAssistantContent left-out records", () => {
     );
   });
 
-  it("calls uncounted reports unknown instead of complete", () => {
+  it("stays silent about reports published before counting", () => {
     expect(
       renderOutcome(answer({ risks: 0, decisions: 0, unknown: true })),
-    ).toHaveTextContent(
-      "Some reports were published before unfinished records were counted, so the answer may miss a few.",
-    );
+    ).toBeNull();
   });
 
   it("stays silent when nothing is left out", () => {
