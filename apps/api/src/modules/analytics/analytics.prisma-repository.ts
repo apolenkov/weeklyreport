@@ -6,10 +6,11 @@ import {
   type LeadVelocityOutput,
   type PeriodComparisonInput,
   type PeriodComparisonOutput,
+  type RecordOmission,
+  summarizeRecordOmissions,
   type TrafficLightCell,
   type TrafficLightHistoryInput,
   type TrafficLightHistoryOutput,
-  UNCOUNTED_RECORD_OMISSIONS,
   type UserSession,
 } from "@weeklyreport/shared";
 
@@ -70,6 +71,7 @@ function mapPublishedAnalyticsReport(
     author: { name: section.authorName },
     status: section.status,
     late: section.late,
+    recordOmission: section.recordOmission,
     projectStatuses: section.projects.map((project) => ({
       projectId: project.projectId,
       status: project.trafficLight,
@@ -95,16 +97,29 @@ function mapPublishedAnalyticsReport(
   };
 }
 
-function analyticsPeriod(report: {
-  periodStart: Date;
-  periodEnd: Date;
-}): AnalyticsPeriod {
+interface AnalyticsPeriodSource {
+  readonly periodStart: Date;
+  readonly periodEnd: Date;
+  readonly sections: readonly {
+    readonly recordOmission?: RecordOmission | undefined;
+  }[];
+}
+
+// Omissions follow the facts: the same winning snapshot, the sections the
+// caller may read and, when asked, the same Product.
+function analyticsPeriod(
+  report: AnalyticsPeriodSource,
+  projectId?: string,
+): AnalyticsPeriod {
   return {
     periodStart: isoDateOnly(report.periodStart),
     periodEnd: isoDateOnly(report.periodEnd),
-    // TODO(TASK-836): summarize the winning snapshot's frozen omission buckets
-    // through the same section, lead and Product filter as the facts.
-    omissions: UNCOUNTED_RECORD_OMISSIONS,
+    omissions: summarizeRecordOmissions(
+      report.sections.map((section) => section.recordOmission),
+      projectId === undefined
+        ? undefined
+        : { parentKind: "product", parentId: projectId },
+    ),
   };
 }
 
@@ -165,7 +180,9 @@ export class AnalyticsPrismaRepository implements AnalyticsRepository {
             },
           ];
     });
-    const periods = reports.map(analyticsPeriod);
+    const periods = reports.map((report) =>
+      analyticsPeriod(report, input.projectId),
+    );
 
     const projectMap = collectProjectNames(reports, input.projectId);
 
