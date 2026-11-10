@@ -1,7 +1,6 @@
 import { Prisma } from "@prisma/client";
 import type { SearchHit } from "@weeklyreport/shared";
 
-import type { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
 import type { SearchRepository } from "./application/search.service.js";
 
 interface RawPublishedHit {
@@ -80,7 +79,7 @@ function toSearchHit(row: RawPublishedHit): SearchHit {
 
 /** Runs one bounded GIN-backed query over immutable publication documents. */
 export async function searchPublishedDocuments(
-  prisma: PrismaService,
+  prisma: Prisma.TransactionClient,
   params: SearchParams,
 ): Promise<SearchHit[]> {
   const includedTypes = PUBLISHED_RECORD_TYPES.filter(

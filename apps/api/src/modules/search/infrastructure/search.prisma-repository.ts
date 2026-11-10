@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
-import type { SearchHit } from "@weeklyreport/shared";
+import type { SearchHit, SearchQueryOutput } from "@weeklyreport/shared";
 
 import { PrismaService } from "../../../infrastructure/prisma/prisma.service.js";
 import type { SearchRepository } from "../application/search.service.js";
@@ -184,26 +184,36 @@ function toSearchHit(row: RawHit): SearchHit {
   };
 }
 
+async function searchHits(
+  prisma: Prisma.TransactionClient,
+  params: SearchParams,
+): Promise<SearchHit[]> {
+  if (params.scope === "published")
+    return searchPublishedDocuments(prisma, params);
+  const chunks = buildIncludedChunks(
+    buildSqlContext(params),
+    params.excludeTypes,
+  );
+  if (chunks.length === 0) return [];
+  const rows = await prisma.$queryRaw<RawHit[]>(
+    buildSearchQuery(chunks, params.limit),
+  );
+  return rows.map(toSearchHit);
+}
+
 @Injectable()
 export class SearchPrismaRepository implements SearchRepository {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  readonly search = async (params: SearchParams): Promise<SearchHit[]> => {
-    if (params.scope === "published") {
-      return searchPublishedDocuments(this.prisma, params);
-    }
-
-    const chunks = buildIncludedChunks(
-      buildSqlContext(params),
-      params.excludeTypes,
+  // Content and disclosure are one read result. RepeatableRead keeps a save
+  // or republish between statements from mixing two corpus versions.
+  readonly search = (params: SearchParams): Promise<SearchQueryOutput> =>
+    this.prisma.$transaction(
+      async (tx) => {
+        const hits = await searchHits(tx, params);
+        const omissions = await countSearchOmissions(tx, params);
+        return { hits, omissions };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
     );
-    if (chunks.length === 0) return [];
-
-    const query = buildSearchQuery(chunks, params.limit);
-    const rows = await this.prisma.$queryRaw<RawHit[]>(query);
-    return rows.map(toSearchHit);
-  };
-
-  readonly countOmissions: SearchRepository["countOmissions"] = (params) =>
-    countSearchOmissions(this.prisma, params);
 }

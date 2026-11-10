@@ -120,7 +120,7 @@ describe("SearchPrismaRepository excludeTypes (integration)", () => {
   it.each(HIT_TYPES)(
     "omits %s while every other hit type still appears",
     async (excludedType) => {
-      const hits = await repository.search({
+      const { hits: hits } = await repository.search({
         q: QUERY,
         scope: "all",
         userId: LEAD_ID,

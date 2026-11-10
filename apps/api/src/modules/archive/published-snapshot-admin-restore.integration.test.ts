@@ -163,7 +163,7 @@ describe("published snapshot scope after admin restore (integration)", () => {
       }),
     ).resolves.toBe(1);
 
-    const hits = await searchRepository.search({
+    const { hits: hits } = await searchRepository.search({
       q: "restoresearchtoken",
       scope: "published",
       userId: viewerSession.userId,
@@ -193,7 +193,7 @@ describe("published snapshot scope after admin restore (integration)", () => {
       data: { reportingGroupId: otherGroup.id },
     });
 
-    const oldGroupHits = await searchRepository.search({
+    const { hits: oldGroupHits } = await searchRepository.search({
       q: "restoresearchtoken",
       scope: "published",
       userId: viewerSession.userId,
@@ -201,7 +201,7 @@ describe("published snapshot scope after admin restore (integration)", () => {
       excludeTypes: ["project"],
       limit: 20,
     });
-    const newGroupHits = await searchRepository.search({
+    const { hits: newGroupHits } = await searchRepository.search({
       q: "restoresearchtoken",
       scope: "published",
       userId: viewerSession.userId,

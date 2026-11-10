@@ -1,4 +1,8 @@
-import type { SearchHit, UserSession } from "@weeklyreport/shared";
+import type {
+  SearchHit,
+  SearchQueryOutput,
+  UserSession,
+} from "@weeklyreport/shared";
 import { describe, expect, it, vi } from "vitest";
 
 import { createNullLogger } from "../../../lib/logger.js";
@@ -46,22 +50,32 @@ function makeHit(overrides: Partial<SearchHit> = {}): SearchHit {
   };
 }
 
+type CountOmissions = (
+  params: Omit<Parameters<SearchRepository["search"]>[0], "q" | "limit">,
+) => Promise<SearchQueryOutput["omissions"]>;
+
 function createRepository(
   handler: (params: Parameters<SearchRepository["search"]>[0]) => SearchHit[],
-  countOmissions: SearchRepository["countOmissions"] = () =>
+  countOmissions: CountOmissions = () =>
     Promise.resolve({ risks: 0, decisions: 0, unknown: false }),
 ): SearchRepository {
   return {
-    countOmissions,
-    search(params) {
+    async search(params) {
       // Faithfully model the real repository, which omits excluded-type chunks
       // from the query entirely, so service tests exercise the true contract.
       const hits = handler(params);
-      return Promise.resolve(
-        params.excludeTypes.length > 0
-          ? hits.filter((hit) => !params.excludeTypes.includes(hit.type))
-          : hits,
-      );
+      return {
+        hits:
+          params.excludeTypes.length > 0
+            ? hits.filter((hit) => !params.excludeTypes.includes(hit.type))
+            : hits,
+        omissions: await countOmissions({
+          scope: params.scope,
+          userId: params.userId,
+          groupIds: params.groupIds,
+          excludeTypes: params.excludeTypes,
+        }),
+      };
     },
   };
 }
@@ -85,7 +99,7 @@ describe("SearchService", () => {
 
   it("discloses the corpus's omissions beside zero hits", async () => {
     const countOmissions = vi
-      .fn<SearchRepository["countOmissions"]>()
+      .fn<CountOmissions>()
       .mockResolvedValue({ risks: 2, decisions: 0, unknown: false });
     const service = new SearchService(
       createRepository(() => [], countOmissions),
@@ -113,7 +127,7 @@ describe("SearchService", () => {
   });
 
   it("discloses nothing and reads nothing when no group is granted", async () => {
-    const countOmissions = vi.fn<SearchRepository["countOmissions"]>();
+    const countOmissions = vi.fn<CountOmissions>();
     const service = new SearchService(
       createRepository(() => {
         throw new Error("search must not run");

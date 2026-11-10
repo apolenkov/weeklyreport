@@ -346,7 +346,7 @@ describe("SearchPrismaRepository — immutable published scope (integration)", (
   });
 
   async function publishedSearch(groupIds: string[] | null): Promise<string[]> {
-    const hits = await repo.search({
+    const { hits: hits } = await repo.search({
       q: Q,
       scope: "published",
       userId: LEAD_A_ID,
@@ -399,7 +399,7 @@ describe("SearchPrismaRepository — immutable published scope (integration)", (
   });
 
   it("keeps frozen content, anchors, and group scope after live rows and current ownership are removed", async () => {
-    const before = await repo.search({
+    const { hits: before } = await repo.search({
       q: Q,
       scope: "published",
       userId: LEAD_A_ID,
@@ -416,7 +416,7 @@ describe("SearchPrismaRepository — immutable published scope (integration)", (
       where: { reportId: REPORT_PUB_ID },
     });
 
-    const after = await repo.search({
+    const { hits: after } = await repo.search({
       q: Q,
       scope: "published",
       userId: LEAD_A_ID,
@@ -492,7 +492,7 @@ describe("SearchPrismaRepository — immutable published scope (integration)", (
   it("the publish gate is scope-specific: scope='all' still surfaces unpublished in-group content", async () => {
     // Differentiator — proves the INNER JOIN applies ONLY to scope='published'
     // and did not silently constrain the existing 'all' scope.
-    const hits = await repo.search({
+    const { hits: hits } = await repo.search({
       q: Q,
       scope: "all",
       userId: LEAD_A_ID,
