@@ -106,6 +106,14 @@ void test("Head publication names the unfinished risk it leaves out and never sh
   );
   await waitText("Period published & locked", session);
 
+  // Searching the published history finds no unfinished text, and says what
+  // the searched reports leave out.
+  await open("/reports", session);
+  await command(["wait", 'input[name="search"]'], session);
+  await command(["fill", 'input[name="search"]', "unfinished"], session);
+  await waitText("Search leaves out 1 unfinished risk", session);
+  assert.ok(!(await snapshot(session)).snapshot.includes(NAME));
+
   // The frozen report holds no trace of the unfinished text.
   await open(reportPath, session);
   await waitText("Reopen period", session);
