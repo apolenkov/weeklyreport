@@ -49,6 +49,17 @@ function withCreateDefaults(
   };
 }
 
+function ownsDecisionLineage(
+  row: DecisionEntry,
+  edited: DecisionEntry,
+): boolean {
+  return (
+    !row.foreign &&
+    (row.id === edited.id ||
+      Boolean(edited.stableId && row.stableId === edited.stableId))
+  );
+}
+
 // Owns the create/edit dialog and the confirm-delete flow; every write rebuilds
 // the list and hands it back through `onChange`.
 function useDecisionsEditing({
@@ -90,7 +101,18 @@ function useDecisionsEditing({
     if (dialogState.open && dialogState.mode === "create") {
       onChange?.([...decisions, withCreateDefaults(saved, defaultProductName)]);
     } else {
-      onChange?.(decisions.map((d) => (d.id === saved.id ? saved : d)));
+      onChange?.(
+        decisions.map((row) =>
+          ownsDecisionLineage(row, saved)
+            ? {
+                ...row,
+                ...saved,
+                id: row.id,
+                stableId: row.stableId ?? saved.stableId,
+              }
+            : row,
+        ),
+      );
     }
     close();
   };
@@ -177,6 +199,15 @@ export function DecisionsSection(props: DecisionsSectionProps) {
         defaultProductId={props.defaultProductId}
         defaultActivityId={props.defaultActivityId}
         unfinishedAllowed={props.unfinishedAllowed}
+        publishedLocked={
+          dialogState.open &&
+          dialogState.mode === "edit" &&
+          props.decisions.some(
+            (row) =>
+              ownsDecisionLineage(row, dialogState.entity) &&
+              props.publishedLockedIds?.has(row.id),
+          )
+        }
         onSave={editing.saveDecision}
         onCancel={editing.cancelDialog}
       />
