@@ -17,7 +17,7 @@ import {
 // A refused stale save reverts the draft to the last server section at once,
 // whatever arrived while the save was in flight, exactly like the reseed of an
 // external change; the conflict refetch then lands on a clean draft, while the
-// Lead's own item text is retained over the next newer revision. The
+// Lead's own item text and unfinished records are retained over the next newer revision. The
 // autosave controller exists only after the conflict callback, hence the refs.
 export function useAutosaveWithStaleRevert({
   serverSection,
@@ -43,6 +43,7 @@ export function useAutosaveWithStaleRevert({
     latestServerSectionRef.current = serverSection;
   });
   const retained = useConflictRetainedEdits({
+    acceptedVersion: autosaveArgs.version,
     serverSection,
     setDraftSection: setDraftSectionRaw,
     payload: autosaveArgs.payload,
@@ -51,14 +52,16 @@ export function useAutosaveWithStaleRevert({
   const { capture } = retained;
   const handleSaveConflict = useCallback(
     (contextualAttempt?: boolean, failed?: AutosaveRequest) => {
-      const section = latestServerSectionRef.current;
+      const captured =
+        !contextualAttempt && failed ? capture(failed) : undefined;
+      const section = captured ?? latestServerSectionRef.current;
       if (section && !contextualAttempt) {
-        if (failed) capture(failed);
         const serverDraftKey = encodeDraftSaveComparisonKey(
           sectionToDraftPayload(section),
         );
         ledger.consume(serverDraftKey, sectionRevision(section));
-        autosaveRef.current?.adoptBaseline(serverDraftKey, "read");
+        if (!failed || section.version > failed.version)
+          autosaveRef.current?.adoptBaseline(serverDraftKey, "read");
         setDraftSection(section);
       }
       handleConflict();
@@ -69,6 +72,18 @@ export function useAutosaveWithStaleRevert({
     ...autosaveArgs,
     heldKey: retained.heldKey,
     onConflict: handleSaveConflict,
+    onUncertainWrite: capture,
+    onSaved: (...saved) => {
+      retained.rememberSaved(saved[0]);
+      return (
+        autosaveArgs.onSaved?.(...saved) ?? {
+          savedKey: encodeDraftSaveComparisonKey(
+            sectionToDraftPayload(saved[0]),
+          ),
+          queuedPayload: saved[2],
+        }
+      );
+    },
   });
   useEffect(() => {
     autosaveRef.current = autosave;

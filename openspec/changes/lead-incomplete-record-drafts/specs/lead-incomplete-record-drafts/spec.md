@@ -41,6 +41,31 @@ Draft saves MUST retain stable identity, comments, version CAS, existing foreign
 - **WHEN** a save conflicts or its response is lost
 - **THEN** the client retains input and reconciles against an authorized authoritative read without claiming unconfirmed success or duplicating lineage
 
+#### Scenario: Unfinished card follows persistence evidence
+
+- **WHEN** an unfinished risk or decision appears in the author's editable form
+- **THEN** its card distinguishes local input, pending save, failed save, unconfirmed response and confirmed saved content
+- **AND** a saved label requires the current row to be included in the payload confirmed by the existing save owner or authoritative load
+- **AND** a late response for an older edit or another editor activation cannot label newer input saved
+- **AND** a card rendered without persistence evidence says unfinished without claiming it was saved
+
+#### Scenario: Undo cannot erase an uncertain write
+
+- **WHEN** an ordinary draft save loses its response after the author restores the previous saved text
+- **THEN** the save owner keeps the outcome uncertain and the current input unsaved until a confirmed write or newer authoritative read establishes the baseline
+- **AND** explicit Save is not skipped merely because the current payload equals the old baseline
+- **AND** if a newer read reveals that the earlier write committed, the author's later undo stays unsaved and recoverable, with or without an intervening Save conflict
+
+#### Scenario: Conflict preserves unfinished author input in either read order
+
+- **GIVEN** an author creates or edits an unfinished risk or decision and continues typing, including completing its details, while its save is pending
+- **WHEN** that save returns a version conflict and a newer authoritative section arrives before or after the rejection
+- **THEN** the latest local fields and stable identity remain visibly unsaved over the newer section
+- **AND** unrelated server fields and records are preserved, with no copied stale comments or automatic replay of the refused payload
+- **AND** a locally changed parent or stage selection is recovered as one valid context, never combined with another parent from the newer server row
+- **AND** the failed base may come from a confirmed save before query caches catch up, and typing while the conflict refetch is pending remains recoverable
+- **AND** an explicit reconciliation save uses the newer version without creating another lineage
+
 ### Requirement: Projection before risk derivation
 
 Live reviewer-facing projections and published snapshots MUST exclude incomplete risks and decisions before calculating risk floors, status alarms, escalation counts and aggregates. Complete records in unsubmitted sections retain existing semantics.

@@ -38,6 +38,8 @@ export interface AutosaveRequest {
 }
 
 export interface AutosaveSnapshot {
+  /** Uncertainty lasts until a confirmed baseline replaces it. */
+  readonly lastFailureKind?: "rejected" | "uncertain" | undefined;
   readonly state: AutosaveState;
   readonly lastSavedAt: Date | null;
   readonly dirty: boolean;
@@ -109,6 +111,7 @@ export interface UseLeadFormAutosaveArgs {
       readonly expectedVersion: number;
     },
   ) => SavedDraftReconciliation;
+  readonly onUncertainWrite?: (request: AutosaveRequest) => void;
   // Conflict handler lets the caller refetch and suppress the generic toast.
   readonly onConflict?: (
     contextualAttempt?: boolean,
@@ -130,6 +133,9 @@ interface SavedDraftReconciliation {
 
 // Internal engine types; the live object stays private to its owning module.
 export interface AutosaveSinks {
+  readonly setFailureKind?: (
+    kind: "rejected" | "uncertain" | undefined,
+  ) => void;
   readonly setRecovery?: (state: AutosaveRecovery | null) => void;
   readonly setState: Dispatch<SetStateAction<AutosaveState>>;
   readonly setLastSavedAt: (savedAt: Date | null) => void;

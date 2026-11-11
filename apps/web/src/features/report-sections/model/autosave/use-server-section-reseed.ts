@@ -79,6 +79,17 @@ function inFlightForSection(
   );
 }
 
+function refreshBaselineForNewRevision(
+  ledger: SaveEchoLedger,
+  autosave: AutosaveController,
+  key: string,
+  revision: string,
+) {
+  if (ledger.lastRevision() === revision) return;
+  ledger.consume(key, revision);
+  if (autosave.lastFailureKind === "uncertain") autosave.primeBaseline(key);
+}
+
 interface ServerSectionReseedArgs {
   readonly serverSection: ReportSectionReadModel | null | undefined;
   // "Local edits exist": the payload difference OR a partially typed row the
@@ -137,9 +148,7 @@ export function useServerSectionReseed({
       saveEcho !== undefined,
     );
     if (trigger === "unchanged") {
-      if (ledger.lastRevision() !== revision) {
-        ledger.consume(serverDraftKey, revision);
-      }
+      refreshBaselineForNewRevision(ledger, autosave, serverDraftKey, revision);
       // Reviewer feedback lands without moving the section version, so the merge
       // runs on every delivery. It returns the current object unchanged when
       // nothing differs, which keeps this idempotent instead of re-rendering.

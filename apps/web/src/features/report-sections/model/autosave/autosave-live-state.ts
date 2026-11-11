@@ -1,10 +1,7 @@
 import type { ReportSectionReadModel } from "@weeklyreport/shared";
 
 import * as effects from "./autosave-effects";
-import {
-  type AutosaveMutationHandle,
-  unboundAutosaveMutation,
-} from "./autosave-mutation";
+import { unboundAutosaveMutation } from "./autosave-mutation";
 import {
   createPersistedIntentOwner,
   persistedResponseMatches,
@@ -26,17 +23,7 @@ import type {
   UseLeadFormAutosaveArgs,
 } from "./autosave-types";
 
-interface AutosaveLiveState {
-  args: UseLeadFormAutosaveArgs;
-  mutation: AutosaveMutationHandle;
-  persisted: ReturnType<typeof createPersistedIntentOwner>;
-  recovery: ReturnType<typeof createSaveRecovery>;
-  inFlight: Set<AutosaveRequest>;
-  generation: symbol;
-  version: number;
-  lastSaved: string;
-  debounceTimer: ReturnType<typeof setTimeout> | null;
-}
+type AutosaveLiveState = ReturnType<typeof createInitialAutosaveState>;
 
 function cancelDebounce(live: AutosaveLiveState): void {
   if (live.debounceTimer === null) return;
@@ -117,9 +104,7 @@ function saveSucceeded(
     request,
   );
   live.lastSaved = savedKey;
-  sinks.setLastSavedKey(savedKey);
-  sinks.setState("saved");
-  sinks.setLastSavedAt(new Date());
+  effects.reportAdoptedBaseline(sinks, savedKey, "write");
   const accepted = live.persisted.accept(request, saved);
   if (accepted) sinks.rearmRetry();
   if (accepted === false) sinks.setState("error");
@@ -142,22 +127,34 @@ function saveFailed(
     drainQueuedSave(live, sinks);
     return;
   }
-  request.persistedAttempt?.settle({
-    status: generation === live.generation ? "failed" : "obsolete",
-    token: request.persistedAttempt.token,
-  });
+  effects.settleFailedAttempt(request, generation === live.generation);
   if (generation !== live.generation) {
     live.persisted.dropGeneration(generation);
+    drainQueuedSave(live, sinks);
+    return;
+  }
+  // A confirmed newer revision fences this request's CAS, even if its
+  // transport reports failure later. Keep that baseline and pending edits.
+  const uncertain = effects.saveFailureKind(err) === "uncertain";
+  const fenced = request.version < live.version && live.lastSaved !== null;
+  if (uncertain && fenced) {
+    effects.reportObsoleteSaveFailure(sinks);
     drainQueuedSave(live, sinks);
     return;
   }
   const queuedSectionId =
     live.persisted.queued()?.payload.reportSectionId ?? null;
   live.persisted.replaceQueued(null);
+  if (uncertain) {
+    live.lastSaved = null;
+    live.args.onUncertainWrite?.(request);
+    sinks.setLastSavedAt(null);
+  }
   effects.reportSaveFailure(err, {
     args: live.args,
     sinks,
     contextual: Boolean(request.persistedAttempt),
+    uncertain: live.lastSaved === null,
     request,
     retry:
       queuedSectionId !== null &&
@@ -244,24 +241,15 @@ export function createAutosaveEngine(
   args: UseLeadFormAutosaveArgs,
   sinks: AutosaveSinks,
 ) {
-  const live: AutosaveLiveState = {
-    persisted: createPersistedIntentOwner(),
-    recovery: createSaveRecovery((state) => sinks.setRecovery?.(state)),
-    inFlight: new Set(),
-    generation: Symbol("autosave-generation"),
-    version: args.version,
-    lastSaved: "",
-    debounceTimer: null,
-    args,
-    mutation: unboundAutosaveMutation(),
-  };
+  const live = createInitialAutosaveState(args, sinks);
   return {
     // Re-sync every live value from the latest committed args.
     stamp: (
       next: UseLeadFormAutosaveArgs,
-      mutation: AutosaveMutationHandle,
+      mutation: AutosaveLiveState["mutation"],
     ) => {
       if (live.args.reportSectionId !== next.reportSectionId) {
+        sinks.setFailureKind?.(undefined);
         live.recovery.clear();
         live.persisted.invalidate();
         cancelDebounce(live);
@@ -305,6 +293,7 @@ export function createAutosaveEngine(
     primeBaseline: (savedKey: string) => {
       if (live.recovery.blocked()) return;
       live.lastSaved = savedKey;
+      sinks.setFailureKind?.(undefined);
       sinks.setLastSavedKey(savedKey);
     },
     adoptBaseline: (savedKey: string, source: "read" | "write") => {
@@ -313,9 +302,7 @@ export function createAutosaveEngine(
       live.persisted.adopt();
       live.lastSaved = savedKey;
       live.persisted.dropGeneration(live.generation);
-      sinks.setLastSavedKey(savedKey);
-      sinks.setState(source === "write" ? "saved" : "idle");
-      sinks.setLastSavedAt(source === "write" ? new Date() : null);
+      effects.reportAdoptedBaseline(sinks, savedKey, source);
     },
     dispose: () => {
       live.recovery.clear();
@@ -325,5 +312,22 @@ export function createAutosaveEngine(
       live.args = { ...live.args, enabled: false };
       live.persisted.takeQueued();
     },
+  };
+}
+
+function createInitialAutosaveState(
+  args: UseLeadFormAutosaveArgs,
+  sinks: AutosaveSinks,
+) {
+  return {
+    persisted: createPersistedIntentOwner(),
+    recovery: createSaveRecovery((state) => sinks.setRecovery?.(state)),
+    inFlight: new Set<AutosaveRequest>(),
+    generation: Symbol("autosave-generation"),
+    version: args.version,
+    lastSaved: "" as string | null,
+    debounceTimer: null as ReturnType<typeof setTimeout> | null,
+    args,
+    mutation: unboundAutosaveMutation(),
   };
 }

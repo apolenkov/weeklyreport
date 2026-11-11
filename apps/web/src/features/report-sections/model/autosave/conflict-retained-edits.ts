@@ -2,6 +2,7 @@
 
 import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import {
+  type RefObject,
   type SetStateAction,
   useCallback,
   useEffect,
@@ -12,6 +13,11 @@ import {
 
 import { sectionToDraftPayload } from "../lead-section-draft-payload";
 import type { AutosaveRequest, DraftSaveContent } from "./autosave-types";
+import {
+  captureUnfinishedRecords,
+  overlayUnfinishedRecords,
+  type RetainedDraftRecords,
+} from "./conflict-retained-records";
 import { encodeDraftSaveComparisonKey } from "./draft-save-comparison-key";
 import {
   sectionRevision,
@@ -22,6 +28,10 @@ import {
 const SECTION_HISTORY_LIMIT = 8;
 
 interface RetainedEdits {
+  readonly base: ReportSectionReadModel;
+  readonly attempted: DraftSaveContent;
+  readonly awaitingNewer: boolean;
+  readonly records: RetainedDraftRecords;
   readonly reportSectionId: string;
   readonly baseVersion: number;
   readonly texts: ReadonlyMap<string, string>;
@@ -70,7 +80,7 @@ function retainedAppliesTo(
     retained?.reportSectionId === section?.reportSectionId &&
     retained !== null &&
     section !== null &&
-    section.version > retained.baseVersion
+    section.version >= retained.baseVersion
   );
 }
 
@@ -84,14 +94,157 @@ function rememberSection(
     history.delete(oldest);
 }
 
+function usePendingConflictInput({
+  acceptedVersion,
+  serverSection,
+  payload,
+  payloadKey,
+  retainedRef,
+  heldKeyRef,
+  setHeldKey,
+}: {
+  acceptedVersion: number;
+  serverSection: ReportSectionReadModel | null | undefined;
+  payload: DraftSaveContent | null;
+  payloadKey: string | null;
+  retainedRef: RefObject<RetainedEdits | null>;
+  heldKeyRef: RefObject<string | null>;
+  setHeldKey: (key: string | null) => void;
+}) {
+  // Editing is reconciliation only after the newer base has arrived. Until
+  // then the existing hold follows the latest input through the pending read.
+  useEffect(() => {
+    const retained = retainedRef.current;
+    if (
+      retained &&
+      serverSection?.reportSectionId === retained.reportSectionId &&
+      serverSection.version > retained.baseVersion &&
+      serverSection.version >= acceptedVersion &&
+      encodeDraftSaveComparisonKey(sectionToDraftPayload(serverSection)) ===
+        payloadKey
+    ) {
+      retainedRef.current = null;
+      heldKeyRef.current = null;
+      setHeldKey(null);
+      return;
+    }
+    if (payloadKey === heldKeyRef.current) return;
+    if (
+      retained &&
+      (retained.awaitingNewer || heldKeyRef.current === null) &&
+      payload?.reportSectionId === retained.reportSectionId
+    ) {
+      retainedRef.current = {
+        ...retained,
+        texts: changedItemTexts(payload, retained.base),
+        records: captureUnfinishedRecords(
+          payload,
+          retained.base,
+          retained.attempted,
+          retained.records,
+        ),
+      };
+      if (heldKeyRef.current !== null) {
+        heldKeyRef.current = payloadKey;
+        setHeldKey(payloadKey);
+      }
+      return;
+    }
+    retainedRef.current = null;
+    heldKeyRef.current = null;
+    setHeldKey(null);
+  }, [
+    acceptedVersion,
+    serverSection,
+    payloadKey,
+    payload,
+    retainedRef,
+    heldKeyRef,
+    setHeldKey,
+  ]);
+}
+
+function awaitingReadFor(retained: RetainedEdits | null, sectionId: string) {
+  return retained?.awaitingNewer && retained.reportSectionId === sectionId
+    ? retained
+    : null;
+}
+
+function capturedEdits(
+  failed: AutosaveRequest,
+  current: DraftSaveContent | null,
+  base: ReportSectionReadModel | undefined,
+  previous: RetainedEdits | null,
+): RetainedEdits | null {
+  const { reportSectionId } = failed.payload;
+  const texts =
+    base && current?.reportSectionId === reportSectionId
+      ? changedItemTexts(current, base)
+      : new Map<string, string>();
+  const records =
+    base && current?.reportSectionId === reportSectionId
+      ? captureUnfinishedRecords(
+          current,
+          base,
+          failed.payload,
+          previous?.records,
+        )
+      : { risks: [], decisions: [] };
+  return base &&
+    (texts.size > 0 || records.risks.length > 0 || records.decisions.length > 0)
+    ? {
+        reportSectionId,
+        baseVersion: failed.version,
+        texts,
+        records,
+        base,
+        attempted: failed.payload,
+        awaitingNewer: true,
+      }
+    : null;
+}
+
+function latestSection(
+  history: Map<string, ReportSectionReadModel>,
+  reportSectionId: string,
+) {
+  return [...history.values()]
+    .filter((section) => section.reportSectionId === reportSectionId)
+    .reduce<ReportSectionReadModel | undefined>(
+      (latest, section) =>
+        !latest || section.version > latest.version ? section : latest,
+      undefined,
+    );
+}
+
+function useObservedSection(
+  serverSection: ReportSectionReadModel | null | undefined,
+  historyRef: RefObject<Map<string, ReportSectionReadModel>>,
+  retainedRef: RefObject<RetainedEdits | null>,
+) {
+  useEffect(() => {
+    if (serverSection) rememberSection(historyRef.current, serverSection);
+    const retained = retainedRef.current;
+    if (
+      retained &&
+      serverSection?.reportSectionId === retained.reportSectionId &&
+      serverSection.version > retained.baseVersion
+    )
+      retainedRef.current = { ...retained, awaitingNewer: false };
+  }, [serverSection, historyRef, retainedRef]);
+}
+
 // A conflicting save never replays the stale section, but the Lead's own item
-// text stays on screen: it is laid over the first newer authoritative section,
-// held there unsaved (autosave reports an error) until the Lead edits or saves.
+// text and unfinished record edits stay over the authoritative section, held
+// unsaved until the Lead edits or saves. Keep records before the newer revision
+// arrives too: its payload may be unchanged and only refresh metadata.
 export function useConflictRetainedEdits({
+  acceptedVersion,
   serverSection,
   setDraftSection,
   payload,
 }: {
+  readonly acceptedVersion: number;
   readonly serverSection: ReportSectionReadModel | null | undefined;
   readonly setDraftSection: SetDraftSection;
   readonly payload: DraftSaveContent | null;
@@ -108,38 +261,44 @@ export function useConflictRetainedEdits({
   const retainedRef = useRef<RetainedEdits | null>(null);
   const heldKeyRef = useRef<string | null>(null);
   const [heldKey, setHeldKey] = useState<string | null>(null);
-  useEffect(() => {
-    if (serverSection) rememberSection(historyRef.current, serverSection);
-  }, [serverSection]);
-  // Any change away from the held draft is the Lead's explicit reconciliation:
-  // later server sections no longer receive the retained text. A stale heldKey
-  // state is harmless because only an exactly equal draft is held.
-  useEffect(() => {
-    if (heldKeyRef.current === null || payloadKey === heldKeyRef.current)
-      return;
-    retainedRef.current = null;
-    heldKeyRef.current = null;
-  }, [payloadKey]);
+  // A read and typing can share one commit. Capture that input before the
+  // read releases the hold, so the following reseed still has the latest text.
+  usePendingConflictInput({
+    acceptedVersion,
+    serverSection,
+    payload,
+    payloadKey,
+    retainedRef,
+    heldKeyRef,
+    setHeldKey,
+  });
+  useObservedSection(serverSection, historyRef, retainedRef);
 
   const capture = useCallback((failed: AutosaveRequest) => {
     const { reportSectionId } = failed.payload;
     const base = historyRef.current.get(`${reportSectionId}:${failed.version}`);
-    const current = payloadRef.current;
-    const texts =
-      base && current?.reportSectionId === reportSectionId
-        ? changedItemTexts(current, base)
-        : new Map<string, string>();
-    retainedRef.current =
-      texts.size > 0
-        ? { reportSectionId, baseVersion: failed.version, texts }
-        : null;
+
+    retainedRef.current = capturedEdits(
+      failed,
+      payloadRef.current,
+      base,
+      awaitingReadFor(retainedRef.current, reportSectionId),
+    );
+    return latestSection(historyRef.current, reportSectionId);
   }, []);
 
   const applyRetained = useCallback(
     (section: ReportSectionReadModel | null) => {
       const retained = retainedRef.current;
       if (!section || !retainedAppliesTo(retained, section)) return section;
-      const overlaid = overlayItemTexts(section, retained.texts);
+      if (section.version > retained.baseVersion)
+        retainedRef.current = { ...retained, awaitingNewer: false };
+      const overlaid = overlayUnfinishedRecords(
+        section.version > retained.baseVersion
+          ? overlayItemTexts(section, retained.texts)
+          : section,
+        retained.records,
+      );
       const key = encodeDraftSaveComparisonKey(sectionToDraftPayload(overlaid));
       heldKeyRef.current = key;
       setHeldKey(key);
@@ -148,12 +307,20 @@ export function useConflictRetainedEdits({
     [],
   );
 
-  const setDraftWithRetained = useCallback<SetDraftSection>(
+  const setDraft = useCallback<SetDraftSection>(
     (next: SetStateAction<ReportSectionReadModel | null>) => {
       setDraftSection(typeof next === "function" ? next : applyRetained(next));
     },
     [applyRetained, setDraftSection],
   );
 
-  return { capture, heldKey, setDraftSection: setDraftWithRetained };
+  const rememberSaved = useCallback((section: ReportSectionReadModel) => {
+    rememberSection(historyRef.current, section);
+    if (retainedRef.current?.reportSectionId === section.reportSectionId) {
+      retainedRef.current = null;
+      heldKeyRef.current = null;
+      setHeldKey(null);
+    }
+  }, []);
+  return { capture, rememberSaved, heldKey, setDraftSection: setDraft };
 }

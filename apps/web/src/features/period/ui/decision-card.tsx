@@ -5,7 +5,10 @@ import { DeleteIcon, EditIcon } from "../../../shared/ui/icons/action-icons";
 import { LockBadge } from "../../../shared/ui/report-shell/lock-badge";
 import { MetaRow } from "../../../shared/ui/report-shell/meta-row";
 import type { DecisionEntry } from "../../report-sections";
-import { PublishedRecordMarker } from "../../report-sections";
+import {
+  PublishedRecordMarker,
+  unfinishedRecordLabel,
+} from "../../report-sections";
 
 function formatDeadline(iso: string | null): string | null {
   if (!iso) return null;
@@ -103,7 +106,8 @@ export function DecisionCard(props: DecisionCardProps) {
           data-testid="decision-unfinished-note"
           className="mt-2 text-xs font-semibold text-[var(--color-status-at-risk-fg)]"
         >
-          Saved, unfinished — only you see it. Add its impact before you submit.
+          {unfinishedRecordLabel(decision.draftSaveState)} — only you see it.
+          Add its impact before you submit.
         </p>
       )}
       <MetaRow

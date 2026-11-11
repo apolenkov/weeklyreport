@@ -55,6 +55,7 @@ async function saveUnfinishedRisk(): Promise<void> {
   await findRole("button", "Save risk", "click");
   await waitClosed(RISK_DIALOG);
   await saveDraft();
+  await waitText("Saved, unfinished");
 }
 
 void test("a risk saved with its name only survives reload and blocks submit by name", async () => {
@@ -62,6 +63,7 @@ void test("a risk saved with its name only survives reload and blocks submit by 
 
   await reload();
   await waitText(NAME);
+  await waitText("Saved, unfinished");
   await waitText(`Finish the risk "${NAME}"`);
   const data = await snapshot();
   assert.ok(

@@ -80,7 +80,11 @@ type UnresolvedKanbanItem = KanbanItemFields & {
 export type KanbanItem =
   ProductKanbanItem | ActivityKanbanItem | UnresolvedKanbanItem;
 
+export type DraftRecordSaveState =
+  "local" | "pending" | "error" | "uncertain" | "saved";
+
 export interface RiskEntry {
+  readonly draftSaveState?: DraftRecordSaveState | undefined;
   readonly id: string;
   readonly stableId?: string | undefined;
   readonly productId: string;
@@ -98,6 +102,7 @@ export interface RiskEntry {
 }
 
 export interface DecisionEntry {
+  readonly draftSaveState?: DraftRecordSaveState | undefined;
   readonly id: string;
   readonly stableId?: string | undefined;
   readonly productId: string;

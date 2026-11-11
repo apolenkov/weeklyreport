@@ -215,9 +215,13 @@ function useLeadFormEditorWithData(
       ? resolveLeadFormLoaded(data, editing.draft.draft)
       : null;
   const viewModel = loaded
-    ? buildLeadFormLoadedViewModel(
-        leadFormViewModelInput(data, loaded, editing),
-      )
+    ? buildLeadFormLoadedViewModel({
+        ...leadFormViewModelInput(data, loaded, editing),
+        draftPersistence: {
+          autosave: editing.draft.autosave,
+          recovery: editing.draft.saveRecovery,
+        },
+      })
     : null;
   const quickAdd = useLeadFormQuickAdd({
     apply: editing.draft.apply,

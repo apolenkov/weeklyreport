@@ -33,10 +33,15 @@ import {
   mergeForeignDisplayRecords,
   publishedLockedIds,
 } from "./lead-form-loaded-view-model-helpers";
+import {
+  type DraftPersistenceEvidence,
+  withDraftRecordSaveStates,
+} from "./lead-form-record-save-state";
 
 // Pure projection input; LeadForm supplies settled query/draft data after its
 // skeleton guard, so this boundary owns no React state, effects, or routing.
 export interface LeadFormLoadedInput {
+  readonly draftPersistence?: DraftPersistenceEvidence | undefined;
   readonly active: ReportSectionReadModel;
   readonly draftSection: ReportSectionReadModel;
   readonly serverReadOnly: boolean;
@@ -212,7 +217,7 @@ export function buildLeadFormLoadedViewModel(
   input: LeadFormLoadedInput,
 ): LeadFormLoadedViewModel {
   // Map raw draft state -> Lead* presentation shapes for existing children.
-  const data = mapLeadFormData({
+  const mapped = mapLeadFormData({
     active: input.active,
     byPeriod: {
       section: input.draftSection,
@@ -223,6 +228,11 @@ export function buildLeadFormLoadedViewModel(
     history: input.history,
   });
 
+  const data = withDraftRecordSaveStates(
+    mapped,
+    input.draftSection,
+    input.draftPersistence,
+  );
   const products = resolveDisplayProducts(data, input);
   const own = pickOwnDraftRecords(data);
   const foreign = mergeForeignDisplayRecords({

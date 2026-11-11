@@ -165,3 +165,4 @@ export { StageStep } from "./ui/stage-step";
 export { StatusOverview } from "./ui/status-overview";
 export type { StatusOverviewEditorSlot } from "./ui/status-overview-editor-slot";
 export { StatusOverviewInlineItemEditor } from "./ui/status-overview-inline-item-editor";
+export { unfinishedRecordLabel } from "./ui/unfinished-record-label";

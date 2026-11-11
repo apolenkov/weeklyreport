@@ -261,6 +261,7 @@ function renderHarness({
     },
     { path: ["leadForm", "crossAuthors"], query: [] },
   ]);
+  captured["reports.saveDraft"]?.mutationFn.mockResolvedValue(section);
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });

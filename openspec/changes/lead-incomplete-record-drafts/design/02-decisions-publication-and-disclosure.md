@@ -46,3 +46,70 @@ Explicit copy prefills primary and available detail text into a currently editab
 ## Legacy unknown is silent on screen (2026-11-10)
 
 Responses keep `unknown` for a snapshot frozen without omission metadata; no surface turns it into a warning or an "at least" bound. Storage accepted incomplete risks and decisions only together with the freeze that counts them, so every such snapshot left nothing out, and a warning across the whole archive would be false and would wear out the real notice. Report page, print template, History search, assistant and analytics name only counted omissions. If a snapshot could ever be frozen uncounted after incomplete writes exist, restore the warning for that case.
+
+### Author card persistence evidence (5.1)
+
+The loaded form projects the existing autosave snapshot and recovery state into
+presentation-only risk/decision save states. It owns no timer, write, retry or
+second receipt ledger. A row can say saved only when it survives the canonical
+draft payload builder and the current payload equals the save owner's confirmed
+baseline, with no pending transport or recovery. The baseline already belongs
+to the active section generation. A newer edit removes that proof immediately;
+an old response cannot restore it. While the section has unconfirmed changes,
+cards conservatively show the section save state rather than infer per-row
+success. A standalone card with no evidence only says unfinished.
+
+Extend `conflict-retained-edits`, the existing conflict owner, to retain new
+unfinished risks/decisions and changed fields of an existing unfinished row.
+Compare the latest current payload with the failed write's base revision, then
+overlay only those changed fields on the newer authoritative row. Keep server
+physical identity, comments and unrelated fields. If the row is absent, keep
+the local record under the same stable identity as unsaved input; it is not
+automatically persisted. The existing held-key barrier requires explicit
+reconciliation. Section activation boundaries continue to invalidate old work.
+Eligibility also includes an unfinished identity in the failed request, so
+completing its details before a conflict response cannot discard the latest
+input. Parent IDs and stage names form one context: changing any of them retains
+the entire local context together, while text-only edits preserve a newer
+server context. Retain records over the last known base while the refetch is
+pending too: a newer revision can carry the same payload, which only refreshes
+metadata and would otherwise leave the author's record missing. Confirmed save
+responses enter the same bounded revision history as query deliveries; a lagging
+query cannot erase the base of an already acknowledged write. While the newer
+authoritative revision is pending, update the retained fields as the author
+types and keep the autosave hold. Editing against that old base is not yet
+reconciliation.
+
+Capture input before observing the new revision: React may batch typing and a
+query delivery into the same commit. Marking the read settled first would drop
+the updated retention before the reseed can apply it.
+
+An ambiguous ordinary write invalidates the existing save owner's baseline
+confirmation, even if undo returns to the previous payload. Keep that uncertainty
+until a confirmed write or a newer authoritative read re-establishes the baseline;
+manual Save remains possible. Uncertainty alone does not trigger a retry of an
+undo; the existing explicit-edit and queued-edit retry behavior remains intact.
+When only the revision changes, prime the confirmed baseline without cancelling
+an already armed edit debounce. A late failure from an older CAS request cannot
+invalidate an already confirmed newer baseline or block outcome commands again.
+Until an overlaid conflict is explicitly reconciled, uncertain-write retention
+continues tracking later input across metadata-only reads. A newer read whose
+payload exactly matches the current draft clears retention, so later remote
+changes are not overwritten by input that is already confirmed.
+A matching read must also be at least the version already accepted by the draft
+owner; a late older query cannot release the hold. Ignoring an obsolete write
+failure ends that transport's saving status while preserving a newer edit's
+pending status and debounce.
+The existing conflict owner also observes uncertain ordinary writes. Its retained
+field set includes changes from both the confirmed base and the dispatched
+payload, so undo remains authored input. Preserve those field names across a
+later conflicting attempt, refresh their values from current input, and clear
+the retention on a confirmed save. This covers a newer read both directly after
+the lost response and after a subsequent Save conflict without replaying stale
+unrelated fields or creating a second write coordinator.
+
+Verify through the real editor and cards with controlled write responses:
+pending before ACK, accepted nullable rows, newer input during an old response,
+failed writes, lost ACK with exact retry, conflict/refetch ordering and activation
+cancellation. Keep transport deletion-intent/retained-row checks in the existing
+write adapter and slides save path. Task 5.1 stays open until those paths pass.

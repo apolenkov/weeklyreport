@@ -4,7 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { makeReportSectionFixture } from "../../../../test-utils/report-section-fixtures";
 import { leadFormGenerationOf } from "./lead-form-generation";
-import type { LeadFormOutcomeResult } from "./lead-form-write-port";
+import {
+  type LeadFormOutcomeResult,
+  LeadFormWriteError,
+} from "./lead-form-write-port";
 import { InMemoryLeadFormWriteAdapter } from "./lead-form-write-port.in-memory";
 import { useLeadFormDraftCore } from "./use-lead-form-draft-core";
 
@@ -145,34 +148,55 @@ describe("useLeadFormDraftCore outcome coordination", () => {
     expect(harness.result.current.autosave.lastSavedAt).toBeNull();
   });
 
-  it("allows outcomes after undoing a failed autosave to the confirmed baseline", async () => {
-    const harness = buildHarness(
-      () => Promise.reject(new Error("Unexpected command")),
-      () => Promise.reject(new Error("Save failed")),
-    );
-    act(() =>
-      harness.result.current.apply({
-        kind: "item-patch",
-        itemId: RECORD_ID,
-        patch: { text: "Unsaved change" },
-      }),
-    );
-    await act(async () => {
-      await harness.result.current.autosave.forceSave();
-    });
-    expect(harness.result.current.autosave.state).toBe("error");
-    expect(harness.result.current.outcomes.canExecute).toBe(false);
-    act(() =>
-      harness.result.current.apply({
-        kind: "item-patch",
-        itemId: RECORD_ID,
-        patch: { text: "Tracked work" },
-      }),
-    );
-    expect(harness.result.current.dirty).toBe(false);
-    expect(harness.result.current.autosave.state).toBe("idle");
-    expect(harness.result.current.outcomes.canExecute).toBe(true);
-  });
+  it.each([
+    {
+      name: "confirmed rejection",
+      failure: new LeadFormWriteError("restriction", "Save refused"),
+      uncertain: false,
+    },
+    {
+      name: "lost response",
+      failure: new Error("Response lost"),
+      uncertain: true,
+    },
+  ])(
+    "gates outcomes after undoing a save with $name",
+    async ({ failure, uncertain }) => {
+      const harness = buildHarness(
+        () => Promise.reject(new Error("Unexpected command")),
+        () => Promise.reject(failure),
+      );
+      act(() =>
+        harness.result.current.apply({
+          kind: "item-patch",
+          itemId: RECORD_ID,
+          patch: { text: "Unsaved change" },
+        }),
+      );
+      await act(async () => {
+        await harness.result.current.autosave.forceSave();
+      });
+      expect(harness.result.current.autosave.state).toBe("error");
+      expect(harness.result.current.outcomes.canExecute).toBe(false);
+      act(() =>
+        harness.result.current.apply({
+          kind: "item-patch",
+          itemId: RECORD_ID,
+          patch: { text: "Tracked work" },
+        }),
+      );
+      expect(harness.result.current.dirty).toBe(uncertain);
+      expect(harness.result.current.autosave.state).toBe(
+        uncertain ? "error" : "idle",
+      );
+      expect(harness.result.current.outcomes.canExecute).toBe(!uncertain);
+      if (uncertain) {
+        harness.rerender({ serverSection: makeSection({ version: 2 }) });
+        expect(harness.result.current.dirty).toBe(false);
+        expect(harness.result.current.outcomes.canExecute).toBe(true);
+      }
+    },
+  );
 
   it("adopts the command reply as the saved baseline without an extra autosave", async () => {
     const returned = makeSection({
@@ -200,6 +224,47 @@ describe("useLeadFormDraftCore outcome coordination", () => {
       await vi.advanceTimersByTimeAsync(6000);
     });
     expect(harness.writePort.calls.saveDraft).toHaveLength(0);
+  });
+
+  it("keeps outcome commands available after an obsolete transport failure", async () => {
+    let reject!: (error: Error) => void;
+    const harness = buildHarness(
+      () => Promise.reject(new Error("Unexpected command")),
+      () =>
+        new Promise((_, fail) => {
+          reject = fail;
+        }),
+    );
+    act(() =>
+      harness.result.current.apply({
+        kind: "item-patch",
+        itemId: RECORD_ID,
+        patch: { text: "In flight edit" },
+      }),
+    );
+    await act(async () => {
+      void harness.result.current.autosave.forceSave();
+      await Promise.resolve();
+    });
+    act(() =>
+      harness.result.current.apply({
+        kind: "item-patch",
+        itemId: RECORD_ID,
+        patch: { text: "Tracked work" },
+      }),
+    );
+    harness.rerender({ serverSection: makeSection({ version: 2 }) });
+    await act(async () => {
+      reject(new LeadFormWriteError("ambiguous", "Response lost"));
+      await Promise.resolve();
+    });
+    harness.rerender({ serverSection: makeSection({ version: 2 }) });
+    expect(harness.result.current.dirty).toBe(false);
+    expect(harness.result.current.outcomes.canExecute).toBe(true);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(6000);
+    });
+    expect(harness.writePort.calls.saveDraft).toHaveLength(1);
   });
 
   it("blocks local apply and submit synchronously while an outcome command is pending", async () => {

@@ -322,6 +322,7 @@ function renderHarness({
     { path: ["leadForm", "byPeriod"], query: { section } },
     { path: ["reports", "saveDraft"], mutation: true },
   ]);
+  captured["reports.saveDraft"]?.mutationFn.mockResolvedValue(section);
   const queryClient = makeQueryClient();
   const refetchSection = vi.fn().mockResolvedValue(undefined);
 

@@ -12,6 +12,7 @@ import {
   type MappedLeadForm,
   sectionToDraftPayload,
 } from "../../report-sections";
+import { useStoredDraftLedger } from "../../report-sections/client";
 import type { GridRowEditableRef } from "../model/slide-grid-rows";
 import {
   ownedStagesForProduct,
@@ -37,6 +38,7 @@ export function useSlideDraftSaveMutation({
 }) {
   const trpc = useTRPC();
   const qc = useQueryClient();
+  const ledger = useStoredDraftLedger();
   const saveDraftMut = useMutation(trpc.reports.saveDraft.mutationOptions());
 
   function saveDraftSection(
@@ -45,13 +47,20 @@ export function useSlideDraftSaveMutation({
     operation: SaveOperation,
   ) {
     if (saveDraftMut.isPending) return;
+    const payload = sectionToDraftPayload(nextSection);
+    const deleted = ledger.deletionsFor({
+      ...payload,
+      version: section.version,
+    });
     saveDraftMut.mutate(
       {
-        ...sectionToDraftPayload(nextSection),
+        ...payload,
         version: section.version,
+        ...(deleted.length > 0 ? { deletedIncompleteRecords: deleted } : {}),
       },
       {
-        onSuccess: () => {
+        onSuccess: (saved) => {
+          ledger.record(saved);
           invalidateLeadForm(qc, trpc);
           void refetchSection().catch(() => undefined);
           onSaved(section.reportSectionId);
