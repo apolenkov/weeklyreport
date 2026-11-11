@@ -141,6 +141,13 @@ Each editable This week and Next week cell of an eligible Product or Activity MU
 - **WHEN** an entry is saved successfully
 - **THEN** the line is cleared, keeps focus and remains available for the next item of that unit and week
 
+#### Scenario: Entry defaults by week
+
+- **WHEN** an entry is saved from a This week line
+- **THEN** the new record gets the Done status, and its status control is reachable on the record right after saving
+- **WHEN** an entry is saved from a Next week line
+- **THEN** the new record has no status and shows no status control
+
 #### Scenario: A failed entry keeps its text
 
 - **WHEN** the save of an entry fails or is refused by validation

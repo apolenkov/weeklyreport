@@ -214,7 +214,7 @@ An eligible lead MUST see currently owned Product stages as selectable labels wh
 
 ### Requirement: Overview reads in the Lead's order of work
 
-The Overview MUST show one `Before you submit` list of blockers, reached from Submit, that names each blocker on its own line and links it to its unit or item. No second blocker line or copy of the same blockers MAY exist. Week, save state, Submit, column headers and the current unit name MUST stay visible while scrolling.
+The Overview MUST show one `Before you submit` list of blockers at the end of the report, reached from Submit, that names each blocker on its own line and links it to its unit or item. No second blocker line or copy of the same blockers MAY exist. Week, save state, Submit, column headers and the current unit name MUST stay visible while scrolling.
 
 #### Scenario: Blockers are listed once
 
