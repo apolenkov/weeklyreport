@@ -31,51 +31,87 @@ Previously planned MUST remain read-only. Eligible prior work MUST be continuabl
 
 ### Requirement: Each prior-week planned item MUST receive one verdict in one action
 
-For every prior-week planned item that the Lead can still decide, the Lead Report Overview MUST list it exactly once in a "Last week's plan" answer list placed above the This week / Next week grid. Each row shows the planned text, its Product or Activity and its stage as read-only context. Each row MUST offer `Done`, `Continue` (keep it in This week) and `Next week`, each reachable in one activation, and an overflow menu holding `Paused` (requires a one-line reason) and `Won't do` (requires its existing reason). Each verdict control MUST show a visible text label naming the verdict, with an accessible name that states the verdict and the item text, and MUST NOT rely on color alone. The list MUST carry one visible hint line: at rest it asks what happened to each plan, and while a verdict control is hovered or focused it states that verdict's consequence for the selected week before the Lead commits; the same consequence MUST be exposed as the control's accessible description. A recorded verdict removes the row from the list, shows the selected week's occurrence in its unit's This week or Next week cell with a visible "from plan" marker that reveals the original promise, and announces the result. A carried continuation that is not yet confirmed still counts as awaiting an answer; when such continuations are pending, the list MUST offer `Confirm all as continue`. Undo of a verdict MUST be offered only after its save is confirmed and only while the resulting occurrence still matches the version that verdict produced; otherwise Undo is refused with an explanation and nothing changes. While the list reflows after a verdict, a repeated activation landing on the next row within a short guard interval MUST NOT record a verdict. When no plan awaits an answer the list MUST collapse to a one-line summary that keeps the "Show last week" control. Verdicts apply only to items that were planned for the selected week; the list MUST NOT ask for a verdict on prior-week results that carry no commitment for the selected week.
+For every prior-week planned item that the Lead can still decide, the Last week column MUST show its answer controls in that plan's own row: `Done` (check), `Continue` (arrow), `Next week` (double arrow) and an overflow "…" holding `Paused` and `Won't do`. Each control MUST be one activation away, have a tooltip and an accessible name that states the verdict and the item text, and MUST NOT rely on color alone. The plan text MUST NOT change.
 
 #### Scenario: A planned item is marked done
 
-- **WHEN** the lead activates `Done` for a row of the answer list
+- **WHEN** the lead activates `Done` in the plan's row
 - **THEN** the item's Current week occurrence for the same `stableId` is created or updated with status done
 - **AND** the prior week item, its text and its published snapshot are unchanged
-- **AND** the row leaves the answer list and the unit's This week cell shows the occurrence with a "from plan" marker
+- **AND** the row's controls are replaced by a result mark, and the occurrence appears in This week on the plan's line with a "from plan" marker
 
 #### Scenario: A planned item is paused
 
-- **WHEN** the lead chooses `Paused` from the row's overflow menu
+- **WHEN** the lead chooses `Paused` from the row's "…" overflow
 - **THEN** a one-line reason is requested before saving
 - **AND** the Current week occurrence for the same `stableId` is saved as paused with that reason
 - **AND** no `blocked` wording is used for this verdict
 
 #### Scenario: A planned item moves to next week
 
-- **WHEN** the lead activates `Next week` for a row of the answer list
+- **WHEN** the lead activates `Next week` in the plan's row
 - **THEN** exactly one Next week occurrence exists for that `stableId` afterwards
 - **AND** an already existing explicit Next commitment is not duplicated
 
 #### Scenario: The Lead reads what a verdict does before choosing
 
 - **WHEN** a prior-week planned item awaits a verdict
-- **THEN** each control shows a visible label, and the list shows a hint asking what happened to each plan
-- **AND** hovering or focusing a control replaces the hint with that verdict's consequence for the selected week
+- **THEN** each control's tooltip states that verdict's consequence for the selected week, and the same text is its accessible description
+- **AND** visible text labels appear only in the narrow tabbed layout, as a 44 px button strip under the plan
 - **AND** no verdict is recorded until the control is activated
+
+#### Scenario: Paused and Won't do share the overflow
+
+- **WHEN** a prior-week planned item awaits a verdict
+- **THEN** the row shows only `Done`, `Continue` and `Next week` as icons beside the overflow
+- **AND** `Paused` and `Won't do` are the overflow entries, each opening its reason request
 
 #### Scenario: A repeated activation does not answer the next plan
 
-- **WHEN** the lead activates a verdict and activates again at the same position while the list reflows
+- **WHEN** the lead activates a verdict and activates again at the same position while the row updates
 - **THEN** only the first verdict is recorded and the next plan still awaits its answer
+
+#### Scenario: A continuation shares the plan's line
+
+- **WHEN** a plan is answered `Continue` or `Next week`
+- **THEN** its This week or Next week record starts on the same row line as the plan, with tops and first text lines within 2 CSS pixels
+- **AND** a plan without an answer leaves the space beside it empty, with no placeholder or dash
+
+#### Scenario: Unanswered plans are a non-blocking pointer
+
+- **WHEN** a prior-week planned item has no answer and is not a carried continuation
+- **THEN** the blocker line shows an "N plans to answer" link that moves focus to the first such plan's row
+- **AND** the link does not block Submit, and "Before you submit" states that unanswered plans are sent as Not answered
+
+#### Scenario: Submitted report shows Not answered
+
+- **WHEN** the report is submitted or read-only
+- **THEN** no verdict control is shown and an unanswered plan reads "Not answered"
+- **AND** while the report is editable an unanswered plan reads "No answer yet"
 
 #### Scenario: All plans are answered
 
 - **WHEN** no prior-week planned item awaits a verdict
-- **THEN** the answer list collapses to one line stating that all plans are answered
-- **AND** "Show last week" remains available
+- **THEN** the blocker line shows no "plans to answer" link and the Last week column shows no answer control
+- **AND** each plan keeps its result mark in its row
 
 #### Scenario: A carried continuation is not yet confirmed
 
 - **WHEN** rollover has carried a prior plan into This week without confirmation
-- **THEN** the plan remains in the answer list and counts as pending review
-- **AND** `Continue` confirms that existing occurrence without creating another
+- **THEN** the plan keeps its answer controls, the This week record is marked "not updated this week" on the plan's line, and the blocker line counts it as "N to review"
+- **AND** `Continue` confirms that existing occurrence without creating another, and `Confirm all as Continue` in the Last week column header confirms all such occurrences
+- **AND** Submit stays blocked until they are confirmed
+
+#### Scenario: A result without commitment gets no verdict
+
+- **WHEN** a prior-week result carries no commitment for the selected week
+- **THEN** its Last week row shows no answer control
+
+#### Scenario: Undo is offered only after confirmation
+
+- **WHEN** a verdict has been recorded
+- **THEN** Undo is offered only after its save is confirmed and only while the occurrence still matches the version that verdict produced
+- **AND** an Undo outside that window is refused with an explanation and changes nothing
 
 #### Scenario: Undo while the occurrence is being edited is refused
 

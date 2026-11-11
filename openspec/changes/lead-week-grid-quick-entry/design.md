@@ -130,14 +130,25 @@ that incomplete details still block section submission.
 
 Focused tests must first demonstrate failures for contextual week/owner entry, required fields and stage changes, comment empty state, stale/failed persistence, dirty discard and prior-plan identity. Verify exact saved identity on a matching receipt, no duplicates on retry, preservation of other own rows, no foreign leakage, and unchanged prior snapshot. Exercise existing full editor, toolbar, verdict, move, roles and lifecycle. Run the six root gates, strict OpenSpec validation, appropriate guarded database integration and full E2E where the write contract requires it. Inspect the implemented source in a separate browser session at 1280 and 375 with keyboard, focus, empty/error/pending states and screenshots; do not reset or change the owner's current inspection data.
 
-## Layout direction 11.11 (mockup v2.1, pending owner acceptance)
+## Layout direction 11.11 (mockup v2.2, pending owner acceptance)
 
-Source: `/Users/wrk/work/task-836-ux-mocks/v2/index.html` (screen, 16 state templates, 375 preview; before/after captures beside it). The owner judged the three-column grid as cramming too much: every unanswered plan appeared twice and rows did not align.
+Source: `/Users/wrk/work/task-836-ux-mocks/v2/index.html` is the behaviour source and is not edited here. v2.2 shows Last week beside This week and Next week, so planning sees what happened. It replaces v2.1's answer list above the grid and its on-demand Last week column.
 
-- Order of work: blocker summary line → "Last week's plan" answer list (one row per unanswered plan across all units; Done / Continue / Next week, Paused and Won't do under the overflow) → grid with This week and Next week only.
-- Last week's column is on demand ("Show last week", remembered per browser), read-only with outcome marks. Answered plans appear in This week with a "from plan" marker; lineage and identity rules are unchanged.
-- Entries are one line: status icon, text, stage as muted text; actions appear on hover/focus and stay visible on touch. Stage changes in place from the stage text.
-- Risks and decisions collapse to a count under the unit name; one "Risk or decision" start with a kind switch. Colour only for severity and submit blockers.
-- Sticky header (week, save state, Submit), column headers and unit name. First lines of all cells in a row align within 2 px.
-- 375: answer list, then This week / Next week tabs; Last week tab only after "Show last week".
-- Defaults decided by the gate (reversible): Paused under overflow; last week hidden by default; risk rows collapsed, expanded from the blocker link; "Add what happened" defaults to Done.
+- Order: a blocker line (blocking links, plus a non-blocking "N plans to answer" link to the first unanswered plan's row), then the grid: Last week (read-only), This week, Next week. Rows are Product or Activity lines.
+- A plan and its continuation share one line (tops and first text lines within 2 px). Space beside an unanswered plan stays empty. Records not linked to a plan start below all plan rows.
+- Each plan is answered in its own row: Done, Continue, Next week, and "…" with Paused and Won't do. Each icon has a tooltip and an accessible name; text labels appear only in the narrow layout (44 px strip). After answering, a result mark replaces the icons and the plan text never changes. "Confirm all as Continue" sits in the Last week header. A carried, unconfirmed continuation counts as "N to review" and blocks Submit.
+- Unanswered plans are sent as "Not answered" (stated in "Before you submit"). A submitted report shows no verdict controls.
+- Edit, move and discussion exist for every record. An unavailable one stays in place (aria-disabled, focusable), with its reason as tooltip and description; activating it or its Alt+Arrow shortcut announces the reason and changes nothing. Move is refused for Done, closed records, occupied targets, derived rows and read-only reports, and, as in the mockup, for an ended assignment, another person's item and an unsaved change. On touch the reason is a message, because tooltips do not open on touch.
+- A derived Next row (from a next step) gets Edit, which opens the source next step, and the shared discussion.
+- Risks and decisions collapse to a count under the unit name. One "Risk or decision" start with a kind switch keeps the text. Colour marks only risk severity and submit blockers.
+- One responsive component. Below 920 CSS px of table width (container query, not viewport) the columns become tabs Last week, This week, Next week, with This week open. Home, End and arrow keys move between tabs.
+- Kept from v2.1: an unsaved entry blocks Submit; Undo guards; "Before you submit"; the "from plan" popover; discussion draft; no duplicate continuation.
+- Gate defaults, reversible: Paused and Won't do under the overflow; Last week shown by default; risk rows collapsed; "Add what happened" defaults to Done; 920 px threshold.
+
+### Component mapping
+
+Built on the shadcn-style kit in `packages/ui` (`radix-ui` 1.8.1): Tabs for the narrow layout (custom panel, since cells sit inside product rows); DropdownMenu for the status menu and "…"; Tooltip for icons and reasons; Popover for "from plan"; Sheet for discussion and the full form; sonner for Undo and touch reasons; alert and button for conflicts; card for "Before you submit"; Collapsible or a button with `aria-expanded` for risk counts; ToggleGroup or RadioGroup for kind, severity and stage; lucide icons.
+
+Missing, to build in `packages/ui`: the subgrid and container-query layout (`grid-rows-subgrid`, `@container`); an `aria-disabled` Button variant (the native `disabled` attribute removes focus and pointer events, so the tooltip cannot open); Popover, Collapsible and ToggleGroup wrappers; an auto-growing one-line input (`field-sizing: content`).
+
+Considered, not adopted: Meta Astryx (MIT, June 2026). It is a 0.x public beta on StyleX; its cascade layers would need separate reconciliation with Tailwind, and it would duplicate the existing kit.

@@ -2,18 +2,18 @@
 
 ### Requirement: Overview cards MUST expose their actions flat, one click and one menu level
 
-The `/lead/report/:reportId` Report Overview MUST show two temporal columns, This week and Next week, by default. The frozen Previously planned column MUST be available on demand through a "Show last week" control; it is read-only, shows each plan as published with its outcome mark, and has no controls. The show/hide choice MAY be remembered per browser. Each editable Current or Next item MUST rest as one status icon followed by its text and, for Product items, its stage names as muted text on the same line. The status icon MUST open a menu of statuses; when the item can take a terminal outcome, that same menu MUST end with an outcome entry that opens the existing outcome flow, and no separate "Update status" entry MUST exist. The outcome entry MUST follow the existing eligibility: never on Previous rows, an unconfirmed carry, or a derived Next projection. On pointer hover, keyboard focus within the item, or an open control, a row of icon buttons MUST appear without changing the card's layout or the text's width (on hover devices it floats over the card's corner and steps aside while the inline text editor has focus): Edit (pencil), the week move, the record comment action, and the Plan or Restore recovery action where it applies. Hidden controls MUST stay in the accessibility tree and the Tab order. No control on a Current or Next card MUST open a nested menu, and no overflow menu MUST exist there; the Previously planned verdict controls of `lead-plan-verdict` keep their own menu. On devices without hover the row MUST be visible at all times. Activating the stage text of an eligible Product item MUST open, in place, only the Lead's currently owned stages as selectable labels; a sole owned stage stays visible as text. They MUST be keyboard operable, write through the current draft with every other item field preserved, and MUST NOT remove a Product item's last stage. Activity, Previously planned and unowned items MUST NOT render stage mutation controls. Operating the status menu, a stage control or a row control with a keyboard MUST return focus to the triggering control, and the visible temporal columns MUST stay without document-level horizontal overflow. Updating an unconfirmed carried item through the status menu MUST clear its unconfirmed marker without a separate Confirm action. Previously planned content MUST remain read-only: no control in that column edits, moves or changes the status of the prior-week occurrence; the verdict controls defined by `lead-plan-verdict` write only the selected week's occurrence.
+The Report Overview MUST show three temporal columns, Last week, This week and Next week, side by side or as tabs below 920 CSS px of table width. Each editable Current or Next item MUST rest as one status icon, its text, and muted stage and "from plan" text after it. Edit, week move and discussion MUST exist for every record as a flat row of icons, shown on hover, focus or touch; an unavailable one stays in place with its reason. The status menu MUST end with the outcome entry when eligible.
 
 #### Scenario: an ordinary active item is shown
 
 - **WHEN** Overview renders an editable Current or Next item with no restore or historical-replan state
-- **THEN** it shows the status icon, its text and, for a Product item, its stage names as muted text on the same line
-- **AND** no text button and no metadata line is visible until hover or focus
+- **THEN** it shows the status icon, its text, and for a Product item its stage names, with "from plan" when applicable, as muted text right after the text
+- **AND** the stage and "from plan" text wrap together as one group and no separate metadata line is rendered
 
 #### Scenario: actions appear on hover without moving the layout
 
 - **WHEN** the lead hovers the item or moves keyboard focus into it
-- **THEN** Edit and the week move become visible in one row
+- **THEN** Edit, the week move and the discussion become visible in one row
 - **AND** the card and its neighbours keep their size and position
 - **AND** no "More actions" control is rendered
 
@@ -21,8 +21,9 @@ The `/lead/report/:reportId` Report Overview MUST show two temporal columns, Thi
 
 - **GIVEN** an editable Current item that can be resolved
 - **WHEN** the lead opens its status menu
-- **THEN** the progress statuses and one outcome entry are listed in that single menu
+- **THEN** the progress statuses and one outcome entry are listed in that single menu, with no nested menu and no overflow menu on the card
 - **AND** choosing the outcome entry opens the existing outcome flow
+- **AND** the outcome entry is never listed on Last week rows, an unconfirmed carry, or a derived Next projection
 
 #### Scenario: the stage label is set on the card
 
@@ -47,24 +48,38 @@ The `/lead/report/:reportId` Report Overview MUST show two temporal columns, Thi
 
 - **WHEN** the lead operates the status menu, a stage control or a row control with a keyboard, or closes a dialog
 - **THEN** focus returns to the triggering item control or the Overview heading
+- **AND** hidden controls stay in the accessibility tree and the Tab order
 - **AND** the visible temporal columns remain without document-level horizontal overflow
 
 #### Scenario: an unconfirmed carried item is shown
 
 - **WHEN** Overview renders a carried Current item that the lead has not updated in the selected week
 - **THEN** its status icon visibly marks it as continued or planned but not updated this week
-- **AND** the status menu lets the lead update it without a separate Confirm action
+- **AND** the status menu lets the lead update it without a separate Confirm action, which clears the marker
 
 #### Scenario: prior week remains read-only
 
-- **WHEN** the Lead shows last week and Overview renders Previously planned content
+- **WHEN** the Lead views Last week and Overview renders its plans
 - **THEN** no control edits, moves or changes the status of the prior-week occurrence
-- **AND** verdict controls, when shown, change only the selected week's occurrence
+- **AND** verdict controls change only the selected week's occurrence
 
 #### Scenario: touch shows the row without hover
 
 - **WHEN** the Overview renders editable items on a device without hover
-- **THEN** each item's action row is visible and every control has a touch-size target
+- **THEN** each item's action row is visible, every control has a touch-size target, and tapping an unavailable icon shows its reason as a message
+
+#### Scenario: an unavailable action explains itself
+
+- **WHEN** the lead focuses, hovers or activates an aria-disabled Edit, week-move or discussion icon
+- **THEN** its reason is the tooltip and accessible description, and activation shows the same reason and changes nothing
+- **AND** a touch device shows the reason as a message, because tooltips do not open on touch
+
+#### Scenario: three columns side by side or as tabs
+
+- **WHEN** Overview renders with at least 920 CSS px of table width
+- **THEN** Last week, This week and Next week are side by side, Last week first
+- **WHEN** the table is narrower than 920 CSS px
+- **THEN** the same columns are tabs Last week, This week and Next week with This week open, and Home, End and the arrow keys move between tabs
 
 ### Requirement: Overview MUST edit and create current-period items through the canonical editor
 
@@ -200,18 +215,19 @@ An eligible Lead MUST see currently owned Product stages as selectable labels in
 
 ### Requirement: Overview reads in the Lead's order of work
 
-The Overview MUST show, top to bottom: a one-line summary of what blocks submission, the "Last week's plan" answer list of `lead-plan-verdict`, then the This week / Next week grid by Product and Activity. Week, save state, Submit, column headers and the unit name in view MUST stay visible while scrolling. A blocking item linked from the summary MUST expand its unit and receive focus.
+The Overview MUST show, top to bottom: a one-line blocker line that links each submit blocker to its unit and carries a non-blocking "N plans to answer" link, then the three-column grid by Product and Activity. There is no answer list above the grid. Week, save state, Submit, column headers and the unit name in view MUST stay visible while scrolling.
 
 #### Scenario: The Lead sees what blocks submission first
 
 - **WHEN** the report has items that block submission
-- **THEN** a one-line summary above the answer list names each blocking item as a link
+- **THEN** the blocker line names each blocking item as a link
 - **AND** activating a link expands the owning unit and focuses that item
+- **AND** the "N plans to answer" link is not counted as a blocker
 
 #### Scenario: Typed text blocks submission instead of being lost
 
 - **WHEN** an inline composer or editor holds any unsaved change, including text or stage, or a save is pending, and the Lead activates Submit
-- **THEN** submission is blocked, both the top summary and the end-of-form explanation link to the unsaved entry, and the input is kept
+- **THEN** submission is blocked, both the blocker line and the end-of-form explanation link to the unsaved entry, and the input is kept
 
 #### Scenario: The full explanation stays at the end
 
@@ -226,12 +242,13 @@ The Overview MUST show, top to bottom: a one-line summary of what blocks submiss
 #### Scenario: Narrow screens use week tabs
 
 - **WHEN** the Overview renders at 375 CSS pixels
-- **THEN** the answer list stays above the grid, This week and Next week become tabs, and Last week becomes a third tab only after "Show last week"
+- **THEN** the blocker line stays above the tabs, which are Last week, This week and Next week with This week open
+- **AND** the Last week tab shows the number of unanswered plans, and its plans show their answer controls as labelled buttons in a 44 px strip
 - **AND** there is no document-level horizontal overflow and every control has a touch-size target
 
 ### Requirement: Overview rows are aligned and quiet
 
-Within a unit row, the unit name and the first line of every cell MUST start at the same vertical position, with no in-cell group headers above the first entry, and entries in a column MUST share one text inset. Colour MUST mark only risk severity and what blocks submission. A unit's risks and decisions MUST appear as a count under the unit name that expands their rows in place.
+Within a unit row, the unit name and the first line of every temporal cell MUST start within 2 CSS pixels of each other, and a plan and its continuation MUST share one row line. Records not linked to a plan MUST start below all plan rows, and empty slots beside plans MUST stay blank. Colour MUST mark only risk severity and what blocks submission. A unit's risks and decisions MUST appear as a count under the unit name that expands their rows in place.
 
 #### Scenario: Cells in a unit row are aligned
 
@@ -239,10 +256,27 @@ Within a unit row, the unit name and the first line of every cell MUST start at 
 - **THEN** the first line of each cell and the unit name start within 2 CSS pixels of each other
 - **AND** entry text in a column shares one left edge
 
+#### Scenario: A continuation shares the plan's line
+
+- **WHEN** a plan is answered Continue or Next week, or is a carried continuation
+- **THEN** the continuation's top and first text line are within 2 CSS pixels of the plan's line
+- **AND** while the continuation's in-place editor is open the field text may sit 1 CSS pixel lower
+
+#### Scenario: An unanswered plan leaves its line empty
+
+- **WHEN** a plan has no answer
+- **THEN** the space beside it in This week and Next week stays empty, with no dash or placeholder
+- **AND** the contextual Add control of the cell sits after the cell's last row
+
+#### Scenario: Unlinked records start below the plan rows
+
+- **WHEN** a unit has records that are not linked to a plan
+- **THEN** they start below the last plan row of that unit, on a strict row grid
+
 #### Scenario: An item with several stages
 
 - **WHEN** a Product item has several stages
-- **THEN** all its stage names are shown as muted text after the description
+- **THEN** all its stage names are shown as muted text right after the description, wrapping together with its "from plan" text
 
 #### Scenario: Risks collapse to a count
 

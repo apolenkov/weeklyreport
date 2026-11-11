@@ -18,7 +18,7 @@ A Lead MUST be able to enter minimum-input risk and decision drafts inline under
 
 #### Scenario: A record is started from its reporting unit
 
-- **WHEN** a Lead uses the "Risk or decision" start of an editable Product or Activity in the Overview and picks the kind
+- **WHEN** a Lead uses the single "Risk or decision" start of an editable Product or Activity in the Overview and selects the kind with its kind switch (default Risk)
 - **THEN** the record editor opens with that Product or Activity as the parent, without a guessed stage when several are owned, and nothing is created until the Lead saves
 - **AND** a read-only or historical unit offers no such start
 

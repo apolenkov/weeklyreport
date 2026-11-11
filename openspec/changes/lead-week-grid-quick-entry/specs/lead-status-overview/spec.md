@@ -30,7 +30,7 @@ The `/lead/report/:reportId` route MUST expose addressable Report and Slides vie
 
 ### Requirement: Overview MUST be compact, expandable, and contained
 
-At desktop widths of at least 80 rem, all reporting units MUST form a flat matrix with shared temporal boundaries, thin row separators, and no nested item card chrome or document-level horizontal overflow. The identity column and the visible temporal columns (This week and Next week, plus Last week when shown) MUST align across units. Within an item, the description and stage text own the flexible region while hover/focus actions occupy a stable trailing area; text growth MUST wrap without moving actions into a separate column or causing document overflow. A collapsed unit MUST show at most two item previews per column and an operable count for hidden items; activation MUST expand the full content inline. At smaller widths the columns MUST remain reachable as week tabs. Disclosure controls MUST expose `aria-expanded` and `aria-controls`, and collapsed content MUST not remain keyboard-focusable.
+At desktop widths of at least 80 rem, all reporting units MUST form a flat matrix with shared temporal boundaries, thin row separators, and no nested item card chrome or document-level horizontal overflow. The identity column and the Last week, This week and Next week columns MUST align across units. A collapsed unit MUST show at most two item previews per column and an operable count for hidden items. Disclosure controls MUST expose `aria-expanded` and `aria-controls`.
 
 #### Scenario: A column contains more than two items
 
@@ -54,12 +54,30 @@ At desktop widths of at least 80 rem, all reporting units MUST form a flat matri
 #### Scenario: An editable unplanned item wraps
 
 - **WHEN** an unplanned Current item has a multi-line description
-- **THEN** the `Unplanned` marker stays with the item's metadata beneath the description
-- **AND** the description, marker, and actions remain readable without overlap
+- **THEN** the `Unplanned` marker stays in the muted metadata group right after the description, wrapping with the stage and "from plan" text
+- **AND** the description, that group, and the actions remain readable without overlap
+
+#### Scenario: item text owns the flexible region
+
+- **WHEN** an item's description or stage text grows over several lines
+- **THEN** the text wraps, hover or focus actions float over the item's corner without changing the text width, and on touch they sit in the free space of the last text line
+- **AND** no actions column is added and the document has no horizontal overflow
+
+#### Scenario: collapsed content is not focusable
+
+- **WHEN** a unit is collapsed
+- **THEN** its hidden items are not keyboard-focusable, and its disclosure control exposes `aria-expanded` and `aria-controls`
+- **AND** activating the count expands the full content inline
+
+#### Scenario: narrow tables use tabs
+
+- **WHEN** the table is narrower than 920 CSS pixels
+- **THEN** the columns are reachable as Last week, This week and Next week tabs with This week open by default
+- **AND** every tab and control keeps a touch-size target
 
 ### Requirement: Empty temporal cells MUST state their emptiness in plain language
 
-An empty editable This week or Next week cell MUST show only its quiet contextual Add control ("Add what happened" or "Plan something"). An empty read-only cell, including Last week when shown, MUST state its emptiness in plain language, distinguishing "Nothing was planned" from an unavailable previous report, and MUST expose no write controls.
+An empty editable This week or Next week cell MUST show only its quiet contextual Add control ("Add what happened" or "Plan something"), placed after the cell's last row. An empty read-only cell, including Last week, MUST state its emptiness in plain language, distinguishing "Nothing was planned" from an unavailable previous report, and MUST expose no write controls.
 
 #### Scenario: A temporal cell has no content
 
@@ -79,14 +97,14 @@ An empty editable This week or Next week cell MUST show only its quiet contextua
 
 ### Requirement: Overview previews MUST preserve reading and secondary-action access
 
-**Reason**: The single More actions disclosure conflicts with the flat hover/focus action row of `lead-status-overview-actions` and the mockup v2.1 layout.
+**Reason**: The single More actions disclosure conflicts with the flat hover/focus action row of `lead-status-overview-actions` and the mockup v2.2 layout.
 **Migration**: Use "Overview previews keep reading and flat secondary actions" below.
 
 ## ADDED Requirements
 
 ### Requirement: Overview previews keep reading and flat secondary actions
 
-Editable Current/Next previews MUST keep readable copy, a separate complete-editor action, a status interaction, and their applicable secondary actions as the flat hover/focus icon row of `lead-status-overview-actions`, without a More actions disclosure. Read-only previews MUST expose no write action. Move MUST follow the placement-or-acknowledgement contract in `record-status-derivation`, not reinterpret Continue next week.
+Editable Current/Next previews MUST keep readable copy, a separate complete-editor action, a status interaction, and their secondary actions (Edit, Move, Discussion) as the flat icon row of `lead-status-overview-actions`, without a More actions disclosure. Read-only previews MUST expose no write action. Move MUST follow the placement-or-acknowledgement contract in `record-status-derivation`.
 
 #### Scenario: the lead reads and edits a long update
 
@@ -97,9 +115,15 @@ Editable Current/Next previews MUST keep readable copy, a separate complete-edit
 
 #### Scenario: secondary actions are flat
 
-- **WHEN** Edit, Move or Discussion applies to an editable item
+- **WHEN** Edit, Move or Discussion is shown for an editable item, including one that is currently unavailable
 - **THEN** each is a separate named icon button in the item's action row
 - **AND** no More actions disclosure exists
+
+#### Scenario: an unavailable secondary action stays in place
+
+- **WHEN** Edit, Move or Discussion cannot be used for an editable item
+- **THEN** the icon stays in the row, aria-disabled and focusable, and its reason is its tooltip and accessible description
+- **AND** activating it changes nothing and shows the reason
 
 #### Scenario: a Current occurrence is postponed to Next
 
