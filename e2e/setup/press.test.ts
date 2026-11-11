@@ -3,7 +3,7 @@ import test from "node:test";
 
 import { keyEvents } from "../lead-form/press.js";
 
-void test("key events never carry a native virtual key code", () => {
+void test("ordinary key events never carry a native virtual key code", () => {
   for (const spec of ["Escape", "ArrowDown", "Control+Enter", "f", "Space"]) {
     for (const event of keyEvents(spec)) {
       assert.equal("nativeVirtualKeyCode" in event, false, spec);
@@ -43,4 +43,19 @@ void test("editing keys carry commands and Shift extends the selection", () => {
 void test("unsupported keys and modifiers are rejected", () => {
   assert.throws(() => keyEvents("F13"), /Unsupported E2E key/u);
   assert.throws(() => keyEvents("Hyper+a"), /Unsupported E2E key modifier/u);
+});
+
+void test("macOS fullscreen Escape carries its native code without changing other keys", () => {
+  for (const event of keyEvents("Escape", true)) {
+    assert.equal(
+      event.nativeVirtualKeyCode,
+      process.platform === "darwin" ? 53 : undefined,
+    );
+    assert.equal(event.windowsVirtualKeyCode, 27);
+  }
+  for (const spec of ["f", "Control+Escape", "Shift+Escape", "Enter"]) {
+    for (const event of keyEvents(spec, true)) {
+      assert.equal("nativeVirtualKeyCode" in event, false, spec);
+    }
+  }
 });
