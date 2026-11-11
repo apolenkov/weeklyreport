@@ -44,3 +44,16 @@
 - Done (package 5, discussion owner): one page-scoped store keyed by section and stable lineage holds the reply draft, its edit sequence and the single delivery attempt, shared by Current and derived Next and kept while the comments are closed; an acknowledgement clears only the unchanged draft; an unavailable result or FORBIDDEN/UNAUTHORIZED read hides messages and drops the draft, a transient read failure keeps the list with a note; an uncertain delivery survives reads, blocks Send and resends only through "Send again (may duplicate)" after a check; a resolved own item keeps its comments control. Covered by hook, store and view tests; not yet browser-checked.
 - Done (package 9, browser): the autosave conflict recovery was reproduced on the dev stand and autosave resumes after the Lead dismisses the conflict.
 - Open: discussion remainder (session/user teardown of the store, reply notice for a removed card, focus rules, SPA-navigation retention); incomplete-record dependency work (package 4); E2E; final independent review.
+
+## Contextual record presentation
+
+- The nullable contract and preparation boundary are reviewed and committed.
+- Risk and decision forms focus primary text on mount, keep additional details
+  behind an accessible disclosure, accept missing details, and retain controlled
+  input when details close. Errors reveal the affected optional fields and keep
+  them open after correction until the Lead explicitly collapses them.
+- Product stages, explicit risk severity, authoritative author and stale-context
+  errors remain visible; pending writes disable duplicate submission while Cancel
+  still emits intent for the host to reconcile. Component checks cover these
+  states. Record host integration, persistence receipts, cancellation recovery
+  and complete browser journeys remain in packages 2 and 7.
