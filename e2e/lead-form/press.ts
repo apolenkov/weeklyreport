@@ -3,7 +3,9 @@
 // (Escape 27 is the Minus key), after which the page receives thousands of
 // phantom keydown events per second until it navigates. The flood saturates
 // the main thread, so timers (Radix focus restore) and touch handling stall
-// for tens of seconds. These events omit nativeVirtualKeyCode.
+// for tens of seconds. Ordinary page events omit nativeVirtualKeyCode; native
+// fullscreen Escape uses the macOS Escape code instead of the Windows one.
+const MACOS_ESCAPE_KEY_CODE = 53;
 const META = 4;
 const SHIFT = 8;
 const MODIFIER_BITS = new Map([
@@ -65,6 +67,7 @@ export interface KeyEvent {
   readonly key: string;
   readonly code: string;
   readonly windowsVirtualKeyCode: number;
+  readonly nativeVirtualKeyCode?: number;
   readonly modifiers: number;
   readonly text?: string;
   readonly unmodifiedText?: string;
@@ -86,8 +89,17 @@ function definition(name: string): KeyDefinition {
   throw new Error(`Unsupported E2E key: ${name}`);
 }
 
+function nativeFullscreenEscape(spec: string, fullscreen: boolean) {
+  return fullscreen && process.platform === "darwin" && spec === "Escape"
+    ? { nativeVirtualKeyCode: MACOS_ESCAPE_KEY_CODE }
+    : {};
+}
+
 /** Expands "Control+Enter"-style specs into the CDP key down/up pair. */
-export function keyEvents(spec: string): readonly [KeyEvent, KeyEvent] {
+export function keyEvents(
+  spec: string,
+  fullscreen = false,
+): readonly [KeyEvent, KeyEvent] {
   const parts = spec.split("+");
   const name = parts.pop();
   if (name === undefined) throw new Error("Empty E2E key spec");
@@ -109,6 +121,7 @@ export function keyEvents(spec: string): readonly [KeyEvent, KeyEvent] {
     key: def.key,
     code: def.code,
     windowsVirtualKeyCode: def.keyCode,
+    ...nativeFullscreenEscape(spec, fullscreen),
     modifiers,
   };
   return [
@@ -178,9 +191,9 @@ export function releasePressSocket(session: string): void {
 /**
  * Dispatches a key press to the session's page over a direct page socket.
  * Attaching through the browser socket makes agent-browser re-enable its
- * network capture. Returns false when the command is not a press, or when
- * fullscreen is active: the browser exits fullscreen on Escape only for the
- * native key code, so agent-browser's own press stays responsible there.
+ * network capture. Fullscreen Escape on macOS needs its native key code; the
+ * pinned CLI omits it, so the same page socket sends that key too. Other
+ * fullscreen keys stay with the native CLI.
  * `run` executes an agent-browser command for the session.
  */
 export async function pressKey(
@@ -197,7 +210,12 @@ export async function pressKey(
     ["eval", "document.fullscreenElement !== null"],
     session,
   );
-  if (fullscreen.result === true) return false;
+  const isFullscreen = fullscreen.result === true;
+  if (
+    isFullscreen &&
+    (process.platform !== "darwin" || args.at(1) !== "Escape")
+  )
+    return false;
   const { cdpUrl } = await run(["get", "cdp-url"], session);
   const { url } = await run(["get", "url"], session);
   if (typeof cdpUrl !== "string" || typeof url !== "string") {
@@ -224,7 +242,7 @@ export async function pressKey(
     };
     pageSockets.set(session, cdp);
   }
-  for (const event of keyEvents(String(args.at(1)))) {
+  for (const event of keyEvents(String(args.at(1)), isFullscreen)) {
     await cdp.send("Input.dispatchKeyEvent", event);
   }
   return true;
