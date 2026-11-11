@@ -7,7 +7,10 @@ import type {
   StatusOverviewRecordTarget,
 } from "../model/status-overview";
 import type { StatusOverviewActivityFieldsChange } from "./status-overview-activity-editor";
-import type { StatusOverviewEditorSlot } from "./status-overview-editor-slot";
+import type {
+  StatusOverviewEditorSlot,
+  StatusOverviewRecordSlot,
+} from "./status-overview-editor-slot";
 import type {
   SetStagesHandler,
   SetStatusHandler,
@@ -17,6 +20,7 @@ import type {
 export interface StatusOverviewProps {
   readonly health?: ReportHealthPulse | undefined;
   readonly editorSlot?: StatusOverviewEditorSlot | undefined;
+  readonly recordSlot?: StatusOverviewRecordSlot | undefined;
   readonly model: StatusOverviewModel;
   readonly onEditItem?:
     ((target: StatusOverviewEditTarget) => void) | undefined;

@@ -9,7 +9,6 @@ import type {
 import { toast } from "sonner";
 import { describe, expect, it, vi } from "vitest";
 
-import { LeadForm } from "./lead-form";
 import {
   ACTIVITY_ID,
   chooseDirectMove,
@@ -25,7 +24,8 @@ import {
   REPORT_ID,
   SECOND_PROJECT_ID,
   Wrapper,
-} from "./lead-status-overview.fixtures";
+} from "./__tests__/lead-status-overview.fixtures";
+import { LeadForm } from "./lead-form";
 
 vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
 vi.mock("next/navigation", () => ({

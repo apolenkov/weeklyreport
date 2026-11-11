@@ -65,3 +65,21 @@ Adapter tests compare the full outgoing request across both read changes and
 verify that a new-version write derives its own intent. This is the transport
 part of package 2; contextual host cancellation and guarded end-to-end acceptance
 remain open.
+
+## Contextual record host
+
+The Overview now places the record form under its Product or Activity, without
+an item week lane. The existing input provider retains the composer; the existing
+draft engine applies identity-scoped creation, replacement and compensation.
+Only a matching scoped receipt confirms the submitted record. Later typing stays
+for a separate save; uncertain retries keep the original request and cancellation
+waits for the original outcome before removing or restoring the unchanged lineage.
+The existing stage memory observes these scoped patches only after persistence.
+
+Own-save echoes reconcile against current state even when the render preceding
+the read was clean, so a child applying a later edit or cancellation on the save
+receipt cannot have that change replaced by the same-version read. Negative
+receipt checks cover token, activation, version, exact lineage and absence in
+both the dispatched payload and persisted response. Full acceptance remains in
+packages 7 and 8; component and in-memory checks do not replace the guarded
+browser and database journeys.

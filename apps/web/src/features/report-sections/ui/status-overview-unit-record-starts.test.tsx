@@ -31,6 +31,21 @@ function unit(overrides: Partial<StatusOverviewUnit> = {}): StatusOverviewUnit {
 }
 
 describe("unit risk and decision starts", () => {
+  it("keeps the unit editor visible when starts are disabled without assigning a week", () => {
+    render(
+      <StatusOverviewTimelineFooter
+        unit={unit()}
+        recordSlot={{
+          unitKey: unit().key,
+          content: <form aria-label="Risk input">Retained input</form>,
+        }}
+      />,
+    );
+    const form = screen.getByRole("form", { name: "Risk input" });
+    expect(form.closest("[data-overview-create-lane]")).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
   it.each([
     ["risk", "Add risk to Billing"],
     ["decision", "Add decision to Billing"],
