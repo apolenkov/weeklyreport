@@ -11,6 +11,7 @@ export type {
 } from "./model/lead-form/lead-form-write-port";
 export { isLeadFormWriteConflict } from "./model/lead-form/lead-form-write-port";
 export { useLeadFormWritePort } from "./model/lead-form/lead-form-write-port.trpc-adapter";
+export { useStoredDraftLedger } from "./model/lead-form/stored-draft-ledger";
 export { useGenerationState } from "./model/lead-form/use-generation-state";
 export { useLeadFormDraft } from "./model/lead-form/use-lead-form-draft";
 export type { LeadFormOutcomeActions } from "./model/lead-form/use-lead-form-outcome-coordinator";

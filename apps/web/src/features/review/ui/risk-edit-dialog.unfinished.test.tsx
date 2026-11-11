@@ -137,11 +137,14 @@ describe("RiskCard — unfinished note", () => {
       </SdlcTooltipProvider>,
     );
 
-  it("tells the author a saved risk is unfinished", () => {
+  it("does not claim persistence without save evidence", () => {
     renderCard({ ...finished, impact: "", mitigation: "Escalate" });
 
     expect(screen.getByTestId("risk-unfinished-note")).toHaveTextContent(
-      "Saved, unfinished",
+      "Unfinished — only you see it.",
+    );
+    expect(screen.getByTestId("risk-unfinished-note")).not.toHaveTextContent(
+      "Saved",
     );
   });
 

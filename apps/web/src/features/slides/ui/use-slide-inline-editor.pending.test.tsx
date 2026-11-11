@@ -132,6 +132,7 @@ function setup() {
   const save = captured["reports.saveDraft"];
   if (!save) throw new Error("Missing save fixture");
   const pending = Promise.withResolvers<unknown>();
+  save.mutationFn.mockResolvedValue({ ...makeSection(), version: 2 });
   save.mutationFn.mockImplementationOnce(() => pending.promise);
   const client = makeQueryClient();
   const ui = (section: ReportSectionReadModel) => (
@@ -245,7 +246,7 @@ describe("slide pending writes with real record dialogs", () => {
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.getByRole("alertdialog")).toBe(confirmation);
     await act(async () => {
-      pending.resolve({ version: 2 });
+      pending.resolve({ ...makeSection(), version: 2 });
       await pending.promise;
     });
     await waitFor(() =>

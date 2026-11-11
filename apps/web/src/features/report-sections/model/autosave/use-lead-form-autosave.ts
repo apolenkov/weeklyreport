@@ -14,6 +14,14 @@ import type {
 
 const DEFAULT_DEBOUNCE_MS = 5000;
 
+function recoveryAutosaveState(
+  recovery: AutosaveRecovery | null,
+  state: AutosaveState,
+): AutosaveState {
+  if (!recovery) return state;
+  return recovery.phase === "pending" ? "saving" : "error";
+}
+
 // Thin React wiring: render-visible state lives here, every mutable
 // live value and save rule lives behind the engine's operations.
 export function useLeadFormAutosave(
@@ -24,6 +32,9 @@ export function useLeadFormAutosave(
 } {
   const [recovery, setRecovery] = useState<AutosaveRecovery | null>(null);
   const [autosaveState, setAutosaveState] = useState<AutosaveState>("idle");
+  const [lastFailureKind, setFailureKind] = useState<
+    "rejected" | "uncertain"
+  >();
   const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
   const [queuedRetryRevision, setQueuedRetryRevision] = useState(0);
   // Mirrors the engine's saved baseline so render computes `dirty` from
@@ -33,6 +44,7 @@ export function useLeadFormAutosave(
     createAutosaveEngine(args, {
       setState: setAutosaveState,
       setRecovery,
+      setFailureKind,
       setLastSavedAt,
       setLastSavedKey,
       rearmRetry: () => setQueuedRetryRevision((revision) => revision + 1),
@@ -64,6 +76,7 @@ export function useLeadFormAutosave(
     enabled,
     reportSectionId,
     autosaveState,
+    uncertain: lastFailureKind === "uncertain",
   });
   const debounceMs = args.debounceMs ?? DEFAULT_DEBOUNCE_MS;
 
@@ -91,14 +104,11 @@ export function useLeadFormAutosave(
   );
 
   return {
+    lastFailureKind,
     recovery,
     retrySameAttempt: engine.retrySameAttempt,
     isRecoveryBlocked: engine.isRecoveryBlocked,
-    state: recovery
-      ? recovery.phase === "pending"
-        ? "saving"
-        : "error"
-      : view.state,
+    state: recoveryAutosaveState(recovery, view.state),
     lastSavedAt,
     dirty,
     currentPayloadMatchesSavedBaseline: view.currentPayloadMatchesSavedBaseline,

@@ -1,7 +1,10 @@
 import { reviewRecordAnchor } from "../../../shared/ui/feedback/review-record-focus";
 import { MetaRow } from "../../../shared/ui/report-shell/meta-row";
 import type { RiskEntry, StageStatus } from "../../report-sections";
-import { hasCompleteRiskDetails } from "../../report-sections";
+import {
+  hasCompleteRiskDetails,
+  unfinishedRecordLabel,
+} from "../../report-sections";
 import {
   RiskCardActions,
   RiskCardSummary,
@@ -171,8 +174,8 @@ export function RiskCard({
           data-testid="risk-unfinished-note"
           className="mt-2 text-xs font-semibold text-[var(--color-status-at-risk-fg)]"
         >
-          Saved, unfinished — only you see it. Add its impact and mitigation
-          before you submit.
+          {unfinishedRecordLabel(risk.draftSaveState)} — only you see it. Add
+          its impact and mitigation before you submit.
         </p>
       )}
       {state.needsStage && (

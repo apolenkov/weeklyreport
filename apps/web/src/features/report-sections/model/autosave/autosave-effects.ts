@@ -4,7 +4,10 @@ import { useEffect } from "react";
 import { toast } from "sonner";
 
 import { mutationErrorMessage } from "../../../../shared/lib/errors/mutation-error-message";
-import { isLeadFormWriteConflict } from "../lead-form/lead-form-write-port";
+import {
+  isLeadFormWriteConflict,
+  LeadFormWriteError,
+} from "../lead-form/lead-form-write-port";
 import type { AutosaveState } from "./autosave-types";
 import type {
   AutosaveRequest,
@@ -14,16 +17,52 @@ import type {
 } from "./autosave-types";
 import { encodeDraftSaveComparisonKey } from "./draft-save-comparison-key";
 
+export function settleFailedAttempt(
+  request: AutosaveRequest,
+  current: boolean,
+): void {
+  request.persistedAttempt?.settle({
+    status: current ? "failed" : "obsolete",
+    token: request.persistedAttempt.token,
+  });
+}
+
+export function saveFailureKind(error: unknown): "rejected" | "uncertain" {
+  return error instanceof LeadFormWriteError &&
+    (error.kind === "restriction" || error.kind === "conflict")
+    ? "rejected"
+    : "uncertain";
+}
+
+export function reportAdoptedBaseline(
+  sinks: AutosaveSinks,
+  savedKey: string,
+  source: "read" | "write",
+): void {
+  sinks.setFailureKind?.(undefined);
+  sinks.setLastSavedKey(savedKey);
+  sinks.setState(source === "write" ? "saved" : "idle");
+  sinks.setLastSavedAt(source === "write" ? new Date() : null);
+}
+
+export function reportObsoleteSaveFailure(sinks: AutosaveSinks): void {
+  sinks.setState((state) => (state === "saving" ? "idle" : state));
+}
+
 export function reportSaveFailure(
   error: unknown,
   options: {
     args: UseLeadFormAutosaveArgs;
     sinks: AutosaveSinks;
     contextual: boolean;
+    uncertain: boolean;
     retry: boolean;
     request: AutosaveRequest;
   },
 ): void {
+  options.sinks.setFailureKind?.(
+    options.uncertain ? "uncertain" : saveFailureKind(error),
+  );
   options.sinks.setState("error");
   if (options.args.onConflict && isLeadFormWriteConflict(error)) {
     options.args.onConflict(options.contextual, options.request);
@@ -85,23 +124,29 @@ export function autosaveDraftView(view: {
   readonly enabled: boolean;
   readonly reportSectionId: string | null;
   readonly autosaveState: AutosaveState;
+  readonly uncertain?: boolean;
 }) {
   const payloadKey =
     view.payload === null ? "" : encodeDraftSaveComparisonKey(view.payload);
   const hasPayload = payloadKey !== "";
   const currentPayloadMatchesSavedBaseline =
-    hasPayload && payloadKey === view.lastSavedKey;
+    hasPayload && !view.uncertain && payloadKey === view.lastSavedKey;
   const dirty =
     view.enabled && hasPayload && !currentPayloadMatchesSavedBaseline;
   const held = dirty && payloadKey === view.heldKey;
-  const armed = dirty && !held && Boolean(view.reportSectionId);
-  const state: AutosaveState = held
-    ? "error"
-    : reportedAutosaveState(
-        view.autosaveState,
-        armed,
-        !dirty && view.lastSavedKey === payloadKey,
-      );
+  const armed =
+    dirty &&
+    !held &&
+    (!view.uncertain || payloadKey !== view.lastSavedKey) &&
+    Boolean(view.reportSectionId);
+  const state: AutosaveState =
+    held || (view.uncertain && payloadKey === view.lastSavedKey)
+      ? "error"
+      : reportedAutosaveState(
+          view.autosaveState,
+          armed,
+          !dirty && view.lastSavedKey === payloadKey,
+        );
   return {
     payloadKey,
     currentPayloadMatchesSavedBaseline,

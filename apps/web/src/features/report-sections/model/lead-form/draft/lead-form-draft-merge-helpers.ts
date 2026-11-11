@@ -122,7 +122,7 @@ export function mergeDecisionDraft(
     }
     return {
       id: decision.id,
-      stableId: decision.stableId,
+      stableId: decision.stableId ?? decision.id,
       ...parentFields,
       text: decision.text,
       owner: decision.owner,
@@ -166,7 +166,7 @@ export function mergeRiskDraft(
     }
     return {
       id: risk.id,
-      stableId: risk.stableId,
+      stableId: risk.stableId ?? risk.id,
       ...parentFields,
       risk: risk.text,
       impact: risk.impact,

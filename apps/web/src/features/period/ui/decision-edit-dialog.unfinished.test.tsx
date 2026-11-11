@@ -145,12 +145,15 @@ describe("DecisionCard — unfinished note", () => {
     />
   );
 
-  it("marks a saved decision that still misses its impact", () => {
+  it("does not claim persistence without save evidence", () => {
     render(card({ ...finished, impact: "" }));
 
     expect(screen.getByTestId("decision-unfinished-note")).toHaveTextContent(
-      "Saved, unfinished — only you see it.",
+      "Unfinished — only you see it.",
     );
+    expect(
+      screen.getByTestId("decision-unfinished-note"),
+    ).not.toHaveTextContent("Saved");
   });
 
   it("shows no note on a finished decision", () => {
