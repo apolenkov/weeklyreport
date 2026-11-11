@@ -2,13 +2,15 @@ import { useCallback, useState } from "react";
 
 import {
   ownedStagesForProject,
+  projectReportHealthPulse,
   projectStatusOverview,
+  type StatusOverviewModel,
 } from "../../../../report-sections";
 import { openWorkDisabledReason } from "./open-work-register-model";
 import { buildActivityFieldsChange } from "./overview-activity-fields";
 import { overviewInlineItemSlot } from "./overview-inline-item-slot";
 import { overviewPlanPresentation } from "./overview-plan-presentation";
-import { unitRecordStarter } from "./overview-unit-record";
+import { overviewRecordPresentation } from "./overview-record-presentation";
 import { useCompletionPresentation } from "./presentation/use-completion-presentation";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
 import { useOpenWorkRegister } from "./use-open-work-register";
@@ -17,6 +19,7 @@ import {
   useOverviewItemEditor,
 } from "./use-overview-item-editor";
 import { useOverviewPlanActions } from "./use-overview-plan-actions";
+import { useOverviewRecordEditor } from "./use-overview-record-editor";
 import { useOverviewVerdictActions } from "./use-overview-verdict-actions";
 import { useSaveStatus } from "./use-save-status";
 
@@ -92,26 +95,15 @@ export function useOverviewController({
     currentSection: readyEditor?.draft.section,
     currentItemsEditable: canEdit,
   });
-  const dialog = useOverviewItemEditor(
+  const editing = useOverviewEditing({
     readyEditor,
     model,
     targetReportId,
     output,
-  );
-  const plan = useOverviewPlanActions(
-    readyEditor,
-    output,
-    model,
-    dialog.dialog !== null,
-  );
+    activityPending: pendingActivityIds.size > 0,
+  });
+  const { plan, record, pendingInput } = editing;
   const verdict = useOverviewVerdictActions(readyEditor, output);
-  const planPresentation = overviewPlanPresentation(plan, model);
-  const itemSlot = overviewInlineItemSlot(readyEditor, model, dialog);
-  const itemEditor = overviewEditor(readyEditor, dialog);
-  const pendingInput =
-    dialog.dialog !== null ||
-    plan.dialog !== null ||
-    pendingActivityIds.size > 0;
   const saveStatus = useSaveStatus(readyEditor, pendingInput, plan.pending);
   const canStartAction = canEdit && !pendingInput;
   const openWork = useOpenWorkRegister(
@@ -133,18 +125,73 @@ export function useOverviewController({
     canStartAction,
     completion,
     model,
-    dialog,
-    plan,
-    verdict: { ...verdict, onAddRecord: unitRecordStarter(readyEditor) },
-    planPresentation,
-    itemSlot,
-    itemEditor,
-    pendingInput,
+    ...editing,
+    health: projectReportHealthPulse(
+      model.units,
+      readyEditor?.draft.section ?? output.current.section,
+    ),
+    verdict: { ...verdict, onAddRecord: record.open },
     saveStatus,
     openWork,
     openWorkBlocker,
     onActivityFieldsChange: buildActivityFieldsChange(readyEditor),
     onActivityFieldsPendingChange,
+  };
+}
+
+function useOverviewEditing({
+  readyEditor,
+  model,
+  targetReportId,
+  output,
+  activityPending,
+}: {
+  readonly readyEditor: ReadyEditor | null;
+  readonly model: StatusOverviewModel;
+  readonly targetReportId: string;
+  readonly output: Parameters<typeof projectStatusOverview>[0];
+  readonly activityPending: boolean;
+}) {
+  const dialog = useOverviewItemEditor(
+    readyEditor,
+    model,
+    targetReportId,
+    output,
+  );
+  const plan = useOverviewPlanActions(
+    readyEditor,
+    output,
+    model,
+    dialog.dialog !== null,
+  );
+  const planPresentation = overviewPlanPresentation(plan, model);
+  const itemSlot = overviewInlineItemSlot(readyEditor, model, dialog);
+  const itemEditor = overviewEditor(readyEditor, dialog);
+  const record = useOverviewRecordEditor(
+    readyEditor,
+    model,
+    targetReportId,
+    dialog.dialog !== null || plan.dialog !== null || activityPending,
+  );
+  const recordPresentation = overviewRecordPresentation(
+    readyEditor,
+    model,
+    record,
+  );
+  const pendingInput =
+    record.state !== null ||
+    dialog.dialog !== null ||
+    plan.dialog !== null ||
+    activityPending;
+  return {
+    dialog,
+    plan,
+    record,
+    planPresentation,
+    recordPresentation,
+    itemSlot,
+    itemEditor,
+    pendingInput,
   };
 }
 

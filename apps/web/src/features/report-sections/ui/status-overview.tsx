@@ -170,7 +170,8 @@ export function StatusOverview(props: StatusOverviewProps) {
     setExpandedKeys((current) => new Set([...current, key]));
   });
   const toggle = (key: string): void => {
-    if (editorSlot?.unitKey === key) return;
+    if (editorSlot?.unitKey === key || props.recordSlot?.unitKey === key)
+      return;
     setExpandedKeys((current) => {
       const next = new Set(current);
       if (next.has(key)) next.delete(key);

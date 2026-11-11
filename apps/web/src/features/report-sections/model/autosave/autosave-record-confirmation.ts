@@ -90,3 +90,24 @@ export function confirmSavedRecord(
     encodeAutosaveComparisonKey(fields(b))
   );
 }
+
+/** A compensation is confirmed only when the exact scoped request and reply omit the lineage. */
+export function confirmSavedRecordRemoval(
+  receipt: AutosaveSaveReceipt,
+  target: RecordTarget,
+): boolean {
+  if (!scopeMatches(receipt, target) || !receipt.submittedPayload) return false;
+  const submitted =
+    target.kind === "risk"
+      ? receipt.submittedPayload.risks
+      : receipt.submittedPayload.decisions;
+  const returned =
+    target.kind === "risk"
+      ? receipt.persistedRisks
+      : receipt.persistedDecisions;
+  return (
+    returned !== undefined &&
+    !submitted.some((row) => row.stableId === target.stableId) &&
+    !returned.some((row) => row.stableId === target.stableId)
+  );
+}
