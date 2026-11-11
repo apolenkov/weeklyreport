@@ -6,18 +6,18 @@ Make authorized record comments understandable and reachable from the Lead Overv
 
 ### Requirement: The item comment control has a visible, authorized result
 
-The item comment control MUST reveal a visible view of the record's authorized comments, including an honest empty state and an authorized reply composer for the Lead’s own eligible item. Pointer, keyboard and focus behavior MUST be meaningful; the server MUST enforce ownership, role and lifecycle rules.
+The item comment control MUST open a modal Sheet named `Discussion` that shows the record's authorized comments, including an honest empty state and an authorized reply composer for the Lead’s own eligible item. Pointer, keyboard and focus behavior MUST be meaningful; the server MUST enforce ownership, role and lifecycle rules.
 
 #### Scenario: No comments exist
 
 - **WHEN** a Lead activates the comment control on their own editable item without comments
-- **THEN** a visible comments view shows an honest empty state
+- **THEN** the `Discussion` Sheet shows an honest empty state
 - **AND** it does not claim a message was sent or add a comment without an authorized submission
 
 #### Scenario: A record has reviewer comments
 
 - **WHEN** a Lead activates the comment control on their own item with authorized reviewer comments
-- **THEN** the view exposes those comments for that record and does not reveal another author's private comments
+- **THEN** the `Discussion` Sheet exposes those comments for that record and does not reveal another author's private comments
 
 #### Scenario: A Lead replies to their own item
 
@@ -189,3 +189,33 @@ Opening an eligible persisted item's discussion SHALL resolve and read automatic
 - **AND** loading is not presented as an honest empty result and network completion does not steal focus
 
 This item-only increment does not complete risk or decision discussions, ordinary editor 409 recovery, realtime revocation, exactly-once delivery or persistence across browser termination.
+
+### Requirement: The discussion is a modal Sheet at every width
+
+The discussion of a record MUST open as a modal `Discussion` Sheet at every width. While it is open the page below MUST be inert, Tab MUST cycle inside the Sheet, and Escape or its close control MUST return focus to the trigger that opened it. Its reply draft MUST survive closing and reopening within the same session until it is sent or cleared.
+
+#### Scenario: The Sheet isolates the page
+
+- **WHEN** a Lead opens the discussion of a record
+- **THEN** the page behind the Sheet is inert and Tab cycles only among the Sheet's controls
+- **AND** the same modal behaviour applies at phone and desktop widths
+
+#### Scenario: Escape returns focus to the trigger
+
+- **WHEN** the Lead presses Escape or activates the close control of the Discussion Sheet
+- **THEN** the Sheet closes and focus returns to the discussion control that opened it
+
+#### Scenario: A typed draft is kept
+
+- **WHEN** the Lead has typed reply text and closes the Sheet
+- **THEN** the text is kept and returns when the Sheet is reopened for the same record, until it is sent or cleared
+
+#### Scenario: An unsaved item cannot receive a reply
+
+- **WHEN** the record is not yet saved
+- **THEN** Send is disabled and the Sheet states `This item is not saved yet. You can send a reply once it is.`
+
+#### Scenario: Ctrl+Enter sends a reply
+
+- **WHEN** the Lead presses Ctrl+Enter in the reply field of a saved record that the Lead may answer
+- **THEN** the reply is sent through the same authorized path as the Send control

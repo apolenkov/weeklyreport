@@ -47,7 +47,7 @@ A Lead MUST be able to enter minimum-input risk and decision drafts inline under
 #### Scenario: Responsive and keyboard operation
 
 - **WHEN** a Lead creates an item, risk or decision using keyboard or at 375 CSS pixels
-- **THEN** owner and week remain understandable, actions and focus are reachable without hover or document-level horizontal overflow, and failures are announced with a recovery path
+- **THEN** owner and week remain understandable, actions and focus are reachable with no hover-only control and no document-level horizontal overflow, and failures are announced with a recovery path
 
 ### Requirement: Each unit offers one start for a risk or decision
 
@@ -120,3 +120,33 @@ Each intended contextual risk or decision MUST retain one stable lineage through
 - **WHEN** the report becomes read-only while the submitted attempt holds an unresolved save outcome (an ambiguous or reconciling recovery, or an unsent attempt that still holds the barrier)
 - **THEN** the composer stays open with its input and a notice that the save is not resolved, so the engine barrier never outlives its composer
 - **AND** the requested cancellation resumes once the report is editable again: an ambiguous original is retried once through its identical request and reconciled before any compensation, and an unsent attempt is restored from its unchanged local lineage before the barrier is released
+
+### Requirement: Each This week and Next week cell has an always-present entry line
+
+Each editable This week and Next week cell of an eligible Product or Activity MUST show an always-present entry line in place of any separate `+ Add` control. The line MUST sit after the cell's last row, and its accessible name MUST be `Add what happened — <unit>, This week` or `Plan something — <unit>, Next week`. Read-only and ineligible cells MUST show no entry line. The line MUST use the canonical item save path, and a failed save MUST keep the typed text with its error.
+
+#### Scenario: An empty editable cell shows only its line
+
+- **WHEN** an editable This week or Next week cell has no record
+- **THEN** the cell shows only its entry line, with the placeholder `What happened…` in This week and `Plan…` in Next week
+
+#### Scenario: Keys in the entry line
+
+- **WHEN** the Lead types in an entry line
+- **THEN** Enter saves the item, Shift+Enter inserts a line break, and Escape clears the text and offers Undo as defined in `lead-status-overview-actions`
+- **AND** leaving the line with non-empty text saves it
+
+#### Scenario: A saved entry keeps the line ready
+
+- **WHEN** an entry is saved successfully
+- **THEN** the line is cleared, keeps focus and remains available for the next item of that unit and week
+
+#### Scenario: A failed entry keeps its text
+
+- **WHEN** the save of an entry fails or is refused by validation
+- **THEN** the typed text remains in the line with an actionable error, and no success is announced
+
+#### Scenario: Read-only cells have no line
+
+- **WHEN** a cell is Last week, Previously planned, submitted, locked, historical or foreign
+- **THEN** no entry line is rendered and the cell states its emptiness in plain language

@@ -1,69 +1,69 @@
-## MODIFIED Requirements
+## REMOVED Requirements
 
 ### Requirement: Overview week moves MUST be reachable from hover icons and keyboard shortcuts
 
-Each editable Current or Next item MUST expose an icon row for every record: edit, a week-move arrow (to the other week) and discussion, with no overflow menu. The row shows on hover, focus or touch. An unavailable icon MUST stay in place, `aria-disabled` and focusable, with its reason; activating it or its Alt+Arrow shortcut changes nothing and announces the reason. Moves follow the placement-or-acknowledgement contract of `record-status-derivation`.
+**Reason**: Mockup v2.4 removes the hover reveal. The week move is always visible in each record's fixed actions column, and move eligibility now includes a re-check of the target week and the derived next-step rule.
+**Migration**: Use "Overview week moves MUST be reachable from visible icons and keyboard shortcuts" below.
 
-#### Scenario: the week-move icon moves an item
+## ADDED Requirements
 
-- **WHEN** the lead hovers an eligible Current item and activates its week-move arrow
-- **THEN** the occurrence moves to Next through the canonical draft save path
-- **AND** it keeps its stored progress, text, and stable identity
+### Requirement: Overview week moves MUST be reachable from visible icons and keyboard shortcuts
 
-#### Scenario: a Next item is moved to Current
+Each This week or Next week record MUST show a week-move icon in its fixed actions column, always visible. Activating it MUST move the record to the other week as one saved change, without a drag. Alt+Right MUST move a focused record to This week and Alt+Left to Next week, and MUST call preventDefault while focus is in the report grid outside text fields. A refused move MUST change nothing and state its reason.
 
-- **WHEN** the lead activates the week-move arrow on a Next item
-- **THEN** the occurrence is placed in Current with its stored progress and text preserved
-- **AND** no continuation verdict or Current result is synthesized
+#### Scenario: The week-move icon moves a record
 
-#### Scenario: an occupied target rejects the move
+- **WHEN** the lead activates the move icon of an eligible This week record
+- **THEN** the record becomes a Next week record with its status hidden, and no second record of the same plan appears in either week
+- **AND** focus stays on the move control of the moved record and the change is announced as `Moved to Next week.`
 
-- **GIVEN** a Next occurrence with the same `stableId` already exists
-- **WHEN** the lead moves the Current item to Next by arrow or keyboard
-- **THEN** the move is refused with the reason "Next week already has this item" and no occurrence is written
-- **AND** the item stays in its original week
+#### Scenario: A Next week record moves back to This week
 
-#### Scenario: Alt+Arrow moves the focused card
+- **WHEN** the lead activates the move icon of a Next week record
+- **THEN** it becomes a This week record and its status is shown again
 
-- **GIVEN** keyboard focus is on an editable Current item card
-- **WHEN** the lead presses Alt+ArrowRight
-- **THEN** the card moves to Next and focus follows the moved card
-- **WHEN** the lead then presses Alt+ArrowLeft while focus stays on the card
-- **THEN** the card moves back to Current
+#### Scenario: An occupied target rejects the move
 
-#### Scenario: a shortcut with no applicable direction does nothing
+- **WHEN** the target week already holds a record of the same plan lineage
+- **THEN** the move is refused with the reason `Next week already has this item.` (or the This week equivalent), nothing changes, and the target is checked again immediately before any move is applied
 
-- **GIVEN** keyboard focus is on a Current item card
-- **WHEN** the lead presses Alt+ArrowLeft
-- **THEN** no move is performed, nothing is announced, and the item stays Current
-- **AND** no keyboard shortcut is applicable from or toward Last week content
+#### Scenario: Alt+Arrow moves the focused record
 
-#### Scenario: edit and comment icons reach the existing flows
+- **WHEN** the lead presses Alt+Right on a Next week record, or Alt+Left on a This week record, outside text fields
+- **THEN** the record moves to the other week and the key does not trigger browser history navigation
 
-- **WHEN** the lead activates the edit icon on an editable item
-- **THEN** the canonical item editor opens in a dialog with that item selected
-- **AND** no overflow menu is needed to reach edit, move or the in-place stage labels
-- **WHEN** the lead activates the discussion icon
-- **THEN** the existing record discussion flow opens for that record
+#### Scenario: A shortcut with no applicable direction does nothing
 
-#### Scenario: a refused move announces its reason
+- **WHEN** the lead presses Alt+Right on a record already in This week, or Alt+Left on a record already in Next week
+- **THEN** nothing moves and `Already in This week. Nothing was moved.` (or the Next week equivalent) is announced
 
-- **GIVEN** an item that cannot move, for one of the refusal conditions listed below
-- **WHEN** the lead activates the disabled arrow or presses Alt+ArrowRight on it
-- **THEN** the reason is announced as a message and nothing is moved or written
-- **AND** the refusal conditions are: Done ("Done items stay in This week"); closed as Won't do ("Closed as Won’t do. Restore it first"); occupied target; derived row; read-only report ("Read-only report"); ended assignment; another person's item; and an unsaved or conflicting change ("Not saved yet. Retry or discard the change first")
+#### Scenario: A refused move announces its reason
 
-#### Scenario: a touch user sees the reason as a message
+- **WHEN** the lead activates a disabled move icon or presses Alt+Arrow on it
+- **THEN** its reason, the same text as its tooltip and accessible description, is announced and nothing moves
 
-- **GIVEN** a device without hover
-- **WHEN** the user taps a disabled arrow or other unavailable icon
-- **THEN** the reason is shown as a message, because tooltips do not open on touch
-- **AND** nothing is changed
+#### Scenario: A touch user sees the reason as a message
 
-#### Scenario: a derived Next row offers Edit and discussion
+- **WHEN** a coarse-pointer user activates a disabled move icon
+- **THEN** the reason shows as a message at the bottom of the screen, because tooltips do not open on touch
 
-- **GIVEN** a Next row derived from a next step of a This week item
-- **WHEN** the row is rendered
-- **THEN** Edit opens the source next step for editing
-- **AND** the week-move arrow is disabled with the reason "Planned from a next step — edit the next step instead"
-- **AND** the discussion icon opens the source record's shared discussion
+#### Scenario: Move is refused for Done, closed, derived and locked records
+
+- **WHEN** a record is Done, closed as Won't do, a derived next step, in a read-only or lost-assignment report, another person's, or has unsaved changes
+- **THEN** its move icon is aria-disabled with the matching reason and no move is applied
+
+#### Scenario: A move on a phone keeps the open tab
+
+- **WHEN** the table is in the tabs layout and a record moves to the other week
+- **THEN** the open tab does not change, and the message offers `Show`, which opens the destination tab only when activated
+
+#### Scenario: A next step moves with its record
+
+- **WHEN** a record with a next step is moved, or a next step is shown under an item
+- **THEN** the next step belongs to its record, moves with it, and shows as a derived `Next step` row under the record in Next week
+- **AND** that derived row's move icon is aria-disabled with its reason, and its Edit control opens the source next step and its discussion is the source record's
+
+#### Scenario: Undo of a move follows the one Undo rule
+
+- **WHEN** the lead activates Undo after a move
+- **THEN** the Undo rule of `lead-status-overview-actions` applies, a refused Undo changes nothing, and restoring text never overwrites text typed since
