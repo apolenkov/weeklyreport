@@ -77,19 +77,36 @@ function cachedSections(
  * Remembers what the server holds for the sections this form writes. A save
  * is issued against one version, so only the section as stored at exactly
  * that version says which unfinished records the save leaves out; it comes
- * from the last write response or, before any write, from the form's read.
- * With no such section the save names nothing and the server decides.
+ * from a write response or the form's read. Capture the derived intent for
+ * that version and kept identities for this editor activation: a later read
+ * must neither remove nor introduce deletion intent on an uncertain retry.
+ * With no such version the save names nothing and the server decides.
  */
 export function useStoredDraftLedger() {
   const trpc = useTRPC();
   const queryClient = useQueryClient();
   const written = useRef(new Map<string, AuthorReportSectionReadModel>());
-  return useMemo(
-    () => ({
-      record: (section: AuthorReportSectionReadModel): void => {
-        written.current.set(section.reportSectionId, section);
-      },
+  const captured = useRef(
+    new Map<string, readonly IncompleteRecordDeletion[]>(),
+  );
+  return useMemo(() => {
+    const record = (section: AuthorReportSectionReadModel): void => {
+      written.current.set(section.reportSectionId, section);
+    };
+    return {
+      record,
       deletionsFor: (save: SavedRecords): IncompleteRecordDeletion[] => {
+        // Intent depends only on these identities, never on private prose.
+        const key = JSON.stringify({
+          section: save.reportSectionId,
+          version: save.version,
+          kept: [
+            ...identified("risk", save.risks),
+            ...identified("decision", save.decisions),
+          ],
+        });
+        const existing = captured.current.get(key);
+        if (existing) return existing.map((entry) => ({ ...entry }));
         const lastWritten = written.current.get(save.reportSectionId);
         const stored = [
           ...(lastWritten ? [lastWritten] : []),
@@ -99,11 +116,12 @@ export function useStoredDraftLedger() {
             section.reportSectionId === save.reportSectionId &&
             section.version === save.version,
         );
-        return stored
+        const intent = stored
           ? deletionIntentsFor(storedIncompleteRecords(stored), save)
           : [];
+        captured.current.set(key, intent);
+        return intent.map((entry) => ({ ...entry }));
       },
-    }),
-    [queryClient, trpc],
-  );
+    };
+  }, [queryClient, trpc]);
 }
