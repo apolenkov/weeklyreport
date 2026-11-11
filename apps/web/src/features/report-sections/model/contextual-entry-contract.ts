@@ -30,15 +30,15 @@ export interface ItemInput {
 
 export interface RiskInput {
   readonly text: string;
-  readonly impact: string;
-  readonly mitigation: string;
+  readonly impact: string | null;
+  readonly mitigation: string | null;
   readonly severity: "at-risk" | "blocked";
   readonly stageNames: readonly string[];
 }
 
 export interface DecisionInput {
   readonly text: string;
-  readonly impact: string;
+  readonly impact: string | null;
   readonly deadline: string;
   readonly stageNames: readonly string[];
 }

@@ -64,11 +64,17 @@ function validateContext(
 export function prepareContextualRisk(
   args: Context & { readonly input: RiskInput },
 ): Result<ReturnType<typeof buildProductRiskEntry>> {
+  const input = {
+    ...args.input,
+    impact: args.input.impact ?? "",
+    mitigation: args.input.mitigation ?? "",
+  };
   const { errors, parent } = validateContext(args, args.input.stageNames);
   Object.assign(
     errors,
     collectRiskErrors({
-      ...args.input,
+      ...input,
+      detailsOptional: true,
       isActivityParent: args.parent.kind === "activity",
       effectiveStageNames: args.input.stageNames,
     }),
@@ -81,7 +87,7 @@ export function prepareContextualRisk(
   const common = {
     existingId: args.identity.id,
     stableId: args.identity.stableId,
-    ...args.input,
+    ...input,
   };
   const record =
     parent.kind === "activity"
@@ -103,11 +109,13 @@ export function prepareContextualDecision(
     readonly authorName: string;
   },
 ): Result<ReturnType<typeof buildProductDecisionSave>> {
+  const input = { ...args.input, impact: args.input.impact ?? "" };
   const { errors, parent } = validateContext(args, args.input.stageNames);
   Object.assign(
     errors,
     collectDecisionErrors({
-      ...args.input,
+      ...input,
+      impactOptional: true,
       availableStages: args.eligibleStages,
       effectiveStageNames: args.input.stageNames,
     }),
@@ -127,7 +135,7 @@ export function prepareContextualDecision(
   const base = buildDecisionSaveBase({
     decision: null,
     ...args.identity,
-    ...args.input,
+    ...input,
     owner: args.authorName,
   });
   const record =

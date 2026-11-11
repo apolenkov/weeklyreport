@@ -117,6 +117,15 @@ The gate freezes the contract. Integration work is divided among explicitly assi
 
 The separate visual, guideline and UX inputs are archived under `/Users/wrk/work/handoffs/task-836/`.
 
+The nullable contract uses the existing `prepareContextualRisk` and
+`prepareContextualDecision` builders. At that boundary, null details become
+blank form-control values; canonical payload serialization writes them as null.
+Primary text, current parent/stage eligibility, explicit severity and decision
+author remain required, and supplied nonblank details keep their text validation.
+Contract tests carry both Product and Activity drafts through the existing
+own-list merge and shared write schema, preserving caller identity and proving
+that incomplete details still block section submission.
+
 ## Verification
 
 Focused tests must first demonstrate failures for contextual week/owner entry, required fields and stage changes, comment empty state, stale/failed persistence, dirty discard and prior-plan identity. Verify exact saved identity on a matching receipt, no duplicates on retry, preservation of other own rows, no foreign leakage, and unchanged prior snapshot. Exercise existing full editor, toolbar, verdict, move, roles and lifecycle. Run the six root gates, strict OpenSpec validation, appropriate guarded database integration and full E2E where the write contract requires it. Inspect the implemented source in a separate browser session at 1280 and 375 with keyboard, focus, empty/error/pending states and screenshots; do not reset or change the owner's current inspection data.

@@ -33,7 +33,7 @@ export function StatusOverviewInlineRiskForm({
           <textarea
             aria-label={label}
             required
-            value={value[key]}
+            value={value[key] ?? ""}
             disabled={view.pending}
             aria-invalid={!!view.errors[key]}
             aria-describedby={view.errors[key] ? `${id}-${key}` : undefined}
