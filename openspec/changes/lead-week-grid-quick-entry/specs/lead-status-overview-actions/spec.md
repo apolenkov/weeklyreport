@@ -210,8 +210,8 @@ The Overview MUST show, top to bottom: a one-line summary of what blocks submiss
 
 #### Scenario: Typed text blocks submission instead of being lost
 
-- **WHEN** an inline composer holds unsaved text or a save is pending and the Lead activates Submit
-- **THEN** submission is blocked, the summary links to the unsaved entry and the text is kept
+- **WHEN** an inline composer or editor holds any unsaved change, including text or stage, or a save is pending, and the Lead activates Submit
+- **THEN** submission is blocked, both the top summary and the end-of-form explanation link to the unsaved entry, and the input is kept
 
 #### Scenario: The full explanation stays at the end
 

@@ -77,6 +77,11 @@ For every prior-week planned item that the Lead can still decide, the Lead Repor
 - **THEN** the plan remains in the answer list and counts as pending review
 - **AND** `Continue` confirms that existing occurrence without creating another
 
+#### Scenario: Undo while the occurrence is being edited is refused
+
+- **WHEN** an editor holds unsaved input for the occurrence produced by a verdict and the Lead activates Undo
+- **THEN** Undo is refused with a request to save or cancel first, and the input is kept
+
 #### Scenario: Undo after a later change is refused
 
 - **WHEN** the Lead edits, moves or discusses the occurrence produced by a verdict and then activates Undo
