@@ -2,7 +2,7 @@
 
 ## Intent and decisions
 
-A Lead works within an existing Product or Activity and a three-week report. Keep the established paper visual system and timeline. Place one quiet add action per editable unit in each of Current and Next, including an empty unit. The chosen lane fixes the week and the unit fixes its parent. Input begins inline; the pencil continues to open the canonical detailed editor. Display the Lead’s eligible product stages as directly selectable labels in the item context and let the Lead start a new item directly from a selected stage in its week; apply a sole eligible stage by the existing default, and keep stale selections visible until the user explicitly resolves them. Selecting a stage for a report item does not alter product-stage assignments or grant administrative rights. The separate global toolbar creation flows remain available.
+A Lead works within an existing Product or Activity and a three-week report; the layout follows the 11.11 direction below. Keep the established paper visual system and timeline. Place one quiet add action per editable unit in each of Current and Next, including an empty unit. The chosen lane fixes the week and the unit fixes its parent. Input begins inline; the pencil continues to open the canonical detailed editor. Display the Lead’s eligible product stages as directly selectable labels in the item context and let the Lead start a new item directly from a selected stage in its week; apply a sole eligible stage by the existing default, and keep stale selections visible until the user explicitly resolves them. Selecting a stage for a report item does not alter product-stage assignments or grant administrative rights. The separate global toolbar creation flows remain available.
 
 Provide similarly compact inline risk and decision entry in the relevant unit context. Risks and decisions belong to the report section and parent rather than to an invented weekly item lane. One action focuses primary text; details expand on demand. Under `../lead-incomplete-record-drafts/design.md`, draft save requires primary text, valid parent/stages, explicit risk severity and authoritative decision owner; absent impact/mitigation is null. A matching receipt confirms an incomplete draft, not a completed record. Section submission requires complete details or explicit identity-targeted deletion. Product stage choice follows owned eligible stages; Activity has no Product stages. Invalid primary input or context remains visibly unsaved.
 
@@ -129,3 +129,15 @@ that incomplete details still block section submission.
 ## Verification
 
 Focused tests must first demonstrate failures for contextual week/owner entry, required fields and stage changes, comment empty state, stale/failed persistence, dirty discard and prior-plan identity. Verify exact saved identity on a matching receipt, no duplicates on retry, preservation of other own rows, no foreign leakage, and unchanged prior snapshot. Exercise existing full editor, toolbar, verdict, move, roles and lifecycle. Run the six root gates, strict OpenSpec validation, appropriate guarded database integration and full E2E where the write contract requires it. Inspect the implemented source in a separate browser session at 1280 and 375 with keyboard, focus, empty/error/pending states and screenshots; do not reset or change the owner's current inspection data.
+
+## Layout direction 11.11 (mockup v2.1, pending owner acceptance)
+
+Source: `/Users/wrk/work/task-836-ux-mocks/v2/index.html` (screen, 16 state templates, 375 preview; before/after captures beside it). The owner judged the three-column grid as cramming too much: every unanswered plan appeared twice and rows did not align.
+
+- Order of work: blocker summary line → "Last week's plan" answer list (one row per unanswered plan across all units; Done / Continue / Next week, Paused and Won't do under the overflow) → grid with This week and Next week only.
+- Last week's column is on demand ("Show last week", remembered per browser), read-only with outcome marks. Answered plans appear in This week with a "from plan" marker; lineage and identity rules are unchanged.
+- Entries are one line: status icon, text, stage as muted text; actions appear on hover/focus and stay visible on touch. Stage changes in place from the stage text.
+- Risks and decisions collapse to a count under the unit name; one "Risk or decision" start with a kind switch. Colour only for severity and submit blockers.
+- Sticky header (week, save state, Submit), column headers and unit name. First lines of all cells in a row align within 2 px.
+- 375: answer list, then This week / Next week tabs; Last week tab only after "Show last week".
+- Defaults decided by the gate (reversible): Paused under overflow; last week hidden by default; risk rows collapsed, expanded from the blocker link; "Add what happened" defaults to Done.

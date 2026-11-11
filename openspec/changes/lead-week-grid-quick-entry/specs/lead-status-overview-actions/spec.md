@@ -2,12 +2,12 @@
 
 ### Requirement: Overview cards MUST expose their actions flat, one click and one menu level
 
-The `/lead/report/:reportId` Report Overview MUST keep the three temporal columns. Each editable Current or Next item MUST rest as one status icon followed by its text, with directly visible labelled stage controls below the text for eligible Product items. The status icon MUST open a menu of statuses; when the item can take a terminal outcome, that same menu MUST end with an outcome entry that opens the existing outcome flow, and no separate "Update status" entry MUST exist. The outcome entry MUST follow the existing eligibility: never on Previous rows, an unconfirmed carry, or a derived Next projection. On pointer hover, keyboard focus within the item, or an open control, a row of icon buttons MUST appear without changing the card's layout or the text's width (on hover devices it floats over the card's corner and steps aside while the inline text editor has focus): Edit (pencil), the week move, the record comment action, and the Plan or Restore recovery action where it applies. Hidden controls MUST stay in the accessibility tree and the Tab order. No control on a Current or Next card MUST open a nested menu, and no overflow menu MUST exist there; the Previously planned verdict controls of `lead-plan-verdict` keep their own menu. On devices without hover the row MUST be visible at all times. The directly visible stage controls MUST present only the Lead's currently owned stages as selectable labels for eligible Product items, including a visible singleton readout when only one stage is owned. They MUST be keyboard operable, write through the current draft with every other item field preserved, and MUST NOT remove a Product item's last stage. Activity, Previously planned and unowned items MUST NOT render stage mutation controls. Operating the status menu, a stage control or a row control with a keyboard MUST return focus to the triggering control, and the three-column lineage MUST stay visible without document-level horizontal overflow. Updating an unconfirmed carried item through the status menu MUST clear its unconfirmed marker without a separate Confirm action. Previously planned content MUST remain read-only: no control in that column edits, moves or changes the status of the prior-week occurrence; the verdict controls defined by `lead-plan-verdict` write only the selected week's occurrence.
+The `/lead/report/:reportId` Report Overview MUST show two temporal columns, This week and Next week, by default. The frozen Previously planned column MUST be available on demand through a "Show last week" control; it is read-only, shows each plan as published with its outcome mark, and has no controls. The show/hide choice MAY be remembered per browser. Each editable Current or Next item MUST rest as one status icon followed by its text and, for Product items, its stage names as muted text on the same line. The status icon MUST open a menu of statuses; when the item can take a terminal outcome, that same menu MUST end with an outcome entry that opens the existing outcome flow, and no separate "Update status" entry MUST exist. The outcome entry MUST follow the existing eligibility: never on Previous rows, an unconfirmed carry, or a derived Next projection. On pointer hover, keyboard focus within the item, or an open control, a row of icon buttons MUST appear without changing the card's layout or the text's width (on hover devices it floats over the card's corner and steps aside while the inline text editor has focus): Edit (pencil), the week move, the record comment action, and the Plan or Restore recovery action where it applies. Hidden controls MUST stay in the accessibility tree and the Tab order. No control on a Current or Next card MUST open a nested menu, and no overflow menu MUST exist there; the Previously planned verdict controls of `lead-plan-verdict` keep their own menu. On devices without hover the row MUST be visible at all times. Activating the stage text of an eligible Product item MUST open, in place, only the Lead's currently owned stages as selectable labels; a sole owned stage stays visible as text. They MUST be keyboard operable, write through the current draft with every other item field preserved, and MUST NOT remove a Product item's last stage. Activity, Previously planned and unowned items MUST NOT render stage mutation controls. Operating the status menu, a stage control or a row control with a keyboard MUST return focus to the triggering control, and the visible temporal columns MUST stay without document-level horizontal overflow. Updating an unconfirmed carried item through the status menu MUST clear its unconfirmed marker without a separate Confirm action. Previously planned content MUST remain read-only: no control in that column edits, moves or changes the status of the prior-week occurrence; the verdict controls defined by `lead-plan-verdict` write only the selected week's occurrence.
 
 #### Scenario: an ordinary active item is shown
 
 - **WHEN** Overview renders an editable Current or Next item with no restore or historical-replan state
-- **THEN** it shows the status icon, its text and, for an eligible Product item, directly visible labelled stage controls
+- **THEN** it shows the status icon, its text and, for a Product item, its stage names as muted text on the same line
 - **AND** no text button and no metadata line is visible until hover or focus
 
 #### Scenario: actions appear on hover without moving the layout
@@ -27,14 +27,14 @@ The `/lead/report/:reportId` Report Overview MUST keep the three temporal column
 #### Scenario: the stage label is set on the card
 
 - **GIVEN** an editable Product item
-- **WHEN** the lead selects a directly visible labelled stage owned by the Lead
+- **WHEN** the lead activates the item's stage text and selects a stage owned by the Lead
 - **THEN** the item's stages update through the canonical draft save path with all other fields preserved
-- **AND** only currently owned stages are selectable without opening a menu or details editor
+- **AND** only currently owned stages are selectable, in place, without opening the details editor
 
 #### Scenario: the last stage cannot be removed
 
 - **GIVEN** an editable Product item with one stage
-- **WHEN** the lead attempts to deselect its directly visible stage label
+- **WHEN** the lead attempts to deselect its only stage label
 - **THEN** that stage cannot be unchecked and the control says a Product update needs a stage
 - **AND** no draft patch is emitted
 
@@ -47,7 +47,7 @@ The `/lead/report/:reportId` Report Overview MUST keep the three temporal column
 
 - **WHEN** the lead operates the status menu, a stage control or a row control with a keyboard, or closes a dialog
 - **THEN** focus returns to the triggering item control or the Overview heading
-- **AND** the three-column lineage remains visible without document-level horizontal overflow
+- **AND** the visible temporal columns remain without document-level horizontal overflow
 
 #### Scenario: an unconfirmed carried item is shown
 
@@ -57,7 +57,7 @@ The `/lead/report/:reportId` Report Overview MUST keep the three temporal column
 
 #### Scenario: prior week remains read-only
 
-- **WHEN** Overview renders Previously planned content
+- **WHEN** the Lead shows last week and Overview renders Previously planned content
 - **THEN** no control edits, moves or changes the status of the prior-week occurrence
 - **AND** verdict controls, when shown, change only the selected week's occurrence
 
@@ -105,13 +105,14 @@ Overview MUST offer contextual inline creation in editable Current and Next unit
 
 #### Scenario: Create a Current item inline
 
-- **WHEN** a Lead selects Add item in an eligible Product's Current week lane
-- **THEN** an inline composer opens with that Product and Current week fixed
+- **WHEN** a Lead selects "Add what happened" in an eligible Product's This week cell
+- **THEN** an inline one-line composer opens with that Product and Current week fixed
+- **AND** Done progress is selected and can be changed before saving
 - **AND** there is no duplicate Add control on each lineage row or solely on the left unit rail
 
 #### Scenario: A new item is created directly in Next
 
-- **WHEN** a Lead selects Add item in an eligible Activity's Next week lane
+- **WHEN** a Lead selects "Plan something" in an eligible Activity's Next week cell
 - **THEN** the inline composer is bound to that Activity and Next week
 - **AND** Planned progress is selected and can be changed before saving
 - **AND** saving unchanged defaults emits one Next item with `workflowStatus=planned`
@@ -151,13 +152,13 @@ Overview MUST offer contextual inline creation in editable Current and Next unit
 
 ### Requirement: Owned product stages are directly selectable in context
 
-An eligible Lead MUST see and select currently owned Product stages directly in creation and on editable items without the full details dialog. Selection MUST respect ownership, minimum-stage and lifecycle validation.
+An eligible Lead MUST see currently owned Product stages as selectable labels in the inline composer and change them on editable items in place, without the full details dialog. Selection MUST respect ownership, minimum-stage and lifecycle validation.
 
 #### Scenario: Choose an available stage while creating an item
 
 - **GIVEN** a product has multiple stages currently assigned to the Lead
 - **WHEN** the Lead begins creating an item for that product and week
-- **THEN** available stages are presented as directly selectable labelled controls
+- **THEN** available stages are presented in the composer as directly selectable labelled controls
 - **AND** choosing one associates that stage with the intended item without opening a separate details editor
 
 #### Scenario: A sole owned stage is unambiguous
@@ -169,14 +170,14 @@ An eligible Lead MUST see and select currently owned Product stages directly in 
 #### Scenario: Select an owned stage on an existing item
 
 - **GIVEN** an eligible editable Current or Next Product item
-- **WHEN** the Lead selects a directly visible owned stage label by pointer or keyboard
+- **WHEN** the Lead activates the item's stage text and selects an owned stage by pointer or keyboard
 - **THEN** the canonical draft save updates its stages while preserving all other item fields
 - **AND** keyboard focus returns to the triggering control and the last selected stage cannot be removed
 
 #### Scenario: A sole owned stage on an existing item
 
 - **WHEN** an eligible Product item has exactly one currently owned stage
-- **THEN** its stage label remains directly visible without opening a menu or details editor
+- **THEN** its stage name remains visible as text without opening a menu or details editor
 - **AND** the last selected stage cannot be removed
 
 #### Scenario: Ineligible items cannot change stages
@@ -196,3 +197,39 @@ An eligible Lead MUST see and select currently owned Product stages directly in 
 - **WHEN** the Lead activates that stage's add-work control
 - **THEN** the inline item composer opens for that product and week with the selected stage visible and preselected
 - **AND** no separate full editor or repeated week selection is required
+
+### Requirement: Overview reads in the Lead's order of work
+
+The Overview MUST show, top to bottom: a one-line summary of what blocks submission, the "Last week's plan" answer list of `lead-plan-verdict`, then the This week / Next week grid by Product and Activity. Week, save state, Submit, column headers and the unit name in view MUST stay visible while scrolling. A blocking item linked from the summary MUST expand its unit and receive focus.
+
+#### Scenario: The Lead sees what blocks submission first
+
+- **WHEN** the report has items that block submission
+- **THEN** a one-line summary above the answer list names each blocking item as a link
+- **AND** activating a link expands the owning unit and focuses that item
+
+#### Scenario: Header and unit stay in view
+
+- **WHEN** the Lead scrolls a long report
+- **THEN** week, save state, Submit, column headers and the current unit name remain visible
+
+#### Scenario: Narrow screens use week tabs
+
+- **WHEN** the Overview renders at 375 CSS pixels
+- **THEN** the answer list stays above the grid, This week and Next week become tabs, and Last week becomes a third tab only after "Show last week"
+- **AND** there is no document-level horizontal overflow and every control has a touch-size target
+
+### Requirement: Overview rows are aligned and quiet
+
+Within a unit row, the unit name and the first line of every cell MUST start at the same vertical position, with no in-cell group headers above the first entry, and entries in a column MUST share one text inset. Colour MUST mark only risk severity and what blocks submission. A unit's risks and decisions MUST appear as a count under the unit name that expands their rows in place.
+
+#### Scenario: Cells in a unit row are aligned
+
+- **WHEN** a unit row renders entries, composers or empty add controls in its cells at 1280 CSS pixels
+- **THEN** the first line of each cell and the unit name start within 2 CSS pixels of each other
+- **AND** entry text in a column shares one left edge
+
+#### Scenario: Risks collapse to a count
+
+- **WHEN** a unit has risks or decisions
+- **THEN** a count with the highest severity shows under the unit name and expands the rows in place on activation

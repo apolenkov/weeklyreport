@@ -18,8 +18,8 @@ A Lead MUST be able to enter minimum-input risk and decision drafts inline under
 
 #### Scenario: A record is started from its reporting unit
 
-- **WHEN** a Lead uses the Risk or Decision start of an editable Product or Activity in the Overview
-- **THEN** the record editor opens with that Product or Activity as the parent, without a guessed stage, and nothing is created until the Lead saves
+- **WHEN** a Lead uses the "Risk or decision" start of an editable Product or Activity in the Overview and picks the kind
+- **THEN** the record editor opens with that Product or Activity as the parent, without a guessed stage when several are owned, and nothing is created until the Lead saves
 - **AND** a read-only or historical unit offers no such start
 
 #### Scenario: Ownership changes before submission
@@ -48,6 +48,20 @@ A Lead MUST be able to enter minimum-input risk and decision drafts inline under
 
 - **WHEN** a Lead creates an item, risk or decision using keyboard or at 375 CSS pixels
 - **THEN** owner and week remain understandable, actions and focus are reachable without hover or document-level horizontal overflow, and failures are announced with a recovery path
+
+### Requirement: Each unit offers one start for a risk or decision
+
+Each editable Product or Activity MUST offer one "Risk or decision" start whose inline composer has a visible kind switch defaulting to Risk. When the unit has records, the start is inside its expanded record list; otherwise it is directly under the unit name.
+
+#### Scenario: A unit without records
+
+- **WHEN** an editable unit has no risks or decisions
+- **THEN** "Risk or decision" is shown under the unit name and opens the composer for that unit
+
+#### Scenario: Switching the kind keeps the text
+
+- **WHEN** the Lead types text and switches the kind from Risk to Decision
+- **THEN** the text is kept and the required fields change to those of a decision
 
 ### Requirement: A contextual record is confirmed by its saved identity
 
