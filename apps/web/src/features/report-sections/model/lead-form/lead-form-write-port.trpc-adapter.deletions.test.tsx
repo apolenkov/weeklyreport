@@ -15,6 +15,12 @@ const section = makeReportSectionFixture({
   authorId: "33333333-3333-4333-8333-333333333333",
   authorName: "Test Lead",
 });
+const readMetadata = {
+  readOnly: false,
+  canRequestReopen: false,
+  reopenBlockedReason: null,
+  publishedLineage: { itemStableIds: [], decisionStableIds: [] },
+};
 
 function buildHarness() {
   const { proxy, captured } = createMockTRPC([
@@ -41,13 +47,111 @@ function buildHarness() {
       </QueryClientProvider>
     );
   }
-  return { Wrapper, captured };
+  return { Wrapper, captured, queryClient, proxy };
 }
 
 // The server deletes an unfinished risk or decision only when a save names it
 // (openspec: lead-incomplete-record-drafts), so the adapter remembers what the
 // last write left stored.
 describe("useLeadFormWritePort — unfinished records", () => {
+  it.each([true, false])(
+    "keeps deletion intent across changed reads (initial read: %s)",
+    async (initialRead) => {
+      const { Wrapper, captured, queryClient, proxy } = buildHarness();
+      const stableId = "44444444-4444-4444-8444-444444444444";
+      const queryKey = proxy.leadForm.byPeriod.queryKey({
+        reportId: section.reportId,
+      });
+      const initialSection = {
+        ...section,
+        version: 1,
+        risks: [
+          {
+            id: stableId,
+            stableId,
+            projectId: null,
+            activityId: null,
+            risk: "Unfinished risk",
+            impact: null,
+            mitigation: null,
+            severity: "at-risk" as const,
+            stageNames: [],
+          },
+        ],
+      };
+      if (initialRead)
+        queryClient.setQueryData(queryKey, {
+          ...readMetadata,
+          section: initialSection,
+        });
+      const saveDraft = expectDefined(captured["reports.saveDraft"]).mutationFn;
+      saveDraft.mockRejectedValue(new Error("Response lost"));
+      const { result } = renderHook(
+        () => useLeadFormWritePort(section.reportSectionId),
+        { wrapper: Wrapper },
+      );
+      const request = {
+        reportSectionId: section.reportSectionId,
+        version: 1,
+        status: "draft" as const,
+        projectStatuses: [],
+        stageStatuses: [],
+        activityStatuses: [],
+        items: [],
+        risks: [],
+        decisions: [],
+      };
+      await act(async () => {
+        await expect(result.current.saveDraft(request)).rejects.toMatchObject({
+          kind: "ambiguous",
+        });
+      });
+      expect(
+        (saveDraft.mock.calls[0]?.[0] as { deletedIncompleteRecords?: unknown })
+          .deletedIncompleteRecords,
+      ).toEqual(initialRead ? [{ kind: "risk", stableId }] : undefined);
+      await act(async () => {
+        await expect(
+          result.current.saveDraft({ ...request, risks: initialSection.risks }),
+        ).rejects.toMatchObject({ kind: "ambiguous" });
+      });
+      expect(saveDraft.mock.calls[1]?.[0]).not.toHaveProperty(
+        "deletedIncompleteRecords",
+      );
+      // An authorized read sees the committed deletion. It is not the original
+      // request: its retry must still carry the original expected version/intent.
+      await act(() =>
+        queryClient.setQueryData(queryKey, {
+          ...readMetadata,
+          section: initialRead
+            ? { ...section, version: 2, risks: [] }
+            : initialSection,
+        }),
+      );
+      await act(async () => {
+        await expect(
+          result.current.saveDraft(structuredClone(request)),
+        ).rejects.toMatchObject({ kind: "ambiguous" });
+      });
+      expect(saveDraft.mock.calls[2]?.[0]).toEqual(
+        saveDraft.mock.calls[0]?.[0],
+      );
+      // A later new-version write derives its own intent, not the old request's.
+      queryClient.setQueryData(queryKey, {
+        ...readMetadata,
+        section: { ...section, version: 2, risks: [] },
+      });
+      await act(async () => {
+        await expect(
+          result.current.saveDraft({ ...request, version: 2 }),
+        ).rejects.toMatchObject({ kind: "ambiguous" });
+      });
+      expect(saveDraft.mock.calls[3]?.[0]).not.toHaveProperty(
+        "deletedIncompleteRecords",
+      );
+    },
+  );
+
   it("names the stored unfinished records a later save leaves out", async () => {
     const { Wrapper, captured } = buildHarness();
     const RISK = "44444444-4444-4444-8444-444444444444";

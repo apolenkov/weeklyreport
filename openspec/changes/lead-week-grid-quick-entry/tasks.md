@@ -57,3 +57,11 @@
   still emits intent for the host to reconcile. Component checks cover these
   states. Record host integration, persistence receipts, cancellation recovery
   and complete browser journeys remain in packages 2 and 7.
+
+The existing stored-draft ledger captures deletion intent by expected section
+version and kept record identities. A later authorized read cannot add or remove
+that intent from an uncertain retry, including when the initial read was absent.
+Adapter tests compare the full outgoing request across both read changes and
+verify that a new-version write derives its own intent. This is the transport
+part of package 2; contextual host cancellation and guarded end-to-end acceptance
+remain open.
