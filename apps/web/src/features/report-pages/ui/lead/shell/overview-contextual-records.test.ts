@@ -132,8 +132,6 @@ describe("contextual record preparation", () => {
       ok: false,
       errors: {
         text: expect.any(String) as string,
-        impact: expect.any(String) as string,
-        mitigation: expect.any(String) as string,
       },
     });
     expect(
@@ -146,7 +144,6 @@ describe("contextual record preparation", () => {
       ok: false,
       errors: {
         text: expect.any(String) as string,
-        impact: expect.any(String) as string,
         deadline: expect.any(String) as string,
         authorName: expect.any(String) as string,
       },
