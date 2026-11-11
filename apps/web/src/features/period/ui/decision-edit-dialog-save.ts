@@ -107,6 +107,7 @@ export function runDecisionSave(args: {
     availableStages: args.model.availableStages,
     effectiveStageNames: args.model.effectiveStageNames,
     impactOptional: isDecisionImpactOptional(args.input),
+    publishedLocked: args.input.publishedLocked,
   });
   if (Object.keys(errors).length > 0) {
     args.fields.setErrors(errors);

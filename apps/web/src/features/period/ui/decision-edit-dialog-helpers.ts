@@ -21,14 +21,20 @@ export function collectDecisionErrors(args: {
   readonly effectiveStageNames: readonly string[];
   // An author's unfinished decision may be saved before its impact is written.
   readonly impactOptional?: boolean;
+  readonly publishedLocked?: boolean | undefined;
 }): DecisionFieldErrors {
   const stageRequired =
     args.availableStages.length > 0 && args.effectiveStageNames.length === 0;
   return {
     ...decisionProseError("Decision text", args.text, "text"),
-    ...(args.impactOptional === true && args.impact.trim().length === 0
-      ? {}
-      : decisionProseError("Impact", args.impact, "impact")),
+    ...(args.publishedLocked === true && args.impact.trim().length === 0
+      ? {
+          impact:
+            "This decision has been published. Restore its Impact or enter a new one.",
+        }
+      : args.impactOptional === true && args.impact.trim().length === 0
+        ? {}
+        : decisionProseError("Impact", args.impact, "impact")),
     ...(stageRequired ? { stageNames: "Select at least one stage." } : {}),
   };
 }
