@@ -2,7 +2,7 @@
 
 ### Requirement: Overview week moves MUST be reachable from hover icons and keyboard shortcuts
 
-Each editable Current or Next item in the Report Overview MUST expose an icon cluster revealed on pointer hover and on keyboard focus within the item, and always visible on touch: the applicable week-move icon (toward Next for Current, toward Current for Next), an edit icon, and a comment icon, with no overflow menu. Eligible editable Current and Next Product items MUST instead expose directly visible, keyboard-operable labelled controls for the Lead's currently owned stages, including a singleton readout; Activity, Previously planned and unowned items MUST NOT offer stage mutation controls. Stage changes MUST use the canonical draft save path, preserve all other fields and MUST NOT remove the last stage. Keyboard operation MUST return focus to the triggering stage control. The week-move icon MUST move the occurrence through the canonical draft and autosave path, following the placement-or-acknowledgement contract in `record-status-derivation`; a move that would create a second active occurrence for the same `stableId` in the target week MUST be rejected without writing. With keyboard focus on the card, `Alt+ArrowRight` MUST move a Current item to Next and `Alt+ArrowLeft` MUST move a Next item to Current.
+Each editable Current or Next item in the Report Overview MUST expose an icon cluster revealed on pointer hover and on keyboard focus within the item, and always visible on touch: the applicable week-move icon (toward Next for Current, toward Current for Next), an edit icon, and a comment icon, with no overflow menu. Eligible editable Current and Next Product items MUST show their stage names as text that, when activated by pointer or keyboard, offers the Lead's currently owned stages as selectable labels in place; Activity, Previously planned and unowned items MUST NOT offer stage mutation controls. Stage changes MUST use the canonical draft save path, preserve all other fields and MUST NOT remove the last stage. Keyboard operation MUST return focus to the triggering stage control. The week-move icon MUST move the occurrence through the canonical draft and autosave path, following the placement-or-acknowledgement contract in `record-status-derivation`; a move that would create a second active occurrence for the same `stableId` in the target week MUST be rejected without writing. With keyboard focus on the card, `Alt+ArrowRight` MUST move a Current item to Next and `Alt+ArrowLeft` MUST move a Next item to Current.
 
 #### Scenario: the week-move icon moves an item
 
@@ -42,6 +42,6 @@ Each editable Current or Next item in the Report Overview MUST expose an icon cl
 
 - **WHEN** the lead activates the edit icon on an editable item
 - **THEN** the canonical item editor opens in a dialog with that item selected
-- **AND** no overflow menu is needed to reach edit, move or the directly visible stage labels
+- **AND** no overflow menu is needed to reach edit, move or the in-place stage labels
 - **WHEN** the lead activates the comment icon
 - **THEN** the existing record comment flow opens for that record

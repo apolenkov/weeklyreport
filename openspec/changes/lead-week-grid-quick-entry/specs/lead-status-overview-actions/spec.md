@@ -130,7 +130,7 @@ Overview MUST offer contextual inline creation in editable Current and Next unit
 
 #### Scenario: Save and add another succeeds
 
-- **WHEN** the Lead enters a valid inline item and activates Save and add another or presses Ctrl+Shift+Enter / Cmd+Shift+Enter
+- **WHEN** the Lead enters a valid inline item and presses Enter in the one-line composer, activates Save and add another, or presses Ctrl+Shift+Enter / Cmd+Shift+Enter in the detailed editor
 - **THEN** the item is persisted through the canonical draft path and the composer remains for the same owner and week
 - **AND** the entry fields clear and focus returns to the description only if the current input still matches the confirmed submitted snapshot
 - **AND** newer input typed while the save was pending is retained and is not claimed as part of the confirmed item
@@ -208,6 +208,16 @@ The Overview MUST show, top to bottom: a one-line summary of what blocks submiss
 - **THEN** a one-line summary above the answer list names each blocking item as a link
 - **AND** activating a link expands the owning unit and focuses that item
 
+#### Scenario: Typed text blocks submission instead of being lost
+
+- **WHEN** an inline composer holds unsaved text or a save is pending and the Lead activates Submit
+- **THEN** submission is blocked, the summary links to the unsaved entry and the text is kept
+
+#### Scenario: The full explanation stays at the end
+
+- **WHEN** the Lead reaches the end of the report
+- **THEN** the submission explanation of `lead-completion-guidance` is shown there in normal flow
+
 #### Scenario: Header and unit stay in view
 
 - **WHEN** the Lead scrolls a long report
@@ -228,6 +238,11 @@ Within a unit row, the unit name and the first line of every cell MUST start at 
 - **WHEN** a unit row renders entries, composers or empty add controls in its cells at 1280 CSS pixels
 - **THEN** the first line of each cell and the unit name start within 2 CSS pixels of each other
 - **AND** entry text in a column shares one left edge
+
+#### Scenario: An item with several stages
+
+- **WHEN** a Product item has several stages
+- **THEN** all its stage names are shown as muted text after the description
 
 #### Scenario: Risks collapse to a count
 
