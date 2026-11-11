@@ -32,22 +32,42 @@ export function overviewRecordScopeReason(
   return null;
 }
 
+// The engine keeps a save barrier until an attempt's exact receipt or an explicit
+// abandon, and only an editable composer can drive that release. A read-only
+// composer therefore stays open while one of its attempts is unresolved.
+export function holdsUnresolvedAttempt(
+  editor: ReadyEditor | null,
+  submission: OverviewRecordSubmission,
+): boolean {
+  if (
+    submission.phase === "not-sent" ||
+    submission.phase === "restoring" ||
+    submission.discard?.notSent === true
+  )
+    return true;
+  const recovery = editor?.draft.saveRecovery;
+  return (
+    !!recovery &&
+    (recovery.token === submission.token ||
+      recovery.token === submission.discard?.token)
+  );
+}
+
 export function canCloseSubmittedRecord(
   editor: ReadyEditor | null,
   state: OverviewRecordState,
 ): boolean {
-  if (!state.submission) return false;
-  if (
-    isRecordScopeDetached(editor, state) ||
-    state.submission.phase === "unresolved"
-  )
+  const submission = state.submission;
+  if (!submission) return false;
+  if (isRecordScopeDetached(editor, state) || submission.phase === "unresolved")
     return true;
   return (
     !!editor &&
     editor.view.viewModel.isReadOnly &&
     !editor.draft.autosave.isInFlight &&
     (editor.draft.saveRecovery?.pendingTransports ?? 0) === 0 &&
-    editor.draft.saveRecovery?.phase !== "pending"
+    editor.draft.saveRecovery?.phase !== "pending" &&
+    !holdsUnresolvedAttempt(editor, submission)
   );
 }
 

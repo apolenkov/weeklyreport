@@ -114,5 +114,9 @@ Each intended contextual risk or decision MUST retain one stable lineage through
 #### Scenario: A submitted composer becomes read-only
 
 - **WHEN** the report becomes read-only and no transport for the submitted input remains pending
+- **AND** the submitted attempt holds no unresolved save outcome: its original and cancellation are neither ambiguous nor needing reconciliation, and no unsent attempt still holds the autosave barrier
 - **THEN** the author can explicitly close the editor without compensation or a new write
 - **AND** a notice explains that closing does not undo an earlier save and its outcome must be checked in the report
+- **WHEN** the report becomes read-only while the submitted attempt holds an unresolved save outcome (an ambiguous or reconciling recovery, or an unsent attempt that still holds the barrier)
+- **THEN** the composer stays open with its input and a notice that the save is not resolved, so the engine barrier never outlives its composer
+- **AND** the requested cancellation resumes once the report is editable again: an ambiguous original is retried once through its identical request and reconciled before any compensation, and an unsent attempt is restored from its unchanged local lineage before the barrier is released

@@ -12,6 +12,7 @@ import {
 } from "../../../../report-sections/client";
 import {
   canCloseSubmittedRecord,
+  holdsUnresolvedAttempt,
   overviewRecordEligibleStages,
   overviewRecordScopeReason,
 } from "./overview-record-context";
@@ -69,13 +70,19 @@ function recordView(
 ): RiskComposerProps["view"] {
   const { pending, retry, recoveryMessage } = recordSaveProgress(editor, state);
   const detached = canCloseSubmittedRecord(editor, state);
+  const unresolved =
+    (!editor || editor.view.viewModel.isReadOnly) &&
+    state.submission !== null &&
+    holdsUnresolvedAttempt(editor, state.submission);
   return {
     eligibleStages: overviewRecordEligibleStages(editor, state),
     authorName: editor?.draft.section.authorName ?? "Unavailable",
     errors: state.errors,
     message: detached
       ? "This input cannot be saved from this editor. Closing it does not undo an earlier save, which may still finish. Check the report before creating another record."
-      : (blocked ?? state.message ?? recoveryMessage),
+      : unresolved
+        ? "The save is not resolved and the report is not editable. Your input is kept here; this editor stays open until the save is resolved. Reload the report if the save needs reconciliation."
+        : (blocked ?? state.message ?? recoveryMessage),
     cancelLabel: detached ? "Close editor" : "Cancel",
     dirty: isRecordInputEdited(state),
     pending: !blocked && !detached && pending,

@@ -336,3 +336,123 @@ describe.each(["risk", "decision"] as const)("%s recovery exits", (kind) => {
     expect(result.current.record.state?.value.stageNames).toEqual(["Testing"]);
   });
 });
+
+describe("a read-only composer with an unresolved save outcome", () => {
+  const editAfterReadOnlyClose = "Edit after the read-only close";
+
+  it.each(["risk", "decision"] as const)(
+    "does not leave the %s save barrier without a composer after an ambiguous original",
+    async (kind) => {
+      const first = Promise.withResolvers<ReportSectionReadModel>();
+      const h = buildRecordEditorHarness((request) =>
+        h.calls.length === 1
+          ? first.promise
+          : Promise.resolve(h.reply(request)),
+      );
+      const { result, rerender } = renderHook(
+        (readOnly: boolean) => h.useEditor({ readOnly }),
+        { initialProps: false, wrapper: h.wrapper },
+      );
+      act(() =>
+        result.current.record.open({
+          kind,
+          unitKind: "activity",
+          unitId: ACTIVITY_ID,
+        }),
+      );
+      act(() => enter(result.current, "Ambiguous composer"));
+      act(() => result.current.record.submit());
+      await settle();
+      expect(h.calls).toHaveLength(1);
+      rerender(true);
+      await act(async () => {
+        first.reject(new LeadFormWriteError("ambiguous", "Response was lost"));
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(result.current.draft.saveRecovery?.phase).toBe("ambiguous");
+      act(() => result.current.record.close());
+      rerender(false);
+      await settle();
+      act(() =>
+        result.current.draft.apply({
+          kind: "item-patch",
+          itemId: CURRENT_ITEM_ID,
+          patch: { text: editAfterReadOnlyClose },
+        }),
+      );
+      const callsBeforeEdit = h.calls.length;
+      await act(async () => vi.advanceTimersByTimeAsync(5000));
+      expect(h.calls.length).toBeGreaterThan(callsBeforeEdit);
+      expect(h.calls.at(-1)?.items).toContainEqual(
+        expect.objectContaining({
+          id: CURRENT_ITEM_ID,
+          text: editAfterReadOnlyClose,
+        }),
+      );
+    },
+  );
+
+  it.each(["risk", "decision"] as const)(
+    "does not leave the %s save barrier without a composer after a not-sent original",
+    async (kind) => {
+      const first = Promise.withResolvers<ReportSectionReadModel>();
+      const h = buildRecordEditorHarness((request) =>
+        h.calls.length === 1
+          ? first.promise
+          : Promise.resolve(h.reply(request)),
+      );
+      const { result, rerender } = renderHook(
+        (readOnly: boolean) => h.useEditor({ readOnly }),
+        { initialProps: false, wrapper: h.wrapper },
+      );
+      act(() =>
+        result.current.draft.apply({
+          kind: "item-patch",
+          itemId: CURRENT_ITEM_ID,
+          patch: { text: "Other edit" },
+        }),
+      );
+      act(() => {
+        void result.current.draft.save();
+      });
+      await settle();
+      act(() =>
+        result.current.record.open({
+          kind,
+          unitKind: "activity",
+          unitId: ACTIVITY_ID,
+        }),
+      );
+      act(() => enter(result.current, "Keep my record"));
+      act(() => result.current.record.submit());
+      await settle();
+      rerender(true);
+      await act(async () => {
+        // A non-conflict failure drops the queued attempt without starting
+        // the stale-revert reseed, which would hold autosave for its own reason.
+        first.reject(new LeadFormWriteError("error", "Earlier save failed"));
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(result.current.record.state?.submission?.phase).toBe("not-sent");
+      act(() => result.current.record.close());
+      rerender(false);
+      await settle();
+      act(() =>
+        result.current.draft.apply({
+          kind: "item-patch",
+          itemId: CURRENT_ITEM_ID,
+          patch: { text: editAfterReadOnlyClose },
+        }),
+      );
+      const callsBeforeEdit = h.calls.length;
+      await act(async () => vi.advanceTimersByTimeAsync(5000));
+      expect(h.calls.length).toBeGreaterThan(callsBeforeEdit);
+      expect(h.calls.at(-1)?.items).toContainEqual(
+        expect.objectContaining({
+          id: CURRENT_ITEM_ID,
+          text: editAfterReadOnlyClose,
+        }),
+      );
+    },
+  );
+});
