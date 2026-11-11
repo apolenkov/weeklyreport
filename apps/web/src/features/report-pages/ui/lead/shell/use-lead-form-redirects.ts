@@ -3,6 +3,10 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect } from "react";
 
+import {
+  readRetainedDraftCopy,
+  writeRetainedDraftCopy,
+} from "../../../../../shared/lib/navigation/retained-draft-copy";
 import { getScalarSearchParam } from "../../../../../shared/lib/navigation/scalar-search-param";
 
 interface UseLeadFormRedirectsInput {
@@ -47,6 +51,7 @@ export function useLeadFormRedirects({
     if (shouldRouteHeadLikeAwayFromLeadForm) return;
     if (!activeReportId) return;
     const next = feedbackQuery();
+    writeRetainedDraftCopy(next, readRetainedDraftCopy(searchParams));
     const authorId = getScalarSearchParam(searchParams, "authorId");
     if (authorId) next.set("authorId", authorId);
     if (canonicalMode) next.set("mode", canonicalMode);

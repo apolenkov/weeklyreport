@@ -1,10 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type {
-  RetainedIncompleteRecordsOutput,
-  RetainedReadOnlyReason,
-} from "@weeklyreport/shared";
+import type { RetainedIncompleteRecordsOutput } from "@weeklyreport/shared";
 import {
   Dialog,
   DialogContent,
@@ -15,8 +12,13 @@ import Link from "next/link";
 import { toast } from "sonner";
 
 import { useQueryErrorHandler } from "../../../../shared/hooks/query/use-query-error-handler";
+import {
+  type RetainedDraftCopySource,
+  writeRetainedDraftCopy,
+} from "../../../../shared/lib/navigation/retained-draft-copy";
 import { useTRPC } from "../../../../shared/lib/trpc/trpc-context";
 import { LEAD_REPORT_ROUTE } from "../../../../shared/ui/navigation/nav-links";
+import { retainedDraftSourceReason } from "../../model/retained-draft-source";
 
 /** The history entry whose kept drafts the dialog reads. */
 export interface RetainedDraftsSource {
@@ -35,19 +37,6 @@ type AvailableDrafts = Extract<
   { status: "available" }
 >;
 
-// Why the drafts cannot be edited here (openspec:
-// lead-retained-incomplete-records). An unpublished source is never said to
-// have been left out of a publication.
-const READ_ONLY_REASON: Record<RetainedReadOnlyReason, string> = {
-  published:
-    "This report is published and can no longer be edited, so these drafts are read-only.",
-  archived: "This report is archived, so these drafts are read-only.",
-  "not-current":
-    "This report is no longer your current one, so these drafts are read-only.",
-  reopened:
-    "This report was reopened. Finish these drafts in the report form; here they are read-only.",
-};
-
 const BUTTON_CLASS =
   "btn-press inline-flex min-h-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-[var(--radius-pill)] border border-[var(--color-border)] bg-transparent px-3 py-1.5 text-sm font-semibold text-[var(--color-foreground)] transition-colors hover:bg-[var(--color-surface-hover)] sm:min-h-0";
 
@@ -56,6 +45,7 @@ interface DraftText {
   readonly kind: "Risk" | "Decision";
   readonly text: string;
   readonly details: readonly (readonly [label: string, value: string])[];
+  readonly copySource: RetainedDraftCopySource;
 }
 
 const present = (
@@ -68,6 +58,12 @@ function toDraftTexts(drafts: AvailableDrafts): readonly DraftText[] {
     ...drafts.risks.map((risk) => ({
       key: `risk-${risk.stableId}`,
       kind: "Risk" as const,
+      copySource: {
+        reportId: drafts.reportId,
+        reportSectionId: drafts.reportSectionId,
+        kind: "risk" as const,
+        stableId: risk.stableId,
+      },
       text: risk.risk,
       details: present([
         ["Impact", risk.impact],
@@ -78,6 +74,12 @@ function toDraftTexts(drafts: AvailableDrafts): readonly DraftText[] {
     ...drafts.decisions.map((decision) => ({
       key: `decision-${decision.stableId}`,
       kind: "Decision" as const,
+      copySource: {
+        reportId: drafts.reportId,
+        reportSectionId: drafts.reportSectionId,
+        kind: "decision" as const,
+        stableId: decision.stableId,
+      },
       text: decision.text,
       details: present([
         ["Owner", decision.owner],
@@ -103,8 +105,10 @@ async function copyDraft(draft: DraftText): Promise<void> {
 }
 
 function DraftRow({ draft }: { readonly draft: DraftText }) {
+  const query = new URLSearchParams();
+  writeRetainedDraftCopy(query, draft.copySource);
   return (
-    <li className="flex items-start justify-between gap-3 border-t border-[var(--color-border-subtle)] py-3 first:border-t-0 first:pt-0">
+    <li className="grid gap-3 border-t border-[var(--color-border-subtle)] py-3 first:border-t-0 first:pt-0">
       <div className="min-w-0">
         <p className="text-xs font-semibold text-[var(--color-muted-foreground)]">
           {draft.kind}
@@ -123,14 +127,23 @@ function DraftRow({ draft }: { readonly draft: DraftText }) {
           </dl>
         )}
       </div>
-      <button
-        type="button"
-        className={BUTTON_CLASS}
-        aria-label={`Copy ${draft.kind.toLowerCase()} text: ${draft.text}`}
-        onClick={() => void copyDraft(draft)}
-      >
-        Copy text
-      </button>
+      <div className="flex flex-wrap gap-2">
+        <Link
+          href={`${LEAD_REPORT_ROUTE}?${query.toString()}`}
+          className={BUTTON_CLASS}
+          aria-label={`Copy ${draft.kind.toLowerCase()} to current report: ${draft.text}`}
+        >
+          Copy to current report
+        </Link>
+        <button
+          type="button"
+          className={BUTTON_CLASS}
+          aria-label={`Copy ${draft.kind.toLowerCase()} text: ${draft.text}`}
+          onClick={() => void copyDraft(draft)}
+        >
+          Copy text
+        </button>
+      </div>
     </li>
   );
 }
@@ -139,7 +152,7 @@ function AvailableBody({ drafts }: { readonly drafts: AvailableDrafts }) {
   return (
     <>
       <p className="text-sm text-[var(--color-foreground)]">
-        {READ_ONLY_REASON[drafts.readOnlyReason]}
+        {retainedDraftSourceReason(drafts.readOnlyReason)}
       </p>
       <ul className="max-h-[50vh] overflow-y-auto">
         {toDraftTexts(drafts).map((draft) => (
@@ -147,9 +160,9 @@ function AvailableBody({ drafts }: { readonly drafts: AvailableDrafts }) {
         ))}
       </ul>
       <p className="text-[13px] text-[var(--color-muted-foreground)]">
-        To continue one, copy its text and add it to your current report.
-        Nothing is added for you, and these drafts are kept only as long as the
-        report keeps them.
+        Copy to your current report to choose an eligible context and review the
+        details. Nothing is added until you save. These source drafts stay
+        unchanged and are available only as long as the report keeps them.
       </p>
     </>
   );
@@ -205,7 +218,7 @@ function DialogBody({ source }: { readonly source: RetainedDraftsSource }) {
 /**
  * Private, read-only view of the unfinished risks and decisions one of the
  * author's own past sections still keeps. Copying is explicit and goes through
- * the clipboard: opening the view never creates or changes a record.
+ * a separate create composer: opening the view never creates or changes a record.
  */
 export function RetainedDraftsDialog({
   source,

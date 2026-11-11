@@ -1,4 +1,8 @@
 export { hasCompleteRiskDetails } from "./model/alarms/risk-completeness";
+export {
+  confirmSavedRecord,
+  confirmSavedRecordRemoval,
+} from "./model/autosave/autosave-record-confirmation";
 export type {
   CommentsViewProps,
   DecisionComposerProps,
@@ -45,6 +49,7 @@ export {
   ownedStagesForProject,
 } from "./model/lead-form";
 export type { DraftPatch } from "./model/lead-form/draft/lead-form-draft-patch";
+export { matchesCreatedRecord } from "./model/lead-form/draft/lead-form-draft-record";
 export type { LeadFormGeneration } from "./model/lead-form/lead-form-generation";
 export { leadFormGenerationOf } from "./model/lead-form/lead-form-generation";
 export type {
@@ -163,6 +168,9 @@ export {
 export { StageChip } from "./ui/stage-chip";
 export { StageStep } from "./ui/stage-step";
 export { StatusOverview } from "./ui/status-overview";
-export type { StatusOverviewEditorSlot } from "./ui/status-overview-editor-slot";
+export type {
+  StatusOverviewEditorSlot,
+  StatusOverviewRecordSlot,
+} from "./ui/status-overview-editor-slot";
 export { StatusOverviewInlineItemEditor } from "./ui/status-overview-inline-item-editor";
 export { unfinishedRecordLabel } from "./ui/unfinished-record-label";

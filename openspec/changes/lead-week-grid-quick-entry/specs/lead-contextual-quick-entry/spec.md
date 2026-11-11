@@ -78,3 +78,27 @@ Each intended contextual risk or decision MUST retain one stable lineage through
 - **THEN** the original outcome is reconciled before cancellation is reported complete
 - **AND** any confirmed compensation removes only the unchanged intended lineage from current state and is itself persisted and confirmed
 - **AND** newer edits and unrelated records are retained, with an explicit conflict if safe compensation is not possible
+
+#### Scenario: A contextual save never reaches dispatch
+
+- **WHEN** a pending report command refuses the local patch, or a failed earlier save removes the contextual attempt from the queue before dispatch
+- **THEN** the composer retains its input and offers a functioning retry and cancellation path without reporting success
+- **AND** an unchanged local patch from the dropped attempt is restored before its save barrier is released; unrelated records and later typing remain intact
+
+#### Scenario: A submitted composer survives page navigation
+
+- **WHEN** a submitted composer is retained across navigation and the returning editor has a new activation
+- **THEN** its old request is not replayed or compensated through the new activation
+- **AND** the author can explicitly close the retained editor with a notice that closing does not undo the earlier save and that its outcome must be checked in the report
+
+#### Scenario: Required reads briefly fail during a contextual save
+
+- **WHEN** the editor is temporarily unavailable while an existing save or compensation is in flight or queued
+- **THEN** the original attempt remains associated with its result through recovery of the same activation
+- **AND** its exact scoped receipt confirms the save, or a dropped queue result retains working retry and cancellation without duplicating the request
+
+#### Scenario: A submitted composer becomes read-only
+
+- **WHEN** the report becomes read-only and no transport for the submitted input remains pending
+- **THEN** the author can explicitly close the editor without compensation or a new write
+- **AND** a notice explains that closing does not undo an earlier save and its outcome must be checked in the report

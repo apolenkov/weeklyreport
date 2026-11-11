@@ -44,6 +44,7 @@ export interface DecisionInput {
 }
 
 interface CommonView {
+  readonly cancelLabel?: string;
   readonly eligibleStages: readonly string[];
   readonly authorName: string;
   readonly errors: Readonly<Record<string, string>>;

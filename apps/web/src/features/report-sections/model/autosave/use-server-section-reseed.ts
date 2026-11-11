@@ -3,7 +3,10 @@
 import type { ReportSectionReadModel } from "@weeklyreport/shared";
 import { type Dispatch, type SetStateAction, useEffect } from "react";
 
-import { sectionToDraftPayload } from "../lead-section-draft-payload";
+import {
+  countLocalOnlyRows,
+  sectionToDraftPayload,
+} from "../lead-section-draft-payload";
 import type { AutosaveController } from "./autosave-types";
 import { encodeDraftSaveComparisonKey } from "./draft-save-comparison-key";
 import {
@@ -46,14 +49,21 @@ function findExactSaveEcho(
 }
 
 function reconcileWithEcho(echo: PendingSaveEcho) {
-  return (current: ReportSectionReadModel | null) =>
-    current
-      ? reconcileSavedIdentities(
-          current,
-          echo.savedSection,
-          echo.persistedPayload,
-        )
-      : current;
+  return (current: ReportSectionReadModel | null) => {
+    if (!current) return current;
+    const reconciled = reconcileSavedIdentities(
+      current,
+      echo.savedSection,
+      echo.persistedPayload,
+    );
+    const currentKey = encodeDraftSaveComparisonKey(
+      sectionToDraftPayload(reconciled),
+    );
+    return currentKey === echo.serverDraftKey &&
+      countLocalOnlyRows(reconciled) === 0
+      ? echo.savedSection
+      : reconciled;
+  };
 }
 
 // An unsettled original write keeps the draft frozen; once the server has
@@ -159,7 +169,9 @@ export function useServerSectionReseed({
     }
 
     ledger.consume(serverDraftKey, revision);
-    if (trigger === "save-echo" && hasLocalEdits && saveEcho) {
+    if (trigger === "save-echo" && saveEcho) {
+      // A child may patch the draft on the receipt before this parent's effect
+      // runs. Reconcile against current state even if this render was clean.
       autosave.primeBaseline(serverDraftKey);
       setDraftSection(reconcileWithEcho(saveEcho));
       return;

@@ -36,22 +36,7 @@ function PreviousUnavailableNotice({
   );
 }
 
-export function StatusOverviewUnitRow({
-  health,
-  healthPanelId,
-  healthExpanded,
-  onInspect,
-  onCloseHealth,
-  unit,
-  rows,
-  periods,
-  expanded,
-  onToggle,
-  panelId,
-  editorSlot,
-  headerAction,
-  ...handlers
-}: {
+interface StatusOverviewUnitRowProps extends ItemHandlers {
   readonly health?: ReportHealthUnit | undefined;
   readonly healthPanelId: string;
   readonly healthExpanded: boolean;
@@ -65,7 +50,25 @@ export function StatusOverviewUnitRow({
   readonly panelId: string;
   /** Optional control shown in the unit header (the Activity edit button). */
   readonly headerAction?: ReactNode;
-} & ItemHandlers) {
+}
+
+export function StatusOverviewUnitRow({
+  health,
+  healthPanelId,
+  healthExpanded,
+  onInspect,
+  onCloseHealth,
+  unit,
+  rows,
+  periods,
+  expanded,
+  onToggle,
+  panelId,
+  editorSlot,
+  recordSlot,
+  headerAction,
+  ...handlers
+}: StatusOverviewUnitRowProps) {
   return (
     <article
       aria-label={`${unit.kind === "product" ? "Product" : "Activity"} ${unit.name}`}
@@ -83,9 +86,10 @@ export function StatusOverviewUnitRow({
           />
         </div>
         <div className="min-w-0 min-[80rem]:col-span-3">
-          <MobilePeriodsSummary periods={periods} />
-          <DesktopPeriodHeader periods={periods} />
-          <PreviousUnavailableNotice column={unit.columns.previouslyPlanned} />
+          <TimelineHeading
+            periods={periods}
+            previous={unit.columns.previouslyPlanned}
+          />
           <LineageRowList
             rows={rows}
             expanded={expanded}
@@ -98,6 +102,7 @@ export function StatusOverviewUnitRow({
             onAddRecord={handlers.onAddRecord}
             ownedStageStarts={handlers.ownedStageStarts}
             editorSlot={editorSlot}
+            recordSlot={recordSlot}
           />
           <ShowMoreButton
             rows={rows}
@@ -115,5 +120,21 @@ export function StatusOverviewUnitRow({
         />
       ) : null}
     </article>
+  );
+}
+
+function TimelineHeading({
+  periods,
+  previous,
+}: {
+  readonly periods: StatusOverviewModel["periods"];
+  readonly previous: StatusOverviewUnit["columns"]["previouslyPlanned"];
+}) {
+  return (
+    <>
+      <MobilePeriodsSummary periods={periods} />
+      <DesktopPeriodHeader periods={periods} />
+      <PreviousUnavailableNotice column={previous} />
+    </>
   );
 }

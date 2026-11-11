@@ -143,6 +143,27 @@ describe("history: kept unfinished drafts", () => {
     );
   });
 
+  it("offers explicit create prefill using source identifiers without private text in the URL", async () => {
+    read.mockResolvedValue(AVAILABLE);
+    renderList(RETAINED);
+    expect(read).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: /^View 1/u }));
+    const link = await screen.findByRole("link", {
+      name: "Copy risk to current report: Vendor may slip",
+    });
+    const href = link.getAttribute("href");
+    if (!href) throw new Error("Expected a copy link");
+    const destination = new URL(href, "http://localhost");
+    expect(destination.pathname).toBe("/lead/report");
+    expect(Object.fromEntries(destination.searchParams)).toEqual({
+      copyReportId: REPORT_ID,
+      copySectionId: SECTION_ID,
+      copyKind: "risk",
+      copyStableId: "33333333-3333-4333-8333-333333333333",
+    });
+    expect(read).toHaveBeenCalledTimes(1);
+  });
+
   it("says so when the kept drafts are gone, without promising them", async () => {
     read.mockResolvedValue({ status: "unavailable" });
     renderList(RETAINED);
