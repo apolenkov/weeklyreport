@@ -184,3 +184,44 @@ Each editable This week and Next week column of an eligible Product or Activity 
 
 - **WHEN** a cell is Last week, submitted, locked, historical or foreign
 - **THEN** no entry line is rendered and the cell states its emptiness in plain language
+
+### Requirement: The entry line shows three controls while typing and starts from sensible stages
+
+At rest the entry line MUST stay a quiet line. While it holds text it MUST show exactly three controls: one icon-only stage button showing the current stage, `More details` and `Save`. An Activity entry, and a Product with one owned stage, have no stage button. Default stages: a continuation inherits the source item's stages; a new entry takes the last stages the Lead chose in that Product; otherwise the Product's first stage.
+
+#### Scenario: A resting line has no controls
+
+- **WHEN** an entry line is idle and empty
+- **THEN** it shows only its placeholder and no stage button, More details or Save
+
+#### Scenario: Typing shows exactly three controls
+
+- **WHEN** the Lead types the first character in the entry line of a Product with several owned stages
+- **THEN** the line shows exactly three controls: the stage button, `More details` and `Save`
+- **AND** the stage button is icon-only, its tooltip reads `Stage: <name>`, and no control exists that is visible only on hover
+
+#### Scenario: The stage button opens a small popover
+
+- **WHEN** the Lead activates the stage button
+- **THEN** a small popover shows the owned stages as toggles, several may be chosen, and the last pressed toggle cannot be switched off (the toast `A record needs at least one stage.` appears)
+- **AND** an Activity entry shows no stage button and a Product with one owned stage shows its icon without a button
+
+#### Scenario: The line’s own controls are not leaving it
+
+- **WHEN** focus moves from the typed text to the line’s stage button, its small popover, `More details` or `Save`
+- **THEN** the text is not saved by that move, and leaving the line for anything else still saves non-empty text as `Keys in the entry line` states
+
+#### Scenario: A continuation inherits the source stages
+
+- **WHEN** an entry continues an existing item, such as a plan answered into This week
+- **THEN** its default stages are the source item's stages that are still eligible for the Lead
+
+#### Scenario: A new entry takes the last chosen stages
+
+- **WHEN** a new entry, not a continuation, is started in a Product where the Lead chose stages before
+- **THEN** its default stages are the last stages the Lead chose in that Product that are still eligible
+
+#### Scenario: Otherwise the first stage
+
+- **WHEN** a new entry is started in a Product where the Lead chose no stages before
+- **THEN** its default stage is the Product's first eligible stage

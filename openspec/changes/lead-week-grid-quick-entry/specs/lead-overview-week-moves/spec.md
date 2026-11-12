@@ -2,13 +2,13 @@
 
 ### Requirement: Overview item actions MUST be visible and tappable on touch devices
 
-On a touch device, Overview record controls (text, status, stage label, discussion count and entry line) MUST NOT depend on pointer hover and MUST have 44 px targets. Tapping a record's text MUST open the in-place editor, and moves MUST be reached through the status menu or the editor. No Overview card MUST be draggable on any device.
+On a touch device, Overview record controls (text, status, discussion count and entry line) MUST NOT depend on pointer hover and MUST have 44 px targets. Tapping a record's text MUST open the editing surface, a bottom Sheet on touch, and moves MUST be reached through the status menu or the Sheet. No Overview card MUST be draggable on any device.
 
 #### Scenario: icons are visible and tappable without hover
 
 - **WHEN** the Overview renders editable records on a touch device
 - **THEN** each record's status control and, when comments exist, its discussion icon are visible without hover and operable by tap
-- **AND** tapping the status control opens its menu with the week move, and tapping the text opens the in-place editor
+- **AND** tapping the status control opens its menu with the week move, and tapping the text opens the editing Sheet
 
 #### Scenario: no card starts a drag
 
@@ -19,14 +19,14 @@ On a touch device, Overview record controls (text, status, stage label, discussi
 
 ### Requirement: Overview week moves MUST be reachable from hover icons and keyboard shortcuts
 
-**Reason**: Mockup v2.5 removes the per-record move arrow together with the pencil and discussion icons. A move is reached through the status menu or the in-place editor, and its eligibility now includes a re-check of the target week and the derived next-step rule.
+**Reason**: Mockup v2.5 removes the per-record move arrow together with the pencil and discussion icons. A move is reached through the status menu or the editing popover, and its eligibility now includes a re-check of the target week and the derived next-step rule.
 **Migration**: Use "Overview week moves MUST be reachable from the status menu, the editor and keyboard shortcuts" below. The placement-or-acknowledgement contract in `record-status-derivation` is unchanged.
 
 ## ADDED Requirements
 
 ### Requirement: Overview week moves MUST be reachable from the status menu, the editor and keyboard shortcuts
 
-A This week record's status menu MUST offer `Move to next week`; the in-place editor of a This week or Next week record MUST offer `Move…`. No record carries a move icon. A move is one saved change, without a drag. Alt+Right MUST move a focused This week record to Next week and Alt+Left a Next week record to This week, calling preventDefault in the report grid outside text fields. An impossible move MUST stay in its menu, aria-disabled, with its reason, and change nothing.
+A This week record's status menu MUST offer `Move to next week`, and the editing popover of a This week or Next week record MUST offer the icon action `Move to next week` or `Move to this week`. A move is one saved change, without a drag. Alt+Right MUST move a focused This week record to Next week and Alt+Left a Next week record to This week, calling preventDefault in the grid outside text fields. An impossible move stays aria-disabled with its reason and changes nothing.
 
 #### Scenario: A move from the status menu
 
@@ -34,11 +34,11 @@ A This week record's status menu MUST offer `Move to next week`; the in-place ed
 - **THEN** the record becomes a Next week record with its status hidden, and no second record of the same work appears in either week
 - **AND** focus lands on the moved record's text control and `Moved to Next week.` is announced
 
-#### Scenario: A Next week record moves back from its editor
+#### Scenario: A Next week record moves back from its popover
 
-- **WHEN** the lead activates `Move…` in the in-place editor of a Next week record and chooses `Move to this week`
+- **WHEN** the lead activates `Move to this week` in the editing popover of a Next week record
 - **THEN** the record becomes a This week record and its status is shown again
-- **AND** an unsaved draft in that editor is saved or cancelled first, and `Save or cancel your changes first.` is announced otherwise
+- **AND** an unsaved draft in that popover is saved or cancelled first, and `Save or cancel your changes first.` is announced otherwise
 
 #### Scenario: An occupied target rejects the move
 
@@ -58,7 +58,7 @@ A This week record's status menu MUST offer `Move to next week`; the in-place ed
 #### Scenario: A refused move announces its reason
 
 - **WHEN** the lead activates a disabled move item or presses Alt+Arrow on a record that cannot move
-- **THEN** its reason, the same text as its visible line and accessible description, is announced and nothing moves
+- **THEN** its reason, the same text as its tooltip and accessible description, is announced and nothing moves
 
 #### Scenario: A touch user sees the reason as a message
 
@@ -78,8 +78,8 @@ A This week record's status menu MUST offer `Move to next week`; the in-place ed
 
 #### Scenario: A derived next step cannot move
 
-- **WHEN** the lead opens the editor of a derived `Next step` line
-- **THEN** its `Move…` item is aria-disabled with `A next step stays with its item. Edit the next step instead`
+- **WHEN** the lead opens the popover of a derived `Next step` line
+- **THEN** the popover offers no Move action, because a next step travels with its item and is changed by editing the step
 
 #### Scenario: A move on a phone keeps the open tab
 

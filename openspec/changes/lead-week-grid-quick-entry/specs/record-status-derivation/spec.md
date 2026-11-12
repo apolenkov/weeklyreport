@@ -20,7 +20,7 @@ In Lead Report Overview and on Lead form week cards, Move to next week on an eli
 #### Scenario: Move keeps a saved next step and never promotes
 
 - **GIVEN** an eligible Current occurrence in the Report Overview that already carries a stored `nextStepText`, shown in the Next week cell of the same row
-- **WHEN** the lead opens its status menu or its `Move…` editor action
+- **WHEN** the lead opens its status menu or its `Move to next week` action in the editing popover
 - **THEN** `Move to next week` is present but disabled, and its accessible description and tooltip say "Its next step is already planned in Next week. Edit the next step instead"
 - **AND** an unanswered plan on that occurrence offers its `Next week` outcome disabled with the same reason, while its other outcomes stay available
 - **AND** activating the disabled item writes nothing: the occurrence keeps Current placement, text, stored progress, `stableId`, `carriedOver` and the saved next step

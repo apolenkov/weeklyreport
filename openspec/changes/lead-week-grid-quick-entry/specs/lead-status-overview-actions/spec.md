@@ -2,7 +2,7 @@
 
 ### Requirement: Overview MUST edit and create current-period items through the canonical editor
 
-Editable Lead Overview MUST create This week and Next week items through the quiet entry line of each eligible unit and week, bound to that owner and week, using the canonical draft-save, authorization and lifecycle paths. Editing MUST use the in-place editor, with the canonical item editor in a modal Sheet behind More details. Last week and ineligible sections remain read-only.
+Editable Lead Overview MUST create This week and Next week items through the quiet entry line of each eligible unit and week, bound to that owner and week, using the canonical draft-save, authorization and lifecycle paths. Editing MUST use the editing popover, with the canonical item editor in a modal Sheet behind More details. Last week and ineligible sections remain read-only.
 
 #### Scenario: A lead creates a Product update from Overview
 
@@ -25,19 +25,19 @@ Editable Lead Overview MUST create This week and Next week items through the qui
 
 ### Requirement: Overview MUST edit current-period items through the canonical editor
 
-For an editable lead draft, the text of a This week or Next week record MUST open the in-place editor, and More details MUST open the canonical item editor as a modal Sheet, without leaving Overview. Saving MUST use the existing draft patch, autosave, optimistic version, authorization and lifecycle paths. Last week stays immutable; submitted, locked, historical and foreign records MUST NOT expose a write action. Full authoring stays reachable within Report without a separate Edit mode.
+For an editable lead draft, the text of a This week or Next week record MUST open the editing popover, and More details MUST open the canonical item editor as a modal Sheet, without leaving Overview. Saving MUST use the existing draft patch, autosave, optimistic version, authorization and lifecycle paths. Last week stays immutable; submitted, locked, historical and foreign records MUST NOT expose a write action. Full authoring stays reachable within Report without a separate Edit mode.
 
 #### Scenario: A lead edits a current item from Overview
 
 - **WHEN** the lead activates the text of an owned This week record in an editable draft
-- **THEN** the in-place editor opens on the same Overview page
+- **THEN** the editing popover opens under the record on the same Overview page
 - **AND** saving applies the change through the canonical draft and autosave path
 - **AND** the compact projection reflects the live draft change
 
 #### Scenario: A lead edits a next item from Overview
 
 - **WHEN** the lead activates the text of an owned Next week record in an editable draft
-- **THEN** the in-place editor opens without a Status field
+- **THEN** the editing popover opens without a Status field and without a Next step field
 - **AND** no Overview-specific mutation or autosave path is used
 
 #### Scenario: An item is not editable
@@ -48,7 +48,7 @@ For an editable lead draft, the text of a This week or Next week record MUST ope
 
 #### Scenario: A save held back by a lost connection is announced in the open editor
 
-- **GIVEN** the inline editor is open and its Save update is paused because the browser is offline
+- **GIVEN** the editing popover is open and its Save update is paused because the browser is offline
 - **WHEN** the status region renders
 - **THEN** it announces that the lead is offline and that changes save when the connection returns
 - **AND** it does not show only the generic unsaved-update copy
@@ -63,9 +63,9 @@ For an editable lead draft, the text of a This week or Next week record MUST ope
 #### Scenario: Discarding an editor after a failed save reverts the board
 
 - **GIVEN** Save update applied an edit to the draft and the save failed
-- **WHEN** the lead keeps the editor open
+- **WHEN** the lead keeps the editing popover open
 - **THEN** the typed text is retained and saving can be retried
-- **WHEN** the lead then cancels the editor and confirms Discard
+- **WHEN** the lead then cancels the popover and confirms Discard
 - **THEN** the edited row returns to its last saved fields, or a newly created row is removed
 - **AND** the discarded text is not part of any later autosave payload
 
@@ -73,13 +73,13 @@ For an editable lead draft, the text of a This week or Next week record MUST ope
 
 ### Requirement: Overview items MUST support inline text editing in place
 
-**Reason**: Mockup v2.5 replaces the text-only inline editor with an in-place editor that also holds stage, Next step and the text actions, and that does not save on blur; the old scenario `clicking outside saves non-empty text` contradicts it.
-**Migration**: Use "Overview records open an in-place editor" below. Enter saving, Shift+Enter, Escape and the empty-text and read-only rules are kept there.
+**Reason**: The owner replaced the text-only inline editor, and then the in-place editor, with an editing popover (12.11). It also holds stages, Next step and the icon actions, and leaving it never saves; the old scenario `clicking outside saves non-empty text` contradicts that.
+**Migration**: Use "Overview records open an editing popover" and "Leaving the editing popover never saves" in `lead-record-editing-popover`. Enter saving, Shift+Enter, Escape and the empty-text and read-only rules are kept there.
 
 ### Requirement: Overview cards MUST expose their actions flat, one click and one menu level
 
-**Reason**: Mockup v2.5 removes the per-record pencil, move arrow and discussion buttons and the hover row. The text opens an in-place editor, and status, stage and week moves are reached through the status menu, the stage label and the editor.
-**Migration**: Use "Overview records open an in-place editor", "Overview status menu offers the outcomes of its context" and "Owned product stages are directly selectable in context" below.
+**Reason**: Mockup v2.5 removes the per-record pencil button, move arrow and discussion buttons and the hover row of actions. The text opens an editing popover, and status, stage and week moves are reached through the status menu and the popover. The hover pencil that remains is a decoration, not a control.
+**Migration**: Use "Overview records open an editing popover" and "Editable records show a hover cue on a fine pointer" in `lead-record-editing-popover`, and "Overview status menu offers the outcomes of its context" and "Owned product stages are directly selectable in context" below.
 
 ### Requirement: Overview create save MUST land focus on the new item
 
@@ -111,15 +111,16 @@ Overview MUST create This week and Next week items in the entry line of each edi
 
 #### Scenario: An item is edited in detail
 
-- **WHEN** the Lead activates More details in the in-place editor of an eligible record, or in an entry line that holds text
+- **WHEN** the Lead activates More details in the editing popover of an eligible record, or in an entry line that holds text
 - **THEN** the canonical editor opens as a modal Sheet named `Edit details: <text>` holding the same draft text, stages and Next step, and the page below becomes inert
-- **AND** closing returns focus to More details
+- **AND** the popover stays open and inert under the Sheet and closing the Sheet returns focus to More details
 
 #### Scenario: A dirty editor is dismissed
 
-- **WHEN** a dirty in-place editor is cancelled or a dirty detailed Sheet receives Escape, outside click, close button or Cancel
+- **WHEN** a dirty editing popover receives Escape or Cancel, or a dirty detailed Sheet receives Escape, outside click, close button or Cancel
 - **THEN** an AlertDialog asks `Discard changes?` and the existing save-recovery protections apply
 - **AND** Keep editing returns to the editor with the input intact
+- **AND** a click outside a dirty popover does not ask: it leaves the popover open, as `Leaving the editing popover never saves` in `lead-record-editing-popover` states
 
 #### Scenario: Save and add another succeeds
 
@@ -142,60 +143,6 @@ Overview MUST create This week and Next week items in the entry line of each edi
 
 - **WHEN** a unit or section is foreign, historical, submitted, locked or otherwise ineligible
 - **THEN** it offers no entry line or edit mutation controls
-
-### Requirement: Overview records open an in-place editor
-
-Activating a record's text MUST open an editor in place, holding in order: text, stage, Next step (This week only), Save and Cancel, then the text actions More details, Move…, Discussion (N) and Delete. Enter saves and Shift+Enter adds a line. Leaving the editor MUST NOT save: the draft stays, is marked unsaved and blocks Submit. Cancel or Escape with changes MUST ask `Discard changes?`; an empty text is never saved.
-
-#### Scenario: The text control opens the editor in place
-
-- **WHEN** the lead activates the text button `Edit text: <text>, This week` of an editable record
-- **THEN** the text becomes a field at the same place, with no popover over neighbouring records and no Sheet
-- **AND** the controls follow the stated order, Stage appears for a Product record only, and Next step only for a This week record
-
-#### Scenario: Enter saves and Escape cancels
-
-- **WHEN** the lead presses Enter in the field
-- **THEN** the edited text, stage and Next step are saved through the canonical draft path, keeping the record's progress, placement and stable identity
-- **WHEN** the lead presses Shift+Enter, or Enter during IME composition
-- **THEN** a line break is inserted and nothing is saved
-- **WHEN** the lead presses Escape with no changes
-- **THEN** the editor closes and no draft patch is emitted
-
-#### Scenario: Empty text is not saved
-
-- **WHEN** the lead clears the text and activates Save or Enter
-- **THEN** no draft patch is emitted, the field shows `The text can’t be empty. Press Esc to cancel.` and the record keeps its previous text
-
-#### Scenario: Leaving the editor keeps the draft unsaved
-
-- **WHEN** focus leaves the editor after the lead changed text, stage or Next step
-- **THEN** nothing is saved, the draft stays in place marked `Unsaved changes`, and `Before you submit` lists it
-- **AND** the draft survives a tab switch and opening a Sheet
-
-#### Scenario: Next step feeds the plan of the next week
-
-- **WHEN** the lead saves a Next step in a This week record
-- **THEN** Next week shows it as the derived `Next step` line of the same row and the This week result is kept
-- **AND** when Next week already holds a record of the same work, the Next step field is read-only with the reason `Next week already has this item`
-
-#### Scenario: Delete asks first
-
-- **WHEN** the lead activates Delete
-- **THEN** an AlertDialog asks `Delete this entry?` and, on confirmation, the record is removed and an Undo is offered under the one Undo rule
-- **AND** when the work item was already published in an earlier report, Delete is aria-disabled with `Published in last week’s report. It can’t be deleted`, and the work can only be closed through the Won’t do outcome
-
-#### Scenario: A derived next step opens a reduced editor
-
-- **WHEN** the lead activates the text of a derived `Next step` line
-- **THEN** the editor holds only the step text, Save changes only the next step, and Delete asks `Delete this next step?` and removes only that step while the item stays
-- **AND** Move… is aria-disabled with `A next step stays with its item. Edit the next step instead`, Discussion opens the source record's discussion, and More details opens the Sheet of the source record at its Next step
-
-#### Scenario: Unavailable actions say why
-
-- **WHEN** the record is read-only, foreign, lost or unsaved and the lead opens its editor
-- **THEN** the text shows read-only and Save, More details, Move… and Delete that cannot apply are aria-disabled with their reason, shown as a visible line and as the accessible description
-- **AND** activating one by pointer, Enter or touch announces that reason and changes nothing
 
 ### Requirement: Overview status menu offers the outcomes of its context
 
@@ -238,37 +185,44 @@ The status icon of a This week record MUST open one menu: Done, In progress, Not
 
 ### Requirement: Owned product stages are directly selectable in context
 
-The stage label of a Product record MUST be a text button that opens its owned stages in place as checkboxes with Apply and Cancel, so stages change without the Sheet. Selection MUST respect ownership, the minimum of one stage and lifecycle validation, and MUST NOT change Product stage assignments. An Activity record has no stage control. In the in-place editor a stage change is a draft until Save.
+A Product record's stages MUST be shown as icons and changed only in the editing popover's toggles, the entry line's stage button or More details. Selection MUST respect ownership, the minimum of one stage and lifecycle validation, and MUST NOT change Product stage assignments. An Activity record has no stage control. In the popover a stage change is a draft until Save.
 
 #### Scenario: Choose an available stage while creating an item
 
 - **GIVEN** a product has multiple stages currently assigned to the Lead
 - **WHEN** the Lead types in an entry line for that product and week
-- **THEN** the stage label appears with the text and opens the owned stages
-- **AND** choosing one associates that stage with the intended item without opening the Sheet
+- **THEN** one icon-only stage button showing the current stage appears, with the tooltip `Stage: <name>`, and opens a small popover with the owned stages as toggles
+- **AND** several stages may be chosen, the last one cannot be switched off, and the choice is associated with the intended item without opening the Sheet
+- **AND** the default stages follow `The entry line shows three controls while typing`
 
 #### Scenario: A sole owned stage is unambiguous
 
 - **GIVEN** exactly one eligible stage is assigned to the Lead for the product
 - **WHEN** a new item is started in that context
-- **THEN** the stage is applied by the established default and shown as plain text without a menu
+- **THEN** the stage is applied by the established default and shown as its icon, with no stage button and no toggle
 
 #### Scenario: Select an owned stage on an existing item
 
 - **GIVEN** an eligible editable Product record in This week or Next week
-- **WHEN** the Lead activates its stage label, checks stages and activates Apply
+- **WHEN** the Lead opens its editing popover, switches stage toggles and activates Save
 - **THEN** the canonical draft save updates its stages while preserving all other fields
-- **AND** focus returns to the stage label and the last selected stage cannot be removed: Apply is aria-disabled with `Choose at least one stage.`
+- **AND** the last pressed toggle cannot be switched off: it stays pressed and the toast `A record needs at least one stage.` appears
+
+#### Scenario: A stage is changed only in a stage control
+
+- **WHEN** the Lead clicks the stage icon of a record
+- **THEN** the editing popover opens like the rest of the cell, and the icon itself changes nothing
+- **AND** the only places that change a stage are the popover’s toggles, the entry line’s stage button and More details
 
 #### Scenario: Ineligible items cannot change stages
 
 - **WHEN** a record is an Activity, in Last week, foreign, submitted, locked, historical or otherwise ineligible
 - **THEN** it offers no stage mutation control
 
-#### Scenario: A stage-only change in the editor is a draft
+#### Scenario: A stage-only change in the popover is a draft
 
-- **WHEN** the lead applies a stage inside the in-place editor and does not save
-- **THEN** the draft is marked unsaved, blocks Submit and is saved only with Save
+- **WHEN** the lead switches a stage toggle in the editing popover and does not save
+- **THEN** the draft is marked `Not saved`, blocks Submit and is saved only with Save
 
 #### Scenario: A selected stage becomes unavailable
 
@@ -278,7 +232,7 @@ The stage label of a Product record MUST be a text button that opens its owned s
 
 ### Requirement: Overview rows are aligned and quiet
 
-Within a work-item row the first line of every cell MUST start within 2 CSS pixels of the others at 1280 and 1728, and the three columns MUST have equal width. Colour MUST mark only risk severity and what blocks submission. Hover MUST NOT highlight anything, a visible keyboard focus MUST remain, and one line above the table MUST read `Click text to edit. Use status to answer a plan.` Entry lines MUST have no fill and no resting border.
+Within a work-item row the first line of every cell MUST start within 2 CSS pixels of the others at 1280 and 1728, and the three columns MUST have equal width. Colour MUST mark only risk severity and what blocks submission. Outside the hover cue, hover MUST NOT highlight anything, and a visible keyboard focus MUST remain. An editable report MUST show one line above the table: `Click text to edit. Use status to answer a plan.` Entry lines have no fill and no resting border.
 
 #### Scenario: Cells in a row are aligned
 
@@ -286,15 +240,16 @@ Within a work-item row the first line of every cell MUST start within 2 CSS pixe
 - **THEN** the first line of each cell of a row starts within 2 CSS pixels of the others
 - **AND** entry text in a column shares one left edge
 
-#### Scenario: Hover changes nothing
+#### Scenario: Hover shows only the cue
 
-- **WHEN** the pointer hovers any record, status, stage label or entry line
-- **THEN** no highlight, fill or action appears, while the cursor, a tooltip naming the control, the keyboard focus ring and the pressed state remain
+- **WHEN** the pointer hovers a Last week record, a status control, an entry line, a tab or a menu item
+- **THEN** no tint, underline, fill or pencil appears, while the cursor, a tooltip naming the control, the keyboard focus ring and the pressed state remain
+- **AND** only an editable This week or Next week record shows the cue of `Editable records show a hover cue on a fine pointer` in `lead-record-editing-popover`
 
 #### Scenario: An item with several stages
 
 - **WHEN** a Product record has several stages
-- **THEN** all stage names are shown as muted text right after the description, wrapping together with it
+- **THEN** all its stage icons are shown right after the description, wrapping together with it
 
 #### Scenario: A unit at rest offers few controls
 
@@ -305,4 +260,5 @@ Within a work-item row the first line of every cell MUST start within 2 CSS pixe
 #### Scenario: Touch targets
 
 - **WHEN** the Overview renders on a coarse pointer or in the tabs layout
-- **THEN** every control is at least 44 by 44 CSS pixels and a stage label may take its own line so that targets do not overlap
+- **THEN** every control is at least 44 by 44 CSS pixels
+- **AND** stage icons on a record are not controls and need no target of their own, and the controls of the editing Sheet follow `lead-overview-responsive-shell`

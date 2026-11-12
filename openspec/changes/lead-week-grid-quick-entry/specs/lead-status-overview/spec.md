@@ -100,19 +100,19 @@ At table widths of at least 1087 CSS pixels, each reporting unit MUST show its h
 
 #### Scenario: A short record keeps a calm height
 
-- **WHEN** a short record with its stage text is shown on desktop
+- **WHEN** a short record with its stage icons is shown on desktop
 - **THEN** its row is at least 48 CSS pixels and at most 64 CSS pixels high
 - **AND** long text and an open editor grow the row freely
 
 #### Scenario: An editable unplanned item wraps
 
 - **WHEN** a This week record has a multi-line description
-- **THEN** its stage text stays muted right after the description and wraps with it as one group
+- **THEN** its stage icons stay right after the description and wrap with it as one group
 - **AND** the description, its status control and any discussion count remain readable without overlap
 
 #### Scenario: item text owns the flexible region
 
-- **WHEN** an item's description or stage text grows over several lines
+- **WHEN** an item's description grows over several lines, with its stage icons following it
 - **THEN** the text wraps and no control overlaps it
 - **AND** the document has no horizontal overflow at any supported width
 
@@ -150,8 +150,8 @@ An empty cell in a work-item row MUST show a quiet `—` with the accessible nam
 
 ### Requirement: Overview previews MUST preserve reading and secondary-action access
 
-**Reason**: The More actions disclosure, the pencil and the hover row conflict with mockup v2.5: a record carries no per-record icon cluster, its text opens an in-place editor, and its status, stage and discussion count are the only controls on the line.
-**Migration**: Use "Overview records show text, stage, status and a conditional discussion count" below and "Overview records open an in-place editor" in `lead-status-overview-actions`.
+**Reason**: The More actions disclosure, the pencil and the hover row conflict with mockup v2.5: a record carries no per-record icon cluster, its text opens an editing popover, and its status and discussion count are the only controls on the line; the stage is shown as icons.
+**Migration**: Use "Overview records show text, stage, status and a conditional discussion count" and "Stages are icons explained by one legend" below, and "Overview records open an editing popover" in `lead-record-editing-popover`.
 
 ## ADDED Requirements
 
@@ -225,7 +225,7 @@ Overview MUST build exactly one row per work item, identified by lineage `stable
 
 ### Requirement: Overview records show text, stage, status and a conditional discussion count
 
-Each record MUST be one line of its text, its muted stage text (Product only) and, in This week, a status control; a Next week record MUST have no status control. A discussion control with its message count MUST appear only when the record has comments. A record MUST carry no pencil, move arrow or per-record action cluster, and hover MUST NOT reveal, hide or move anything.
+Each record MUST be one line of its text, its stage icons (Product only) and, in This week, a status control; a Next week record MUST have no status control. A discussion control with its message count MUST appear only when the record has comments. A record MUST carry no pencil button, move arrow or per-record action cluster. Hover shows only the cue of `lead-record-editing-popover`: it reveals no control and moves nothing.
 
 #### Scenario: A long record is read
 
@@ -236,8 +236,9 @@ Each record MUST be one line of its text, its muted stage text (Product only) an
 #### Scenario: A record carries no icon cluster
 
 - **WHEN** a record without comments is shown on desktop or touch
-- **THEN** it shows no pencil, no move arrow and no discussion icon
-- **AND** the record keeps its size when the pointer hovers it or keyboard focus enters it
+- **THEN** it shows no pencil button, no move arrow and no discussion icon
+- **AND** the record keeps its size when the pointer hovers it, and the pencil of the hover cue is a decoration in a reserved slot, not a control
+- **AND** keyboard focus entering the record changes no size either
 
 #### Scenario: Comments show a count
 
@@ -248,15 +249,47 @@ Each record MUST be one line of its text, its muted stage text (Product only) an
 #### Scenario: A record without comments shows no discussion icon
 
 - **WHEN** a record has no comments
-- **THEN** its Discussion stays reachable as `Discussion (0)` in the in-place editor
+- **THEN** its Discussion stays reachable as `Discussion (0)` in the editing popover
 - **AND** the line shows no empty-discussion icon
 
 #### Scenario: Read-only and locked records expose no write action
 
 - **WHEN** a Last week record is shown
 - **THEN** its text is not a control and it has no status control
-- **WHEN** a submitted, lost or foreign record is shown
-- **THEN** its text control opens the editor read-only and every write action in it is aria-disabled with its reason
+- **WHEN** the report is submitted
+- **THEN** its record text is plain text, not an edit button, and no editing popover, status control or write action exists
+- **WHEN** a lost-assignment or foreign record is shown in an otherwise open report
+- **THEN** its text button opens the popover read-only, and every write action in it stays visible, disabled, with its reason
+
+### Requirement: Stages are icons explained by one legend
+
+Stages MUST render as icons with `role="img"` and the name `Stage: <name>`. One legend above the table MUST explain them. Last week MUST show the same icons dimmed, an Activity record has no stages, and clicking a stage icon on a record MUST open its editing popover like the rest of the cell.
+
+#### Scenario: A record shows stage icons
+
+- **WHEN** a Product record has the stages Development and Testing
+- **THEN** its line shows two icons after the text, each with `role="img"` and the names `Stage: Development` and `Stage: Testing`, with the stage name as a tooltip
+- **AND** an Activity record shows no stage icon
+
+#### Scenario: The legend appears once
+
+- **WHEN** the Overview renders, editable or submitted
+- **THEN** one legend above the table lists all seven stages, each with its icon and name, and no unit or row repeats it
+
+#### Scenario: Each stage has one icon
+
+- **WHEN** a stage icon is drawn anywhere on the Overview, in the legend, on a record, in the popover or in the entry line
+- **THEN** it uses this lucide mapping: Planning `calendar`, Analysis `search`, Design `pen-tool`, Development `code-xml`, Testing `flask-conical`, DevOps `infinity`, Support `life-buoy`
+
+#### Scenario: Last week shows dimmed icons
+
+- **WHEN** a Last week record has stages
+- **THEN** it shows the same icons, dimmed, with the same accessible names and no control
+
+#### Scenario: A stage icon opens the popover
+
+- **WHEN** the lead clicks a stage icon on an editable This week or Next week record
+- **THEN** the editing popover opens like the rest of the cell, and the icon is not a separate control
 
 ### Requirement: Last week shows how the previous week went
 
@@ -284,13 +317,13 @@ The Last week column MUST show the previous report's published results with thei
 
 ### Requirement: Next week records have no status
 
-Next week records MUST be plans without a status: no status icon, no status menu, and no Status field in the in-place editor or the detailed Sheet. A stored status or pause reason on such a record MUST be kept hidden, never cleared, and moving a record into Next week MUST NOT reset it. Moving it back to This week MUST show the stored status again.
+Next week records MUST be plans without a status: no status icon, no status menu, and no Status field in the editing popover or the detailed Sheet. A stored status or pause reason on such a record MUST be kept hidden, never cleared, and moving a record into Next week MUST NOT reset it. Moving it back to This week MUST show the stored status again.
 
 #### Scenario: A Next week record is shown
 
 - **WHEN** a Next week record is shown
 - **THEN** it shows no status control and no marker
-- **AND** its in-place editor and detailed Sheet have no Status field
+- **AND** its editing popover and detailed Sheet have no Status field
 
 #### Scenario: Moving keeps the stored progress
 

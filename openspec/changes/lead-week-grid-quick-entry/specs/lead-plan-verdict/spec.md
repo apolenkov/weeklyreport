@@ -95,7 +95,7 @@ Previously planned MUST remain read-only. Eligible prior work MUST be continuabl
 
 ### Requirement: An unanswered plan is one line like any record
 
-An unanswered plan MUST appear on its work item's row in This week as one line: a question-mark status icon, its published text and its stage text. It MUST NOT show answer buttons, a `Planned last week` label, a `from plan` badge or a second question text, and its text MUST NOT be editable. A plan with no record is a non-blocking reminder; a carried record that needs a status is a blocker.
+An unanswered plan MUST appear on its work item's row in This week as one line: a question-mark status icon, its published text and its stage icons. It MUST NOT show answer buttons, a `Planned last week` label, a `from plan` badge or a second question text, and its text MUST NOT be editable. A plan with no record is a non-blocking reminder; a carried record that needs a status is a blocker.
 
 #### Scenario: A plan is one line
 
@@ -169,4 +169,4 @@ Before every answer, move or Undo the target week MUST be checked again for a re
 
 - **WHEN** an answer has been recorded
 - **THEN** Undo restores the record the answer changed, or removes the record the answer created, only after its save is confirmed and only while the record still matches the version that answer produced
-- **AND** Undo is refused with its reason while the record is saving, being edited, changed afterwards, holding a typed reply in its discussion, or when the restore would enter an occupied week, and then changes nothing
+- **AND** Undo is refused with its reason while the record is saving, while any editor is open, after a later change to the same work, while its discussion has an unsent reply, or when the restore would enter an occupied week, and then changes nothing

@@ -14,8 +14,15 @@ The report header MUST be one quiet line holding the week navigation (the existi
 - **THEN** the header shows `Saving…`
 - **WHEN** a save failed or conflicts
 - **THEN** the header shows `Some changes are not saved`
-- **WHEN** nothing is pending
+- **WHEN** nothing is pending and no draft exists
 - **THEN** the header shows `All changes saved`
+
+#### Scenario: Drafts are reported as unsaved, never as saved
+
+- **WHEN** the report holds one or more drafts, such as an editing popover with changes, an entry line with text, a typed reason or a risk or decision draft, and no save is running or failed
+- **THEN** the header shows a neutral `1 unsaved change` or `N unsaved changes`, and never `All changes saved`
+- **AND** N is the number of unsaved lines in `Before you submit`, because the header and Submit read the same source
+- **AND** a failed or conflicting save shows `Some changes are not saved` and a running save shows `Saving…`, each before the unsaved count
 
 #### Scenario: Submit with blockers
 
@@ -68,3 +75,55 @@ Below 1087 CSS pixels of table width the same grid MUST become tabs Last week, T
 
 - **WHEN** Overview renders at 375 CSS pixels
 - **THEN** `scrollWidth` does not exceed `clientWidth`, long text wraps, and every control is at least 44 by 44 CSS pixels with no overlapping targets
+
+### Requirement: The editing popover becomes a bottom Sheet on narrow screens and touch
+
+At 760 CSS pixels or narrower, or on a coarse pointer, the content of the editing popover MUST open as a modal bottom Sheet: the page below is inert, Tab cycles inside it and every target is 44 px. There MUST be no hover cue there. On a fine pointer wider than 760 px it stays the non-modal popover, also in the tabs layout. Content, order, save rules and focus return are the same in both.
+
+#### Scenario: A narrow screen opens a bottom Sheet
+
+- **WHEN** the lead activates a record’s text at 760 CSS pixels or narrower
+- **THEN** the same content opens as a modal bottom Sheet, the page below is inert and every target is at least 44 by 44 CSS pixels
+- **AND** no hover cue is shown on that screen
+
+#### Scenario: A coarse pointer opens a bottom Sheet at any width
+
+- **WHEN** the lead taps a record’s text on a coarse pointer in a window wider than 760 px
+- **THEN** the modal bottom Sheet opens and the non-modal popover does not
+
+#### Scenario: A fine pointer keeps the popover in the tabs layout
+
+- **WHEN** a fine-pointer user activates a record’s text while the table is narrower than 1087 CSS pixels but the window is wider than 760
+- **THEN** the non-modal popover opens under the record, not a Sheet
+
+#### Scenario: The Sheet keeps the same save and focus rules
+
+- **WHEN** the lead taps the overlay or Escape, or activates Cancel, in the Sheet
+- **THEN** with no changes the Sheet closes; with changes a tap on the overlay does not save or close it, and Escape or Cancel asks `Discard changes?`
+- **AND** after Save, Cancel or Escape focus returns to the record’s text button, and Tab cycles inside the Sheet while it is open
+
+#### Scenario: Resizing across 760 pixels keeps the draft
+
+- **WHEN** the window or pointer changes across the threshold while an editor holds changes
+- **THEN** the same draft continues in the other surface with its text, stages and Next step intact and the record still shows `Not saved`
+
+### Requirement: A submitted report is read-only and says so once
+
+A submitted report MUST be read-only: no entry line, no `+ Risk or decision`, no edit controls, no editing popover and no hover cue. One banner above the table MUST state `This report is read-only.` once, and no other element repeats it. This keeps the existing rule that ineligible sections offer no write controls.
+
+#### Scenario: A submitted report offers no write control
+
+- **WHEN** the report is submitted
+- **THEN** no entry line, `+ Risk or decision`, status control, stage toggle, editing popover or hover cue is rendered, and record text is plain text
+- **AND** each unit still shows its counts and the list of its risks and decisions, as `lead-contextual-quick-entry` states
+
+#### Scenario: The banner says it once
+
+- **WHEN** the report is submitted
+- **THEN** one banner above the table states `This report is read-only.`, and the line `Click text to edit. Use status to answer a plan.` is not shown
+- **AND** no other element, such as a tooltip or a per-unit note, repeats that statement
+
+#### Scenario: A record with comments keeps its discussion
+
+- **WHEN** a record of a submitted report has comments
+- **THEN** its discussion icon with the count still opens the `Discussion` Sheet under the rules of `lead-item-comment-access`

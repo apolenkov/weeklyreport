@@ -6,11 +6,11 @@ Make authorized record comments understandable and reachable from the Lead Overv
 
 ### Requirement: The item discussion has a visible, authorized result
 
-A record’s discussion MUST open as a modal `Discussion` Sheet with its authorized comments, an honest empty state and a reply composer for the Lead’s own eligible item. A row MUST show a discussion icon, named `Discussion: <title>, N comments`, only when the record has comments; otherwise the discussion MUST be reached through `Discussion (N)` in the in-place editor. The server MUST enforce ownership, role and lifecycle rules.
+A record’s discussion MUST open as a modal `Discussion` Sheet with its authorized comments, an honest empty state and a reply composer for the Lead’s own eligible item. A row MUST show a discussion icon, named `Discussion: <title>, N comments`, only when the record has comments; otherwise the discussion MUST be reached through `Discussion (N)` in the editing popover. The server MUST enforce ownership, role and lifecycle rules.
 
 #### Scenario: No comments exist
 
-- **WHEN** a Lead opens `Discussion (0)` in the in-place editor of their own editable item without comments
+- **WHEN** a Lead opens `Discussion (0)` in the editing popover of their own editable item without comments
 - **THEN** the `Discussion` Sheet shows an honest empty state
 - **AND** it does not claim a message was sent or add a comment without an authorized submission
 - **AND** the record's row shows no discussion icon
@@ -102,7 +102,7 @@ The UI SHALL distinguish own live, published snapshot, submitted predecessor, au
 
 - **WHEN** a persisted Current item also has a derived Next projection
 - **THEN** both projections use one discussion keyed by session, user, report, section and stable lineage
-- **AND** a derived `Next step` line shows no icon of its own and its editor’s `Discussion (N)` opens the source record’s discussion
+- **AND** a derived `Next step` line shows no icon of its own and its popover’s `Discussion (N)` opens the source record’s discussion
 - **AND** explicit Next has its own selected-section discussion
 - **AND** Previous never redirects its identity to Current
 - **AND** historical Current and derived Next show the same authorized source comments, or the derived historical control is deliberately omitted rather than claiming an empty discussion
@@ -191,15 +191,15 @@ Opening an eligible persisted item's discussion SHALL resolve and read automatic
 
 #### Scenario: Keyboard and empty-discussion access
 
-- **WHEN** a user opens a zero-message discussion through `Discussion (N)` in the editor, or a comments-only eligible item through its icon
+- **WHEN** a user opens a zero-message discussion through `Discussion (N)` in the editing popover, or a comments-only eligible item through its icon
 - **THEN** the visible trigger opens it and deliberately focuses the composer or read-only heading
 - **AND** each projection has unique control IDs, Close or Escape returns focus to its trigger or a reachable fallback, and composition Escape and textarea newlines remain intact
 - **AND** loading is not presented as an honest empty result and network completion does not steal focus
 
-#### Scenario: The editor stays open under the Sheet
+#### Scenario: The popover stays open under the Sheet
 
-- **WHEN** the Lead opens `Discussion (N)` from an in-place editor holding an unsaved draft
-- **THEN** the draft stays intact under the Sheet, and closing the Sheet returns focus to that editor control
+- **WHEN** the Lead opens `Discussion (N)` from an editing popover holding an unsaved draft
+- **THEN** the popover stays open and inert under the Sheet with its draft intact, opening the Sheet does not count as leaving the popover, and closing the Sheet returns focus to the `Discussion (N)` action
 
 This item-only increment does not complete risk or decision discussions, ordinary editor 409 recovery, realtime revocation, exactly-once delivery or persistence across browser termination.
 
