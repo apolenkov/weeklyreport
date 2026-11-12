@@ -87,6 +87,6 @@ Package 10 closes the gap in the web feature only, with no schema change:
 
 Open points for the owner or the gate:
 
-- Move with a saved next step: the baseline `record-status-derivation` contract (“Move keeps a saved next step and never promotes”) acknowledges the move in place. Mockup v2.5 and the owner’s brief make `Move to next week` disabled with its reason instead. `lead-overview-week-moves` follows the brief; the baseline contract stays in force for the command layer, which package 10 does not change.
+- Move with a saved next step (decided by the gate, 12.11): in the Overview, `Move to next week` and the plan outcome `Next week` are disabled with the reason "Its next step is already planned in Next week. Edit the next step instead", and nothing is written; the plan already sits in the Next week cell of the same row. Lead form week cards keep the in-place acknowledgement. The `record-status-derivation` delta in this change carries the rule.
 - Unit collapse: the baseline lets a unit collapse its rows; v2.5 does not show the control. The specs keep the baseline behaviour.
 - Not specified from the mockup: the unit status summary and the grey Last week background.
