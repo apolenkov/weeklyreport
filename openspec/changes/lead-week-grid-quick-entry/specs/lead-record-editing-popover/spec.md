@@ -107,12 +107,13 @@ A click outside the popover, or Tab out of its last control, MUST NOT save. With
 
 ### Requirement: A derived next step opens a reduced popover
 
-Activating the text of a derived `Next step` line MUST open a popover holding only the step text, Discussion (the item’s discussion, with its count), More details (the step only, with no statuses) and Delete, then Cancel and Save. Save changes only the next step. Delete MUST remove only the step, after a confirmation that names the step; the item stays. Leaving the popover follows `Leaving the editing popover never saves`.
+Activating the text of a derived `Next step` line MUST open a popover holding only the step text, Discussion (the item’s discussion, with its count), Move (disabled with its reason), More details (the step only, with no statuses) and Delete, then Cancel and Save. Save changes only the next step. Delete MUST remove only the step, after a confirmation that names the step; the item stays. Leaving the popover follows `Leaving the editing popover never saves`.
 
 #### Scenario: A reduced popover opens
 
 - **WHEN** the lead activates the text of a derived `Next step` line
-- **THEN** the popover shows the step text, `Discussion (N)`, `More details`, `Delete`, Cancel and Save, and no stage toggles, no Next step field and no Move
+- **THEN** the popover shows the step text, `Discussion (N)`, Move, `More details`, `Delete`, Cancel and Save, and no stage toggles and no Next step field
+- **AND** Move is aria-disabled with the reason `A next step stays with its item.` in its tooltip and accessible description, because the step moves only with its item
 - **AND** Discussion opens the source record’s discussion with its count, and More details opens the Sheet of the source record at its Next step, with no status fields
 
 #### Scenario: Delete removes only the step

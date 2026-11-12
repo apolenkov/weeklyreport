@@ -257,7 +257,7 @@ Each record MUST be one line of its text, its stage icons (Product only) and, in
 - **WHEN** a Last week record is shown
 - **THEN** its text is not a control and it has no status control
 - **WHEN** the report is submitted
-- **THEN** its record text is plain text, not an edit button, and no editing popover, status control or write action exists
+- **THEN** its record text opens only the read-only popover with the text, `Discussion (N)` and Close, and no editing popover, status control or write action exists
 - **WHEN** a lost-assignment or foreign record is shown in an otherwise open report
 - **THEN** its text button opens the popover read-only, and every write action in it stays visible, disabled, with its reason
 

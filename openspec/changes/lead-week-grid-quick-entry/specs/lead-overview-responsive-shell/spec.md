@@ -109,12 +109,18 @@ At 760 CSS pixels or narrower, or on a coarse pointer, the content of the editin
 
 ### Requirement: A submitted report is read-only and says so once
 
-A submitted report MUST be read-only: no entry line, no `+ Risk or decision`, no edit controls, no editing popover and no hover cue. One banner above the table MUST state `This report is read-only.` once, and no other element repeats it. This keeps the existing rule that ineligible sections offer no write controls.
+A submitted report MUST be read-only: no entry line, no `+ Risk or decision`, no edit controls, no editing popover and no hover cue. A record's text MUST open a read-only popover with only the text, `Discussion (N)` and Close. One banner above the table MUST state `This report is read-only.` once, and no other element repeats it. This keeps the rule that ineligible sections offer no write controls.
 
 #### Scenario: A submitted report offers no write control
 
 - **WHEN** the report is submitted
-- **THEN** no entry line, `+ Risk or decision`, status control, stage toggle, editing popover or hover cue is rendered, and record text is plain text
+- **THEN** no entry line, `+ Risk or decision`, status control, stage toggle, editing popover or hover cue is rendered
+
+#### Scenario: A record of a submitted report opens a read-only popover
+
+- **WHEN** the lead activates a record's text in a submitted report
+- **THEN** a popover shows the read-only text, `Discussion (N)` and Close, with no Move, More details, Delete, stage control or Save
+- **AND** Discussion opens the record's `Discussion` Sheet even when it has no comments yet
 - **AND** each unit still shows its counts and the list of its risks and decisions, as `lead-contextual-quick-entry` states
 
 #### Scenario: The banner says it once

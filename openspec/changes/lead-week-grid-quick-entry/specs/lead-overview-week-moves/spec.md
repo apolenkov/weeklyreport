@@ -79,7 +79,8 @@ A This week record's status menu MUST offer `Move to next week`, and the editing
 #### Scenario: A derived next step cannot move
 
 - **WHEN** the lead opens the popover of a derived `Next step` line
-- **THEN** the popover offers no Move action, because a next step travels with its item and is changed by editing the step
+- **THEN** its Move action is aria-disabled with the reason `A next step stays with its item.`, because a next step travels with its item and is changed by editing the step
+- **AND** activating Move announces that reason and moves nothing
 
 #### Scenario: A move on a phone keeps the open tab
 
