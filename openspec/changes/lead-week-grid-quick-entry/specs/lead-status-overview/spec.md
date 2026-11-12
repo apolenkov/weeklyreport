@@ -1,8 +1,25 @@
 ## MODIFIED Requirements
 
+### Requirement: Overview MUST group and identify reporting units clearly
+
+Products and Project Activities MUST remain peer reporting-unit types in stable Product-first order, with explicit group boundaries and counts. Each unit MUST show its complete name in a header above its three week columns; a status badge or metadata MUST NOT force the only name label into a single-line ellipsis. Grouping MUST NOT duplicate Activity rows beneath linked Products.
+
+#### Scenario: Long Product and Activity names are rendered
+
+- **WHEN** a reporting-unit name exceeds the single-line width of its header
+- **THEN** the complete name remains visually readable through wrapping
+- **AND** the unit's risk and decision controls remain associated with the same unit
+- **AND** the document has no horizontal overflow
+
+#### Scenario: Both reporting-unit types are present
+
+- **WHEN** Overview contains Products and Project Activities
+- **THEN** each type appears under one explicit labelled group with its real count
+- **AND** every reporting unit appears exactly once in canonical order
+
 ### Requirement: Lead report MUST expose an addressable compact Overview
 
-The `/lead/report/:reportId` route MUST expose addressable Report and Slides views, defaulting to Report Overview. Report MUST retain canonical document controls and, in each editable This week and Next week cell of an eligible unit, the always-present entry line. Every entry and create path MUST reuse the same canonical handlers, not another persistence path. Removing Edit mode MUST preserve `unified-report-authoring` parity.
+The `/lead/report/:reportId` route MUST expose addressable Report and Slides views, defaulting to Report Overview. Report MUST retain canonical document controls and, in each editable unit, the quiet entry lines of This week and Next week. Every entry and create path MUST reuse the same canonical handlers, not another persistence path. Removing Edit mode MUST preserve `unified-report-authoring` parity.
 
 #### Scenario: A lead opens a report without a mode
 
@@ -19,74 +36,109 @@ The `/lead/report/:reportId` route MUST expose addressable Report and Slides vie
 #### Scenario: An editable lead opens the default route
 
 - **WHEN** the lead opens `/lead/report/:reportId` without a mode query
-- **THEN** Report retains report identity, autosave, Fill from, Retry after autosave error, Submit, period navigation, visibility, mode controls, and the entry line of each eligible This week and Next week cell
+- **THEN** Report retains report identity, autosave, Fill from, Retry after autosave error, Submit, period navigation, visibility, mode controls, and the entry line of each eligible unit and week
 - **AND** all actions use canonical editor eligibility and handlers
 
 #### Scenario: An Overview action opens a canonical dialog
 
-- **WHEN** the lead activates an entry line, detailed edit, Fill from, Submit, or reopen/revoke
+- **WHEN** the lead activates an entry line, More details, Fill from, Submit, or reopen/revoke
 - **THEN** the existing lead composer, the detailed Sheet or the dialog host handles the action
 - **AND** no Overview-specific mutation endpoint or draft store is used
 
+### Requirement: Temporal columns MUST use authoritative period sources
+
+Every reporting unit MUST expose Last week, This week and Next week. Last week MUST show the predecessor’s results with the statuses it published. The predecessor’s commitments MUST be a separate projection that feeds the plan line in This week and MUST NOT replace a Last week result. A valid immutable published snapshot is authoritative; a submitted live section MAY be used when none exists. Each column MUST show its period range or an explicit unavailable state.
+
+#### Scenario: The predecessor is published
+
+- **WHEN** the immediate prior period has a valid published snapshot containing the lead's section
+- **THEN** Last week renders that frozen section's results with their published statuses
+- **AND** its next-period commitments reach This week only as prior commitments
+- **AND** later live-table changes cannot alter either projection
+
+#### Scenario: A current result has an independent next commitment
+
+- **WHEN** a selected This week item contains both a reported result and nonblank `nextStepText`
+- **THEN** This week shows the result and Next week shows the separate commitment as a derived `Next step` line of the same row
+- **AND** both projections retain the same stable lineage and one editable occurrence
+- **AND** in the successor report Last week shows the result text and the prior commitment uses the commitment text, so neither replaces the other
+
+#### Scenario: Only a predecessor draft exists
+
+- **WHEN** the immediate prior period has no published snapshot and the lead's section is draft
+- **THEN** Last week shows `Last week’s report isn’t available.` and This week shows no plan question for it
+- **AND** no draft item is represented as an agreed plan
+
+#### Scenario: Current work was not in the prior plan
+
+- **WHEN** a This week record has no prior commitment or Last week result of the same stableId
+- **THEN** it appears exactly once on its own row with an empty Last week cell
+- **AND** no badge or marker distinguishes it from planned work
+
 ### Requirement: Overview MUST be compact, expandable, and contained
 
-At table widths of at least 1087 CSS pixels, all reporting units MUST form a flat matrix with shared temporal boundaries, thin row separators, and no nested item card chrome or document-level horizontal overflow. The unit name and the Last week, This week and Next week columns MUST align across units. A collapsed unit MUST show at most two item previews per column and an operable count for hidden items. Disclosure controls MUST expose `aria-expanded` and `aria-controls`.
+At table widths of at least 1087 CSS pixels, each reporting unit MUST show its header above three equal columns, Last week, This week and Next week, with shared boundaries across units, thin row separators, no left rail, no nested card chrome and no document-level horizontal overflow. A collapsed unit MUST show at most two work rows and an operable count for hidden rows. Disclosure controls MUST expose `aria-expanded` and `aria-controls`.
 
 #### Scenario: A column contains more than two items
 
-- **WHEN** Overview renders a collapsed temporal column with five source items
-- **THEN** two previews and an operable `+3 more` control are visible
-- **AND** activating that control reveals all five items inline exactly once
+- **WHEN** Overview renders a collapsed unit with five work rows
+- **THEN** two rows and an operable `+3 more` control are visible
+- **AND** activating that control reveals all five rows inline exactly once
 
 #### Scenario: Overview renders at desktop width
 
 - **WHEN** Overview renders at 1280 by 900 or 1728 by 962
-- **THEN** the visible time columns align across reporting units
+- **THEN** the three week columns have equal widths and their boundaries align across reporting units
 - **AND** document `scrollWidth` does not exceed `clientWidth`
 
 #### Scenario: Desktop rows contain different amounts of text
 
 - **WHEN** Overview renders at 1280x900 or 1728x962
-- **THEN** all column boundaries align across every reporting unit
-- **AND** the unit name and the first line of each This week and Last week cell in a unit row start within 2 CSS pixels of each other
-- **AND** a Next week cell MAY start lower when its records sit on lineage rows of Last week
+- **THEN** the first text line of each cell of one row starts within 2 CSS pixels of the others
+- **AND** a cell whose week holds no record of that work shows `—` instead of shifting its neighbours
 - **AND** the document has no horizontal overflow
+
+#### Scenario: A short record keeps a calm height
+
+- **WHEN** a short record with its stage text is shown on desktop
+- **THEN** its row is at least 48 CSS pixels and at most 64 CSS pixels high
+- **AND** long text and an open editor grow the row freely
 
 #### Scenario: An editable unplanned item wraps
 
-- **WHEN** a This week record that is not linked to a plan has a multi-line description
+- **WHEN** a This week record has a multi-line description
 - **THEN** its stage text stays muted right after the description and wraps with it as one group
-- **AND** the description, that group and the actions column remain readable without overlap
+- **AND** the description, its status control and any discussion count remain readable without overlap
 
 #### Scenario: item text owns the flexible region
 
 - **WHEN** an item's description or stage text grows over several lines
-- **THEN** the text wraps before the fixed actions column and no action overlaps text
+- **THEN** the text wraps and no control overlaps it
 - **AND** the document has no horizontal overflow at any supported width
 
 #### Scenario: collapsed content is not focusable
 
 - **WHEN** a unit is collapsed
-- **THEN** its hidden items are not keyboard-focusable, and its disclosure control exposes `aria-expanded` and `aria-controls`
+- **THEN** its hidden rows are not keyboard-focusable, and its disclosure control exposes `aria-expanded` and `aria-controls`
 - **AND** activating the count expands the full content inline
-
-#### Scenario: narrow tables use tabs
-
-- **WHEN** the table is narrower than 1087 CSS pixels
-- **THEN** the columns are reachable as Last week, This week and Next week tabs with This week open by default
-- **AND** every tab and control keeps a 44 px target on a coarse pointer
 
 ### Requirement: Empty temporal cells MUST state their emptiness in plain language
 
-An editable This week or Next week cell with no record MUST show only its entry line, placed after the cell's last row. An empty read-only cell, including Last week, MUST expose no write control and MUST state its emptiness in plain language: `No update last week.` or `No update this week.` when the report exists but is empty, `Nothing planned.` for an empty Next week, and `Last week's report isn't available.` when the previous report is unavailable.
+An empty cell in a work-item row MUST show a quiet `—` with the accessible name `No entry in <week>` and no fill, card frame or add button. A unit with no record in a week MUST state its emptiness in plain language: `No update last week.`, `No update this week.` or `Nothing planned.`; an unavailable previous report MUST read `Last week’s report isn’t available.`, never an empty column. Read-only cells MUST expose no write control.
 
 #### Scenario: A temporal cell has no content
 
-- **WHEN** an editable This week or Next week cell has no record
-- **THEN** it shows the entry line for that unit and week and no other control
-- **WHEN** a Last week cell or a read-only cell has no record
+- **WHEN** an editable unit has no record in its This week or Next week column
+- **THEN** that column shows the unit's entry line and no other control
+- **WHEN** a Last week column or a read-only unit has no record
 - **THEN** it states the matching plain-language line
 - **AND** historical and read-only views expose no write controls
+
+#### Scenario: A row has no record in a week
+
+- **WHEN** a work-item row has no record in one of its three weeks
+- **THEN** that cell shows `—` named `No entry in Last week`, `No entry in This week` or `No entry in Next week`
+- **AND** it has no background, border card or add control
 
 #### Scenario: Empty periods are compacted on mobile
 
@@ -98,111 +150,150 @@ An editable This week or Next week cell with no record MUST show only its entry 
 
 ### Requirement: Overview previews MUST preserve reading and secondary-action access
 
-**Reason**: The More actions disclosure and the hover row conflict with mockup v2.4, which shows the actions as a fixed, always visible column.
-**Migration**: Use "Overview previews keep reading and fixed record actions" below.
+**Reason**: The More actions disclosure, the pencil and the hover row conflict with mockup v2.5: a record carries no per-record icon cluster, its text opens an in-place editor, and its status, stage and discussion count are the only controls on the line.
+**Migration**: Use "Overview records show text, stage, status and a conditional discussion count" below and "Overview records open an in-place editor" in `lead-status-overview-actions`.
 
 ## ADDED Requirements
 
-### Requirement: Overview previews keep reading and fixed record actions
+### Requirement: One row is one work item
 
-Editable This week and Next week records MUST keep their readable text, a text control that opens in-place quick edit, a detailed-edit control, a status control (This week only), and week-move and discussion controls, all in one fixed actions column that is always visible. No More actions disclosure MAY exist. Read-only records MUST expose no write action. Move MUST follow the placement-or-acknowledgement contract in `record-status-derivation`.
+Overview MUST build exactly one row per work item, identified by lineage `stableId`, and trace Last week, This week and Next week within that row. Records with different `stableId`s MUST NOT share a row, matching text MUST NOT join rows, and a cell already filled MUST NOT be overwritten. A plan from last week and a This week record of the same work MUST NOT both appear. Rows keep durable identity order within a unit.
 
-#### Scenario: the lead reads a long record
+#### Scenario: Different work with the same text stays apart
+
+- **WHEN** two records of a unit have different stableIds and identical text
+- **THEN** they appear on two rows and no row joins them
+- **AND** a missing stableId never matches another record by its text
+
+#### Scenario: A changed text keeps its row
+
+- **WHEN** the text, stage or Product of one work item differs between Last week, This week and Next week while its stableId is the same
+- **THEN** one row traces last, this and next week for it
+
+#### Scenario: A new item gets its own row
+
+- **WHEN** a Lead creates an item
+- **THEN** it appears on its own row with its earlier cells empty
+- **AND** later saving, a status change or a week move does not move the row
+
+#### Scenario: A result without continuation
+
+- **WHEN** a Last week result has no commitment for the selected week and no This week or Next week record
+- **THEN** its row shows the result in Last week and `—` in the other columns
+- **AND** no question is created
+
+#### Scenario: A prior plan without a This week record
+
+- **WHEN** the previous report planned a work item for this week and This week has no record of it
+- **THEN** its row holds one plan line in This week, answered through its status icon, with any Last week result of the same work beside it
+- **AND** the row never shows both the plan line and a This week record of that work
+
+#### Scenario: Work exists only as a plan
+
+- **WHEN** a work item exists only in Next week
+- **THEN** its row shows `—` in Last week and This week and the plan in Next week
+
+#### Scenario: A next step shares the row
+
+- **WHEN** a This week record carries a saved next step
+- **THEN** the step shows in Next week on the same row as a derived `Next step` line
+- **AND** several steps of one work are one multi-line plan, while steps that need their own tracking become new work items with new stableIds and their own rows
+
+#### Scenario: Work is split or merged
+
+- **WHEN** one piece of work is divided into several or several are combined
+- **THEN** the source rows stay as they are and each new work item gets a new stableId and its own row
+- **AND** history is neither copied into the new rows nor joined, and no Split or Merge operation or inferred link exists
+
+#### Scenario: A work item changes Product
+
+- **WHEN** the owner of a stableId changes between reports
+- **THEN** its row belongs to the current owner and keeps one lineage
+- **AND** a Last week cell from the earlier Product keeps its former Product label
+
+#### Scenario: A filled cell is never overwritten
+
+- **WHEN** two records with the same stableId would fill the same cell
+- **THEN** the second record gets a row of its own, so the conflict is visible
+- **AND** neither record is dropped or silently replaced
+
+#### Scenario: Row order is stable
+
+- **WHEN** a record is saved, changes status or moves between weeks
+- **THEN** its row keeps its place in the durable identity order that report reads return
+- **AND** a new record appears at its own position and does not jump after the read-back
+
+### Requirement: Overview records show text, stage, status and a conditional discussion count
+
+Each record MUST be one line of its text, its muted stage text (Product only) and, in This week, a status control; a Next week record MUST have no status control. A discussion control with its message count MUST appear only when the record has comments. A record MUST carry no pencil, move arrow or per-record action cluster, and hover MUST NOT reveal, hide or move anything.
+
+#### Scenario: A long record is read
 
 - **WHEN** a long This week record is shown
 - **THEN** its full text wraps and remains readable
-- **AND** its text control is named `Edit text: <text>` and its status control is named `Status: <label>. Change status of <text>`
+- **AND** its text control is named `Edit text: <text>, This week` and its status control `Choose outcome: <text>. Status: <label>`
 
-#### Scenario: the pencil opens the detailed Sheet
+#### Scenario: A record carries no icon cluster
 
-- **WHEN** the lead activates the pencil of an editable record
-- **THEN** the detailed form opens as a modal Sheet named `Edit details: <text>` and the page below becomes inert
+- **WHEN** a record without comments is shown on desktop or touch
+- **THEN** it shows no pencil, no move arrow and no discussion icon
+- **AND** the record keeps its size when the pointer hovers it or keyboard focus enters it
 
-#### Scenario: secondary actions are fixed
+#### Scenario: Comments show a count
 
-- **WHEN** a record is shown
-- **THEN** the pencil, the week-move icon and the discussion icon are separate named buttons in one fixed column
-- **AND** no More actions disclosure exists
+- **WHEN** a record has N comments
+- **THEN** its line shows a discussion icon with the count, named `Discussion: <text>, N comments`
+- **AND** activating it opens the discussion Sheet
 
-#### Scenario: a Current occurrence is postponed to Next
+#### Scenario: A record without comments shows no discussion icon
 
-- **WHEN** the lead moves an eligible This week record without a separate next commitment
-- **THEN** the occurrence moves to Next week through the placement-only move contract, not the separate Continue next week verdict
-
-#### Scenario: Move carries a saved next step with its record
-
-- **WHEN** the lead moves an eligible This week record that carries a saved next step
-- **THEN** the record moves with its next step, which shows as a derived `Next step` row under it in Next week
-- **AND** the existing continuation-promotion command is not called
+- **WHEN** a record has no comments
+- **THEN** its Discussion stays reachable as `Discussion (0)` in the in-place editor
+- **AND** the line shows no empty-discussion icon
 
 #### Scenario: Read-only and locked records expose no write action
 
 - **WHEN** a Last week record is shown
-- **THEN** it exposes no action
+- **THEN** its text is not a control and it has no status control
 - **WHEN** a submitted, lost or foreign record is shown
-- **THEN** its actions stay in place as aria-disabled controls with their reason
+- **THEN** its text control opens the editor read-only and every write action in it is aria-disabled with its reason
 
 ### Requirement: Last week shows how the previous week went
 
-The Last week column MUST show the previous report's published records with their published statuses, read-only. It MUST NOT change after any action on this screen. Its header subtitle MUST read `How it went · read-only`, This week's MUST read `Progress`, and Next week's MUST read `Plan`.
+The Last week column MUST show the previous report's published results with their published statuses, read-only. It MUST NOT change after any action on this screen. Its header subtitle MUST read `How it went · read-only`, This week's MUST read `Progress`, and Next week's MUST read `Plan`.
 
 #### Scenario: Answers do not change Last week
 
-- **WHEN** the lead answers, moves, edits or undoes a This week or Next week record
+- **WHEN** the lead answers, moves, edits, deletes or undoes a This week or Next week record
 - **THEN** the Last week column renders exactly as before the action
 
 #### Scenario: A published status is shown as published
 
 - **WHEN** a Last week record was published with status In progress
-- **THEN** it shows In progress with no status control
+- **THEN** it shows In progress with no status menu
+
+#### Scenario: Last week has no controls
+
+- **WHEN** the lead hovers, focuses or activates a Last week record
+- **THEN** no editor, menu or action opens and no draft patch is emitted
 
 #### Scenario: The previous report is unavailable
 
 - **WHEN** the previous report is not available
-- **THEN** Last week reads `Last week's report isn't available.` and This week shows no plan question for it
+- **THEN** Last week reads `Last week’s report isn’t available.` and This week shows no plan question for it
 
 ### Requirement: Next week records have no status
 
-Next week records MUST be plans without a status: no status icon, no status menu, and no Status field in their detailed form. Their detailed form MUST keep the Next step field. Moving a record into Next week MUST hide its status, and moving it back MUST show the status again.
+Next week records MUST be plans without a status: no status icon, no status menu, and no Status field in the in-place editor or the detailed Sheet. A stored status or pause reason on such a record MUST be kept hidden, never cleared, and moving a record into Next week MUST NOT reset it. Moving it back to This week MUST show the stored status again.
 
 #### Scenario: A Next week record is shown
 
 - **WHEN** a Next week record is shown
-- **THEN** it shows a neutral marker and no status control
-- **AND** its detailed form has a Next step field and no Status field
+- **THEN** it shows no status control and no marker
+- **AND** its in-place editor and detailed Sheet have no Status field
 
-#### Scenario: Moving back shows the status
+#### Scenario: Moving keeps the stored progress
 
-- **WHEN** a record moves from Next week back to This week
-- **THEN** its status is shown again
-
-### Requirement: Report header is one quiet line
-
-The report header MUST be one quiet line holding the week navigation (the existing PeriodNavigator), the save state and Submit. On a phone the week navigation MAY scroll away while the save state and Submit stay visible. The app bar and unrelated controls are outside this screen's scope and MUST NOT be removed by this change.
-
-#### Scenario: Save state and Submit
-
-- **WHEN** a save is running
-- **THEN** the header shows `Saving…`
-- **WHEN** a save failed or conflicts
-- **THEN** the header shows `Some changes are not saved`
-- **WHEN** nothing is pending
-- **THEN** the header shows `All changes saved`
-
-#### Scenario: Submit with blockers
-
-- **WHEN** blockers exist
-- **THEN** Submit shows `N to fix` and is aria-disabled, and activating it moves focus to the blockers list in `Before you submit`
-- **WHEN** no blocker exists
-- **THEN** Submit is enabled
-
-#### Scenario: The next-week arrow at the latest week
-
-- **WHEN** the selected week is the latest
-- **THEN** the next arrow is aria-disabled and focusable, with `This is the latest week. The next report opens on <date>` as its tooltip and accessible description
-- **AND** activating it, or pressing Alt+Right on it, announces that reason and changes nothing
-
-#### Scenario: Submitted report header
-
-- **WHEN** the report is submitted
-- **THEN** the header shows `Submitted` and no Submit control
+- **WHEN** a Paused record moves to Next week and back
+- **THEN** it shows no status in Next week
+- **AND** it shows Paused with its reason again in This week

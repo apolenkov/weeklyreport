@@ -4,19 +4,26 @@ Make authorized record comments understandable and reachable from the Lead Overv
 
 ## ADDED Requirements
 
-### Requirement: The item comment control has a visible, authorized result
+### Requirement: The item discussion has a visible, authorized result
 
-The item comment control MUST open a modal Sheet named `Discussion` that shows the record's authorized comments, including an honest empty state and an authorized reply composer for the Lead’s own eligible item. Pointer, keyboard and focus behavior MUST be meaningful; the server MUST enforce ownership, role and lifecycle rules.
+A record’s discussion MUST open as a modal `Discussion` Sheet with its authorized comments, an honest empty state and a reply composer for the Lead’s own eligible item. A row MUST show a discussion icon, named `Discussion: <title>, N comments`, only when the record has comments; otherwise the discussion MUST be reached through `Discussion (N)` in the in-place editor. The server MUST enforce ownership, role and lifecycle rules.
 
 #### Scenario: No comments exist
 
-- **WHEN** a Lead activates the comment control on their own editable item without comments
+- **WHEN** a Lead opens `Discussion (0)` in the in-place editor of their own editable item without comments
 - **THEN** the `Discussion` Sheet shows an honest empty state
 - **AND** it does not claim a message was sent or add a comment without an authorized submission
+- **AND** the record's row shows no discussion icon
+
+#### Scenario: The icon appears only with comments
+
+- **WHEN** a record has one or more authorized comments
+- **THEN** its row shows the discussion icon with the count, visible without hover, with a 44 px target on touch
+- **AND** a record with no comments shows no icon, and the icon appears once the first comment is confirmed
 
 #### Scenario: A record has reviewer comments
 
-- **WHEN** a Lead activates the comment control on their own item with authorized reviewer comments
+- **WHEN** a Lead activates the discussion icon on their own item with authorized reviewer comments
 - **THEN** the `Discussion` Sheet exposes those comments for that record and does not reveal another author's private comments
 
 #### Scenario: A Lead replies to their own item
@@ -95,6 +102,7 @@ The UI SHALL distinguish own live, published snapshot, submitted predecessor, au
 
 - **WHEN** a persisted Current item also has a derived Next projection
 - **THEN** both projections use one discussion keyed by session, user, report, section and stable lineage
+- **AND** a derived `Next step` line shows no icon of its own and its editor’s `Discussion (N)` opens the source record’s discussion
 - **AND** explicit Next has its own selected-section discussion
 - **AND** Previous never redirects its identity to Current
 - **AND** historical Current and derived Next show the same authorized source comments, or the derived historical control is deliberately omitted rather than claiming an empty discussion
@@ -183,10 +191,15 @@ Opening an eligible persisted item's discussion SHALL resolve and read automatic
 
 #### Scenario: Keyboard and empty-discussion access
 
-- **WHEN** a user opens a zero-message discussion or a comments-only eligible item
-- **THEN** an independent visible trigger opens it and deliberately focuses the composer or read-only heading
+- **WHEN** a user opens a zero-message discussion through `Discussion (N)` in the editor, or a comments-only eligible item through its icon
+- **THEN** the visible trigger opens it and deliberately focuses the composer or read-only heading
 - **AND** each projection has unique control IDs, Close or Escape returns focus to its trigger or a reachable fallback, and composition Escape and textarea newlines remain intact
 - **AND** loading is not presented as an honest empty result and network completion does not steal focus
+
+#### Scenario: The editor stays open under the Sheet
+
+- **WHEN** the Lead opens `Discussion (N)` from an in-place editor holding an unsaved draft
+- **THEN** the draft stays intact under the Sheet, and closing the Sheet returns focus to that editor control
 
 This item-only increment does not complete risk or decision discussions, ordinary editor 409 recovery, realtime revocation, exactly-once delivery or persistence across browser termination.
 

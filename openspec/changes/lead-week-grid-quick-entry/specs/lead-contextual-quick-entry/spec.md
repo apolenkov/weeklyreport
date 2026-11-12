@@ -18,8 +18,8 @@ A Lead MUST be able to enter minimum-input risk and decision drafts inline under
 
 #### Scenario: A record is started from its reporting unit
 
-- **WHEN** a Lead uses the single "Risk or decision" start of an editable Product or Activity in the Overview and selects the kind with its kind switch (default Risk)
-- **THEN** the record editor opens with that Product or Activity as the parent, without a guessed stage when several are owned, and nothing is created until the Lead saves
+- **WHEN** a Lead uses `+ Risk or decision` in the header of an editable Product or Activity in the Overview and selects the kind with its kind switch (default Risk)
+- **THEN** a short form opens under the unit header with that Product or Activity as the parent, without a guessed stage when several are owned, and nothing is created until the Lead saves
 - **AND** a read-only or historical unit offers no such start
 
 #### Scenario: Ownership changes before submission
@@ -49,19 +49,30 @@ A Lead MUST be able to enter minimum-input risk and decision drafts inline under
 - **WHEN** a Lead creates an item, risk or decision using keyboard or at 375 CSS pixels
 - **THEN** owner and week remain understandable, actions and focus are reachable with no hover-only control and no document-level horizontal overflow, and failures are announced with a recovery path
 
-### Requirement: Each unit offers one start for a risk or decision
+### Requirement: Each unit header offers a risk-or-decision start and its counts
 
-Each editable Product or Activity MUST offer one "Risk or decision" start whose inline composer has a visible kind switch defaulting to Risk. When the unit has records, the start is inside its expanded record list; otherwise it is directly under the unit name.
+The header of each editable Product or Activity MUST always show `+ Risk or decision`, whose short form has a visible kind switch defaulting to Risk, and MUST show the counts `N risks · M decisions` as one disclosure that opens the list of that unit's risks and decisions. The counts belong to the report, not to a week column or tab. Details MUST open in a modal Sheet.
 
 #### Scenario: A unit without records
 
 - **WHEN** an editable unit has no risks or decisions
-- **THEN** "Risk or decision" is shown under the unit name and opens the composer for that unit
+- **THEN** its header shows `+ Risk or decision` and no counts, and the start opens the short form for that unit
+
+#### Scenario: The counts open a list
+
+- **WHEN** the Lead activates `N risks · M decisions` in a unit header
+- **THEN** a list shows each record's title, its kind, its severity and a mark when required details are missing
+- **AND** activating a title opens its details in a modal Sheet, and the counts are visible on every tab of the narrow layout
 
 #### Scenario: Switching the kind keeps the text
 
 - **WHEN** the Lead types text and switches the kind from Risk to Decision
 - **THEN** the text is kept and the required fields change to those of a decision
+
+#### Scenario: A read-only unit shows counts without a start
+
+- **WHEN** the report is read-only or the unit is historical
+- **THEN** the header shows the counts and the list, and no `+ Risk or decision`
 
 ### Requirement: A contextual record is confirmed by its saved identity
 
@@ -121,19 +132,35 @@ Each intended contextual risk or decision MUST retain one stable lineage through
 - **THEN** the composer stays open with its input and a notice that the save is not resolved, so the engine barrier never outlives its composer
 - **AND** the requested cancellation resumes once the report is editable again: an ambiguous original is retried once through its identical request and reconciled before any compensation, and an unsent attempt is restored from its unchanged local lineage before the barrier is released
 
-### Requirement: Each This week and Next week cell has an always-present entry line
+### Requirement: Each unit has one quiet entry line per week
 
-Each editable This week and Next week cell of an eligible Product or Activity MUST show an always-present entry line in place of any separate `+ Add` control. The line MUST sit after the cell's last row, and its accessible name MUST be `Add what happened — <unit>, This week` or `Plan something — <unit>, Next week`. Read-only and ineligible cells MUST show no entry line. The line MUST use the canonical item save path, and a failed save MUST keep the typed text with its error.
+Each editable This week and Next week column of an eligible Product or Activity MUST show one quiet entry line after its last row, with no fill and no resting border, in place of any `+ Add` control. Its accessible name MUST be `Add what happened — <unit>, This week` or `Plan something — <unit>, Next week`. Read-only and ineligible columns MUST show none. The line MUST use the canonical item save path, and a failed save MUST keep the typed text with its error.
 
 #### Scenario: An empty editable cell shows only its line
 
 - **WHEN** an editable This week or Next week cell has no record
 - **THEN** the cell shows only its entry line, with the placeholder `What happened…` in This week and `Plan…` in Next week
 
+#### Scenario: The line is quiet
+
+- **WHEN** the entry line is idle and empty
+- **THEN** it shows only its placeholder, with no grey box, no background fill and no resting border
+- **AND** a border may appear only while it holds focus or text
+
+#### Scenario: One line per unit and week
+
+- **WHEN** a unit has several rows
+- **THEN** it has exactly one entry line in This week and one in Next week, after the last row of the unit, never one per row
+
+#### Scenario: A Product without a This week record is marked
+
+- **WHEN** an eligible Product has no This week record and none is typed
+- **THEN** its This week entry line shows the marker `needed to submit`, which clears once a record exists
+
 #### Scenario: Keys in the entry line
 
 - **WHEN** the Lead types in an entry line
-- **THEN** Enter saves the item, Shift+Enter inserts a line break, and Escape clears the text and offers Undo as defined in `lead-status-overview-actions`
+- **THEN** Enter saves the item, Shift+Enter inserts a line break, and Escape clears the text and offers Undo as defined in `lead-overview-save-safety`
 - **AND** leaving the line with non-empty text saves it
 
 #### Scenario: A saved entry keeps the line ready
@@ -155,5 +182,5 @@ Each editable This week and Next week cell of an eligible Product or Activity MU
 
 #### Scenario: Read-only cells have no line
 
-- **WHEN** a cell is Last week, Previously planned, submitted, locked, historical or foreign
+- **WHEN** a cell is Last week, submitted, locked, historical or foreign
 - **THEN** no entry line is rendered and the cell states its emptiness in plain language
