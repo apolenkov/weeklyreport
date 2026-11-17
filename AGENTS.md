@@ -21,8 +21,7 @@ the owner's global instructions; it does not replace their decisions.
 | `deploy`                      | Local/tester infrastructure, Helm and observability configuration |
 | `docs`, `openspec/specs`      | Current product guides/ADRs; requirements and scenarios           |
 
-Use CodeGraph first when the project is indexed. Reuse existing owners and public
-contracts; keep tests beside their owner. Read `docs/exemplary-code-standard.md`.
+Reuse existing owners and public contracts; keep tests beside their owner. Read `docs/exemplary-code-standard.md`.
 UI copy in `apps/web/src/**/*.tsx` is English. Required runtime configuration
 fails closed; no silent defaults, new lint exemptions or compatibility layers.
 Comments explain current rationale; use `TODO(<ref>): note` for tracked work.
