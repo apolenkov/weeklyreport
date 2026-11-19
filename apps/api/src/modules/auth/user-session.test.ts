@@ -411,9 +411,7 @@ describe("buildUserSession — samlId identity cross-check", () => {
       projectStatus: { createMany: vi.fn() },
       reportingGroup: {
         findFirst: vi.fn(() => Promise.resolve(null)),
-        findUnique: vi.fn(() =>
-          Promise.resolve({ name: "Software Development" }),
-        ),
+        findUnique: vi.fn(() => Promise.resolve({ name: "Software Development" })),
         upsert: vi.fn(() => Promise.resolve(null)),
       },
     };
