@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type {
+  AuthorReportSectionReadModel,
   LeadOpenWorkHistoryOccurrence,
   ReportSectionReadModel,
 } from "@weeklyreport/shared";
@@ -9,13 +10,14 @@ import type { ReactNode } from "react";
 import { toast } from "sonner";
 import { expect, vi } from "vitest";
 
-import { SessionContext } from "../../../../../shared/lib/auth/session-provider";
-import { TRPCProxyContext } from "../../../../../shared/lib/trpc/trpc-context";
-import { createMockTRPC } from "../../../../../test-utils/mock-trpc";
-import { makeReportSectionFixture } from "../../../../../test-utils/report-section-fixtures";
-import type { LeadFormOutcomeResult } from "../../../../report-sections/client";
-import { LeadReportAssistantStore } from "../../lead-report-assistant-store";
-import { OverviewInputProvider } from "./overview-input-provider";
+import { SessionContext } from "../../../../../../shared/lib/auth/session-provider";
+import { TRPCProxyContext } from "../../../../../../shared/lib/trpc/trpc-context";
+import { createMockTRPC } from "../../../../../../test-utils/mock-trpc";
+import { makeReportSectionFixture } from "../../../../../../test-utils/report-section-fixtures";
+import type { LeadFormOutcomeResult } from "../../../../../report-sections/client";
+import { formSectionOf } from "../../../../../report-sections/model/form-section";
+import { LeadReportAssistantStore } from "../../../lead-report-assistant-store";
+import { OverviewInputProvider } from "../overview-input-provider";
 
 export const REPORT_ID = "a0000000-0000-4000-8000-000000000001";
 export const PROJECT_ID = "a0000000-0000-4000-8000-000000000002";
@@ -26,11 +28,11 @@ export const ACTIVITY_ID = "a0000000-0000-4000-8000-000000000006";
 export const PREDECESSOR_REPORT_ID = "a0000000-0000-4000-8000-000000000007";
 const HEAD_REVIEWER_ID = "a0000000-0000-4000-8000-000000000099";
 
-function createSectionStore(initial: ReportSectionReadModel) {
+function createSectionStore(initial: AuthorReportSectionReadModel) {
   let current = initial;
   return {
     read: () => current,
-    write: (next: ReportSectionReadModel) => {
+    write: (next: AuthorReportSectionReadModel) => {
       current = next;
       return next;
     },
@@ -72,7 +74,7 @@ export function Wrapper({
   readonly saveDraft?: (
     input: unknown,
     current: ReportSectionReadModel,
-  ) => Promise<ReportSectionReadModel>;
+  ) => Promise<AuthorReportSectionReadModel>;
   readonly openWork?: readonly LeadOpenWorkHistoryOccurrence[];
   readonly inputProvider?: boolean;
   readonly legacyNextText?: string | undefined;
@@ -322,13 +324,13 @@ export function Wrapper({
       if (saveDraft) {
         try {
           return sectionStore.write(
-            await saveDraft(input, sectionStore.read()),
+            await saveDraft(input, formSectionOf(sectionStore.read())),
           );
         } catch (error) {
           const serverSection = (error as { serverSection?: unknown })
             .serverSection;
           if (serverSection)
-            sectionStore.write(serverSection as ReportSectionReadModel);
+            sectionStore.write(serverSection as AuthorReportSectionReadModel);
           throw error;
         }
       }
@@ -350,7 +352,10 @@ export function Wrapper({
   if (promotePlan)
     captured["leadForm.promotePlan"]?.mutationFn.mockImplementation(
       async (input) => {
-        const result = await promotePlan(input, sectionStore.read());
+        const result = await promotePlan(
+          input,
+          formSectionOf(sectionStore.read()),
+        );
         sectionStore.write(result.section);
         return result;
       },

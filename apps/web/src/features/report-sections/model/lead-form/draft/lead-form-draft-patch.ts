@@ -26,10 +26,15 @@ import {
   mergeRiskDraft,
   patchDraftItem,
 } from "./lead-form-draft-merge-helpers";
+import {
+  applyCreatedRecordPatch,
+  type CreatedRecordPatch,
+} from "./lead-form-draft-record";
 
 // Each patch applies to the latest section; collection patches replace their
 // owned collection, while item patches update one identified row.
 export type DraftPatch =
+  | CreatedRecordPatch
   | { readonly kind: "products"; readonly products: ProductsUpdater }
   | {
       readonly kind: "activity-status";
@@ -127,6 +132,10 @@ export function applyDraftPatch(
   patch: DraftPatch,
 ): ReportSectionReadModel {
   switch (patch.kind) {
+    case "create-record":
+    case "discard-created-record":
+    case "replace-created-record":
+      return applyCreatedRecordPatch(section, patch);
     case "products":
       return mergeProductDraft(
         section,
