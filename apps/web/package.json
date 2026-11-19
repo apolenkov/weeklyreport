@@ -19,7 +19,7 @@
     "@weeklyreport/shared": "workspace:*",
     "@weeklyreport/ui": "workspace:*",
     "lucide-react": "catalog:",
-    "next": "^16.4.3",
+    "next": "^16.4.6",
     "react": "catalog:",
     "react-dom": "catalog:",
     "server-only": "^0.0.1",
