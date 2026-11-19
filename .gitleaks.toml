@@ -42,37 +42,37 @@ regexes = ['''^REPLACE_WITH_IDP_CERT_B64$''']
 [[allowlists]]
 description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"
 condition = "AND"
-commits = ["0edb8383bf3a90c73854c4c60f7de56b7beb5048"]
+commits = ["a6415ffedb2191ea4be75d7cbeb8f970c8e9a869"]
 paths = ['''^e2e/runtime\-sweep/preflight/launch/preflight\-shard\-child\-environment\.ts$''']
 
 [[allowlists]]
 description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"
 condition = "AND"
-commits = ["826ffa1677dd967b39250fd392bcbac005175216"]
+commits = ["cfcf508548bc3eba2130f199892a4bb6b515e7c7"]
 paths = ['''^e2e/runtime\-sweep/preflight/shards/journal/preflight\-shard\-journal\-contract\.test\.ts$''']
 
 [[allowlists]]
 description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"
 condition = "AND"
-commits = ["dbeed10731e4c058b0559c55945bb5990d187338"]
+commits = ["87e43a1a9977848818bf456bb6dda98ae0f574ae"]
 paths = ['''^e2e/runtime\-sweep/preflight/observability/environment\-observer\-bugsink\-sdk\.test\.ts$''']
 
 [[allowlists]]
 description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"
 condition = "AND"
-commits = ["26f021e7ecfc798ab81393639f8873e9672f7a5f"]
+commits = ["6852c04d80b0ea366f9cffa6b0d56b9a6d4ac3ef"]
 paths = ['''^apps/api/src/modules/telegram/activation\.integration\.test\.ts$''']
 
 [[allowlists]]
 description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"
 condition = "AND"
-commits = ["107e257774e48c71291a867cf69a520bb111e703"]
+commits = ["39548d33caa23417432cf231ce1a34fdac8e67b3"]
 paths = ['''^apps/api/src/modules/auth/auth\.e2e\.spec\.ts$''']
 
 [[allowlists]]
 description = "Deleted planning/issue-export file: documented default dev credentials or issue keys, not secrets"
 condition = "AND"
-commits = ["3e455b62b5ec712caf0f1794b828c8292f636758"]
+commits = ["31f82fd1615ee754c2ffa516d9685df9a36f73d4"]
 paths = ['''^\.planning/plans/tingly\-wandering\-brooks\.md$''']
 
 [[allowlists]]
@@ -84,7 +84,7 @@ paths = ['''^\.jira$''']
 [[allowlists]]
 description = "Deleted planning/issue-export file: documented default dev credentials or issue keys, not secrets"
 condition = "AND"
-commits = ["2626c5488e1da2421933238a187849cb5ac8ac40"]
+commits = ["fe93b583ee5ad5508b8ba4db43b97ce6ccfd7411"]
 paths = ['''^\.planning/phases/47\-developer\-experience/47\-03\-SUMMARY\.md$''']
 
 [[allowlists]]
