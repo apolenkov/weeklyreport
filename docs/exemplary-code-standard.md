@@ -32,7 +32,7 @@ applicable rules.
 ## Verification
 
 For changes to application code, build tooling, dependencies, or runtime
-configuration, run the repository commands from `README.md` before delivery:
+configuration, run the repository commands from `docs/quick-start.md` before delivery:
 
 ```bash
 pnpm format:check

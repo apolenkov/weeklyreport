@@ -9,6 +9,7 @@ not belong in this directory.
 | `adr/`                       | Current accepted architectural and product decisions; `adr/README.md` holds the ADR template.          |
 | `exemplary-code-standard.md` | Current code-quality and maintainability standard.                                                     |
 | `onboarding.md`              | New-contributor guide: setup, development, testing, workflows.                                         |
+| `quick-start.md`             | Local setup steps, dev login, main commands and delivery gates.                                        |
 | `environment.md`             | Environment precedence and safe contracts for dev, tests, local dependencies, production Helm, and CI. |
 | `gitlab-ci.md`               | Manual GitLab image build and deploy jobs; where former CI checks run locally.                         |
 | `kubernetes.md`              | Kubernetes delivery: Helm chart install, upgrade, secrets, rollback limits, backup, recovery.          |
