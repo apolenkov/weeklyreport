@@ -10,4 +10,4 @@ scope: lint, tests, audit and secret scanning move to local pre-push; coverage,
 mutation and database checks remain explicit local commands. Image production
 and manual deployment remain unchanged. Hook skips are not passing evidence.
 See [the job destination table](../gitlab-ci.md) and
-[the OpenSpec change](../../openspec/changes/light-build-only-ci/proposal.md).
+[the resulting CI contract](../../openspec/specs/ci-merge-gate/spec.md) (OpenSpec change `light-build-only-ci`, archived in commit 3e4f72974).

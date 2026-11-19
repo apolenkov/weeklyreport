@@ -30,6 +30,11 @@ WeeklyReport автоматизирует еженедельные статус-
 
 ### Что умеет MVP
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="../assets/readme/lifecycle-dark.svg">
+  <img src="../assets/readme/lifecycle.svg" alt="Жизненный цикл отчета. Лид заполняет секцию (draft, затем submitted). Глава проверяет и сводит секции (approved или changes), публикует период и экспортирует его в PDF (published, затем pdf)" width="100%">
+</picture>
+
 Лиды (`lead`) заполняют свои секции отчёта независимо друг от друга. Глава отдела
 (`head`) просматривает, публикует и экспортирует единый сводный отчёт. Есть ещё
 роли `admin` (администрирование) и `viewer` (наблюдение отчёта; назначенные
@@ -187,7 +192,7 @@ pnpm dev:feedback
 доступен только для точной одноразовой базы, принятой destructive guard;
 первичную базу подготовь штатной командой из следующего раздела.
 
-Agentation `3.0.2` отправляет sessions, annotations, статусы и threads в
+Agentation отправляет sessions, annotations, статусы и threads в
 same-origin backend WeeklyReport; источником истины остаётся PostgreSQL.
 Штатный `agentation-mcp` `1.3.2` запускается только как MCP-клиент к этому
 adapter API, без собственного HTTP-сервера и без локальной SQLite:
@@ -398,7 +403,9 @@ DOM-, сетевыми наблюдениями или снимком экран
 ## 10. Первые шаги
 
 1. Запусти проект по [`quick-start.md`](./quick-start.md) и зайди под каждой ролью через
-   переключатель ролей.
+   переключатель ролей. Он выключен по умолчанию: поставь в `.env`
+   `NEXT_PUBLIC_DEV_ROLE_SWITCHER=true` и перезапусти `pnpm dev`. Без
+   переключателя обычный `Sign in` в dev входит под администратором.
 2. Прочитай `CONTEXT.md` целиком — это язык, на котором написан проект.
 3. Пройди один поток данных в коде: открой `apps/web/src/shared/lib/trpc/trpc.ts`, найди
    вызов процедуры, проследи его до сервиса модуля в `apps/api/src/modules/*` и

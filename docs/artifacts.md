@@ -21,7 +21,7 @@ and `scripts/gates/repository-cleanliness.ts`.
 | `scripts`                     | Existing gates, development automation and analysis consumers           |
 | `e2e`                         | Product acceptance source and reusable browser/database setup           |
 | `eslint-config`               | Policy helpers consumed by root `eslint.config.ts`                      |
-| `assets/readme`               | SVGs consumed by the root README                                        |
+| `assets/readme`               | SVGs consumed by the root README and `docs/onboarding.md`               |
 | `docs`                        | Current guides and accepted ADRs; raw run material stays external       |
 | `openspec`                    | Normative requirements, active changes and generator context            |
 | `.gitlab`, `.gitlab-ci.yml`   | Accountable code ownership and pipeline orchestration                   |
