@@ -1,162 +1,75 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/readme/hero-dark.svg">
-  <img src="assets/readme/hero.svg" alt="WeeklyReport — еженедельный статус-отчёт отдела CoreDev: лиды заполняют секции, глава сводит их в один документ недели" width="100%">
+  <img src="assets/readme/hero.svg" alt="WeeklyReport: еженедельный статус-отчет отдела CoreDev. Лиды заполняют секции, глава сводит их в один документ недели" width="100%">
 </picture>
 
-Лиды (`lead`) заполняют свои секции отчёта независимо друг от друга. Глава отдела
-(`head`) просматривает, публикует и экспортирует единый сводный отчёт. Есть ещё
-роли `admin` (администрирование) и `viewer` (наблюдение отчёта; назначенные
-review-действия доступны отдельно).
+# WeeklyReport
+
+Веб-приложение для еженедельного статус-отчета отдела. Лиды заполняют свои
+секции независимо друг от друга, глава отдела сводит их в один отчет недели,
+публикует его и выгружает в PDF.
 
 > Разрушительные операции с БД не считаются безопасными по умолчанию. Точный
 > список одноразовых целей и обязательный guard описаны в
-> [`AGENTS.md`](./AGENTS.md), раздел «Database safety».
+> [`AGENTS.md`](./AGENTS.md), раздел "Database safety".
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/readme/lifecycle-dark.svg">
-  <img src="assets/readme/lifecycle.svg" alt="Жизненный цикл отчёта: лид заполняет секцию (draft → submitted), глава проверяет и сводит секции (approved / changes), публикует период и экспортирует его в PDF (published → pdf)" width="100%">
-</picture>
+## Что умеет
 
-## Что умеет MVP
+- **Лид** (`lead`) заполняет свою секцию: статусы, задачи, риски, решения. Черновик сохраняется сам.
+- **Глава отдела** (`head`) проверяет секции, оставляет комментарии и вердикты, публикует период, показывает слайды, выгружает PDF.
+- **Наблюдатель** (`viewer`) читает текущий или опубликованный отчет, ищет по опубликованным периодам, содержание не меняет.
+- **Администратор** (`admin`) ведет пользователей, группы, продукты, периоды, напоминания и AI-провайдера.
+- **Система**: SAML-вход, перенос незавершенной работы, напоминания, неизменяемые снимки опубликованных отчетов, помощник для лида.
 
-- **Лид** заполняет свою секцию: статусы продуктов и активностей, задачи на
-  текущую и следующую недели, риски, решения и приоритеты. Черновик сохраняется
-  автоматически; лид может перенести незавершённую работу, отправить секцию и
-  запросить повторное открытие.
-- **Глава отдела** видит сводный дашборд и секции лидов, проверяет записи,
-  оставляет комментарии и вердикты, публикует или повторно открывает период,
-  показывает слайды и экспортирует отчёт в PDF.
-- **Наблюдатель** читает доступный текущий или опубликованный отчёт, ищет записи
-  в опубликованных периодах, открывает историю, слайды и PDF. Контент отчёта
-  недоступен для изменения; назначенные reviewer-действия (acknowledgements,
-  comments и verdicts) остаются отдельными операциями.
-- **Администратор** управляет пользователями, группами, продуктами, этапами,
-  активностями, отчётными периодами, напоминаниями, настройками организации,
-  AI-провайдером и версиями системных инструкций ассистента.
-- **Система** поддерживает SAML-вход, автоматический перенос незавершённой
-  работы, доставку напоминаний, неизменяемые опубликованные снимки,
-  авторизованный поиск по отчётам, помощника для лида, наблюдаемость и
-  защищённые процедуры резервного копирования и восстановления.
-
-Актуальные контракты поведения находятся в `openspec/specs/`. Репозиторий
-доказывает реализацию и сборку, но не заменяет проверку конкретного
-production-развёртывания.
-
-## Стек
-
-- **Фронтенд** — Next.js 16 / React 19 (`apps/web`).
-- **Бэкенд** — NestJS + tRPC + Prisma (`apps/api`).
-- **БД** — PostgreSQL; общие схемы и контракты — `packages/shared`.
-- **Наблюдаемость** — структурированные логи, внутренние метрики на `/metrics`
-  и ошибки в подключённом внешнем Sentry.
-- **Монорепо** — pnpm workspaces + Turborepo.
-
-## Структура
-
-```text
-weeklyreport
-├── apps/{web,api}               # UI и API; тесты рядом с владельцем
-├── packages/{shared,ui}         # общие контракты и UI
-├── packages/report-persistence  # серверный Prisma mapper и snapshots
-├── packages/migrator-runtime    # зависимости минимального migration image
-├── prisma/                      # schema, guards, migrations и seed
-├── deploy/                      # локальная инфраструктура, Helm и операции
-├── scripts/                     # автоматизация, gates и анализ результатов
-├── e2e/                         # пользовательские проверки и их setup
-├── eslint-config/               # правила для корневого eslint.config.ts
-├── assets/readme/               # изображения этого README
-├── docs/                        # актуальные гайды и ADR
-└── openspec/                    # требования и активные изменения
-```
-
-Исходники и тесты с действующими потребителями остаются в своих областях.
-Рабочие копии `.worktrees/`, кэши, логи и готовые отчёты — локальное состояние.
-[Карта артефактов](./docs/artifacts.md) объясняет, что входит в Git и образы,
-что выгружает CI и где хранится экспорт PDF; [AGENTS.md](./AGENTS.md) задаёт
-правила для агентов и параллельных сессий.
-
-## Требования
-
-- Node.js **26.13.0 Current** (`>=26.0.0 <27.0.0`, версия `.nvmrc`)
-- pnpm — версия из поля `packageManager` в `package.json` (`npm install -g pnpm@<версия>`; Node 26 не поставляет Corepack)
-- OrbStack с включённым Kubernetes и `kubectl` (локальные Postgres, Redis, Mailpit и Gotenberg живут в namespace `wr-dev`)
+Все роли и возможности подробно: [`docs/onboarding.md`](./docs/onboarding.md#что-умеет-mvp).
 
 ## Быстрый старт
 
+Нужны Node.js 26 (`.nvmrc`), pnpm из поля `packageManager` и OrbStack с Kubernetes и `kubectl`.
+
 ```bash
-# 1. Зависимости
 pnpm install
-
-# 2. Окружение: скопировать пример и при необходимости поправить
 cp .env.example .env
-# Для `pnpm dev` достаточно значений из примера и локальных зависимостей.
-
-# 3. Поднять локальные зависимости (Postgres, Redis, Mailpit, Gotenberg в Kubernetes)
 pnpm deps:up
-
-# 4. Создать точную disposable-базу, применить миграции и залить профиль
 PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION='давай' \
   pnpm db:bootstrap:local demo
-# stress — тот же продуктовый набор с большим объёмом данных
-
-# 5. Запустить web + api одной командой (параллельные процессы)
 pnpm dev
 ```
 
-После старта:
+Веб откроется на http://localhost:3000, API на http://localhost:3002. Шаги по
+отдельности, вход без SSO и все команды: [`docs/quick-start.md`](./docs/quick-start.md).
 
-Все опубликованные dev-порты привязаны к `127.0.0.1` и недоступны напрямую
-с других машин в сети.
+## Как устроено
 
-- Веб — http://localhost:3000
-- API — http://localhost:3002
-- Метрики API — http://localhost:3002/metrics (в production endpoint закрыт
-  внешним Caddy)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/readme/lifecycle-dark.svg">
+  <img src="assets/readme/lifecycle.svg" alt="Жизненный цикл отчета. Лид заполняет секцию (draft, затем submitted). Глава проверяет и сводит секции (approved или changes), публикует период и экспортирует его в PDF (published, затем pdf)" width="100%">
+</picture>
 
-### Вход без реального SSO (dev)
-
-Локально аутентификация идёт через dev-режим: `AUTH_DEV_MODE=true` и эндпоинт
-`/auth/dev-login`. Переключатель ролей в UI включается флагом
-`NEXT_PUBLIC_DEV_ROLE_SWITCHER=true`. В продакшене эти флаги запрещены — там
-только Keycloak SAML.
-
-## Основные команды
-
-```bash
-pnpm dev            # web + api в dev-режиме через persistent Turbo tasks
-pnpm db:bootstrap:local demo    # guarded create + migrate + seed
-pnpm typecheck      # проверка типов во всех пакетах
-pnpm lint           # полный набор проверок качества, отчёт по каждой
-pnpm test           # unit-тесты workspace + Prisma, cleanliness и operations checks
-pnpm build          # production-сборка
-pnpm format         # Prettier по всему дереву
-pnpm spec:check     # строгая проверка всех спецификаций OpenSpec
+```text
+браузер -> apps/web (Next.js) -> /trpc -> apps/api (NestJS, tRPC) -> Prisma -> PostgreSQL
+                                                 |
+                                                 +-> Gotenberg (PDF), почта, Redis
 ```
 
-Перед поставкой один и тот же tree должен пройти:
-`pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` и
-`pnpm spec:check`.
+Монорепозиторий на pnpm workspaces и Turborepo. Общие схемы и типы для web и
+api лежат в `packages/shared`. Требования к поведению описаны в `openspec/specs/`.
 
-Корневой `pnpm test` запускает unit-тесты workspace, Prisma-тесты и проверки
-repository cleanliness и operations. Интеграционные тесты API с базой данных в
-него не входят: запускайте их отдельно через
-`pnpm --filter @weeklyreport/api test:integration`.
+## Документация
 
-Полезное при локальной отладке: читай структурированный лог API в
-`apps/api/.logs/app.log`; в production Kubernetes API пишет в stdout
-(`kubectl -n <ns> logs deployment/api -c api`, точные команды — в `docs/onboarding.md`). Готовность проверяй через `/health/ready`, а метрики —
-через `/metrics`.
+- [`docs/quick-start.md`](./docs/quick-start.md): запуск по шагам и команды
+- [`docs/onboarding.md`](./docs/onboarding.md): гайд для новых разработчиков
+- [`CONTEXT.md`](./CONTEXT.md): словарь терминов проекта
+- [`docs/environment.md`](./docs/environment.md): переменные окружения для всех сред
+- [`docs/operations.md`](./docs/operations.md): деплой, бэкапы, восстановление, откат
+- [`docs/kubernetes.md`](./docs/kubernetes.md): установка через Helm-чарт
+- [`docs/artifacts.md`](./docs/artifacts.md): что хранится в Git и образах
+- [`docs/adr/`](./docs/adr/): принятые архитектурные решения
+- [`docs/coming-soon.md`](./docs/coming-soon.md): реестр отложенных идей
+- [`AGENTS.md`](./AGENTS.md): правила для агентов и БД
+- [`CONTRIBUTING.md`](./CONTRIBUTING.md): правила контрибьюции
 
-## Куда смотреть дальше
+## Статус
 
-- **[`docs/onboarding.md`](./docs/onboarding.md)** — подробный гайд для новых
-  разработчиков: архитектура, поток данных, роли, окружение, наблюдаемость,
-  гейты, отладка, рабочий процесс.
-- **[`CONTEXT.md`](./CONTEXT.md)** — словарь терминов проекта (отчётный период,
-  submission, сценарии и т.д.). Читать до того, как спорить о названиях.
-- **[`docs/adr/`](./docs/adr/)** — архитектурные решения (почему так, а не иначе).
-- **`openspec/specs/`** — источник истины для актуальных контрактов поведения;
-  проверяется командой `pnpm spec:check`.
-- **[`docs/coming-soon.md`](./docs/coming-soon.md)** — единый реестр отложенных
-  продуктовых идей; ни одна из них не реализуется без прямой команды владельца.
-- **[`CONTRIBUTING.md`](./CONTRIBUTING.md)** — правила контрибьюции.
+MVP. Репозиторий доказывает реализацию и сборку, но не заменяет проверку
+конкретного production-развертывания.

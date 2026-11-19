@@ -62,7 +62,7 @@ guard, set `NODE_ENV=test` and per-command
 `pnpm db:migrate:reset` against that same target. Supply matching DATABASE_URL
 and E2E_DATABASE_URL explicitly, Redis DB15 for the main target (lane a/b use
 DB1/2), and reachable Postgres/Redis/Mailpit. Follow [AGENTS.md](../AGENTS.md) and
-[README.md](../README.md); localhost alone does not authorize a reset.
+[docs/quick-start.md](quick-start.md); localhost alone does not authorize a reset.
 
 `pnpm test:integration` and `pnpm test:coverage` set
 `REQUIRED_INTEGRATION_DEPS=true` for the API suite. Missing Mailpit is a hard
