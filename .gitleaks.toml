@@ -78,17 +78,5 @@ paths = ['''^\.planning/plans/tingly\-wandering\-brooks\.md$''']
 [[allowlists]]
 description = "Deleted planning/issue-export file: documented default dev credentials or issue keys, not secrets"
 condition = "AND"
-commits = ["9d9e59fe89bf69a32886b730e0d94d178cf267d6"]
-paths = ['''^\.jira$''']
-
-[[allowlists]]
-description = "Deleted planning/issue-export file: documented default dev credentials or issue keys, not secrets"
-condition = "AND"
 commits = ["fe93b583ee5ad5508b8ba4db43b97ce6ccfd7411"]
 paths = ['''^\.planning/phases/47\-developer\-experience/47\-03\-SUMMARY\.md$''']
-
-[[allowlists]]
-description = "Historical dev-only perf trace carrying an expired local-dev HS256 session token; file no longer in HEAD"
-condition = "AND"
-commits = ["c05332b982434f67f1203d60b3f2b383004d2abc"]
-paths = ['''^\.planning/quick/uat\-feedback\-2026\-05\-11/perf\-head\-dashboard\.json$''']

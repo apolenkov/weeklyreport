@@ -12,6 +12,9 @@
 - Node.js **26.13.0 Current** (`>=26.0.0 <27.0.0`, версия `.nvmrc`)
 - pnpm — версия из поля `packageManager` в `package.json` (`npm install -g pnpm@<версия>`; Node 26 не поставляет Corepack)
 - OrbStack с включённым Kubernetes и `kubectl` (локальные Postgres, Redis, Mailpit и Gotenberg живут в namespace `wr-dev`)
+- Текущий контекст `kubectl` должен быть `orbstack`, иначе `pnpm deps:up` и
+  `pnpm deps:down` откажутся работать. Проверить: `kubectl config current-context`,
+  переключить: `kubectl config use-context orbstack`.
 
 ## Запуск
 
