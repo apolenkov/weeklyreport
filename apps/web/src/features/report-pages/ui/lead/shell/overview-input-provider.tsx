@@ -16,11 +16,16 @@ import {
   isPlanInputEdited,
   type OverviewPlanState,
 } from "./overview-plan-command";
+import {
+  isRecordInputEdited,
+  type OverviewRecordState,
+} from "./overview-record-state";
 
 function createMemory() {
   return {
     item: createOverviewInputMemory<OverviewItemDialogState>(),
     plan: createOverviewInputMemory<OverviewPlanState>(),
+    record: createOverviewInputMemory<OverviewRecordState>(),
   };
 }
 
@@ -40,21 +45,27 @@ function SessionInputMemory({ children }: { readonly children: ReactNode }) {
     memory.plan.hasInput,
     () => false,
   );
+  const recordPending = useSyncExternalStore(
+    memory.record.subscribe,
+    memory.record.hasInput,
+    () => false,
+  );
   useEffect(() => {
-    if (!itemPending && !planPending) return;
+    if (!itemPending && !planPending && !recordPending) return;
     // Retained input that still equals what its composer opened with has
     // nothing to lose, so unload is only blocked for edited input.
     const preventUnload = (event: BeforeUnloadEvent) => {
       if (
         memory.item.some((dialog) => dialog.draftStore.isDirty()) ||
-        memory.plan.some(isPlanInputEdited)
+        memory.plan.some(isPlanInputEdited) ||
+        memory.record.some(isRecordInputEdited)
       ) {
         event.preventDefault();
       }
     };
     window.addEventListener("beforeunload", preventUnload);
     return () => window.removeEventListener("beforeunload", preventUnload);
-  }, [itemPending, planPending, memory]);
+  }, [itemPending, planPending, recordPending, memory]);
   return (
     <MemoryContext.Provider value={memory}>{children}</MemoryContext.Provider>
   );
@@ -74,20 +85,23 @@ export function OverviewInputProvider({
   );
 }
 
-function useOverviewMemory<Kind extends "item" | "plan">(kind: Kind) {
+function useOverviewMemory<Kind extends "item" | "plan" | "record">(
+  kind: Kind,
+) {
   const shared = useContext(MemoryContext);
   const [local] = useState(createMemory);
   return (shared ?? local)[kind];
 }
 
-export function useRetainedOverviewState<Kind extends "item" | "plan">(
-  kind: Kind,
-  reportId: string,
-) {
+export function useRetainedOverviewState<
+  Kind extends "item" | "plan" | "record",
+>(kind: Kind, reportId: string) {
   const memory = useOverviewMemory(kind);
   type Value = Kind extends "item"
     ? OverviewItemDialogState
-    : OverviewPlanState;
+    : Kind extends "plan"
+      ? OverviewPlanState
+      : OverviewRecordState;
   const typed = memory as ReturnType<typeof createOverviewInputMemory<Value>>;
   const value = useSyncExternalStore(
     typed.subscribe,

@@ -22,4 +22,6 @@ export type { DraftSaveContent } from "./model/lead-section-draft-payload";
 export { useStatusRiskSync } from "./model/status-risk/use-status-risk";
 export type { RecordVisibility } from "./model/visibility/use-record-visibility";
 export { useRecordVisibility } from "./model/visibility/use-record-visibility";
+export { StatusOverviewInlineDecisionForm } from "./ui/status-overview-inline-decision-form";
+export { StatusOverviewInlineRiskForm } from "./ui/status-overview-inline-risk-form";
 export { useInlineEditUnloadGuard } from "./ui/use-inline-edit-unload-guard";

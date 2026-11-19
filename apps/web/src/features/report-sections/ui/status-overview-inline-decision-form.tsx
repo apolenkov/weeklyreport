@@ -221,7 +221,7 @@ function Actions({
         Save decision
       </button>
       <button type="button" onClick={onCancel} className={button}>
-        Cancel
+        {view.cancelLabel ?? "Cancel"}
       </button>
     </div>
   );

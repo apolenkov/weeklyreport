@@ -5,7 +5,10 @@ import type {
   StatusOverviewRecordTarget,
   StatusOverviewUnit,
 } from "../model/status-overview";
-import type { StatusOverviewEditorSlot } from "./status-overview-editor-slot";
+import type {
+  StatusOverviewEditorSlot,
+  StatusOverviewRecordSlot,
+} from "./status-overview-editor-slot";
 import { TIMELINE_GRID } from "./status-overview-layout";
 
 export function UnitAddItemButton({
@@ -88,8 +91,7 @@ const RECORD_STARTS = [
   { kind: "decision", label: "Decision" },
 ] as const;
 
-// A risk or decision raised where the work is: it opens the usual editor with
-// this Product or Activity already chosen, so only the text is left to write.
+// A risk or decision is raised from its Product or Activity, without a week lane.
 function UnitRecordStarts({
   unit,
   onAddRecord,
@@ -123,6 +125,7 @@ export function StatusOverviewTimelineFooter({
   onAddItem,
   onAddRecord,
   editorSlot,
+  recordSlot,
   ownedStageStarts,
 }: {
   readonly unit: StatusOverviewUnit;
@@ -131,9 +134,13 @@ export function StatusOverviewTimelineFooter({
   readonly onAddRecord?:
     ((target: StatusOverviewRecordTarget) => void) | undefined;
   readonly editorSlot?: StatusOverviewEditorSlot | undefined;
+  readonly recordSlot?: StatusOverviewRecordSlot | undefined;
   readonly ownedStageStarts?: readonly string[] | undefined;
 }) {
-  if (!onAddItem || unit.historical) return null;
+  if (unit.historical) return null;
+  if (recordSlot?.unitKey === unit.key)
+    return <div className="min-w-0 px-3 py-2">{recordSlot.content}</div>;
+  if (!onAddItem && !onAddRecord) return null;
   return (
     <div className={TIMELINE_GRID}>
       <div className={onAddRecord ? "min-w-0 px-3" : "max-md:hidden"}>
@@ -141,32 +148,33 @@ export function StatusOverviewTimelineFooter({
           <UnitRecordStarts unit={unit} onAddRecord={onAddRecord} />
         ) : null}
       </div>
-      {(["current", "next"] as const).map((source) => (
-        <div
-          key={source}
-          data-overview-create-lane={source}
-          className="min-w-0 px-3 md:border-l md:border-[var(--color-border-subtle)]"
-        >
-          <UnitAddItemButton
-            unit={unit}
-            source={source}
-            onAddItem={onAddItem}
-          />
-          {unit.kind === "product" && ownedStageStarts?.length ? (
-            <StageStarts
+      {onAddItem &&
+        (["current", "next"] as const).map((source) => (
+          <div
+            key={source}
+            data-overview-create-lane={source}
+            className="min-w-0 px-3 md:border-l md:border-[var(--color-border-subtle)]"
+          >
+            <UnitAddItemButton
               unit={unit}
               source={source}
-              stageNames={ownedStageStarts}
               onAddItem={onAddItem}
             />
-          ) : null}
-          {editorSlot?.mode === "create" &&
-          editorSlot.unitKey === unit.key &&
-          editorSlot.source === source
-            ? editorSlot.content
-            : null}
-        </div>
-      ))}
+            {unit.kind === "product" && ownedStageStarts?.length ? (
+              <StageStarts
+                unit={unit}
+                source={source}
+                stageNames={ownedStageStarts}
+                onAddItem={onAddItem}
+              />
+            ) : null}
+            {editorSlot?.mode === "create" &&
+            editorSlot.unitKey === unit.key &&
+            editorSlot.source === source
+              ? editorSlot.content
+              : null}
+          </div>
+        ))}
     </div>
   );
 }

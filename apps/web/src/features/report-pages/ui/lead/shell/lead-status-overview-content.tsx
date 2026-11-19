@@ -5,7 +5,6 @@ import type { ComponentProps, ReactNode, RefObject } from "react";
 
 import { SdlcTooltipProvider } from "../../../../../shared/ui/feedback/sdlc-tooltip";
 import {
-  projectReportHealthPulse,
   projectStatusOverview,
   StatusOverview,
   type StatusOverviewItem,
@@ -258,6 +257,7 @@ export function LeadStatusOverviewContent({
           <EditorAvailabilityNotice editor={editor} />
           <OverviewRefreshWarning failed={refreshError} onRetry={onRefresh} />
           {planPresentation.recovery}
+          {controller.recordPresentation.recovery}
           {!itemSlot && (
             <OverviewEditorNotices
               dialog={dialog}
@@ -268,11 +268,9 @@ export function LeadStatusOverviewContent({
           <StatusOverview
             model={model}
             ownedStageStartsForProduct={controller.ownedStageStartsForProduct}
-            health={projectReportHealthPulse(
-              model.units,
-              readyEditor?.draft.section ?? output.current.section,
-            )}
+            health={controller.health}
             editorSlot={itemSlot ?? planPresentation.slot}
+            recordSlot={controller.recordPresentation.slot}
             {...overviewItemActions(canStartAction, dialog, plan)}
             onAddItem={itemSlot || canStartAction ? dialog.addItem : undefined}
             {...overviewDirectActions(canStartAction, dialog, verdict)}
