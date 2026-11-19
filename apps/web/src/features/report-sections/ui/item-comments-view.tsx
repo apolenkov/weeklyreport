@@ -1,7 +1,7 @@
 "use client";
 
 import type { StatusOverviewItem } from "../model/status-overview";
-import { useItemReplyPort } from "./item-reply-context";
+import { useItemReplyScope } from "./item-reply-context";
 import { StatusOverviewCommentsView } from "./status-overview-comments-view";
 import { useItemDiscussion } from "./use-item-reply-composer";
 
@@ -11,8 +11,9 @@ interface ItemCommentsViewProps {
   readonly onClose: () => void;
 }
 
-// Mounted only while open: the live read and its composer exist only where
-// the page provides the discussion capability.
+// Mounted only while open: the live read exists only where the page provides
+// the discussion capability. The draft and its delivery attempt live in the
+// page's discussion store, so closing this view discards nothing.
 function LiveItemComments({ id, item, onClose }: ItemCommentsViewProps) {
   const discussion = useItemDiscussion(item);
   return (
@@ -28,7 +29,7 @@ function LiveItemComments({ id, item, onClose }: ItemCommentsViewProps) {
 
 /** The open comments of one Overview item. */
 export function ItemCommentsView(props: ItemCommentsViewProps) {
-  return useItemReplyPort() ? (
+  return useItemReplyScope() ? (
     <LiveItemComments {...props} />
   ) : (
     <StatusOverviewCommentsView
