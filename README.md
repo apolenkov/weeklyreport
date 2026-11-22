@@ -5,6 +5,11 @@
 
 # WeeklyReport
 
+[![CI](https://github.com/apolenkov/weeklyreport/actions/workflows/ci.yml/badge.svg)](https://github.com/apolenkov/weeklyreport/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+![Node.js 26](https://img.shields.io/badge/node-26-339933)
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6)
+
 Веб-приложение для еженедельного статус-отчета отдела. Лиды заполняют свои
 секции, глава отдела проверяет их, публикует отчет недели и выгружает его в PDF.
 
@@ -45,3 +50,7 @@ pnpm dev
 - [`docs/onboarding.md`](./docs/onboarding.md): роли, архитектура, окружение, гейты
 - [`CONTEXT.md`](./CONTEXT.md): словарь терминов проекта
 - [`docs/README.md`](./docs/README.md): все документы
+
+## Лицензия
+
+MIT, см. [`LICENSE`](./LICENSE).

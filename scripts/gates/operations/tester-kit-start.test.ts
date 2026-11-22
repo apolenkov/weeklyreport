@@ -304,8 +304,14 @@ const readWhen = (file: string, pattern: RegExp): string => {
   return text;
 };
 
-const alive = (pid: number): boolean =>
-  spawnSync("/bin/kill", ["-0", String(pid)]).status === 0;
+// kill -0 succeeds on an unreaped zombie (Linux); count it as stopped.
+const alive = (pid: number): boolean => {
+  if (spawnSync("/bin/kill", ["-0", String(pid)]).status !== 0) return false;
+  const ps = spawnSync("/bin/ps", ["-o", "stat=", "-p", String(pid)], {
+    encoding: "utf8",
+  });
+  return !/^(Z|$)/u.test(ps.stdout.trim());
+};
 
 // A disposable sleeper: forked by a short-lived shell, reparented, and killed
 // by the test itself. It stands in for any unrelated process that may inherit

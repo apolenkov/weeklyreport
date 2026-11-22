@@ -53,12 +53,13 @@ In merge request pipelines the `quality` job runs commitlint over every MR commi
 Before committing, run `pnpm format:check`, `pnpm lint`, `pnpm typecheck`,
 `pnpm test`, `pnpm build`, and `pnpm spec:check`. The lint floor is zero warnings.
 
-## Pushing to `gitlab/main`
+## Pushing and CI
 
-The canonical remote is `https://forge.example.com/example/weeklyreport.git` (remote `gitlab`).
-Before relying on a push, verify the configured remote, authenticated private
-read access, the pushed commit, and the remote SHA. A successful local push command does
-not prove that GitLab accepted the update or ran CI.
+The canonical remote is `https://github.com/apolenkov/weeklyreport` (remote `origin`).
+Work on a branch and open a pull request to `main`. GitHub Actions
+(`.github/workflows/ci.yml`, [ADR 0025](docs/adr/0025-github-actions-runs-checks.md))
+runs `pnpm format:check`, `pnpm lint`, `pnpm typecheck` and `pnpm test` on
+every pull request and on every push to `main`. Merge when CI is green.
 
 ## Common gotchas
 
