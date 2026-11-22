@@ -2,6 +2,7 @@
 
 **Status:** accepted by owner, implementation proposed in TASK-622
 **Date:** 2026-10-21
+**Superseded-by:** [ADR 0025](0025-github-actions-runs-checks.md) (CI scope on GitHub; `.gitlab-ci.yml` stays for GitLab-hosted deployment)
 
 The owner decided on 2026-10-20 that CI serves only builds and deployment,
 and confirmed the WeeklyReport change on 2026-10-21. Shared GitLab capacity

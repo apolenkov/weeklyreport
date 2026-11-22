@@ -2,7 +2,7 @@
 
 **Status:** accepted
 **Date:** 2026-10-15
-**Superseded-by:** [ADR 0023](0023-ci-builds-and-deploys-local-checks.md) (CI scope)
+**Superseded-by:** [ADR 0023](0023-ci-builds-and-deploys-local-checks.md) (CI scope), then [ADR 0025](0025-github-actions-runs-checks.md)
 
 ## Context
 

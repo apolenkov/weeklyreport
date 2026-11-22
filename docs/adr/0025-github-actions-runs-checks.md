@@ -16,13 +16,18 @@ every public repository to show a green CI (TASK-919, 2026-11-22).
 
 `.github/workflows/ci.yml` runs on every push to `main` and on every pull
 request, on `ubuntu-latest`: `pnpm format:check`, `pnpm lint`,
-`pnpm typecheck` and `pnpm test`. The local pre-push gate stays as it is: it
-also covers the build, OpenSpec, audits, secret scanning and the database
-checks. ADR 0023 still describes `.gitlab-ci.yml`, which only matters for a
-GitLab-hosted deployment.
+`pnpm typecheck` and `pnpm test`. The local pre-push gate stays as it is:
+`pnpm check:push` runs the same four commands plus `pnpm spec:check`
+(OpenSpec), `pnpm audit:dependencies` and `pnpm scan:secrets`. Commit messages
+are checked locally by the `commit-msg` hook (commitlint); CI does not repeat
+it.
+
+ADR 0019, 0022 and 0023 described CI on the GitLab runner. This ADR supersedes
+their CI scope. `.gitlab-ci.yml` and `.gitlab/` remain only as the deployment
+pipeline for a GitLab-hosted installation; nothing on GitHub runs them.
 
 ## Consequences
 
 Reviewers see the check status on the pull request without a local run.
-Database integration tests, coverage, mutation and E2E remain explicit local
-commands.
+The production build, database integration tests, coverage, mutation and E2E
+remain explicit local commands.

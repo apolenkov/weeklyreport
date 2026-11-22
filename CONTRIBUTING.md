@@ -40,13 +40,12 @@ Subject ≤ 100 chars. Body is free-form (multi-line line length unrestricted).
 
 - pre-commit — `prettier --check`, ESLint and Stylelint on staged files (skipped in CI, for agents (`AGENT_*`) and during merges);
 - commit-msg — commitlint (`commitlint.config.ts`): Conventional Commits (plus `merge:` and
-  GitLab `Merge branch …`), scope from the list;
-- pre-push — light: `format:check`, `typecheck`, `spec:check`; full lint and tests run in the CI
-  `quality` job. Skipped when `CI` or any `AGENT_*` variable is set.
+  `Merge branch …`), scope from the list; CI does not repeat it;
+- pre-push — `pnpm check:push`: `format:check`, `lint`, `typecheck`, `test`, `spec:check`,
+  `audit:dependencies` and `scan:secrets`. Skipped when `CI` is set or with
+  `WR_SKIP_PUSH_CHECKS=1`.
 
 Hooks live in the common git directory and work in every worktree without a separate install.
-
-In merge request pipelines the `quality` job runs commitlint over every MR commit.
 
 ## Local quality gate
 
