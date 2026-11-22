@@ -155,12 +155,12 @@ Create the session before the task's first browser command and reuse it. Verify
 observable DOM/network/screenshot outcomes and inspect whole screenshots. A
 visible defect, failed or unknown result is not PASS.
 
-GitLab is the only remote. Owner decision 2026-10-11: push straight to `main`
-without a merge request and without waiting for CI; local gates and hooks still
-run and are never bypassed. Owner decision 2026-10-20, reconfirmed 2026-10-29
-(TASK-798): checks run locally and CI only deploys, so `main` pipelines skip
-their jobs; skipped CI proves nothing, and local gates plus the pre-push hook
-are the check. Tie local checks, independent review and direct main push to
+The remote is `origin` = github.com/apolenkov/weeklyreport (moved from GitLab on
+2026-11-19). Work on a branch and open a pull request to `main`; merge when the
+GitHub Actions CI ([ADR 0025](docs/adr/0025-github-actions-runs-checks.md)) is
+green and delete the branch. Local gates and the pre-push hook
+(`pnpm check:push`) still run and are never bypassed; CI repeats only format,
+lint, typecheck and test. Tie local checks, independent review and the merged pull request to
 their actual SHA and keep those evidence layers distinct. Report
 what changed, what passed, what remains and the next action in Backlog. Stop only
 your processes and remove only delivered task-owned worktrees/resources; retain

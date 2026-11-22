@@ -45,10 +45,13 @@ the acceptance authority; no custom replacement gate substitutes for them.
 
 ## Current hosting and CI boundary
 
-The only configured remote is the private GitLab project ([ADR 0019](adr/0019-gitlab-is-the-only-remote-and-ci-runs-lint-and-test-only.md)).
-`.gitlab-ci.yml` holds only the manual `build-images` and `deploy-production`
-jobs described in `docs/gitlab-ci.md`; checks run in the Lefthook pre-push
-(`pnpm check:push`) and `pnpm build` is local acceptance evidence. Repository files
+The repository lives on GitHub (github.com/apolenkov/weeklyreport, since
+2026-11-19). GitHub Actions runs format, lint, typecheck and test on every pull
+request and push to `main` ([ADR 0025](adr/0025-github-actions-runs-checks.md));
+the Lefthook pre-push (`pnpm check:push`) runs the full local gate and
+`pnpm build` is local acceptance evidence. `.gitlab-ci.yml` keeps only the
+manual `build-images` and `deploy-production` jobs described in
+`docs/gitlab-ci.md`, for a GitLab-hosted installation. Repository files
 do not prove that `main` is protected or that any platform security setting is
 enabled. Those external settings are **unverified** until an authorized
 read-back confirms them.

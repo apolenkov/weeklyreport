@@ -2,7 +2,7 @@
 
 **Status:** superseded
 **Date:** 2026-09-28
-**Superseded-by:** [ADR 0022](0022-ci-runs-security-mutation-and-production-build-routes.md) (CI scope only; GitLab stays the only remote)
+**Superseded-by:** [ADR 0022](0022-ci-runs-security-mutation-and-production-build-routes.md) (CI scope); [ADR 0025](0025-github-actions-runs-checks.md) (remote moved to GitHub on 2026-11-19)
 
 ## Context
 
