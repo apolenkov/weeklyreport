@@ -351,9 +351,9 @@ pnpm lint:eslint
 спецификацию и код.
 
 Тесты живут рядом с продуктовым кодом. Корневой `pnpm test` запускает unit-тесты
-workspace, Prisma-тесты и проверки repository cleanliness и operations. Он не
-запускает интеграционные тесты API с базой данных: их запускают отдельно через
-`pnpm --filter @weeklyreport/api test:integration`.
+workspace, Prisma-тесты и проверки repository cleanliness и operations.
+Интеграционные тесты API с базой данных запускай из корня командой
+`pnpm test:integration`. Если Mailpit недоступен, команда завершится с ошибкой.
 
 Конфиги API `vitest.integration.config.ts` и `vitest.coverage.config.ts` загружают
 `.env.test`; `apps/web/vitest.config.ts` этот файл не загружает. По MVP-политике

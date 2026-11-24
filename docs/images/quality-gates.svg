@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="580" viewBox="0 0 1200 580" role="img" aria-labelledby="title desc">
+  <title id="title">Проверки WeeklyReport</title>
+  <desc id="desc">Слева перечислены локальные хуки Lefthook. Справа три параллельных задания CI и два независимых процесса анализа безопасности GitHub Actions с собственными условиями запуска.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+      <path d="M0 0L8 4L0 8Z" fill="#5c7086"/>
+    </marker>
+  </defs>
+  <rect width="1200" height="580" rx="24" fill="#f2f6fa"/>
+  <rect x="24" y="24" width="1152" height="532" rx="20" fill="#fff" stroke="#c8d7e6"/>
+  <g font-family="DejaVu Sans, sans-serif" fill="#142a41">
+    <text x="48" y="76" font-size="32" font-weight="700">Проверки WeeklyReport</text>
+    <text x="48" y="121" font-size="18" font-weight="700">Локально / Lefthook</text>
+    <text x="382" y="121" font-size="18" font-weight="700">GitHub Actions</text>
+    <path d="M358 102V531" stroke="#c8d7e6"/>
+    <g fill="#f2f6fa" stroke="#aabed2">
+      <rect x="48" y="144" width="283" height="92" rx="12"/>
+      <rect x="48" y="258" width="283" height="78" rx="12"/>
+      <rect x="48" y="358" width="283" height="103" rx="12"/>
+    </g>
+    <g fill="none" stroke="#5c7086" stroke-width="2.5" marker-end="url(#arrow)">
+      <path d="M190 236V256"/>
+      <path d="M190 336V356"/>
+    </g>
+    <g font-size="19" font-weight="700">
+      <text x="66" y="176">pre-commit</text>
+      <text x="66" y="289">commit-msg</text>
+      <text x="66" y="389">pre-push</text>
+    </g>
+    <g font-size="15" fill="#48647f">
+      <text x="66" y="203">Prettier, ESLint, Stylelint</text>
+      <text x="66" y="223">для staged-файлов</text>
+      <text x="66" y="315">Commitlint</text>
+      <text x="66" y="415">pnpm check:push</text>
+      <text x="66" y="438">Сборка образов по флагу</text>
+    </g>
+    <rect x="382" y="144" width="770" height="228" rx="14" fill="#e8f4fc" stroke="#70a9cb"/>
+    <text x="402" y="179" font-size="21" font-weight="700">CI</text>
+    <text x="449" y="179" font-size="16" fill="#48647f">pull request · push в main · ручной запуск</text>
+    <g fill="#fff" stroke="#aabed2">
+      <rect x="402" y="210" width="230" height="137" rx="10"/>
+      <rect x="652" y="210" width="230" height="137" rx="10"/>
+      <rect x="902" y="210" width="230" height="137" rx="10"/>
+    </g>
+    <g font-size="19" font-weight="700">
+      <text x="418" y="243">checks</text>
+      <text x="668" y="243">coverage</text>
+      <text x="918" y="243">supply-chain</text>
+    </g>
+    <g font-size="15" fill="#48647f">
+      <text x="418" y="273">Prettier и линтеры</text>
+      <text x="418" y="297">Типы и тесты</text>
+      <text x="668" y="273">Пороги API и Web</text>
+      <text x="668" y="297">LCOV и JSON</text>
+      <text x="918" y="273">OpenSpec и Gitleaks</text>
+      <text x="918" y="297">Аудит зависимостей</text>
+    </g>
+    <g fill="#ddf5f0" stroke="#6fb8aa">
+      <rect x="382" y="396" width="375" height="113" rx="12"/>
+      <rect x="777" y="396" width="375" height="113" rx="12"/>
+    </g>
+    <g font-size="19" font-weight="700">
+      <text x="402" y="429">CodeQL</text>
+      <text x="797" y="429">OpenSSF Scorecard</text>
+    </g>
+    <g font-size="15" fill="#48647f">
+      <text x="402" y="455">JavaScript / TypeScript</text>
+      <text x="402" y="479">Pull request · push в main · еженедельно</text>
+      <text x="797" y="455">Публикация результатов проверки</text>
+      <text x="797" y="479">Push в main · еженедельно</text>
+    </g>
+  </g>
+</svg>

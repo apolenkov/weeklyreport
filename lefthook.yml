@@ -23,7 +23,7 @@ commit-msg:
       run: pnpm exec commitlint --edit {1}
 pre-push:
   jobs:
-    # Full local gate; GitHub Actions repeats only format, lint, typecheck and test (ADR 0025).
+    # Local checks; GitHub Actions also has a separate coverage job (ADR 0026).
     # Existing CI/agent skips are not evidence that checks passed.
     # Explicit skip only via WR_SKIP_PUSH_CHECKS=1; AGENT_* no longer skips check:push (owner decision 2026-10-31).
     # Git fixture subprocesses must resolve their own repositories.

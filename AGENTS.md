@@ -157,10 +157,10 @@ visible defect, failed or unknown result is not PASS.
 
 The remote is `origin` = github.com/apolenkov/weeklyreport (moved from GitLab on
 2026-11-19). Work on a branch and open a pull request to `main`; merge when the
-GitHub Actions CI ([ADR 0025](docs/adr/0025-github-actions-runs-checks.md)) is
+GitHub Actions CI ([ADR 0026](docs/adr/0026-github-actions-checks-coverage-and-supply-chain.md)) is
 green and delete the branch. Local gates and the pre-push hook
-(`pnpm check:push`) still run and are never bypassed; CI repeats only format,
-lint, typecheck and test. Tie local checks, independent review and the merged pull request to
+(`pnpm check:push`) still run and are never bypassed. CI runs checks, coverage,
+and supply-chain jobs. Tie local checks, independent review and the merged pull request to
 their actual SHA and keep those evidence layers distinct. Report
 what changed, what passed, what remains and the next action in Backlog. Stop only
 your processes and remove only delivered task-owned worktrees/resources; retain

@@ -22,9 +22,11 @@ and `scripts/gates/repository-cleanliness.ts`.
 | `e2e`                         | Product acceptance source and reusable browser/database setup           |
 | `eslint-config`               | Policy helpers consumed by root `eslint.config.ts`                      |
 | `assets/readme`               | SVGs consumed by the root README and `docs/onboarding.md`               |
+| `docs/images`                 | Static diagrams and selected CLI captures consumed by the public README |
 | `docs`                        | Current guides and accepted ADRs; raw run material stays external       |
 | `openspec`                    | Normative requirements, active changes and generator context            |
-| `.gitlab`, `.gitlab-ci.yml`   | Accountable code ownership and pipeline orchestration                   |
+| `.github`                     | Public CI, security analysis, and contributor entry points              |
+| `.gitlab`, `.gitlab-ci.yml`   | Optional deployment pipeline                                            |
 | Root manifests/config/docs    | Tool discovery and developer entrypoints; keep their current paths      |
 
 Versions and commands belong to manifests, `.nvmrc`, `turbo.json`, Dockerfiles
@@ -70,6 +72,7 @@ context size. See `Dockerfile.api`, `Dockerfile.web` and `turbo.json`.
 
 Operators run `pnpm images:build` on their workstations and push images to the
 registry before deployment. GitHub Actions runs the public repository checks.
+The coverage job uploads LCOV and JSON summaries to the workflow run.
 Record the exact tested SHA with each check result. For a GitLab-hosted
 installation, see [GitLab deployment](gitlab-ci.md) for deployment and the
 operator-triggered Renovate command.

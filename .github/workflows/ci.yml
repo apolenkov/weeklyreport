@@ -23,6 +23,8 @@ jobs:
       DATABASE_URL: postgresql://ci:ci@localhost:5432/weeklyreport_ci
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -34,3 +36,134 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+
+  coverage:
+    name: API and web coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    # Match the service images in deploy/local-dev/deps.yaml.
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.7-pg15-bookworm@sha256:47af0b65960b14f1c6945aa4ccae37836c632e9a6fe0eea9160936e616e5b2e9
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: weeklyreport_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U ci -d weeklyreport_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+      redis:
+        image: redis:8.10.3-alpine@sha256:896f241f438ab6a210cfb24f573b84bea721a4cbe67f1b4fd07eb638b3b02a7b
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+      mailpit:
+        # The image ships a /mailpit readyz Docker health check.
+        image: axllent/mailpit:v1.32.0@sha256:0790692be935ea4420d085694f7985b1f692ca6a8771ab0e0bd8ba75ac180498
+        ports:
+          - 1025:1025
+          - 8025:8025
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/weeklyreport_e2e
+      E2E_DATABASE_URL: postgresql://ci:ci@127.0.0.1:5432/weeklyreport_e2e
+      REDIS_HOST: 127.0.0.1
+      REDIS_PORT: "6379"
+      REDIS_DB: "15"
+      SMTP_HOST: 127.0.0.1
+      SMTP_PORT: "1025"
+      MAILPIT_API_URL: http://127.0.0.1:8025
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @weeklyreport/api db:generate
+      - name: Reset and seed the disposable database
+        env:
+          PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: давай
+        run: |
+          node --import tsx --input-type=module -e '
+            import { parseE2eRuntimeDatabaseTarget } from "./prisma/guards/_destructive-guard.ts";
+            const { host, port, database } = parseE2eRuntimeDatabaseTarget("ci-coverage", process.env.DATABASE_URL ?? "");
+            console.log("PostgreSQL target: postgresql://***:***@%s:%s/%s", host, port, database);
+          '
+          node --import tsx prisma/operations/migrate-reset.ts
+          pnpm db:seed:profile minimal
+      - name: Enforce API and web coverage thresholds
+        env:
+          # API suites truncate test tables only after checking explicit consent.
+          PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION: давай
+        run: |
+          node --import tsx --input-type=module -e '
+            import { parseE2eRuntimeDatabaseTarget } from "./prisma/guards/_destructive-guard.ts";
+            const { host, port, database } = parseE2eRuntimeDatabaseTarget("ci-coverage", process.env.DATABASE_URL ?? "");
+            console.log("PostgreSQL target: postgresql://***:***@%s:%s/%s", host, port, database);
+          '
+          pnpm test:coverage
+      - name: Require all coverage reports
+        run: |
+          test -s apps/api/coverage/lcov.info
+          test -s apps/api/coverage/coverage-summary.json
+          test -s apps/web/coverage/lcov.info
+          test -s apps/web/coverage/coverage-summary.json
+      - name: Upload coverage reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: vitest-coverage
+          path: |
+            apps/api/coverage/lcov.info
+            apps/api/coverage/coverage-summary.json
+            apps/web/coverage/lcov.info
+            apps/web/coverage/coverage-summary.json
+
+  supply-chain:
+    name: OpenSpec, secrets, dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - id: install
+        run: pnpm install --frozen-lockfile
+      - name: Install Gitleaks
+        id: gitleaks
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSLo "$RUNNER_TEMP/$archive" "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/$archive"
+          echo "$GITLEAKS_SHA256  $RUNNER_TEMP/$archive" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" gitleaks
+          sudo install "$RUNNER_TEMP/gitleaks" /usr/local/bin/gitleaks
+          gitleaks version
+      - run: pnpm spec:check
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
+        env:
+          OPENSPEC_TELEMETRY: "0"
+      - run: pnpm scan:secrets
+        if: ${{ !cancelled() && steps.gitleaks.outcome == 'success' }}
+      - run: pnpm audit:dependencies
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}

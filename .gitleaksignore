@@ -6,3 +6,11 @@ eed849a34c30be7bf066ead94b01e2d823248ca5:e2e/runtime-sweep/preflight/shards/jour
 7a610db8ea622067e52a6be039970aa57a624032:e2e/runtime-sweep/preflight/observability/environment-observer-bugsink-sdk.test.ts:generic-api-key:14
 8823b2fa6604e5e645eecc9a1e8cbed9023b636f:apps/api/src/modules/telegram/activation.integration.test.ts:generic-api-key:12
 235ef01256a0e6ea5663d38b3f5094b73dee2740:apps/api/src/modules/auth/auth.e2e.spec.ts:generic-api-key:7
+# First-parent merge diffs repeat reviewed env names, test fixtures, and local Grafana defaults.
+9d840f29a436ba0a96e8961d66cdeab6319b4f83:e2e/runtime-sweep/preflight/launch/preflight-shard-child-environment.ts:generic-api-key:25
+9d840f29a436ba0a96e8961d66cdeab6319b4f83:e2e/runtime-sweep/preflight/shards/journal/preflight-shard-journal-contract.test.ts:generic-api-key:96
+e7a1add34fd6480c3b1bbe74e83cda9fd506ca63:e2e/runtime-sweep/preflight/observability/environment-observer-bugsink-sdk.test.ts:generic-api-key:13
+e7a1add34fd6480c3b1bbe74e83cda9fd506ca63:e2e/runtime-sweep/preflight/observability/environment-observer-bugsink-sdk.test.ts:generic-api-key:14
+68cd94d8a3c4562cecaafc1b4e51e8fb6e53b4ae:.planning/plans/tingly-wandering-brooks.md:curl-auth-user:342
+68cd94d8a3c4562cecaafc1b4e51e8fb6e53b4ae:.planning/plans/tingly-wandering-brooks.md:curl-auth-user:348
+d6cef86a195a6c85a69df81171662b7f9657f2bf:.planning/phases/47-developer-experience/47-03-SUMMARY.md:curl-auth-user:154

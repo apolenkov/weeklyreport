@@ -1,8 +1,8 @@
 # GitHub Actions runs the checks on GitHub
 
-**Status:** accepted
+**Status:** superseded
 **Date:** 2026-11-22
-**Superseded-by:** None
+**Superseded-by:** [0026-github-actions-checks-coverage-and-supply-chain](0026-github-actions-checks-coverage-and-supply-chain.md)
 
 ## Context
 

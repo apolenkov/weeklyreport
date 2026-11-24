@@ -1,70 +1,46 @@
-# Security Policy
+# Security policy
 
-WeeklyReport is pre-production software in a private repository. Treat reports
-about credentials, authentication, authorization, personal data, CI/CD, and
-deployment infrastructure as confidential even when no production traffic
-exists.
+## Supported versions
 
-## Report a vulnerability privately
+WeeklyReport is pre-1.0. The maintainer applies security fixes to the
+current `main` branch.
 
-Use a confidential GitLab issue when that feature is available. Otherwise contact the repository owner
-through an already approved private work channel.
+## Report a vulnerability
 
-Do not put a suspected secret, exploit, user record, access token, private log,
-or reproduction against a live system in a public issue, pull request, chat, or
-commit. Include only the minimum evidence needed to reproduce the problem:
+Use [GitHub private vulnerability reporting](https://github.com/apolenkov/weeklyreport/security/advisories/new).
+Keep credentials, user records, private logs, and live-system reproduction
+details out of public issues, pull requests, and commits.
 
-- affected commit, component, route, or workflow;
-- impact and required access;
-- deterministic reproduction against disposable or synthetic data;
-- relevant request, trace, or run identifiers with secrets removed;
-- suggested containment, when known.
+Include the affected commit and component, expected impact, required access,
+and the shortest reproduction against disposable or synthetic data. Redact
+secrets and personal data from logs and attachments. Include a suggested
+containment step if you have one.
 
-The repository owner coordinates triage for every report. A report is not
-closed until containment, root cause, verification, and follow-up ownership are
-recorded.
+The maintainer acknowledges reports in the advisory thread and uses it to
+coordinate triage, follow-up, and disclosure. Fix timing depends on the impact
+and the work required to verify the fix.
 
-## Leaked credential response
+## Application and delivery boundaries
 
-Deleting a credential from Git history does not invalidate it. For a suspected
-leak, use this order:
+- Leave `AUTH_DEV_MODE` disabled in production. API startup rejects
+  `AUTH_DEV_MODE=true` with `NODE_ENV=production`.
+- Use `prisma/guards/_destructive-guard.ts` for destructive development and
+  test operations. The guard requires a disposable database on loopback,
+  a non-production environment, and explicit consent per run. Follow the
+  [operations runbook](docs/operations.md) for production recovery.
+- Keep credentials in untracked local environment files or managed deployment
+  secrets. Commit placeholders in examples. If a credential leaks, revoke or
+  rotate it at its provider, then verify that the old credential fails.
+- The [CI workflow](.github/workflows/ci.yml) runs a blocking dependency audit
+  and a redacted Gitleaks scan of the committed tree and reachable history.
+  The scan traverses every parent and checks merge diffs against the first parent.
+  The local pre-push gate runs the same checks. [CodeQL](.github/workflows/codeql.yml)
+  scans JavaScript and TypeScript. [OpenSSF Scorecard](.github/workflows/scorecard.yml)
+  publishes repository security checks.
 
-1. Pause the affected publish, deployment, integration, or automation path.
-2. Revoke or rotate the credential at its provider.
-3. Preserve the relevant commit, workflow run, audit record, deployment record,
-   and timestamps without copying the secret.
-4. Determine the credential scope, observed use, affected systems, and exposure
-   window.
-5. Update dependent services and verify that the old credential no longer
-   works.
-6. Remove the secret from current source and, when necessary, perform a
-   separately reviewed history rewrite.
-7. Record root cause, detection gap, corrective control, and owner.
+## Incident response
 
-## CI/CD compromise response
-
-For a suspected pipeline, dependency, runner, artifact, or deployment
-compromise:
-
-```text
-detect -> pause publish/deploy
-       -> revoke affected identities
-       -> preserve run, commit, digest, provenance, and audit evidence
-       -> inspect access and deployment history
-       -> rebuild from a known-good reviewed commit
-       -> verify dependencies and artifact identity
-       -> promote through protected environments
-       -> record root cause and prevention
-```
-
-Do not reuse an artifact whose source, builder identity, dependency graph, or
-provenance is uncertain. Database recovery is a separate destructive decision;
-follow [the operations runbook](docs/operations.md) and do not represent an
-image rollback as a schema rollback.
-
-## Disclosure
-
-Coordinate disclosure with the repository owner. Do not disclose an unresolved
-vulnerability, active exploit path, or leaked credential outside the approved
-response group. Preserve reporter attribution unless the reporter requests
-anonymity.
+Pause affected publishing or deployment, revoke affected credentials, and
+preserve run IDs, commit and artifact digests, and audit events. Rebuild
+affected artifacts from a reviewed commit and verify their identity before
+promotion. Coordinate any public disclosure in the advisory thread.

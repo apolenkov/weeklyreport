@@ -1,6 +1,6 @@
 # Optional GitLab deployment
 
-The public repository runs checks on [GitHub Actions](adr/0025-github-actions-runs-checks.md).
+The public repository runs checks on [GitHub Actions](adr/0026-github-actions-checks-coverage-and-supply-chain.md).
 The GitLab pipeline below is for a GitLab-hosted installation. Set the release
 registry and deployment variables for that installation before use.
 
@@ -13,20 +13,20 @@ do not create pipelines.
 
 ## Job destinations
 
-| Former job        | Where it runs now                                                                                                                                               |
-| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| node-toolchain    | Removed CI-only artifact transport; local Node from `.nvmrc`, pnpm from `package.json`; Dockerfiles still own image toolchains.                                 |
-| quality           | `pnpm check:push` in Lefthook pre-push: format, lint, typecheck, tests and spec validation. Commitlint remains the commit-msg hook.                             |
-| dependency-scan   | `pnpm audit:dependencies` in pre-push, preserving production audit and high-severity full audit. Endpoint failure blocks verification.                          |
-| secret-scan       | `pnpm scan:secrets` in pre-push: Gitleaks committed-tree/history scan with redaction and synthetic positive/negative controls. Install Gitleaks before pushing. |
-| mutation-period   | `pnpm test:mutation` on demand; existing serial Stryker pilot and threshold unchanged.                                                                          |
-| coverage          | `pnpm --filter @weeklyreport/web test:coverage` on demand.                                                                                                      |
-| api-integration   | `pnpm test:coverage` runs combined API unit/integration coverage once then Web coverage; `pnpm test:integration` offers integration-only checks.                |
-| migrate-reset     | `pnpm db:migrate:reset` on demand: guarded reset followed by explicit full seed.                                                                                |
-| production-build  | `pnpm build` is required local acceptance evidence. Image builds use Dockerfiles directly and never consumed this job's artifacts.                              |
-| renovate          | Operator-triggered local container command below; no scheduled update job in CI.                                                                                |
-| build-images      | Local workstation (Mac with OrbStack): `pnpm images:build` builds and pushes `api`, `migrate`, `web`, `backup` tagged with commit SHA.                          |
-| deploy-production | GitLab, conditional manual production deployment; verifies image existence in registry before mutating the cluster.                                             |
+| Former job        | Where it runs now                                                                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| node-toolchain    | Removed CI-only artifact transport; local Node from `.nvmrc`, pnpm from `package.json`; Dockerfiles still own image toolchains.                  |
+| quality           | GitHub Actions and `pnpm check:push` in Lefthook pre-push. Commitlint remains the commit-msg hook.                                               |
+| dependency-scan   | `pnpm audit:dependencies` in GitHub Actions and pre-push. An endpoint failure blocks verification.                                               |
+| secret-scan       | `pnpm scan:secrets` in GitHub Actions and pre-push. Install Gitleaks before pushing.                                                             |
+| mutation-period   | `pnpm test:mutation` on demand; existing serial Stryker pilot and threshold unchanged.                                                           |
+| coverage          | `pnpm test:coverage` in GitHub Actions and on demand.                                                                                            |
+| api-integration   | `pnpm test:coverage` runs combined API unit/integration coverage once then Web coverage; `pnpm test:integration` offers integration-only checks. |
+| migrate-reset     | `pnpm db:migrate:reset` on demand: guarded reset followed by explicit full seed.                                                                 |
+| production-build  | `pnpm build` is required local acceptance evidence. Image builds use Dockerfiles directly and never consumed this job's artifacts.               |
+| renovate          | Operator-triggered local container command below; no scheduled update job in CI.                                                                 |
+| build-images      | Local workstation (Mac with OrbStack): `pnpm images:build` builds and pushes `api`, `migrate`, `web`, `backup` tagged with commit SHA.           |
+| deploy-production | GitLab, conditional manual production deployment; verifies image existence in registry before mutating the cluster.                              |
 
 ## Local verification
 
@@ -56,8 +56,8 @@ hook skips remain unchanged; `AGENT_*` variables no longer skip the check
 
 On the owner's shared host, use `run-checks <worktree> 'pnpm check:push'` so the
 existing global pre-push semaphore covers the whole check. Other machines must
-coordinate heavy checks with their resource owner. Coverage, mutation and DB
-checks are deliberately excluded from every push.
+coordinate heavy checks with their resource owner. The local hook omits
+coverage, mutation, and DB integration tests.
 
 Before each database-backed phase, coordinate the exact synthetic target with
 other sessions, print its credential-masked address, verify the destructive
@@ -76,9 +76,8 @@ commands for integration acceptance and combined API/Web coverage.
 Coverage thresholds and Vitest JSON reporting remain intact. Use
 `VITEST_JSON_OUTPUT_FILE` with an absolute external evidence path for per-suite
 JSON; native coverage summaries remain under each app's coverage directory.
-The old CI Markdown summaries, production-build checksum manifest and temporary
-Node tarball are no longer produced or uploaded. Preserve local logs, native
-coverage reports and exact SHA instead; they are not GitLab artifacts.
+GitHub Actions uploads LCOV and JSON summaries from the coverage job. For a
+local run, preserve logs, coverage reports, and the source SHA.
 
 Renovate remains configured by `renovate.json`. With operator-provided
 RENOVATE_TOKEN in the environment (never print it), run the former pinned image:
