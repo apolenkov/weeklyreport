@@ -8,7 +8,10 @@ import type {
   StatusOverviewRecordTarget,
 } from "../model/status-overview";
 import type { PlanVerdict } from "../model/status-overview-verdict";
-import type { StatusOverviewEditorSlot } from "./status-overview-editor-slot";
+import type {
+  StatusOverviewEditorSlot,
+  StatusOverviewRecordSlot,
+} from "./status-overview-editor-slot";
 
 /** Records a verdict for a Previously planned item; resolves to a failure message, or null when recorded. */
 export type VerdictHandler = (
@@ -33,6 +36,7 @@ export type SetStagesHandler = (
 /** Overview row callbacks threaded from the shell into every timeline lane. */
 export interface ItemHandlers {
   readonly editorSlot?: StatusOverviewEditorSlot | undefined;
+  readonly recordSlot?: StatusOverviewRecordSlot | undefined;
   readonly onEditItem?:
     ((target: StatusOverviewEditTarget) => void) | undefined;
   /** Commits the inline in-place text edit of one editable item. */

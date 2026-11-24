@@ -18,8 +18,8 @@ A Lead MUST be able to enter minimum-input risk and decision drafts inline under
 
 #### Scenario: A record is started from its reporting unit
 
-- **WHEN** a Lead uses the Risk or Decision start of an editable Product or Activity in the Overview
-- **THEN** the record editor opens with that Product or Activity as the parent, without a guessed stage, and nothing is created until the Lead saves
+- **WHEN** a Lead uses `+ Risk or decision` in the header of an editable Product or Activity in the Overview and selects the kind with its kind switch (default Risk)
+- **THEN** a short form opens under the unit header with that Product or Activity as the parent, without a guessed stage when several are owned, and nothing is created until the Lead saves
 - **AND** a read-only or historical unit offers no such start
 
 #### Scenario: Ownership changes before submission
@@ -47,7 +47,32 @@ A Lead MUST be able to enter minimum-input risk and decision drafts inline under
 #### Scenario: Responsive and keyboard operation
 
 - **WHEN** a Lead creates an item, risk or decision using keyboard or at 375 CSS pixels
-- **THEN** owner and week remain understandable, actions and focus are reachable without hover or document-level horizontal overflow, and failures are announced with a recovery path
+- **THEN** owner and week remain understandable, actions and focus are reachable with no hover-only control and no document-level horizontal overflow, and failures are announced with a recovery path
+
+### Requirement: Each unit header offers a risk-or-decision start and its counts
+
+The header of each editable Product or Activity MUST always show `+ Risk or decision`, whose short form has a visible kind switch defaulting to Risk, and MUST show the counts `N risks · M decisions` as one disclosure that opens the list of that unit's risks and decisions. The counts belong to the report, not to a week column or tab. Details MUST open in a modal Sheet.
+
+#### Scenario: A unit without records
+
+- **WHEN** an editable unit has no risks or decisions
+- **THEN** its header shows `+ Risk or decision` and no counts, and the start opens the short form for that unit
+
+#### Scenario: The counts open a list
+
+- **WHEN** the Lead activates `N risks · M decisions` in a unit header
+- **THEN** a list shows each record's title, its kind, its severity and a mark when required details are missing
+- **AND** activating a title opens its details in a modal Sheet, and the counts are visible on every tab of the narrow layout
+
+#### Scenario: Switching the kind keeps the text
+
+- **WHEN** the Lead types text and switches the kind from Risk to Decision
+- **THEN** the text is kept and the required fields change to those of a decision
+
+#### Scenario: A read-only unit shows counts without a start
+
+- **WHEN** the report is read-only or the unit is historical
+- **THEN** the header shows the counts and the list, and no `+ Risk or decision`
 
 ### Requirement: A contextual record is confirmed by its saved identity
 
@@ -78,3 +103,125 @@ Each intended contextual risk or decision MUST retain one stable lineage through
 - **THEN** the original outcome is reconciled before cancellation is reported complete
 - **AND** any confirmed compensation removes only the unchanged intended lineage from current state and is itself persisted and confirmed
 - **AND** newer edits and unrelated records are retained, with an explicit conflict if safe compensation is not possible
+
+#### Scenario: A contextual save never reaches dispatch
+
+- **WHEN** a pending report command refuses the local patch, or a failed earlier save removes the contextual attempt from the queue before dispatch
+- **THEN** the composer retains its input and offers a functioning retry and cancellation path without reporting success
+- **AND** an unchanged local patch from the dropped attempt is restored before its save barrier is released; unrelated records and later typing remain intact
+
+#### Scenario: A submitted composer survives page navigation
+
+- **WHEN** a submitted composer is retained across navigation and the returning editor has a new activation
+- **THEN** its old request is not replayed or compensated through the new activation
+- **AND** the author can explicitly close the retained editor with a notice that closing does not undo the earlier save and that its outcome must be checked in the report
+
+#### Scenario: Required reads briefly fail during a contextual save
+
+- **WHEN** the editor is temporarily unavailable while an existing save or compensation is in flight or queued
+- **THEN** the original attempt remains associated with its result through recovery of the same activation
+- **AND** its exact scoped receipt confirms the save, or a dropped queue result retains working retry and cancellation without duplicating the request
+
+#### Scenario: A submitted composer becomes read-only
+
+- **WHEN** the report becomes read-only and no transport for the submitted input remains pending
+- **AND** the submitted attempt holds no unresolved save outcome: its original and cancellation are neither ambiguous nor needing reconciliation, and no unsent attempt still holds the autosave barrier
+- **THEN** the author can explicitly close the editor without compensation or a new write
+- **AND** a notice explains that closing does not undo an earlier save and its outcome must be checked in the report
+- **WHEN** the report becomes read-only while the submitted attempt holds an unresolved save outcome (an ambiguous or reconciling recovery, or an unsent attempt that still holds the barrier)
+- **THEN** the composer stays open with its input and a notice that the save is not resolved, so the engine barrier never outlives its composer
+- **AND** the requested cancellation resumes once the report is editable again: an ambiguous original is retried once through its identical request and reconciled before any compensation, and an unsent attempt is restored from its unchanged local lineage before the barrier is released
+
+### Requirement: Each unit has one quiet entry line per week
+
+Each editable This week and Next week column of an eligible Product or Activity MUST show one quiet entry line after its last row, with no fill and no resting border, in place of any `+ Add` control. Its accessible name MUST be `Add what happened — <unit>, This week` or `Plan something — <unit>, Next week`. Read-only and ineligible columns MUST show none. The line MUST use the canonical item save path, and a failed save MUST keep the typed text with its error.
+
+#### Scenario: An empty editable cell shows only its line
+
+- **WHEN** an editable This week or Next week cell has no record
+- **THEN** the cell shows only its entry line, with the placeholder `What happened…` in This week and `Plan…` in Next week
+
+#### Scenario: The line is quiet
+
+- **WHEN** the entry line is idle and empty
+- **THEN** it shows only its placeholder, with no grey box, no background fill and no resting border
+- **AND** a border may appear only while it holds focus or text
+
+#### Scenario: One line per unit and week
+
+- **WHEN** a unit has several rows
+- **THEN** it has exactly one entry line in This week and one in Next week, after the last row of the unit, never one per row
+
+#### Scenario: A Product without a This week record is marked
+
+- **WHEN** an eligible Product has no This week record and none is typed
+- **THEN** its This week entry line shows the marker `needed to submit`, which clears once a record exists
+
+#### Scenario: Keys in the entry line
+
+- **WHEN** the Lead types in an entry line
+- **THEN** Enter saves the item, Shift+Enter inserts a line break, and Escape clears the text and offers Undo as defined in `lead-overview-save-safety`
+- **AND** leaving the line with non-empty text saves it
+
+#### Scenario: A saved entry keeps the line ready
+
+- **WHEN** an entry is saved successfully
+- **THEN** the line is cleared, keeps focus and remains available for the next item of that unit and week
+
+#### Scenario: Entry defaults by week
+
+- **WHEN** an entry is saved from a This week line
+- **THEN** the new record gets the Done status, and its status control is reachable on the record right after saving
+- **WHEN** an entry is saved from a Next week line
+- **THEN** the new record has no status and shows no status control
+
+#### Scenario: A failed entry keeps its text
+
+- **WHEN** the save of an entry fails or is refused by validation
+- **THEN** the typed text remains in the line with an actionable error, and no success is announced
+
+#### Scenario: Read-only cells have no line
+
+- **WHEN** a cell is Last week, submitted, locked, historical or foreign
+- **THEN** no entry line is rendered and the cell states its emptiness in plain language
+
+### Requirement: The entry line shows three controls while typing and starts from sensible stages
+
+At rest the entry line MUST stay a quiet line. While it holds text it MUST show exactly three controls: one icon-only stage button showing the current stage, `More details` and `Save`. An Activity entry, and a Product with one owned stage, have no stage button. Default stages: a continuation inherits the source item's stages; a new entry takes the last stages the Lead chose in that Product; otherwise the Product's first stage.
+
+#### Scenario: A resting line has no controls
+
+- **WHEN** an entry line is idle and empty
+- **THEN** it shows only its placeholder and no stage button, More details or Save
+
+#### Scenario: Typing shows exactly three controls
+
+- **WHEN** the Lead types the first character in the entry line of a Product with several owned stages
+- **THEN** the line shows exactly three controls: the stage button, `More details` and `Save`
+- **AND** the stage button is icon-only, its tooltip reads `Stage: <name>`, and no control exists that is visible only on hover
+
+#### Scenario: The stage button opens a small popover
+
+- **WHEN** the Lead activates the stage button
+- **THEN** a small popover shows the owned stages as toggles, several may be chosen, and the last pressed toggle cannot be switched off (the toast `A record needs at least one stage.` appears)
+- **AND** an Activity entry shows no stage button and a Product with one owned stage shows its icon without a button
+
+#### Scenario: The line’s own controls are not leaving it
+
+- **WHEN** focus moves from the typed text to the line’s stage button, its small popover, `More details` or `Save`
+- **THEN** the text is not saved by that move, and leaving the line for anything else still saves non-empty text as `Keys in the entry line` states
+
+#### Scenario: A continuation inherits the source stages
+
+- **WHEN** an entry continues an existing item, such as a plan answered into This week
+- **THEN** its default stages are the source item's stages that are still eligible for the Lead
+
+#### Scenario: A new entry takes the last chosen stages
+
+- **WHEN** a new entry, not a continuation, is started in a Product where the Lead chose stages before
+- **THEN** its default stages are the last stages the Lead chose in that Product that are still eligible
+
+#### Scenario: Otherwise the first stage
+
+- **WHEN** a new entry is started in a Product where the Lead chose no stages before
+- **THEN** its default stage is the Product's first eligible stage

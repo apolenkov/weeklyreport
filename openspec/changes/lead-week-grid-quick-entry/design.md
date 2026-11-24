@@ -2,13 +2,13 @@
 
 ## Intent and decisions
 
-A Lead works within an existing Product or Activity and a three-week report. Keep the established paper visual system and timeline. Place one quiet add action per editable unit in each of Current and Next, including an empty unit. The chosen lane fixes the week and the unit fixes its parent. Input begins inline; the pencil continues to open the canonical detailed editor. Display the Lead’s eligible product stages as directly selectable labels in the item context and let the Lead start a new item directly from a selected stage in its week; apply a sole eligible stage by the existing default, and keep stale selections visible until the user explicitly resolves them. Selecting a stage for a report item does not alter product-stage assignments or grant administrative rights. The separate global toolbar creation flows remain available.
+A Lead works within an existing Product or Activity and a three-week report; the layout follows the 11.12 direction in design/02-layout-direction-and-editing-popover.md (mockup v2.5). Keep the established paper visual system and timeline. Place one quiet entry line per unit in each editable This week and Next week column, including an empty unit, in place of any separate Add control. The chosen column fixes the week and the unit fixes its parent. Input begins inline. Clicking a record's text opens an editing popover under the record that holds the text, the stage toggles, the Next step and the icon actions Discussion, Move, More details (the modal full form) and Delete; no record line carries a pencil button, move arrow or discussion icon of its own (see design/02-layout-direction-and-editing-popover.md). Stages are icons; they change only in the popover, the entry line's stage button or More details, and a stale selection stays visible until the user explicitly resolves it. Selecting a stage for a report item does not alter product-stage assignments or grant administrative rights. The separate global toolbar creation flows remain available.
 
 Provide similarly compact inline risk and decision entry in the relevant unit context. Risks and decisions belong to the report section and parent rather than to an invented weekly item lane. One action focuses primary text; details expand on demand. Under `../lead-incomplete-record-drafts/design.md`, draft save requires primary text, valid parent/stages, explicit risk severity and authoritative decision owner; absent impact/mitigation is null. A matching receipt confirms an incomplete draft, not a completed record. Section submission requires complete details or explicit identity-targeted deletion. Product stage choice follows owned eligible stages; Activity has no Product stages. Invalid primary input or context remains visibly unsaved.
 
-A prior commitment is immutable historical input. Its existing Done, Continue, Next week, Paused and Won't do actions write the selected week's occurrence or the existing outcome command, never the prior snapshot. Reuse stable identity, existing rollover precedence, conflict handling and undo; identical text alone is not an identity conflict. Directional buttons and existing keyboard shortcuts provide quick movement without requiring drag.
+A prior commitment is immutable historical input. In This week it is one line on its work item’s row with a question-mark status icon; the icon’s menu answers it with Done, In progress, Next week, Paused… or Won’t do… (the last two ask one line of reason). The answer writes the selected week's occurrence or the existing outcome command, never the prior snapshot. Reuse stable identity, existing rollover precedence, conflict handling and undo; identical text alone is not an identity conflict. The target week is re-checked before every answer, move and Undo. A move is reached through the status menu or the editing popover, and Alt+Right / Alt+Left give quick movement without drag. An impossible move stays in its menu, aria-disabled, with its reason.
 
-The comment icon opens a labelled item discussion, including an empty state and a reply composer for the Lead on their own eligible item. The owner explicitly chose two-way conversation. The existing `tracked-work-continuation` contract permits such replies, but current `review.comment` rejects Leads; implement a narrowly scoped Lead write route with server-derived author and transactional ownership, stable lineage and lifecycle checks, while preserving the existing reviewer-only routes and permissions. Existing comments form one chronological discussion; do not invent a threaded relationship or modify frozen historical records.
+A record’s discussion (its icon when comments exist, otherwise `Discussion (N)` in the editing popover) opens a modal `Discussion` Sheet, including an empty state and a reply composer for the Lead on their own eligible item. The owner explicitly chose two-way conversation. The existing `tracked-work-continuation` contract permits such replies, but current `review.comment` rejects Leads; implement a narrowly scoped Lead write route with server-derived author and transactional ownership, stable lineage and lifecycle checks, while preserving the existing reviewer-only routes and permissions. Existing comments form one chronological discussion; do not invent a threaded relationship or modify frozen historical records.
 
 ## Lead discussion authorization and data flow
 
@@ -28,7 +28,7 @@ Putting a modal behind each week button would preserve much of the current code 
 
 ## Boundaries and data flow
 
-1. `report-sections` Overview renders labelled unit/week actions and compact presentation. It passes an explicit existing unit kind/id and Current/Next target; no Previous creation. On mobile, preserve unit and period labels, 44px targets, touch-visible controls and no page overflow.
+1. `report-sections` Overview renders one entry line per unit and editable week column and the row grid of the layout below. It passes an explicit existing unit kind/id and Current/Next target; no Previous creation. On mobile, preserve unit and period labels, 44px targets, touch-visible controls and no page overflow.
 2. The Lead shell owns one mutually exclusive contextual editor state and all writes. Item creation reuses `useOverviewCreateOpeners`, `saveOverviewItem`, the submission driver, generation and focus/recovery machinery. Detailed edit remains the modal. New inline input participates in existing pending-input, leave and discard guards.
 3. Contextual risk/decision presentation produces a valid draft `RiskEntry`/`DecisionEntry` through the canonical nullable draft builders; no changes are made to foreign rows. Empty detail controls normalize to null, never placeholder text. The shell applies a patch against the latest **own** list and waits for a record-specific, generation-scoped persistence receipt before reporting success. A generic last-saved timestamp is not proof that the intended record survived filtering. Keep a stable submitted ID across retries; disable duplicate submissions while pending. Compensating removal of a persisted incomplete create carries explicit kind/stableId deletion intent at the current section version, not mere list omission.
 4. At dispatch, the existing autosave owner captures an immutable whole-section payload, section/generation/scope, expected version, record stableId and input snapshot. Each new risk/decision gets one client-generated stableId which survives builder, own-list merge, payload and server remint. Extend the existing receipt with the saved risk/decision records and submitted request metadata needed to correlate exact kind, stableId, parent and normalized fields; a local patch or generic saved timestamp is not proof.
@@ -37,95 +37,32 @@ Putting a modal behind each week button would preserve much of the current code 
 
    Cancel before dispatch removes only the unchanged intended lineage from the latest own draft. After possible dispatch, retain cancel intent until the original result is resolved; if it committed and the lineage is still unchanged, apply and confirm a scoped compensating removal against fresh state. A changed lineage or permission/lifecycle restriction is surfaced for resolution. No stale whole-list rollback; other own and foreign rows are not removed. Reuse the existing coordinator, generation and pending-input mechanisms rather than introducing a general state-machine framework.
 
-5. The comment presentation consumes only the existing authorized `item.comments`; it opens a named discussion with an empty state, direct reply input and focus return. The Lead reply uses a narrowly scoped server-authorized write for an own editable item; preserve input on rejection or uncertainty and refresh that item without replacing newer report edits. Do not fetch foreign/private data or grant delete, review, acknowledgement or verdict permissions.
+5. The comment presentation consumes only the existing authorized `item.comments`; the row icon appears only when comments exist, and the popover’s `Discussion (N)` opens the modal `Discussion` Sheet with an empty state, reply input and focus return. The Lead reply uses a narrowly scoped server-authorized write for an own editable item; preserve input on rejection or uncertainty and refresh that item without replacing newer report edits. Do not fetch foreign/private data or grant delete, review, acknowledgement or verdict permissions.
 
 ## Frozen presentation interface and ownership
 
-The integration owner creates the following data-only presentation contract in `apps/web/src/features/report-sections/model/contextual-entry-contract.ts` and exports it through `report-sections/index.ts` before other owners implement forms. This keeps report-sections independent of the Lead page shell. `ItemWorkflowStatus` and `RecordCommentView` are canonical types from `@weeklyreport/shared`. `ItemWorkflowStatus` includes `postponed`; invalid week/status combinations are validated by the canonical owner. Target and input are correlated by discriminant; mismatches and stale parent/stage eligibility are rejected by the integration owner.
-
-```ts
-type Parent = {
-  readonly kind: "product" | "activity";
-  readonly id: string;
-  readonly name: string;
-};
-type ItemTarget = {
-  readonly kind: "item";
-  readonly parent: Parent;
-  readonly week: "current" | "next";
-};
-type RecordTarget = {
-  readonly kind: "risk" | "decision";
-  readonly parent: Parent;
-};
-type ItemInput = {
-  readonly text: string;
-  readonly nextStepText: string;
-  readonly stageNames: readonly string[];
-  readonly status: ItemWorkflowStatus;
-  readonly pausedReason: string;
-};
-type RiskInput = {
-  readonly text: string;
-  readonly impact: string | null;
-  readonly mitigation: string | null;
-  readonly severity: "at-risk" | "blocked";
-  readonly stageNames: readonly string[];
-};
-type DecisionInput = {
-  readonly text: string;
-  readonly impact: string | null;
-  readonly deadline: string;
-  readonly stageNames: readonly string[];
-};
-type CommonView = {
-  readonly eligibleStages: readonly string[];
-  readonly authorName: string;
-  readonly errors: Readonly<Record<string, string>>;
-  readonly message: string | null;
-  readonly pending: boolean;
-  readonly dirty: boolean;
-  readonly canSubmit: boolean;
-};
-type ItemComposerProps = {
-  readonly target: ItemTarget;
-  readonly value: ItemInput;
-  readonly view: CommonView;
-  readonly onChange: (value: ItemInput) => void;
-  readonly onSubmit: (mode: "save" | "save-and-add-another") => void;
-  readonly onCancel: () => void;
-};
-type RiskComposerProps = {
-  readonly target: RecordTarget & { readonly kind: "risk" };
-  readonly value: RiskInput;
-  readonly view: CommonView;
-  readonly onChange: (value: RiskInput) => void;
-  readonly onSubmit: () => void;
-  readonly onCancel: () => void;
-};
-type DecisionComposerProps = {
-  readonly target: RecordTarget & { readonly kind: "decision" };
-  readonly value: DecisionInput;
-  readonly view: CommonView;
-  readonly onChange: (value: DecisionInput) => void;
-  readonly onSubmit: () => void;
-  readonly onCancel: () => void;
-};
-```
-
-The gate freezes the contract. Integration work is divided among explicitly assigned, non-overlapping file owners for the record identity data path, prior-plan verdict, autosave receipt/recovery and Overview host/shell integration; each existing file has at most one active writer. The **item presentation owner** creates only `status-overview-inline-item-form.tsx` and its own test. The **record presentation owner** creates only `status-overview-inline-risk-form.tsx`, `status-overview-inline-decision-form.tsx` and their own tests. The **comments presentation owner** creates only a new named comments-view component and its own test; existing row/preview/comments files and their wiring remain with the host integration owner. Presentation owners emit user intent, never mutate draft state or claim persistence. The contract must be committed and reviewed before presentation work; integration of all candidates follows their completion under the host integration owner. Cross-component and browser tests belong to the integration owner. Workers do not alter the active owner-preview worktree, browser, ports or data.
-
-The separate visual, guideline and UX inputs are archived under `handoffs/task-836/`.
-
-The nullable contract uses the existing `prepareContextualRisk` and
-`prepareContextualDecision` builders. At that boundary, null details become
-blank form-control values; canonical payload serialization writes them as null.
-Primary text, current parent/stage eligibility, explicit severity and decision
-author remain required, and supplied nonblank details keep their text validation.
-Contract tests carry both Product and Activity drafts through the existing
-own-list merge and shared write schema, preserving caller identity and proving
-that incomplete details still block section submission.
+The data-only presentation contract (`contextual-entry-contract.ts`: `Parent`, `ItemTarget`, `RecordTarget`, `ItemInput`, `RiskInput`, `DecisionInput`, `CommonView` and the three composer props), the file ownership of presentation work and the nullable-draft builders are in [design/01-frozen-presentation-contract.md](design/01-frozen-presentation-contract.md). The contract is unchanged by v2.5.
 
 ## Verification
 
 Focused tests must first demonstrate failures for contextual week/owner entry, required fields and stage changes, comment empty state, stale/failed persistence, dirty discard and prior-plan identity. Verify exact saved identity on a matching receipt, no duplicates on retry, preservation of other own rows, no foreign leakage, and unchanged prior snapshot. Exercise existing full editor, toolbar, verdict, move, roles and lifecycle. Run the six root gates, strict OpenSpec validation, appropriate guarded database integration and full E2E where the write contract requires it. Inspect the implemented source in a separate browser session at 1280 and 375 with keyboard, focus, empty/error/pending states and screenshots; do not reset or change the owner's current inspection data.
+
+## Layout direction 11.12 and the editing popover
+
+The layout direction of mockup v2.5, its component mapping and the editing-popover decisions of 12.11 (popover, leaving never saves, bottom Sheet on narrow screens and touch, hover cue, stage icons and legend, three-control entry line, one Undo rule, status line, read-only submitted report) are in [design/02-layout-direction-and-editing-popover.md](design/02-layout-direction-and-editing-popover.md). The mockup is `/Users/wrk/work/task-836-ux-mocks/v2/index.html`; where it differs from the 12.11 decisions, the decisions and the specs win.
+
+## Data gap and how package 10 closes it
+
+The one-row-per-work-item grid needs a row model the current code does not have. Today `buildStatusOverviewLineage` (`status-overview-lineage.ts`) merges occurrences by `stableId` and overwrites a repeated slot, and `buildStatusOverviewColumns` (`status-overview-items.ts`) selects prior commitments through `isPreviousPlanItem` and substitutes the single `Item.nextStepText` for the result. The Prisma `Item` holds one `nextStepText` and no split or merge relation, so a work item cannot have several independent next steps.
+
+Package 10 closes the gap in the web feature only, with no schema change:
+
+1. Split the previous-week input into `lastWeek` (the published results and statuses) and `priorCommitments` (plans still to answer), both read-only.
+2. Build a row model `{ stableId, last, current, next, priorCommitment, answerState }` keyed by lineage. A repeated slot is a conflict that gets its own row, and nothing is overwritten. Rows are never matched by text.
+3. Several steps of one piece of work are one multi-line plan in `nextStepText`; an independent step is a new item with its own `stableId`. Nothing is split or merged.
+
+Open points for the owner or the gate:
+
+- Move with a saved next step (decided by the gate, 12.11): in the Overview, `Move to next week` and the plan outcome `Next week` are disabled with the reason "Its next step is already planned in Next week. Edit the next step instead", and nothing is written; the plan already sits in the Next week cell of the same row. Lead form week cards keep the in-place acknowledgement. The `record-status-derivation` delta in this change carries the rule.
+- Unit collapse: the baseline lets a unit collapse its rows; v2.5 does not show the control. The specs keep the baseline behaviour.
+- Not specified from the mockup: the unit status summary and the grey Last week background.

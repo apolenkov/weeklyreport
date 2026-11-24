@@ -1,6 +1,7 @@
 import type { ReportSectionReadModel } from "@weeklyreport/shared";
 
 import type { DraftPatch } from "./lead-form/draft/lead-form-draft-patch";
+import { applyCreatedRecordPatch } from "./lead-form/draft/lead-form-draft-record";
 
 // One record's stage choice made in this draft: the draft row it belongs to,
 // the record's parent, and the stages the lead left selected.
@@ -251,6 +252,16 @@ export function changedStageSelections(
 ): readonly SavedStageSelection[] {
   if (previous === null) return [];
   switch (patch.kind) {
+    case "create-record":
+    case "replace-created-record": {
+      const next = applyCreatedRecordPatch(previous, patch);
+      return next === previous
+        ? []
+        : changedSelections(
+            contextualSelectionRows(previous, patch.record.kind),
+            contextualSelectionRows(next, patch.record.kind),
+          );
+    }
     case "week-items": {
       const previousItems = previous.items.filter(
         (item) => item.type === patch.week,
@@ -304,6 +315,23 @@ interface StageSelectionRow {
   readonly id?: string | undefined;
   readonly productId: string | null | undefined;
   readonly stageNames: readonly string[];
+}
+
+function contextualSelectionRows(
+  section: ReportSectionReadModel,
+  kind: "risk" | "decision",
+): readonly StageSelectionRow[] {
+  return kind === "risk"
+    ? section.risks.map((row) => ({
+        id: row.id,
+        productId: row.projectId,
+        stageNames: row.stageNames,
+      }))
+    : section.decisions.map((row) => ({
+        id: row.id,
+        productId: row.productId,
+        stageNames: row.stageNames,
+      }));
 }
 
 function changedSelections(

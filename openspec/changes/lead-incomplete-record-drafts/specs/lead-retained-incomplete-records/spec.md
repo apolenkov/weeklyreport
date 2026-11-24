@@ -43,6 +43,18 @@ The author MUST explicitly choose to copy retained text into a currently eligibl
 - **THEN** the copy is rejected without a target write or source mutation
 - **AND** the author is not granted permission to reopen the source
 
+#### Scenario: Cached source is opened while offline
+
+- **WHEN** a copy activation has cached source data but its new authorization read is paused by loss of connectivity
+- **THEN** cached private text and the copy action remain hidden until that activation's read settles successfully
+- **AND** reconnecting to an unavailable source offers no prefill or write
+
+#### Scenario: Source refresh preserves the chosen destination
+
+- **WHEN** a successfully loaded source is checked again in the same copy activation
+- **THEN** the explicit destination choice is retained while opening the composer is blocked until the read settles
+- **AND** an unavailable or failed result does not permit copying stale source data
+
 ### Requirement: Recovery does not depend on current-period routing
 
 Retained-draft discovery and reads MUST use authenticated own-section access, not the viewer current-period gate or section provisioning. The read MUST verify current active identity, canonical authoring-role entitlement and exact source section ownership. Group membership or shared-product access alone MUST NOT authorize private recovery. Missing or unauthorized sources MUST return no protected content.

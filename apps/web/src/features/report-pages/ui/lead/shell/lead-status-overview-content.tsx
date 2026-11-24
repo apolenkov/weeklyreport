@@ -5,7 +5,6 @@ import type { ComponentProps, ReactNode, RefObject } from "react";
 
 import { SdlcTooltipProvider } from "../../../../../shared/ui/feedback/sdlc-tooltip";
 import {
-  projectReportHealthPulse,
   projectStatusOverview,
   StatusOverview,
   type StatusOverviewItem,
@@ -26,6 +25,7 @@ import { openWorkOutsideTimeline } from "./open-work-register-model";
 import { OverviewItemDialogSurface } from "./overview-item-dialog-surface";
 import { overviewItemActions } from "./overview-plan-presentation";
 import type { CompletionPresentation } from "./presentation/use-completion-presentation";
+import { RetainedRecordCopyRequest } from "./retained-record-copy-request";
 import {
   type AvailableEditor,
   type ReadyEditor,
@@ -228,18 +228,8 @@ export function LeadStatusOverviewContent({
   onRefresh,
 }: LeadStatusOverviewContentProps) {
   const controller = useOverviewController({ targetReportId, output, editor });
-  const {
-    readyEditor,
-    canEdit,
-    canStartAction,
-    model,
-    dialog,
-    plan,
-    verdict,
-    planPresentation,
-    itemSlot,
-    itemEditor,
-  } = controller;
+  const { readyEditor, model, dialog, plan, verdict } = controller;
+  const { canStartAction, itemSlot } = controller;
   const detailsHref = useOverviewDetailsHref(readyEditor, targetReportId);
   return (
     <SdlcTooltipProvider>
@@ -257,27 +247,32 @@ export function LeadStatusOverviewContent({
           />
           <EditorAvailabilityNotice editor={editor} />
           <OverviewRefreshWarning failed={refreshError} onRetry={onRefresh} />
-          {planPresentation.recovery}
+          <RetainedRecordCopyRequest
+            editor={readyEditor}
+            model={model}
+            pendingInput={controller.pendingInput}
+            onOpen={controller.record.openCopy}
+          />
+          {controller.planPresentation.recovery}
+          {controller.recordPresentation.recovery}
           {!itemSlot && (
             <OverviewEditorNotices
               dialog={dialog}
               error={dialog.error}
-              itemEditor={itemEditor}
+              itemEditor={controller.itemEditor}
             />
           )}
           <StatusOverview
             model={model}
             ownedStageStartsForProduct={controller.ownedStageStartsForProduct}
-            health={projectReportHealthPulse(
-              model.units,
-              readyEditor?.draft.section ?? output.current.section,
-            )}
-            editorSlot={itemSlot ?? planPresentation.slot}
+            health={controller.health}
+            editorSlot={itemSlot ?? controller.planPresentation.slot}
+            recordSlot={controller.recordPresentation.slot}
             {...overviewItemActions(canStartAction, dialog, plan)}
             onAddItem={itemSlot || canStartAction ? dialog.addItem : undefined}
             {...overviewDirectActions(canStartAction, dialog, verdict)}
             detailsHref={detailsHref}
-            activityFieldsEditable={canEdit}
+            activityFieldsEditable={controller.canEdit}
             onActivityFieldsChange={controller.onActivityFieldsChange}
             onActivityFieldsPendingChange={
               controller.onActivityFieldsPendingChange

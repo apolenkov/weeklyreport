@@ -126,7 +126,7 @@ export function UnitGroup({
   onToggle,
   onAddItem,
 }: UnitGroupProps) {
-  const { model, health, editorSlot } = overview;
+  const { model, health } = overview;
   const disclosure = useActivityFieldsDisclosure();
   const units = model.units.filter((unit) => unit.kind === group.kind);
   if (units.length === 0) return null;
@@ -168,9 +168,7 @@ export function UnitGroup({
             onResolvePlan={overview.onResolvePlan}
             onRestorePlan={overview.onRestorePlan}
             onVerdict={overview.onVerdict}
-            editorSlot={
-              editorSlot?.unitKey === unit.key ? editorSlot : undefined
-            }
+            {...unitEditors(unit, overview)}
             headerAction={
               canEditActivityFields(overview, unit) ? (
                 <ActivityFieldsEditButton
@@ -199,4 +197,17 @@ function ownedStageStarts(
   return unit.kind === "product" && !unit.historical
     ? overview.ownedStageStartsForProduct?.(unit.id)
     : undefined;
+}
+
+function unitEditors(unit: StatusOverviewUnit, overview: StatusOverviewProps) {
+  return {
+    editorSlot:
+      overview.editorSlot?.unitKey === unit.key
+        ? overview.editorSlot
+        : undefined,
+    recordSlot:
+      overview.recordSlot?.unitKey === unit.key
+        ? overview.recordSlot
+        : undefined,
+  };
 }

@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest";
 
 import { makeDraftMergeSection } from "../lead-form/draft/lead-form-draft-merge-test-fixtures";
 import { sectionToDraftPayload } from "../lead-section-draft-payload";
-import { confirmSavedRecord } from "./autosave-record-confirmation";
+import {
+  confirmSavedRecord,
+  confirmSavedRecordRemoval,
+} from "./autosave-record-confirmation";
 import type { AutosaveSaveReceipt } from "./autosave-types";
 
 const section = makeDraftMergeSection();
@@ -31,6 +34,103 @@ const target = {
   reportSectionId: section.reportSectionId,
   attemptToken: "attempt",
 };
+
+describe.each(["risk", "decision"] as const)(
+  "%s removal confirmation",
+  (kind) => {
+    const absent: AutosaveSaveReceipt = {
+      ...receipt,
+      submittedPayload: sectionToDraftPayload({
+        ...section,
+        risks: [],
+        decisions: [],
+      }),
+      persistedRisks: [],
+      persistedDecisions: [],
+    };
+    const removal = { ...target, kind };
+    it("requires both captured payload and persisted response to omit the exact lineage", () => {
+      expect(confirmSavedRecordRemoval(absent, removal)).toBe(true);
+      const firstDecision = section.decisions[0];
+      if (!firstDecision) throw new Error("Missing decision fixture");
+      const present = {
+        ...section,
+        risks: [risk],
+        decisions: [{ ...firstDecision, stableId: removal.stableId }],
+      };
+      expect(
+        confirmSavedRecordRemoval(
+          { ...absent, submittedPayload: sectionToDraftPayload(present) },
+          removal,
+        ),
+      ).toBe(false);
+      expect(
+        confirmSavedRecordRemoval(
+          {
+            ...absent,
+            persistedRisks: present.risks,
+            persistedDecisions: present.decisions,
+          },
+          removal,
+        ),
+      ).toBe(false);
+      expect(
+        confirmSavedRecordRemoval(
+          {
+            ...absent,
+            persistedRisks: undefined,
+            persistedDecisions: undefined,
+          },
+          removal,
+        ),
+      ).toBe(false);
+      expect(
+        confirmSavedRecordRemoval(
+          { ...absent, submittedPayload: undefined },
+          removal,
+        ),
+      ).toBe(false);
+    });
+    it.each([
+      { scope: "other" },
+      { attemptToken: "old" },
+      { attemptToken: "" },
+      { stableId: "" },
+      { generation: `old:${section.reportSectionId}` as const },
+      { reportSectionId: "other" },
+    ])("rejects a mismatched or absent scope/identity: %o", (change) => {
+      expect(confirmSavedRecordRemoval(absent, { ...removal, ...change })).toBe(
+        false,
+      );
+    });
+    it("rejects a non-advancing receipt or a payload from a different section", () => {
+      expect(
+        confirmSavedRecordRemoval(
+          { ...absent, version: section.version },
+          removal,
+        ),
+      ).toBe(false);
+      expect(
+        confirmSavedRecordRemoval(
+          { ...absent, expectedVersion: undefined },
+          removal,
+        ),
+      ).toBe(false);
+      expect(
+        confirmSavedRecordRemoval(
+          {
+            ...absent,
+            submittedPayload: {
+              ...sectionToDraftPayload(section),
+              reportSectionId: "other",
+            },
+          },
+          removal,
+        ),
+      ).toBe(false);
+    });
+  },
+);
 
 describe("record confirmation", () => {
   it("confirms reminted physical ID only for the exact scoped dispatched lineage", () => {
