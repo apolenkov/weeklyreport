@@ -30,7 +30,7 @@ None.
 
 Period admin service, repository port, locked manual writer and their existing
 tests. Evidence: `wave-01/api/INPUT.json` C0767 and
-`wave-01/native-core-baseline.log` in `/home/user/work/handoffs/task-503`.
+`wave-01/native-core-baseline.log` in `handoffs/task-503`.
 
 ## Non-goals
 

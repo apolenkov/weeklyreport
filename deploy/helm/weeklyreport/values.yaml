@@ -5,7 +5,7 @@
 clusterDomain: cluster.local
 
 images:
-  # `registry` (repository prefix, for example gitlab.example.com/group/project)
+  # `registry` (repository prefix, for example registry.example.com/group/project)
   # and `tag` (the exact release, for example a Git SHA) are required.
   pullPolicy: IfNotPresent
   # Name of an existing dockerconfigjson Secret for a private registry.

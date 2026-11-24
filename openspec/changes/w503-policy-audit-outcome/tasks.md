@@ -11,7 +11,7 @@ Linked execution task: TASK-503.19; confirmed findings C0456/C0786.
 ## 2. Integration acceptance
 
 - [ ] 2.1 On the reviewed tree run `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm spec:check`; retain SHA-bound receipts outside the product tree.
-- [ ] 2.2 Obtain independent review of the exact diff/SHA and deliver evidence to the coordinator before integration.
+- [ ] 2.2 Obtain review of the exact diff/SHA from the designated independent reviewer for this task and deliver evidence to the coordinator before integration.
 
 ## Workflow follow-up
 

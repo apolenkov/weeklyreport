@@ -159,7 +159,7 @@ const organizationBrand = {
 const deadlineJobData = {
   contractVersion: 1 as const,
   executionId: "exec-1",
-  recipientEmail: "lead@test.com",
+  recipientEmail: "lead@example.test",
   kind: "deadline" as const,
   cycleDate: "2026-04-14",
   leadName: "Jane Lead",
@@ -174,7 +174,7 @@ const defaultJobData: EmailReminderJobData = deadlineJobData;
 const escalationJobData = {
   contractVersion: 1 as const,
   executionId: "exec-3",
-  recipientEmail: "head@test.com",
+  recipientEmail: "head@example.test",
   kind: "escalation" as const,
   headName: "Head Person",
   cycleDate: "2026-04-14",
@@ -227,7 +227,7 @@ describe("EmailReminderProcessor.processJob", () => {
 
     // A null setting delegates the final From-address choice to EmailService.
     expect(mockEmail.sendMailMultipart).toHaveBeenCalledWith(
-      "lead@test.com",
+      "lead@example.test",
       renderedEmailFixture,
       null,
     );
@@ -252,7 +252,7 @@ describe("EmailReminderProcessor.processJob", () => {
 
     expect(mockAdmin.getSettings).toHaveBeenCalledTimes(1);
     expect(mockEmail.sendMailMultipart).toHaveBeenCalledWith(
-      "lead@test.com",
+      "lead@example.test",
       renderedEmailFixture,
       "alerts@corp.example.com",
     );
@@ -276,7 +276,7 @@ describe("EmailReminderProcessor.processJob", () => {
     await (processor as unknown as ProcessorTestSeam).processJob(job);
 
     expect(mockEmail.sendMailMultipart).toHaveBeenCalledWith(
-      "lead@test.com",
+      "lead@example.test",
       renderedEmailFixture,
       null,
     );
@@ -449,7 +449,7 @@ describe("EmailReminderProcessor.processJob", () => {
     );
     const preContractJob = createMockJob({
       executionId: "pre-contract-exec",
-      recipientEmail: "lead@test.com",
+      recipientEmail: "lead@example.test",
       reportPeriod: "2026-04-07 – 2026-04-13",
     } as unknown as EmailReminderJobData);
 
@@ -565,14 +565,14 @@ describe("EmailReminderProcessor.processJob", () => {
   it("renders the durable DB payload when an old failed job is retried after manual revival", async () => {
     const staleJobA: EmailReminderJobData = {
       ...deadlineJobData,
-      recipientEmail: "old-recipient@test.com",
+      recipientEmail: "old-recipient@example.test",
       leadName: "Old Lead",
       reportPeriod: "Old period",
       deadlineIso: "2026-04-14T18:00:00.000Z",
     };
     const durablePayloadB: EmailReminderJobData = {
       ...deadlineJobData,
-      recipientEmail: "current-recipient@test.com",
+      recipientEmail: "current-recipient@example.test",
       leadName: "Current Lead",
       reportPeriod: "Current period",
       deadlineIso: "2026-04-21T18:00:00.000Z",

@@ -16,30 +16,34 @@ describe("sanitizeNext — same-origin redirect validation", () => {
   });
 
   it("rejects the backslash bypass (slash then backslash)", () => {
-    expect(sanitizeNext(String.raw`/\evil.com`, FALLBACK)).toBe(FALLBACK);
+    expect(sanitizeNext(String.raw`/\other.example.test`, FALLBACK)).toBe(
+      FALLBACK,
+    );
   });
 
-  it("rejects the scheme-relative bypass //evil.com", () => {
-    expect(sanitizeNext("//evil.com", FALLBACK)).toBe(FALLBACK);
+  it("rejects the scheme-relative bypass //other.example.test", () => {
+    expect(sanitizeNext("//other.example.test", FALLBACK)).toBe(FALLBACK);
   });
 
   it.each([
-    "/.//evil.com",
-    "/%2e//evil.com",
-    "/%2E%2E//evil.com",
-    String.raw`/./\evil.com`,
-    String.raw`/.\/evil.com`,
-    "/a/../..//evil.com",
+    "/.//other.example.test",
+    "/%2e//other.example.test",
+    "/%2E%2E//other.example.test",
+    String.raw`/./\other.example.test`,
+    String.raw`/.\/other.example.test`,
+    "/a/../..//other.example.test",
   ])("rejects the dot-segment normalization bypass %s", (candidate) => {
     expect(sanitizeNext(candidate, FALLBACK)).toBe(FALLBACK);
   });
 
   it("rejects an absolute off-origin URL", () => {
-    expect(sanitizeNext("https://evil.com", FALLBACK)).toBe(FALLBACK);
+    expect(sanitizeNext("https://other.example.test", FALLBACK)).toBe(FALLBACK);
   });
 
   it("rejects a leading-backslash target", () => {
-    expect(sanitizeNext(String.raw`\evil.com`, FALLBACK)).toBe(FALLBACK);
+    expect(sanitizeNext(String.raw`\other.example.test`, FALLBACK)).toBe(
+      FALLBACK,
+    );
   });
 
   it("falls back when the target is empty or absent", () => {

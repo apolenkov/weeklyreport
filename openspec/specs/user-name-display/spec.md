@@ -17,7 +17,7 @@ label.
 #### Scenario: full ФИО only in the own top badge
 
 - **WHEN** the navigation bar renders for the signed-in user
-- **THEN** the user's own profile badge shows the full ФИО «Иванов Василий Петрович»
+- **THEN** the user's own profile badge shows the full ФИО «Ильин Василий Петрович»
 - **AND** no other surface renders the full ФИО
 
 #### Scenario: short form for spelled-out name labels
@@ -25,7 +25,7 @@ label.
 - **WHEN** a name is rendered as a text label on an SDLC stage owner (own or
   cross-author), a slide owner or contributor, the leads summary table, a
   cross-author content author, or a dashboard escalation assignee
-- **THEN** it shows the short form «Иванов В.П.» (surname + dotted initials)
+- **THEN** it shows the short form «Ильин В.П.» (surname + dotted initials)
 - **AND** never the full ФИО and never the bare two-letter mark
 
 #### Scenario: two-letter mark for avatars and micro-chips

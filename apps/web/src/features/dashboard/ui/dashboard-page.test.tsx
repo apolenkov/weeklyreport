@@ -115,7 +115,10 @@ describe("DashboardPage progressive readiness", () => {
             email: "head@example.test",
             role: "head",
           },
-          organization: { shortName: "Demo", fullName: "Example Software Department" },
+          organization: {
+            shortName: "Demo",
+            fullName: "Example Software Department",
+          },
           isLoading: false,
           isAuthenticated: true,
         }}

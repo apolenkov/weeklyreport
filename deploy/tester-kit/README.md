@@ -8,7 +8,7 @@
 - **OrbStack** или **Docker Desktop** с включённым Kubernetes.
 - Свободно **6 ГБ ОЗУ** для кластера и **25 ГБ** на диске (с образами и кэшем сборки), доступ в интернет для первой сборки.
 - `kubectl`, `helm`, `openssl`, `envsubst`, `curl`, а также Node 26 и `pnpm` (они нужны для загрузки демо-данных).
-- Копия репозитория: `git clone https://forge.example.com/example/weeklyreport.git`.
+- Копия репозитория: `git clone https://github.com/apolenkov/weeklyreport.git`.
 - `docker` (он есть в OrbStack и Docker Desktop).
 - Свободные порты `8080`, `8081`, `8026`. Если на машине уже работает другой стенд, остановите его —
   или поднимите второй рядом на других портах и в другом namespace:

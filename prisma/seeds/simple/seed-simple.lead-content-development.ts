@@ -43,7 +43,10 @@ export const DEVELOPMENT_LEAD_CONTENT: Record<string, LeadContent> = {
       },
     ],
     nextItems: [
-      { text: "Запланировал ревью архитектуры с платформенной командой", tag: "ops" },
+      {
+        text: "Запланировал ревью архитектуры с платформенной командой",
+        tag: "ops",
+      },
       { text: "Подготовка демо для квартального ревью", tag: "feature" },
       // Postponed exemplar — consciously pushed beyond this period.
       {

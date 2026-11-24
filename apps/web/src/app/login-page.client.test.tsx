@@ -128,9 +128,9 @@ describe("Landing identity", () => {
     const LoginPageClient = await loadLoginPageClient();
     render(<LoginPageClient initialOrg={STUB_ORG} />);
 
-    expect(
-      screen.getByText("Demo · Example Software Department"),
-    ).toHaveClass("text-[var(--color-primary-foreground)]");
+    expect(screen.getByText("Demo · Example Software Department")).toHaveClass(
+      "text-[var(--color-primary-foreground)]",
+    );
   });
 });
 

@@ -121,7 +121,7 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
           worstStatus: "yellow",
           stageCount: 7,
           leadNames: [
-            "Иванов Василий Петрович",
+            "Ильин Василий Петрович",
             "Каштанова Мария Александровна",
           ],
           leadIds: [
@@ -226,7 +226,7 @@ describe("mapWeeklyReport — grouping, severity & escalation", () => {
     expect(result.portfolio).toHaveLength(2);
     const crm = result.portfolio.find((p) => p.id === PROJECT_A);
     expect(crm?.status).toBe("at-risk");
-    expect(crm?.leads).toBe("Иванов В.П. \u00B7 Каштанова М.А.");
+    expect(crm?.leads).toBe("Ильин В.П. \u00B7 Каштанова М.А.");
     expect(crm?.currentWeekCount).toBe(1);
     expect(crm?.nextWeekCount).toBe(1);
     expect(crm?.riskCount).toBe(1);

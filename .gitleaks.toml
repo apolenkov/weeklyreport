@@ -5,7 +5,8 @@ useDefault = true
 
 # Reviewed 2026-10-15 (TASK-522 WR1). Every entry is a synthetic or non-secret
 # value; a new finding anywhere else fails the blocking CI job. HEAD entries are
-# path-scoped; history-only entries are scoped to path AND the reviewed commit.
+# path-scoped. History entries use exact fingerprints in .gitleaksignore
+# or combine a path with the reviewed commit.
 
 [[allowlists]]
 description = "Synthetic SAML test key fixture (not a deployed credential)"
@@ -38,36 +39,6 @@ description = "Placeholder or synthetic test value (REPLACE-style or fixed test 
 condition = "AND"
 paths = ['''^deploy/tester\-kit/values\-tester\.yaml$''']
 regexes = ['''^REPLACE_WITH_IDP_CERT_B64$''']
-
-[[allowlists]]
-description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"
-condition = "AND"
-commits = ["a6415ffedb2191ea4be75d7cbeb8f970c8e9a869"]
-paths = ['''^e2e/runtime\-sweep/preflight/launch/preflight\-shard\-child\-environment\.ts$''']
-
-[[allowlists]]
-description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"
-condition = "AND"
-commits = ["cfcf508548bc3eba2130f199892a4bb6b515e7c7"]
-paths = ['''^e2e/runtime\-sweep/preflight/shards/journal/preflight\-shard\-journal\-contract\.test\.ts$''']
-
-[[allowlists]]
-description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"
-condition = "AND"
-commits = ["87e43a1a9977848818bf456bb6dda98ae0f574ae"]
-paths = ['''^e2e/runtime\-sweep/preflight/observability/environment\-observer\-bugsink\-sdk\.test\.ts$''']
-
-[[allowlists]]
-description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"
-condition = "AND"
-commits = ["6852c04d80b0ea366f9cffa6b0d56b9a6d4ac3ef"]
-paths = ['''^apps/api/src/modules/telegram/activation\.integration\.test\.ts$''']
-
-[[allowlists]]
-description = "Placeholder or synthetic test value (REPLACE-style or fixed test string)"
-condition = "AND"
-commits = ["39548d33caa23417432cf231ce1a34fdac8e67b3"]
-paths = ['''^apps/api/src/modules/auth/auth\.e2e\.spec\.ts$''']
 
 [[allowlists]]
 description = "Deleted planning/issue-export file: documented default dev credentials or issue keys, not secrets"

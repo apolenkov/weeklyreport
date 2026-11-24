@@ -1,4 +1,8 @@
-# GitLab CI
+# Optional GitLab deployment
+
+The public repository runs checks on [GitHub Actions](adr/0025-github-actions-runs-checks.md).
+The GitLab pipeline below is for a GitLab-hosted installation. Set the release
+registry and deployment variables for that installation before use.
 
 Owner decision 2026-10-20, confirmed 2026-10-21 (TASK-622): checks run locally;
 CI deploys. Owner decision 2026-10-28 (TASK-709): images are built locally on
@@ -81,7 +85,7 @@ RENOVATE_TOKEN in the environment (never print it), run the former pinned image:
 
 ```sh
 docker run --rm -e RENOVATE_TOKEN -e RENOVATE_PLATFORM=gitlab \
-  -e RENOVATE_ENDPOINT=https://forge.example.com/api/v4 \
+  -e RENOVATE_ENDPOINT=https://gitlab.example.com/api/v4 \
   -e RENOVATE_ONBOARDING=false \
   -v "$PWD/renovate.json:/usr/src/app/renovate.json:ro" \
   renovate/renovate:44.155.2@sha256:93e8dc64410276bb44854b4f6fce2306f8fe24c87301d558a920381130b30851 \
@@ -107,9 +111,21 @@ git, Docker, registry or Helm call. `linux/amd64` is a decision recorded here,
 not a documented cluster fact: the cluster architecture is not in the
 repository, so the owner confirms it before a release.
 
-The command verifies that the git tree is clean, HEAD is on or in `gitlab/main`,
-required web build parameters (`WR_NEXT_PUBLIC_*`, from `deploy/images/web-public.env`
-or the environment) are set, and the registry is authenticated. It builds all 4
+In a fresh clone, add the installation's GitLab repository as the `gitlab`
+remote. Replace the example URL and fetch `main` before building.
+
+```bash
+git remote add gitlab https://gitlab.example.com/example/weeklyreport.git
+git fetch gitlab main
+```
+
+If the `gitlab` remote is already set to that installation, run only the fetch.
+This creates or updates the `gitlab/main` reference used by `images:build`.
+
+The command requires a clean git tree. HEAD must match `gitlab/main` or be an
+ancestor or descendant of it. For the web image, set the required `WR_NEXT_PUBLIC_*`
+build parameters in `deploy/images/web-public.env` or in the environment.
+Authenticate to the registry before pushing. The command builds all 4
 images (`api`, `migrate`, `web`, `backup`) with `--platform` set to `IMAGE_PLATFORM`,
 tags them with the full commit SHA, and pushes them. After each push it reads the
 registry index (`docker buildx imagetools inspect --raw`) and fails unless the

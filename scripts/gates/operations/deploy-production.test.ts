@@ -475,7 +475,7 @@ test("registry token requests use quoted basic auth without a shell-split argume
 
 test("the deploy job has no literal registry or user fallback", () => {
   const script = deployJob.script.join("\n");
-  assert.doesNotMatch(script, /forge\.example\.com/u);
+  assert.ok(!script.includes(REGISTRY), "the registry comes from release.env");
   assert.doesNotMatch(script, /gitlab-ci-token/u);
   assert.doesNotMatch(script, /:-[^}]*gitlab/u);
 });

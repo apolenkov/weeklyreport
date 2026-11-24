@@ -81,14 +81,24 @@ test("the CLI rejects an option without its value and unknown options", () => {
   assert.throws(() => parseCliArgs(["--bogus"]), /Unknown option/u);
 });
 
-test("the committed release file names the registry and the amd64 platform", () => {
+test("the example release coordinates parse with a registry port", () => {
   const release = readReleaseConfig(
-    readFileSync(resolve("deploy/images/release.env"), "utf8"),
+    "IMAGE_REGISTRY=registry.example.com:5005/example/weeklyreport\nIMAGE_PLATFORM=linux/amd64\n",
   );
   assert.deepEqual(release, {
     registry: "registry.example.com:5005/example/weeklyreport",
     platform: "linux/amd64",
   });
+});
+
+test("the committed release file provides a registry prefix and platform", () => {
+  const { registry } = readReleaseConfig(
+    readFileSync(resolve("deploy/images/release.env"), "utf8"),
+  );
+  assert.match(
+    registry,
+    /^[A-Za-z\d.-]+(?::\d+)?(?:\/[a-z\d]+(?:[._-]+[a-z\d]+)*)+$/u,
+  );
 });
 
 test("a release file without a registry or platform is refused, naming the key", () => {

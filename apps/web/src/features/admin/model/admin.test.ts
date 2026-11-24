@@ -87,7 +87,7 @@ function makeSnapshot(overrides: Partial<AdminSnapshot> = {}): AdminSnapshot {
     users: overrides.users ?? [
       {
         id: UUID_A,
-        email: "lead@x.io",
+        email: "lead@example.test",
         name: "Lead Person",
         lastName: "Lead",
         firstName: "Person",
@@ -100,7 +100,7 @@ function makeSnapshot(overrides: Partial<AdminSnapshot> = {}): AdminSnapshot {
       },
       {
         id: UUID_B,
-        email: "head@x.io",
+        email: "head@example.test",
         name: "Head Person",
         lastName: "Head",
         firstName: "Person",
@@ -113,7 +113,7 @@ function makeSnapshot(overrides: Partial<AdminSnapshot> = {}): AdminSnapshot {
       },
       {
         id: UUID_C,
-        email: "view@x.io",
+        email: "view@example.test",
         name: "Viewer Person",
         lastName: "Viewer",
         firstName: "Person",

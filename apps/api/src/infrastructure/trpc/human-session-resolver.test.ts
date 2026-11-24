@@ -215,7 +215,10 @@ describe("resolveHumanSession", () => {
         reportSection: { findFirst: statement(null) },
         reportingGroup: { findUnique: statement(null) },
         organization: {
-          findUnique: statement({ shortName: "Demo", fullName: "Product Team" }),
+          findUnique: statement({
+            shortName: "Demo",
+            fullName: "Product Team",
+          }),
         },
       };
       clearOrgCache();

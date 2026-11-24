@@ -15,7 +15,7 @@ peer-level configuration cards in the primary flow. Existing fields and
 conditional separate-embedding behavior MUST remain available. An active
 revision MUST open in a read/summary mode until the administrator chooses
 `Edit configuration`; an unconfigured, draft, or failed revision MUST open in
-edit mode. The layout MUST preserve the Demo visual language and remain usable
+edit mode. The layout MUST preserve the existing visual language and remain usable
 without page-level horizontal overflow at supported narrow widths. Built-in
 profiles MUST NOT expose their fixed endpoint as an editable field; the custom
 OpenAI-compatible profile MUST retain its bounded endpoint field. Configured

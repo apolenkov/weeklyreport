@@ -44,4 +44,4 @@ No automatic rollover of incomplete records, invented content, new reopen rights
 
 ## Impact
 
-Shared schemas, Prisma migrations, section transactions, projections, search response contracts, snapshots, carry-over, PDF and Lead UI. No new dependency. TASK-836 evidence: `/home/user/work/handoffs/task-836/quick-draft-options.md` and `quick-draft-review.md`; source inventory and rollout in `design.md`. Coordinated with `../lead-week-grid-quick-entry/`, whose contextual-entry contract now depends on this change rather than full-before-save.
+Shared schemas, Prisma migrations, section transactions, projections, search response contracts, snapshots, carry-over, PDF and Lead UI. No new dependency. TASK-836 evidence: `handoffs/task-836/quick-draft-options.md` and `quick-draft-review.md`; source inventory and rollout in `design.md`. Coordinated with `../lead-week-grid-quick-entry/`, whose contextual-entry contract now depends on this change rather than full-before-save.

@@ -46,7 +46,7 @@ export const LEADS: readonly LeadCfg[] = [
     status: ReportSectionStatus.draft,
     lightStatus: TrafficLightStatus.red,
     label: "Василий И.",
-    name: "Иванов Василий Петрович",
+    name: "Ильин Василий Петрович",
   },
   {
     id: LEAD_MARIA,

@@ -36,13 +36,13 @@ describe("AuthorBadge tooltip", () => {
     render(
       <SdlcTooltipProvider>
         <AuthorBadge
-          author={{ ...AUTHOR, name: "Иванов Василий Петрович", role: "Lead" }}
+          author={{ ...AUTHOR, name: "Ильин Василий Петрович", role: "Lead" }}
         />
       </SdlcTooltipProvider>,
     );
     fireEvent.mouseEnter(screen.getByTestId("slide-author-badge"));
     const tooltip = await screen.findByTestId("sdlc-tooltip");
-    expect(tooltip).toHaveTextContent("Иванов В.П. · Lead");
+    expect(tooltip).toHaveTextContent("Ильин В.П. · Lead");
     expect(tooltip).not.toHaveTextContent("Василий");
   });
 });

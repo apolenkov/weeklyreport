@@ -16,7 +16,7 @@ const section = (over: ReportSectionFixture = {}): ReportSectionReadModel =>
     reportSectionId: "sec-1",
     reportId: "rep-1",
     authorId: "lead-1",
-    authorName: "Иванов В.П.",
+    authorName: "Ильин В.П.",
     ...over,
   });
 
@@ -42,7 +42,7 @@ describe("buildAuthorRoster — color assignment", () => {
 
     expect(roster.owner).toMatchObject({
       id: "lead-1",
-      name: "Иванов В.П.",
+      name: "Ильин В.П.",
       role: "lead",
       initials: "ИВ",
       isOwner: true,
@@ -90,8 +90,8 @@ describe("buildAuthorRoster — color assignment", () => {
 
 describe("slide author canonical identity marks", () => {
   it.each([
-    { name: "Иванов В.П.", expected: "ИВ" },
-    { name: "Иванов", expected: "ИВ" },
+    { name: "Ильин В.П.", expected: "ИВ" },
+    { name: "Ильин", expected: "ИЛ" },
     { name: " ".repeat(3), expected: "??" },
     { name: "𠮷田 花子", expected: "𠮷花" },
     { name: "𠮷田", expected: "𠮷田" },

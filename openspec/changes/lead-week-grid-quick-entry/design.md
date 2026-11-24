@@ -115,7 +115,7 @@ type DecisionComposerProps = {
 
 The gate freezes the contract. Integration work is divided among explicitly assigned, non-overlapping file owners for the record identity data path, prior-plan verdict, autosave receipt/recovery and Overview host/shell integration; each existing file has at most one active writer. The **item presentation owner** creates only `status-overview-inline-item-form.tsx` and its own test. The **record presentation owner** creates only `status-overview-inline-risk-form.tsx`, `status-overview-inline-decision-form.tsx` and their own tests. The **comments presentation owner** creates only a new named comments-view component and its own test; existing row/preview/comments files and their wiring remain with the host integration owner. Presentation owners emit user intent, never mutate draft state or claim persistence. The contract must be committed and reviewed before presentation work; integration of all candidates follows their completion under the host integration owner. Cross-component and browser tests belong to the integration owner. Workers do not alter the active owner-preview worktree, browser, ports or data.
 
-The separate visual, guideline and UX inputs are archived under `/home/user/work/handoffs/task-836/`.
+The separate visual, guideline and UX inputs are archived under `handoffs/task-836/`.
 
 The nullable contract uses the existing `prepareContextualRisk` and
 `prepareContextualDecision` builders. At that boundary, null details become

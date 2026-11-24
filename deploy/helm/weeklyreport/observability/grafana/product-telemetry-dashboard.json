@@ -1,6 +1,6 @@
 {
   "schemaVersion": 39,
-  "title": "Product KPIs — Demo WeeklyReport",
+  "title": "Product KPIs — WeeklyReport",
   "uid": "product-telemetry",
   "tags": ["weeklyreport", "product", "kpi"],
   "timezone": "browser",

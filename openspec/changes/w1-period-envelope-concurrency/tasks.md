@@ -8,7 +8,7 @@
 ## 2. Verification and handoff
 
 - [x] 2.1 Check changed-file Prettier, git diff --check and openspec validate w1-period-envelope-concurrency --strict; deliver scoped diff and exact focused-test commands to TASK-503 evidence directory.
-- [ ] 2.2 Coordinator runs pnpm format:check, pnpm lint, pnpm typecheck, pnpm test, pnpm build and pnpm spec:check on the reviewed tree, plus independent review.
+- [ ] 2.2 Coordinator runs pnpm format:check, pnpm lint, pnpm typecheck, pnpm test, pnpm build and pnpm spec:check on the reviewed tree and obtains review from the designated independent reviewer for this task.
 
 ## Workflow follow-up
 

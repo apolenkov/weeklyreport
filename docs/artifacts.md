@@ -68,13 +68,11 @@ context size. See `Dockerfile.api`, `Dockerfile.web` and `turbo.json`.
 | Container images tagged by commit SHA | Built locally via `pnpm images:build`, pushed to registry | External registry policy is unverified |
 | Manual Helm deployment                | GitLab CI `deploy-production`, consumes pre-pushed images | Cluster deployment history             |
 
-Image builds are executed on the operator workstation (`pnpm images:build`) and
-pushed directly to the registry before deployment (TASK-709); GitLab CI does not
-build images or upload image digests. A GREEN CI claim requires the pipeline's exact tested SHA.
-Follow the task's current decision about intermediate CI; one final corporate
-CI remains required for the full completion program. The local operator-triggered Renovate
-command is documented in `docs/gitlab-ci.md`; token provisioning and actual
-activation remain unverified.
+Operators run `pnpm images:build` on their workstations and push images to the
+registry before deployment. GitHub Actions runs the public repository checks.
+Record the exact tested SHA with each check result. For a GitLab-hosted
+installation, see [GitLab deployment](gitlab-ci.md) for deployment and the
+operator-triggered Renovate command.
 
 ## Product report exports
 

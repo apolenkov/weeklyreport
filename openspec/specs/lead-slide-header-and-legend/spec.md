@@ -78,9 +78,9 @@ The slide footer MUST render a legend listing each contributor: initials badge i
 
 #### Scenario: visible legend uses canonical short names
 
-- **GIVEN** a contributor's full name is Иванов Василий Петрович
+- **GIVEN** a contributor's full name is Ильин Василий Петрович
 - **WHEN** the contributor legend is rendered
-- **THEN** its visible name label is Иванов В.П.
+- **THEN** its visible name label is Ильин В.П.
 - **AND** its existing initials, assigned color and persisted role remain unchanged
 
 ### Requirement: Header counter labels match their counts

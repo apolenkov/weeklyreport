@@ -1,0 +1,8 @@
+# Reviewed synthetic history matches from TASK-964. Each fingerprint pins
+# one commit, file, detector and line. Keep the current tree in scope.
+c85ac22d252628928e8a10686257145d6d665d57:e2e/runtime-sweep/preflight/launch/preflight-shard-child-environment.ts:generic-api-key:22
+eed849a34c30be7bf066ead94b01e2d823248ca5:e2e/runtime-sweep/preflight/shards/journal/preflight-shard-journal-contract.test.ts:generic-api-key:96
+7a610db8ea622067e52a6be039970aa57a624032:e2e/runtime-sweep/preflight/observability/environment-observer-bugsink-sdk.test.ts:generic-api-key:13
+7a610db8ea622067e52a6be039970aa57a624032:e2e/runtime-sweep/preflight/observability/environment-observer-bugsink-sdk.test.ts:generic-api-key:14
+8823b2fa6604e5e645eecc9a1e8cbed9023b636f:apps/api/src/modules/telegram/activation.integration.test.ts:generic-api-key:12
+235ef01256a0e6ea5663d38b3f5094b73dee2740:apps/api/src/modules/auth/auth.e2e.spec.ts:generic-api-key:7

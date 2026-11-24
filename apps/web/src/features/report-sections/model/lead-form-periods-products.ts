@@ -67,7 +67,7 @@ function deriveOwnedStageRow(
             risks.filter((r) => riskCoversStage(r, stageName)),
           ),
     ownership: "mine" as const,
-    // Stage owner labels render the short form ("Иванов В.П."); the full ФИО
+    // Stage owner labels render the short form ("Ильин В.П."); the full ФИО
     // is reserved for the top user badge. Avatar chips keep 2-letter initials.
     assignee: shortNameFromName(ownerLabel),
     // Completeness counts only risks that explicitly name the stage.

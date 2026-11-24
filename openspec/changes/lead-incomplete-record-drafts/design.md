@@ -2,7 +2,7 @@
 
 ## Context
 
-See `proposal.md`, the sibling `lead-week-grid-quick-entry` change and the owner-adopted policy in `/home/user/work/handoffs/task-836/quick-draft-review.md`. This is a specification candidate, not deployed behavior. The source trace below was made in task-836 at HEAD `4e3000572` with concurrent uncommitted product work; implementation owners must rebase their exact files before changing them.
+See `proposal.md`, the sibling `lead-week-grid-quick-entry` change and the owner-adopted policy in `<private-handoff-root>/task-836/quick-draft-review.md`. This is a specification candidate, not deployed behavior. The source trace below was made in task-836 at HEAD `4e3000572` with concurrent uncommitted product work; implementation owners must rebase their exact files before changing them.
 
 Expert check: start from actual replacement writes and consumer authorization, not the form mockup; follow data into snapshots, indexed retrieval and queued artifacts; prove it with interleaving and scope-negative tests, not just nullable schema tests. This determines the design below.
 
@@ -24,7 +24,7 @@ Expert check: start from actual replacement writes and consumer authorization, n
 | History/recovery  | `report-sections/infrastructure/report-sections.my-history-query.ts`, `application/lead-form-by-period.ts`, `domain/lead-form-cross-author-scope.ts`                                                  | Published history is frozen; own source access is section-author keyed, not a viewer current-only entitlement. Private recovery needs a separate explicit read and discovery link.                                                                                         |
 | Carry             | `apps/api/src/modules/carry-over/carry-over.prisma-repository.ts`                                                                                                                                     | Closed source reads snapshot; open/reopened source reads live rows. Filter source decisions, never target rows; do not accidentally filter/delete target private drafts.                                                                                                   |
 
-Additional source boundaries from the independent review in `/home/user/work/handoffs/task-836/incomplete-spec-review.md` (F1–F5), re-traced for this repair:
+Additional source boundaries from the independent review in `<private-handoff-root>/task-836/incomplete-spec-review.md` (F1–F5), re-traced for this repair:
 
 | Boundary           | Inspected source                                                                                                                                                                                                                                   | Required policy / owner                                                                                                                                                                                                 |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

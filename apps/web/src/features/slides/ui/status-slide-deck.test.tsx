@@ -53,7 +53,7 @@ const makeSection = (over: ReportSectionFixture = {}): ReportSectionReadModel =>
     reportSectionId: "sec-1",
     reportId: "rep-1",
     authorId: "lead-1",
-    authorName: "Иванов Василий Петрович",
+    authorName: "Ильин Василий Петрович",
     authorRole: "lead",
     version: 1,
     status: "draft",
@@ -354,7 +354,7 @@ describe("StatusSlideDeck — by-product grid article", () => {
     expect(screen.getByTestId("slide-priority-rank-badge")).toHaveStyle({
       background: "var(--slide-author-0)",
     });
-    expect(screen.getByTestId("slide-legend")).toHaveTextContent("Иванов В.П.");
+    expect(screen.getByTestId("slide-legend")).toHaveTextContent("Ильин В.П.");
     expect(screen.getByTestId("slide-legend")).toHaveTextContent("Петров П.П.");
   });
 
@@ -373,7 +373,7 @@ describe("StatusSlideDeck — by-product grid article", () => {
     );
 
     expect(screen.getAllByTestId("slide-author-badge")).toHaveLength(2);
-    expect(screen.getByTestId("slide-legend")).toHaveTextContent("Иванов В.П.");
+    expect(screen.getByTestId("slide-legend")).toHaveTextContent("Ильин В.П.");
     expect(screen.getByTestId("slide-legend")).toHaveTextContent("Петров П.П.");
   });
 

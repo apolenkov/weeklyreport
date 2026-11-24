@@ -143,7 +143,7 @@ describe("DecisionsSection — own decision stays editable despite owner/name mi
     render(
       <DecisionsSection
         decisions={[{ ...BASE_DECISION, owner: "Василий И." }]}
-        currentUserName="Иванов Василий Петрович"
+        currentUserName="Ильин Василий Петрович"
         readOnly={false}
       />,
     );
@@ -164,7 +164,7 @@ describe("DecisionsSection — own decision stays editable despite owner/name mi
     render(
       <DecisionsSection
         decisions={[{ ...BASE_DECISION, owner: "Мария К.", foreign: true }]}
-        currentUserName="Иванов Василий Петрович"
+        currentUserName="Ильин Василий Петрович"
         readOnly={false}
       />,
     );

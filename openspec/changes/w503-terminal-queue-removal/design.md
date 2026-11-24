@@ -3,7 +3,7 @@
 ## Context
 
 See [proposal](proposal.md). Coordinator 002 approved option A in the external
-[adapter design](/home/user/work/handoffs/task-503/api-confirmed-fixes/packet1/queue-red/design/ADAPTER.md).
+adapter design at `handoffs/task-503/api-confirmed-fixes/packet1/queue-red/design/ADAPTER.md`.
 This author worktree is frozen at TASK-513
 `76416bce000cf2f791f069bca76c9ffd3438b0fc`; the earlier main60 preparation
 worktree and receipts remain read-only.
@@ -110,7 +110,7 @@ do not weaken it silently or accept a same-id recreated hash as preservation.
 
 ### Keep destructive authority separate from enqueue
 
-The superseding independent reviewer port-scope advice preserves generic `JobEnqueuer` and
+The superseding independent review advice on port scope preserves generic `JobEnqueuer` and
 search unchanged. Narrow the reminders add argument to `Pick<JobEnqueuer, "add">`
 and require a separate `TerminalJobRemoval` second constructor argument.
 `AdminBullmqJobsQueue` instantiates the same concrete owner internally, preserving

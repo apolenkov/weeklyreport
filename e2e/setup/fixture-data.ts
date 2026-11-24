@@ -23,7 +23,7 @@ if (!oldestArchive) {
   throw new Error("E2E fixture-data: missing archived history in seed");
 }
 
-const LEAD_FULL_NAME = "Иванов Василий Петрович";
+const LEAD_FULL_NAME = "Ильин Василий Петрович";
 
 export const LEAD_FORM_FIXTURE = {
   reportId: REPORT_ACTIVE,

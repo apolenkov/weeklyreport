@@ -98,7 +98,7 @@ describe("shortName", () => {
 
 describe("shortNameFromName", () => {
   it("surname + initials of the first two given tokens", () => {
-    expect(shortNameFromName("Иванов Василий Петрович")).toBe("Иванов В.П.");
+    expect(shortNameFromName("Ильин Василий Петрович")).toBe("Ильин В.П.");
   });
 
   it.each([
@@ -116,13 +116,11 @@ describe("shortNameFromName", () => {
   });
 
   it("single token returns just the surname", () => {
-    expect(shortNameFromName("Иванов")).toBe("Иванов");
+    expect(shortNameFromName("Ильин")).toBe("Ильин");
   });
 
   it("collapses noisy whitespace", () => {
-    expect(shortNameFromName(`Иванов${" ".repeat(3)}Василий`)).toBe(
-      "Иванов В.",
-    );
+    expect(shortNameFromName(`Ильин${" ".repeat(3)}Василий`)).toBe("Ильин В.");
   });
 
   it("empty string yields empty", () => {
@@ -164,7 +162,7 @@ describe("initialsFromName", () => {
   });
 
   it("single token yields its first two letters", () => {
-    expect(initialsFromName("Берёзов")).toBe("БА");
+    expect(initialsFromName("Берёзов")).toBe("БЕ");
   });
 
   it("keeps astral first letters whole across tokens", () => {

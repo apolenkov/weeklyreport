@@ -149,7 +149,7 @@ test("archive validation precedes one non-production restore", () => {
   assert.equal(result.status, 0);
   assert.equal(calls.length, 2);
   assert.match(calls[0] ?? "", /^--list /);
-  assert.match(calls[1] ?? "", /--host=db\.internal/);
+  assert.match(calls[1] ?? "", /--host=db\.example\.com/);
   assert.match(calls[1] ?? "", /--port=5432/);
   assert.match(calls[1] ?? "", /--dbname=weeklyreport_test/);
   assert.match(calls[1] ?? "", /--single-transaction/);
@@ -159,7 +159,7 @@ test("archive validation precedes one non-production restore", () => {
 test("fully consented production restore runs once after validation", () => {
   const { calls, result } = runRestore({
     RESTORE_ENVIRONMENT: "Production",
-    PGHOST: "db.example.com.",
+    PGHOST: "DB.EXAMPLE.COM.",
     PGDATABASE: "WEEKLYREPORT_TEST",
     CONFIRM_RESTORE_TARGET: "production|db.example.com|5432|weeklyreport_test",
     ALLOW_PROD_DESTRUCTIVE: "yes",

@@ -24,6 +24,7 @@ import {
   VIEWER_ID,
 } from "./seed-simple.ids.js";
 
+// Synthetic identities for the full seed profile.
 const USER_ROWS = [
   {
     id: HEAD_ID,
@@ -64,8 +65,8 @@ const USER_ROWS = [
   {
     id: LEAD_1,
     email: LEAD_1_EMAIL,
-    name: "Иванов Василий Петрович",
-    lastName: "Иванов",
+    name: "Ильин Василий Петрович",
+    lastName: "Ильин",
     firstName: "Василий",
     middleName: "Петрович",
     position: "Тимлид",
@@ -135,7 +136,7 @@ const USER_ROWS = [
     samlId: "lead-sergey",
     reportingGroupId: FINANCE_GROUP_ID,
   },
-  // Non-technical PM leads in Development group (MOBILE/CLOUD/DEVOPS only)
+  // Non-technical PM leads in the default reporting group (MOBILE/CLOUD/DEVOPS only)
   {
     id: LEAD_MOBILE_PM,
     email: "boris@weeklyreport.local",

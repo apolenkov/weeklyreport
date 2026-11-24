@@ -40,7 +40,7 @@ generation-scoped PDF cleanup, plus `RemindersBullmqEnqueuer.enqueue` through
 through `createBootstrapJobsService` and `RemindersModule`. The add-only
 `JobEnqueuer` contract must not acquire destructive capabilities.
 
-Read the [approved adapter design](/home/user/work/handoffs/task-503/api-confirmed-fixes/packet1/queue-red/design/ADAPTER.md),
+Read the approved adapter design at `<private-handoff-root>/task-503/api-confirmed-fixes/packet1/queue-red/design/ADAPTER.md`,
 [failed-job contract](../../specs/queue-reliability-monitoring/spec.md#requirement-head-queue-investigation-covers-every-monitored-queue),
 and [reaper contract](../../specs/reliable-reminder-delivery/spec.md#requirement-a-reaper-re-enqueues-stuck-queued-executions).
 

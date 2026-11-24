@@ -74,10 +74,10 @@ describe("statusLabelFor", () => {
   it("joins lead names with ', ' and prefixes the status", () => {
     expect(
       statusLabelFor("at-risk", [
-        "Иванов Василий Петрович",
+        "Ильин Василий Петрович",
         "Каштанова Мария Александровна",
       ]),
-    ).toBe("At risk \u00B7 Иванов В.П., Каштанова М.А.");
+    ).toBe("At risk \u00B7 Ильин В.П., Каштанова М.А.");
   });
   it('falls back to "Unassigned" when no leads', () => {
     expect(statusLabelFor("on-track", [])).toBe("On track \u00B7 Unassigned");
@@ -85,7 +85,7 @@ describe("statusLabelFor", () => {
 
   it("shortens every product lead while preserving source names, ids, and order", () => {
     const leadNames = [
-      "Иванов Василий Петрович",
+      "Ильин Василий Петрович",
       "Каштанова Мария Александровна",
     ] as const;
     const report = baseReport({
@@ -129,7 +129,7 @@ describe("statusLabelFor", () => {
     const product = expectDefined(result.products[0]);
     expect(product).toMatchObject({
       status: "at-risk",
-      leads: "Иванов В.П. · Каштанова М.А.",
+      leads: "Ильин В.П. · Каштанова М.А.",
       authorIds: [AUTHOR_A, AUTHOR_B],
     });
     expect(report.portfolioOverview[0]?.leadNames).toEqual(leadNames);

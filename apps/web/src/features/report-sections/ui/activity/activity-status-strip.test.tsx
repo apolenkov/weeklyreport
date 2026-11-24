@@ -14,7 +14,7 @@ describe("ActivityStatusStrip — 1", () => {
   it("renders one row per (activity, author) with the status label", () => {
     const sections = [
       sectionWithActivities({
-        authorName: "Иванов Василий Петрович",
+        authorName: "Ильин Василий Петрович",
         activities: [
           {
             activityId: ACTIVITY_ID_A,
@@ -48,9 +48,9 @@ describe("ActivityStatusStrip — 1", () => {
     expect(screen.getAllByText("Jira triage duty")).toHaveLength(2);
     expect(screen.getByText("Blocked")).toBeInTheDocument();
     expect(screen.getByText("On track")).toBeInTheDocument();
-    expect(screen.getByText("Иванов В.П.")).toBeInTheDocument();
+    expect(screen.getByText("Ильин В.П.")).toBeInTheDocument();
     expect(screen.getByText("Каштанова М.А.")).toBeInTheDocument();
-    expect(screen.queryByText("Иванов Василий Петрович")).toBeNull();
+    expect(screen.queryByText("Ильин Василий Петрович")).toBeNull();
     expect(screen.getByText("Blocked on vendor")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { level: 2, name: "Project Activities" }),

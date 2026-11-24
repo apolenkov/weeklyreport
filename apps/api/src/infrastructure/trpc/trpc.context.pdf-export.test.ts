@@ -279,7 +279,9 @@ function makeRequesterPrisma(user: RequesterUser | null) {
       findMany: vi.fn(() => Promise.resolve([{ groupId: GRANTED_GROUP_ID }])),
     },
     reportingGroup: {
-      findUnique: vi.fn(() => Promise.resolve({ name: "Software Development" })),
+      findUnique: vi.fn(() =>
+        Promise.resolve({ name: "Software Development" }),
+      ),
     },
     organization: {
       findUnique: vi.fn(() =>

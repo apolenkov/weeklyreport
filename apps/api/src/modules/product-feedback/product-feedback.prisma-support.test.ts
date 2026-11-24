@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   type FeedbackRow,
   mapFeedback,
+  queryWhere,
 } from "./product-feedback.prisma-support";
 import { FeedbackInvalidStatusError } from "./product-feedback.repository";
 
@@ -32,6 +33,22 @@ function feedbackRow(overrides: Partial<FeedbackRow> = {}): FeedbackRow {
     ...overrides,
   };
 }
+
+it("scopes legacy inbox reads to WeeklyReport even when the reserved product is requested", () => {
+  const where = queryWhere(
+    {
+      userId: "user-1",
+      role: "admin",
+      name: "Admin User",
+      email: "admin@example.test",
+      reportingGroupId: undefined,
+    },
+    { projectName: "external-product" },
+  );
+
+  expect(where.projectName).toBe("weekly-report");
+  expect(mapFeedback(feedbackRow()).projectName).toBe("weekly-report");
+});
 
 describe("mapFeedback enum boundary", () => {
   it("maps a row whose type and status are shared enum values unchanged", () => {

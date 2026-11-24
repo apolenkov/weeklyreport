@@ -1,6 +1,6 @@
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/readme/hero-dark.svg">
-  <img src="assets/readme/hero.svg" alt="WeeklyReport: еженедельный статус-отчет отдела Development. Лиды заполняют секции, глава сводит их в один документ недели" width="100%">
+  <img src="assets/readme/hero.svg" alt="WeeklyReport: еженедельный статус-отчет отдела. Лиды заполняют секции, глава сводит их в один документ недели" width="100%">
 </picture>
 
 # WeeklyReport

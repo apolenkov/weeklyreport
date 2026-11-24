@@ -250,7 +250,11 @@ describe("rate-limit middleware — fail-loud store policy", () => {
       const creation = createRateLimits({
         logger: silentLogger,
         isTest: false,
-        env: { REDIS_DB: 15, REDIS_HOST: "redis.example.com", REDIS_PORT: 6379 },
+        env: {
+          REDIS_DB: 15,
+          REDIS_HOST: "redis.example.com",
+          REDIS_PORT: 6379,
+        },
       });
       const beforeReadiness = await Promise.race([
         creation.then(() => "created" as const),
@@ -309,7 +313,11 @@ describe("rate-limit middleware — fail-loud store policy", () => {
       const owned = await createRateLimits({
         logger: silentLogger,
         isTest: false,
-        env: { REDIS_DB: 15, REDIS_HOST: "redis.example.com", REDIS_PORT: 6379 },
+        env: {
+          REDIS_DB: 15,
+          REDIS_HOST: "redis.example.com",
+          REDIS_PORT: 6379,
+        },
       });
       const disconnectsBeforeShutdown = disconnect.mock.calls.length;
 

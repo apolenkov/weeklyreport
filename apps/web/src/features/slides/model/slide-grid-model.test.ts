@@ -69,7 +69,7 @@ const section = (over: ReportSectionFixture = {}): ReportSectionReadModel =>
     reportSectionId: "sec-1",
     reportId: "rep-1",
     authorId: "lead-1",
-    authorName: "Иванов В.П.",
+    authorName: "Ильин В.П.",
     projects: [project("p1", "Alpha"), project("p2", "Beta")],
     ...over,
   });

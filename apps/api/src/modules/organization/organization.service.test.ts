@@ -120,9 +120,7 @@ describe("OrganizationService", () => {
         id: "singleton",
         shortName: field === "shortName" ? blankBrand : "Demo",
         fullName:
-          field === "fullName"
-            ? blankBrand
-            : "Example Software Department",
+          field === "fullName" ? blankBrand : "Example Software Department",
         createdAt: new Date("2026-05-10T00:00:00Z"),
         updatedAt: new Date("2026-05-10T00:00:00Z"),
       });

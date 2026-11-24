@@ -51,7 +51,10 @@ describe("useLeadFormChrome — document title branding", () => {
             email: "lead@example.test",
             role: "lead",
           },
-          organization: { shortName: "Demo", fullName: "Example Software Department" },
+          organization: {
+            shortName: "Demo",
+            fullName: "Example Software Department",
+          },
           isLoading: false,
           isAuthenticated: true,
         }}

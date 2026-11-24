@@ -315,7 +315,7 @@ describe("PrintReportPage — PDF-worker-vs-human server gate", () => {
     render(ui);
     // The template renders the report header.
     expect(
-      screen.getByText(/Software Development — status report/i),
+      screen.getByText(/software development — status report/i),
     ).toBeInTheDocument();
     expect(permanentRedirect).not.toHaveBeenCalled();
     expect(redirect).not.toHaveBeenCalled();

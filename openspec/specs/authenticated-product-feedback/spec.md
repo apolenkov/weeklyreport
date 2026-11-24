@@ -273,9 +273,9 @@ managed through the preserved domain model.
 ### Requirement: External feedback ingress MUST stay closed pending a separate SSO/token specification
 
 Only the `weekly-report` product is enabled by this contract. The reserved
-`external-product` discriminator MUST NOT expose a external product ingress, and the product
-MUST NOT add an external feedback-ingress route, until a separate SSO or
-short-lived signed-token specification defines one.
+`external-product` discriminator MUST NOT expose a feedback-ingress route.
+The product MUST NOT add any external feedback-ingress route until a separate
+SSO or short-lived signed-token specification defines one.
 
 #### Scenario: No external ingress route is exposed before its own specification
 
