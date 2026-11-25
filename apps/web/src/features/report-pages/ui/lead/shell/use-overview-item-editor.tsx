@@ -121,32 +121,35 @@ function useOverviewDetails(
   close: () => void,
 ) {
   const detailsOrigin = useRef<HTMLElement | null>(null);
-  const detailsBaseline = useRef<string | null>(null);
-  const detailsFields = () =>
-    JSON.stringify([dialog?.week, dialog?.draftStore.getSnapshot()]);
-  const canReturnFromDetails = () =>
-    dialog?.detailsOpen === true &&
-    dialog.submission === null &&
-    detailsFields() === detailsBaseline.current;
   const dismissDetails = () => {
-    if (!canReturnFromDetails()) {
+    if (!dialog?.detailsBaseline || dialog.submission) {
       close();
       return;
     }
+    const { fields, statusChosen, week } = dialog.detailsBaseline;
+    dialog.draftStore.restoreSnapshot(fields, statusChosen);
     setDialog((current) =>
-      current ? { ...current, detailsOpen: false } : null,
+      current === dialog
+        ? { ...current, week, detailsOpen: false, detailsBaseline: undefined }
+        : current,
     );
   };
   return {
     showDetails: (origin: HTMLElement) => {
+      if (!dialog || dialog.detailsOpen) return;
+      const detailsBaseline = {
+        week: dialog.week,
+        fields: dialog.draftStore.getSnapshot(),
+        statusChosen: dialog.draftStore.isStatusChosen(),
+      };
       detailsOrigin.current = origin;
-      detailsBaseline.current = detailsFields();
       setDialog((current) =>
-        current ? { ...current, detailsOpen: true } : null,
+        current === dialog
+          ? { ...current, detailsOpen: true, detailsBaseline }
+          : current,
       );
     },
     dismissDetails,
-    canReturnFromDetails,
     restoreDetailsFocus: () => {
       const origin = detailsOrigin.current;
       detailsOrigin.current = null;
@@ -162,14 +165,12 @@ export function buildOverviewEditor(
     onSave,
     onSaveAndAddAnother,
     onCancel,
-    closeWithoutConfirmation,
     onWeekChange,
     requestCloseRef,
   }: {
     onSave: (item: KanbanItem) => void;
     onSaveAndAddAnother?: ((item: KanbanItem) => void) | undefined;
     onCancel: () => void;
-    closeWithoutConfirmation?: (() => boolean) | undefined;
     onWeekChange: (week: "current" | "next") => void;
     requestCloseRef: RefObject<(() => void) | null>;
   },
@@ -199,7 +200,6 @@ export function buildOverviewEditor(
       onSave={onSave}
       onSaveAndAddAnother={onSaveAndAddAnother}
       onCancel={onCancel}
-      closeWithoutConfirmation={closeWithoutConfirmation}
       onWeekChange={onWeekChange}
       requestCloseRef={requestCloseRef}
     />

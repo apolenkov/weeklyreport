@@ -106,6 +106,7 @@ export function OverviewEntryLine({
           view.pending ||
           view.message ||
           choosing ||
+          event.currentTarget.closest("[inert]") !== null ||
           event.currentTarget.contains(event.relatedTarget) ||
           event.relatedTarget?.closest(
             '[role="tab"],button[aria-controls], [data-sonner-toast], [data-slot="popover-content"]',

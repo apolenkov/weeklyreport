@@ -31,6 +31,7 @@ export function overviewInlineItemSlot(
     !editor ||
     dialog?.mode !== "create" ||
     !dialog.contextual ||
+    (dialog.detailsOpen === true && !dialog.detailsBaseline) ||
     actions.recoveryReason ||
     editor.generation !== dialog.generation ||
     editor.view.viewModel.isReadOnly

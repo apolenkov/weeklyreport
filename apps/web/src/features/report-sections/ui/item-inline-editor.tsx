@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  type RefObject,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-} from "react";
+import { type RefObject, useEffect, useLayoutEffect, useRef } from "react";
 
 import type { ParentActivityOption } from "../model/record-parent";
 import type { ItemEditDialogProps } from "./item-edit-dialog";
@@ -17,6 +11,7 @@ import {
 } from "./item-inline-editor-subfields";
 import { useFocusCancelWhenLocked } from "./use-focus-cancel-when-locked";
 import { useItemEditDialog } from "./use-item-edit-dialog";
+import type { ItemEditDiscardBaseline } from "./use-item-edit-form-state";
 
 const EMPTY_ACTIVITIES: readonly ParentActivityOption[] = [];
 
@@ -117,7 +112,7 @@ type ItemInlineEditorProps = Omit<ItemEditDialogProps, "open" | "onDelete"> & {
   readonly confirmationOnly?: boolean | undefined;
   readonly onWeekChange?: ((week: "current" | "next") => void) | undefined;
   readonly weekChangeDisabled?: boolean | undefined;
-  readonly closeWithoutConfirmation?: (() => boolean) | undefined;
+  readonly discardBaseline?: ItemEditDiscardBaseline | undefined;
   readonly hideNextStatus?: boolean | undefined;
 };
 
@@ -248,21 +243,13 @@ export function ItemInlineEditor({
   confirmationOnly = false,
   onWeekChange,
   requestCloseRef,
-  closeWithoutConfirmation,
   hideNextStatus = false,
-  onCancel,
   ...props
 }: ItemInlineEditorProps) {
   const nextStepTextareaRef = useFocusNextStep(focusNextStep, props.week);
   const activities = props.activities ?? EMPTY_ACTIVITIES;
-  const {
-    dialogSurfaceRef,
-    discardDialog,
-    requestClose: closeForm,
-    ...dialogForm
-  } = useItemEditDialog({
+  const { dialogSurfaceRef, discardDialog, ...dialogForm } = useItemEditDialog({
     ...props,
-    onCancel,
     activities,
     presentation: "inline",
     onSave: (item) => {
@@ -276,21 +263,17 @@ export function ItemInlineEditor({
         }
       : undefined,
   });
-  const requestClose = useCallback(
-    () => (closeWithoutConfirmation?.() ? onCancel() : closeForm()),
-    [closeWithoutConfirmation, onCancel, closeForm],
-  );
   useLayoutEffect(() => {
     if (!requestCloseRef) return;
-    requestCloseRef.current = requestClose;
+    requestCloseRef.current = dialogForm.requestClose;
     return () => {
       requestCloseRef.current = null;
     };
-  }, [requestCloseRef, requestClose]);
+  }, [requestCloseRef, dialogForm.requestClose]);
   return (
     <div ref={dialogSurfaceRef} className="min-w-0">
       <InlineFormView
-        form={{ ...dialogForm, requestClose }}
+        form={dialogForm}
         week={props.week}
         products={props.products}
         activities={activities}

@@ -53,6 +53,7 @@ export function Wrapper({
   withActivity = false,
   currentWorkflowStatus = "in_progress",
   nextWorkflowStatus = "planned",
+  nextOutcomeHistory,
   currentCarriedOver = false,
   coveringRisk = false,
   predecessorItem,
@@ -85,6 +86,7 @@ export function Wrapper({
     "planned" | "in_progress" | "paused" | "postponed" | "done";
   readonly nextWorkflowStatus?:
     "planned" | "in_progress" | "paused" | "postponed" | "done";
+  readonly nextOutcomeHistory?: ReportSectionReadModel["items"][number]["outcomeHistory"];
   readonly currentCarriedOver?: boolean | undefined;
   readonly coveringRisk?: boolean;
   readonly predecessorItem?:
@@ -239,6 +241,7 @@ export function Wrapper({
         workflowStatus: nextWorkflowStatus,
         pausedReason:
           nextWorkflowStatus === "paused" ? "Waiting for access" : null,
+        outcomeHistory: nextOutcomeHistory,
         carriedOver: false,
         stageNames: ["Development"],
       },

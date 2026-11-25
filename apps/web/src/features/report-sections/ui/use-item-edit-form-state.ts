@@ -16,9 +16,15 @@ export interface ItemEditErrors {
   pausedReason?: string | undefined;
 }
 
+export interface ItemEditDiscardBaseline {
+  readonly week: "current" | "next";
+  readonly fields: ReturnType<ItemEditDraftStore["getSnapshot"]>;
+}
+
 interface UseItemEditFormStateArgs extends ItemEditDraftSeed {
   readonly presentation?: "dialog" | "inline" | undefined;
   readonly draftStore?: ItemEditDraftStore | undefined;
+  readonly discardBaseline?: ItemEditDiscardBaseline | undefined;
   readonly onCancel: () => void;
   readonly isPending?: boolean | undefined;
 }
@@ -37,8 +43,12 @@ export function useItemEditFormState(args: UseItemEditFormStateArgs) {
   const isDialog = (args.presentation ?? "dialog") === "dialog";
   // Make the subscribed snapshot an explicit dependency for React Compiler.
   const dirty = store.isDirty(fields);
+  const discardBaseline = args.discardBaseline;
   const { requestClose, discardDialog } = useDiscardGuard(
-    dirty,
+    discardBaseline
+      ? discardBaseline.week !== args.week ||
+          store.isDirty(fields, discardBaseline.fields)
+      : dirty,
     args.onCancel,
     args.isPending,
   );

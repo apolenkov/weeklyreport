@@ -486,8 +486,6 @@ describe("LeadForm Overview", () => {
     const editor = await screen.findByRole("form", {
       name: "Current week update for Payments",
     });
-    // A hidden next-step validation error reveals the field in place instead
-    // of sending the lead through a different editor.
     await user.click(within(editor).getByRole("button", { name: "Done" }));
     await user.click(
       within(editor).getByRole("button", { name: "Save update" }),
@@ -501,6 +499,7 @@ describe("LeadForm Overview", () => {
     expect(screen.queryByText(/Cancel, then choose/)).toBeNull();
     await user.click(within(editor).getByRole("button", { name: "Cancel" }));
     await user.click(screen.getByRole("button", { name: "Discard" }));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     const settled = await itemPreview("Current work");
     await user.click(
@@ -1165,7 +1164,7 @@ describe("LeadForm Overview", () => {
     await itemPreview("Current work — in-flight edit");
   });
 
-  it("returns focus and restores report actions when an inline edit is cancelled", async () => {
+  it("restores focus and report actions after cancelling the inline edit", async () => {
     const user = userEvent.setup();
     render(
       <Wrapper>
@@ -1176,6 +1175,7 @@ describe("LeadForm Overview", () => {
     await user.type(screen.getByLabelText(/Description \*/i), " unsaved");
     await user.keyboard("{Escape}");
     await user.click(screen.getByRole("button", { name: "Discard" }));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(
       screen.getByRole("button", {
         name: "Edit text: Current work, This week",

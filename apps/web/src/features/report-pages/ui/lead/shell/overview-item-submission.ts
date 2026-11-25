@@ -171,17 +171,16 @@ function finishAcknowledgedSubmission({
             submission: null,
           }
         : { ...current, submission: null };
-    if (current.mode === "create") {
-      if (!submission.addAnother || current.contextual) return null;
-      const target = { ...current.target, source: current.week };
-      return {
-        ...createOverviewComposerState(editor, target, null),
-        mode: "create",
-        target,
-        seq: current.seq + 1,
-      };
-    }
-    return null;
+    if (current.mode !== "create" || !submission.addAnother) return null;
+    if (current.contextual && !current.detailsOpen) return null;
+    const target = { ...current.target, source: current.week };
+    return {
+      ...current,
+      ...createOverviewComposerState(editor, target, null),
+      detailsBaseline: undefined,
+      target,
+      seq: current.seq + 1,
+    };
   });
 }
 

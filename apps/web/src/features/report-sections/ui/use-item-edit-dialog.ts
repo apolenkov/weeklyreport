@@ -5,13 +5,17 @@ import { deriveItemEditFields } from "./item-edit-dialog-derive";
 import { collectItemStatusErrors } from "./item-edit-dialog-helpers";
 import type { ItemEditDraftStore } from "./item-edit-draft-store";
 import { useInlineEditUnloadGuard } from "./use-inline-edit-unload-guard";
-import { useItemEditFormState } from "./use-item-edit-form-state";
+import {
+  type ItemEditDiscardBaseline,
+  useItemEditFormState,
+} from "./use-item-edit-form-state";
 import { useItemEditSave } from "./use-item-edit-save";
 
 interface UseItemEditDialogArgs {
   readonly presentation?: "dialog" | "inline" | undefined;
   readonly contextualCreateValidation?: boolean | undefined;
   readonly draftStore?: ItemEditDraftStore | undefined;
+  readonly discardBaseline?: ItemEditDiscardBaseline | undefined;
   readonly item: KanbanItem | null;
   readonly products: readonly Product[];
   readonly activities: readonly ParentActivityOption[];
@@ -123,6 +127,7 @@ export function useItemEditDialog(args: UseItemEditDialogArgs) {
     isPending: args.isPending,
     presentation: args.presentation,
     draftStore: args.draftStore,
+    discardBaseline: args.discardBaseline,
     stageMemory: stageMemory ?? undefined,
     stagesForProduct: args.stagesForProduct,
   });
