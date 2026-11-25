@@ -49,7 +49,7 @@ Focused tests must first demonstrate failures for contextual week/owner entry, r
 
 ## Layout direction 11.12 and the editing popover
 
-The layout direction of mockup v2.5, its component mapping and the editing-popover decisions of 12.11 (popover, leaving never saves, bottom Sheet on narrow screens and touch, hover cue, stage icons and legend, three-control entry line, one Undo rule, status line, read-only submitted report) are in [design/02-layout-direction-and-editing-popover.md](design/02-layout-direction-and-editing-popover.md). The mockup is `/Users/wrk/work/task-836-ux-mocks/v2/index.html`; where it differs from the 12.11 decisions, the decisions and the specs win.
+The layout direction of mockup v2.5, its component mapping and the editing-popover decisions of 12.11 (popover, leaving never saves, bottom Sheet on narrow screens and touch, hover cue, stage icons and legend, three-control entry line, one Undo rule, status line, read-only submitted report) are in [design/02-layout-direction-and-editing-popover.md](design/02-layout-direction-and-editing-popover.md). The mockup is `~/work/task-836-ux-mocks/v2/index.html`; where it differs from the 12.11 decisions, the decisions and the specs win.
 
 ## Data gap and how package 10 closes it
 
