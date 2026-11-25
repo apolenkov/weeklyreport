@@ -16,7 +16,27 @@ export function focusCompletionIssue(focus?: string): void {
     : document.querySelector<HTMLElement>(
         '[data-overview-focus^="confirm:current:"]',
       );
-  revealAndFocus(target, { scope: target?.closest("article") ?? null });
+  if (!target) return;
+  const article = target.closest("article");
+  const lane = target.closest<HTMLElement>(
+    "[data-overview-lineage-lane],[data-overview-create-lane]",
+  );
+  const week =
+    lane?.dataset.overviewLineageLane ?? lane?.dataset.overviewCreateLane;
+  if (week)
+    article
+      ?.closest(".overview-table")
+      ?.querySelector<HTMLButtonElement>(
+        `[data-overview-week-tab="${CSS.escape(week)}"][aria-selected="false"]`,
+      )
+      ?.focus();
+  if (article === target)
+    article
+      .querySelector<HTMLButtonElement>(
+        '[data-unit-collapse][aria-expanded="false"]',
+      )
+      ?.click();
+  revealAndFocus(target, { scope: article });
 }
 
 export function firstPendingReviewFocus(

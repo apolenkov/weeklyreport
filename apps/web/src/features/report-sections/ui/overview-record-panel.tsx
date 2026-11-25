@@ -29,7 +29,7 @@ export function OverviewRecordPanel({
       trigger={trigger}
       dirty={dirty || editor.pending}
       nested={discussion || !!confirm || stepDetails}
-      close={editor.leave??editor.close}
+      close={editor.leave ?? editor.close}
       cancel={cancel}
     >
       <div
@@ -216,7 +216,7 @@ function PanelConfirm({
             <Button
               onClick={() => {
                 if (confirm === "delete") editor.remove?.(step);
-                else editor.close();
+                else (editor.discard ?? editor.close)();
                 setConfirm(null);
               }}
             >
@@ -252,7 +252,6 @@ function PanelFields({
         ref={field}
         rows={3}
         aria-label={step ? "Step text" : "Record text"}
-        disabled={editor.pending}
         className="w-full resize-y rounded-md border bg-card p-2"
         value={step ? value.nextStepText : value.text}
         onChange={(event) => {
@@ -279,7 +278,6 @@ function PanelFields({
           Next step
           <GrowingTextarea
             className="block rounded-md border px-2 py-1"
-            disabled={editor.pending}
             readOnly={occupied}
             title={occupied ? "Next week already has this item" : undefined}
             value={value.nextStepText}

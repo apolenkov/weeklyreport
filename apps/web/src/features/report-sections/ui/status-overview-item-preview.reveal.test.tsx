@@ -36,29 +36,46 @@ describe("StatusOverviewItemPreview reveal and keyboard", () => {
     ownedStages: ["Development", "Testing"],
   };
 
-  it("reserves a decorative pencil and keeps hover free of extra controls",async()=>{
- render(<StatusOverviewItemPreview item={item} {...handlers}/>);
- const title=screen.getByRole("button",{name:"Edit text: Original text, This week"});
- expect(title.querySelector(".overview-pencil")).toHaveAttribute("aria-hidden","true");
- const controls=screen.getAllByRole("button");
- await userEvent.hover(title);
- expect(screen.getAllByRole("button")).toEqual(controls);
- expect(screen.queryByRole("button",{name:/Move|Discussion|Edit details/i})).toBeNull();
- });
- it("tabs from status to the record without adding stops for its stages",async()=>{
- render(<StatusOverviewItemPreview item={item} {...handlers}/>);
- await userEvent.tab();expect(screen.getByRole("button",{name:STATUS_BUTTON})).toHaveFocus();
- await userEvent.tab();const title=screen.getByRole("button",{name:/Edit text:/});expect(title).toHaveFocus();
- await userEvent.keyboard("{Enter}");expect(handlers.onEditItem).toHaveBeenCalledWith(item.editTarget);
- });
- it("opens the same record when its stage is tapped",async()=>{
- render(<StatusOverviewItemPreview item={item} {...handlers}/>);
- await userEvent.click(screen.getByRole("img",{name:"Stage: Development"}));
- expect(handlers.onEditItem).toHaveBeenCalledWith(item.editTarget);
- });
- it("withholds the pencil from frozen results",()=>{
- render(<StatusOverviewItemPreview item={{...item,source:"previous",editTarget:null}}/>);
- expect(document.querySelector(".overview-pencil")).toBeNull();
- expect(screen.queryByRole("button")).toBeNull();
- });
+  it("reserves a decorative pencil and keeps hover free of extra controls", async () => {
+    render(<StatusOverviewItemPreview item={item} {...handlers} />);
+    const title = screen.getByRole("button", {
+      name: "Edit text: Original text, This week",
+    });
+    expect(title.querySelector(".overview-pencil")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+    const controls = screen.getAllByRole("button");
+    await userEvent.hover(title);
+    expect(screen.getAllByRole("button")).toEqual(controls);
+    expect(
+      screen.queryByRole("button", { name: /Move|Discussion|Edit details/i }),
+    ).toBeNull();
+  });
+  it("tabs from status to the record without adding stops for its stages", async () => {
+    render(<StatusOverviewItemPreview item={item} {...handlers} />);
+    await userEvent.tab();
+    expect(screen.getByRole("button", { name: STATUS_BUTTON })).toHaveFocus();
+    await userEvent.tab();
+    const title = screen.getByRole("button", { name: /Edit text:/ });
+    expect(title).toHaveFocus();
+    await userEvent.keyboard("{Enter}");
+    expect(handlers.onEditItem).toHaveBeenCalledWith(item.editTarget);
+  });
+  it("opens the same record when its stage is tapped", async () => {
+    render(<StatusOverviewItemPreview item={item} {...handlers} />);
+    await userEvent.click(
+      screen.getByRole("img", { name: "Stage: Development" }),
+    );
+    expect(handlers.onEditItem).toHaveBeenCalledWith(item.editTarget);
+  });
+  it("withholds the pencil from frozen results", () => {
+    render(
+      <StatusOverviewItemPreview
+        item={{ ...item, source: "previous", editTarget: null }}
+      />,
+    );
+    expect(document.querySelector(".overview-pencil")).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
 });

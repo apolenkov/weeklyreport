@@ -40,7 +40,7 @@ export function OverviewRecordSurface({
   };
   const escape = (event: KeyboardEvent) => {
     event.preventDefault();
-    if (!nested) cancel();
+    if (!nested && !event.isComposing) cancel();
   };
   const focusField = (event: Event) => {
     event.preventDefault();
@@ -78,7 +78,7 @@ export function OverviewRecordSurface({
       onCloseAutoFocus={restore}
       onOpenAutoFocus={focusField}
       onKeyDown={(event) => {
-        leaveOnTab(event, { nested, trigger, dirty, close });
+        leaveOnTab(event, { nested, trigger });
       }}
     >
       {children}
@@ -91,13 +91,9 @@ function leaveOnTab(
   {
     nested,
     trigger,
-    dirty,
-    close,
   }: {
     nested: boolean;
     trigger: RefObject<HTMLButtonElement | null>;
-    dirty: boolean;
-    close: () => void;
   },
 ) {
   if (event.key !== "Tab" || nested) return;
@@ -118,10 +114,10 @@ function leaveOnTab(
     ),
   ].filter(
     (node) =>
-      !node.closest("[hidden],[inert],[data-radix-popper-content-wrapper]") &&
-      node.getClientRects().length > 0,
+      !node.closest(
+        "[hidden],[inert],[data-radix-focus-guard],[data-radix-popper-content-wrapper]",
+      ) && node.getClientRects().length > 0,
   );
   const next = candidates[candidates.indexOf(anchor) + 1];
   (back ? anchor : (next ?? anchor)).focus();
-  if (!dirty) close();
 }

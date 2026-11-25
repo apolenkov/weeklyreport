@@ -43,7 +43,7 @@ describe("unit creation controls", () => {
     );
 
     const add = screen.getByRole("button", {
-      name: "Add item to Incident duty, Current week",
+      name: "Add what happened — Incident duty, This week",
     });
     expect(add).toHaveAttribute(
       "data-overview-focus",
@@ -75,18 +75,23 @@ describe("unit creation controls", () => {
 
     expect(
       screen.queryByRole("button", {
-        name: "Add item to Incident duty, Current week",
+        name: "Add what happened — Incident duty, This week",
       }),
     ).not.toBeInTheDocument();
   });
 
-  it("puts the stage selector inside the entry and marks a missing current update",()=>{
-    render(<StatusOverviewTimelineFooter unit={overviewUnit({kind:"product"})} onAddItem={vi.fn()} ownedStageStarts={["Planning","Testing"]}/>);
+  it("puts the stage selector inside the entry and marks a missing current update", () => {
+    render(
+      <StatusOverviewTimelineFooter
+        unit={overviewUnit({ kind: "product" })}
+        onAddItem={vi.fn()}
+        ownedStageStarts={["Planning", "Testing"]}
+      />,
+    );
     expect(screen.getAllByRole("button")).toHaveLength(2);
     expect(screen.getByText("needed to submit")).toBeVisible();
-    expect(screen.queryByRole("button",{name:/Planning/})).toBeNull();
+    expect(screen.queryByRole("button", { name: /Planning/ })).toBeNull();
   });
-
 });
 
 it("offers one quiet entry line for each editable week", () => {

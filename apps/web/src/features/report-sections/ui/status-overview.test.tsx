@@ -33,7 +33,10 @@ function overviewItem(index: number) {
   };
 }
 
-const addTo = (w: string) => `Add item to Incident duty, ${w} week`;
+const addTo = (w: string) =>
+  w === "Current"
+    ? "Add what happened — Incident duty, This week"
+    : "Plan something — Incident duty, Next week";
 
 const model: StatusOverviewModel = {
   periods: {
@@ -119,12 +122,13 @@ describe("StatusOverview", () => {
     const target = document.getElementById("review-record:item:item-5");
     expect(target?.closest("[hidden]")).not.toBeNull();
     await user.click(screen.getByRole("link", { name: "Work item 5" }));
-    await vi.waitFor(() => expect(target).toHaveFocus());
+    expect(
+      await screen.findByRole("dialog", { name: "Discussion" }),
+    ).toBeVisible();
     expect(target?.closest("[hidden], [inert]")).toBeNull();
-    expect(screen.getByRole("button", { name: "Show less" })).toHaveAttribute(
-      "aria-expanded",
-      "true",
-    );
+    expect(
+      screen.getByRole("button", { name: "Show less", hidden: true }),
+    ).toHaveAttribute("aria-expanded", "true");
   });
 
   it("names only the unplanned Current item as unplanned, without a badge", () => {
@@ -153,18 +157,15 @@ describe("StatusOverview", () => {
     expect(screen.queryByText(/next step/i)).toBeNull();
     expect(screen.queryByText(/drag/i)).toBeNull();
     expect(screen.queryByRole("group", { name: "Displayed week" })).toBeNull();
-    expect(screen.getAllByText("Current week").length).toBeGreaterThan(1);
-    expect(screen.getAllByText("Next week").length).toBeGreaterThan(1);
+    expect(screen.getAllByText("This week").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Next week").length).toBeGreaterThan(0);
 
     const preview = screen
       .getByText("Work item 1")
       .closest<HTMLElement>("[data-overview-item-preview]");
     if (!preview) throw new Error("Expected the item preview");
-    await user.click(
-      within(preview).getByRole("button", {
-        name: "Move Work item 1 to next week",
-      }),
-    );
+    preview.focus();
+    await user.keyboard("{Alt>}{ArrowRight}{/Alt}");
     expect(onMoveItem).toHaveBeenCalledWith(
       expect.objectContaining({ recordId: "item-1" }),
       "next",
@@ -203,10 +204,8 @@ describe("StatusOverview", () => {
       />,
     );
 
-    // The status icon keeps the confirm anchor so the submit-readiness deep
-    // link still resolves, and it opens the status menu.
     const status = screen.getByRole("button", {
-      name: "Choose outcome: Work item 1. Status: Continued · not updated this week · Unplanned",
+      name: "Status not set",
     });
     expect(status).toHaveAttribute("id", "confirm:current:item-1");
     expect(status).toHaveAttribute(
@@ -234,20 +233,14 @@ describe("StatusOverview", () => {
     if (!preview) throw new Error("Expected the item preview");
     expect(
       within(preview).getByRole("button", {
-        name: "Edit details: Work item 1",
+        name: "Edit text: Work item 1, This week",
       }),
     ).toBeInTheDocument();
-    expect(
-      within(preview).getByRole("button", {
-        name: "Move Work item 1 to next week",
-      }),
-    ).toBeInTheDocument();
-    // The unconfirmed carry offers no terminal outcome entry: choosing a
-    // status in the icon menu is the way to clear it.
+    expect(within(preview).queryByRole("button", { name: /^Move/ })).toBeNull();
     await user.click(status);
     expect(
-      screen.queryByRole("menuitem", { name: "Resolve plan: Work item 1" }),
-    ).toBeNull();
+      screen.queryByRole("menuitem", { name: "Won’t do…" }),
+    ).toHaveAttribute("aria-disabled", "true");
   });
 
   it("keeps the terminal outcome entry inside the status menu", async () => {
@@ -267,17 +260,16 @@ describe("StatusOverview", () => {
       .getByText("Work item 1")
       .closest<HTMLElement>("[data-overview-item-preview]");
     if (!preview) throw new Error("Expected the item preview");
-    // The outcome path is one level inside the status menu, never a button.
     expect(
       within(preview).queryByRole("button", { name: /Resolve plan/ }),
     ).toBeNull();
 
     await user.click(
-      within(preview).getByRole("button", { name: /^Status of Work item 1:/ }),
+      within(preview).getByRole("button", {
+        name: /^Choose outcome: Work item 1/,
+      }),
     );
-    await user.click(
-      screen.getByRole("menuitem", { name: "Resolve plan: Work item 1" }),
-    );
+    await user.click(screen.getByRole("menuitem", { name: "Won’t do…" }));
 
     expect(onResolvePlan).toHaveBeenCalledWith(
       expect.objectContaining({ recordId: "item-1" }),
@@ -292,8 +284,6 @@ describe("StatusOverview", () => {
     const onMoveItem = vi.fn();
     const baseUnit = model.units[0];
     if (!baseUnit) throw new Error("Expected one overview unit");
-    // The derived projection renders the Current record's next-step
-    // commitment: its terminal status belongs to the Current occurrence.
     const derived = {
       ...overviewItem(1),
       key: "next:item-1",
@@ -339,15 +329,10 @@ describe("StatusOverview", () => {
     if (status) await user.click(status);
     expect(
       screen.queryByRole("menuitem", {
-        name: "Resolve plan: Ship the follow-up",
+        name: "Won’t do…",
       }),
     ).toBeNull();
-    // The derived commitment keeps its supported move action.
-    expect(
-      within(preview).getByRole("button", {
-        name: "Move Ship the follow-up to current week",
-      }),
-    ).toBeInTheDocument();
+    expect(within(preview).queryByRole("button", { name: /^Move/ })).toBeNull();
     expect(onResolvePlan).not.toHaveBeenCalled();
   });
 
@@ -396,19 +381,10 @@ describe("StatusOverview", () => {
       .closest<HTMLElement>("[data-overview-item-preview]");
     if (!preview) throw new Error("Expected the item preview");
     await user.click(
-      within(preview).getByRole("button", {
-        name: /^Status of Genuine next work:/,
-      }),
+      within(preview).getByRole("button", { name: /View text:/ }),
     );
-    await user.click(
-      screen.getByRole("menuitem", {
-        name: "Resolve plan: Genuine next work",
-      }),
-    );
-    expect(onResolvePlan).toHaveBeenCalledWith(
-      expect.objectContaining({ recordId: "next-item-1" }),
-      "resolve:next:next-lineage-1",
-    );
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(onResolvePlan).not.toHaveBeenCalled();
   });
 
   it("keeps a locked cancelled carry informational without mutation controls", () => {
@@ -746,7 +722,7 @@ describe("StatusOverview", () => {
     if (!preview) throw new Error("Expected the item preview");
     expect(text.closest("li")).not.toHaveClass("rounded-[var(--radius-sm)]");
     expect(text.closest("button")).toHaveAccessibleName(
-      "Edit item: Work item 1",
+      "Edit text: Work item 1, This week",
     );
 
     await user.click(text);
@@ -758,7 +734,7 @@ describe("StatusOverview", () => {
 
     await user.click(
       within(preview).getByRole("button", {
-        name: "Edit details: Work item 1",
+        name: "Edit text: Work item 1, This week",
       }),
     );
 
@@ -793,8 +769,8 @@ describe("StatusOverview", () => {
         {
           ...unit,
           columns: {
-            lastWeek: { availability: "available", items: [] },
-            priorCommitments: {
+            priorCommitments: { availability: "available", items: [] },
+            lastWeek: {
               availability: "available",
               items: [
                 item("previous", "shared", "Previous shared"),
@@ -849,8 +825,6 @@ describe("StatusOverview", () => {
       expect(lane).not.toHaveClass("hidden");
       expect(lane).toHaveClass("md:flex");
     }
-    // The matched cell keeps its preview; the editor is a separate full-width
-    // cell appended after the three lineage cells of the same row.
     expect(
       currentSharedLane?.querySelector("[data-overview-item-preview]"),
     ).not.toBeNull();
@@ -924,15 +898,13 @@ describe("StatusOverview", () => {
 
     render(<StatusOverview model={readOnlyModel} />);
 
-    // Empty desktop lanes retain their accessible name; mobile uses one
-    // summary for the whole unit rather than a strip in each lineage row.
     const emptyLane = document.querySelector(
       '[data-overview-lineage-lane="next"]',
     );
-    expect(emptyLane).toHaveClass("hidden", "md:flex");
-    expect(emptyLane).toHaveTextContent("No item in this period");
+    expect(emptyLane).toHaveClass("overview-empty-lane");
+    expect(emptyLane).toHaveTextContent("No entry in Next week");
     expect(emptyLane).not.toHaveTextContent("7–13 Sep 2026");
-    expect(screen.getByText("No items in other periods")).toBeInTheDocument();
+    expect(screen.getByText("Nothing planned.")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add next step" })).toBeNull();
   });
 
@@ -967,12 +939,10 @@ describe("StatusOverview", () => {
 
     render(<StatusOverview model={linkedModel} />);
 
-    // R15: every week label stays visible once in the shared mobile periods
-    // header; populated cells still repeat their own lane label.
-    for (const label of ["Previously planned", "Current week", "Next week"]) {
+    for (const label of ["Last week", "This week", "Next week"]) {
       expect(screen.getAllByText(label).length).toBeGreaterThanOrEqual(1);
     }
-    expect(screen.getAllByText("Current week").length).toBeGreaterThan(1);
+    expect(screen.getAllByText("This week").length).toBeGreaterThan(0);
     expect(screen.queryByRole("button", { name: "Add next step" })).toBeNull();
   });
 
@@ -1083,9 +1053,11 @@ describe("StatusOverview", () => {
         name: addTo("Current"),
       }),
     ).toBeInTheDocument();
-    expect(screen.getAllByRole("button", { name: /Add item to/ })).toHaveLength(
-      2,
-    );
+    expect(
+      screen.getAllByRole("button", {
+        name: /Add what happened|Plan something/,
+      }),
+    ).toHaveLength(2);
   });
 
   it("opens a status menu from the icon and the canonical editor from the text", async () => {
@@ -1111,7 +1083,7 @@ describe("StatusOverview", () => {
     );
 
     await user.click(status);
-    await user.click(screen.getByRole("menuitem", { name: "Paused" }));
+    await user.click(screen.getByRole("menuitem", { name: "Paused…" }));
     expect(
       screen.getByRole("textbox", { name: "Paused reason — Work item 1" }),
     ).toBeVisible();
@@ -1120,7 +1092,7 @@ describe("StatusOverview", () => {
     expect(onEditItem).not.toHaveBeenCalled();
 
     await user.click(
-      screen.getByRole("button", { name: "Edit item: Work item 1" }),
+      screen.getByRole("button", { name: "Edit text: Work item 1, This week" }),
     );
     expect(onEditItem).toHaveBeenCalledWith({
       recordId: "item-1",
@@ -1206,7 +1178,7 @@ describe("StatusOverview", () => {
     ).toBeNull();
     expect(screen.getByText(/Won't do · The dependency closed/)).toBeVisible();
     const restore = screen.getByRole("button", {
-      name: "Restore Work item 1",
+      name: "Restore",
     });
     expect(restore).toHaveAttribute(
       "data-overview-focus",
@@ -1281,8 +1253,8 @@ describe("StatusOverview", () => {
           ...baseUnit,
           columns: {
             ...baseUnit.columns,
-            lastWeek: { availability: "available", items: [] },
-            priorCommitments: {
+            priorCommitments: { availability: "available", items: [] },
+            lastWeek: {
               availability: "available",
               items: [
                 {
@@ -1366,7 +1338,7 @@ describe("StatusOverview", () => {
     expect(preview).not.toHaveTextContent("In progress");
     expect(preview).not.toHaveTextContent("Update progress");
     expect(preview).not.toHaveTextContent("Not in prior plan");
-    const row = status.closest("article")?.firstElementChild;
+    const row = status.closest("[data-testid=overview-lineage-row]");
     expect(row).toHaveClass("overview-week-grid");
   });
 
@@ -1421,7 +1393,7 @@ describe("StatusOverview", () => {
 
     expect(
       screen.getByRole("button", {
-        name: `Add item to ${longProductName}, Current week`,
+        name: `Add what happened — ${longProductName}, This week`,
       }),
     ).toBeVisible();
     expect(
@@ -1462,7 +1434,11 @@ describe("StatusOverview", () => {
     );
 
     expect(screen.getByText("Work item 1")).toBeVisible();
-    expect(screen.queryByRole("button", { name: /Add item to/ })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: /Add what happened|Plan something/,
+      }),
+    ).toBeNull();
     expect(
       document.querySelectorAll("[data-overview-create-origin]"),
     ).toHaveLength(0);
@@ -1479,7 +1455,7 @@ describe("StatusOverview", () => {
     const add = within(article).getByRole("button", {
       name: addTo("Current"),
     });
-    expect(add).toHaveTextContent("Add item");
+    expect(add).toHaveTextContent("What happened…");
     expect(add).not.toHaveClass("opacity-0");
     expect(add).toHaveClass("min-h-[var(--touch-target-min)]");
     expect(article.querySelector("[data-overview-mobile-create]")).toBeNull();

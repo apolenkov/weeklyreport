@@ -1,12 +1,14 @@
 import { useCallback, useState } from "react";
 
 import {
+  buildStatusOverviewLineage,
   ownedStagesForProject,
   projectReportHealthPulse,
   projectStatusOverview,
   type StatusOverviewItem,
   type StatusOverviewModel,
 } from "../../../../report-sections";
+import type { OverviewItemDialogState } from "./lead-status-overview-item-editor";
 import { openWorkDisabledReason } from "./open-work-register-model";
 import { recordPanel } from "./overview-active-record";
 import { buildActivityFieldsChange } from "./overview-activity-fields";
@@ -101,13 +103,13 @@ export function useOverviewController({
     activityPending: pendingActivityIds.size > 0,
   });
   const { plan, record, pendingInput } = editing;
-  const undo = useOverviewUndo(readyEditor, pendingInput);
-  useEntryUndo(readyEditor, editing.dialog.dialog, undo.announce);
-  const verdict = useOverviewVerdictActions(readyEditor, output, undo.write,undo.announce);
-  const { saveStatus, readiness,onReasonDraft } = useOverviewReadiness(
+  const { saveStatus, readiness, onReasonDraft, hasReasonDraft } =
+    useOverviewReadiness(readyEditor, editing, pendingActivityIds);
+  const { undo, verdict } = useOverviewHistory(
     readyEditor,
-    editing,
-    pendingActivityIds,
+    editing.dialog.dialog,
+    pendingInput || hasReasonDraft,
+    output,
   );
   const canStartAction = canEdit && !pendingInput;
   const openWork = useOpenWorkRegister(
@@ -129,25 +131,18 @@ export function useOverviewController({
     canStartAction,
     completion,
     model,
+    lineage: buildStatusOverviewLineage(model.units),
     ...editing,
     activeRecord: recordPanel(readyEditor, editing.dialog, model, undo),
-    move: (item: StatusOverviewItem) => {
-      if (!readyEditor || pendingInput) return;
-      const change = itemChange(readyEditor, item, "move");
-      if (change) void undo.write(change);
-    },
-    deleteUnitRecord: (kind: "risk" | "decision", stableId: string) => {
-      if (!readyEditor || pendingInput) return;
-      const change = unitRecordDeletion(readyEditor, kind, stableId);
-      if (change) void undo.write(change);
-    },
+    ...reversibleActions(readyEditor, pendingInput, undo.write),
     health: projectReportHealthPulse(
       model.units,
       readyEditor?.draft.section ?? output.current.section,
     ),
     verdict: { ...verdict, onAddRecord: record.open },
     saveStatus,
-    readiness,onReasonDraft,
+    readiness,
+    onReasonDraft,
     openWork,
     openWorkBlocker,
     onActivityFieldsChange: buildActivityFieldsChange(readyEditor),
@@ -228,4 +223,46 @@ function overviewEditor(
       requestCloseRef: dialog.requestCloseRef,
     },
   );
+}
+
+function reversibleActions(
+  readyEditor: ReadyEditor | null,
+  pendingInput: boolean,
+  write: (
+    change: NonNullable<ReturnType<typeof itemChange>>,
+  ) => Promise<boolean>,
+) {
+  return {
+    move: (item: StatusOverviewItem) => {
+      if (!readyEditor || pendingInput) return;
+      const change = itemChange(readyEditor, item, "move");
+      if (change) void write(change);
+    },
+    deleteUnitRecord: (kind: "risk" | "decision", stableId: string) => {
+      if (!readyEditor || pendingInput) return;
+      const change = unitRecordDeletion(readyEditor, kind, stableId);
+      if (change) void write(change);
+    },
+  };
+}
+
+function useOverviewHistory(
+  readyEditor: ReadyEditor | null,
+  dialog: OverviewItemDialogState | null,
+  pendingInput: boolean,
+  output: Parameters<typeof projectStatusOverview>[0],
+) {
+  const undo = useOverviewUndo(
+    readyEditor,
+    pendingInput,
+    dialog?.stableId ?? null,
+  );
+  useEntryUndo(readyEditor, dialog, undo.announce);
+  const verdict = useOverviewVerdictActions(
+    readyEditor,
+    output,
+    undo.write,
+    undo.announce,
+  );
+  return { undo, verdict };
 }

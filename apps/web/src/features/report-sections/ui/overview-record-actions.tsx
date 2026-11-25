@@ -67,23 +67,21 @@ export function PanelActions({
         Icon={MessageSquare}
         act={openDiscussion}
       />
-      {!item.editTarget?.focusNextStep && (
-        <RecordAction
-          label={
-            item.source === "next" ? "Move to this week" : "Move to next week"
-          }
-          Icon={item.source === "next" ? ArrowLeft : ArrowRight}
-          reason={
-            moveReason ??
-            (dirty
-              ? "Save or cancel your changes first."
-              : editor.move
-                ? undefined
-                : "This entry cannot be moved.")
-          }
-          act={() => editor.move?.()}
-        />
-      )}
+      <RecordAction
+        label={
+          item.source === "next" ? "Move to this week" : "Move to next week"
+        }
+        Icon={item.source === "next" ? ArrowLeft : ArrowRight}
+        reason={
+          moveReason ??
+          (dirty
+            ? "Save or cancel your changes first."
+            : editor.move
+              ? undefined
+              : "This entry cannot be moved.")
+        }
+        act={() => editor.move?.()}
+      />
       <RecordAction label="More details" Icon={Maximize2} act={details} />
       <RecordAction
         label="Delete"
@@ -92,10 +90,13 @@ export function PanelActions({
         reason={editor.pending ? "Still saving." : deletion}
       />
       <Button variant="ghost" className="ml-auto" onClick={cancel}>
-        Cancel
+        {editor.failed ? "Discard" : "Cancel"}
       </Button>
-      <Button disabled={editor.pending} onClick={save}>
-        Save
+      <Button
+        disabled={editor.pending}
+        onClick={editor.failed ? editor.save : save}
+      >
+        {editor.failed ? "Retry" : "Save"}
       </Button>
     </div>
   );

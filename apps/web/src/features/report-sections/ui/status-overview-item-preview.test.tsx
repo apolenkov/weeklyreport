@@ -43,7 +43,7 @@ describe("StatusOverviewItemPreview at rest", () => {
       }),
     ).toBeVisible();
     expect(
-      screen.getByRole("button", { name: `Edit item: ${text}` }),
+      screen.getByRole("button", { name: `Edit text: ${text}, This week` }),
     ).toBeVisible();
   });
 
@@ -60,7 +60,9 @@ describe("StatusOverviewItemPreview at rest", () => {
 
     expect(screen.getByRole("button", { name: STATUS_BUTTON })).toBeVisible();
     expect(
-      screen.getByRole("button", { name: "Edit item: Original text" }),
+      screen.getByRole("button", {
+        name: "Edit text: Original text, This week",
+      }),
     ).toBeVisible();
     // No permanent text button and no metadata line.
     for (const label of [
@@ -75,25 +77,22 @@ describe("StatusOverviewItemPreview at rest", () => {
     expect(screen.queryByText(/In progress/)).toBeNull();
     expect(screen.queryByText(/Paused:/)).toBeNull();
     expect(screen.queryByText("feature")).toBeNull();
-    // The badge is short; the full stage names live in the name and tooltip.
-    expect(screen.queryByText("Development")).toBeNull();
-    const badge = screen.getByRole("img", { name: "Stages: Development" });
-    expect(badge).toHaveTextContent("Dev");
-    expect(badge).toHaveAttribute("title", "Development");
+    expect(
+      screen.getByRole("img", { name: "Stage: Development" }),
+    ).toBeVisible();
   });
 
-  it("summarises several stages with a count and names them all", () => {
+  it("names each stage icon", () => {
     render(
       <StatusOverviewItemPreview
         item={{ ...item, stageNames: ["Development", "Testing"] }}
       />,
     );
 
-    const badge = screen.getByRole("img", {
-      name: "Stages: Development, Testing",
-    });
-    expect(badge).toHaveTextContent("Dev +1");
-    expect(badge).toHaveAttribute("title", "Development, Testing");
+    for (const stage of ["Development", "Testing"])
+      expect(
+        screen.getByRole("img", { name: `Stage: ${stage}` }),
+      ).toBeVisible();
   });
 
   it("keeps the unplanned meaning in the status name, not as a badge", () => {
@@ -107,17 +106,17 @@ describe("StatusOverviewItemPreview at rest", () => {
     ).toBeInTheDocument();
   });
 
-  it("clamps a long collapsed update to two lines until it is expanded", async () => {
+  it("wraps a long update and opens its full text", async () => {
     const user = userEvent.setup();
     const text = "Long update ".repeat(12).trim();
     render(<StatusOverviewItemPreview item={{ ...item, text }} />);
-    const preview = screen.getByText(text);
-    expect(preview).toHaveClass("line-clamp-2");
-    expect(preview).not.toHaveClass("block");
-
-    await user.click(screen.getByRole("button", { name: /Show full update/ }));
-    expect(preview).toHaveClass("block");
-    expect(preview).not.toHaveClass("line-clamp-2");
+    expect(screen.getByText(text)).not.toHaveClass("line-clamp-2");
+    await user.click(
+      screen.getByRole("button", { name: `View text: ${text}, This week` }),
+    );
+    expect(screen.getByRole("dialog", { name: "Record" })).toHaveTextContent(
+      text,
+    );
   });
 
   it("keeps the full visible text inside the accessible name of the title button", () => {
@@ -129,15 +128,15 @@ describe("StatusOverviewItemPreview at rest", () => {
       />,
     );
     expect(
-      screen.getByRole("button", { name: /Edit item/ }),
-    ).toHaveAccessibleName(`Edit item: ${text}`);
+      screen.getByRole("button", { name: /Edit text/ }),
+    ).toHaveAccessibleName(`Edit text: ${text}, This week`);
   });
 
   it("renders no mutation controls and no status menu when no handlers are provided", () => {
     render(<StatusOverviewItemPreview item={{ ...item, canResolve: true }} />);
 
-    expect(screen.getByText("Original text").tagName).toBe("P");
-    expect(screen.queryAllByRole("button")).toHaveLength(0);
+    expect(screen.getByText("Original text")).toBeVisible();
+    expect(screen.getAllByRole("button")).toHaveLength(1);
     expect(screen.getByRole("img", { name: STATUS_BUTTON })).toBeVisible();
   });
 });
@@ -165,11 +164,13 @@ describe("StatusOverviewItemPreview status menu", () => {
       .getAllByRole("menuitem")
       .map((entry) => entry.textContent);
     expect(labels).toEqual([
-      "Not started",
-      "In progress",
-      "Paused",
-      "Postponed",
       "Done",
+      "In progress",
+      "Not started",
+      "Paused…",
+      "Postponed",
+      "Move to next week",
+      "Won’t do…",
     ]);
     expect(
       screen.getByRole("menuitem", { name: "In progress" }),
@@ -184,7 +185,7 @@ describe("StatusOverviewItemPreview status menu", () => {
     expect(onEditItem).not.toHaveBeenCalled();
   });
 
-  it("names Next-week statuses as planned rather than not started", async () => {
+  it("opens a Next record without a status menu", async () => {
     const user = userEvent.setup();
     render(
       <StatusOverviewItemPreview
@@ -193,14 +194,9 @@ describe("StatusOverviewItemPreview status menu", () => {
       />,
     );
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "Choose outcome: Original text. Status: Planned",
-      }),
-    );
-    expect(
-      screen.getByRole("menuitem", { name: "Planned" }),
-    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /View text:/ }));
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Choose outcome/ })).toBeNull();
   });
 
   it("opens from the keyboard and returns focus to the icon", async () => {
@@ -234,14 +230,16 @@ describe("StatusOverviewItemPreview status menu", () => {
     );
 
     const trigger = screen.getByRole("button", {
-      name: "Choose outcome: Original text. Status: Planned · not updated this week",
+      name: "Status not set",
     });
     expect(trigger).toHaveAttribute("id", "confirm:current:stable-1");
     expect(trigger).toHaveAttribute(
       "data-overview-focus",
       "confirm:current:stable-1",
     );
-    expect(trigger.querySelector('circle[r="3.5"]')).not.toBeNull();
+    expect(
+      trigger.querySelector(".lucide-circle-question-mark"),
+    ).not.toBeNull();
     expect(screen.queryByRole("button", { name: /Confirm/ })).toBeNull();
 
     // Keeping the shown status is the confirmation; no separate button.
@@ -270,7 +268,7 @@ describe("StatusOverviewItemPreview status menu", () => {
 
     expect(
       screen.getByRole("button", {
-        name: "Choose outcome: Original text. Status: Continued · not updated this week",
+        name: "Status not set",
       }),
     ).toBeInTheDocument();
   });
@@ -281,7 +279,7 @@ describe("StatusOverviewItemPreview status menu", () => {
     ).map((workflowStatus) => {
       const { container, unmount } = render(
         <StatusOverviewItemPreview
-          item={{ ...item, workflowStatus, source: "next" }}
+          item={{ ...item, workflowStatus, source: "current" }}
         />,
       );
       const markup = container.querySelector("svg")?.innerHTML ?? "";
@@ -312,20 +310,18 @@ describe("StatusOverviewItemPreview status menu", () => {
       />,
     );
 
-    expect(
-      screen.getByRole("img", {
-        name: "Choose outcome: Original text. Status: Planned",
-      }),
-    ).toBeVisible();
+    expect(screen.queryByRole("img", { name: /Choose outcome/ })).toBeNull();
     await user.click(
-      screen.getByRole("button", { name: "Edit item: Original text" }),
+      screen.getByRole("button", {
+        name: "Edit text: Original text, Next week",
+      }),
     );
     expect(onEditItem).toHaveBeenCalledWith(projection.editTarget);
   });
 });
 
 describe("StatusOverviewItemPreview revealed actions", () => {
-  it("exposes move, edit and comments as one flat row with no overflow menu", async () => {
+  it("opens the editor from text and keeps secondary actions off the row", async () => {
     const user = userEvent.setup();
     const onMoveItem = vi.fn();
     const onEditItem = vi.fn();
@@ -340,21 +336,16 @@ describe("StatusOverviewItemPreview revealed actions", () => {
 
     expect(screen.queryByRole("button", { name: /More actions/ })).toBeNull();
     await user.click(
-      screen.getByRole("button", { name: "Edit details: Original text" }),
+      screen.getByRole("button", {
+        name: "Edit text: Original text, This week",
+      }),
     );
     expect(onEditItem).toHaveBeenCalledWith(item.editTarget);
 
-    await user.click(
-      screen.getByRole("button", { name: "Move Original text to next week" }),
-    );
-    expect(onMoveItem).toHaveBeenCalledWith(
-      expect.objectContaining({ key: "item-1" }),
-      "next",
-      "move:current:stable-1",
-    );
     expect(
-      screen.getByRole("button", { name: "Comments on Original text" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: /^(Move|Discussion)/ }),
+    ).toBeNull();
+    expect(onMoveItem).not.toHaveBeenCalled();
   });
 
   it("reaches the terminal outcome from the status menu, one level deep", async () => {
@@ -370,9 +361,7 @@ describe("StatusOverviewItemPreview revealed actions", () => {
     );
 
     await user.click(screen.getByRole("button", { name: STATUS_BUTTON }));
-    await user.click(
-      screen.getByRole("menuitem", { name: "Resolve plan: Original text" }),
-    );
+    await user.click(screen.getByRole("menuitem", { name: "Won’t do…" }));
     expect(onResolvePlan).toHaveBeenCalledWith(
       expect.objectContaining({ key: "item-1" }),
       "resolve:current:stable-1",
@@ -390,8 +379,11 @@ describe("StatusOverviewItemPreview revealed actions", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /^Status of/ }));
-    expect(screen.queryByRole("menuitem", { name: /Resolve plan/ })).toBeNull();
+    await user.click(screen.getByRole("button", { name: /^Status not set$/ }));
+    expect(screen.getByRole("menuitem", { name: "Won’t do…" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
   });
 
   it("keeps a completed item editable but not movable and not clickable by text", () => {
@@ -407,7 +399,9 @@ describe("StatusOverviewItemPreview revealed actions", () => {
 
     expect(screen.queryByRole("button", { name: /Edit item/ })).toBeNull();
     expect(
-      screen.getByRole("button", { name: "Edit details: Original text" }),
+      screen.getByRole("button", {
+        name: "Edit text: Original text, This week",
+      }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Move .* week$/ })).toBeNull();
   });
@@ -452,16 +446,14 @@ describe("StatusOverviewItemPreview revealed actions", () => {
     ).toBeVisible();
     expect(screen.getByText("Won't do · Scope removed")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /More actions/ })).toBeNull();
-    await user.click(
-      screen.getByRole("button", { name: "Restore Original text" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Restore" }));
     expect(onRestorePlan).toHaveBeenCalledWith(
       resolved,
       "restore:current:stable-1",
     );
   });
 
-  it("keeps Previous read-only with only the explicit replan action", async () => {
+  it("keeps Last week read-only", async () => {
     const user = userEvent.setup();
     const previous = {
       ...item,
@@ -482,10 +474,10 @@ describe("StatusOverviewItemPreview revealed actions", () => {
       />,
     );
 
-    expect(screen.getByText("Original text").tagName).toBe("P");
+    expect(screen.getByText("Original text")).toBeVisible();
     expect(screen.getByRole("img", { name: STATUS_BUTTON })).toBeVisible();
-    await user.click(screen.getByRole("button", { name: /^Plan this work/ }));
-    expect(onPlanItem).toHaveBeenCalledWith(previous);
+    await user.click(screen.getByText("Original text"));
+    expect(onPlanItem).not.toHaveBeenCalled();
     expect(
       screen.queryByRole("button", {
         name: /Status of|More actions|Edit/,

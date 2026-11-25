@@ -5,10 +5,12 @@ import type { LeadFormEditorHandle } from "./use-lead-form-editor";
 type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
 
 export function LeadOverviewDetails({
+  hasUnansweredPlans,
   editor,
   pendingInput,
   readiness,
 }: {
+  readonly hasUnansweredPlans: boolean;
   readonly editor: ReadyEditor | null;
   readonly pendingInput: boolean;
   readonly readiness: ReadyEditor["view"]["submitReadiness"];
@@ -30,10 +32,10 @@ export function LeadOverviewDetails({
         crossAuthorEntries={view.data.crossAuthors}
         pendingInput={pendingInput}
       />
-      {!view.viewModel.isReadOnly ? (
+      {!view.viewModel.isReadOnly || pendingInput ? (
         <div id="overview-readiness" tabIndex={-1}>
-          {" "}
           <LeadSubmitReadinessSummary
+            hasUnansweredPlans={hasUnansweredPlans}
             readiness={readiness}
             onSubmit={view.writeActions.handleSubmit}
             showSubmitAction={false}

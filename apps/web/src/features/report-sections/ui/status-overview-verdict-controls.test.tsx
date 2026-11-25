@@ -98,7 +98,7 @@ describe("the frozen plan's outcome menu", () => {
       await user.click(screen.getByRole("button", { name: "Save" }));
       expect(onVerdict).not.toHaveBeenCalled();
       expect(screen.getByRole("alert")).toHaveTextContent(
-        "Add a one-line reason.",
+        "One line is enough, but it can’t be empty.",
       );
       await user.type(field, "Dependency unavailable{Enter}");
       expect(await screen.findByText("Save failed.")).toBeVisible();
@@ -111,11 +111,13 @@ describe("the frozen plan's outcome menu", () => {
     },
   );
   it("returns focus after cancelling an empty reason", async () => {
-    const { user, choose, trigger } = setup();
+    const { user, choose } = setup();
     await choose("Paused…");
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("textbox")).toBeNull();
-    await waitFor(() => expect(trigger).toHaveFocus());
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: outcomeName })).toHaveFocus(),
+    );
   });
   it("retains a typed reason after Escape", async () => {
     const { user, choose, onVerdict } = setup();

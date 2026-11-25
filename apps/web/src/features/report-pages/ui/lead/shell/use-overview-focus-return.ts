@@ -61,7 +61,7 @@ function findCreatedControl(
 export function useOverviewFocusReturn(
   open: boolean,
   createdFocusRef?: { current: OverviewCreatedFocus | null },
-  keepOutsideFocus?: {current:boolean},
+  keepOutsideFocusRef?: { current: boolean },
 ): (explicitOriginKey?: string) => void {
   const originKey = useRef<string | null>(null);
   const fallbackKey = useRef<string | null>(null);
@@ -70,7 +70,10 @@ export function useOverviewFocusReturn(
     const closing = previouslyOpen.current && !open;
     previouslyOpen.current = open;
     if (!closing) return;
-    if(keepOutsideFocus?.current){keepOutsideFocus.current=false;return;}
+    if (keepOutsideFocusRef?.current) {
+      keepOutsideFocusRef.current = false;
+      return;
+    }
     const key = originKey.current;
     const identity = key?.slice(key.lastIndexOf(":") + 1);
     const fallback = fallbackKey.current;
@@ -108,7 +111,7 @@ export function useOverviewFocusReturn(
       origin ??
       document.querySelector<HTMLElement>("[data-overview-focus-heading]");
     destination?.focus();
-  }, [open, createdFocusRef,keepOutsideFocus]);
+  }, [open, createdFocusRef, keepOutsideFocusRef]);
 
   return (explicitOriginKey?: string) => {
     const origin = document.activeElement;

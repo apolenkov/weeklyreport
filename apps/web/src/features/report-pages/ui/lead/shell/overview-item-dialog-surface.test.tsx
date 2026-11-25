@@ -106,7 +106,7 @@ describe("Overview item dialog dismissal", () => {
       expect(dialog).toHaveAttribute("aria-modal", "true");
       if (dismissal === "Escape") await user.keyboard("{Escape}");
       else if (dismissal === "outside") {
-        const overlay = document.querySelector("[data-slot=dialog-overlay]");
+        const overlay = document.querySelector("[data-slot=sheet-overlay]");
         if (!overlay) throw new Error("Expected the modal overlay");
         await user.click(overlay);
       } else

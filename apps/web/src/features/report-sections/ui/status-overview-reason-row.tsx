@@ -1,8 +1,16 @@
-import {OverviewRecordContext} from "./overview-record-context";
 "use client";
 
 import { SAFE_TEXT_MAX_LENGTH, safeText } from "@weeklyreport/shared";
-import { type SubmitEvent,useContext, useEffect, useId, useRef, useState } from "react";
+import {
+  type SubmitEvent,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
+
+import { OverviewRecordContext } from "./overview-record-context";
 
 const FOCUS_RING =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
@@ -37,7 +45,7 @@ function ReasonActions({
 
 function reasonError(reason: string, message: string | undefined): string {
   return reason.trim() === ""
-    ? "Add a one-line reason."
+    ? "One line is enough, but it can’t be empty."
     : (message ?? "Add a visible reason.");
 }
 
@@ -48,6 +56,22 @@ interface ReasonRowProps {
   readonly error: string | null;
   readonly onSubmit: (reason: string) => void;
   readonly onCancel: (value?: string) => void;
+}
+
+function usePendingReason(
+  errorId: string,
+  input: React.RefObject<HTMLInputElement | null>,
+  reason: string,
+) {
+  const { onReasonDraft } = useContext(OverviewRecordContext);
+  useEffect(() => {
+    if (!reason.trim()) return;
+    onReasonDraft?.(errorId, {
+      label: `Unsaved reason: ${reason}`,
+      overviewFocus: `${errorId}-field`,
+    });
+    return () => onReasonDraft?.(errorId, null);
+  }, [errorId, onReasonDraft, reason, input]);
 }
 
 export function ReasonRow({
@@ -68,12 +92,7 @@ export function ReasonRow({
     return () => cancelAnimationFrame(frame);
   }, [busy]);
   const errorId = useId();
-  const {onReasonDraft}=useContext(OverviewRecordContext);
-  useEffect(()=>{
-    if(!reason.trim())return;
-    onReasonDraft?.(errorId,{label:`Unsaved reason: ${reason}`,overviewFocus:input.current?.closest("article")?.id??"report-details"});
-    return ()=>onReasonDraft?.(errorId,null);
-  },[errorId,onReasonDraft,reason]);
+  usePendingReason(errorId, input, reason);
   const submit = (event: SubmitEvent) => {
     event.preventDefault();
     if (busy) return;
@@ -103,6 +122,7 @@ export function ReasonRow({
       <div className="flex min-w-0 flex-wrap items-center gap-1">
         <input
           ref={input}
+          id={`${errorId}-field`}
           type="text"
           name="status-reason"
           autoComplete="off"

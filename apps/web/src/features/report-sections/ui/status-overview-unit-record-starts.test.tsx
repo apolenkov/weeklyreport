@@ -89,8 +89,8 @@ it("starts a contextual record with the header action", async () => {
   const open = vi.fn();
   render(<OverviewUnitRecords unit={unit()} onAddRecord={open} />);
   expect(
-    screen.getByRole("button", { name: "0 risks · 0 decisions" }),
-  ).toBeVisible();
+    screen.queryByRole("button", { name: "0 risks · 0 decisions" }),
+  ).toBeNull();
   await userEvent.click(
     screen.getByRole("button", { name: "+ Risk or decision" }),
   );

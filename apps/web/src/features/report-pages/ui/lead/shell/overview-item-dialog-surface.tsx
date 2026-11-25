@@ -32,7 +32,7 @@ export function OverviewItemDialogSurface({
         ref={panel}
         aria-modal="true"
         aria-describedby={undefined}
-        className="max-h-[calc(100dvh-2rem)] overflow-y-auto bg-[var(--color-popover)] sm:max-w-3xl max-md:[&_[data-slot=dialog-close]]:min-h-[var(--touch-target-min)] max-md:[&_[data-slot=dialog-close]]:min-w-[var(--touch-target-min)]"
+        className="max-h-[calc(100dvh-2rem)] overflow-y-auto bg-[var(--color-popover)] sm:max-w-3xl max-md:[&_[data-slot=sheet-close]]:min-h-[var(--touch-target-min)] max-md:[&_[data-slot=sheet-close]]:min-w-[var(--touch-target-min)]"
         onOpenAutoFocus={(event) => {
           // The canonical editor focuses its description on mount and batch reset.
           event.preventDefault();

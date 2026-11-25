@@ -120,3 +120,28 @@ function appendOccurrence(
   };
   group.set(identity, matches);
 }
+
+function pendingRows(lineage: ReturnType<typeof buildStatusOverviewLineage>) {
+  return [...lineage.values()]
+    .flat()
+    .filter(
+      (row) => !row.current && !row.next && row.answerState === "pending",
+    );
+}
+
+export function countPendingPlans(
+  lineage: ReturnType<typeof buildStatusOverviewLineage>,
+) {
+  return pendingRows(lineage).length;
+}
+
+export function planOutcomeId(item: StatusOverviewItem) {
+  return `plan-outcome:${item.recordId ?? item.key}`;
+}
+
+export function firstPendingOutcomeId(
+  lineage: ReturnType<typeof buildStatusOverviewLineage>,
+) {
+  const plan = pendingRows(lineage)[0]?.priorCommitment;
+  return plan ? planOutcomeId(plan) : undefined;
+}

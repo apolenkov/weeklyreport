@@ -1,5 +1,4 @@
 import { NOT_STARTED_LABEL, STATUS_BADGE } from "../model/item-card-style";
-import { stageShortLabel } from "../model/stage-tags";
 import type { StatusOverviewItem } from "../model/status-overview";
 
 const PROGRESS_LABELS: Readonly<
@@ -24,33 +23,6 @@ export function statusOverviewProgressLabel(item: StatusOverviewItem): string {
   if (item.source === "current" && item.workflowStatus === "planned")
     return NOT_STARTED_LABEL;
   return PROGRESS_LABELS[item.workflowStatus];
-}
-
-const BADGE_CLASS =
-  "inline-flex max-w-full items-center truncate rounded-[var(--radius-sm)] bg-[var(--color-muted)] px-1.5 py-0.5 text-xs font-medium text-[var(--color-muted-foreground)]";
-
-// A short badge: the first stage plus a count; the full names stay in the
-// name and tooltip so the badge never carries the whole SDLC list.
-function stageBadgeText(stageNames: readonly string[]): string {
-  const [first = "", ...rest] = stageNames;
-  const short = stageShortLabel(first);
-  return rest.length > 0 ? `${short} +${String(rest.length)}` : short;
-}
-
-/** Stage badge at rest; the unplanned meaning lives in the status icon name. */
-export function ItemBadges({ item }: { readonly item: StatusOverviewItem }) {
-  if (item.stageNames.length === 0) return null;
-  const stages = item.stageNames.join(", ");
-  return (
-    <span
-      role="img"
-      title={stages}
-      aria-label={`Stages: ${stages}`}
-      className={BADGE_CLASS}
-    >
-      {stageBadgeText(item.stageNames)}
-    </span>
-  );
 }
 
 /** The cancellation reason stays visible on a resolved (Won't do) item. */

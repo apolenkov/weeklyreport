@@ -145,6 +145,16 @@ function statusInputFields(
   };
 }
 
+function projectedStep(
+  item: SectionItem,
+  source: StatusOverviewItem["source"],
+  historical: boolean | undefined,
+) {
+  return !historical && source !== "current" && item.type === "current"
+    ? (item.nextStepText ?? null)
+    : null;
+}
+
 function toOverviewItem(
   item: SectionItem,
   source: StatusOverviewItem["source"],
@@ -160,10 +170,7 @@ function toOverviewItem(
   const recordId = item.id ?? null;
   const resolution = item.resolution ?? null;
   const facts = { source, stableId, recordId, resolution };
-  const nextStep =
-    !historicalResult && source !== "current" && item.type === "current"
-      ? (item.nextStepText ?? null)
-      : null;
+  const nextStep = projectedStep(item, source, historicalResult);
   return {
     key: `${source}:${stableId ?? item.id ?? String(index)}`,
     recordId,
@@ -284,7 +291,4 @@ export function buildStatusOverviewColumns(
   };
 }
 
-export {
-  type StatusOverviewActionModel,
-  statusOverviewItemActions,
-} from "./status-overview-actions";
+export { statusOverviewItemActions } from "./status-overview-actions";

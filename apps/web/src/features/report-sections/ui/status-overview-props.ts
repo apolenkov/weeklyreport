@@ -6,6 +6,7 @@ import type {
   StatusOverviewModel,
   StatusOverviewRecordTarget,
 } from "../model/status-overview";
+import type { buildStatusOverviewLineage } from "../model/status-overview-lineage";
 import type { StatusOverviewActivityFieldsChange } from "./status-overview-activity-editor";
 import type {
   StatusOverviewEditorSlot,
@@ -18,6 +19,8 @@ import type {
 } from "./status-overview-item-handlers";
 
 export interface StatusOverviewProps {
+  readonly lineage?: ReturnType<typeof buildStatusOverviewLineage> | undefined;
+  readonly editable?: boolean;
   readonly health?: ReportHealthPulse | undefined;
   readonly editorSlot?: StatusOverviewEditorSlot | undefined;
   readonly recordSlot?: StatusOverviewRecordSlot | undefined;

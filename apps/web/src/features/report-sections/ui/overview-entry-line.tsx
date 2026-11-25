@@ -6,11 +6,58 @@ import {
   PopoverTrigger,
 } from "@weeklyreport/ui/components/ui/popover";
 import { useEffect, useRef, useState } from "react";
-import {toast} from "sonner";
+import { toast } from "sonner";
 
 import type { ItemComposerProps } from "../model/contextual-entry-contract";
 import { StageIcon, StageToggles } from "./overview-stages";
 
+function useClearEntry(
+  input: React.RefObject<HTMLTextAreaElement | null>,
+  value: ItemComposerProps["value"],
+  onChange: ItemComposerProps["onChange"],
+  onCancel: ItemComposerProps["onCancel"],
+) {
+  const revision = useRef(0);
+  const clear = () => {
+    if (!value.text) {
+      onCancel();
+      return;
+    }
+    const version = ++revision.current;
+    const previous = value.text;
+    onChange({ ...value, text: "" });
+    toast("Entry cleared.", {
+      action: {
+        label: "Undo",
+        onClick: () => {
+          if (
+            !input.current?.isConnected ||
+            input.current.value ||
+            revision.current !== version
+          ) {
+            toast.error(
+              "Can’t put it back now: save or cancel the entry first.",
+            );
+            return;
+          }
+          revision.current++;
+          onChange({ ...value, text: previous });
+          input.current.focus();
+        },
+      },
+    });
+  };
+  return {
+    changed: () => {
+      revision.current++;
+    },
+    clear,
+  };
+}
+
+function entryPlaceholder(week: "current" | "next") {
+  return week === "current" ? "What happened…" : "Plan…";
+}
 export function OverviewEntryLine({
   target,
   view,
@@ -25,29 +72,31 @@ export function OverviewEntryLine({
   useEffect(() => {
     input.current?.focus();
   }, []);
-  const revision=useRef(0);
-  const clear=()=>{
-    if(!value.text){onCancel();return;}
-    const version=++revision.current;
-    const previous=value.text;
-    onChange({...value,text:""});
-    toast("Entry cleared.",{action:{label:"Undo",onClick:()=>{
-      if(!input.current?.isConnected || input.current.value || revision.current!==version){toast.error("Can’t undo: this work changed after that.");return;}
-      revision.current++;
-      onChange({...value,text:previous});input.current.focus();
-    }}});
-  };
+  const { changed, clear } = useClearEntry(input, value, onChange, onCancel);
+  const placeholder = entryPlaceholder(target.week);
   const save = () => {
     if (value.text.trim() && !view.pending && view.canSubmit)
       onSubmit("save-and-add-another");
   };
 
-  const placeholder = target.week === "current" ? "What happened…" : "Plan…";
   return (
-    <div
+    <form
+      aria-label={`Add item for ${target.parent.name}, ${target.week} week`}
+      onSubmit={(event) => {
+        event.preventDefault();
+        save();
+      }}
       className="grid gap-1"
       onBlur={(event) => {
-        if (choosing || event.currentTarget.contains(event.relatedTarget))
+        if (
+          view.pending ||
+          view.message ||
+          choosing ||
+          event.currentTarget.contains(event.relatedTarget) ||
+          event.relatedTarget?.closest(
+            '[role="tab"],button[aria-controls], [data-sonner-toast], [data-slot="popover-content"]',
+          )
+        )
           return;
         if (value.text.trim()) save();
         else onCancel();
@@ -55,26 +104,17 @@ export function OverviewEntryLine({
     >
       <GrowingTextarea
         ref={input}
+        data-overview-focus={`entry:${target.parent.kind}:${target.parent.id}:${target.week}`}
         placeholder={placeholder}
         aria-label={`${placeholder} ${target.parent.name}`}
         value={value.text}
         disabled={view.pending}
         className="min-h-11 rounded-md bg-transparent px-2 py-1 text-sm focus-visible:ring-1 focus-visible:ring-ring"
-        onChange={(event) => {revision.current++;onChange({ ...value, text: event.target.value });}}
-        onKeyDown={(event) => {
-          if (
-            event.key === "Enter" &&
-            !event.shiftKey &&
-            !event.nativeEvent.isComposing
-          ) {
-            event.preventDefault();
-            save();
-          }
-          if (event.key === "Escape") {
-            event.stopPropagation();
-            clear();
-          }
+        onChange={(event) => {
+          changed();
+          onChange({ ...value, text: event.target.value });
         }}
+        onKeyDown={(event) => entryKey(event, save, clear)}
       />
       {value.text.length > 0 && (
         <div className="flex flex-wrap items-center gap-1">
@@ -84,21 +124,16 @@ export function OverviewEntryLine({
                 {...{ choosing, setChoosing, value, view, onChange }}
               />
             )}
-          <Button variant="ghost" onClick={onDetails}>
+          <Button type="button" variant="ghost" onClick={onDetails}>
             More details
           </Button>
-          <Button disabled={view.pending} onClick={save}>
+          <Button type="submit" disabled={view.pending}>
             Save
           </Button>
         </div>
       )}
-      {Object.entries(view.errors).map(([key, message]) => (
-        <p key={key} role="alert">
-          {message}
-        </p>
-      ))}
-      {view.message && <p role="alert">{view.message}</p>}
-    </div>
+      <EntryErrors view={view} />
+    </form>
   );
 }
 
@@ -125,7 +160,12 @@ function EntryStages({
           <StageIcon name={value.stageNames[0] ?? ""} />
         </Button>
       </PopoverTrigger>
-      <PopoverContent>
+      <PopoverContent
+        onEscapeKeyDown={(event) => {
+          event.stopPropagation();
+          setChoosing(false);
+        }}
+      >
         <StageToggles
           selected={value.stageNames}
           owned={view.eligibleStages}
@@ -133,5 +173,38 @@ function EntryStages({
         />
       </PopoverContent>
     </Popover>
+  );
+}
+
+function entryKey(
+  event: React.KeyboardEvent<HTMLTextAreaElement>,
+  save: () => void,
+  clear: () => void,
+) {
+  if (
+    event.key === "Enter" &&
+    !event.shiftKey &&
+    !event.nativeEvent.isComposing
+  ) {
+    event.preventDefault();
+    event.stopPropagation();
+    save();
+  }
+  if (event.key === "Escape") {
+    event.stopPropagation();
+    clear();
+  }
+}
+
+function EntryErrors({ view }: Pick<ItemComposerProps, "view">) {
+  return (
+    <>
+      {Object.entries(view.errors).map(([key, message]) => (
+        <p key={key} role="alert">
+          {message}
+        </p>
+      ))}
+      {view.message && <p role="alert">{view.message}</p>}
+    </>
   );
 }

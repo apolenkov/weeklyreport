@@ -669,7 +669,7 @@ describe("projectStatusOverview", () => {
       }).units[0]?.columns.priorCommitments.items.map((entry) => entry.verdict);
 
     expect(verdicts(true)).toEqual(["done", "pending", "pending"]);
-    expect(verdicts(false)).toEqual(["done", undefined, undefined]);
+    expect(verdicts(false)).toEqual(["done", "pending", "pending"]);
     expect(
       projectStatusOverview(output, {
         currentItemsEditable: true,

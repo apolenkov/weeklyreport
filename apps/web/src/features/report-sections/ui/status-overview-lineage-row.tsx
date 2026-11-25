@@ -90,11 +90,16 @@ export function MobilePeriodsSummary({
   );
 }
 
-function itemInWeek(row:StatusOverviewLineageRow,source:"previous"|"current"|"next"){
- if(source==="previous")return row.last;
- if(source==="next")return row.next;
- if(row.current)return row.current;
- return row.answerState==="pending" && !row.next ? row.priorCommitment:null;
+function itemInWeek(
+  row: StatusOverviewLineageRow,
+  source: "previous" | "current" | "next",
+) {
+  if (source === "previous") return row.last;
+  if (source === "next") return row.next;
+  if (row.current) return row.current;
+  return row.answerState === "pending" && !row.next
+    ? row.priorCommitment
+    : null;
 }
 
 function LineageRow({
@@ -114,7 +119,7 @@ function LineageRow({
       className={`${TIMELINE_GRID} min-w-0 items-stretch border-b border-[var(--color-border-subtle)]`}
     >
       {STATUS_OVERVIEW_COLUMNS.map((column) => {
-        const item = itemInWeek(row,column.source);
+        const item = itemInWeek(row, column.source);
         if (!item) return <EmptyLane key={column.key} column={column} />;
         return (
           <Lane
@@ -146,27 +151,6 @@ function LineageRow({
           {editorSlot?.content}
         </div>
       ) : null}
-    </div>
-  );
-}
-
-export function DesktopPeriodHeader({
-  periods,
-}: {
-  readonly periods: StatusOverviewModel["periods"];
-}) {
-  return (
-    <div
-      className={`${TIMELINE_GRID} max-md:hidden bg-[var(--color-surface-muted)]`}
-    >
-      {STATUS_OVERVIEW_COLUMNS.map((column) => (
-        <div key={column.key} className={TIMELINE_CELL}>
-          <p className="text-xs font-semibold">{column.label}</p>
-          <p className="text-xs text-[var(--color-muted-foreground)]">
-            {periods[column.key] ?? PERIOD_UNAVAILABLE}
-          </p>
-        </div>
-      ))}
     </div>
   );
 }

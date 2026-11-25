@@ -3,16 +3,16 @@ import { useEffect, useRef } from "react";
 import type { DraftPatch } from "../../../../report-sections";
 import type { OverviewItemDialogState } from "./lead-status-overview-item-editor";
 import { overviewAcknowledgedItem } from "./overview-editor-recovery";
-import { type UndoTarget,workSignature } from "./overview-undo";
+import { type UndoTarget, workSignature } from "./overview-undo";
 import type { ReadyEditor } from "./use-overview-controller";
 
-type Offer = {
+interface Offer {
   target: UndoTarget;
   scope: string;
   signature: string;
   reverse: (editor: ReadyEditor) => DraftPatch | null;
   message: string;
-};
+}
 
 export function useEntryUndo(
   editor: ReadyEditor | null,

@@ -1,5 +1,8 @@
 "use client";
 
+import { useId } from "react";
+import { toast } from "sonner";
+
 import type { ReportPeriod } from "../../report-sections";
 import type {
   PeriodListboxNav,
@@ -14,6 +17,7 @@ import {
 } from "./period-navigator-icons";
 
 interface PeriodNavigatorProps {
+  readonly explainLatest?: boolean;
   readonly periods: readonly ReportPeriod[];
   // Explicit addressed id takes precedence over pathname inference.
   readonly currentPeriodId?: string | undefined;
@@ -32,25 +36,37 @@ const PERIOD_NAV_ARROW_BUTTON_CLASS =
 
 function PeriodNavArrowButton({
   direction,
+  unavailableReason,
   onClick,
   disabled,
   title,
 }: {
+  readonly unavailableReason?: string | undefined;
   readonly direction: "prev" | "next";
   readonly onClick: () => void;
   readonly disabled: boolean;
   readonly title: string;
 }) {
+  const reasonId = useId();
   const isPrev = direction === "prev";
   return (
     <button
       type="button"
       className={PERIOD_NAV_ARROW_BUTTON_CLASS}
-      onClick={onClick}
-      disabled={disabled}
-      title={title}
+      onClick={
+        unavailableReason ? () => toast.info(unavailableReason) : onClick
+      }
+      disabled={disabled && !unavailableReason}
+      aria-disabled={unavailableReason ? true : undefined}
+      aria-describedby={unavailableReason ? reasonId : undefined}
+      title={unavailableReason ?? title}
       aria-label={isPrev ? "Previous period" : "Next period"}
     >
+      {unavailableReason && (
+        <span className="sr-only" id={reasonId}>
+          {unavailableReason}
+        </span>
+      )}
       {isPrev && <ChevronLeft />}
       <span className="hidden text-xs font-medium md:inline">
         {isPrev ? "Previous" : "Next"}
@@ -109,7 +125,16 @@ function PeriodSelectTrigger({
   );
 }
 
+const DAYS_PER_WEEK = 7;
+function latestWeekReason(period: ReportPeriod | undefined) {
+  if (!period?.periodStart) return undefined;
+  const next = new Date(period.periodStart);
+  next.setUTCDate(next.getUTCDate() + DAYS_PER_WEEK);
+  return `This is the latest week. The next report opens on ${next.toLocaleDateString("en-GB", { year: "numeric", month: "short", day: "numeric", timeZone: "UTC" })}`;
+}
+
 export function PeriodNavigator({
+  explainLatest = false,
   periods,
   currentPeriodId,
   urlBuilder,
@@ -149,6 +174,11 @@ export function PeriodNavigator({
 
       <PeriodNavArrowButton
         direction="next"
+        unavailableReason={
+          explainLatest && !selection.hasNext
+            ? latestWeekReason(selection.selectedPeriod)
+            : undefined
+        }
         onClick={selection.goNext}
         disabled={!selection.hasNext}
         title={selection.hasNext ? "Next period" : "Latest period"}

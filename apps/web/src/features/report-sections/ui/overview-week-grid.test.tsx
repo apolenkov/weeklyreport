@@ -14,8 +14,8 @@ it("switches at the table width and retains the selected week across resize", as
       constructor(callback: ResizeObserverCallback) {
         resize = callback;
       }
-      observe() {}
-      disconnect() {}
+      observe = vi.fn();
+      disconnect = vi.fn();
     },
   );
   const width = (value: number) =>

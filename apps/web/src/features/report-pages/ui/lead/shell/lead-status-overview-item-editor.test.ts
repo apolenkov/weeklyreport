@@ -167,13 +167,13 @@ describe("createOverviewComposerState — draft stage default", () => {
     expect(state.draftStore.getSnapshot().stageNames).toEqual(["Testing"]);
   });
 
-  it("starts empty for a multi-stage Product without a remembered stage", () => {
+  it("starts with the first owned stage for a multi-stage Product without a remembered stage", () => {
     const state = createOverviewComposerState(
       readyEditor(createDraftStageMemory()),
       CREATE_TARGET,
       null,
     );
 
-    expect(state.draftStore.getSnapshot().stageNames).toEqual([]);
+    expect(state.draftStore.getSnapshot().stageNames).toEqual(["Development"]);
   });
 });

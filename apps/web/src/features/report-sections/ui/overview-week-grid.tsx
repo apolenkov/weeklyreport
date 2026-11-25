@@ -5,6 +5,7 @@ import {
 } from "@weeklyreport/ui/components/ui/tabs";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 
+import { OverviewVisibleWeek } from "./overview-record-context";
 import { STATUS_OVERVIEW_COLUMNS } from "./status-overview-layout";
 
 const TABLE_BREAKPOINT = 1087;
@@ -38,6 +39,7 @@ export function OverviewWeekGrid({
               <TabsTrigger
                 key={column.source}
                 value={column.source}
+                data-overview-week-tab={column.source}
                 id={id + column.source}
                 aria-controls={id}
                 className="min-h-11"
@@ -53,7 +55,9 @@ export function OverviewWeekGrid({
           role={narrow ? "tabpanel" : undefined}
           aria-labelledby={narrow ? id + week : undefined}
         >
-          {children}
+          <OverviewVisibleWeek.Provider value={narrow ? week : null}>
+            {children}
+          </OverviewVisibleWeek.Provider>
         </div>
       </Tabs>
     </div>

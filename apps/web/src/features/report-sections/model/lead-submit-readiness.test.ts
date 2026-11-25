@@ -127,7 +127,7 @@ describe("deriveLeadSubmitReadiness", () => {
       {
         id: `risk-stage:${PRODUCT_ID}`,
         label: "Portal: specify stages for committed risks.",
-        overviewFocus: "report-details",
+        overviewFocus: `product:${PRODUCT_ID}`,
       },
     ]);
     expect(readiness.autosaveState).toBe("error");
@@ -174,12 +174,12 @@ describe("deriveLeadSubmitReadiness", () => {
         id: `unfinished-risk:${RISK_ID}`,
         label:
           'Finish the risk "Vendor may slip": add its impact and mitigation.',
-        overviewFocus: "report-details",
+        overviewFocus: `product:${PRODUCT_ID}`,
       },
       {
         id: `unfinished-decision:${DECISION_ID}`,
         label: 'Finish the decision "Choose a vendor": add its impact.',
-        overviewFocus: "report-details",
+        overviewFocus: `product:${PRODUCT_ID}`,
       },
     ]);
     expect(readiness.canOpenConfirmation).toBe(false);

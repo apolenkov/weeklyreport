@@ -374,10 +374,7 @@ describe("LeadSubmitReadinessSummary", () => {
     );
 
     const disclosure = screen.getByRole("button", { name: "+1 more" });
-    const progress = screen.getByRole("button", {
-      name: "Choose outcome: Third carried work. Status: Continued · not updated this week",
-      hidden: true,
-    });
+    const progress = document.getElementById(overviewFocus);
     expect(disclosure).toHaveAttribute("aria-expanded", "false");
     expect(progress).not.toBeVisible();
 

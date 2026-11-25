@@ -281,10 +281,22 @@ body:has([data-slot="dialog-content"][data-state="open"])
     ) {
     display: none;
   }
-  [data-week="previous"] li:has(> .overview-week-grid > .overview-empty-lane[data-overview-lineage-lane="previous"]),
-  [data-week="current"] li:has(> .overview-week-grid > .overview-empty-lane[data-overview-lineage-lane="current"]),
-  [data-week="next"] li:has(> .overview-week-grid > .overview-empty-lane[data-overview-lineage-lane="next"]) {
-    display:none;
+  [data-week="previous"]
+    li:has(
+      > .overview-week-grid
+        > .overview-empty-lane[data-overview-lineage-lane="previous"]
+    ),
+  [data-week="current"]
+    li:has(
+      > .overview-week-grid
+        > .overview-empty-lane[data-overview-lineage-lane="current"]
+    ),
+  [data-week="next"]
+    li:has(
+      > .overview-week-grid
+        > .overview-empty-lane[data-overview-lineage-lane="next"]
+    ) {
+    display: none;
   }
   .overview-table button {
     min-height: 44px;

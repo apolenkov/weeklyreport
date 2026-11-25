@@ -42,12 +42,12 @@ it("starts an entry in the selected Product and week", async () => {
   );
   await user.click(
     screen.getByRole("button", {
-      name: "Add item to Duty, Current week",
+      name: "Add what happened — Duty, This week",
     }),
   );
   await user.click(
     screen.getByRole("button", {
-      name: "Add item to Duty, Next week",
+      name: "Plan something — Duty, Next week",
     }),
   );
   expect(onAddItem.mock.calls).toEqual([
@@ -127,7 +127,9 @@ it("offers one contextual action in each writable week even for an empty unit", 
     />,
   );
   const article = screen.getByRole("article", { name: "Activity Duty" });
-  const buttons = within(article).getAllByRole("button", { name: /^Add item/ });
+  const buttons = within(article).getAllByRole("button", {
+    name: /^(Add what happened|Plan something)/,
+  });
   expect(buttons).toHaveLength(2);
   expect(
     within(article).getByRole("button", { name: "Other action" }),
@@ -137,12 +139,12 @@ it("offers one contextual action in each writable week even for an empty unit", 
   ).not.toBeInTheDocument();
   await user.click(
     within(article).getByRole("button", {
-      name: "Add item to Duty, Current week",
+      name: "Add what happened — Duty, This week",
     }),
   );
   await user.click(
     within(article).getByRole("button", {
-      name: "Add item to Duty, Next week",
+      name: "Plan something — Duty, Next week",
     }),
   );
   expect(onAddItem.mock.calls).toEqual([

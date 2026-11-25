@@ -14,5 +14,10 @@ function focusReviewAnchor(target: HTMLElement | null | undefined): void {
 
 /** Reveal the existing disclosure before focusing its record, without editing it. */
 export function focusReviewRecord(anchor: string): void {
-  focusReviewAnchor(document.getElementById(anchor));
+  const record = document.getElementById(anchor);
+  const discussion = record?.querySelector<HTMLButtonElement>(
+    "[data-review-discussion]",
+  );
+  focusReviewAnchor(discussion ?? record);
+  if (discussion) queueMicrotask(() => discussion.click());
 }

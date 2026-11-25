@@ -30,7 +30,7 @@ export interface ItemReplyPort {
   ) => Promise<ItemReplyOutcome>;
 }
 
-interface ItemReplyScope {
+export interface ItemReplyScope {
   readonly port: ItemReplyPort;
   readonly store: ItemDiscussionStore;
 }

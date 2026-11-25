@@ -194,31 +194,30 @@ describe("lead report stage memory across view switches", () => {
 
       await user.click(
         await screen.findByRole("button", {
-          name: "Add item to Payments, Current week",
+          name: "Add what happened — Payments, This week",
         }),
       );
-      await user.type(screen.getByLabelText("Description"), "Ship importer");
-      await user.click(screen.getByRole("checkbox", { name: "Testing" }));
+      await user.type(
+        screen.getByPlaceholderText("What happened…"),
+        "Ship importer",
+      );
+      await user.click(screen.getByRole("button", { name: /^Stage:/ }));
+      await user.click(screen.getByRole("button", { name: "Testing" }));
+      await user.click(screen.getByRole("button", { name: "Development" }));
+      await user.keyboard("{Escape}");
       await user.click(screen.getByRole("button", { name: "Save" }));
 
       // The accepted save closes the composer and confirms the remembered stage.
-      await vi.waitFor(
-        () =>
-          expect(
-            screen.queryByRole("form", {
-              name: "Add item for Payments, current week",
-            }),
-          ).not.toBeInTheDocument(),
-        { timeout: 15_000 },
+      await vi.waitFor(() =>
+        expect(screen.getByPlaceholderText("What happened…")).toHaveValue(""),
       );
-
       // Both are real route modes; each switch mounts the other view branch and
       // unmounts the Overview that hosts the composer.
       rerender(page(harness, "slides"));
       await vi.waitFor(() =>
         expect(
           screen.queryByRole("button", {
-            name: "Add item to Payments, Current week",
+            name: "Add what happened — Payments, This week",
           }),
         ).not.toBeInTheDocument(),
       );
@@ -227,16 +226,17 @@ describe("lead report stage memory across view switches", () => {
 
       const addItem = expectDefined(
         await screen.findByRole("button", {
-          name: "Add item to Payments, Current week",
+          name: "Add what happened — Payments, This week",
         }),
       );
       await user.click(addItem);
+      await user.type(
+        screen.getByPlaceholderText("What happened…"),
+        "Another update",
+      );
       expect(
-        await screen.findByRole("checkbox", { name: "Testing" }),
-      ).toBeChecked();
-      expect(
-        screen.getByRole("checkbox", { name: "Development" }),
-      ).not.toBeChecked();
+        screen.getByRole("button", { name: "Stage: Testing" }),
+      ).toBeVisible();
     },
   );
 });

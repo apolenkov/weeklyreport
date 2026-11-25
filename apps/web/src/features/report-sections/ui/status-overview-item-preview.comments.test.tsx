@@ -37,16 +37,14 @@ const comment = {
 
 it("opens the empty comments region and returns focus on close", async () => {
   const user = userEvent.setup();
-  render(<StatusOverviewItemPreview item={item} onEditItem={vi.fn()} />);
-  const opener = screen.getByRole("button", { name: "Comments on First item" });
-  expect(opener).toHaveAttribute("aria-expanded", "false");
+  render(<StatusOverviewItemPreview item={item} />);
+  await user.click(screen.getByRole("button", { name: /View text/ }));
+  const opener = screen.getByRole("button", { name: "Discussion (0)" });
   opener.focus();
   await user.keyboard("{Enter}");
   const region = screen.getByRole("region", {
     name: "Comments for First item",
   });
-  expect(opener).toHaveAttribute("aria-expanded", "true");
-  expect(opener).toHaveAttribute("aria-controls", region.id);
   expect(within(region).getByText("No comments yet.")).toBeVisible();
   await user.click(
     within(region).getByRole("button", { name: "Close comments" }),
@@ -55,18 +53,23 @@ it("opens the empty comments region and returns focus on close", async () => {
     screen.queryByRole("region", { name: "Comments for First item" }),
   ).toBeNull();
   expect(opener).toHaveFocus();
-  expect(opener).toHaveAttribute("aria-expanded", "false");
 });
 
 it("lets keyboard users reach close after opening and restores focus", async () => {
   const user = userEvent.setup();
-  render(<StatusOverviewItemPreview item={item} onEditItem={vi.fn()} />);
-  const opener = screen.getByRole("button", { name: "Comments on First item" });
+  render(
+    <StatusOverviewItemPreview
+      item={{ ...item, comments: [comment] }}
+      onEditItem={vi.fn()}
+    />,
+  );
+  const opener = screen.getByRole("button", {
+    name: "Discussion: First item, 1 comments",
+  });
   opener.focus();
   await user.keyboard("{Enter}");
-  expect(screen.getByRole("button", { name: "Close comments" })).toHaveFocus();
+  expect(screen.getByRole("heading", { name: "Discussion" })).toHaveFocus();
   await user.tab();
-  await user.tab({ shift: true });
   expect(screen.getByRole("button", { name: "Close comments" })).toHaveFocus();
   await user.keyboard("{Enter}");
   expect(opener).toHaveFocus();
@@ -75,13 +78,17 @@ it("lets keyboard users reach close after opening and restores focus", async () 
 it("does not carry an open region to a different item in a reused card", async () => {
   const user = userEvent.setup();
   const { rerender } = render(
-    <StatusOverviewItemPreview item={item} onEditItem={vi.fn()} />,
+    <StatusOverviewItemPreview
+      item={{ ...item, comments: [comment] }}
+      onEditItem={vi.fn()}
+    />,
   );
   await user.click(
-    screen.getByRole("button", { name: "Comments on First item" }),
+    screen.getByRole("button", { name: "Discussion: First item, 1 comments" }),
   );
   const second = {
     ...item,
+    comments: [comment],
     key: "current:two",
     recordId: "two",
     stableId: "two",
@@ -93,25 +100,37 @@ it("does not carry an open region to a different item in a reused card", async (
     screen.queryByRole("region", { name: "Comments for Second item" }),
   ).toBeNull();
   expect(
-    screen.getByRole("button", { name: "Comments on Second item" }),
+    screen.getByRole("button", { name: "Discussion: Second item, 1 comments" }),
   ).toHaveAttribute("aria-expanded", "false");
-  rerender(<StatusOverviewItemPreview item={item} onEditItem={vi.fn()} />);
+  rerender(
+    <StatusOverviewItemPreview
+      item={{ ...item, comments: [comment] }}
+      onEditItem={vi.fn()}
+    />,
+  );
   expect(
     screen.queryByRole("region", { name: "Comments for First item" }),
   ).toBeNull();
   expect(
-    screen.getByRole("button", { name: "Comments on First item" }),
+    screen.getByRole("button", { name: "Discussion: First item, 1 comments" }),
   ).toHaveAttribute("aria-expanded", "false");
 });
 
 it("uses a plain read-comment icon, not an add-comment icon", () => {
-  render(<StatusOverviewItemPreview item={item} onEditItem={vi.fn()} />);
-  const opener = screen.getByRole("button", { name: "Comments on First item" });
+  render(
+    <StatusOverviewItemPreview
+      item={{ ...item, comments: [comment] }}
+      onEditItem={vi.fn()}
+    />,
+  );
+  const opener = screen.getByRole("button", {
+    name: "Discussion: First item, 1 comments",
+  });
   expect(opener.querySelector(".lucide-message-square")).not.toBeNull();
   expect(opener.querySelector(".lucide-message-square-plus")).toBeNull();
 });
 
-it("does not steal programmatic card focus when revealing feedback", async () => {
+it("keeps ordinary record focus outside the discussion", () => {
   render(
     <StatusOverviewItemPreview
       item={{ ...item, comments: [comment] }}
@@ -120,9 +139,7 @@ it("does not steal programmatic card focus when revealing feedback", async () =>
   );
   const card = screen.getByRole("group");
   card.focus();
-  await waitFor(() =>
-    expect(screen.getByText("First item feedback")).toBeVisible(),
-  );
+  expect(screen.queryByRole("dialog")).toBeNull();
   expect(card).toHaveFocus();
 });
 
@@ -160,7 +177,7 @@ it("shows only the selected item's comments once and offers no composer", async 
     </>,
   );
   await user.click(
-    screen.getByRole("button", { name: "Comments on First item" }),
+    screen.getByRole("button", { name: "Discussion: First item, 1 comments" }),
   );
   const region = screen.getByRole("region", {
     name: "Comments for First item",
@@ -175,12 +192,17 @@ it("keeps the comments control on a resolved own item", async () => {
   const user = userEvent.setup();
   render(
     <StatusOverviewItemPreview
-      item={{ ...item, editTarget: null, canRestore: true }}
+      item={{
+        ...item,
+        comments: [comment],
+        editTarget: null,
+        canRestore: true,
+      }}
       onRestorePlan={vi.fn()}
     />,
   );
   await user.click(
-    screen.getByRole("button", { name: "Comments on First item" }),
+    screen.getByRole("button", { name: "Discussion: First item, 1 comments" }),
   );
   expect(
     screen.getByRole("region", { name: "Comments for First item" }),

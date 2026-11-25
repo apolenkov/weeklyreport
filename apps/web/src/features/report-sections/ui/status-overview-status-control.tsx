@@ -4,21 +4,18 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger,
 } from "@weeklyreport/ui/components/ui/dropdown-menu";
-import { ArrowRight, Check } from "lucide-react";
-import { type ReactNode, useId, useRef } from "react";
+import { ArrowRight, Check, CircleHelp } from "lucide-react";
+import { useId, useRef } from "react";
 import { toast } from "sonner";
 
-import { shortItemLabel } from "../../../shared/lib/format/short-label";
-import { itemStatusToWorkflow, statusInputKind } from "../model/item-status";
+import { statusInputKind } from "../model/item-status";
 import type { StatusOverviewItem } from "../model/status-overview";
 import { statusOverviewItemActions } from "../model/status-overview-items";
-import { choicesForWeek } from "./item-status-choices";
+import { StaticStatusIcon, StatusTrigger } from "./overview-status-trigger";
 import {
   type ActionProps,
   canResolveFromStatus,
-  ICON_BUTTON_CLASS,
   identityOf,
   MENU_ITEM_CLASS,
 } from "./status-overview-item-actions";
@@ -31,6 +28,13 @@ function statusLabelOf(item: StatusOverviewItem): string {
   return `Choose outcome: ${item.text}. Status: ${statusOverviewProgressLabel(item)}${unplanned}`;
 }
 
+const currentChoices = [
+  ["done", "Done"],
+  ["in_progress", "In progress"],
+  ["planned", "Not started"],
+  ["paused", "Paused…"],
+  ["postponed", "Postponed"],
+] as const satisfies readonly (readonly [ItemWorkflowStatus, string])[];
 function StatusMenuItems({
   item,
   onChoose,
@@ -44,28 +48,25 @@ function StatusMenuItems({
   readonly locked: boolean;
   readonly reasonIds: string | undefined;
 }) {
-  return choicesForWeek(item.source === "next" ? "next" : "current").map(
-    (choice) => {
-      const status = itemStatusToWorkflow(choice.value);
-      const current = status === item.workflowStatus;
-      return (
-        <DropdownMenuItem
-          key={choice.value}
-          aria-current={current ? "true" : undefined}
-          disabled={
-            locked || (Boolean(item.statusRiskText) && !(current && canConfirm))
-          }
-          aria-describedby={reasonIds}
-          onSelect={() => onChoose(status)}
-          className={MENU_ITEM_CLASS}
-        >
-          <ProgressIcon status={status} />
-          <span className="flex-1">{choice.label}</span>
-          {current ? <Check aria-hidden="true" className="size-4" /> : null}
-        </DropdownMenuItem>
-      );
-    },
-  );
+  return currentChoices.map(([status, label]) => {
+    const current = status === item.workflowStatus;
+    return (
+      <DropdownMenuItem
+        key={status}
+        aria-current={current ? "true" : undefined}
+        disabled={
+          locked || (Boolean(item.statusRiskText) && !(current && canConfirm))
+        }
+        aria-describedby={reasonIds}
+        onSelect={() => onChoose(status)}
+        className={MENU_ITEM_CLASS}
+      >
+        <ProgressIcon status={status} />
+        <span className="flex-1">{label}</span>
+        {current ? <Check aria-hidden="true" className="size-4" /> : null}
+      </DropdownMenuItem>
+    );
+  });
 }
 
 function RiskStatusReason({
@@ -90,24 +91,6 @@ function describedByIds(
   ...ids: readonly (string | null)[]
 ): string | undefined {
   return ids.filter((id) => id !== null).join(" ") || undefined;
-}
-
-function StaticStatusIcon({
-  label,
-  children,
-}: {
-  readonly label: string;
-  readonly children: ReactNode;
-}) {
-  return (
-    <span
-      role="img"
-      aria-label={label}
-      className="inline-flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center justify-center"
-    >
-      {children}
-    </span>
-  );
 }
 
 function StatusLockReason({
@@ -159,59 +142,39 @@ function chooseStatus({
   void onSetStatus?.(item, status, focusKey);
 }
 
-function StatusTrigger({
-  id,
-  label,
-  focusKey,
-  children,
-}: {
-  readonly id: string | undefined;
-  readonly label: string;
-  readonly focusKey: string;
-  readonly children: ReactNode;
-}) {
-  return (
-    <DropdownMenuTrigger asChild>
-      <button
-        // The submit-readiness summary deep-links to this id and focus key.
-        id={id}
-        type="button"
-        aria-label={label}
-        title={label}
-        data-overview-focus={focusKey}
-        className={ICON_BUTTON_CLASS}
-      >
-        {children}
-      </button>
-    </DropdownMenuTrigger>
-  );
-}
-
 // The terminal outcome is one level inside the status menu, never a second menu.
 function ResolvePlanMenuItem({
   item,
-  locked,
+  lockReason,
   onResolvePlan,
 }: {
   readonly item: StatusOverviewItem;
-  readonly locked: boolean;
+  readonly lockReason: string | null;
   readonly onResolvePlan: ActionProps["onResolvePlan"];
 }) {
-  if (!onResolvePlan || !canResolveFromStatus(item)) return null;
+  const reason =
+    lockReason ??
+    item.statusRiskText ??
+    (!onResolvePlan || !canResolveFromStatus(item)
+      ? "This record cannot be closed here."
+      : undefined);
   return (
-    <>
-      <DropdownMenuSeparator />
-      <DropdownMenuItem
-        aria-label={`Resolve plan: ${shortItemLabel(item.text)}`}
-        disabled={locked}
-        onSelect={() =>
-          onResolvePlan(item, `resolve:${item.source}:${identityOf(item)}`)
-        }
-        className={MENU_ITEM_CLASS}
-      >
-        <span className="flex-1">Won’t do…</span>
-      </DropdownMenuItem>
-    </>
+    <DropdownMenuItem
+      aria-disabled={!!reason}
+      title={reason}
+      aria-description={reason}
+      onSelect={(event) => {
+        if (reason) {
+          event.preventDefault();
+          toast.info(reason);
+        } else
+          onResolvePlan?.(item, `resolve:${item.source}:${identityOf(item)}`);
+      }}
+      className={MENU_ITEM_CLASS}
+    >
+      <ProgressIcon status="wont_do" />
+      Won’t do…
+    </DropdownMenuItem>
   );
 }
 
@@ -224,23 +187,30 @@ function WeekMoveOption({
   focusKey: string;
   moveReason: string | undefined;
 }) {
+  const reason =
+    moveReason ?? (!onMoveItem ? "This record cannot be moved." : undefined);
   return (
-    <>
-      {onMoveItem && (
-        <DropdownMenuItem
-          aria-disabled={!!moveReason}
-          title={moveReason}
-          aria-description={moveReason}
-          onSelect={() => {
-            if (moveReason) toast.info(moveReason);
-            else onMoveItem(item, "next", focusKey);
-          }}
-        >
-          <ArrowRight />
-          Move to next week
-        </DropdownMenuItem>
-      )}
-    </>
+    <DropdownMenuItem
+      aria-disabled={!!reason}
+      title={reason}
+      aria-description={reason}
+      onSelect={(event) => {
+        if (reason) {
+          event.preventDefault();
+          toast.info(reason);
+        } else onMoveItem?.(item, "next", focusKey);
+      }}
+    >
+      <ArrowRight />
+      Move to next week
+    </DropdownMenuItem>
+  );
+}
+function StatusIcon({ item }: { item: StatusOverviewItem }) {
+  if (item.needsConfirmation)
+    return <CircleHelp aria-hidden="true" className="size-5" />;
+  return (
+    <ProgressIcon status={item.resolution ? "wont_do" : item.workflowStatus} />
   );
 }
 /**
@@ -265,20 +235,13 @@ export function StatusControl({
   readonly lockReason?: string | null;
 }) {
   const inlineChoice = useRef(false);
-  const riskReasonId = useId();
-  const lockReasonId = useId();
-  const reasonIds = describedByIds(
-    item.statusRiskText ? riskReasonId : null,
-    lockReason ? lockReasonId : null,
+  const { riskReasonId, lockReasonId, reasonIds } = useStatusReasons(
+    item,
+    lockReason,
   );
   const label = statusLabelOf(item);
   const carried = item.needsConfirmation === true;
-  const icon = (
-    <ProgressIcon
-      status={item.resolution ? "wont_do" : item.workflowStatus}
-      unconfirmed={carried}
-    />
-  );
+  const icon = <StatusIcon item={item} />;
   if (
     statusOverviewItemActions(item).primary !== "status" ||
     onSetStatus === undefined
@@ -286,16 +249,14 @@ export function StatusControl({
     return <StaticStatusIcon label={label}>{icon}</StaticStatusIcon>;
   }
   const focusKey = `${carried ? "confirm" : "edit"}:${item.source}:${identityOf(item)}`;
-  const choose = (status: ItemWorkflowStatus) =>
-    chooseStatus({
-      item,
-      status,
-      focusKey,
-      lockReason,
-      onSetStatus,
-      onConfirmItem,
-      inlineChoice,
-    });
+  const statusActions = {
+    item,
+    focusKey,
+    lockReason,
+    onSetStatus,
+    onConfirmItem,
+    inlineChoice,
+  };
   return (
     <DropdownMenu>
       <StatusTrigger
@@ -318,18 +279,32 @@ export function StatusControl({
         <StatusLockReason id={lockReasonId} text={lockReason} />
         <StatusMenuItems
           item={item}
-          onChoose={choose}
+          onChoose={(status) => chooseStatus({ ...statusActions, status })}
           canConfirm={carried && onConfirmItem !== undefined}
           locked={lockReason !== null}
           reasonIds={reasonIds}
         />
-        <WeekMoveOption {...{ item, moveReason, focusKey, onMoveItem }} />
+        <DropdownMenuSeparator />
+        <WeekMoveOption
+          {...{ item, focusKey, onMoveItem }}
+          moveReason={lockReason ?? moveReason}
+        />
         <ResolvePlanMenuItem
           item={item}
-          locked={lockReason !== null}
+          lockReason={lockReason}
           onResolvePlan={onResolvePlan}
         />
       </DropdownMenuContent>
     </DropdownMenu>
   );
+}
+
+function useStatusReasons(item: StatusOverviewItem, lockReason: string | null) {
+  const riskReasonId = useId();
+  const lockReasonId = useId();
+  const reasonIds = describedByIds(
+    item.statusRiskText ? riskReasonId : null,
+    lockReason ? lockReasonId : null,
+  );
+  return { riskReasonId, lockReasonId, reasonIds };
 }

@@ -1,25 +1,35 @@
+"use client";
+
 import type { RefObject } from "react";
 import { createContext } from "react";
 
 import type { StatusOverviewItem } from "../model/status-overview";
 import type { ItemEditDraftStore } from "./item-edit-draft-store";
 
+export const OverviewUnitCollapsed = createContext(false);
+export const OverviewVisibleWeek = createContext<string | null>(null);
+
 export interface ActiveRecordEditor {
   readonly id: string;
   readonly stableId?: string | null;
   readonly source: StatusOverviewItem["source"];
   readonly store: ItemEditDraftStore;
+  readonly failed?: boolean;
   readonly pending: boolean;
   readonly error: string | null;
   readonly close: () => void;
-  readonly leave?:()=>void;
+  readonly discard?: () => void;
+  readonly leave?: () => void;
   readonly save: () => void;
   readonly details: () => void;
   readonly remove?: (step: boolean) => void;
   readonly move?: () => void;
 }
 export const OverviewRecordContext = createContext<{
-  readonly onReasonDraft?: (id:string,issue:{label:string;overviewFocus:string}|null)=>void;
+  readonly onReasonDraft?: (
+    id: string,
+    issue: { label: string; overviewFocus: string } | null,
+  ) => void;
   readonly active: ActiveRecordEditor | null;
   readonly submitted: boolean;
   readonly deleteRecord?:

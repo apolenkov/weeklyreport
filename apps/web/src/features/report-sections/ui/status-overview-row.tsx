@@ -1,8 +1,10 @@
-import type { ReactNode } from "react";
+import { ChevronDown } from "lucide-react";
+import { type ReactNode, useState } from "react";
 
 import type { ReportHealthUnit } from "../model/report-health-pulse";
 import type { StatusOverviewUnit } from "../model/status-overview";
 import type { StatusOverviewLineageRow } from "../model/status-overview-lineage";
+import { OverviewUnitCollapsed } from "./overview-record-context";
 import { OverviewUnitRecords } from "./overview-unit-records";
 import {
   type OpenHealthDetail,
@@ -66,6 +68,7 @@ export function StatusOverviewUnitRow({
   headerAction,
   ...handlers
 }: StatusOverviewUnitRowProps) {
+  const [collapsed, setCollapsed] = useState(false);
   return (
     <article
       id={unit.key}
@@ -73,8 +76,12 @@ export function StatusOverviewUnitRow({
       aria-label={`${unit.kind === "product" ? "Product" : "Activity"} ${unit.name}`}
       className="min-w-0 border-t border-[var(--color-border-subtle)] first:border-t-0"
     >
-      <div id={panelId} className="overview-unit">
+      <div className="overview-unit">
         <div className="min-w-0 px-4 py-3">
+          <CollapseUnit
+            {...{ collapsed, setCollapsed, panelId }}
+            name={unit.name}
+          />
           <StatusOverviewUnitSummary
             unit={unit}
             health={health}
@@ -85,29 +92,33 @@ export function StatusOverviewUnitRow({
           />
           <OverviewUnitRecords unit={unit} onAddRecord={handlers.onAddRecord} />
         </div>
-        <div className="min-w-0 ">
-          <PreviousUnavailableNotice column={unit.columns.lastWeek} />
-          <LineageRowList
-            rows={rows}
-            expanded={expanded}
-            editorSlot={editorSlot}
-            handlers={handlers}
-          />
-          <StatusOverviewTimelineFooter
-            unit={unit}
-            onAddItem={handlers.onAddItem}
-            onAddRecord={handlers.onAddRecord}
-            ownedStageStarts={handlers.ownedStageStarts}
-            editorSlot={editorSlot}
-            recordSlot={recordSlot}
-          />
-          <ShowMoreButton
-            rows={rows}
-            expanded={expanded}
-            panelId={panelId}
-            onToggle={onToggle}
-          />
-        </div>
+        <OverviewUnitCollapsed.Provider value={collapsed}>
+          <div
+            id={`${panelId}-body`}
+            hidden={collapsed}
+            inert={collapsed}
+            className="min-w-0"
+          >
+            <div id={panelId}>
+              <PreviousUnavailableNotice column={unit.columns.lastWeek} />
+              <LineageRowList
+                rows={rows}
+                expanded={expanded}
+                editorSlot={editorSlot}
+                handlers={handlers}
+              />
+              <StatusOverviewTimelineFooter
+                unit={unit}
+                onAddItem={handlers.onAddItem}
+                onAddRecord={handlers.onAddRecord}
+                ownedStageStarts={handlers.ownedStageStarts}
+                editorSlot={editorSlot}
+                recordSlot={recordSlot}
+              />
+              <ShowMoreButton {...{ rows, expanded, panelId, onToggle }} />
+            </div>
+          </div>
+        </OverviewUnitCollapsed.Provider>
       </div>
       {health && healthExpanded ? (
         <ReportHealthDetail
@@ -117,5 +128,34 @@ export function StatusOverviewUnitRow({
         />
       ) : null}
     </article>
+  );
+}
+
+function CollapseUnit({
+  collapsed,
+  setCollapsed,
+  panelId,
+  name,
+}: {
+  collapsed: boolean;
+  setCollapsed: (value: boolean) => void;
+  panelId: string;
+  name: string;
+}) {
+  return (
+    <button
+      type="button"
+      className="float-right inline-flex size-11 items-center justify-center"
+      aria-label={`${collapsed ? "Expand" : "Collapse"} ${name}`}
+      data-unit-collapse=""
+      aria-expanded={!collapsed}
+      aria-controls={`${panelId}-body`}
+      onClick={() => setCollapsed(!collapsed)}
+    >
+      <ChevronDown
+        aria-hidden="true"
+        className={collapsed ? "-rotate-90" : ""}
+      />
+    </button>
   );
 }

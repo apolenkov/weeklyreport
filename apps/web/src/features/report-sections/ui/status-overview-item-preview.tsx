@@ -1,17 +1,5 @@
-import { Button } from "@weeklyreport/ui/components/ui/button";
 import { Popover, PopoverAnchor } from "@weeklyreport/ui/components/ui/popover";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-} from "@weeklyreport/ui/components/ui/sheet";
-import {
-  ArrowRight,
-  Maximize2,
-  MessageSquare,
-  Pencil,
-  Trash2,
-} from "lucide-react";
+import { MessageSquare, Pencil } from "lucide-react";
 import {
   useContext,
   useId,
@@ -19,20 +7,19 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { toast } from "sonner";
 
 import { reviewRecordAnchor } from "../../../shared/ui/feedback/review-record-focus";
 import { overviewMoveReason } from "../model/overview-move-reason";
-import { ItemCommentsView } from "./item-comments-view";
-import { RecordAction } from "./overview-record-actions";
-import { OverviewRecordContext } from "./overview-record-context";
-import { OverviewRecordPanel } from "./overview-record-panel";
-import { OverviewRecordSurface } from "./overview-record-surface";
-import { StageIcon } from "./overview-stages";
 import {
-  type ActionProps,
-  weekMoveFocusKey,
-} from "./status-overview-item-actions";
+  OverviewRecordContext,
+  OverviewUnitCollapsed,
+  OverviewVisibleWeek,
+} from "./overview-record-context";
+import { OverviewRecordPanel } from "./overview-record-panel";
+import { ReadOnlyPanel, RecordDiscussion } from "./overview-record-secondary";
+import { moveShortcut } from "./overview-record-shortcut";
+import { StageIcon } from "./overview-stages";
+import { type ActionProps } from "./status-overview-item-actions";
 import { ResolutionNote } from "./status-overview-item-metadata";
 import { OutcomeAudit } from "./status-overview-outcome-audit";
 import { StatusControl } from "./status-overview-status-control";
@@ -62,7 +49,7 @@ function useRecordLine(props: ActionProps) {
   const editable =
     !!item.editTarget && (!!onEditItem || !!editor) && !submitted;
   function openRecord() {
-    if (editable && item.editTarget) onEditItem?.(item.editTarget);
+    if (editable) onEditItem?.(item.editTarget);
     else setReading(true);
   }
   function openDiscussion() {
@@ -92,7 +79,11 @@ function useRecordLine(props: ActionProps) {
 type Line = ReturnType<typeof useRecordLine>;
 type LineProps = ActionProps & { line: Line };
 
-function RecordTitle({ item, activity, line }: LineProps) {
+function RecordTitle({
+  item,
+  activity,
+  line: { trigger, editable, editor, reading, openRecord },
+}: LineProps) {
   const history = item.source === "previous";
   const content = (
     <>
@@ -116,46 +107,23 @@ function RecordTitle({ item, activity, line }: LineProps) {
   return (
     <button
       type="button"
-      ref={line.trigger}
+      ref={trigger}
       data-overview-focus={`title:${item.source}:${item.stableId ?? item.key}`}
-      aria-label={`${line.editable ? "Edit text" : "View text"}: ${item.text}, ${item.source === "next" ? "Next week" : "This week"}`}
-      aria-expanded={!!line.editor || line.reading}
+      aria-label={`${editable ? "Edit text" : "View text"}: ${item.text}, ${item.source === "next" ? "Next week" : "This week"}`}
+      aria-expanded={!!editor || reading}
       aria-haspopup="dialog"
-      onClick={line.openRecord}
-      data-editable={line.editable}
+      onClick={openRecord}
+      data-editable={editable}
       className="overview-record-trigger min-h-11 min-w-0 flex-1 rounded-md text-left focus-visible:ring-2 focus-visible:ring-ring"
     >
       <span className="flex min-w-0 flex-wrap items-center gap-1">
         {content}
       </span>
-      {line.editable && (
+      {editable && (
         <Pencil aria-hidden="true" className="overview-pencil size-4" />
       )}
     </button>
   );
-}
-
-function moveShortcut(props: LineProps, event: React.KeyboardEvent) {
-  const { item, line, onMoveItem } = props;
-  if (
-    !event.altKey ||
-    event.ctrlKey ||
-    event.shiftKey ||
-    event.metaKey ||
-    item.source === "previous" ||
-    !onMoveItem
-  )
-    return;
-  const current = item.source === "current";
-  if (
-    event.key !== (current ? "ArrowRight" : "ArrowLeft") ||
-    (event.target instanceof Element &&
-      event.target.closest("input,textarea,[role=dialog]"))
-  )
-    return;
-  event.preventDefault();
-  if (line.moveReason) toast.info(line.moveReason);
-  else onMoveItem(item, current ? "next" : "current", weekMoveFocusKey(item));
 }
 
 function RecordStatus(props: LineProps) {
@@ -217,7 +185,10 @@ function RecordLine(props: LineProps) {
             : undefined
         }
         className="overview-record flex min-w-0 flex-wrap items-center gap-1 rounded-md text-sm data-[open=true]:ring-1 data-[open=true]:ring-ring"
-        onPointerUp={event=>{if(event.target===event.currentTarget && line.editable)line.trigger.current?.click();}}
+        onPointerUp={(event) => {
+          if (event.target === event.currentTarget && line.editable)
+            line.trigger.current?.click();
+        }}
         onKeyDown={(event) => moveShortcut(props, event)}
       >
         <RecordStatus {...props} />
@@ -225,6 +196,8 @@ function RecordLine(props: LineProps) {
         {hasDiscussion && (
           <button
             aria-label={`Discussion: ${item.text}, ${item.comments.length} comments`}
+            data-review-discussion=""
+            aria-controls={line.commentsId}
             aria-haspopup="dialog"
             aria-expanded={line.discussion}
             onClick={line.openDiscussion}
@@ -237,6 +210,11 @@ function RecordLine(props: LineProps) {
         {line.dirty && (
           <span className="text-xs text-muted-foreground">Not saved</span>
         )}
+        {item.workflowStatus === "paused" && item.pausedReason && (
+          <span className="text-xs text-muted-foreground">
+            {item.pausedReason}
+          </span>
+        )}
         {item.needsConfirmation && <span>Needs status</span>}
         {item.source !== "next" && (
           <>
@@ -245,98 +223,32 @@ function RecordLine(props: LineProps) {
           </>
         )}
         {item.canRestore && props.onRestorePlan && (
-          <button onClick={() => props.onRestorePlan?.(item)}>Restore</button>
+          <button
+            data-overview-focus={`restore:${item.source}:${item.stableId ?? item.key}`}
+            onClick={() =>
+              props.onRestorePlan?.(
+                item,
+                `restore:${item.source}:${item.stableId ?? item.key}`,
+              )
+            }
+          >
+            Restore
+          </button>
         )}
       </div>
     </PopoverAnchor>
   );
 }
 
-function ReadOnlyPanel({ line, item }: LineProps) {
-  const close = () => {
-    line.setReading(false);
-    line.trigger.current?.focus();
-  };
-  const reason = "You do not have permission to edit this record.";
-  return (
-    <OverviewRecordSurface
-      trigger={line.trigger}
-      nested={line.discussion}
-      dirty={false}
-      close={() => line.setReading(false)}
-      cancel={close}
-    >
-      <p className="whitespace-pre-wrap">{item.text}</p>
-      <RecordAction
-        label={`Discussion (${item.comments.length})`}
-        Icon={MessageSquare}
-        act={line.openDiscussion}
-      />
-      {!line.submitted && (
-        <>
-          {(
-            [
-              [
-                item.source === "next"
-                  ? "Move to this week"
-                  : "Move to next week",
-                ArrowRight,
-              ],
-              ["More details", Maximize2],
-              ["Delete", Trash2],
-            ] as const
-          ).map(([label, Icon]) => (
-            <RecordAction
-              key={label}
-              label={label}
-              Icon={Icon}
-              reason={reason}
-              act={() => undefined}
-            />
-          ))}
-          <Button
-            aria-disabled
-            aria-description={reason}
-            title={reason}
-            onUnavailable={() => toast.info(reason)}
-          >
-            Save
-          </Button>
-        </>
-      )}
-      <button onClick={close}>Close</button>
-    </OverviewRecordSurface>
-  );
-}
-function RecordDiscussion({ line, item }: LineProps) {
-  return (
-    <Sheet open onOpenChange={line.setDiscussion}>
-      <SheetContent
-        aria-describedby={undefined}
-        showCloseButton={false}
-        className="p-4"
-        onCloseAutoFocus={(event) => {
-          event.preventDefault();
-          line.discussionOrigin.current?.focus();
-        }}
-      >
-        <SheetTitle>Discussion</SheetTitle>
-        <ItemCommentsView
-          id={line.commentsId}
-          item={item}
-          onClose={() => line.setDiscussion(false)}
-        />
-      </SheetContent>
-    </Sheet>
-  );
-}
-
 function RecordPreview(props: ActionProps) {
   const line = useRecordLine(props);
+  const collapsed = useContext(OverviewUnitCollapsed);
+  const week = useContext(OverviewVisibleWeek);
+  const visible = !collapsed && (!week || week === props.item.source);
   return (
-    <Popover open={!!line.editor || line.reading} modal={false}>
+    <Popover open={visible && (!!line.editor || line.reading)} modal={false}>
       <RecordLine {...props} line={line} />
-      {line.editor && (
+      {visible && line.editor && (
         <OverviewRecordPanel
           item={props.item}
           editor={line.editor}
@@ -349,8 +261,21 @@ function RecordPreview(props: ActionProps) {
           moveReason={line.moveReason}
         />
       )}
-      {line.reading && <ReadOnlyPanel {...props} line={line} />}
-      {line.discussion && <RecordDiscussion {...props} line={line} />}
+      {visible && line.reading && (
+        <ReadOnlyPanel
+          {...line}
+          item={props.item}
+          closePanel={() => line.setReading(false)}
+        />
+      )}
+      {visible && line.discussion && (
+        <RecordDiscussion
+          item={props.item}
+          id={line.commentsId}
+          origin={line.discussionOrigin}
+          setDiscussion={line.setDiscussion}
+        />
+      )}
     </Popover>
   );
 }
@@ -358,7 +283,7 @@ function RecordPreview(props: ActionProps) {
 export function StatusOverviewItemPreview(props: ActionProps) {
   return (
     <RecordPreview
-      key={props.item.source + ":" + (props.item.stableId ?? props.item.key)}
+      key={`${props.item.source}:${props.item.stableId ?? props.item.key}`}
       {...props}
     />
   );

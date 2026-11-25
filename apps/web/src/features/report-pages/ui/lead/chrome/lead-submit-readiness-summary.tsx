@@ -12,6 +12,7 @@ import { autosaveReadinessCopy } from "./autosave-state-copy";
 import { focusCompletionIssue } from "./overview-completion-focus";
 
 interface LeadSubmitReadinessSummaryProps {
+  readonly hasUnansweredPlans?: boolean;
   readonly readiness: LeadSubmitReadiness;
   readonly onSubmit: () => void;
   readonly showSubmitAction?: boolean | undefined;
@@ -195,6 +196,7 @@ function BlockingIssues({
 }
 
 export function LeadSubmitReadinessSummary({
+  hasUnansweredPlans,
   readiness,
   onSubmit,
   showSubmitAction,
@@ -212,6 +214,11 @@ export function LeadSubmitReadinessSummary({
         showSubmitAction={showSubmitAction}
         showAutosaveStatus={showAutosaveStatus}
       />
+      {hasUnansweredPlans && (
+        <p className="text-sm text-muted-foreground">
+          Unanswered plans are sent as Not answered.
+        </p>
+      )}
       <AutomaticStatusChanges items={readiness.willAutoPromote} />
       <BlockingIssues items={readiness.blockingIssues} />
     </section>

@@ -15,7 +15,11 @@ export type {
 export { crossAuthorContentFetchEnabled } from "./model/cross-author/cross-author-content-gate";
 export type { DraftStageMemory } from "./model/draft-stage-memory";
 export { createDraftStageMemory } from "./model/draft-stage-memory";
-export { withFormSection, withSlideSections } from "./model/form-section";
+export {
+  formSectionOf,
+  withFormSection,
+  withSlideSections,
+} from "./model/form-section";
 export { STATUS_BADGE } from "./model/item-card-style";
 export { buildItemDialogProps } from "./model/item-dialog-props";
 export { persistableItemStatusToWorkflow } from "./model/item-status";
@@ -100,6 +104,10 @@ export type {
   StatusOverviewRecordTarget,
 } from "./model/status-overview";
 export { projectStatusOverview } from "./model/status-overview";
+export {
+  buildStatusOverviewLineage,
+  countPendingPlans,
+} from "./model/status-overview-lineage";
 export type { PlanVerdict } from "./model/status-overview-verdict";
 export { planVerdictWrite } from "./model/status-overview-verdict";
 export {
@@ -157,7 +165,11 @@ export {
   type ItemEditDraftStore,
 } from "./ui/item-edit-draft-store";
 export { ItemInlineEditor } from "./ui/item-inline-editor";
-export { type ItemReplyPort, ItemReplyProvider } from "./ui/item-reply-context";
+export {
+  type ItemReplyPort,
+  ItemReplyProvider,
+  type ItemReplyScope,
+} from "./ui/item-reply-context";
 export { useItemReplyScope } from "./ui/item-reply-context";
 export { NextWeekSection } from "./ui/next-week/next-week-section";
 export {

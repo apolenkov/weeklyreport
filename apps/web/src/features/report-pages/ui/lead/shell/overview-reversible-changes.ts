@@ -6,13 +6,51 @@ import {
 import type { ReadyEditor } from "./use-overview-controller";
 import type { OverviewUndoWrite } from "./use-overview-undo";
 
+const ITEM_PATCH = "item-patch";
+function moveChange(
+  editor: ReadyEditor,
+  row: ReadyEditor["draft"]["section"]["items"][number],
+  target: OverviewUndoWrite["target"],
+): OverviewUndoWrite | null {
+  const { section } = editor.draft;
+  const week = row.type;
+  if (!row.id) return null;
+  const to = week === "current" ? "next" : "current";
+  const patch = buildMoveItemPatch(section, row.id, to);
+  if (!patch) return null;
+  return {
+    section,
+    target,
+    patch,
+    message: to === "next" ? "Moved to Next week." : "Moved to This week.",
+    destination: to,
+    restoreWeek: week,
+    reverse: (ready) => {
+      const moved = ready.draft.section.items.find(
+        (value) => value.stableId === row.stableId && value.type === to,
+      );
+      if (
+        !moved?.id ||
+        !buildMoveItemPatch(ready.draft.section, moved.id, week)
+      )
+        return null;
+      return {
+        kind: ITEM_PATCH,
+        itemId: moved.id,
+        patch: { type: week, carriedOver: row.carriedOver },
+      };
+    },
+  };
+}
 export function itemChange(
   editor: ReadyEditor,
   item: StatusOverviewItem,
   action: "delete" | "step" | "move",
 ): OverviewUndoWrite | null {
   const { section } = editor.draft;
-  const row = section.items.find((value) => value.id === item.recordId);
+  const row = section.items.find(
+    (value) => value.id && value.id === item.recordId,
+  );
   if (
     !item.stableId ||
     !row?.id ||
@@ -27,46 +65,27 @@ export function itemChange(
     ready.draft.section.items.find(
       (other) => other.stableId === row.stableId && other.type === week,
     );
-  if (action === "move") {
-    const to = week === "current" ? "next" : "current";
-    const patch = buildMoveItemPatch(section, row.id, to);
-    if (!patch || item.editTarget.focusNextStep) return null;
-    return {
-      section,target,
-      patch,
-      message: to === "next" ? "Moved to next week" : "Moved to this week",
-      reverse: (ready) => {
-        const moved = ready.draft.section.items.find(
-          (value) => value.stableId === row.stableId && value.type === to,
-        );
-        if (
-          !moved?.id ||
-          !buildMoveItemPatch(ready.draft.section, moved.id, week)
-        )
-          return null;
-        return {
-          kind: "item-patch",
-          itemId: moved.id,
-          patch: { type: week, carriedOver: row.carriedOver },
-        };
-      },
-    };
-  }
+  if (action === "move")
+    return item.editTarget.focusNextStep
+      ? null
+      : moveChange(editor, row, target);
   if (action === "step") {
     if (!row.nextStepText) return null;
     return {
-      section,target,
+      section,
+      target,
       patch: {
-        kind: "item-patch",
+        kind: ITEM_PATCH,
         itemId: row.id,
         patch: { nextStepText: null },
       },
+      deletion: true,
       message: "Next step deleted",
       reverse: (ready) => {
         const parent = latestRow(ready);
         return parent?.id && !parent.nextStepText
           ? {
-              kind: "item-patch",
+              kind: ITEM_PATCH,
               itemId: parent.id,
               patch: { nextStepText: row.nextStepText },
             }
@@ -81,12 +100,15 @@ export function itemChange(
   const deleted = list(editor).find((value) => value.id === row.id);
   if (!deleted) return null;
   return {
-    section,target,
+    section,
+    target,
     patch: {
       kind: "week-items",
       week,
       items: list(editor).filter((value) => value.id !== row.id),
     },
+    restoreWeek: week,
+    deletion: true,
     message: "Entry deleted",
     reverse: (ready) =>
       latestRow(ready)
@@ -116,8 +138,10 @@ export function unitRecordDeletion(
     record,
   };
   return {
-    section:editor.draft.section,target: { kind, stableId },
+    section: editor.draft.section,
+    target: { kind, stableId },
     patch,
+    deletion: true,
     message: kind === "risk" ? "Risk deleted" : "Decision deleted",
     reverse: () => ({ kind: "create-record", reportSectionId, record }),
   };

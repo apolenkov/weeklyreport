@@ -2,7 +2,12 @@
 
 import { useEffect, useId, useState } from "react";
 
-import { buildStatusOverviewLineage } from "../model/status-overview-lineage";
+import { revealAndFocus } from "../../../shared/ui/feedback/reveal-and-focus";
+import {
+  buildStatusOverviewLineage,
+  countPendingPlans,
+  firstPendingOutcomeId,
+} from "../model/status-overview-lineage";
 import { StageLegend } from "./overview-stages";
 import { OverviewWeekGrid } from "./overview-week-grid";
 import { ReportHealthPulseView } from "./report-health-pulse";
@@ -18,7 +23,9 @@ function ColumnHeading({
   label,
   period,
   plans,
+  firstPlanId,
 }: {
+  readonly firstPlanId?: string | undefined;
   readonly plans?: number | undefined;
   readonly id: string;
   readonly label: string;
@@ -44,17 +51,18 @@ function ColumnHeading({
       </p>
       {plans !== undefined &&
         (plans > 0 ? (
-          <button
-            type="button"
-            onClick={(event) =>
-              event.currentTarget
-                .closest("section")
-                ?.querySelector<HTMLElement>("[data-plan-outcome]")
-                ?.focus()
-            }
+          <a
+            href={`#${firstPlanId ?? ""}`}
+            onClick={(event) => {
+              event.preventDefault();
+              const target = document.getElementById(firstPlanId ?? "");
+              revealAndFocus(target, {
+                scope: target?.closest("article") ?? null,
+              });
+            }}
           >
             {plans} {plans === 1 ? "plan" : "plans"} to answer
-          </button>
+          </a>
         ) : (
           <span>plans answered</span>
         ))}
@@ -146,9 +154,11 @@ function StatusOverviewHeader({
 }
 
 function ColumnHeadings({
+  firstPlanId,
   periods,
   plans,
 }: {
+  readonly firstPlanId: string | undefined;
   readonly plans: number | undefined;
   readonly periods: StatusOverviewProps["model"]["periods"];
 }) {
@@ -164,6 +174,7 @@ function ColumnHeadings({
       <ColumnHeading
         id={STATUS_OVERVIEW_COLUMN_HEADER_IDS.currentWeek}
         label="This week"
+        firstPlanId={firstPlanId}
         plans={plans}
         period={periods.currentWeek}
       />
@@ -176,18 +187,11 @@ function ColumnHeadings({
   );
 }
 
-export function StatusOverview(props: StatusOverviewProps) {
-  const { model, onAddItem, detailsHref, autosaveStatus, editorSlot, health } =
-    props;
-  const idPrefix = useId();
-  const { closeInspection, healthPanelId, inspection, setInspection } =
-    useHealthInspection(idPrefix);
-  const lineage = buildStatusOverviewLineage(model.units);
-  const plans = [...lineage.values()]
-    .flat()
-    .filter(
-      (row) => !row.current && !row.next && row.answerState === "pending",
-    ).length;
+function useUnitExpansion(
+  onAddItem: StatusOverviewProps["onAddItem"],
+  editorSlot: StatusOverviewProps["editorSlot"],
+  recordSlot: StatusOverviewProps["recordSlot"],
+) {
   const [expandedKeys, setExpandedKeys] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -195,8 +199,7 @@ export function StatusOverview(props: StatusOverviewProps) {
     setExpandedKeys((current) => new Set([...current, key]));
   });
   const toggle = (key: string): void => {
-    if (editorSlot?.unitKey === key || props.recordSlot?.unitKey === key)
-      return;
+    if (editorSlot?.unitKey === key || recordSlot?.unitKey === key) return;
     setExpandedKeys((current) => {
       const next = new Set(current);
       if (next.has(key)) next.delete(key);
@@ -204,6 +207,22 @@ export function StatusOverview(props: StatusOverviewProps) {
       return next;
     });
   };
+  return { expandedKeys, addItem, toggle };
+}
+
+export function StatusOverview(props: StatusOverviewProps) {
+  const { model, onAddItem, detailsHref, autosaveStatus, editorSlot, health } =
+    props;
+  const idPrefix = useId();
+  const { closeInspection, healthPanelId, inspection, setInspection } =
+    useHealthInspection(idPrefix);
+  const lineage = props.lineage ?? buildStatusOverviewLineage(model.units);
+  const plans = countPendingPlans(lineage);
+  const { expandedKeys, addItem, toggle } = useUnitExpansion(
+    onAddItem,
+    editorSlot,
+    props.recordSlot,
+  );
 
   return (
     <section
@@ -225,11 +244,17 @@ export function StatusOverview(props: StatusOverviewProps) {
         />
       ) : null}
 
+      {props.editable && (
+        <p className="text-sm text-muted-foreground">
+          Click text to edit. Use status to answer a plan.
+        </p>
+      )}
       <StageLegend />
       <OverviewWeekGrid plans={plans}>
         <ColumnHeadings
           periods={model.periods}
-          plans={props.onVerdict ? plans : undefined}
+          firstPlanId={firstPendingOutcomeId(lineage)}
+          plans={props.editable || props.onVerdict ? plans : undefined}
         />
 
         {model.units.length === 0 ? (

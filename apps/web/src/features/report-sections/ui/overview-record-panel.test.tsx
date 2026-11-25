@@ -1,8 +1,8 @@
-import {act, fireEvent, screen, within } from "@testing-library/react";
+import { act, fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 
-import {setupPanel as setup} from "./overview-record-panel.test-support";
+import { setupPanel as setup } from "./overview-record-panel.test-support";
 it("retains a changed draft outside and asks before discarding", async () => {
   const { save, close } = setup();
   const field = screen.getByRole("textbox", { name: "Record text" });
@@ -55,21 +55,30 @@ it("expands only the derived step in More details", async () => {
   expect(within(details).queryByText("Stage")).toBeNull();
 });
 
-it("retains the draft when the pointer or viewport switches to a modal bottom sheet",async()=>{
- let narrow=false;
- const media=new EventTarget();
- const original=window.matchMedia;
- Object.defineProperty(window,"matchMedia",{configurable:true,value:()=>Object.assign(media,{matches:narrow})});
- try{
-   const {store}=setup();
-   const field=screen.getByRole("textbox",{name:"Record text"});
-   await userEvent.type(field," retained");
-   narrow=true;
-   await act(async()=>{media.dispatchEvent(new Event("change"));});
-   expect(screen.getByRole("dialog",{name:"Record"}).getAttribute("data-slot")).toBe("sheet-content");
-   expect(screen.getByRole("textbox",{name:"Record text"})).toHaveValue("Original text retained");
-   narrow=false;
-   await act(async()=>{media.dispatchEvent(new Event("change"));});
-   expect(store.getSnapshot().text).toBe("Original text retained");
- }finally{Object.defineProperty(window,"matchMedia",{configurable:true,value:original});}
+it("retains the draft when the pointer or viewport switches to a modal bottom sheet", async () => {
+  let narrow = false;
+  const media = new EventTarget();
+  vi.stubGlobal("matchMedia", () => Object.assign(media, { matches: narrow }));
+  try {
+    const { store } = setup();
+    const field = screen.getByRole("textbox", { name: "Record text" });
+    await userEvent.type(field, " retained");
+    narrow = true;
+    act(() => {
+      media.dispatchEvent(new Event("change"));
+    });
+    expect(screen.getByRole("dialog", { name: "Record" }).dataset.slot).toBe(
+      "sheet-content",
+    );
+    expect(screen.getByRole("textbox", { name: "Record text" })).toHaveValue(
+      "Original text retained",
+    );
+    narrow = false;
+    act(() => {
+      media.dispatchEvent(new Event("change"));
+    });
+    expect(store.getSnapshot().text).toBe("Original text retained");
+  } finally {
+    vi.unstubAllGlobals();
+  }
 });

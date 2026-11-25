@@ -71,11 +71,11 @@ function Button({
       {...props}
       onClick={(event) => {
         if (
-          onUnavailable &&
-          (props["aria-disabled"] === true || props["aria-disabled"] === "true")
+          props["aria-disabled"] === true ||
+          props["aria-disabled"] === "true"
         ) {
           event.preventDefault();
-          onUnavailable();
+          onUnavailable?.();
           return;
         }
         onClick?.(event);

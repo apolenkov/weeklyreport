@@ -168,10 +168,9 @@ async function openItemEditor(
     { timeout: 5000 },
   );
   await user.click(
-    await within(preview).findByRole("button", {
-      name: `Edit details: ${text}`,
-    }),
+    within(preview).getByRole("button", { name: /^Edit text:/ }),
   );
+  await user.click(screen.getByRole("button", { name: "More details" }));
 }
 
 describe("Overview editor — Active week after a failed save", () => {

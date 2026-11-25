@@ -39,90 +39,110 @@ export function OverviewUnitRecords({
           + Risk or decision
         </button>
       )}
-      <Collapsible>
-        <CollapsibleTrigger className="min-h-11 px-2">
-          {risks} {risks === 1 ? "risk" : "risks"} · {records.length - risks}{" "}
-          {records.length - risks === 1 ? "decision" : "decisions"}
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          {records.length > 0 ? (
-            <ul>
-              {records.map((record) => (
-                <li key={record.key}>
-                  <button
-                    className="min-h-11 text-left underline"
-                    onClick={() => setOpenId(record.key)}
-                  >
-                    {record.text}
-                  </button>
-                  <small>
-                    {record.kind} ·{" "}
-                    {
-                      record.details.find(
-                        ([label]) => label === "Severity",
-                      )?.[1]
-                    }{" "}
-                    {record.details.some(([, value]) => !value)
-                      ? " · Incomplete"
-                      : ""}
-                  </small>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p>No risks or decisions.</p>
-          )}
-        </CollapsibleContent>
-      </Collapsible>
-      {selected && (
-        <Sheet
-          open
-          onOpenChange={(open) => {
-            if (!open) setOpenId(null);
-          }}
-        >
-          <SheetContent className="p-4" aria-describedby={undefined}>
-            <SheetTitle>
-              {selected.kind === "risk" ? "Risk" : "Decision"}
-            </SheetTitle>
-            <p>{selected.text}</p>
-            <dl>
-              {selected.details.map(([label, value]) => (
-                <div key={label}>
-                  <dt>{label}</dt>
-                  <dd>{value ?? "Not provided"}</dd>
-                </div>
-              ))}
-            </dl>
-            {deleteRecord && selected.stableId && (
-              <AlertDialog.Root>
-                <AlertDialog.Trigger>Delete</AlertDialog.Trigger>
-                <AlertDialog.Portal>
-                  <AlertDialog.Overlay className="fixed inset-0 z-(--layer-overlay) bg-overlay" />
-                  <AlertDialog.Content className="fixed top-1/2 left-1/2 z-(--layer-dialog) -translate-x-1/2 rounded border bg-card p-4">
-                    <AlertDialog.Title>
-                      Delete this {selected.kind}?
-                    </AlertDialog.Title>
-                    <AlertDialog.Description>
-                      {selected.text}
-                    </AlertDialog.Description>
-                    <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
-                    <AlertDialog.Action
-                      onClick={() => {
-                        if (selected.stableId)
-                          deleteRecord(selected.kind, selected.stableId);
-                        setOpenId(null);
-                      }}
+      {(!onAddRecord || unit.historical || records.length > 0) && (
+        <Collapsible>
+          <CollapsibleTrigger className="min-h-11 px-2">
+            {risks} {risks === 1 ? "risk" : "risks"} · {records.length - risks}{" "}
+            {records.length - risks === 1 ? "decision" : "decisions"}
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            {records.length > 0 ? (
+              <ul>
+                {records.map((record) => (
+                  <li key={record.key}>
+                    <button
+                      className="min-h-11 text-left underline"
+                      onClick={() => setOpenId(record.key)}
                     >
-                      Delete
-                    </AlertDialog.Action>
-                  </AlertDialog.Content>
-                </AlertDialog.Portal>
-              </AlertDialog.Root>
+                      {record.text}
+                    </button>
+                    <small>
+                      {record.kind} ·{" "}
+                      {
+                        record.details.find(
+                          ([label]) => label === "Severity",
+                        )?.[1]
+                      }{" "}
+                      {record.details.some(([, value]) => !value)
+                        ? " · Incomplete"
+                        : ""}
+                    </small>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No risks or decisions.</p>
             )}
-          </SheetContent>
-        </Sheet>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+      {selected && (
+        <RecordDetails
+          selected={selected}
+          close={() => setOpenId(null)}
+          deleteRecord={deleteRecord}
+        />
       )}
     </div>
+  );
+}
+
+function RecordDetails({
+  selected,
+  close,
+  deleteRecord,
+}: {
+  selected: NonNullable<StatusOverviewUnit["records"]>[number];
+  close: () => void;
+  deleteRecord: React.ContextType<typeof OverviewRecordContext>["deleteRecord"];
+}) {
+  return (
+    <Sheet
+      open
+      onOpenChange={(open) => {
+        if (!open) close();
+      }}
+    >
+      <SheetContent className="p-4" aria-describedby={undefined}>
+        <SheetTitle>
+          {selected.kind === "risk" ? "Risk" : "Decision"}
+        </SheetTitle>
+        <p>{selected.text}</p>
+        <dl>
+          {selected.details.map(([label, value]) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>{value ?? "Not provided"}</dd>
+            </div>
+          ))}
+        </dl>
+        {deleteRecord && selected.stableId && (
+          <AlertDialog.Root>
+            <AlertDialog.Trigger>Delete</AlertDialog.Trigger>
+            <AlertDialog.Portal>
+              <AlertDialog.Overlay className="fixed inset-0 z-(--layer-overlay) bg-overlay" />
+              <AlertDialog.Content className="fixed top-1/2 left-1/2 z-(--layer-dialog) -translate-x-1/2 rounded border bg-card p-4">
+                <AlertDialog.Title>
+                  Delete this {selected.kind}?
+                </AlertDialog.Title>
+                <AlertDialog.Description>
+                  {selected.text}
+                </AlertDialog.Description>
+                <AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
+                <AlertDialog.Action
+                  onClick={() => {
+                    if (selected.stableId)
+                      deleteRecord(selected.kind, selected.stableId);
+                    close();
+                  }}
+                >
+                  Delete
+                </AlertDialog.Action>
+              </AlertDialog.Content>
+            </AlertDialog.Portal>
+          </AlertDialog.Root>
+        )}
+      </SheetContent>
+    </Sheet>
   );
 }

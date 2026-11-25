@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -112,7 +112,7 @@ describe("mobile lineage layout", () => {
     render(<MobilePeriodsSummary periods={periods} />);
     const summary = screen.getByRole("group", { name: "Reporting periods" });
     expect(summary).toBe(screen.getByTestId("overview-mobile-periods"));
-    for (const label of ["Previously planned", "Current week", "Next week"]) {
+    for (const label of ["Last week", "This week", "Next week"]) {
       const heading = within(summary).getByText(label);
       expect(heading).not.toHaveClass("sr-only");
       expect(heading).toHaveClass("block", "text-xs");
@@ -193,21 +193,13 @@ describe("mobile lineage layout", () => {
       );
     }
     render(<Harness />);
-    const target = document.getElementById("review-record:item:3");
-    expect(target?.closest("[hidden][inert]")).not.toBeNull();
-    const lane = target?.closest("[data-overview-lineage-lane]");
-    expect(lane).toHaveAttribute("data-overview-lineage-lane", "previous");
-    expect(lane).toHaveClass("block");
-    expect(lane).not.toHaveClass("hidden");
-    expect(
-      within(lane as HTMLElement).getByText("Previously planned"),
-    ).toHaveClass("md:hidden");
-    await user.click(screen.getByRole("link", { name: "Prior plan" }));
-    await waitFor(() => expect(target).toHaveFocus());
-    expect(target?.closest("[hidden], [inert]")).toBeNull();
-    expect(
+    const prior = screen.getByText("Prior plan", { selector: "span" });
+    expect(prior.closest("[inert]")).not.toBeNull();
+    await user.click(
       screen.getByRole("button", { name: "Show previous rows" }),
-    ).toHaveAttribute("aria-expanded", "true");
+    );
+    expect(prior.closest("[inert]")).toBeNull();
+    expect(prior.closest("button")).toBeNull();
   });
 
   it("retains unavailable-period context only in the shared strip", () => {
@@ -224,7 +216,10 @@ describe("mobile lineage layout", () => {
     const lane = container.querySelector(
       '[data-overview-lineage-lane="current"]',
     );
-    expect(lane).toHaveTextContent("Current week");
+    expect(lane).toHaveAttribute(
+      "aria-labelledby",
+      "status-overview-current-week-heading",
+    );
     expect(lane).toHaveClass("py-1", "md:py-3");
     for (const period of Object.values(periods)) {
       expect(screen.queryByText(period)).not.toBeInTheDocument();
@@ -233,16 +228,13 @@ describe("mobile lineage layout", () => {
 
   it("shows one empty-period hint per unit, outside its rows, including hidden previews", () => {
     const { container } = render(<Rows />);
-    const hints = screen.getAllByText("No items in other periods");
-    expect(hints).toHaveLength(1);
-    expect(hints[0]?.closest("li")).toBeNull();
-    expect(hints[0]).toHaveClass("md:hidden");
+    expect(screen.queryByText("No items in other periods")).toBeNull();
     const items = container.querySelectorAll("li");
     expect(items[2]).toHaveAttribute("hidden");
     expect(items[2]).toHaveAttribute("inert");
     expect(
       container.querySelector('[data-overview-lineage-lane="previous"]'),
-    ).toHaveClass("hidden", "md:flex");
+    ).toHaveClass("overview-empty-lane");
   });
 
   it("does not claim missing periods when all three occurrences exist", () => {
@@ -298,11 +290,11 @@ describe("timeline lanes", () => {
       "aria-hidden",
       "true",
     );
-    expect(within(nextLane).getByText("No item in this period")).toHaveClass(
+    expect(within(nextLane).getByText("No entry in Next week")).toHaveClass(
       "sr-only",
     );
     // Empty lanes stay collapsed on mobile; the unit header owns creation.
-    expect(nextLane).toHaveClass("hidden", "md:flex");
+    expect(nextLane).toHaveClass("overview-empty-lane");
   });
 
   it("omits leading left border on the first timeline cell at md breakpoint (C3013)", () => {

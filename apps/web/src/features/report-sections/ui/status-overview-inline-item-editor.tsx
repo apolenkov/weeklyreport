@@ -77,25 +77,7 @@ export function StatusOverviewInlineItemEditor(
   props: StatusOverviewInlineItemEditorProps,
 ) {
   const { target } = props;
-  const { dialogSurfaceRef, discardDialog, ...form } = useItemEditDialog({
-    item: null,
-    presentation: "inline",
-    contextualCreateValidation: true,
-    draftStore: props.draftStore,
-    products: props.products.filter(
-      (p) => target.parent.kind === "product" && p.id === target.parent.id,
-    ),
-    activities: props.activities.filter(
-      (a) => target.parent.kind === "activity" && a.id === target.parent.id,
-    ),
-    week: target.week,
-    currentUserName: props.currentUserName,
-    stagesForProduct: props.stagesForProduct,
-    onSave: props.onSave,
-    onSaveAndAddAnother: props.onSaveAndAddAnother,
-    onCancel: props.onCancel,
-    isPending: props.isPending,
-  });
+  const { dialogSurfaceRef, discardDialog, ...form } = useEntryForm(props);
   useCloseRef(props.requestCloseRef, form.requestClose);
   const value = itemValue(form);
   const errors = fieldErrors(form);
@@ -107,6 +89,7 @@ export function StatusOverviewInlineItemEditor(
       role="presentation"
       ref={dialogSurfaceRef}
       onKeyDown={(event) => {
+        if (!event.currentTarget.contains(event.target as Node)) return;
         if (event.key === "Escape") {
           event.stopPropagation();
           form.requestClose();
@@ -155,4 +138,27 @@ export function StatusOverviewInlineItemEditor(
       {discardDialog}
     </div>
   );
+}
+
+function useEntryForm(props: StatusOverviewInlineItemEditorProps) {
+  const { target } = props;
+  return useItemEditDialog({
+    item: null,
+    presentation: "inline",
+    contextualCreateValidation: true,
+    draftStore: props.draftStore,
+    products: props.products.filter(
+      (p) => target.parent.kind === "product" && p.id === target.parent.id,
+    ),
+    activities: props.activities.filter(
+      (a) => target.parent.kind === "activity" && a.id === target.parent.id,
+    ),
+    week: target.week,
+    currentUserName: props.currentUserName,
+    stagesForProduct: props.stagesForProduct,
+    onSave: props.onSave,
+    onSaveAndAddAnother: props.onSaveAndAddAnother,
+    onCancel: props.onCancel,
+    isPending: props.isPending,
+  });
 }

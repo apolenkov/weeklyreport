@@ -246,8 +246,19 @@ describe("create item draft store — editable draft stage default", () => {
   });
 });
 
-it("seeds a contextual current line with Done and the first owned stage without making it dirty",()=>{
- const store=createItemEditDraftStore({activities:[],item:null,week:"current",contextualEntry:true,products:[MULTI_STAGE_PRODUCT], defaultProductId:MULTI_STAGE_PRODUCT.id,stagesForProduct});
- expect(store.getSnapshot()).toMatchObject({status:"completed",stageNames:[stagesForProduct(MULTI_STAGE_PRODUCT.id)[0]]});
- expect(store.isDirty()).toBe(false);
+it("seeds a contextual current line with Done and the first owned stage without making it dirty", () => {
+  const store = createItemEditDraftStore({
+    activities: [],
+    item: null,
+    week: "current",
+    contextualEntry: true,
+    products: [MULTI_STAGE_PRODUCT],
+    defaultProductId: MULTI_STAGE_PRODUCT.id,
+    stagesForProduct,
+  });
+  expect(store.getSnapshot()).toMatchObject({
+    status: "completed",
+    stageNames: [stagesForProduct(MULTI_STAGE_PRODUCT.id)[0]],
+  });
+  expect(store.isDirty()).toBe(false);
 });

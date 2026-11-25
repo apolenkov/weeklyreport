@@ -45,7 +45,7 @@ describe("Overview inline status input", () => {
         onEditItem={onEditItem}
       />,
     );
-    await choose(user, "Paused");
+    await choose(user, "Paused…");
     const reason = screen.getByRole("textbox", {
       name: "Paused reason — Ship importer",
     });
@@ -68,7 +68,7 @@ describe("Overview inline status input", () => {
     const user = userEvent.setup();
     const onSetStatus = vi.fn();
     render(<StatusOverviewItemPreview item={item} onSetStatus={onSetStatus} />);
-    await choose(user, "Paused");
+    await choose(user, "Paused…");
     await waitFor(() => expect(screen.getByRole("textbox")).toHaveFocus());
     await user.keyboard("{Enter}");
     expect(screen.getByRole("alert")).toBeVisible();
@@ -85,7 +85,7 @@ describe("Overview inline status input", () => {
     const user = userEvent.setup();
     const onSetStatus = vi.fn().mockResolvedValue(null);
     render(<StatusOverviewItemPreview item={item} onSetStatus={onSetStatus} />);
-    await choose(user, "Paused");
+    await choose(user, "Paused…");
     const reason = screen.getByRole("textbox", {
       name: "Paused reason — Ship importer",
     });
@@ -111,13 +111,15 @@ describe("Overview inline status input", () => {
     const user = userEvent.setup();
     const onSetStatus = vi.fn();
     render(<StatusOverviewItemPreview item={item} onSetStatus={onSetStatus} />);
-    await choose(user, "Paused");
+    await choose(user, "Paused…");
     await waitFor(() => expect(screen.getByRole("textbox")).toHaveFocus());
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("textbox")).toBeNull();
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: /Status of Ship importer/ }),
+        screen.getByRole("button", {
+          name: /^Choose outcome: Ship importer|^Status not set$/,
+        }),
       ).toHaveFocus(),
     );
     expect(onSetStatus).not.toHaveBeenCalled();
@@ -170,11 +172,13 @@ describe("Overview inline status input", () => {
     const user = userEvent.setup();
     const onSetStatus = vi.fn().mockResolvedValue(null);
     render(<StatusOverviewItemPreview item={item} onSetStatus={onSetStatus} />);
-    await choose(user, "Paused");
+    await choose(user, "Paused…");
     await waitFor(() => expect(screen.getByRole("textbox")).toHaveFocus());
     await user.keyboard("Waiting for access");
     await user.click(
-      screen.getByRole("button", { name: /Status of Ship importer/ }),
+      screen.getByRole("button", {
+        name: /^Choose outcome: Ship importer|^Status not set$/,
+      }),
     );
     const reason =
       "Save or cancel the open status input before choosing another status.";
@@ -186,7 +190,7 @@ describe("Overview inline status input", () => {
       expect(entry).toHaveAttribute("aria-disabled", "true");
       expect(entry).toHaveAccessibleDescription(reason);
     }
-    await user.click(screen.getByRole("menuitem", { name: "Paused" }));
+    await user.click(screen.getByRole("menuitem", { name: "Paused…" }));
     await user.click(screen.getByRole("menuitem", { name: "Postponed" }));
     expect(screen.getByRole("menu")).toBeVisible();
     expect(onSetStatus).not.toHaveBeenCalled();
@@ -207,17 +211,21 @@ describe("Overview inline status input", () => {
     const user = userEvent.setup();
     const onSetStatus = vi.fn().mockResolvedValue(null);
     render(<StatusOverviewItemPreview item={item} onSetStatus={onSetStatus} />);
-    await choose(user, "Paused");
+    await choose(user, "Paused…");
     await waitFor(() => expect(screen.getByRole("textbox")).toHaveFocus());
     await user.click(
-      screen.getByRole("button", { name: /Status of Ship importer/ }),
+      screen.getByRole("button", {
+        name: /^Choose outcome: Ship importer|^Status not set$/,
+      }),
     );
-    await user.click(screen.getByRole("menuitem", { name: "Paused" }));
+    await user.click(screen.getByRole("menuitem", { name: "Paused…" }));
     await user.keyboard("{Escape}");
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: /Status of Ship importer/ }),
+        screen.getByRole("button", {
+          name: /^Choose outcome: Ship importer|^Status not set$/,
+        }),
       ).toHaveFocus(),
     );
     expect(onSetStatus).not.toHaveBeenCalled();
@@ -251,7 +259,9 @@ describe("Overview inline status input", () => {
       expect(screen.queryByTestId("overview-status-next-step")).toBeNull();
       await waitFor(() =>
         expect(
-          screen.getByRole("button", { name: /Status of Ship importer/ }),
+          screen.getByRole("button", {
+            name: /^Choose outcome: Ship importer|^Status not set$/,
+          }),
         ).toHaveFocus(),
       );
       expect(onSetStatus).not.toHaveBeenCalled();
@@ -275,7 +285,9 @@ describe("Overview inline status input", () => {
       />,
     );
     await user.click(
-      screen.getByRole("button", { name: /Status of Ship importer/ }),
+      screen.getByRole("button", {
+        name: /^Choose outcome: Ship importer|^Status not set$/,
+      }),
     );
     expect(screen.getByRole("menu")).toHaveAccessibleDescription(
       "Set by risk: Access unavailable — resolve it in Risks & Blockers",
@@ -308,11 +320,13 @@ describe("Overview inline status input", () => {
         <StatusOverviewItemPreview item={carried} onSetStatus={onSetStatus} />,
       );
       await user.click(
-        screen.getByRole("button", { name: /Status of Ship importer/ }),
+        screen.getByRole("button", {
+          name: /^Choose outcome: Ship importer|^Status not set$/,
+        }),
       );
       await user.click(
         screen.getByRole("menuitem", {
-          name: action === "paused" ? "Paused" : "Done",
+          name: action === "paused" ? "Paused…" : "Done",
         }),
       );
       if (action === "paused") {
@@ -333,7 +347,9 @@ describe("Overview inline status input", () => {
       );
       await waitFor(() =>
         expect(
-          screen.getByRole("button", { name: /Status of Ship importer/ }),
+          screen.getByRole("button", {
+            name: /^Choose outcome: Ship importer|^Status not set$/,
+          }),
         ).toHaveFocus(),
       );
     },
@@ -374,7 +390,9 @@ describe("Overview inline status input", () => {
       />,
     );
     await user.click(
-      screen.getByRole("button", { name: /Status of Ship importer/ }),
+      screen.getByRole("button", {
+        name: /^Choose outcome: Ship importer|^Status not set$/,
+      }),
     );
     expect(
       screen.getByText(

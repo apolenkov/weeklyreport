@@ -1,4 +1,3 @@
-import {OverviewPlacementConfirmation} from "./overview-placement-confirmation";
 "use client";
 
 import { useSearchParams } from "next/navigation";
@@ -6,7 +5,7 @@ import type { ComponentProps, ReactNode, RefObject } from "react";
 
 import { SdlcTooltipProvider } from "../../../../../shared/ui/feedback/sdlc-tooltip";
 import {
-  OverviewRecordContext,
+  countPendingPlans,
   projectStatusOverview,
   StatusOverview,
   type StatusOverviewItem,
@@ -15,7 +14,9 @@ import { LeadCompletionLayout } from "../chrome/lead-completion-layout";
 import { LeadFormDialogs } from "../chrome/lead-form-dialogs";
 import { EditorAvailabilityNotice } from "./lead-editor-availability-notice";
 import { LeadOverviewDetails } from "./lead-overview-details";
+import { OverviewPlacementConfirmation } from "./overview-placement-confirmation";
 export { buildStatusOverviewDetailsHref } from "./lead-status-overview-content-helpers";
+import { OverviewGrid } from "./lead-overview-grid";
 import { buildStatusOverviewDetailsHref } from "./lead-status-overview-content-helpers";
 import { ReadyOverviewHeader } from "./lead-status-overview-header";
 import {
@@ -25,7 +26,6 @@ import {
 import { OpenWorkRegister } from "./open-work-register";
 import { openWorkOutsideTimeline } from "./open-work-register-model";
 import { OverviewItemDialogSurface } from "./overview-item-dialog-surface";
-import { overviewItemActions } from "./overview-plan-presentation";
 import { RetainedRecordCopyRequest } from "./retained-record-copy-request";
 import {
   type AvailableEditor,
@@ -170,30 +170,6 @@ function OverviewOpenWork({
   );
 }
 
-type OverviewVerdictSlice = Pick<
-  ComponentProps<typeof StatusOverview>,
-  "onVerdict" | "onConfirmAll" | "pendingReviewCount" | "onAddRecord"
->;
-
-function overviewDirectActions(
-  enabled: boolean,
-  dialog: OverviewDialogSlice,
-  verdict: OverviewVerdictSlice,
-) {
-  return enabled
-    ? {
-        onAddRecord: verdict.onAddRecord,
-        onMoveItem: dialog.moveItem,
-        onConfirmItem: dialog.confirmItem,
-        onSetStatus: dialog.setItemStatus,
-        onSetStages: dialog.setItemStages,
-        onVerdict: verdict.onVerdict,
-        onConfirmAll: verdict.onConfirmAll,
-        pendingReviewCount: verdict.pendingReviewCount,
-      }
-    : {};
-}
-
 interface LeadStatusOverviewContentProps {
   readonly targetReportId: string;
   readonly output: Parameters<typeof projectStatusOverview>[0];
@@ -211,7 +187,7 @@ export function LeadStatusOverviewContent({
 }: LeadStatusOverviewContentProps) {
   const controller = useOverviewController({ targetReportId, output, editor });
   const { readyEditor, model, dialog, plan, verdict } = controller;
-  const { canStartAction, itemSlot } = controller;
+  const { itemSlot } = controller;
   const detailsHref = useOverviewDetailsHref(readyEditor, targetReportId);
   return (
     <SdlcTooltipProvider>
@@ -248,36 +224,7 @@ export function LeadStatusOverviewContent({
               itemEditor={controller.itemEditor}
             />
           )}
-          <OverviewRecordContext.Provider
-            value={{
-              active: controller.activeRecord,
-              onReasonDraft: controller.onReasonDraft,
-              deleteRecord: controller.canStartAction
-                ? controller.deleteUnitRecord
-                : undefined,
-              submitted: readyEditor?.view.isSubmitted === true,
-            }}
-          >
-            <StatusOverview
-              model={model}
-              ownedStageStartsForProduct={controller.ownedStageStartsForProduct}
-              health={controller.health}
-              editorSlot={itemSlot ?? controller.planPresentation.slot}
-              recordSlot={controller.recordPresentation.slot}
-              {...overviewItemActions(canStartAction, dialog, plan)}
-              onAddItem={
-                itemSlot || canStartAction ? dialog.addItem : undefined
-              }
-              {...overviewDirectActions(canStartAction, dialog, verdict)}
-              onMoveItem={canStartAction ? controller.move : undefined}
-              detailsHref={detailsHref}
-              activityFieldsEditable={controller.canEdit}
-              onActivityFieldsChange={controller.onActivityFieldsChange}
-              onActivityFieldsPendingChange={
-                controller.onActivityFieldsPendingChange
-              }
-            />
-          </OverviewRecordContext.Provider>
+          <OverviewGrid {...controller} detailsHref={detailsHref} />
           <OverviewOpenWork
             openWork={controller.openWork}
             model={model}
@@ -285,13 +232,17 @@ export function LeadStatusOverviewContent({
             onOpen={plan.openWork}
           />
           <LeadOverviewDetails
+            hasUnansweredPlans={countPendingPlans(controller.lineage) > 0}
             readiness={controller.readiness}
             editor={readyEditor}
             pendingInput={controller.pendingInput}
           />
         </div>
       </LeadCompletionLayout>
-      <OverviewPlacementConfirmation week={verdict.placement.week} choose={verdict.placement.choose}/>
+      <OverviewPlacementConfirmation
+        week={verdict.placement.week}
+        choose={verdict.placement.choose}
+      />
       <OverviewDialogs editor={readyEditor} />
     </SdlcTooltipProvider>
   );

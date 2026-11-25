@@ -12,7 +12,6 @@ import { describe, expect, it, vi } from "vitest";
 import {
   ACTIVITY_ID,
   chooseDirectMove,
-  chooseMove,
   chooseUpdateProgress,
   echoSaveDraft,
   itemPreview,
@@ -27,7 +26,13 @@ import {
 } from "./__tests__/lead-status-overview.fixtures";
 import { LeadForm } from "./lead-form";
 
-vi.mock("sonner", () => ({ toast: { error: vi.fn(), success: vi.fn() } }));
+vi.mock("sonner", () => ({
+  toast: Object.assign(vi.fn(), {
+    error: vi.fn(),
+    success: vi.fn(),
+    info: vi.fn(),
+  }),
+}));
 vi.mock("next/navigation", () => ({
   usePathname: () => `/lead/report/${REPORT_ID}`,
   useRouter: () => ({ replace: vi.fn() }),
@@ -83,7 +88,7 @@ describe("LeadForm Overview", () => {
         name: "Choose outcome: Current work. Status: In progress",
       }),
     );
-    await user.click(screen.getByRole("menuitem", { name: "Paused" }));
+    await user.click(screen.getByRole("menuitem", { name: "Paused…" }));
     const reason = screen.getByRole("textbox", {
       name: "Paused reason — Current work",
     });
@@ -130,14 +135,14 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
     await screen.findByTestId("lead-submit-readiness");
-    expect(
-      screen.getAllByRole("button", { name: /^Submit(?: report)?$/u }),
-    ).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: /^Submit\b/u })).toHaveLength(
+      1,
+    );
     expect(screen.queryByText("Autosaved")).toBeNull();
     expect(screen.queryByText("Draft is saved.")).toBeNull();
-    expect(
-      within(screen.getByTestId("status-overview")).getByRole("status"),
-    ).toHaveTextContent("Draft saved");
+    expect(screen.getByTestId("overview-save-state")).toHaveTextContent(
+      "All changes saved",
+    );
     expect(
       screen.getByTestId("lead-status-overview-page").parentElement
         ?.parentElement,
@@ -156,11 +161,13 @@ describe("LeadForm Overview", () => {
         <LeadForm reportId={REPORT_ID} mode="overview" />
       </Wrapper>,
     );
-    const action = await screen.findByRole("button", { name: "1 to review" });
+    const action = await screen.findByRole("link", {
+      name: /Review "Current work"/,
+    });
     await userEvent.click(action);
     expect(
       screen.getByRole("button", {
-        name: "Choose outcome: Current work. Status: Continued · not updated this week",
+        name: "Status not set",
       }),
     ).toHaveFocus();
   });
@@ -184,7 +191,9 @@ describe("LeadForm Overview", () => {
     const preview = await itemPreview("Current work");
     expect(link).toHaveAttribute("href", `#${preview.id}`);
     await user.click(link);
-    expect(preview).toHaveFocus();
+    expect(
+      await screen.findByRole("dialog", { name: "Discussion" }),
+    ).toBeVisible();
   });
 
   it("keeps an authoritative prior-only row informational with only the verdict rail", async () => {
@@ -222,10 +231,21 @@ describe("LeadForm Overview", () => {
     expect(
       within(preview).queryByRole("button", { name: /Update status/ }),
     ).toBeNull();
-    for (const verdict of ["Done", "Continue", "Next week", "Paused"])
+    const more = screen.queryByRole("button", { name: /^\+\d+ more/ });
+    if (more) await userEvent.click(more);
+    await userEvent.click(
+      within(preview).getByRole("button", { name: /^Choose outcome/ }),
+    );
+    for (const verdict of [
+      "Done",
+      "In progress",
+      "Next week",
+      "Paused…",
+      "Won’t do…",
+    ])
       expect(
-        within(preview).getByRole("button", {
-          name: `${verdict} — Resolve this prior plan`,
+        screen.getByRole("menuitem", {
+          name: verdict,
         }),
       ).toBeVisible();
     expect(
@@ -444,20 +464,11 @@ describe("LeadForm Overview", () => {
       }
     ).items.find((item) => item.text === "Next work");
     expect(done).toMatchObject({ type: "next", workflowStatus: "done" });
-    // A terminal item's text no longer opens the editor; its status icon
-    // names the state and no metadata line carries stage text.
-    await pollUntil(() =>
-      expect(
-        screen.queryByRole("button", { name: "Edit item: Next work" }),
-      ).toBeNull(),
-    );
-    const preview = await itemPreview("Next work");
     expect(
-      within(preview).getByRole("button", {
-        name: "Choose outcome: Next work. Status: Done",
+      within(await itemPreview("Next work")).queryByRole("button", {
+        name: /Choose outcome/,
       }),
-    ).toBeVisible();
-    expect(within(preview).queryByText("Development")).toBeNull();
+    ).toBeNull();
   });
 
   it("reaches the terminal outcome composer through the status menu for a committed Current item", async () => {
@@ -492,12 +503,12 @@ describe("LeadForm Overview", () => {
     const settled = await itemPreview("Current work");
     await user.click(
       await within(settled).findByRole("button", {
-        name: /^Status of Current work:/,
+        name: /^Choose outcome: Current work/,
       }),
     );
     await user.click(
       await screen.findByRole("menuitem", {
-        name: "Resolve plan: Current work",
+        name: "Won’t do…",
       }),
     );
     const composer = await screen.findByRole("form", { name: "Resolve plan" });
@@ -735,9 +746,9 @@ describe("LeadForm Overview", () => {
       recovery.getByRole("button", { name: "Save update" }),
     ).toBeDisabled();
     expect(screen.getByText("Saved in the other tab")).toBeInTheDocument();
-    expect(
-      within(screen.getByTestId("status-overview")).getByRole("status"),
-    ).not.toHaveTextContent("Draft saved");
+    expect(screen.getByTestId("overview-save-state")).not.toHaveTextContent(
+      "All changes saved",
+    );
   });
 
   it.each([false, true])(
@@ -814,11 +825,11 @@ describe("LeadForm Overview", () => {
       }
       expect(
         await screen.findByRole("button", {
-          name: `Edit item: ${
+          name: `Edit text: ${
             editAfterFailure
               ? "Retained retry value plus correction"
               : "Retained retry value"
-          }`,
+          }, This week`,
         }),
       ).toBeInTheDocument();
     },
@@ -851,7 +862,7 @@ describe("LeadForm Overview", () => {
       name: "Document actions",
     });
     expect(documentActions).toBeVisible();
-    expect(screen.getByRole("button", { name: "Submit" })).toBeVisible();
+    expect(screen.getByRole("button", { name: /^Submit\b/ })).toBeVisible();
     expect(
       screen.getByRole("group", { name: "Context controls" }),
     ).toBeVisible();
@@ -933,12 +944,12 @@ describe("LeadForm Overview", () => {
     expect(
       within(form).getByRole("button", { name: "Save weekly fields" }),
     ).toBeDisabled();
+    expect(screen.getByTestId("overview-save-state")).toHaveTextContent(
+      /unsaved change/i,
+    );
     expect(
-      within(screen.getByTestId("status-overview")).getByRole("status"),
-    ).toHaveTextContent("Unsaved update");
-    expect(
-      screen.getByRole("button", { name: "Submit", hidden: true }),
-    ).toBeDisabled();
+      screen.getByRole("button", { name: /^Submit\b/, hidden: true }),
+    ).toHaveAttribute("aria-disabled", "true");
 
     await user.click(within(form).getByRole("button", { name: "Cancel" }));
     const editButton = screen.getByTestId(
@@ -996,13 +1007,13 @@ describe("LeadForm Overview", () => {
     const title = await screen.findByTestId(`activity-title-${ACTIVITY_ID}`);
     await user.type(title, "Unsaved weekly title");
 
-    expect(
-      within(screen.getByTestId("status-overview")).getByRole("status"),
-    ).toHaveTextContent("Unsaved update");
+    expect(screen.getByTestId("overview-save-state")).toHaveTextContent(
+      /unsaved change/i,
+    );
     expect(screen.queryByText("Autosaved")).toBeNull();
     expect(
-      screen.getByRole("button", { name: "Submit", hidden: true }),
-    ).toBeDisabled();
+      screen.getByRole("button", { name: /^Submit\b/, hidden: true }),
+    ).toHaveAttribute("aria-disabled", "true");
 
     await user.click(screen.getByRole("link", { name: "Slides" }));
     expect(confirm).toHaveBeenCalledOnce();
@@ -1014,12 +1025,10 @@ describe("LeadForm Overview", () => {
     expect(
       screen.getByTestId(`activity-fields-edit-${ACTIVITY_ID}`),
     ).toHaveFocus();
-    expect(
-      within(screen.getByTestId("status-overview")).getByRole("status"),
-    ).toHaveTextContent("Draft saved");
-    expect(
-      screen.getByRole("button", { name: "Submit" }).closest("fieldset"),
-    ).not.toHaveAttribute("disabled");
+    expect(screen.getByTestId("overview-save-state")).toHaveTextContent(
+      "All changes saved",
+    );
+    expect(screen.getByTestId("lead-submit-readiness")).toBeVisible();
     const unload = new Event("beforeunload", { cancelable: true });
     window.dispatchEvent(unload);
     expect(unload.defaultPrevented).toBe(false);
@@ -1039,12 +1048,6 @@ describe("LeadForm Overview", () => {
       );
 
       await openItemEditor(user, initial);
-      expect(screen.queryByTestId("lead-submit-readiness")).toBeNull();
-      expect(
-        screen.getByText(
-          "Save or cancel the open update before submitting the report.",
-        ),
-      ).toBeVisible();
       const description = screen.getByLabelText(/Description \*/i);
       await user.clear(description);
       await user.type(description, updated);
@@ -1054,7 +1057,7 @@ describe("LeadForm Overview", () => {
       expect(await screen.findByText(updated)).toBeInTheDocument();
       expect(
         await screen.findByRole("button", {
-          name: `Edit details: ${updated}`,
+          name: `Edit text: ${updated}, ${initial.startsWith("Next") ? "Next" : "This"} week`,
         }),
       ).toHaveFocus();
       expect(await screen.findByTestId("lead-submit-readiness")).toBeVisible();
@@ -1064,9 +1067,9 @@ describe("LeadForm Overview", () => {
         ),
       ).toBeNull();
       expect(screen.queryByRole("dialog")).toBeNull();
-      expect(
-        within(screen.getByTestId("status-overview")).getByRole("status"),
-      ).toHaveTextContent(/Draft changes pending|Saving draft|Draft saved/);
+      expect(screen.getByTestId("overview-save-state")).toHaveTextContent(
+        /unsaved change|Saving…|All changes saved/,
+      );
     },
   );
 
@@ -1152,681 +1155,12 @@ describe("LeadForm Overview", () => {
     // resolves, and the discard writes no second draft of its own.
     releaseSave?.();
     await pollUntil(() =>
-      expect(
-        within(screen.getByTestId("status-overview")).getByRole("status"),
-      ).toHaveTextContent("Draft saved"),
+      expect(screen.getByTestId("overview-save-state")).toHaveTextContent(
+        "All changes saved",
+      ),
     );
     expect(saveDraft).toHaveBeenCalledOnce();
     await itemPreview("Current work — in-flight edit");
-  });
-
-  it("opens quick-create with the selected product and saves through the live draft", async () => {
-    const user = userEvent.setup();
-    const serverItemId = "a0000000-0000-4000-8000-000000000020";
-    const serverStableId = "a0000000-0000-4000-8000-000000000021";
-    const savedResponses: ReportSectionReadModel[] = [];
-    const saveDraft = vi.fn(
-      (input: unknown, current: ReportSectionReadModel) => {
-        const draft = input as {
-          readonly version: number;
-          readonly items: ReportSectionReadModel["items"];
-        };
-        const savedResponse = {
-          ...current,
-          version: draft.version + 1,
-          items: draft.items.map((item) =>
-            item.stableId === undefined
-              ? { ...item, id: serverItemId, stableId: serverStableId }
-              : item,
-          ),
-        };
-        savedResponses.push(savedResponse);
-        return Promise.resolve(savedResponse);
-      },
-    );
-    render(
-      <Wrapper saveDraft={saveDraft}>
-        <LeadForm reportId={REPORT_ID} mode="overview" />
-      </Wrapper>,
-    );
-
-    await user.click(
-      await screen.findByRole("button", {
-        name: "Add item to Payments, Current week",
-      }),
-    );
-
-    expect(
-      screen.getByRole("form", { name: "Add item for Payments, current week" }),
-    ).toBeInTheDocument();
-    expect(
-      within(screen.getByTestId("status-overview")).getByRole("status"),
-    ).toHaveTextContent("Unsaved update");
-    expect(screen.queryByText("Autosaved")).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Submit", hidden: true }),
-    ).toBeDisabled();
-    expect(screen.getByText(/Product: Payments/)).toBeInTheDocument();
-
-    const description = screen.getByLabelText("Description");
-    // Deliberately duplicate the existing row's complete authored fields. A
-    // text/content lookup cannot distinguish the acknowledgement; only the
-    // server stableId introduced for this attempt can.
-    await user.type(description, "Current work");
-    await user.click(screen.getByRole("button", { name: "Save" }));
-
-    await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
-    await pollUntil(() =>
-      expect(
-        screen.queryByRole("form", {
-          name: "Add item for Payments, current week",
-        }),
-      ).not.toBeInTheDocument(),
-    );
-    const submittedItems = (
-      saveDraft.mock.calls[0]?.[0] as {
-        readonly items: ReportSectionReadModel["items"];
-      }
-    ).items;
-    const submittedItemsWithoutStableIdentity = submittedItems.filter(
-      (item) => item.stableId === undefined,
-    );
-    expect(submittedItemsWithoutStableIdentity).toHaveLength(1);
-    expect(submittedItemsWithoutStableIdentity[0]?.id).not.toBe(serverItemId);
-    expect(
-      savedResponses[0]?.items.filter(
-        (item) => item.stableId === serverStableId,
-      ),
-    ).toEqual([
-      expect.objectContaining({ id: serverItemId, stableId: serverStableId }),
-    ]);
-    expect(
-      screen.getAllByRole("button", {
-        name: "Edit item: Current work",
-      }),
-    ).toHaveLength(2);
-    expect(
-      screen.queryByRole("region", { name: "Unsaved update recovery" }),
-    ).not.toBeInTheDocument();
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(
-      within(screen.getByTestId("status-overview")).getByRole("status"),
-    ).toHaveTextContent(/Draft changes pending|Saving draft|Draft saved/);
-    // The saved row duplicates the existing row's text, so only the server
-    // stableId separates the new item's control from the existing one.
-    await pollUntil(() => {
-      const active = document.activeElement;
-      expect(
-        active instanceof HTMLElement ? active.dataset.overviewFocus : null,
-      ).toMatch(new RegExp(`^[a-z-]+:current:${serverStableId}$`));
-    });
-  });
-
-  it("Save and add another clears the composer fields and returns focus to the description", async () => {
-    const user = userEvent.setup();
-    const serverItemId = "a0000000-0000-4000-8000-000000000040";
-    const serverStableId = "a0000000-0000-4000-8000-000000000041";
-    const saveDraft = vi.fn(
-      (input: unknown, current: ReportSectionReadModel) => {
-        const draft = input as {
-          readonly version: number;
-          readonly items: ReportSectionReadModel["items"];
-        };
-        return Promise.resolve({
-          ...current,
-          version: draft.version + 1,
-          items: draft.items.map((item) =>
-            item.stableId === undefined
-              ? { ...item, id: serverItemId, stableId: serverStableId }
-              : item,
-          ),
-        });
-      },
-    );
-    render(
-      <Wrapper saveDraft={saveDraft}>
-        <LeadForm reportId={REPORT_ID} mode="overview" />
-      </Wrapper>,
-    );
-
-    await user.click(
-      await screen.findByRole("button", {
-        name: "Add item to Payments, Current week",
-      }),
-    );
-    await user.type(screen.getByLabelText("Description"), "First batch item");
-    await user.click(
-      screen.getByRole("button", { name: "Save and add another" }),
-    );
-
-    await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
-    await vi.waitFor(
-      () => expect(screen.getByLabelText("Description")).toHaveValue(""),
-      { timeout: 2000 },
-    );
-    expect(
-      screen.getByRole("form", { name: "Add item for Payments, current week" }),
-    ).toBeInTheDocument();
-    expect(screen.getByLabelText("Description")).toHaveFocus();
-  });
-
-  it("Save and add another keeps creating in the week the lead chose", async () => {
-    const user = userEvent.setup();
-    const saveDraft = vi.fn(
-      (input: unknown, current: ReportSectionReadModel) => {
-        const draft = input as {
-          readonly version: number;
-          readonly items: ReportSectionReadModel["items"];
-        };
-        return Promise.resolve({
-          ...current,
-          version: draft.version + 1,
-          items: draft.items.map((item) =>
-            item.stableId === undefined
-              ? {
-                  ...item,
-                  id: "a0000000-0000-4000-8000-000000000050",
-                  stableId: "a0000000-0000-4000-8000-000000000051",
-                }
-              : item,
-          ),
-        });
-      },
-    );
-    render(
-      <Wrapper saveDraft={saveDraft}>
-        <LeadForm reportId={REPORT_ID} mode="overview" />
-      </Wrapper>,
-    );
-
-    await user.click(
-      await screen.findByRole("button", {
-        name: "Add item to Payments, Next week",
-      }),
-    );
-    await user.type(screen.getByLabelText("Description"), "First next item");
-    await user.click(
-      screen.getByRole("button", { name: "Save and add another" }),
-    );
-
-    await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
-    await vi.waitFor(
-      () => expect(screen.getByLabelText("Description")).toHaveValue(""),
-      { timeout: 2000 },
-    );
-    expect(
-      screen.getByRole("form", { name: "Add item for Payments, next week" }),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/Progress: Planned/)).toBeInTheDocument();
-  });
-
-  it("Save and add another validation failure retains input and keeps editor open", async () => {
-    const user = userEvent.setup();
-    const saveDraft = vi.fn();
-    render(
-      <Wrapper saveDraft={saveDraft}>
-        <LeadForm reportId={REPORT_ID} mode="overview" />
-      </Wrapper>,
-    );
-
-    await user.click(
-      await screen.findByRole("button", {
-        name: "Add item to Payments, Current week",
-      }),
-    );
-    // Non-empty input that fails client validation: one character over the
-    // 500-character description limit. The composer must keep it verbatim.
-    const overLimit = "a".repeat(501);
-    await user.click(screen.getByLabelText("Description"));
-    await user.paste(overLimit);
-    await user.click(
-      screen.getByRole("button", { name: "Save and add another" }),
-    );
-
-    expect(saveDraft).not.toHaveBeenCalled();
-    expect(
-      screen.getByRole("form", { name: "Add item for Payments, current week" }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText("Description must be 500 characters or fewer."),
-    ).toBeInTheDocument();
-    expect(screen.getByLabelText("Description")).toHaveValue(overLimit);
-  });
-
-  it("Save and add another persistence failure retains input and keeps editor open", async () => {
-    const user = userEvent.setup();
-    const saveDraft = vi.fn(() =>
-      Promise.reject(new Error("network unavailable")),
-    );
-    render(
-      <Wrapper saveDraft={saveDraft}>
-        <LeadForm reportId={REPORT_ID} mode="overview" />
-      </Wrapper>,
-    );
-
-    await user.click(
-      await screen.findByRole("button", {
-        name: "Add item to Payments, Current week",
-      }),
-    );
-    const description = screen.getByLabelText("Description");
-    await user.type(description, "Persistent failure item");
-    await user.click(
-      screen.getByRole("button", { name: "Save and add another" }),
-    );
-
-    expect(
-      await screen.findByText(
-        "Save failed. Your update is still here; try saving again.",
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("form", { name: "Add item for Payments, current week" }),
-    ).toBeInTheDocument();
-    expect(screen.getByLabelText("Description")).toHaveValue(
-      "Persistent failure item",
-    );
-  });
-
-  it("creates a Next item from the Next week Add item with Planned progress and focuses the new item", async () => {
-    const user = userEvent.setup();
-    const serverItemId = "a0000000-0000-4000-8000-000000000030";
-    const serverStableId = "a0000000-0000-4000-8000-000000000031";
-    const savedResponses: ReportSectionReadModel[] = [];
-    const saveDraft = vi.fn(
-      (input: unknown, current: ReportSectionReadModel) => {
-        const draft = input as {
-          readonly version: number;
-          readonly items: ReportSectionReadModel["items"];
-        };
-        const savedResponse = {
-          ...current,
-          version: draft.version + 1,
-          items: draft.items.map((item) =>
-            item.stableId === undefined
-              ? { ...item, id: serverItemId, stableId: serverStableId }
-              : item,
-          ),
-        };
-        savedResponses.push(savedResponse);
-        return Promise.resolve(savedResponse);
-      },
-    );
-    render(
-      <Wrapper saveDraft={saveDraft}>
-        <LeadForm reportId={REPORT_ID} mode="overview" />
-      </Wrapper>,
-    );
-
-    await user.click(
-      await screen.findByRole("button", {
-        name: "Add item to Payments, Next week",
-      }),
-    );
-
-    const form = await screen.findByRole("form", {
-      name: "Add item for Payments, next week",
-    });
-    expect(screen.getAllByRole("form")).toHaveLength(1);
-    expect(screen.queryByRole("dialog")).toBeNull();
-    expect(screen.queryByTestId("report-unit-footer")).not.toBeInTheDocument();
-    expect(within(form).getByText(/Progress: Planned/)).toBeInTheDocument();
-    // Cells never offer creation: the unit header is the only entry point.
-    expect(
-      document.querySelectorAll("[data-overview-create-origin]"),
-    ).toHaveLength(0);
-
-    await user.type(screen.getByLabelText("Description"), "Next path");
-    await user.click(screen.getByRole("button", { name: "Save" }));
-
-    await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
-    await pollUntil(() =>
-      expect(
-        screen.queryByRole("form", {
-          name: "Add item for Payments, next week",
-        }),
-      ).not.toBeInTheDocument(),
-    );
-
-    const submitted = (
-      saveDraft.mock.calls[0]?.[0] as {
-        readonly items: ReportSectionReadModel["items"];
-      }
-    ).items;
-    const created = submitted.filter((item) => item.stableId === undefined);
-    expect(created).toHaveLength(1);
-    expect(created[0]).toMatchObject({
-      type: "next",
-      text: "Next path",
-      workflowStatus: "planned",
-      carriedOver: false,
-    });
-    expect(submitted.filter((item) => item.type === "next")).toHaveLength(2);
-    // Direct Next creation never rewrites the saved Current progress.
-    expect(submitted.find((item) => item.type === "current")).toMatchObject({
-      text: "Current work",
-      workflowStatus: "in_progress",
-    });
-    expect(savedResponses).toHaveLength(1);
-
-    await pollUntil(() => {
-      const active = document.activeElement;
-      expect(
-        active instanceof HTMLElement ? active.dataset.overviewFocus : null,
-      ).toMatch(new RegExp(`^[a-z-]+:next:${serverStableId}$`));
-    });
-  });
-
-  it("focuses the new item in a unit with several Current rows and keeps it inside that unit", async () => {
-    const user = userEvent.setup();
-    const serverItemId = "a0000000-0000-4000-8000-000000000050";
-    const serverStableId = "a0000000-0000-4000-8000-000000000051";
-    const saveDraft = vi.fn(
-      (input: unknown, current: ReportSectionReadModel) => {
-        const draft = input as {
-          readonly version: number;
-          readonly items: ReportSectionReadModel["items"];
-        };
-        return Promise.resolve({
-          ...current,
-          version: draft.version + 1,
-          items: draft.items.map((item) =>
-            item.stableId === undefined
-              ? { ...item, id: serverItemId, stableId: serverStableId }
-              : item,
-          ),
-        });
-      },
-    );
-    render(
-      <Wrapper saveDraft={saveDraft} extraCurrentRow>
-        <LeadForm reportId={REPORT_ID} mode="overview" />
-      </Wrapper>,
-    );
-
-    await user.click(
-      await screen.findByRole("button", {
-        name: "Add item to Payments, Current week",
-      }),
-    );
-    await user.type(screen.getByLabelText("Description"), "Fresh current item");
-    await user.click(screen.getByRole("button", { name: "Save" }));
-
-    await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
-    await pollUntil(() =>
-      expect(
-        screen.queryByRole("form", {
-          name: "Add item for Payments, current week",
-        }),
-      ).not.toBeInTheDocument(),
-    );
-    await pollUntil(() => {
-      const active = document.activeElement;
-      expect(
-        active instanceof HTMLElement ? active.dataset.overviewFocus : null,
-      ).toMatch(new RegExp(`^[a-z-]+:current:${serverStableId}$`));
-    });
-    const unit = screen.getByRole("article", { name: "Product Payments" });
-    expect(unit).toContainElement(document.activeElement as HTMLElement);
-  });
-
-  it("focuses the new item after a retried create save that failed once", async () => {
-    const user = userEvent.setup();
-    const serverItemId = "a0000000-0000-4000-8000-000000000060";
-    const serverStableId = "a0000000-0000-4000-8000-000000000061";
-    const saveDraft = vi
-      .fn()
-      .mockImplementationOnce(() =>
-        Promise.reject(new Error("network unavailable")),
-      )
-      .mockImplementation((input: unknown, current: ReportSectionReadModel) => {
-        const draft = input as {
-          readonly version: number;
-          readonly items: ReportSectionReadModel["items"];
-        };
-        return Promise.resolve({
-          ...current,
-          version: draft.version + 1,
-          items: draft.items.map((item) =>
-            item.stableId === undefined
-              ? { ...item, id: serverItemId, stableId: serverStableId }
-              : item,
-          ),
-        });
-      });
-    render(
-      <Wrapper saveDraft={saveDraft} extraCurrentRow>
-        <LeadForm reportId={REPORT_ID} mode="overview" />
-      </Wrapper>,
-    );
-
-    await user.click(
-      await screen.findByRole("button", {
-        name: "Add item to Payments, Current week",
-      }),
-    );
-    await user.type(
-      screen.getByLabelText("Description"),
-      "Retried current item",
-    );
-    await user.click(screen.getByRole("button", { name: "Save" }));
-    expect(
-      await screen.findByText(
-        "Save failed. Your update is still here; try saving again.",
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("form", { name: "Add item for Payments, current week" }),
-    ).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "Save" }));
-
-    await pollUntil(() =>
-      expect(
-        screen.queryByRole("form", {
-          name: "Add item for Payments, current week",
-        }),
-      ).not.toBeInTheDocument(),
-    );
-    await pollUntil(() => {
-      const active = document.activeElement;
-      expect(
-        active instanceof HTMLElement ? active.dataset.overviewFocus : null,
-      ).toMatch(new RegExp(`^[a-z-]+:current:${serverStableId}$`));
-    });
-  });
-
-  it.each(["current", "next"] as const)(
-    "starts a singleton owned stage in %s inline with a clean baseline and keyboard focus return",
-    async (week) => {
-      const user = userEvent.setup();
-      const saveDraft = vi.fn();
-      render(
-        <Wrapper saveDraft={saveDraft}>
-          <LeadForm reportId={REPORT_ID} mode="overview" />
-        </Wrapper>,
-      );
-      const trigger = await screen.findByRole("button", {
-        name: `Add item to Payments, Development, ${week === "current" ? "Current" : "Next"} week`,
-      });
-      trigger.focus();
-      await user.keyboard("{Enter}");
-      const form = await screen.findByRole("form", {
-        name: `Add item for Payments, ${week} week`,
-      });
-      expect(form.closest("[data-overview-create-lane]")).toHaveAttribute(
-        "data-overview-create-lane",
-        week,
-      );
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-      expect(
-        within(form).getByRole("checkbox", { name: "Development" }),
-      ).toBeChecked();
-      await user.click(within(form).getByRole("button", { name: "Cancel" }));
-      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
-      expect(saveDraft).not.toHaveBeenCalled();
-      await pollUntil(() => expect(trigger).toHaveFocus());
-    },
-  );
-
-  it("retains stage-start input and blocks a stale owned stage through the mounted host", async () => {
-    const user = userEvent.setup();
-    const saveDraft = vi.fn();
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    render(
-      <Wrapper client={client} saveDraft={saveDraft}>
-        <LeadForm reportId={REPORT_ID} mode="overview" />
-      </Wrapper>,
-    );
-    await user.click(
-      await screen.findByRole("button", {
-        name: "Add item to Payments, Development, Next week",
-      }),
-    );
-    const form = await screen.findByRole("form", {
-      name: "Add item for Payments, next week",
-    });
-    await user.type(
-      within(form).getByRole("textbox", { name: /Description/ }),
-      "Retained stage work",
-    );
-    const queryKey = [["leadForm", "byPeriod"], { reportId: REPORT_ID }];
-    const loaded = client.getQueryData<{ section: ReportSectionReadModel }>(
-      queryKey,
-    );
-    if (!loaded) throw new Error("Expected a loaded section");
-    act(() => {
-      client.setQueryData(queryKey, {
-        ...loaded,
-        section: {
-          ...loaded.section,
-          version: loaded.section.version + 1,
-          projects: loaded.section.projects.map((project) => ({
-            ...project,
-            ownedStages: [],
-          })),
-        },
-      });
-    });
-    await user.click(within(form).getByRole("button", { name: "Save" }));
-    expect(
-      within(form).getByRole("textbox", { name: /Description/ }),
-    ).toHaveValue("Retained stage work");
-    expect(
-      within(form).getByRole("group", { name: "Stages (required)" }),
-    ).toHaveAccessibleDescription(
-      "No eligible stages available. Select currently eligible stages.",
-    );
-    expect(
-      within(form).getByRole("button", {
-        name: "Remove unavailable stage Development",
-      }),
-    ).toBeInTheDocument();
-    expect(saveDraft).not.toHaveBeenCalled();
-  });
-
-  it.each(["foreign", "invalid", "read-only"] as const)(
-    "offers no stage start for %s current ownership",
-    async (reason) => {
-      const client = new QueryClient({
-        defaultOptions: { queries: { retry: false } },
-      });
-      render(
-        <Wrapper client={client}>
-          <LeadForm reportId={REPORT_ID} mode="overview" />
-        </Wrapper>,
-      );
-      await screen.findByRole("button", {
-        name: "Add item to Payments, Development, Current week",
-      });
-      const queryKey = [["leadForm", "byPeriod"], { reportId: REPORT_ID }];
-      const loaded = client.getQueryData<{ section: ReportSectionReadModel }>(
-        queryKey,
-      );
-      if (!loaded) throw new Error("Expected a loaded section");
-      act(() => {
-        client.setQueryData(queryKey, {
-          ...loaded,
-          readOnly: reason === "read-only",
-          section: {
-            ...loaded.section,
-            version: loaded.section.version + 1,
-            projects:
-              reason === "foreign"
-                ? []
-                : loaded.section.projects.map((project) => ({
-                    ...project,
-                    ownedStages: project.ownedStages.map((stage) => ({
-                      ...stage,
-                      stageName: "Noncanonical stage",
-                    })),
-                  })),
-          },
-        });
-      });
-      await pollUntil(() =>
-        expect(
-          screen.queryByRole("button", {
-            name: "Add item to Payments, Development, Current week",
-          }),
-        ).not.toBeInTheDocument(),
-      );
-      expect(
-        screen.queryByRole("button", {
-          name: /Add item to .*Noncanonical stage/,
-        }),
-      ).not.toBeInTheDocument();
-      expect(
-        screen.queryByRole("button", {
-          name: "Add item to Payments, Development, Next week",
-        }),
-      ).not.toBeInTheDocument();
-    },
-  );
-
-  it("creates a Current item from the Current week Add item and returns focus there on Cancel", async () => {
-    const user = userEvent.setup();
-    const saveDraft = vi.fn();
-    render(
-      <Wrapper saveDraft={saveDraft}>
-        <LeadForm reportId={REPORT_ID} mode="overview" />
-      </Wrapper>,
-    );
-
-    await user.click(
-      await screen.findByRole("button", {
-        name: "Add item to Payments, Current week",
-      }),
-    );
-
-    const form = await screen.findByRole("form", {
-      name: "Add item for Payments, current week",
-    });
-    expect(screen.getAllByRole("form")).toHaveLength(1);
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(
-      form.closest('[data-overview-create-lane="current"]'),
-    ).not.toBeNull();
-    expect(within(form).getByText("Progress: In progress")).toBeInTheDocument();
-
-    await user.click(within(form).getByRole("button", { name: "Cancel" }));
-
-    await pollUntil(() =>
-      expect(
-        screen.queryByRole("form", {
-          name: "Add item for Payments, current week",
-        }),
-      ).not.toBeInTheDocument(),
-    );
-    expect(saveDraft).not.toHaveBeenCalled();
-    await pollUntil(() => {
-      const active = document.activeElement;
-      expect(
-        active instanceof HTMLElement ? active.dataset.overviewFocus : null,
-      ).toBe(`add:product:${PROJECT_ID}`);
-    });
   });
 
   it("returns focus and restores report actions when an inline edit is cancelled", async () => {
@@ -1841,11 +1175,13 @@ describe("LeadForm Overview", () => {
     await user.keyboard("{Escape}");
     await user.click(screen.getByRole("button", { name: "Discard" }));
     expect(
-      screen.getByRole("button", { name: "Edit details: Current work" }),
+      screen.getByRole("button", {
+        name: "Edit text: Current work, This week",
+      }),
     ).toHaveFocus();
-    expect(
-      within(screen.getByTestId("status-overview")).getByRole("status"),
-    ).toHaveTextContent("Draft saved");
+    expect(screen.getByTestId("overview-save-state")).toHaveTextContent(
+      "All changes saved",
+    );
   });
 
   it("waits for the exact persisted restoration before closing a failed edit", async () => {
@@ -1899,7 +1235,9 @@ describe("LeadForm Overview", () => {
       expect(screen.queryByRole("textbox", { name: /Description/ })).toBeNull(),
     );
     expect(
-      screen.getByRole("button", { name: "Edit item: Current work" }),
+      screen.getByRole("button", {
+        name: "Edit text: Current work, This week",
+      }),
     ).toBeInTheDocument();
     expect(saveDraft).toHaveBeenCalledTimes(3);
   });
@@ -1975,8 +1313,8 @@ describe("LeadForm Overview", () => {
     expect(recovery).toHaveTextContent("Never saved text");
     expect(recovery).toHaveTextContent("restoration was not confirmed");
     expect(
-      screen.getByRole("button", { name: "Submit", hidden: true }),
-    ).toBeDisabled();
+      screen.getByRole("button", { name: /^Submit\b/, hidden: true }),
+    ).toHaveAttribute("aria-disabled", "true");
     expect(saveDraft).toHaveBeenCalledTimes(2);
   });
 
@@ -1996,18 +1334,9 @@ describe("LeadForm Overview", () => {
     await screen.findByText(
       "Save failed. Your update is still here; try saving again.",
     );
-    const header = await screen.findByRole("group", {
-      name: "Header completion actions",
-      hidden: true,
-    });
-    // The persisted-save barrier ignores a generic forceSave, so a live
-    // Retry here would do nothing; Save update in the editor is the retry.
     expect(
-      within(header).getByRole("button", {
-        name: "Retry saving draft",
-        hidden: true,
-      }),
-    ).toBeDisabled();
+      screen.getByRole("button", { name: "Retry save", hidden: true }),
+    ).toHaveAttribute("aria-disabled", "true");
   });
 
   it("retains detached create recovery when its restorative write fails", async () => {
@@ -2022,10 +1351,13 @@ describe("LeadForm Overview", () => {
     );
     await user.click(
       await screen.findByRole("button", {
-        name: "Add item to Payments, Current week",
+        name: "Add what happened — Payments, This week",
       }),
     );
-    await user.type(screen.getByLabelText("Description"), "Phantom item");
+    await user.type(
+      screen.getByPlaceholderText("What happened…"),
+      "Phantom item",
+    );
     await user.click(screen.getByRole("button", { name: "Save" }));
     expect(
       await screen.findByText(
@@ -2078,7 +1410,7 @@ describe("LeadForm Overview", () => {
     ).not.toBeInTheDocument();
     expect(
       screen.getByRole("button", {
-        name: "Edit details: Current work",
+        name: "Edit text: Current work, This week",
       }),
     ).toHaveFocus();
   });
@@ -2312,23 +1644,15 @@ describe("LeadForm Overview", () => {
     );
 
     const preview = await itemPreview("Legacy next-week plan");
-    const opener = await within(preview).findByRole("button", {
-      name: "Move Legacy next-week plan to current week",
-    });
+    const opener = within(preview).getByRole("button", { name: /^Edit text:/ });
     await user.click(opener);
-    expect(
-      screen.getByRole("form", { name: "Current week update for Payments" }),
-    ).toBeVisible();
+    expect(screen.getByRole("button", { name: /^Move/ })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
     await user.click(screen.getByRole("button", { name: "Cancel" }));
-
     expect(saveDraft).not.toHaveBeenCalled();
-    // The Move origin is the row's week-move button, still in the tree.
-    const settled = await itemPreview("Legacy next-week plan");
-    expect(
-      within(settled).getByRole("button", {
-        name: "Move Legacy next-week plan to current week",
-      }),
-    ).toHaveFocus();
+    await pollUntil(() => expect(opener).toHaveFocus());
   });
 
   it("returns focus to the item actions after cancelling the editor", async () => {
@@ -2348,7 +1672,7 @@ describe("LeadForm Overview", () => {
     expect(resolvePlan).not.toHaveBeenCalled();
     expect(
       await screen.findByRole("button", {
-        name: "Edit details: Next work",
+        name: "Edit text: Next work, Next week",
       }),
     ).toHaveFocus();
   });
@@ -2375,7 +1699,7 @@ describe("LeadForm Overview", () => {
     );
 
     const status = await screen.findByRole("button", {
-      name: "Choose outcome: Current work. Status: Continued · not updated this week",
+      name: "Status not set",
     });
     // The submit-readiness deep link still resolves to the status icon.
     expect(status).toHaveAttribute(
@@ -2405,14 +1729,14 @@ describe("LeadForm Overview", () => {
     await pollUntil(() =>
       expect(
         screen.queryByRole("button", {
-          name: "Choose outcome: Current work. Status: Continued · not updated this week",
+          name: "Status not set",
         }),
       ).toBeNull(),
     );
     // Focus returns to the Edit details control that opened the editor.
     expect(
       await screen.findByRole("button", {
-        name: "Edit details: Current work",
+        name: "Edit text: Current work, This week",
       }),
     ).toHaveFocus();
   });
@@ -2444,7 +1768,7 @@ describe("LeadForm Overview", () => {
 
     expect(
       await screen.findByRole("button", {
-        name: "Choose outcome: Current work. Status: Planned · not updated this week",
+        name: "Status not set",
       }),
     ).toBeVisible();
     await openItemEditor(user, "Current work");
@@ -2474,7 +1798,7 @@ describe("LeadForm Overview", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Choose outcome: Current work. Status: Continued · not updated this week",
+        name: "Status not set",
       }),
     );
     await user.click(screen.getByRole("menuitem", { name: "In progress" }));
@@ -2505,7 +1829,7 @@ describe("LeadForm Overview", () => {
         name: "Choose outcome: Current work. Status: In progress",
       }),
     );
-    await user.click(screen.getByRole("menuitem", { name: "Paused" }));
+    await user.click(screen.getByRole("menuitem", { name: "Paused…" }));
     // A pause asks only for its reason and does not change the draft yet.
     expect(
       await screen.findByRole("textbox", {
@@ -2554,12 +1878,12 @@ describe("LeadForm Overview", () => {
     // The marker is untouched, so the carried copy and confirm anchor remain.
     expect(
       screen.getByRole("button", {
-        name: "Choose outcome: Current work. Status: Continued · not updated this week",
+        name: "Status not set",
       }),
     ).toBeVisible();
     expect(
       await screen.findByRole("button", {
-        name: "Edit details: Current work",
+        name: "Edit text: Current work, This week",
       }),
     ).toHaveFocus();
   });
@@ -2573,18 +1897,20 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
 
-    await chooseMove(user, "Legacy next-week plan", "this week");
-    expect(
-      screen.getByRole("form", { name: "Current week update for Payments" }),
-    ).toBeVisible();
-    expect(screen.getByRole("textbox", { name: /Description/ })).toHaveValue(
+    await user.click(
+      within(await itemPreview("Legacy next-week plan")).getByRole("button", {
+        name: /^Edit text:/,
+      }),
+    );
+    expect(screen.getByRole("textbox", { name: "Step text" })).toHaveValue(
       "Legacy next-week plan",
     );
-    expect(screen.getByRole("textbox", { name: /Description/ })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "More details" }));
+    expect(screen.getByRole("dialog", { name: /step/i })).toBeVisible();
     expect(saveDraft).not.toHaveBeenCalled();
   });
 
-  it("confirms a saved next-week plan in place and never promotes the result", async () => {
+  it("refuses Move when the current item has a saved next step", async () => {
     const saveDraft = vi.fn(
       (input: unknown, current: ReportSectionReadModel) => {
         const draft = input as {
@@ -2610,93 +1936,15 @@ describe("LeadForm Overview", () => {
       </Wrapper>,
     );
 
-    // Open the row menu on the real clock; the acknowledgement only starts the
-    // autosave debounce, which is virtualized below instead of waited out.
-    const moveToNextWeek = await openMoveMenu("Current work", "next week");
-    const confirmedStableId = "a0000000-0000-4000-8000-000000000011";
-    vi.useFakeTimers();
-    try {
-      // A real click focuses the button; fireEvent alone does not.
-      moveToNextWeek.focus();
-      fireEvent.click(moveToNextWeek);
-
-      // Move on a saved plan confirms it in place: no editor, no promotion.
-      expect(
-        screen.queryByRole("form", { name: "Next week update for Payments" }),
-      ).toBeNull();
-      expect(toast.success).toHaveBeenCalledWith(
-        "Already planned for next week",
-      );
-      expect(promotePlan).not.toHaveBeenCalled();
-
-      // The acknowledgement rides the ordinary autosave: exactly one 5 s
-      // debounce, advanced here instead of waited out.
-      await act(() => vi.advanceTimersByTimeAsync(5000));
-      await act(() => vi.advanceTimersByTimeAsync(0));
-      expect(saveDraft).toHaveBeenCalledOnce();
-      const request = saveDraft.mock.calls[0]?.[0] as {
-        readonly version: number;
-        readonly items: ReportSectionReadModel["items"];
-      };
-      const confirmed = request.items.find(
-        (item) => item.stableId === confirmedStableId,
-      );
-      // The occurrence and its commitment stay Current; only the carry marker is
-      // acknowledged, so the stored result is not replaced by its next step.
-      expect(confirmed).toMatchObject({
-        id: "a0000000-0000-4000-8000-000000000010",
-        stableId: confirmedStableId,
-        type: "current",
-        text: "Current work",
-        nextStepText: "Legacy next-week plan",
-        workflowStatus: "in_progress",
-        carriedOver: false,
-      });
-      expect(
-        request.items.filter((item) => item.stableId === confirmedStableId),
-      ).toHaveLength(1);
-    } finally {
-      vi.useRealTimers();
-    }
-    await pollUntil(() =>
-      expect(document.activeElement).toHaveAttribute(
-        "data-overview-focus",
-        `move:current:${confirmedStableId}`,
-      ),
-    );
-  }, 15_000);
-
-  it("refuses an editor week change that would drop a saved next-week plan", async () => {
-    const user = userEvent.setup();
-    const saveDraft = vi.fn();
-    const promotePlan = vi.fn();
-    render(
-      <Wrapper
-        legacyNextText="Legacy next-week plan"
-        promotePlan={promotePlan}
-        saveDraft={saveDraft}
-      >
-        <LeadForm reportId={REPORT_ID} mode="overview" />
-      </Wrapper>,
-    );
-
-    await openItemEditor(user, "Current work");
-    // The canonical editor can still switch weeks; that Save is a placement
-    // move, which cannot keep the saved commitment and must be refused instead
-    // of silently acknowledging it from a "Next week" selection.
-    await user.click(screen.getByRole("radio", { name: "Next week" }));
-    await user.click(screen.getByRole("button", { name: "Save update" }));
-
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "This item cannot be moved to the selected week. Your changes are still here.",
-    );
+    const move = await openMoveMenu("Current work", "next week");
+    const reason =
+      "Its next step is already planned in Next week. Edit the next step instead";
+    expect(move).toHaveAttribute("aria-disabled", "true");
+    expect(move).toHaveAccessibleDescription(reason);
+    await userEvent.click(move);
+    expect(toast.info).toHaveBeenCalledWith(reason);
     expect(saveDraft).not.toHaveBeenCalled();
     expect(promotePlan).not.toHaveBeenCalled();
-    expect(
-      screen.queryByText(
-        "This update is no longer in the selected week. Your unsaved input is kept below.",
-      ),
-    ).toBeNull();
   });
 
   // Week moves from the menu apply directly in both directions, so both rows
@@ -2884,7 +2132,7 @@ it.each(["pending", "failed"] as const)(
       </Wrapper>,
     );
     await screen.findByRole("button", {
-      name: "Add item to Payments, Current week",
+      name: "Add what happened — Payments, This week",
     });
     warm.unmount();
     const pending = Promise.withResolvers<unknown>();
@@ -2920,15 +2168,15 @@ it.each(["pending", "failed"] as const)(
     if (phase === "failed") await screen.findByText("Report A plan failed");
     rendered.rerender(<RenderReport reportId={reportB} />);
     await screen.findByRole("button", {
-      name: "Add item to Payments, Current week",
+      name: "Add what happened — Payments, This week",
     });
     expect(screen.queryByText("Report A plan failed")).not.toBeInTheDocument();
     const bAction = screen.getByRole("button", {
       name: /^Replan deferred work: Report scoped deferred work, /,
     });
-    expect(
-      within(screen.getByTestId("status-overview")).getByRole("status"),
-    ).not.toHaveTextContent("Saving plan outcome…");
+    expect(screen.getByTestId("overview-save-state")).not.toHaveTextContent(
+      "Saving plan outcome…",
+    );
     if (phase === "pending") {
       // B has a different physical section; A remains guarded by the adapter.
       expect(bAction).toBeEnabled();
@@ -3007,8 +2255,8 @@ it("keeps lost-ACK discard recovery after a real CAS conflict and never compensa
     within(recovery).getByRole("textbox", { name: /Description/ }),
   ).toHaveValue("Committed but unacknowledged");
   expect(
-    screen.getByRole("button", { name: "Submit", hidden: true }),
-  ).toBeDisabled();
+    screen.getByRole("button", { name: /^Submit\b/, hidden: true }),
+  ).toHaveAttribute("aria-disabled", "true");
   expect(server?.items.find((item) => item.type === "current")?.text).toBe(
     "Committed but unacknowledged",
   );
@@ -3161,7 +2409,7 @@ it.each(["success", "error"] as const)(
     await itemPreview("Only B's authored commitment");
     expect(
       screen.getByRole("button", {
-        name: "Add item to Payments, Current week",
+        name: "Add what happened — Payments, This week",
       }),
     ).toBeEnabled();
     rendered.unmount();

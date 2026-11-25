@@ -41,13 +41,10 @@ it("saves a record through its anchored form using the section draft", async () 
   expect(saveDraft).not.toHaveBeenCalled();
   await user.click(within(panel).getByRole("button", { name: "Save" }));
   await waitFor(() => expect(saveDraft).toHaveBeenCalledTimes(1));
-  expect(saveDraft.mock.calls[0]?.[0]).toMatchObject({
-    items: expect.arrayContaining([
-      expect.objectContaining({
-        text: "Revised delivery",
-        nextStepText: "Check result",
-        type: "current",
-      }),
-    ]),
-  });
+  const input = saveDraft.mock.calls[0]?.[0] as {
+    items: { text: string; nextStepText: string | null; type: string }[];
+  };
+  expect(
+    input.items.find((row) => row.text === "Revised delivery"),
+  ).toMatchObject({ nextStepText: "Check result", type: "current" });
 });

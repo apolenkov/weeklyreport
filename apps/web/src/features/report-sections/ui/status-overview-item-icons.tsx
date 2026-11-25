@@ -81,29 +81,14 @@ const PROGRESS_SHAPES: Readonly<Record<ProgressIconStatus, React.ReactNode>> = {
   ),
 };
 
-/**
- * Progress glyph per stored workflow status. `unconfirmed` adds a filled dot
- * in the corner: the item carried over and has not been updated this week.
- */
 export function ProgressIcon({
   status,
-  unconfirmed = false,
 }: {
   readonly status: ProgressIconStatus;
-  readonly unconfirmed?: boolean;
 }) {
   return (
     <Glyph className={`${ICON_CLASS} ${PROGRESS_TONE[status]}`}>
       {PROGRESS_SHAPES[status]}
-      {unconfirmed ? (
-        <circle
-          cx="19"
-          cy="5"
-          r="3.5"
-          fill="currentColor"
-          stroke="var(--color-card)"
-        />
-      ) : null}
     </Glyph>
   );
 }

@@ -56,6 +56,7 @@ export function Wrapper({
   currentCarriedOver = false,
   coveringRisk = false,
   predecessorItem,
+  submitted = false,
   reviewerFeedback = false,
   extraCurrentRow = false,
 }: {
@@ -87,10 +88,17 @@ export function Wrapper({
   readonly coveringRisk?: boolean;
   readonly predecessorItem?:
     ReportSectionReadModel["items"][number] | undefined;
+  readonly submitted?: boolean;
   readonly reviewerFeedback?: boolean;
   readonly extraCurrentRow?: boolean;
 }) {
   const section = makeReportSectionFixture({
+    ...(submitted
+      ? ({
+          status: "submitted",
+          submittedAt: new Date("2026-09-04T12:00:00Z"),
+        } as const)
+      : {}),
     reportId,
     reviews: reviewerFeedback
       ? [
@@ -418,19 +426,12 @@ export async function openMoveMenu(
   text: string,
   destination: "this week" | "next week",
 ) {
-  const preview=await itemPreview(text);
-  const trigger=within(preview).getByRole("button",{name:/^Edit text:/});
+  const preview = await itemPreview(text);
+  const trigger = within(preview).getByRole("button", { name: /^Edit text:/ });
   await userEvent.click(trigger);
-  return within(await screen.findByRole("dialog",{name:"Record"})).findByRole("button",{name:`Move to ${destination}`});
-
-}
-
-export async function chooseMove(
-  user: ReturnType<typeof userEvent.setup>,
-  text: string,
-  destination: "this week" | "next week",
-) {
-  await user.click(await openMoveMenu(text, destination));
+  return within(
+    await screen.findByRole("dialog", { name: "Record" }),
+  ).findByRole("button", { name: `Move to ${destination}` });
 }
 
 export function echoSaveDraft() {
@@ -458,10 +459,18 @@ export async function chooseDirectMove(
 ) {
   const moveItem = await openMoveMenu(text, destination);
   await userEvent.click(moveItem);
-  await pollUntil(()=>expect(saveDraft).toHaveBeenCalledOnce());
-  await pollUntil(()=>expect(vi.mocked(toast.success).mock.calls.at(-1)?.[1]).toMatchObject({action:{label:"Undo"}}));
-  return {focused:document.activeElement,saved:(saveDraft.mock.calls[0]?.[0] as {items:ReportSectionReadModel["items"]}).items};
-
+  await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
+  await pollUntil(() =>
+    expect(vi.mocked(toast.success).mock.calls.at(-1)?.[1]).toMatchObject({
+      action: { label: "Undo" },
+    }),
+  );
+  return {
+    focused: document.activeElement,
+    saved: (
+      saveDraft.mock.calls[0]?.[0] as { items: ReportSectionReadModel["items"] }
+    ).items,
+  };
 }
 
 // The item title opens the inline text editor; the canonical editor is

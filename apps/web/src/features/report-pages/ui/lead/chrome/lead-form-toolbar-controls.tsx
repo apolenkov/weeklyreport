@@ -155,6 +155,7 @@ export function LeadOverviewToolbarControls({
         <ToolbarClusterRow>
           <div className={LEAD_TOOLBAR_PERIOD_SLOT_CLASS}>
             <ToolbarPeriodCluster
+              explainLatest
               viewModel={viewModel}
               leadSubmittedAt={leadSubmittedAt}
               showArchivePeriods={showArchivePeriods}
@@ -183,6 +184,7 @@ export function LeadOverviewToolbarControls({
 }
 
 interface ToolbarPeriodClusterProps {
+  readonly explainLatest?: boolean;
   readonly viewModel: LeadFormLoadedViewModel;
   readonly leadSubmittedAt: LeadSubmittedAt;
   readonly showArchivePeriods: boolean;
@@ -194,6 +196,7 @@ interface ToolbarPeriodClusterProps {
 // you see it" read as two clusters. The row never wraps: the navigator's own
 // basis-full would otherwise orphan the archive switch on a row of its own.
 export function ToolbarPeriodCluster({
+  explainLatest = false,
   viewModel,
   leadSubmittedAt,
   showArchivePeriods,
@@ -206,6 +209,7 @@ export function ToolbarPeriodCluster({
     >
       <div className="min-w-0 flex-1 md:flex-none">
         <PeriodNavigator
+          explainLatest={explainLatest}
           periods={viewModel.visiblePeriods}
           showLeadSubmissionMarkers
           leadSubmittedAt={leadSubmittedAt}

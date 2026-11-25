@@ -26,7 +26,7 @@ describe("Confirm all as continue", () => {
       />,
     );
 
-    expect(screen.queryByRole("button",{name:/Confirm all/i})).toBeNull();
+    expect(screen.queryByRole("button", { name: /Confirm all/i })).toBeNull();
     expect(onConfirmAll).not.toHaveBeenCalled();
   });
 

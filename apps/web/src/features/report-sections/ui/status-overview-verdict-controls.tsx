@@ -10,6 +10,7 @@ import { CircleHelp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import type { StatusOverviewItem } from "../model/status-overview";
+import { planOutcomeId } from "../model/status-overview-lineage";
 import type { PlanVerdict } from "../model/status-overview-verdict";
 import {
   ICON_BUTTON_CLASS,
@@ -34,26 +35,6 @@ const REASON_PROMPT: Readonly<Record<ReasonVerdict, string>> = {
   wont_do: "Reason",
 };
 
-const FOCUS_RING =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
-
-/** Accepted verdict, shown on the frozen prior row without touching its text. */
-export function VerdictStamp({ verdict }: { readonly verdict: PlanVerdict }) {
-  const label = VERDICT_LABEL[verdict];
-  return (
-    <span
-      role="img"
-      tabIndex={-1}
-      data-verdict-stamp={verdict}
-      aria-label={`Verdict: ${label}`}
-      title={label}
-      className={`inline-flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] shrink-0 items-center justify-center rounded-[var(--radius-sm)] ${FOCUS_RING}`}
-    >
-      <VerdictIcon verdict={verdict} />
-    </span>
-  );
-}
-
 function VerdictButtons({
   item,
   busy,
@@ -72,6 +53,7 @@ function VerdictButtons({
           <button
             type="button"
             disabled={busy}
+            id={planOutcomeId(item)}
             data-plan-outcome=""
             aria-label={`Choose outcome: ${item.text}. Planned last week, no outcome yet`}
             title="Planned last week — choose what happened"

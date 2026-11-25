@@ -1,5 +1,3 @@
-import type { RecordCommentView } from "@weeklyreport/shared";
-
 import type { StatusOverviewItem } from "../model/status-overview";
 
 const item: StatusOverviewItem = {
@@ -41,18 +39,10 @@ const previousItem: StatusOverviewItem = {
   continuity: null,
 };
 
-const COMMENT: RecordCommentView = {
-  id: "33333333-3333-4333-8333-333333333333",
-  reviewerId: "22222222-2222-4222-8222-222222222222",
-  reviewerName: "Head Reviewer",
-  text: "Please split this item.",
-  createdAt: new Date("2026-07-01T10:00:00Z"),
-};
-
 function focusCard(): void {
   const card = document.querySelector<HTMLElement>(
     "[data-overview-item-preview]",
   );
   card?.focus();
 }
-export { COMMENT, focusCard, item, nextItem, previousItem, projection };
+export { focusCard, item, nextItem, previousItem, projection };

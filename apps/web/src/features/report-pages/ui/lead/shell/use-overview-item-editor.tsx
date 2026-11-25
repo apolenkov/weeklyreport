@@ -41,10 +41,8 @@ export function useOverviewItemEditor(
   const recoveryReason = overviewEditorRecoveryReason(editor, dialog, model);
   const startedAttempt = useRef<number | null>(null);
   const promotionAttempt = useRef<string | null>(null);
-  const createdFocus = useRef<OverviewCreatedFocus | null>(null);
-  const requestCloseRef = useRef<(() => void) | null>(null);
-  const keepOutsideFocus=useRef(false);
-  const rememberFocus = useOverviewFocusReturn(dialog !== null, createdFocus,keepOutsideFocus);
+  const { createdFocus, requestCloseRef, keepFocus, rememberFocus } =
+    useEditorFocus(dialog !== null);
   const focusMoved = useOverviewMovedFocus();
   useOverviewSubmissionDriver({
     editor,
@@ -54,13 +52,11 @@ export function useOverviewItemEditor(
     startedAttempt,
     createdFocus,
   });
+  const shared = { editor, dialog, isReadOnly, setDialog };
   const openers = {
-    editor,
+    ...shared,
     model,
     output,
-    dialog,
-    isReadOnly,
-    setDialog,
     rememberFocus,
     focusMoved,
     resetAttempt: () => {
@@ -70,11 +66,8 @@ export function useOverviewItemEditor(
   const editOpeners = useOverviewEditOpeners(openers);
   const { addItem, planItem, changeWeek } = useOverviewCreateOpeners(openers);
   const saveContext = {
-    editor,
-    dialog,
-    isReadOnly,
+    ...shared,
     recoveryReason,
-    setDialog,
     setError,
     startedAttempt,
     promotionAttempt,
@@ -87,6 +80,8 @@ export function useOverviewItemEditor(
   return {
     dialog,
     requestCloseRef,
+    restoreDialog: (saved: OverviewItemDialogState) =>
+      setDialog((current) => current ?? saved),
     showDetails: () =>
       setDialog((current) =>
         current ? { ...current, surface: "details" } : null,
@@ -100,7 +95,12 @@ export function useOverviewItemEditor(
     save: (updatedItem: KanbanItem) =>
       saveOverviewItem(saveContext, updatedItem),
     saveAndAddAnother,
-    leave:()=>{if(dialog?.draftStore.isDirty() || dialog?.submission)return;keepOutsideFocus.current=true;setDialog(null);setError(null);},
+    leave: () => {
+      if (dialog?.draftStore.isDirty() || dialog?.submission) return;
+      keepFocus();
+      setDialog(null);
+      setError(null);
+    },
     close: () => {
       closeOverviewDialog({ editor, dialog, recoveryReason, setDialog });
       startedAttempt.current = null;
@@ -156,4 +156,23 @@ export function buildOverviewEditor(
       requestCloseRef={requestCloseRef}
     />
   );
+}
+
+function useEditorFocus(open: boolean) {
+  const createdFocus = useRef<OverviewCreatedFocus | null>(null);
+  const requestCloseRef = useRef<(() => void) | null>(null);
+  const keepOutsideFocus = useRef(false);
+  const rememberFocus = useOverviewFocusReturn(
+    open,
+    createdFocus,
+    keepOutsideFocus,
+  );
+  return {
+    createdFocus,
+    requestCloseRef,
+    keepFocus: () => {
+      keepOutsideFocus.current = true;
+    },
+    rememberFocus,
+  };
 }
