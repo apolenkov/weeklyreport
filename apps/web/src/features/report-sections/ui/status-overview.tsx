@@ -93,9 +93,9 @@ function buildAddItemHandler(
   expand: (key: string) => void,
 ): StatusOverviewProps["onAddItem"] {
   if (!onAddItem) return undefined;
-  return (target): void => {
+  return (target, text): void => {
     expand(`${target.unitKind}:${target.unitId}`);
-    onAddItem(target);
+    onAddItem(target, text);
   };
 }
 

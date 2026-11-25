@@ -22,8 +22,11 @@ it("keeps one read-only banner, the stage legend and discussion access in a subm
   ).toBeNull();
   expect(
     screen.queryByRole("button", {
-      name: /Risk or decision|Add what happened|Choose outcome:/,
+      name: /Risk or decision|Choose outcome:/,
     }),
+  ).toBeNull();
+  expect(
+    screen.queryByRole("textbox", { name: /Add what happened|Plan something/ }),
   ).toBeNull();
   const grid = screen.getByTestId("status-overview");
   expect(

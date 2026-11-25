@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import type { StatusOverviewModel } from "../model/status-overview";
 import type { StatusOverviewLineageRow } from "../model/status-overview-lineage";
 import {
@@ -93,12 +95,14 @@ export function MobilePeriodsSummary({
 function itemInWeek(
   row: StatusOverviewLineageRow,
   source: "previous" | "current" | "next",
+  offerExistingNext: boolean,
 ) {
   if (source === "previous") return row.last;
   if (source === "next") return row.next;
   if (row.current) return row.current;
-  return row.answerState === "pending" && !row.next
-    ? row.priorCommitment
+  if (row.answerState === "pending") return row.priorCommitment;
+  return offerExistingNext && row.priorCommitment
+    ? { ...row.priorCommitment, verdict: "pending" as const }
     : null;
 }
 
@@ -112,6 +116,27 @@ function LineageRow({
 } & Omit<ItemHandlers, "editorSlot">) {
   // Creation lives in the unit header; rows never render an Add control.
   const { onAddItem: _onAddItem, ...itemHandlers } = handlers;
+  const [keptNext, setKeptNext] = useState<string | null>(null);
+  const nextKey = row.next?.recordId ?? row.next?.key;
+  // A Next placement can exist independently of the prior plan's answer.
+  // An explicit prior-plan Next outcome already carries the placement audit.
+  const offerExistingNext =
+    !!itemHandlers.onVerdict &&
+    row.answerState === "next" &&
+    nextKey !== undefined &&
+    nextKey !== keptNext &&
+    !row.next?.outcomeHistory.some(
+      (event) =>
+        event.outcome === "plan_next" && event.afterState.type === "next",
+    );
+  const onVerdict: ItemHandlers["onVerdict"] = itemHandlers.onVerdict
+    ? async (item, verdict, reason) => {
+        const failure = await itemHandlers.onVerdict?.(item, verdict, reason);
+        if (failure === null && verdict === "next" && nextKey)
+          setKeptNext(nextKey);
+        return failure ?? null;
+      }
+    : undefined;
   const editorBelongsToRow = editorBelongsToLineageRow(row, editorSlot);
   return (
     <div
@@ -119,7 +144,7 @@ function LineageRow({
       className={`${TIMELINE_GRID} min-w-0 items-stretch border-b border-[var(--color-border-subtle)]`}
     >
       {STATUS_OVERVIEW_COLUMNS.map((column) => {
-        const item = itemInWeek(row, column.source);
+        const item = itemInWeek(row, column.source, offerExistingNext);
         if (!item) return <EmptyLane key={column.key} column={column} />;
         return (
           <Lane
@@ -142,6 +167,7 @@ function LineageRow({
               }
               published={!!row.last || !!row.priorCommitment}
               {...itemHandlers}
+              onVerdict={onVerdict}
             />
           </Lane>
         );

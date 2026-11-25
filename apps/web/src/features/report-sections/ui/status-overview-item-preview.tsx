@@ -210,11 +210,13 @@ function RecordLine(props: LineProps) {
         {line.dirty && (
           <span className="text-xs text-muted-foreground">Not saved</span>
         )}
-        {item.workflowStatus === "paused" && item.pausedReason && (
-          <span className="text-xs text-muted-foreground">
-            {item.pausedReason}
-          </span>
-        )}
+        {item.source !== "next" &&
+          item.workflowStatus === "paused" &&
+          item.pausedReason && (
+            <span className="text-xs text-muted-foreground">
+              {item.pausedReason}
+            </span>
+          )}
         {item.needsConfirmation && <span>Needs status</span>}
         {item.source !== "next" && (
           <>

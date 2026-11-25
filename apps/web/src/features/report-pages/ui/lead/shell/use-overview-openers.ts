@@ -230,16 +230,19 @@ export function useOverviewCreateOpeners({
   rememberFocus,
   resetAttempt,
 }: OpenersArgs) {
-  const addItem = (target: StatusOverviewCreateTarget): void => {
+  const addItem = (target: StatusOverviewCreateTarget, text: string): void => {
     if (!editor || isReadOnly || dialog) return;
     const unit = model.units.find(
       (candidate) =>
         candidate.kind === target.unitKind && candidate.id === target.unitId,
     );
     if (!unit || unit.historical) return;
-    rememberFocus();
+    rememberFocus(
+      target.source === "current" ? `add:${unit.key}` : `add:${unit.key}:next`,
+    );
     resetAttempt();
     const state = createOverviewComposerState(editor, target, null);
+    state.draftStore.setters.setText(text);
     setDialog({
       ...state,
       mode: "create",

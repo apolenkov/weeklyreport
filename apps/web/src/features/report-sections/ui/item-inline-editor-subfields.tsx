@@ -29,11 +29,13 @@ export function InlineEditPrimaryFields({
   form,
   week,
   showNextStep,
+  showStatus,
   nextStepTextareaRef,
 }: {
   readonly form: InlineForm;
   readonly week: "current" | "next";
   readonly showNextStep: boolean;
+  readonly showStatus: boolean;
   readonly nextStepTextareaRef: RefObject<HTMLTextAreaElement | null>;
 }) {
   const [nextStepRevealed, setNextStepRevealed] = useState(false);
@@ -62,9 +64,11 @@ export function InlineEditPrimaryFields({
           onChange={(next) => form.onStageChange([...next])}
         />
       ) : null}
-      <div>
-        <ItemStatusFields {...form} choices={choicesForWeek(week)} />
-      </div>
+      {showStatus && (
+        <div>
+          <ItemStatusFields {...form} choices={choicesForWeek(week)} />
+        </div>
+      )}
     </>
   );
 }

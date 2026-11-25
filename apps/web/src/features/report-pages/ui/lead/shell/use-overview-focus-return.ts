@@ -24,7 +24,9 @@ function insideClosedDisclosure(element: HTMLElement): boolean {
   return insideClosedDisclosure(parent);
 }
 
-function isVisibleAction(button: HTMLButtonElement): boolean {
+type FocusControl = HTMLButtonElement | HTMLTextAreaElement;
+
+function isVisibleAction(button: FocusControl): boolean {
   return (
     !button.disabled &&
     !button.closest("[hidden], [inert]") &&
@@ -33,10 +35,7 @@ function isVisibleAction(button: HTMLButtonElement): boolean {
   );
 }
 
-function findFocusTarget(
-  buttons: readonly HTMLButtonElement[],
-  key: string | null,
-) {
+function findFocusTarget(buttons: readonly FocusControl[], key: string | null) {
   if (key === null) return undefined;
   return buttons.find((element) => element.dataset.overviewFocus === key);
 }
@@ -49,7 +48,7 @@ export interface OverviewCreatedFocus {
 }
 
 function findCreatedControl(
-  buttons: readonly HTMLButtonElement[],
+  buttons: readonly FocusControl[],
   created: OverviewCreatedFocus,
 ) {
   const suffix = `:${created.week}:${created.identity}`;
@@ -81,7 +80,7 @@ export function useOverviewFocusReturn(
     originKey.current = null;
     if (createdFocusRef) createdFocusRef.current = null;
     const buttons = [
-      ...document.querySelectorAll<HTMLButtonElement>("[data-overview-focus]"),
+      ...document.querySelectorAll<FocusControl>("[data-overview-focus]"),
     ].filter(isVisibleAction);
     const createdControl =
       createdTarget === null

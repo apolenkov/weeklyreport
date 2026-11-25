@@ -210,6 +210,8 @@ function overviewEditor(
   editor: ReadyEditor | null,
   dialog: Parameters<typeof overviewInlineItemSlot>[2] & {
     readonly changeWeek: (week: "current" | "next") => void;
+    readonly dismissDetails: () => void;
+    readonly canReturnFromDetails: () => boolean;
   },
 ) {
   return buildOverviewEditor(
@@ -218,7 +220,10 @@ function overviewEditor(
     {
       onSave: dialog.save,
       onSaveAndAddAnother: dialog.saveAndAddAnother,
-      onCancel: dialog.close,
+      onCancel: dialog.dialog?.detailsOpen
+        ? dialog.dismissDetails
+        : dialog.close,
+      closeWithoutConfirmation: dialog.canReturnFromDetails,
       onWeekChange: dialog.changeWeek,
       requestCloseRef: dialog.requestCloseRef,
     },

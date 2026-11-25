@@ -16,7 +16,8 @@ import { useStageStartSave } from "./use-stage-start-save";
 type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
 
 interface OverviewComposerState {
-  readonly surface?: "record" | "details";
+  readonly surface?: "record";
+  readonly detailsOpen?: boolean;
   readonly generation: string | null;
   readonly stableId: string | null;
   readonly week: "current" | "next";
@@ -161,6 +162,7 @@ function OverviewItemDialog({
   onSave,
   onSaveAndAddAnother,
   onCancel,
+  closeWithoutConfirmation,
   onWeekChange,
   requestCloseRef,
   saveDisabled = false,
@@ -170,6 +172,7 @@ function OverviewItemDialog({
   readonly onSave: (item: KanbanItem) => void;
   readonly onSaveAndAddAnother?: ((item: KanbanItem) => void) | undefined;
   readonly onCancel: () => void;
+  readonly closeWithoutConfirmation?: (() => boolean) | undefined;
   readonly onWeekChange?: ((week: "current" | "next") => void) | undefined;
   readonly saveDisabled?: boolean | undefined;
   readonly requestCloseRef: RefObject<(() => void) | null>;
@@ -188,6 +191,8 @@ function OverviewItemDialog({
         }
         item={dialog.mode === "edit" ? dialog.item : null}
         draftStore={dialog.draftStore}
+        closeWithoutConfirmation={closeWithoutConfirmation}
+        hideNextStatus={dialog.detailsOpen}
         saveDisabled={saveDisabled}
         products={viewModel.products}
         activities={viewModel.activityOptions}
@@ -236,6 +241,7 @@ export function OverviewEditorDialog({
   onSave,
   onSaveAndAddAnother,
   onCancel,
+  closeWithoutConfirmation,
   onWeekChange,
   requestCloseRef,
 }: Omit<Parameters<typeof OverviewItemDialog>[0], "editor" | "dialog"> & {
@@ -256,6 +262,7 @@ export function OverviewEditorDialog({
       onSave={onSave}
       onSaveAndAddAnother={onSaveAndAddAnother}
       onCancel={onCancel}
+      closeWithoutConfirmation={closeWithoutConfirmation}
       onWeekChange={onWeekChange}
       requestCloseRef={requestCloseRef}
     />

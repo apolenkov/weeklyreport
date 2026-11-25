@@ -11,7 +11,7 @@ import type { OverviewItemDialogState } from "./lead-status-overview-item-editor
 import type { ReadyEditor } from "./use-overview-controller";
 
 interface ItemActions {
-  readonly showDetails: () => void;
+  readonly showDetails: (origin: HTMLElement) => void;
   readonly dialog: OverviewItemDialogState | null;
   readonly recoveryReason: string | null;
   readonly error: string | null;
@@ -31,7 +31,6 @@ export function overviewInlineItemSlot(
     !editor ||
     dialog?.mode !== "create" ||
     !dialog.contextual ||
-    dialog.surface === "details" ||
     actions.recoveryReason ||
     editor.generation !== dialog.generation ||
     editor.view.viewModel.isReadOnly
@@ -59,6 +58,7 @@ export function overviewInlineItemSlot(
           week: dialog.week,
         }}
         onDetails={actions.showDetails}
+        inert={dialog.detailsOpen}
         products={view.products}
         activities={view.activityOptions}
         stagesForProduct={(id) =>
@@ -70,7 +70,9 @@ export function overviewInlineItemSlot(
           dialog.submission !== null && editor.draft.autosave.state !== "error"
         }
         message={actions.error}
-        requestCloseRef={actions.requestCloseRef}
+        requestCloseRef={
+          dialog.detailsOpen ? undefined : actions.requestCloseRef
+        }
         onSave={actions.save}
         onSaveAndAddAnother={actions.saveAndAddAnother}
         onCancel={actions.close}

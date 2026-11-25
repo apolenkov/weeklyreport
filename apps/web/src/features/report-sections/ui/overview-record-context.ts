@@ -15,13 +15,15 @@ export interface ActiveRecordEditor {
   readonly source: StatusOverviewItem["source"];
   readonly store: ItemEditDraftStore;
   readonly failed?: boolean;
+  readonly published?: boolean;
+  readonly detailsOpen?: boolean;
   readonly pending: boolean;
   readonly error: string | null;
   readonly close: () => void;
   readonly discard?: () => void;
   readonly leave?: () => void;
   readonly save: () => void;
-  readonly details: () => void;
+  readonly details: (origin: HTMLElement) => void;
   readonly remove?: (step: boolean) => void;
   readonly move?: () => void;
 }

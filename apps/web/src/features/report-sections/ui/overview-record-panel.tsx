@@ -22,18 +22,22 @@ export function OverviewRecordPanel({
   moveReason,
 }: PanelProps) {
   const [stepDetails, setStepDetails] = useState(false);
+  const stepDetailsOrigin = useRef<HTMLButtonElement>(null);
   const state = usePanelFields(item, editor, owned, published);
   const { dirty, confirm, cancel, invalid, save } = state;
   return (
     <OverviewRecordSurface
       trigger={trigger}
       dirty={dirty || editor.pending}
-      nested={discussion || !!confirm || stepDetails}
+      nested={
+        discussion || !!confirm || stepDetails || editor.detailsOpen === true
+      }
       close={editor.leave ?? editor.close}
       cancel={cancel}
     >
       <div
         role="presentation"
+        inert={stepDetails || editor.detailsOpen === true}
         className="grid min-w-0 gap-3 text-sm"
         onKeyDown={(event) => {
           if (
@@ -54,13 +58,21 @@ export function OverviewRecordPanel({
         <PanelActions
           {...state}
           {...{ item, editor, openDiscussion, moveReason }}
-          details={state.step ? () => setStepDetails(true) : editor.details}
+          details={
+            state.step
+              ? (origin) => {
+                  stepDetailsOrigin.current = origin;
+                  setStepDetails(true);
+                }
+              : editor.details
+          }
         />
       </div>
       {stepDetails && (
         <OverviewStepDetails
           editor={editor}
           close={() => setStepDetails(false)}
+          restoreFocus={() => stepDetailsOrigin.current?.focus()}
           save={save}
           error={invalid}
         />
@@ -100,7 +112,7 @@ function usePanelFields(
     if (!error && !editor.pending) editor.save();
   };
   const deletion =
-    published && !step
+    (published || editor.published) && !step
       ? "Published in last week’s report. It can’t be deleted"
       : editor.remove
         ? undefined

@@ -15,7 +15,8 @@ import { StatusOverviewInlineItemForm } from "./status-overview-inline-item-form
 import { useItemEditDialog } from "./use-item-edit-dialog";
 
 export interface StatusOverviewInlineItemEditorProps {
-  readonly onDetails?: (() => void) | undefined;
+  readonly onDetails?: ((origin: HTMLElement) => void) | undefined;
+  readonly inert?: boolean | undefined;
   readonly target: ItemTarget;
   readonly products: readonly Product[];
   readonly activities: readonly ParentActivityOption[];
@@ -88,6 +89,7 @@ export function StatusOverviewInlineItemEditor(
     <div
       role="presentation"
       ref={dialogSurfaceRef}
+      inert={props.inert}
       onKeyDown={(event) => {
         if (!event.currentTarget.contains(event.target as Node)) return;
         if (event.key === "Escape") {

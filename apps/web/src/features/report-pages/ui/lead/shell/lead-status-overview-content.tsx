@@ -37,6 +37,8 @@ interface OverviewDialogSlice {
   readonly dialog: OverviewItemDialogState | null;
   readonly recoveryReason: string | null;
   readonly close: () => void;
+  readonly dismissDetails: () => void;
+  readonly restoreDetailsFocus: () => void;
   readonly requestCloseRef: RefObject<(() => void) | null>;
   readonly moveItem: (
     item: StatusOverviewItem,
@@ -87,6 +89,7 @@ function OverviewEditorNotices({
   readonly itemEditor: ReactNode;
 }) {
   if (!dialog.dialog) return null;
+  const nestedDetails = dialog.dialog.detailsOpen && !dialog.recoveryReason;
   return (
     <OverviewItemDialogSurface
       title={
@@ -96,7 +99,8 @@ function OverviewEditorNotices({
             ? "Add item"
             : "Edit item"
       }
-      onCancel={dialog.close}
+      onCancel={nestedDetails ? dialog.dismissDetails : dialog.close}
+      restoreFocus={nestedDetails ? dialog.restoreDetailsFocus : undefined}
       requestCloseRef={dialog.requestCloseRef}
     >
       {dialog.recoveryReason ? (
@@ -217,7 +221,8 @@ export function LeadStatusOverviewContent({
           />
           {controller.planPresentation.recovery}
           {controller.recordPresentation.recovery}
-          {!itemSlot && !controller.activeRecord && (
+          {(dialog.dialog?.detailsOpen === true ||
+            (!itemSlot && !controller.activeRecord)) && (
             <OverviewEditorNotices
               dialog={dialog}
               error={dialog.error}

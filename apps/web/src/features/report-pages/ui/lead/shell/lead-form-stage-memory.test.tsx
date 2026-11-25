@@ -193,12 +193,14 @@ describe("lead report stage memory across view switches", () => {
       const { rerender } = render(page(harness, "overview"));
 
       await user.click(
-        await screen.findByRole("button", {
+        await screen.findByRole("textbox", {
           name: "Add what happened — Payments, This week",
         }),
       );
       await user.type(
-        screen.getByPlaceholderText("What happened…"),
+        screen.getByRole("textbox", {
+          name: "Add what happened — Payments, This week",
+        }),
         "Ship importer",
       );
       await user.click(screen.getByRole("button", { name: /^Stage:/ }));
@@ -209,14 +211,18 @@ describe("lead report stage memory across view switches", () => {
 
       // The accepted save closes the composer and confirms the remembered stage.
       await vi.waitFor(() =>
-        expect(screen.getByPlaceholderText("What happened…")).toHaveValue(""),
+        expect(
+          screen.getByRole("textbox", {
+            name: "Add what happened — Payments, This week",
+          }),
+        ).toHaveValue(""),
       );
       // Both are real route modes; each switch mounts the other view branch and
       // unmounts the Overview that hosts the composer.
       rerender(page(harness, "slides"));
       await vi.waitFor(() =>
         expect(
-          screen.queryByRole("button", {
+          screen.queryByRole("textbox", {
             name: "Add what happened — Payments, This week",
           }),
         ).not.toBeInTheDocument(),
@@ -225,13 +231,15 @@ describe("lead report stage memory across view switches", () => {
       rerender(page(harness, "overview"));
 
       const addItem = expectDefined(
-        await screen.findByRole("button", {
+        await screen.findByRole("textbox", {
           name: "Add what happened — Payments, This week",
         }),
       );
       await user.click(addItem);
       await user.type(
-        screen.getByPlaceholderText("What happened…"),
+        screen.getByRole("textbox", {
+          name: "Add what happened — Payments, This week",
+        }),
         "Another update",
       );
       expect(

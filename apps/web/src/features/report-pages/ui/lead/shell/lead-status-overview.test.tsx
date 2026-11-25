@@ -440,20 +440,22 @@ describe("LeadForm Overview", () => {
         <LeadForm reportId={REPORT_ID} mode="overview" />
       </Wrapper>,
     );
-    await chooseUpdateProgress(user, "Next work");
+    await chooseUpdateProgress(user, "Current work");
     const editor = screen.getByRole("form", {
-      name: "Next week update for Payments",
+      name: "Current week update for Payments",
     });
     expect(
       within(editor).getByRole("textbox", { name: /Description/ }),
-    ).toHaveValue("Next work");
+    ).toHaveValue("Current work");
     await user.click(within(editor).getByRole("button", { name: "Done" }));
     await user.click(
       within(editor).getByRole("button", { name: "Save update" }),
     );
     await pollUntil(() =>
       expect(
-        screen.queryByRole("form", { name: "Next week update for Payments" }),
+        screen.queryByRole("form", {
+          name: "Current week update for Payments",
+        }),
       ).not.toBeInTheDocument(),
     );
     await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
@@ -462,13 +464,13 @@ describe("LeadForm Overview", () => {
       saveDraft.mock.calls[0]?.[0] as {
         readonly items: ReportSectionReadModel["items"];
       }
-    ).items.find((item) => item.text === "Next work");
-    expect(done).toMatchObject({ type: "next", workflowStatus: "done" });
+    ).items.find((item) => item.text === "Current work");
+    expect(done).toMatchObject({ type: "current", workflowStatus: "done" });
     expect(
-      within(await itemPreview("Next work")).queryByRole("button", {
-        name: /Choose outcome/,
+      within(await itemPreview("Current work")).getByRole("button", {
+        name: /Status: Done/,
       }),
-    ).toBeNull();
+    ).toBeVisible();
   });
 
   it("reaches the terminal outcome composer through the status menu for a committed Current item", async () => {
@@ -1349,13 +1351,10 @@ describe("LeadForm Overview", () => {
         <LeadForm reportId={REPORT_ID} mode="overview" />
       </Wrapper>,
     );
-    await user.click(
-      await screen.findByRole("button", {
+    await user.type(
+      await screen.findByRole("textbox", {
         name: "Add what happened — Payments, This week",
       }),
-    );
-    await user.type(
-      screen.getByPlaceholderText("What happened…"),
       "Phantom item",
     );
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -1655,7 +1654,7 @@ describe("LeadForm Overview", () => {
     await pollUntil(() => expect(opener).toHaveFocus());
   });
 
-  it("returns focus to the item actions after cancelling the editor", async () => {
+  it("returns focus to More details when dismissing the unchanged Sheet", async () => {
     const user = userEvent.setup();
     const saveDraft = vi.fn();
     const resolvePlan = vi.fn(() => Promise.resolve({}));
@@ -1670,11 +1669,10 @@ describe("LeadForm Overview", () => {
 
     expect(saveDraft).not.toHaveBeenCalled();
     expect(resolvePlan).not.toHaveBeenCalled();
-    expect(
-      await screen.findByRole("button", {
-        name: "Edit text: Next work, Next week",
-      }),
-    ).toHaveFocus();
+    const moreDetails = await screen.findByRole("button", {
+      name: "More details",
+    });
+    await pollUntil(() => expect(moreDetails).toHaveFocus());
   });
 
   it("confirms carried work through the canonical editor save without field changes", async () => {
@@ -1874,6 +1872,7 @@ describe("LeadForm Overview", () => {
     await openItemEditor(user, "Current work");
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(saveDraft).not.toHaveBeenCalled();
     // The marker is untouched, so the carried copy and confirm anchor remain.
     expect(
@@ -2037,7 +2036,7 @@ describe("LeadForm Overview", () => {
     ["paused", "Paused"],
     ["postponed", "Postponed"],
   ] as const)(
-    "keeps current status %s stored and selected after moving directly to next week",
+    "keeps current status %s stored and hidden after moving directly to next week",
     async (status, statusLabel) => {
       const user = userEvent.setup();
       const saveDraft = echoSaveDraft();
@@ -2059,14 +2058,9 @@ describe("LeadForm Overview", () => {
         workflowStatus: status,
       });
 
-      // The moved row now lives in the Next lane; its editor shows the same
-      // status as selected.
       await openItemEditor(user, "Current work");
       expect(screen.getByRole("radio", { name: "Next week" })).toBeChecked();
-      expect(screen.getByRole("button", { name: statusLabel })).toHaveAttribute(
-        "aria-pressed",
-        "true",
-      );
+      expect(screen.queryByRole("button", { name: statusLabel })).toBeNull();
     },
   );
 
@@ -2131,7 +2125,7 @@ it.each(["pending", "failed"] as const)(
         <LeadForm reportId={reportB} mode="overview" />
       </Wrapper>,
     );
-    await screen.findByRole("button", {
+    await screen.findByRole("textbox", {
       name: "Add what happened — Payments, This week",
     });
     warm.unmount();
@@ -2167,7 +2161,7 @@ it.each(["pending", "failed"] as const)(
     await pollUntil(() => expect(resolvePlan).toHaveBeenCalledOnce());
     if (phase === "failed") await screen.findByText("Report A plan failed");
     rendered.rerender(<RenderReport reportId={reportB} />);
-    await screen.findByRole("button", {
+    await screen.findByRole("textbox", {
       name: "Add what happened — Payments, This week",
     });
     expect(screen.queryByText("Report A plan failed")).not.toBeInTheDocument();
@@ -2408,7 +2402,7 @@ it.each(["success", "error"] as const)(
     expect(toast.success).toHaveBeenCalledWith("Plan outcome saved");
     await itemPreview("Only B's authored commitment");
     expect(
-      screen.getByRole("button", {
+      screen.getByRole("textbox", {
         name: "Add what happened — Payments, This week",
       }),
     ).toBeEnabled();

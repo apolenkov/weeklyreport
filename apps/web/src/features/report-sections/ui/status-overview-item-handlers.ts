@@ -43,7 +43,7 @@ export interface ItemHandlers {
   readonly onEditItemText?:
     ((item: StatusOverviewItem, text: string) => void) | undefined;
   readonly onAddItem?:
-    ((target: StatusOverviewCreateTarget) => void) | undefined;
+    ((target: StatusOverviewCreateTarget, text: string) => void) | undefined;
   readonly onAddRecord?:
     ((target: StatusOverviewRecordTarget) => void) | undefined;
   readonly onPlanItem?: ((item: StatusOverviewItem) => void) | undefined;

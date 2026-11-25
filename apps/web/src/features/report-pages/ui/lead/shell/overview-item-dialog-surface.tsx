@@ -8,11 +8,13 @@ import { type ReactNode, type RefObject, useRef } from "react";
 export function OverviewItemDialogSurface({
   title,
   onCancel,
+  restoreFocus,
   requestCloseRef,
   children,
 }: {
   readonly title: string;
   readonly onCancel: () => void;
+  readonly restoreFocus?: (() => void) | undefined;
   readonly requestCloseRef: RefObject<(() => void) | null>;
   readonly children: ReactNode;
 }) {
@@ -40,6 +42,7 @@ export function OverviewItemDialogSurface({
         onCloseAutoFocus={(event) => {
           // Overview owns trigger/new-item focus, including identity changes after save.
           event.preventDefault();
+          restoreFocus?.();
         }}
       >
         <SheetTitle className="pr-10">{title}</SheetTitle>

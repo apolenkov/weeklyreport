@@ -55,9 +55,26 @@ function useClearEntry(
   };
 }
 
-function entryPlaceholder(week: "current" | "next") {
+export function entryPlaceholder(week: "current" | "next") {
   return week === "current" ? "What happened…" : "Plan…";
 }
+
+export function overviewEntryLabel(name: string, week: "current" | "next") {
+  return week === "current"
+    ? `Add what happened — ${name}, This week`
+    : `Plan something — ${name}, Next week`;
+}
+function useEntryFocus() {
+  const input = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const field = input.current;
+    if (!field) return;
+    field.focus();
+    field.setSelectionRange(field.value.length, field.value.length);
+  }, []);
+  return input;
+}
+
 export function OverviewEntryLine({
   target,
   view,
@@ -66,12 +83,9 @@ export function OverviewEntryLine({
   onSubmit,
   onCancel,
   onDetails,
-}: { readonly onDetails: () => void } & ItemComposerProps) {
-  const input = useRef<HTMLTextAreaElement>(null);
+}: { readonly onDetails: (origin: HTMLElement) => void } & ItemComposerProps) {
+  const input = useEntryFocus();
   const [choosing, setChoosing] = useState(false);
-  useEffect(() => {
-    input.current?.focus();
-  }, []);
   const { changed, clear } = useClearEntry(input, value, onChange, onCancel);
   const placeholder = entryPlaceholder(target.week);
   const save = () => {
@@ -106,7 +120,7 @@ export function OverviewEntryLine({
         ref={input}
         data-overview-focus={`entry:${target.parent.kind}:${target.parent.id}:${target.week}`}
         placeholder={placeholder}
-        aria-label={`${placeholder} ${target.parent.name}`}
+        aria-label={overviewEntryLabel(target.parent.name, target.week)}
         value={value.text}
         disabled={view.pending}
         className="min-h-11 rounded-md bg-transparent px-2 py-1 text-sm focus-visible:ring-1 focus-visible:ring-ring"
@@ -124,7 +138,11 @@ export function OverviewEntryLine({
                 {...{ choosing, setChoosing, value, view, onChange }}
               />
             )}
-          <Button type="button" variant="ghost" onClick={onDetails}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={(event) => onDetails(event.currentTarget)}
+          >
             More details
           </Button>
           <Button type="submit" disabled={view.pending}>

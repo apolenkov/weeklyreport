@@ -172,12 +172,11 @@ function finishAcknowledgedSubmission({
           }
         : { ...current, submission: null };
     if (current.mode === "create") {
-      if (!submission.addAnother) return null;
+      if (!submission.addAnother || current.contextual) return null;
       const target = { ...current.target, source: current.week };
       return {
         ...createOverviewComposerState(editor, target, null),
         mode: "create",
-        ...(current.contextual ? { contextual: true } : {}),
         target,
         seq: current.seq + 1,
       };

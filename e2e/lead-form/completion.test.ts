@@ -406,20 +406,20 @@ async function focusMissingCurrent(): Promise<void> {
     "Project CRM-Customer 360 needs at least one Current Week item.",
   );
   await command(["click", link]);
-  const buttonName = "Add item to CRM-Customer 360, Current week";
+  const entryName = "Add what happened — CRM-Customer 360, This week";
   await command([
     "wait",
     "--fn",
-    `document.activeElement?.getAttribute('aria-label') === ${JSON.stringify(buttonName)}`,
+    `document.activeElement?.getAttribute('aria-label') === ${JSON.stringify(entryName)}`,
   ]);
-  await assertFocused(buttonName);
+  await assertFocused(entryName);
   assert.equal(new URL(await getUrl()).hash, expectedHref);
   assert.equal(
     await isVisible(
       await scopedRef(
         { role: "article", name: "Product CRM-Customer 360" },
-        "button",
-        buttonName,
+        "textbox",
+        entryName,
       ),
     ),
     true,

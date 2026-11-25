@@ -1,6 +1,12 @@
 "use client";
 
-import { type RefObject, useEffect, useLayoutEffect, useRef } from "react";
+import {
+  type RefObject,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+} from "react";
 
 import type { ParentActivityOption } from "../model/record-parent";
 import type { ItemEditDialogProps } from "./item-edit-dialog";
@@ -111,6 +117,8 @@ type ItemInlineEditorProps = Omit<ItemEditDialogProps, "open" | "onDelete"> & {
   readonly confirmationOnly?: boolean | undefined;
   readonly onWeekChange?: ((week: "current" | "next") => void) | undefined;
   readonly weekChangeDisabled?: boolean | undefined;
+  readonly closeWithoutConfirmation?: (() => boolean) | undefined;
+  readonly hideNextStatus?: boolean | undefined;
 };
 
 function InlineEditHint({
@@ -152,6 +160,7 @@ interface InlineFormViewProps {
   readonly products: ItemEditDialogProps["products"];
   readonly activities: readonly ParentActivityOption[];
   readonly showNextStep: boolean;
+  readonly hideNextStatus: boolean;
   readonly showPriority: boolean;
   readonly confirmationOnly: boolean;
   readonly saveDisabled: boolean;
@@ -166,6 +175,7 @@ function InlineFormView({
   products,
   activities,
   showNextStep,
+  hideNextStatus,
   showPriority,
   confirmationOnly,
   saveDisabled,
@@ -206,6 +216,7 @@ function InlineFormView({
           form={form}
           week={week}
           showNextStep={showNextStep}
+          showStatus={week === "current" || !hideNextStatus}
           nextStepTextareaRef={nextStepTextareaRef}
         />
       </fieldset>
@@ -237,12 +248,21 @@ export function ItemInlineEditor({
   confirmationOnly = false,
   onWeekChange,
   requestCloseRef,
+  closeWithoutConfirmation,
+  hideNextStatus = false,
+  onCancel,
   ...props
 }: ItemInlineEditorProps) {
   const nextStepTextareaRef = useFocusNextStep(focusNextStep, props.week);
   const activities = props.activities ?? EMPTY_ACTIVITIES;
-  const { dialogSurfaceRef, discardDialog, ...dialogForm } = useItemEditDialog({
+  const {
+    dialogSurfaceRef,
+    discardDialog,
+    requestClose: closeForm,
+    ...dialogForm
+  } = useItemEditDialog({
     ...props,
+    onCancel,
     activities,
     presentation: "inline",
     onSave: (item) => {
@@ -256,21 +276,26 @@ export function ItemInlineEditor({
         }
       : undefined,
   });
+  const requestClose = useCallback(
+    () => (closeWithoutConfirmation?.() ? onCancel() : closeForm()),
+    [closeWithoutConfirmation, onCancel, closeForm],
+  );
   useLayoutEffect(() => {
     if (!requestCloseRef) return;
-    requestCloseRef.current = dialogForm.requestClose;
+    requestCloseRef.current = requestClose;
     return () => {
       requestCloseRef.current = null;
     };
-  }, [requestCloseRef, dialogForm.requestClose]);
+  }, [requestCloseRef, requestClose]);
   return (
     <div ref={dialogSurfaceRef} className="min-w-0">
       <InlineFormView
-        form={dialogForm}
+        form={{ ...dialogForm, requestClose }}
         week={props.week}
         products={props.products}
         activities={activities}
         showNextStep={showNextStep}
+        hideNextStatus={hideNextStatus}
         showPriority={showPriority}
         confirmationOnly={confirmationOnly}
         saveDisabled={saveDisabled}

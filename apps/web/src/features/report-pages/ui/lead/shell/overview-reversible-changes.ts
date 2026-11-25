@@ -93,6 +93,7 @@ export function itemChange(
       },
     };
   }
+  if (editor.view.viewModel.publishedLockedItemIds.has(row.id)) return null;
   const list = (ready: ReadyEditor) =>
     week === "current"
       ? ready.view.viewModel.ownCurrentWeekItems

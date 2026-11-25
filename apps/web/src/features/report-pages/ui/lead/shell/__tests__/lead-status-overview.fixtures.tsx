@@ -56,6 +56,7 @@ export function Wrapper({
   currentCarriedOver = false,
   coveringRisk = false,
   predecessorItem,
+  publishedItemStableIds = [],
   submitted = false,
   reviewerFeedback = false,
   extraCurrentRow = false,
@@ -88,6 +89,7 @@ export function Wrapper({
   readonly coveringRisk?: boolean;
   readonly predecessorItem?:
     ReportSectionReadModel["items"][number] | undefined;
+  readonly publishedItemStableIds?: readonly string[];
   readonly submitted?: boolean;
   readonly reviewerFeedback?: boolean;
   readonly extraCurrentRow?: boolean;
@@ -303,7 +305,10 @@ export function Wrapper({
         section: sectionStore.read(),
         readOnly: false,
         canRequestReopen: false,
-        publishedLineage: { itemStableIds: [], decisionStableIds: [] },
+        publishedLineage: {
+          itemStableIds: publishedItemStableIds,
+          decisionStableIds: [],
+        },
       }),
     },
     { path: ["reports", "myHistory"], query: { items: [] } },

@@ -11,11 +11,13 @@ import type { ActiveRecordEditor } from "./overview-record-context";
 export function OverviewStepDetails({
   editor,
   close,
+  restoreFocus,
   save,
   error,
 }: {
   editor: ActiveRecordEditor;
   close: () => void;
+  restoreFocus: () => void;
   save: () => void;
   error: string;
 }) {
@@ -32,7 +34,14 @@ export function OverviewStepDetails({
         if (!open) close();
       }}
     >
-      <SheetContent aria-describedby={undefined} className="p-4">
+      <SheetContent
+        aria-describedby={undefined}
+        className="p-4"
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          restoreFocus();
+        }}
+      >
         <SheetTitle>Next step details</SheetTitle>
         <textarea
           aria-label="Step text"

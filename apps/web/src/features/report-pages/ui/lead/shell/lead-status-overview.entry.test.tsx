@@ -55,19 +55,21 @@ describe("Overview entry lines", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", {
+      await screen.findByRole("textbox", {
         name: "Add what happened — Payments, This week",
       }),
     );
 
     expect(
-      screen.getByRole("form", { name: "Add item for Payments, current week" }),
-    ).toBeInTheDocument();
+      screen.getByRole("textbox", {
+        name: "Add what happened — Payments, This week",
+      }),
+    ).toHaveFocus();
     expect(screen.getByTestId("overview-save-state")).toHaveTextContent(
       "All changes saved",
     );
     const description = screen.getByRole("textbox", {
-      name: /What happened…|Plan…/,
+      name: "Add what happened — Payments, This week",
     });
     // Deliberately duplicate the existing row's complete authored fields. A
     // text/content lookup cannot distinguish the acknowledgement; only the
@@ -79,7 +81,13 @@ describe("Overview entry lines", () => {
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
-    await pollUntil(() => expect(screen.getByRole("textbox")).toHaveValue(""));
+    await pollUntil(() =>
+      expect(
+        screen.getByRole("textbox", {
+          name: "Add what happened — Payments, This week",
+        }),
+      ).toHaveValue(""),
+    );
     const submittedItems = (
       saveDraft.mock.calls[0]?.[0] as {
         readonly items: ReportSectionReadModel["items"];
@@ -109,7 +117,13 @@ describe("Overview entry lines", () => {
     expect(screen.getByTestId("overview-save-state")).toHaveTextContent(
       /Saving…|All changes saved/,
     );
-    await pollUntil(() => expect(screen.getByRole("textbox")).toHaveFocus());
+    await pollUntil(() =>
+      expect(
+        screen.getByRole("textbox", {
+          name: "Add what happened — Payments, This week",
+        }),
+      ).toHaveFocus(),
+    );
   });
 
   it("Quick Save clears the composer fields and returns focus to the description", async () => {
@@ -140,12 +154,14 @@ describe("Overview entry lines", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", {
+      await screen.findByRole("textbox", {
         name: "Add what happened — Payments, This week",
       }),
     );
     await user.type(
-      screen.getByRole("textbox", { name: /What happened…|Plan…/ }),
+      screen.getByRole("textbox", {
+        name: "Add what happened — Payments, This week",
+      }),
       "First batch item",
     );
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -154,15 +170,21 @@ describe("Overview entry lines", () => {
     await vi.waitFor(
       () =>
         expect(
-          screen.getByRole("textbox", { name: /What happened…|Plan…/ }),
+          screen.getByRole("textbox", {
+            name: "Add what happened — Payments, This week",
+          }),
         ).toHaveValue(""),
       { timeout: 2000 },
     );
     expect(
-      screen.getByRole("form", { name: "Add item for Payments, current week" }),
-    ).toBeInTheDocument();
+      screen.queryByRole("form", {
+        name: "Add item for Payments, current week",
+      }),
+    ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("textbox", { name: /What happened…|Plan…/ }),
+      screen.getByRole("textbox", {
+        name: "Add what happened — Payments, This week",
+      }),
     ).toHaveFocus();
   });
 
@@ -196,12 +218,14 @@ describe("Overview entry lines", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", {
+      await screen.findByRole("textbox", {
         name: "Plan something — Payments, Next week",
       }),
     );
     await user.type(
-      screen.getByRole("textbox", { name: /What happened…|Plan…/ }),
+      screen.getByRole("textbox", {
+        name: "Plan something — Payments, Next week",
+      }),
       "First next item",
     );
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -210,14 +234,20 @@ describe("Overview entry lines", () => {
     await vi.waitFor(
       () =>
         expect(
-          screen.getByRole("textbox", { name: /What happened…|Plan…/ }),
+          screen.getByRole("textbox", {
+            name: "Plan something — Payments, Next week",
+          }),
         ).toHaveValue(""),
       { timeout: 2000 },
     );
     expect(
-      screen.getByRole("form", { name: "Add item for Payments, next week" }),
-    ).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Plan…")).toBeInTheDocument();
+      screen.queryByRole("form", { name: "Add item for Payments, next week" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", {
+        name: "Plan something — Payments, Next week",
+      }),
+    ).toHaveFocus();
   });
 
   it("Quick Save validation failure retains input and keeps editor open", async () => {
@@ -230,7 +260,7 @@ describe("Overview entry lines", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", {
+      await screen.findByRole("textbox", {
         name: "Add what happened — Payments, This week",
       }),
     );
@@ -238,7 +268,9 @@ describe("Overview entry lines", () => {
     // 500-character description limit. The composer must keep it verbatim.
     const overLimit = "a".repeat(501);
     await user.click(
-      screen.getByRole("textbox", { name: /What happened…|Plan…/ }),
+      screen.getByRole("textbox", {
+        name: "Add what happened — Payments, This week",
+      }),
     );
     await user.paste(overLimit);
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -251,7 +283,9 @@ describe("Overview entry lines", () => {
       screen.getByText("Description must be 500 characters or fewer."),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("textbox", { name: /What happened…|Plan…/ }),
+      screen.getByRole("textbox", {
+        name: "Add what happened — Payments, This week",
+      }),
     ).toHaveValue(overLimit);
   });
 
@@ -267,12 +301,12 @@ describe("Overview entry lines", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", {
+      await screen.findByRole("textbox", {
         name: "Add what happened — Payments, This week",
       }),
     );
     const description = screen.getByRole("textbox", {
-      name: /What happened…|Plan…/,
+      name: "Add what happened — Payments, This week",
     });
     await user.type(description, "Persistent failure item");
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -286,7 +320,9 @@ describe("Overview entry lines", () => {
       screen.getByRole("form", { name: "Add item for Payments, current week" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("textbox", { name: /What happened…|Plan…/ }),
+      screen.getByRole("textbox", {
+        name: "Add what happened — Payments, This week",
+      }),
     ).toHaveValue("Persistent failure item");
   });
 
@@ -321,9 +357,16 @@ describe("Overview entry lines", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", {
+      await screen.findByRole("textbox", {
         name: "Plan something — Payments, Next week",
       }),
+    );
+
+    await user.type(
+      screen.getByRole("textbox", {
+        name: "Plan something — Payments, Next week",
+      }),
+      "Next path",
     );
 
     const form = await screen.findByRole("form", {
@@ -333,19 +376,21 @@ describe("Overview entry lines", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.queryByTestId("report-unit-footer")).not.toBeInTheDocument();
     expect(within(form).getByPlaceholderText("Plan…")).toBeInTheDocument();
-    // Cells never offer creation: the unit header is the only entry point.
+    // Cells never offer creation: the footer hosts each entry line.
     expect(
       document.querySelectorAll("[data-overview-create-origin]"),
     ).toHaveLength(0);
 
-    await user.type(
-      screen.getByRole("textbox", { name: /What happened…|Plan…/ }),
-      "Next path",
-    );
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
-    await pollUntil(() => expect(screen.getByRole("textbox")).toHaveValue(""));
+    await pollUntil(() =>
+      expect(
+        screen.getByRole("textbox", {
+          name: "Plan something — Payments, Next week",
+        }),
+      ).toHaveValue(""),
+    );
 
     const submitted = (
       saveDraft.mock.calls[0]?.[0] as {
@@ -368,7 +413,13 @@ describe("Overview entry lines", () => {
     });
     expect(savedResponses).toHaveLength(1);
 
-    await pollUntil(() => expect(screen.getByRole("textbox")).toHaveFocus());
+    await pollUntil(() =>
+      expect(
+        screen.getByRole("textbox", {
+          name: "Plan something — Payments, Next week",
+        }),
+      ).toHaveFocus(),
+    );
   });
 
   it("keeps the entry focused in a unit with several Current rows and keeps it inside that unit", async () => {
@@ -399,19 +450,33 @@ describe("Overview entry lines", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", {
+      await screen.findByRole("textbox", {
         name: "Add what happened — Payments, This week",
       }),
     );
     await user.type(
-      screen.getByRole("textbox", { name: /What happened…|Plan…/ }),
+      screen.getByRole("textbox", {
+        name: "Add what happened — Payments, This week",
+      }),
       "Fresh current item",
     );
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     await pollUntil(() => expect(saveDraft).toHaveBeenCalledOnce());
-    await pollUntil(() => expect(screen.getByRole("textbox")).toHaveValue(""));
-    await pollUntil(() => expect(screen.getByRole("textbox")).toHaveFocus());
+    await pollUntil(() =>
+      expect(
+        screen.getByRole("textbox", {
+          name: "Add what happened — Payments, This week",
+        }),
+      ).toHaveValue(""),
+    );
+    await pollUntil(() =>
+      expect(
+        screen.getByRole("textbox", {
+          name: "Add what happened — Payments, This week",
+        }),
+      ).toHaveFocus(),
+    );
     const unit = screen.getByRole("article", { name: "Product Payments" });
     expect(unit).toContainElement(document.activeElement as HTMLElement);
   });
@@ -447,12 +512,14 @@ describe("Overview entry lines", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", {
+      await screen.findByRole("textbox", {
         name: "Add what happened — Payments, This week",
       }),
     );
     await user.type(
-      screen.getByRole("textbox", { name: /What happened…|Plan…/ }),
+      screen.getByRole("textbox", {
+        name: "Add what happened — Payments, This week",
+      }),
       "Retried current item",
     );
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -467,7 +534,19 @@ describe("Overview entry lines", () => {
 
     await user.click(screen.getByRole("button", { name: "Save" }));
 
-    await pollUntil(() => expect(screen.getByRole("textbox")).toHaveValue(""));
-    await pollUntil(() => expect(screen.getByRole("textbox")).toHaveFocus());
+    await pollUntil(() =>
+      expect(
+        screen.getByRole("textbox", {
+          name: "Add what happened — Payments, This week",
+        }),
+      ).toHaveValue(""),
+    );
+    await pollUntil(() =>
+      expect(
+        screen.getByRole("textbox", {
+          name: "Add what happened — Payments, This week",
+        }),
+      ).toHaveFocus(),
+    );
   });
 });

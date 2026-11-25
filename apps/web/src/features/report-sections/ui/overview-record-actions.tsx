@@ -21,7 +21,7 @@ export function RecordAction({
   readonly label: string;
   readonly Icon: LucideIcon;
   readonly reason?: string | undefined;
-  readonly act: () => void;
+  readonly act: (origin: HTMLButtonElement) => void;
 }) {
   return (
     <Button
@@ -33,7 +33,7 @@ export function RecordAction({
       aria-disabled={!!reason}
       aria-description={reason}
       onUnavailable={() => toast.info(reason)}
-      onClick={act}
+      onClick={(event) => act(event.currentTarget)}
     >
       <Icon aria-hidden="true" />
     </Button>
@@ -58,7 +58,7 @@ export function PanelActions({
   cancel: () => void;
   save: () => void;
   askDelete: () => void;
-  details: () => void;
+  details: (origin: HTMLButtonElement) => void;
 }) {
   return (
     <div ref={actionRow} className="flex flex-wrap items-center gap-1">

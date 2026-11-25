@@ -1,42 +1,54 @@
+import { GrowingTextarea } from "@weeklyreport/ui/components/ui/growing-textarea";
+
 import type {
   StatusOverviewCreateTarget,
   StatusOverviewRecordTarget,
   StatusOverviewUnit,
 } from "../model/status-overview";
+import { entryPlaceholder, overviewEntryLabel } from "./overview-entry-line";
 import type {
   StatusOverviewEditorSlot,
   StatusOverviewRecordSlot,
 } from "./status-overview-editor-slot";
 import { TIMELINE_GRID } from "./status-overview-layout";
 
-export function UnitAddItemButton({
+export function UnitEntryInput({
   unit,
   source,
   onAddItem,
+  readOnly = false,
 }: {
   readonly unit: StatusOverviewUnit;
   readonly source: "current" | "next";
-  readonly onAddItem: (target: StatusOverviewCreateTarget) => void;
+  readonly onAddItem: (
+    target: StatusOverviewCreateTarget,
+    text: string,
+  ) => void;
+  readonly readOnly?: boolean;
 }) {
   if (unit.historical) return null;
-  const label =
-    source === "current"
-      ? `Add what happened — ${unit.name}, This week`
-      : `Plan something — ${unit.name}, Next week`;
+  const begin = (text: string) => {
+    if (text && !readOnly)
+      onAddItem({ source, unitKind: unit.kind, unitId: unit.id }, text);
+  };
   return (
-    <button
-      type="button"
-      aria-label={label}
+    <GrowingTextarea
+      aria-label={overviewEntryLabel(unit.name, source)}
+      placeholder={entryPlaceholder(source)}
       data-overview-focus={
         source === "current" ? `add:${unit.key}` : `add:${unit.key}:next`
       }
-      onClick={() =>
-        onAddItem({ source, unitKind: unit.kind, unitId: unit.id })
-      }
-      className="inline-flex min-h-[var(--touch-target-min)] min-w-[var(--touch-target-min)] items-center gap-1 rounded-[var(--radius-sm)] px-2 text-sm text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--color-primary)]"
-    >
-      <span>{source === "current" ? "What happened…" : "Plan…"}</span>
-    </button>
+      readOnly={readOnly}
+      onChange={(event) => {
+        if (!(
+          event.nativeEvent instanceof InputEvent &&
+          event.nativeEvent.isComposing
+        ))
+          begin(event.currentTarget.value);
+      }}
+      onCompositionEnd={(event) => begin(event.currentTarget.value)}
+      className="min-h-11 min-w-11 rounded-md bg-transparent px-2 py-1 text-sm focus-visible:ring-1 focus-visible:ring-ring"
+    />
   );
 }
 
@@ -49,7 +61,7 @@ export function StatusOverviewTimelineFooter({
 }: {
   readonly unit: StatusOverviewUnit;
   readonly onAddItem?:
-    ((target: StatusOverviewCreateTarget) => void) | undefined;
+    ((target: StatusOverviewCreateTarget, text: string) => void) | undefined;
   readonly onAddRecord?:
     ((target: StatusOverviewRecordTarget) => void) | undefined;
   readonly editorSlot?: StatusOverviewEditorSlot | undefined;
@@ -91,10 +103,11 @@ export function StatusOverviewTimelineFooter({
             ) : (
               <>
                 {!ineligible && (
-                  <UnitAddItemButton
+                  <UnitEntryInput
                     unit={unit}
                     source={source}
                     onAddItem={onAddItem}
+                    readOnly={editorSlot?.mode === "create"}
                   />
                 )}
                 {!ineligible &&

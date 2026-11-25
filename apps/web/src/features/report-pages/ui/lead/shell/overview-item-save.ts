@@ -43,7 +43,7 @@ function buildLatestOverviewPatch(
   editor: ReadyEditor,
   dialog: OverviewItemDialogState,
   updatedItem: KanbanItem,
-) {
+): DraftPatch | null {
   const current = editor.view.viewModel.ownCurrentWeekItems;
   const next = editor.view.viewModel.ownNextWeekItems;
   if (dialog.mode === "create") {
@@ -62,12 +62,15 @@ function buildLatestOverviewPatch(
           updatedItem,
         );
   }
-  const id = findOverviewDraftItem(editor, dialog)?.id;
-  if (!id) return null;
-  const source = editor.draft.section.items.find(
-    (item) => item.id === id,
-  )?.type;
-  if (source !== "current" && source !== "next") return null;
+  const row = findOverviewDraftItem(editor, dialog);
+  if (!row?.id) return null;
+  const { id, type: source } = row;
+  if (dialog.target.focusNextStep)
+    return {
+      kind: "item-patch",
+      itemId: id,
+      patch: { nextStepText: updatedItem.nextStepText ?? null },
+    };
   return buildStatusOverviewItemPatch(
     { ...dialog.target, recordId: id, source },
     current,
@@ -154,7 +157,7 @@ function carriedConfirmPatch(
   editor: ReadyEditor,
   dialog: OverviewItemDialogState,
 ): DraftPatch | null {
-  if (dialog.mode !== "edit") return null;
+  if (dialog.mode !== "edit" || dialog.target.focusNextStep) return null;
   const itemId = findOverviewDraftItem(editor, dialog)?.id;
   return itemId
     ? buildConfirmCarriedItemPatch(editor.draft.section, itemId)
@@ -226,7 +229,13 @@ function submitDraftUpdate(
   dialog: OverviewItemDialogState,
   submission: { item: KanbanItem; options?: SaveOptions | undefined },
 ): void {
-  const updatedItem = submission.item;
+  const updatedItem =
+    dialog.mode === "edit" && dialog.target.focusNextStep
+      ? {
+          ...(findEditableItem(editor, dialog.target) ?? submission.item),
+          nextStepText: submission.item.nextStepText ?? null,
+        }
+      : submission.item;
   const retrying =
     dialog.submission !== null &&
     overviewSubmittedItemIsCurrent(editor, dialog) &&

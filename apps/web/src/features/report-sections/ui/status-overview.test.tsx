@@ -1049,12 +1049,12 @@ describe("StatusOverview", () => {
     expect(screen.queryByTestId("report-unit-footer")).not.toBeInTheDocument();
     expect(screen.queryByRole("form")).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", {
+      screen.getByRole("textbox", {
         name: addTo("Current"),
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getAllByRole("button", {
+      screen.getAllByRole("textbox", {
         name: /Add what happened|Plan something/,
       }),
     ).toHaveLength(2);
@@ -1392,12 +1392,12 @@ describe("StatusOverview", () => {
     expect(longName).toHaveClass("break-words");
 
     expect(
-      screen.getByRole("button", {
+      screen.getByRole("textbox", {
         name: `Add what happened — ${longProductName}, This week`,
       }),
     ).toBeVisible();
     expect(
-      screen.getByRole("button", {
+      screen.getByRole("textbox", {
         name: addTo("Current"),
       }),
     ).toBeVisible();
@@ -1407,16 +1407,20 @@ describe("StatusOverview", () => {
       }),
     ).not.toBeInTheDocument();
 
-    await user.click(
-      screen.getByRole("button", {
+    await user.type(
+      screen.getByRole("textbox", {
         name: addTo("Current"),
       }),
+      "A",
     );
-    expect(onAddItem).toHaveBeenCalledWith({
-      source: "current",
-      unitKind: "activity",
-      unitId: "activity-1",
-    });
+    expect(onAddItem).toHaveBeenCalledWith(
+      {
+        source: "current",
+        unitKind: "activity",
+        unitId: "activity-1",
+      },
+      "A",
+    );
   });
 
   it("hides quick-add for historical units even when a handler exists", () => {
@@ -1435,7 +1439,7 @@ describe("StatusOverview", () => {
 
     expect(screen.getByText("Work item 1")).toBeVisible();
     expect(
-      screen.queryByRole("button", {
+      screen.queryByRole("textbox", {
         name: /Add what happened|Plan something/,
       }),
     ).toBeNull();
@@ -1452,12 +1456,12 @@ describe("StatusOverview", () => {
     const article = screen.getByRole("article", {
       name: "Activity Incident duty",
     });
-    const add = within(article).getByRole("button", {
+    const add = within(article).getByRole("textbox", {
       name: addTo("Current"),
     });
-    expect(add).toHaveTextContent("What happened…");
+    expect(add).toHaveAttribute("placeholder", "What happened…");
     expect(add).not.toHaveClass("opacity-0");
-    expect(add).toHaveClass("min-h-[var(--touch-target-min)]");
+    expect(add).toHaveClass("min-h-11");
     expect(article.querySelector("[data-overview-mobile-create]")).toBeNull();
     expect(
       document.querySelectorAll("[data-overview-create-origin]"),
@@ -1466,22 +1470,29 @@ describe("StatusOverview", () => {
       screen.queryByRole("button", { name: /^Add (current|next) week update/ }),
     ).toBeNull();
 
-    await user.click(add);
-    expect(onAddItem).toHaveBeenLastCalledWith({
-      source: "current",
-      unitKind: "activity",
-      unitId: "activity-1",
-    });
-    await user.click(
-      within(article).getByRole("button", {
+    await user.type(add, "A");
+    expect(onAddItem).toHaveBeenLastCalledWith(
+      {
+        source: "current",
+        unitKind: "activity",
+        unitId: "activity-1",
+      },
+      "A",
+    );
+    await user.type(
+      within(article).getByRole("textbox", {
         name: addTo("Next"),
       }),
+      "A",
     );
-    expect(onAddItem).toHaveBeenLastCalledWith({
-      source: "next",
-      unitKind: "activity",
-      unitId: "activity-1",
-    });
+    expect(onAddItem).toHaveBeenLastCalledWith(
+      {
+        source: "next",
+        unitKind: "activity",
+        unitId: "activity-1",
+      },
+      "A",
+    );
   });
 
   it("renders no creation controls without an add handler", () => {

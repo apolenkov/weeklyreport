@@ -192,6 +192,10 @@ export function findOverviewDraftItem(
   dialog: OverviewItemDialogState,
 ) {
   if (dialog.mode === "create") return undefined;
+  if (dialog.target.focusNextStep)
+    return editor.draft.section.items.find(
+      (row) => row.id === dialog.target.recordId,
+    );
   return editor.draft.section.items.find((row) =>
     dialog.stableId
       ? row.stableId === dialog.stableId

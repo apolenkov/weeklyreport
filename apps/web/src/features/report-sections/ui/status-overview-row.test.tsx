@@ -40,15 +40,17 @@ it("starts an entry in the selected Product and week", async () => {
       ownedStageStarts={["Development", "Testing"]}
     />,
   );
-  await user.click(
-    screen.getByRole("button", {
+  await user.type(
+    screen.getByRole("textbox", {
       name: "Add what happened — Duty, This week",
     }),
+    "A",
   );
-  await user.click(
-    screen.getByRole("button", {
+  await user.type(
+    screen.getByRole("textbox", {
       name: "Plan something — Duty, Next week",
     }),
+    "A",
   );
   expect(onAddItem.mock.calls).toEqual([
     [
@@ -57,6 +59,7 @@ it("starts an entry in the selected Product and week", async () => {
         unitKind: "product",
         unitId: "p1",
       },
+      "A",
     ],
     [
       {
@@ -64,6 +67,7 @@ it("starts an entry in the selected Product and week", async () => {
         unitKind: "product",
         unitId: "p1",
       },
+      "A",
     ],
   ]);
 });
@@ -127,7 +131,7 @@ it("offers one contextual action in each writable week even for an empty unit", 
     />,
   );
   const article = screen.getByRole("article", { name: "Activity Duty" });
-  const buttons = within(article).getAllByRole("button", {
+  const buttons = within(article).getAllByRole("textbox", {
     name: /^(Add what happened|Plan something)/,
   });
   expect(buttons).toHaveLength(2);
@@ -137,19 +141,21 @@ it("offers one contextual action in each writable week even for an empty unit", 
   expect(
     within(article).queryByRole("button", { name: /Add item.*Previously/ }),
   ).not.toBeInTheDocument();
-  await user.click(
-    within(article).getByRole("button", {
+  await user.type(
+    within(article).getByRole("textbox", {
       name: "Add what happened — Duty, This week",
     }),
+    "A",
   );
-  await user.click(
-    within(article).getByRole("button", {
+  await user.type(
+    within(article).getByRole("textbox", {
       name: "Plan something — Duty, Next week",
     }),
+    "A",
   );
   expect(onAddItem.mock.calls).toEqual([
-    [{ source: "current", unitKind: "activity", unitId: "a1" }],
-    [{ source: "next", unitKind: "activity", unitId: "a1" }],
+    [{ source: "current", unitKind: "activity", unitId: "a1" }, "A"],
+    [{ source: "next", unitKind: "activity", unitId: "a1" }, "A"],
   ]);
 });
 

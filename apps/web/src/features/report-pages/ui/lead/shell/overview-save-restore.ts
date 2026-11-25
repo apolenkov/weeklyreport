@@ -16,7 +16,12 @@ export function restorePatchFor(
 ): DraftPatch | null {
   if (dialog.submission) return dialog.submission.restore;
   const row = findOverviewDraftItem(editor, dialog);
-  return row?.id ? { kind: "item-patch", itemId: row.id, patch: row } : null;
+  if (!row?.id) return null;
+  const patch =
+    dialog.mode === "edit" && dialog.target.focusNextStep && !dialog.promotion
+      ? { nextStepText: row.nextStepText ?? null }
+      : row;
+  return { kind: "item-patch", itemId: row.id, patch };
 }
 
 // Patch that undoes a Save the lead abandons after it failed. Only the failed

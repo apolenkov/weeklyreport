@@ -31,7 +31,7 @@ export interface StatusOverviewProps {
   readonly onEditItemText?:
     ((item: StatusOverviewItem, text: string) => void) | undefined;
   readonly onAddItem?:
-    ((target: StatusOverviewCreateTarget) => void) | undefined;
+    ((target: StatusOverviewCreateTarget, text: string) => void) | undefined;
   /** Starts a risk or decision already bound to the unit it was raised from. */
   readonly onAddRecord?:
     ((target: StatusOverviewRecordTarget) => void) | undefined;

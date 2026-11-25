@@ -36,14 +36,14 @@ describe("Overview entry start", () => {
           <LeadForm reportId={REPORT_ID} mode="overview" />
         </Wrapper>,
       );
-      const trigger = await screen.findByRole("button", {
+      const trigger = await screen.findByRole("textbox", {
         name:
           week === "current"
             ? "Add what happened — Payments, This week"
             : "Plan something — Payments, Next week",
       });
       trigger.focus();
-      await user.keyboard("{Enter}");
+      await user.keyboard("a{Backspace}");
       const form = await screen.findByRole("form", {
         name: `Add item for Payments, ${week} week`,
       });
@@ -58,7 +58,7 @@ describe("Overview entry start", () => {
       expect(saveDraft).not.toHaveBeenCalled();
       await pollUntil(() =>
         expect(
-          screen.getByRole("button", {
+          screen.getByRole("textbox", {
             name: trigger.getAttribute("aria-label") ?? "",
           }),
         ).toHaveFocus(),
@@ -77,18 +77,15 @@ describe("Overview entry start", () => {
         <LeadForm reportId={REPORT_ID} mode="overview" />
       </Wrapper>,
     );
-    await user.click(
-      await screen.findByRole("button", {
+    await user.type(
+      await screen.findByRole("textbox", {
         name: "Plan something — Payments, Next week",
       }),
+      "Retained stage work",
     );
     const form = await screen.findByRole("form", {
       name: "Add item for Payments, next week",
     });
-    await user.type(
-      within(form).getByRole("textbox", { name: /What happened…|Plan…/ }),
-      "Retained stage work",
-    );
     const queryKey = [["leadForm", "byPeriod"], { reportId: REPORT_ID }];
     const loaded = client.getQueryData<{ section: ReportSectionReadModel }>(
       queryKey,
@@ -109,7 +106,9 @@ describe("Overview entry start", () => {
     });
     await user.click(within(form).getByRole("button", { name: "Save" }));
     expect(
-      within(form).getByRole("textbox", { name: /What happened…|Plan…/ }),
+      within(form).getByRole("textbox", {
+        name: "Plan something — Payments, Next week",
+      }),
     ).toHaveValue("Retained stage work");
     expect(within(form).getByRole("alert")).toHaveTextContent(/stage/i);
     expect(saveDraft).not.toHaveBeenCalled();
@@ -126,7 +125,7 @@ describe("Overview entry start", () => {
           <LeadForm reportId={REPORT_ID} mode="overview" />
         </Wrapper>,
       );
-      await screen.findByRole("button", {
+      await screen.findByRole("textbox", {
         name: "Add what happened — Payments, This week",
       });
       const queryKey = [["leadForm", "byPeriod"], { reportId: REPORT_ID }];
@@ -156,7 +155,7 @@ describe("Overview entry start", () => {
       });
       await pollUntil(() =>
         expect(
-          screen.queryByRole("button", {
+          screen.queryByRole("textbox", {
             name: "Add what happened — Payments, This week",
           }),
         ).not.toBeInTheDocument(),
@@ -167,7 +166,7 @@ describe("Overview entry start", () => {
         }),
       ).not.toBeInTheDocument();
       expect(
-        screen.queryByRole("button", {
+        screen.queryByRole("textbox", {
           name: "Plan something — Payments, Next week",
         }),
       ).not.toBeInTheDocument();
@@ -184,11 +183,12 @@ describe("Overview entry start", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", {
+      await screen.findByRole("textbox", {
         name: "Add what happened — Payments, This week",
       }),
     );
 
+    await user.keyboard("a{Backspace}");
     const form = await screen.findByRole("form", {
       name: "Add item for Payments, current week",
     });

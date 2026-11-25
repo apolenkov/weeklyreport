@@ -31,7 +31,7 @@ interface ItemActions {
   readonly editRecord: (target: StatusOverviewEditTarget) => void;
   readonly editItem: (target: StatusOverviewEditTarget) => void;
   readonly editItemText: (item: StatusOverviewItem, text: string) => void;
-  readonly addItem: (target: StatusOverviewCreateTarget) => void;
+  readonly addItem: (target: StatusOverviewCreateTarget, text: string) => void;
   readonly planItem: (item: StatusOverviewItem) => void;
 }
 

@@ -1,5 +1,11 @@
 import type { LeadStatusOverviewOutput } from "@weeklyreport/shared";
-import { type RefObject, useRef, useState } from "react";
+import {
+  type Dispatch,
+  type RefObject,
+  type SetStateAction,
+  useRef,
+  useState,
+} from "react";
 
 import {
   type KanbanItem,
@@ -77,15 +83,19 @@ export function useOverviewItemEditor(
       ? (updatedItem: KanbanItem): void =>
           saveOverviewItem(saveContext, updatedItem, { addAnother: true })
       : undefined;
+  const close = () => {
+    closeOverviewDialog({ editor, dialog, recoveryReason, setDialog });
+    startedAttempt.current = null;
+    promotionAttempt.current = null;
+    setError(null);
+  };
+  const details = useOverviewDetails(dialog, setDialog, close);
   return {
     dialog,
     requestCloseRef,
     restoreDialog: (saved: OverviewItemDialogState) =>
       setDialog((current) => current ?? saved),
-    showDetails: () =>
-      setDialog((current) =>
-        current ? { ...current, surface: "details" } : null,
-      ),
+    ...details,
     error: error ?? overviewSaveFailure(editor, dialog),
     recoveryReason,
     ...editOpeners,
@@ -101,11 +111,46 @@ export function useOverviewItemEditor(
       setDialog(null);
       setError(null);
     },
-    close: () => {
-      closeOverviewDialog({ editor, dialog, recoveryReason, setDialog });
-      startedAttempt.current = null;
-      promotionAttempt.current = null;
-      setError(null);
+    close,
+  };
+}
+
+function useOverviewDetails(
+  dialog: OverviewItemDialogState | null,
+  setDialog: Dispatch<SetStateAction<OverviewItemDialogState | null>>,
+  close: () => void,
+) {
+  const detailsOrigin = useRef<HTMLElement | null>(null);
+  const detailsBaseline = useRef<string | null>(null);
+  const detailsFields = () =>
+    JSON.stringify([dialog?.week, dialog?.draftStore.getSnapshot()]);
+  const canReturnFromDetails = () =>
+    dialog?.detailsOpen === true &&
+    dialog.submission === null &&
+    detailsFields() === detailsBaseline.current;
+  const dismissDetails = () => {
+    if (!canReturnFromDetails()) {
+      close();
+      return;
+    }
+    setDialog((current) =>
+      current ? { ...current, detailsOpen: false } : null,
+    );
+  };
+  return {
+    showDetails: (origin: HTMLElement) => {
+      detailsOrigin.current = origin;
+      detailsBaseline.current = detailsFields();
+      setDialog((current) =>
+        current ? { ...current, detailsOpen: true } : null,
+      );
+    },
+    dismissDetails,
+    canReturnFromDetails,
+    restoreDetailsFocus: () => {
+      const origin = detailsOrigin.current;
+      detailsOrigin.current = null;
+      if (origin?.isConnected) origin.focus();
     },
   };
 }
@@ -117,12 +162,14 @@ export function buildOverviewEditor(
     onSave,
     onSaveAndAddAnother,
     onCancel,
+    closeWithoutConfirmation,
     onWeekChange,
     requestCloseRef,
   }: {
     onSave: (item: KanbanItem) => void;
     onSaveAndAddAnother?: ((item: KanbanItem) => void) | undefined;
     onCancel: () => void;
+    closeWithoutConfirmation?: (() => boolean) | undefined;
     onWeekChange: (week: "current" | "next") => void;
     requestCloseRef: RefObject<(() => void) | null>;
   },
@@ -152,6 +199,7 @@ export function buildOverviewEditor(
       onSave={onSave}
       onSaveAndAddAnother={onSaveAndAddAnother}
       onCancel={onCancel}
+      closeWithoutConfirmation={closeWithoutConfirmation}
       onWeekChange={onWeekChange}
       requestCloseRef={requestCloseRef}
     />

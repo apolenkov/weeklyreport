@@ -15,7 +15,7 @@ interface PanelActions {
   close: () => void;
   leave: () => void;
   restoreDialog: (saved: OverviewItemDialogState) => void;
-  showDetails: () => void;
+  showDetails: (origin: HTMLElement) => void;
   save: (value: KanbanItem) => void;
 }
 export function recordPanel(
@@ -41,12 +41,17 @@ export function recordPanel(
   if (!occurrence?.editTarget || !occurrence.recordId) return null;
   const store = dialog.draftStore;
   const failed = !!dialog.submission && editor.draft.autosave.state === "error";
+  const published =
+    editor.view.viewModel.publishedLockedItemIds.has(occurrence.recordId) ||
+    isPublished(model, occurrence);
   return {
     id: occurrence.recordId,
     failed,
     stableId: dialog.stableId,
     source,
     store,
+    published,
+    detailsOpen: dialog.detailsOpen === true,
     pending: dialog.submission !== null && !actions.error,
     error: failed
       ? "Not saved. The connection dropped. Your text is kept here."
@@ -66,7 +71,7 @@ export function recordPanel(
     },
     remove: (onlyStep) => {
       if (dialog.submission) return;
-      if (!onlyStep && isPublished(model, occurrence)) return;
+      if (!onlyStep && published) return;
       const change = itemChange(
         editor,
         occurrence,

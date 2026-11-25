@@ -1,11 +1,11 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import type { StatusOverviewUnit } from "../model/status-overview";
 import {
   StatusOverviewTimelineFooter,
-  UnitAddItemButton,
+  UnitEntryInput,
 } from "./status-overview-timeline-footer";
 
 function overviewUnit(
@@ -35,38 +35,41 @@ describe("unit creation controls", () => {
     const user = userEvent.setup();
     const onAddItem = vi.fn();
     render(
-      <UnitAddItemButton
+      <UnitEntryInput
         unit={overviewUnit()}
         source="current"
         onAddItem={onAddItem}
       />,
     );
 
-    const add = screen.getByRole("button", {
+    const add = screen.getByRole("textbox", {
       name: "Add what happened — Incident duty, This week",
     });
     expect(add).toHaveAttribute(
       "data-overview-focus",
       "add:activity:activity-1",
     );
-    expect(add).toHaveClass("min-h-[var(--touch-target-min)]");
-    expect(add).toHaveClass("min-w-[var(--touch-target-min)]");
+    expect(add).toHaveClass("min-h-11");
+    expect(add).toHaveClass("min-w-11");
     expect(add).not.toHaveClass("opacity-0");
     // A visible label, so the one creation entry reads without hovering.
-    expect(within(add).getByText("What happened…")).toBeVisible();
+    expect(add).toHaveAttribute("placeholder", "What happened…");
 
-    await user.click(add);
-    expect(onAddItem).toHaveBeenCalledWith({
-      source: "current",
-      unitKind: "activity",
-      unitId: "activity-1",
-    });
+    await user.type(add, "A");
+    expect(onAddItem).toHaveBeenCalledWith(
+      {
+        source: "current",
+        unitKind: "activity",
+        unitId: "activity-1",
+      },
+      "A",
+    );
   });
 
   it("offers no creation control for a historical unit", () => {
     const onAddItem = vi.fn();
     render(
-      <UnitAddItemButton
+      <UnitEntryInput
         unit={overviewUnit({ historical: true })}
         source="current"
         onAddItem={onAddItem}
@@ -74,7 +77,7 @@ describe("unit creation controls", () => {
     );
 
     expect(
-      screen.queryByRole("button", {
+      screen.queryByRole("textbox", {
         name: "Add what happened — Incident duty, This week",
       }),
     ).not.toBeInTheDocument();
@@ -88,7 +91,7 @@ describe("unit creation controls", () => {
         ownedStageStarts={["Planning", "Testing"]}
       />,
     );
-    expect(screen.getAllByRole("button")).toHaveLength(2);
+    expect(screen.getAllByRole("textbox")).toHaveLength(2);
     expect(screen.getByText("needed to submit")).toBeVisible();
     expect(screen.queryByRole("button", { name: /Planning/ })).toBeNull();
   });
@@ -98,6 +101,6 @@ it("offers one quiet entry line for each editable week", () => {
   render(
     <StatusOverviewTimelineFooter unit={overviewUnit()} onAddItem={vi.fn()} />,
   );
-  expect(screen.getByText("What happened…")).toBeVisible();
-  expect(screen.getByText("Plan…")).toBeVisible();
+  expect(screen.getByPlaceholderText("What happened…")).toBeVisible();
+  expect(screen.getByPlaceholderText("Plan…")).toBeVisible();
 });
