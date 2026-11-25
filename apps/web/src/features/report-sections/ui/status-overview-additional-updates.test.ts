@@ -10,7 +10,10 @@ function linkedRow(
 ): StatusOverviewLineageRow {
   return {
     key,
-    previous: null,
+    stableId: null,
+    priorCommitment: null,
+    answerState: null,
+    last: null,
     current: cells.current ? ({} as StatusOverviewItem) : null,
     next: cells.next ? ({} as StatusOverviewItem) : null,
     previousParent: null,
@@ -20,7 +23,10 @@ function linkedRow(
 function independentRow(key: string): StatusOverviewLineageRow {
   return {
     key,
-    previous: null,
+    stableId: null,
+    priorCommitment: null,
+    answerState: null,
+    last: null,
     current: {} as StatusOverviewItem,
     next: null,
     previousParent: null,

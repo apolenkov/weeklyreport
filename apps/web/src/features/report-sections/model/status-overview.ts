@@ -18,7 +18,8 @@ import type { PriorVerdictState } from "./status-overview-verdict";
 export type StatusOverviewSection = Pick<
   ReportSectionReadModel,
   "projects" | "referencedProjects" | "activities" | "items" | "risks"
->;
+> &
+  Partial<Pick<ReportSectionReadModel, "decisions">>;
 
 interface StatusOverviewPeriodLabels {
   readonly previouslyPlanned: string | null;
@@ -119,6 +120,13 @@ export interface StatusOverviewUnit {
   readonly status: CanonicalStatus;
   readonly stages: readonly StatusOverviewStage[];
   readonly linkedProducts: readonly string[];
+  readonly records?: readonly {
+    key: string;
+    kind: "risk" | "decision";
+    text: string;
+    stableId?: string | null | undefined;
+    details: readonly (readonly [string, string | null])[];
+  }[];
   /** Weekly title/description overrides; present for activity units only. */
   readonly activityFields?:
     | {
@@ -129,7 +137,8 @@ export interface StatusOverviewUnit {
       }
     | undefined;
   readonly columns: {
-    readonly previouslyPlanned: StatusOverviewColumn;
+    readonly lastWeek: StatusOverviewColumn;
+    readonly priorCommitments: StatusOverviewColumn;
     readonly currentWeek: StatusOverviewColumn;
     readonly nextWeek: StatusOverviewColumn;
   };
@@ -261,7 +270,7 @@ export function projectStatusOverview(
   const sourceCounts = units.reduce(
     (counts, unit) => ({
       previouslyPlanned:
-        counts.previouslyPlanned + unit.columns.previouslyPlanned.items.length,
+        counts.previouslyPlanned + unit.columns.priorCommitments.items.length,
       currentWeek: counts.currentWeek + unit.columns.currentWeek.items.length,
       nextWeek: counts.nextWeek + unit.columns.nextWeek.items.length,
     }),

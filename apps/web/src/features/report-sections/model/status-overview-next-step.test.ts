@@ -98,7 +98,7 @@ describe("next-step overview projection", () => {
       source,
       previous,
     );
-    expect(columns.previouslyPlanned.items[0]).toMatchObject({
+    expect(columns.priorCommitments.items[0]).toMatchObject({
       text: "Run integration tests",
       editTarget: null,
     });

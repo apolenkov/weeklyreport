@@ -15,25 +15,20 @@ const unit: StatusOverviewUnit = {
   stages: [],
   linkedProducts: [],
   columns: {
-    previouslyPlanned: { availability: "available", items: [] },
+    lastWeek: { availability: "available", items: [] },
+    priorCommitments: { availability: "available", items: [] },
     currentWeek: { availability: "available", items: [] },
     nextWeek: { availability: "available", items: [] },
   },
 };
-const periods = {
-  previouslyPlanned: null,
-  currentWeek: "Current week",
-  nextWeek: "Next week",
-};
 
-it("starts an owned product stage in the exact week", async () => {
+it("starts an entry in the selected Product and week", async () => {
   const user = userEvent.setup();
   const onAddItem = vi.fn();
   render(
     <StatusOverviewUnitRow
       unit={{ ...unit, kind: "product", key: "product:p1", id: "p1" }}
       rows={[]}
-      periods={periods}
       expanded={false}
       onToggle={vi.fn()}
       panelId="panel"
@@ -47,12 +42,12 @@ it("starts an owned product stage in the exact week", async () => {
   );
   await user.click(
     screen.getByRole("button", {
-      name: "Add item to Duty, Development, Current week",
+      name: "Add item to Duty, Current week",
     }),
   );
   await user.click(
     screen.getByRole("button", {
-      name: "Add item to Duty, Testing, Next week",
+      name: "Add item to Duty, Next week",
     }),
   );
   expect(onAddItem.mock.calls).toEqual([
@@ -61,7 +56,6 @@ it("starts an owned product stage in the exact week", async () => {
         source: "current",
         unitKind: "product",
         unitId: "p1",
-        stageName: "Development",
       },
     ],
     [
@@ -69,7 +63,6 @@ it("starts an owned product stage in the exact week", async () => {
         source: "next",
         unitKind: "product",
         unitId: "p1",
-        stageName: "Testing",
       },
     ],
   ]);
@@ -78,7 +71,6 @@ it("starts an owned product stage in the exact week", async () => {
 it("does not show stage starts for activities, historical products, or absent ownership", () => {
   const props = {
     rows: [],
-    periods,
     expanded: false,
     onToggle: vi.fn(),
     panelId: "panel",
@@ -123,7 +115,6 @@ it("offers one contextual action in each writable week even for an empty unit", 
     <StatusOverviewUnitRow
       unit={unit}
       rows={[]}
-      periods={periods}
       expanded={false}
       onToggle={vi.fn()}
       panelId="panel"
@@ -165,7 +156,6 @@ it("places the create editor only in its matching unit and week", () => {
     <StatusOverviewUnitRow
       unit={unit}
       rows={[]}
-      periods={periods}
       expanded={false}
       onToggle={vi.fn()}
       panelId="panel"

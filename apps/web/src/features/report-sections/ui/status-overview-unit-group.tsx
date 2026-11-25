@@ -43,7 +43,8 @@ function stageActions(unit: StatusOverviewUnit, overview: StatusOverviewProps) {
         : undefined,
     ownedStages:
       unit.kind === "product"
-        ? unit.stages.map((stage) => stage.name)
+        ? (overview.ownedStageStartsForProduct?.(unit.id) ??
+          unit.stages.map((stage) => stage.name))
         : undefined,
   };
 }
@@ -151,7 +152,6 @@ export function UnitGroup({
             onInspect={onInspect}
             onCloseHealth={onCloseHealth}
             rows={lineage.get(unit.key) ?? []}
-            periods={model.periods}
             expanded={expandedKeys.has(unit.key)}
             onToggle={() => onToggle(unit.key)}
             panelId={`${idPrefix}-${group.kind}-${String(index)}`}

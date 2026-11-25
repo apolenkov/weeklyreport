@@ -7,9 +7,11 @@ type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
 export function LeadOverviewDetails({
   editor,
   pendingInput,
+  readiness,
 }: {
   readonly editor: ReadyEditor | null;
   readonly pendingInput: boolean;
+  readonly readiness: ReadyEditor["view"]["submitReadiness"];
 }) {
   if (!editor) return null;
   const { view } = editor;
@@ -28,20 +30,16 @@ export function LeadOverviewDetails({
         crossAuthorEntries={view.data.crossAuthors}
         pendingInput={pendingInput}
       />
-      {pendingInput ? (
-        <p
-          role="status"
-          className="text-sm text-[var(--color-muted-foreground)]"
-        >
-          Save or cancel the open update before submitting the report.
-        </p>
-      ) : !view.viewModel.isReadOnly ? (
-        <LeadSubmitReadinessSummary
-          readiness={view.submitReadiness}
-          onSubmit={view.writeActions.handleSubmit}
-          showSubmitAction={false}
-          showAutosaveStatus={false}
-        />
+      {!view.viewModel.isReadOnly ? (
+        <div id="overview-readiness" tabIndex={-1}>
+          {" "}
+          <LeadSubmitReadinessSummary
+            readiness={readiness}
+            onSubmit={view.writeActions.handleSubmit}
+            showSubmitAction={false}
+            showAutosaveStatus={false}
+          />
+        </div>
       ) : null}
     </div>
   );

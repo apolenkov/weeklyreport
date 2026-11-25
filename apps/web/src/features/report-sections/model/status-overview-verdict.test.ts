@@ -132,12 +132,15 @@ describe("planVerdictWrite with a linked occurrence", () => {
     expect(isValidWrite(appliedItem(linked, patchOf(result)))).toBe(true);
   });
 
-  it("continues: only clears the marker and keeps planned", () => {
+  it("continues: sets the carried item in progress", () => {
     const linked = carried();
     const result = write("continue", linked);
-    expect(patchOf(result)).toEqual({ type: "current", carriedOver: false });
+    expect(patchOf(result)).toMatchObject({
+      type: "current",
+      carriedOver: false,
+    });
     const applied = appliedItem(linked, patchOf(result));
-    expect(applied.workflowStatus).toBe("planned");
+    expect(applied.workflowStatus).toBe("in_progress");
     expect(applied.carriedOver).toBe(false);
   });
 
@@ -171,7 +174,7 @@ describe("planVerdictWrite with a linked occurrence", () => {
     expect(prior).toEqual(snapshot);
   });
 
-  it("continue returns a done or paused occurrence to planned", () => {
+  it("continue sets a done or paused occurrence in progress", () => {
     const paused = carried({
       workflowStatus: "paused",
       pausedReason: "Waiting",
@@ -179,13 +182,13 @@ describe("planVerdictWrite with a linked occurrence", () => {
     });
     const result = write("continue", paused);
     expect(patchOf(result)).toMatchObject({
-      workflowStatus: "planned",
+      workflowStatus: "in_progress",
       pausedReason: null,
     });
     expect(isValidWrite(appliedItem(paused, patchOf(result)))).toBe(true);
     expect(
       patchOf(write("continue", carried({ workflowStatus: "done" }))),
-    ).toMatchObject({ workflowStatus: "planned" });
+    ).toMatchObject({ workflowStatus: "in_progress" });
   });
 
   it("pauses with a trimmed reason as a paused Current occurrence", () => {
@@ -253,8 +256,11 @@ describe("planVerdictWrite with a linked occurrence", () => {
   it("does not duplicate a Next commitment carried on the Current record", () => {
     const linked = carried({ nextStepText: "Phase two" });
     const result = write("next", linked);
-    expect(patchOf(result)).toEqual({ carriedOver: false });
-    expect(appliedItem(linked, patchOf(result)).type).toBe("current");
+    expect(result).toEqual({
+      kind: "blocked",
+      reason:
+        "Its next step is already planned in Next week. Edit the next step instead",
+    });
   });
 
   it("records won't do through the command on the linked record", () => {

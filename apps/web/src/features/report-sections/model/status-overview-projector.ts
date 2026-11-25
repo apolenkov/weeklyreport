@@ -188,6 +188,37 @@ export function buildStatusOverviewUnit(
     id,
     kind,
     ...presentation,
+    records: [
+      ...input.currentSection.risks
+        .filter(
+          (row) => (kind === "product" ? row.projectId : row.activityId) === id,
+        )
+        .map((risk, index) => ({
+          key: `risk:${risk.stableId ?? risk.id ?? index}`,
+          stableId: risk.stableId,
+          kind: "risk" as const,
+          text: risk.risk,
+          details: [
+            ["Impact", risk.impact],
+            ["Mitigation", risk.mitigation],
+            ["Severity", risk.severity],
+          ] as const,
+        })),
+      ...(input.currentSection.decisions ?? [])
+        .filter(
+          (row) => (kind === "product" ? row.productId : row.activityId) === id,
+        )
+        .map((decision, index) => ({
+          key: `decision:${decision.stableId ?? decision.id ?? index}`,
+          stableId: decision.stableId,
+          kind: "decision" as const,
+          text: decision.text,
+          details: [
+            ["Impact", decision.impact],
+            ["Owner", decision.owner],
+          ] as const,
+        })),
+    ],
     columns: buildStatusOverviewColumns(kind, id, input, previous),
   };
 }

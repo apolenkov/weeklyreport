@@ -20,7 +20,8 @@ function unit(
     stages: [],
     linkedProducts: [],
     columns: {
-      previouslyPlanned: { availability: "available", items: [] },
+      lastWeek: { availability: "available", items: [] },
+      priorCommitments: { availability: "available", items: [] },
       currentWeek: { availability: "available", items: [] },
       nextWeek: { availability: "available", items: [] },
     },

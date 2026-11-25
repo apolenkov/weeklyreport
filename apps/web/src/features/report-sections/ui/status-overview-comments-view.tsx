@@ -154,6 +154,16 @@ function ReplyComposer({
       <textarea
         id={`${id}-reply`}
         className="min-h-11 w-full rounded border border-[var(--color-border)] bg-[var(--color-background)] p-2 text-sm"
+        onKeyDown={(event) => {
+          if (
+            event.ctrlKey &&
+            event.key === "Enter" &&
+            !event.nativeEvent.isComposing
+          ) {
+            event.preventDefault();
+            if (canSend(composer)) composer.onSend();
+          }
+        }}
         value={composer.value}
         onChange={(event) => composer.onChange(event.target.value)}
       />

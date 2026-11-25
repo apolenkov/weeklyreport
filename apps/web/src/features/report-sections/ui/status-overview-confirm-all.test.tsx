@@ -1,5 +1,4 @@
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import type { StatusOverviewModel } from "../model/status-overview";
@@ -17,7 +16,7 @@ const model: StatusOverviewModel = {
 };
 
 describe("Confirm all as continue", () => {
-  it("confirms the suggested continuations in one activation", async () => {
+  it("requires each carried record to receive its own status", () => {
     const onConfirmAll = vi.fn();
     render(
       <StatusOverview
@@ -27,11 +26,8 @@ describe("Confirm all as continue", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Confirm all as continue" }),
-    );
-
-    expect(onConfirmAll).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("button",{name:/Confirm all/i})).toBeNull();
+    expect(onConfirmAll).not.toHaveBeenCalled();
   });
 
   it("is absent when nothing is pending or it cannot be written", () => {

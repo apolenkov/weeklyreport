@@ -52,11 +52,7 @@ describe.each(["risk", "decision"] as const)("Overview inline %s", (kind) => {
         <LeadForm reportId={REPORT_ID} mode="overview" />
       </Wrapper>,
     );
-    await user.click(
-      await screen.findByRole("button", {
-        name: `Add ${kind} to Operational duty`,
-      }),
-    );
+    await openUnitRecord(user, "Operational duty", kind);
     const form = await screen.findByRole("form", {
       name: `Add ${kind} to Operational duty`,
     });
@@ -117,9 +113,7 @@ describe.each(["risk", "decision"] as const)("Overview inline %s", (kind) => {
           <LeadForm reportId={REPORT_ID} mode="overview" />
         </Wrapper>,
       );
-      await user.click(
-        await screen.findByRole("button", { name: `Add ${kind} to ${parent}` }),
-      );
+      await openUnitRecord(user, parent, kind);
       const form = await screen.findByRole("form", {
         name: `Add ${kind} to ${parent}`,
       });
@@ -167,7 +161,9 @@ describe.each(["risk", "decision"] as const)("Overview inline %s", (kind) => {
         "Saved draft — needs details",
       );
       expect(
-        screen.getByRole("button", { name: `Add ${kind} to ${parent}` }),
+        within(
+          screen.getByRole("article", { name: new RegExp(parent) }),
+        ).getByRole("button", { name: "+ Risk or decision" }),
       ).toHaveFocus();
     },
   );
@@ -184,4 +180,17 @@ function echoRecordRequest(
     risks: request.risks,
     decisions: request.decisions,
   });
+}
+
+async function openUnitRecord(
+  user: ReturnType<typeof userEvent.setup>,
+  parent: string,
+  kind: string,
+) {
+  const unit = await screen.findByRole("article", { name: new RegExp(parent) });
+  await user.click(
+    within(unit).getByRole("button", { name: "+ Risk or decision" }),
+  );
+  if (kind === "decision")
+    await user.click(within(unit).getByRole("radio", { name: "Decision" }));
 }

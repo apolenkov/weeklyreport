@@ -4,14 +4,18 @@ import {
   ownedStagesForProject,
   projectReportHealthPulse,
   projectStatusOverview,
+  type StatusOverviewItem,
   type StatusOverviewModel,
 } from "../../../../report-sections";
 import { openWorkDisabledReason } from "./open-work-register-model";
+import { recordPanel } from "./overview-active-record";
 import { buildActivityFieldsChange } from "./overview-activity-fields";
 import { overviewInlineItemSlot } from "./overview-inline-item-slot";
 import { overviewPlanPresentation } from "./overview-plan-presentation";
 import { overviewRecordPresentation } from "./overview-record-presentation";
+import { itemChange, unitRecordDeletion } from "./overview-reversible-changes";
 import { useCompletionPresentation } from "./presentation/use-completion-presentation";
+import { useEntryUndo } from "./use-entry-undo";
 import type { LeadFormEditorHandle } from "./use-lead-form-editor";
 import { useOpenWorkRegister } from "./use-open-work-register";
 import {
@@ -19,9 +23,13 @@ import {
   useOverviewItemEditor,
 } from "./use-overview-item-editor";
 import { useOverviewPlanActions } from "./use-overview-plan-actions";
+import {
+  FALLBACK_READINESS,
+  useOverviewReadiness,
+} from "./use-overview-readiness";
 import { useOverviewRecordEditor } from "./use-overview-record-editor";
+import { useOverviewUndo } from "./use-overview-undo";
 import { useOverviewVerdictActions } from "./use-overview-verdict-actions";
-import { useSaveStatus } from "./use-save-status";
 
 export type AvailableEditor = LeadFormEditorHandle;
 export type ReadyEditor = Extract<AvailableEditor, { status: "ready" }>;
@@ -34,16 +42,6 @@ const FALLBACK_AUTOSAVE = {
   isInFlight: false,
   forceSave: () => Promise.resolve(),
 };
-const FALLBACK_READINESS = {
-  canOpenConfirmation: false,
-  submitPending: false,
-  blockingIssues: [],
-  pendingReviewCount: 0,
-  willAutoPromote: [],
-  unsetStatuses: [],
-  autosaveState: "idle" as const,
-};
-
 function useOverviewCompletion(
   editor: ReadyEditor | null,
   isReadOnly: boolean,
@@ -103,8 +101,14 @@ export function useOverviewController({
     activityPending: pendingActivityIds.size > 0,
   });
   const { plan, record, pendingInput } = editing;
-  const verdict = useOverviewVerdictActions(readyEditor, output);
-  const saveStatus = useSaveStatus(readyEditor, pendingInput, plan.pending);
+  const undo = useOverviewUndo(readyEditor, pendingInput);
+  useEntryUndo(readyEditor, editing.dialog.dialog, undo.announce);
+  const verdict = useOverviewVerdictActions(readyEditor, output, undo.write,undo.announce);
+  const { saveStatus, readiness,onReasonDraft } = useOverviewReadiness(
+    readyEditor,
+    editing,
+    pendingActivityIds,
+  );
   const canStartAction = canEdit && !pendingInput;
   const openWork = useOpenWorkRegister(
     targetReportId,
@@ -126,12 +130,24 @@ export function useOverviewController({
     completion,
     model,
     ...editing,
+    activeRecord: recordPanel(readyEditor, editing.dialog, model, undo),
+    move: (item: StatusOverviewItem) => {
+      if (!readyEditor || pendingInput) return;
+      const change = itemChange(readyEditor, item, "move");
+      if (change) void undo.write(change);
+    },
+    deleteUnitRecord: (kind: "risk" | "decision", stableId: string) => {
+      if (!readyEditor || pendingInput) return;
+      const change = unitRecordDeletion(readyEditor, kind, stableId);
+      if (change) void undo.write(change);
+    },
     health: projectReportHealthPulse(
       model.units,
       readyEditor?.draft.section ?? output.current.section,
     ),
     verdict: { ...verdict, onAddRecord: record.open },
     saveStatus,
+    readiness,onReasonDraft,
     openWork,
     openWorkBlocker,
     onActivityFieldsChange: buildActivityFieldsChange(readyEditor),

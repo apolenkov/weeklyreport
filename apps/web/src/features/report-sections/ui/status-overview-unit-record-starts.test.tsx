@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import type { StatusOverviewUnit } from "../model/status-overview";
+import { OverviewUnitRecords } from "./overview-unit-records";
 import { StatusOverviewTimelineFooter } from "./status-overview-timeline-footer";
 
 function unit(overrides: Partial<StatusOverviewUnit> = {}): StatusOverviewUnit {
@@ -22,7 +23,8 @@ function unit(overrides: Partial<StatusOverviewUnit> = {}): StatusOverviewUnit {
     stages: [],
     linkedProducts: [],
     columns: {
-      previouslyPlanned: { availability: "available", items: [] },
+      lastWeek: { availability: "available", items: [] },
+      priorCommitments: { availability: "available", items: [] },
       currentWeek: { availability: "available", items: [] },
       nextWeek: { availability: "available", items: [] },
     },
@@ -46,42 +48,17 @@ describe("unit risk and decision starts", () => {
     expect(screen.queryByRole("button")).toBeNull();
   });
 
-  it.each([
-    ["risk", "Add risk to Billing"],
-    ["decision", "Add decision to Billing"],
-  ] as const)("starts a %s bound to its Product", async (kind, name) => {
-    const onAddRecord = vi.fn();
-    render(
-      <StatusOverviewTimelineFooter
-        unit={unit()}
-        onAddItem={vi.fn()}
-        onAddRecord={onAddRecord}
-      />,
-    );
-
-    const start = screen.getByRole("button", { name });
-    expect(start).toHaveClass("min-h-[var(--touch-target-min)]");
-    await userEvent.click(start);
-
-    expect(onAddRecord).toHaveBeenCalledWith({
-      kind,
-      unitKind: "product",
-      unitId: "product-1",
-    });
-  });
-
   it("binds a record raised from an Activity to that Activity", async () => {
     const onAddRecord = vi.fn();
     render(
-      <StatusOverviewTimelineFooter
+      <OverviewUnitRecords
         unit={unit({ key: "activity:a-1", id: "a-1", kind: "activity" })}
-        onAddItem={vi.fn()}
         onAddRecord={onAddRecord}
       />,
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Add risk to Billing" }),
+      screen.getByRole("button", { name: "+ Risk or decision" }),
     );
 
     expect(onAddRecord).toHaveBeenCalledWith({
@@ -105,5 +82,21 @@ describe("unit risk and decision starts", () => {
       />,
     );
     expect(screen.queryByRole("button")).toBeNull();
+  });
+});
+
+it("starts a contextual record with the header action", async () => {
+  const open = vi.fn();
+  render(<OverviewUnitRecords unit={unit()} onAddRecord={open} />);
+  expect(
+    screen.getByRole("button", { name: "0 risks · 0 decisions" }),
+  ).toBeVisible();
+  await userEvent.click(
+    screen.getByRole("button", { name: "+ Risk or decision" }),
+  );
+  expect(open).toHaveBeenCalledWith({
+    kind: "risk",
+    unitKind: "product",
+    unitId: "product-1",
   });
 });

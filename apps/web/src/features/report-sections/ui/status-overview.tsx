@@ -3,6 +3,8 @@
 import { useEffect, useId, useState } from "react";
 
 import { buildStatusOverviewLineage } from "../model/status-overview-lineage";
+import { StageLegend } from "./overview-stages";
+import { OverviewWeekGrid } from "./overview-week-grid";
 import { ReportHealthPulseView } from "./report-health-pulse";
 import { STATUS_OVERVIEW_COLUMN_HEADER_IDS } from "./status-overview-layout";
 import type { StatusOverviewProps } from "./status-overview-props";
@@ -15,7 +17,9 @@ function ColumnHeading({
   id,
   label,
   period,
+  plans,
 }: {
+  readonly plans?: number | undefined;
   readonly id: string;
   readonly label: string;
   readonly period: string | null;
@@ -31,6 +35,29 @@ function ColumnHeading({
       <p className="mt-0.5 truncate text-xs text-[var(--color-foreground)]">
         {period ?? "Period unavailable"}
       </p>
+      <p className="text-xs text-muted-foreground">
+        {label === "Last week"
+          ? "How it went · read-only"
+          : label === "This week"
+            ? "Progress"
+            : "Plan"}
+      </p>
+      {plans !== undefined &&
+        (plans > 0 ? (
+          <button
+            type="button"
+            onClick={(event) =>
+              event.currentTarget
+                .closest("section")
+                ?.querySelector<HTMLElement>("[data-plan-outcome]")
+                ?.focus()
+            }
+          >
+            {plans} {plans === 1 ? "plan" : "plans"} to answer
+          </button>
+        ) : (
+          <span>plans answered</span>
+        ))}
     </div>
   );
 }
@@ -69,10 +96,8 @@ function StatusOverviewHeader({
   previousPlanSource,
   autosaveStatus,
   detailsHref,
-  onConfirmAll,
 }: {
   readonly idPrefix: string;
-  readonly onConfirmAll: (() => void) | undefined;
   readonly previousPlanSource: StatusOverviewProps["model"]["previousPlanSource"];
   readonly autosaveStatus: StatusOverviewProps["autosaveStatus"];
   readonly detailsHref: StatusOverviewProps["detailsHref"];
@@ -107,15 +132,6 @@ function StatusOverviewHeader({
             {autosaveStatus}
           </p>
         ) : null}
-        {onConfirmAll ? (
-          <button
-            type="button"
-            onClick={onConfirmAll}
-            className="inline-flex min-h-[var(--touch-target-min)] items-center rounded-[var(--radius-pill)] border border-[var(--color-border-strong)] px-3 text-xs font-semibold text-[var(--color-primary)] transition-colors hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
-          >
-            Confirm all as continue
-          </button>
-        ) : null}
         {detailsHref ? (
           <a
             href={detailsHref}
@@ -131,20 +147,24 @@ function StatusOverviewHeader({
 
 function ColumnHeadings({
   periods,
+  plans,
 }: {
+  readonly plans: number | undefined;
   readonly periods: StatusOverviewProps["model"]["periods"];
 }) {
   return (
-    <div className={`mb-4 hidden ${STATUS_OVERVIEW_DESKTOP_GRID}`}>
-      <div />
+    <div
+      className={`overview-column-headings mb-2 ${STATUS_OVERVIEW_DESKTOP_GRID}`}
+    >
       <ColumnHeading
         id={STATUS_OVERVIEW_COLUMN_HEADER_IDS.previouslyPlanned}
-        label="Previously planned"
+        label="Last week"
         period={periods.previouslyPlanned}
       />
       <ColumnHeading
         id={STATUS_OVERVIEW_COLUMN_HEADER_IDS.currentWeek}
-        label="Current week"
+        label="This week"
+        plans={plans}
         period={periods.currentWeek}
       />
       <ColumnHeading
@@ -163,6 +183,11 @@ export function StatusOverview(props: StatusOverviewProps) {
   const { closeInspection, healthPanelId, inspection, setInspection } =
     useHealthInspection(idPrefix);
   const lineage = buildStatusOverviewLineage(model.units);
+  const plans = [...lineage.values()]
+    .flat()
+    .filter(
+      (row) => !row.current && !row.next && row.answerState === "pending",
+    ).length;
   const [expandedKeys, setExpandedKeys] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
@@ -191,9 +216,6 @@ export function StatusOverview(props: StatusOverviewProps) {
         previousPlanSource={model.previousPlanSource}
         autosaveStatus={autosaveStatus}
         detailsHref={detailsHref}
-        onConfirmAll={
-          (props.pendingReviewCount ?? 0) > 0 ? props.onConfirmAll : undefined
-        }
       />
 
       {health ? (
@@ -203,32 +225,38 @@ export function StatusOverview(props: StatusOverviewProps) {
         />
       ) : null}
 
-      <ColumnHeadings periods={model.periods} />
+      <StageLegend />
+      <OverviewWeekGrid plans={plans}>
+        <ColumnHeadings
+          periods={model.periods}
+          plans={props.onVerdict ? plans : undefined}
+        />
 
-      {model.units.length === 0 ? (
-        <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
-          No reporting units are available for this period.
-        </div>
-      ) : (
-        <div className="min-w-0 overflow-hidden rounded-[var(--radius)] border-y border-[var(--color-border-subtle)] bg-[var(--color-card)]">
-          {UNIT_GROUPS.map((group) => (
-            <UnitGroup
-              key={group.kind}
-              group={group}
-              idPrefix={idPrefix}
-              overview={props}
-              lineage={lineage}
-              inspectionKey={inspection?.key}
-              healthPanelId={healthPanelId}
-              onInspect={(key, opener) => setInspection({ key, opener })}
-              onCloseHealth={closeInspection}
-              expandedKeys={expandedKeys}
-              onToggle={toggle}
-              onAddItem={addItem}
-            />
-          ))}
-        </div>
-      )}
+        {model.units.length === 0 ? (
+          <div className="rounded-[var(--radius)] border border-dashed border-[var(--color-border)] bg-[var(--color-surface-empty)] p-6 text-center text-sm text-[var(--color-muted-foreground)]">
+            No reporting units are available for this period.
+          </div>
+        ) : (
+          <div className="min-w-0 overflow-hidden rounded-[var(--radius)] border-y border-[var(--color-border-subtle)] bg-[var(--color-card)]">
+            {UNIT_GROUPS.map((group) => (
+              <UnitGroup
+                key={group.kind}
+                group={group}
+                idPrefix={idPrefix}
+                overview={props}
+                lineage={lineage}
+                inspectionKey={inspection?.key}
+                healthPanelId={healthPanelId}
+                onInspect={(key, opener) => setInspection({ key, opener })}
+                onCloseHealth={closeInspection}
+                expandedKeys={expandedKeys}
+                onToggle={toggle}
+                onAddItem={addItem}
+              />
+            ))}
+          </div>
+        )}
+      </OverviewWeekGrid>
     </section>
   );
 }

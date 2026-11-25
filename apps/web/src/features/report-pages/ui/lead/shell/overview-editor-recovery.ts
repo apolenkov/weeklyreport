@@ -35,7 +35,7 @@ export function buildPriorPlanSeed(
   const unit = model.units.find(
     (candidate) =>
       !candidate.historical &&
-      candidate.columns.previouslyPlanned.items.some(
+      candidate.columns.priorCommitments.items.some(
         (candidateItem) => candidateItem.key === item.key,
       ),
   );

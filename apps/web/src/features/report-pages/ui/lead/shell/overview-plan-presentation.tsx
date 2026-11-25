@@ -28,6 +28,7 @@ interface PlanActions {
 }
 
 interface ItemActions {
+  readonly editRecord: (target: StatusOverviewEditTarget) => void;
   readonly editItem: (target: StatusOverviewEditTarget) => void;
   readonly editItemText: (item: StatusOverviewItem, text: string) => void;
   readonly addItem: (target: StatusOverviewCreateTarget) => void;
@@ -90,7 +91,7 @@ export function overviewItemActions(
 ) {
   return enabled
     ? {
-        onEditItem: editor.editItem,
+        onEditItem: editor.editRecord,
         onEditItemText: editor.editItemText,
         onAddItem: editor.addItem,
         onPlanItem: editor.planItem,

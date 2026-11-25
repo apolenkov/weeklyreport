@@ -24,7 +24,7 @@ const item: StatusOverviewItem = {
   continuity: "continued",
 };
 
-const STATUS_BUTTON = "Status of Original text: In progress";
+const STATUS_BUTTON = "Choose outcome: Original text. Status: In progress";
 
 describe("StatusOverviewItemPreview at rest", () => {
   it("names the status icon with the full update text, like Edit item", () => {
@@ -38,7 +38,9 @@ describe("StatusOverviewItemPreview at rest", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: `Status of ${text}: In progress` }),
+      screen.getByRole("button", {
+        name: `Choose outcome: ${text}. Status: In progress`,
+      }),
     ).toBeVisible();
     expect(
       screen.getByRole("button", { name: `Edit item: ${text}` }),
@@ -192,7 +194,9 @@ describe("StatusOverviewItemPreview status menu", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: "Status of Original text: Planned" }),
+      screen.getByRole("button", {
+        name: "Choose outcome: Original text. Status: Planned",
+      }),
     );
     expect(
       screen.getByRole("menuitem", { name: "Planned" }),
@@ -230,7 +234,7 @@ describe("StatusOverviewItemPreview status menu", () => {
     );
 
     const trigger = screen.getByRole("button", {
-      name: "Status of Original text: Planned · not updated this week",
+      name: "Choose outcome: Original text. Status: Planned · not updated this week",
     });
     expect(trigger).toHaveAttribute("id", "confirm:current:stable-1");
     expect(trigger).toHaveAttribute(
@@ -266,7 +270,7 @@ describe("StatusOverviewItemPreview status menu", () => {
 
     expect(
       screen.getByRole("button", {
-        name: "Status of Original text: Continued · not updated this week",
+        name: "Choose outcome: Original text. Status: Continued · not updated this week",
       }),
     ).toBeInTheDocument();
   });
@@ -309,7 +313,9 @@ describe("StatusOverviewItemPreview status menu", () => {
     );
 
     expect(
-      screen.getByRole("img", { name: "Status of Original text: Planned" }),
+      screen.getByRole("img", {
+        name: "Choose outcome: Original text. Status: Planned",
+      }),
     ).toBeVisible();
     await user.click(
       screen.getByRole("button", { name: "Edit item: Original text" }),
@@ -440,7 +446,9 @@ describe("StatusOverviewItemPreview revealed actions", () => {
     );
 
     expect(
-      screen.getByRole("img", { name: "Status of Original text: Won't do" }),
+      screen.getByRole("img", {
+        name: "Choose outcome: Original text. Status: Won't do",
+      }),
     ).toBeVisible();
     expect(screen.getByText("Won't do · Scope removed")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /More actions/ })).toBeNull();

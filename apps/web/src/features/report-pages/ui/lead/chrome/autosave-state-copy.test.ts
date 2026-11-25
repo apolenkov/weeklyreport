@@ -40,7 +40,7 @@ describe("autosaveStatusCopy", () => {
 describe("overviewSaveStatus", () => {
   const base = {
     outcomePending: false,
-    pendingInput: true,
+    unsavedCount: 1,
     autosaveState: "saving",
     online: true,
   } as const;
@@ -51,26 +51,19 @@ describe("overviewSaveStatus", () => {
     );
   });
 
-  it("keeps the unsaved-editor copy online and for other autosave states", () => {
-    const unsaved = "Unsaved update — save or cancel the open edit";
-    expect(overviewSaveStatus(base)).toBe(unsaved);
+  it("gives running and failed saves priority over the unsaved count", () => {
+    expect(overviewSaveStatus({ ...base, unsavedCount: 2 })).toBe("Saving…");
     expect(
-      overviewSaveStatus({ ...base, autosaveState: "error", online: false }),
-    ).toBe(unsaved);
+      overviewSaveStatus({ ...base, autosaveState: "error", unsavedCount: 2 }),
+    ).toBe("Some changes are not saved");
   });
-
-  it("falls back to autosave copy without an open editor, and to nothing without a draft", () => {
-    expect(overviewSaveStatus({ ...base, pendingInput: false })).toBe(
-      "Saving draft",
-    );
+  it.each([
+    [0, "All changes saved"],
+    [1, "1 unsaved change"],
+    [3, "3 unsaved changes"],
+  ] as const)("counts %i unsaved records", (unsavedCount, label) => {
     expect(
-      overviewSaveStatus({ ...base, pendingInput: false, autosaveState: null }),
-    ).toBeUndefined();
-  });
-
-  it("lets a pending plan outcome win", () => {
-    expect(
-      overviewSaveStatus({ ...base, outcomePending: true, online: false }),
-    ).toBe("Saving plan outcome…");
+      overviewSaveStatus({ ...base, autosaveState: "idle", unsavedCount }),
+    ).toBe(label);
   });
 });

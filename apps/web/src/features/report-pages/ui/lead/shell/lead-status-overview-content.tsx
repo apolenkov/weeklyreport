@@ -1,3 +1,4 @@
+import {OverviewPlacementConfirmation} from "./overview-placement-confirmation";
 "use client";
 
 import { useSearchParams } from "next/navigation";
@@ -5,6 +6,7 @@ import type { ComponentProps, ReactNode, RefObject } from "react";
 
 import { SdlcTooltipProvider } from "../../../../../shared/ui/feedback/sdlc-tooltip";
 import {
+  OverviewRecordContext,
   projectStatusOverview,
   StatusOverview,
   type StatusOverviewItem,
@@ -24,7 +26,6 @@ import { OpenWorkRegister } from "./open-work-register";
 import { openWorkOutsideTimeline } from "./open-work-register-model";
 import { OverviewItemDialogSurface } from "./overview-item-dialog-surface";
 import { overviewItemActions } from "./overview-plan-presentation";
-import type { CompletionPresentation } from "./presentation/use-completion-presentation";
 import { RetainedRecordCopyRequest } from "./retained-record-copy-request";
 import {
   type AvailableEditor,
@@ -159,7 +160,7 @@ function OverviewOpenWork({
         ...openWork,
         openItems: openWorkOutsideTimeline(
           openWork.openItems,
-          model.units.flatMap((unit) => unit.columns.previouslyPlanned.items),
+          model.units.flatMap((unit) => unit.columns.priorCommitments.items),
         ),
       }}
       actionsDisabled={blocker !== null}
@@ -193,25 +194,6 @@ function overviewDirectActions(
     : {};
 }
 
-function OverviewHeader({
-  editor,
-  pendingInput,
-  completion,
-}: {
-  readonly editor: ReadyEditor | null;
-  readonly pendingInput: boolean;
-  readonly completion: Pick<CompletionPresentation, "completionActions">;
-}) {
-  if (!editor) return null;
-  return (
-    <ReadyOverviewHeader
-      editor={editor}
-      pendingInput={pendingInput}
-      completionActions={completion.completionActions}
-    />
-  );
-}
-
 interface LeadStatusOverviewContentProps {
   readonly targetReportId: string;
   readonly output: Parameters<typeof projectStatusOverview>[0];
@@ -240,11 +222,15 @@ export function LeadStatusOverviewContent({
           data-layout-key="report-page"
           data-layout-stability="position-width"
         >
-          <OverviewHeader
-            editor={readyEditor}
-            pendingInput={controller.pendingInput}
-            completion={controller.completion}
-          />
+          {readyEditor && (
+            <ReadyOverviewHeader
+              editor={readyEditor}
+              pendingInput={controller.pendingInput}
+              completionActions={controller.completion.completionActions}
+              saveStatus={controller.saveStatus}
+              blockers={controller.readiness.blockingIssues.length}
+            />
+          )}
           <EditorAvailabilityNotice editor={editor} />
           <OverviewRefreshWarning failed={refreshError} onRetry={onRefresh} />
           <RetainedRecordCopyRequest
@@ -255,30 +241,43 @@ export function LeadStatusOverviewContent({
           />
           {controller.planPresentation.recovery}
           {controller.recordPresentation.recovery}
-          {!itemSlot && (
+          {!itemSlot && !controller.activeRecord && (
             <OverviewEditorNotices
               dialog={dialog}
               error={dialog.error}
               itemEditor={controller.itemEditor}
             />
           )}
-          <StatusOverview
-            model={model}
-            ownedStageStartsForProduct={controller.ownedStageStartsForProduct}
-            health={controller.health}
-            editorSlot={itemSlot ?? controller.planPresentation.slot}
-            recordSlot={controller.recordPresentation.slot}
-            {...overviewItemActions(canStartAction, dialog, plan)}
-            onAddItem={itemSlot || canStartAction ? dialog.addItem : undefined}
-            {...overviewDirectActions(canStartAction, dialog, verdict)}
-            detailsHref={detailsHref}
-            activityFieldsEditable={controller.canEdit}
-            onActivityFieldsChange={controller.onActivityFieldsChange}
-            onActivityFieldsPendingChange={
-              controller.onActivityFieldsPendingChange
-            }
-            autosaveStatus={controller.saveStatus}
-          />
+          <OverviewRecordContext.Provider
+            value={{
+              active: controller.activeRecord,
+              onReasonDraft: controller.onReasonDraft,
+              deleteRecord: controller.canStartAction
+                ? controller.deleteUnitRecord
+                : undefined,
+              submitted: readyEditor?.view.isSubmitted === true,
+            }}
+          >
+            <StatusOverview
+              model={model}
+              ownedStageStartsForProduct={controller.ownedStageStartsForProduct}
+              health={controller.health}
+              editorSlot={itemSlot ?? controller.planPresentation.slot}
+              recordSlot={controller.recordPresentation.slot}
+              {...overviewItemActions(canStartAction, dialog, plan)}
+              onAddItem={
+                itemSlot || canStartAction ? dialog.addItem : undefined
+              }
+              {...overviewDirectActions(canStartAction, dialog, verdict)}
+              onMoveItem={canStartAction ? controller.move : undefined}
+              detailsHref={detailsHref}
+              activityFieldsEditable={controller.canEdit}
+              onActivityFieldsChange={controller.onActivityFieldsChange}
+              onActivityFieldsPendingChange={
+                controller.onActivityFieldsPendingChange
+              }
+            />
+          </OverviewRecordContext.Provider>
           <OverviewOpenWork
             openWork={controller.openWork}
             model={model}
@@ -286,11 +285,13 @@ export function LeadStatusOverviewContent({
             onOpen={plan.openWork}
           />
           <LeadOverviewDetails
+            readiness={controller.readiness}
             editor={readyEditor}
             pendingInput={controller.pendingInput}
           />
         </div>
       </LeadCompletionLayout>
+      <OverviewPlacementConfirmation week={verdict.placement.week} choose={verdict.placement.choose}/>
       <OverviewDialogs editor={readyEditor} />
     </SdlcTooltipProvider>
   );

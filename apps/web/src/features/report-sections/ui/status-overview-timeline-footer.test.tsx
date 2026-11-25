@@ -21,7 +21,8 @@ function overviewUnit(
     stages: [],
     linkedProducts: [],
     columns: {
-      previouslyPlanned: { availability: "available", items: [] },
+      lastWeek: { availability: "available", items: [] },
+      priorCommitments: { availability: "available", items: [] },
       currentWeek: { availability: "available", items: [] },
       nextWeek: { availability: "available", items: [] },
     },
@@ -52,7 +53,7 @@ describe("unit creation controls", () => {
     expect(add).toHaveClass("min-w-[var(--touch-target-min)]");
     expect(add).not.toHaveClass("opacity-0");
     // A visible label, so the one creation entry reads without hovering.
-    expect(within(add).getByText("Add item")).toBeVisible();
+    expect(within(add).getByText("What happened…")).toBeVisible();
 
     await user.click(add);
     expect(onAddItem).toHaveBeenCalledWith({
@@ -79,35 +80,19 @@ describe("unit creation controls", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("says what the stage names do and starts an item in the chosen stage", async () => {
-    const user = userEvent.setup();
-    const onAddItem = vi.fn();
-    render(
-      <StatusOverviewTimelineFooter
-        unit={overviewUnit({
-          key: "product:product-1",
-          id: "product-1",
-          kind: "product",
-          name: "Internal BI",
-        })}
-        onAddItem={onAddItem}
-        ownedStageStarts={["Planning"]}
-      />,
-    );
-
-    expect(screen.getAllByText("Or start in a stage:")).toHaveLength(2);
-    const start = screen.getByRole("button", {
-      name: "Add item to Internal BI, Planning, Next week",
-    });
-    expect(start).toHaveTextContent("Planning");
-    expect(start).toHaveAccessibleDescription("Add item in Planning");
-
-    await user.click(start);
-    expect(onAddItem).toHaveBeenCalledWith({
-      source: "next",
-      unitKind: "product",
-      unitId: "product-1",
-      stageName: "Planning",
-    });
+  it("puts the stage selector inside the entry and marks a missing current update",()=>{
+    render(<StatusOverviewTimelineFooter unit={overviewUnit({kind:"product"})} onAddItem={vi.fn()} ownedStageStarts={["Planning","Testing"]}/>);
+    expect(screen.getAllByRole("button")).toHaveLength(2);
+    expect(screen.getByText("needed to submit")).toBeVisible();
+    expect(screen.queryByRole("button",{name:/Planning/})).toBeNull();
   });
+
+});
+
+it("offers one quiet entry line for each editable week", () => {
+  render(
+    <StatusOverviewTimelineFooter unit={overviewUnit()} onAddItem={vi.fn()} />,
+  );
+  expect(screen.getByText("What happened…")).toBeVisible();
+  expect(screen.getByText("Plan…")).toBeVisible();
 });

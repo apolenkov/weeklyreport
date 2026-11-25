@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -24,7 +24,7 @@ const item: StatusOverviewItem = {
   continuity: "continued",
 };
 
-const STATUS_BUTTON = "Status of Original text: In progress";
+const STATUS_BUTTON = "Choose outcome: Original text. Status: In progress";
 
 describe("StatusOverviewItemPreview reveal and keyboard", () => {
   const handlers = {
@@ -36,132 +36,29 @@ describe("StatusOverviewItemPreview reveal and keyboard", () => {
     ownedStages: ["Development", "Testing"],
   };
 
-  it("hides the action row with opacity only, never from the tree", () => {
-    render(
-      <StatusOverviewItemPreview
-        item={{ ...item, canResolve: true }}
-        {...handlers}
-      />,
-    );
-
-    const chip = document.querySelector("[data-overview-item-actions]");
-    expect(chip).not.toBeNull();
-    const classes = chip?.className ?? "";
-    expect(classes).toContain("opacity-0");
-    // Revealed on hover, focus within, an open menu, and where hover cannot exist.
-    expect(classes).toContain("group-hover/item:opacity-100");
-    expect(classes).toContain("group-focus-within/item:opacity-100");
-    expect(classes).toContain("has-[[data-state=open]]:opacity-100");
-    expect(classes).toContain("[@media(hover:none)]:opacity-100");
-    for (const hiding of ["hidden", "invisible", "sr-only"]) {
-      expect(chip).not.toHaveClass(hiding);
-    }
-    // Still reachable by name while visually hidden; compact on pointers,
-    // full touch target where a finger has no hover to reveal the row.
-    const more = within(chip as HTMLElement).getByRole("button", {
-      name: "Edit details: Original text",
-    });
-    expect(more).toHaveClass("h-7");
-    expect(more).toHaveClass("w-7");
-    expect(more).toHaveClass(
-      "[@media(hover:none)]:min-h-[var(--touch-target-min)]",
-    );
-    expect(more).toHaveClass(
-      "[@media(hover:none)]:min-w-[var(--touch-target-min)]",
-    );
-  });
-
-  it("floats the action row over the corner on hover devices and wraps it below the text on touch", () => {
-    render(
-      <StatusOverviewItemPreview
-        item={{ ...item, canResolve: true }}
-        {...handlers}
-      />,
-    );
-
-    const row = document.querySelector<HTMLElement>(
-      "[data-overview-item-actions]",
-    );
-    expect(row).not.toBeNull();
-    // The text keeps the full column; the row only overlays it while revealed.
-    expect(row).toHaveClass("absolute");
-    expect(row).toHaveClass("right-0");
-    expect(row).toHaveClass("[@media(hover:none)]:static");
-    expect(row).toHaveClass("[@media(hover:none)]:w-full");
-  });
-
-  it("gives every control the touch target size where hover cannot exist", () => {
-    render(
-      <StatusOverviewItemPreview
-        item={{ ...item, canResolve: true }}
-        {...handlers}
-      />,
-    );
-
-    // Inline controls keep the full touch target; the chip's compact
-    // pointer buttons carry it under the no-hover media query.
-    for (const button of screen.getAllByRole("button")) {
-      const classes = button.className;
-      expect(
-        classes.includes("min-h-[var(--touch-target-min)]") ||
-          classes.includes(
-            "[@media(hover:none)]:min-h-[var(--touch-target-min)]",
-          ),
-      ).toBe(true);
-    }
-  });
-
-  it("tabs through status, text, direct stages, and the row's actions", async () => {
-    const user = userEvent.setup();
-    render(
-      <StatusOverviewItemPreview
-        item={{ ...item, canResolve: true }}
-        {...handlers}
-      />,
-    );
-
-    await user.tab();
-    expect(screen.getByRole("button", { name: STATUS_BUTTON })).toHaveFocus();
-    await user.tab();
-    expect(
-      screen.getByRole("button", { name: "Edit item: Original text" }),
-    ).toHaveFocus();
-    await user.tab();
-    expect(screen.getByRole("button", { name: "Testing" })).toHaveFocus();
-    await user.tab();
-    expect(
-      screen.getByRole("button", { name: "Move Original text to next week" }),
-    ).toHaveFocus();
-    await user.tab();
-    expect(
-      screen.getByRole("button", { name: "Edit details: Original text" }),
-    ).toHaveFocus();
-    await user.tab();
-    expect(
-      screen.getByRole("button", { name: "Comments on Original text" }),
-    ).toHaveFocus();
-    // No drag handle and no overflow menu follow the flat row.
-    await user.tab();
-    expect(document.body).toHaveFocus();
-  });
-
-  it("runs a row action on a touch tap", async () => {
-    const user = userEvent.setup();
-    const onEditItem = vi.fn();
-    render(
-      <StatusOverviewItemPreview
-        item={{ ...item, canResolve: true }}
-        {...handlers}
-        onEditItem={onEditItem}
-      />,
-    );
-
-    await user.pointer({
-      keys: "[TouchA]",
-      target: screen.getByRole("button", {
-        name: "Edit details: Original text",
-      }),
-    });
-    expect(onEditItem).toHaveBeenCalledWith(item.editTarget);
-  });
+  it("reserves a decorative pencil and keeps hover free of extra controls",async()=>{
+ render(<StatusOverviewItemPreview item={item} {...handlers}/>);
+ const title=screen.getByRole("button",{name:"Edit text: Original text, This week"});
+ expect(title.querySelector(".overview-pencil")).toHaveAttribute("aria-hidden","true");
+ const controls=screen.getAllByRole("button");
+ await userEvent.hover(title);
+ expect(screen.getAllByRole("button")).toEqual(controls);
+ expect(screen.queryByRole("button",{name:/Move|Discussion|Edit details/i})).toBeNull();
+ });
+ it("tabs from status to the record without adding stops for its stages",async()=>{
+ render(<StatusOverviewItemPreview item={item} {...handlers}/>);
+ await userEvent.tab();expect(screen.getByRole("button",{name:STATUS_BUTTON})).toHaveFocus();
+ await userEvent.tab();const title=screen.getByRole("button",{name:/Edit text:/});expect(title).toHaveFocus();
+ await userEvent.keyboard("{Enter}");expect(handlers.onEditItem).toHaveBeenCalledWith(item.editTarget);
+ });
+ it("opens the same record when its stage is tapped",async()=>{
+ render(<StatusOverviewItemPreview item={item} {...handlers}/>);
+ await userEvent.click(screen.getByRole("img",{name:"Stage: Development"}));
+ expect(handlers.onEditItem).toHaveBeenCalledWith(item.editTarget);
+ });
+ it("withholds the pencil from frozen results",()=>{
+ render(<StatusOverviewItemPreview item={{...item,source:"previous",editTarget:null}}/>);
+ expect(document.querySelector(".overview-pencil")).toBeNull();
+ expect(screen.queryByRole("button")).toBeNull();
+ });
 });

@@ -15,6 +15,7 @@ export interface ItemEditDraftSeed {
   readonly products: readonly Product[];
   readonly activities: readonly ParentActivityOption[];
   readonly week: "current" | "next";
+  readonly contextualEntry?: boolean;
   readonly currentUserName?: string | undefined;
   readonly defaultProductId?: string | undefined;
   readonly defaultStageName?: string | undefined;
@@ -46,6 +47,25 @@ function explicitStageSeed(
     : undefined;
 }
 
+function initialStages(
+  args: ItemEditDraftSeed,
+  productId: string | undefined,
+  isCreate: boolean,
+) {
+  const stageNames = resolveInitialStageNames({
+    isCreate,
+    storedStageNames: args.item?.stageNames,
+    rememberedStageName:
+      productId === undefined ? undefined : args.stageMemory?.recall(productId),
+    availableStages:
+      productId === undefined ? [] : (args.stagesForProduct?.(productId) ?? []),
+  });
+  const explicitStage = explicitStageSeed(args, productId);
+  if (explicitStage) return [explicitStage];
+  if (stageNames.length > 0 || !args.contextualEntry || !isCreate || !productId)
+    return [...stageNames];
+  return args.stagesForProduct?.(productId).slice(0, 1) ?? [];
+}
 function seedDraft(args: ItemEditDraftSeed) {
   const isCreate = args.item === null;
   const initial = resolveInitialItem({
@@ -66,23 +86,17 @@ function seedDraft(args: ItemEditDraftSeed) {
     args.products,
   );
   const productId = parent.kind === "product" ? parent.id : undefined;
-  const stageNames = resolveInitialStageNames({
-    isCreate,
-    storedStageNames: args.item?.stageNames,
-    rememberedStageName:
-      productId === undefined ? undefined : args.stageMemory?.recall(productId),
-    availableStages:
-      productId === undefined ? [] : (args.stagesForProduct?.(productId) ?? []),
-  });
-  const explicitStage = explicitStageSeed(args, productId);
   const snapshot: ItemEditDraftFields = {
     text: initial.text,
     nextStepText: initial.nextStepText ?? "",
-    status: initial.status,
+    status:
+      args.contextualEntry && isCreate && args.week === "current"
+        ? "completed"
+        : initial.status,
     pausedReason: args.item?.pausedReason ?? "",
     parent,
     priorityRank: args.item?.priorityRank ?? null,
-    stageNames: explicitStage ? [explicitStage] : [...stageNames],
+    stageNames: initialStages(args, productId, isCreate),
   };
   return { isCreate, initial, snapshot };
 }

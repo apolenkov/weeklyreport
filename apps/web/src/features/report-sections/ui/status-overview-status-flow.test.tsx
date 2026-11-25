@@ -27,7 +27,7 @@ const item: StatusOverviewItem = {
 async function choose(user: ReturnType<typeof userEvent.setup>, name: string) {
   await user.click(
     screen.getByRole("button", {
-      name: "Status of Ship importer: In progress",
+      name: "Choose outcome: Ship importer. Status: In progress",
     }),
   );
   await user.click(screen.getByRole("menuitem", { name }));

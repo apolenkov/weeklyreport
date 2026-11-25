@@ -1,8 +1,8 @@
 import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@weeklyreport/ui/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetTitle,
+} from "@weeklyreport/ui/components/ui/sheet";
 import { type ReactNode, type RefObject, useRef } from "react";
 
 export function OverviewItemDialogSurface({
@@ -22,13 +22,13 @@ export function OverviewItemDialogSurface({
     else if (panel.current && !panel.current.querySelector("form")) onCancel();
   };
   return (
-    <Dialog
+    <Sheet
       open
       onOpenChange={(open) => {
         if (!open) requestClose();
       }}
     >
-      <DialogContent
+      <SheetContent
         ref={panel}
         aria-modal="true"
         aria-describedby={undefined}
@@ -42,9 +42,9 @@ export function OverviewItemDialogSurface({
           event.preventDefault();
         }}
       >
-        <DialogTitle className="pr-10">{title}</DialogTitle>
+        <SheetTitle className="pr-10">{title}</SheetTitle>
         {children}
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

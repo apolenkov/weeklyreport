@@ -14,14 +14,6 @@ import {
 } from "./status-overview-layout";
 
 const PERIOD_UNAVAILABLE = "Period unavailable";
-function MobileWeekLabel({ label }: { readonly label: string }) {
-  return (
-    <p className="text-xs font-semibold text-[var(--color-muted-foreground)] md:hidden">
-      {label}
-    </p>
-  );
-}
-
 function editorBelongsToLineageRow(
   row: StatusOverviewLineageRow,
   editorSlot: ItemHandlers["editorSlot"],
@@ -29,13 +21,17 @@ function editorBelongsToLineageRow(
   if (!editorSlot || editorSlot.mode === "create") return false;
   if (editorSlot.stableId) {
     return STATUS_OVERVIEW_COLUMNS.some(
-      (column) => row[column.source]?.stableId === editorSlot.stableId,
+      (column) =>
+        (column.source === "previous" ? row.last : row[column.source])
+          ?.stableId === editorSlot.stableId,
     );
   }
   return Boolean(
     editorSlot.recordId &&
     STATUS_OVERVIEW_COLUMNS.some(
-      (column) => row[column.source]?.recordId === editorSlot.recordId,
+      (column) =>
+        (column.source === "previous" ? row.last : row[column.source])
+          ?.recordId === editorSlot.recordId,
     ),
   );
 }
@@ -53,7 +49,7 @@ function EmptyLane({
   return (
     <Lane
       column={column}
-      className={`${TIMELINE_CELL} hidden md:min-h-24 md:flex md:flex-col md:items-center md:justify-center md:border-t-0 bg-[var(--color-surface-muted)]`}
+      className={`${TIMELINE_CELL} overview-empty-lane text-center`}
     >
       <span
         aria-hidden="true"
@@ -61,7 +57,7 @@ function EmptyLane({
       >
         —
       </span>
-      <span className="sr-only">No item in this period</span>
+      <span className="sr-only">No entry in {column.label}</span>
     </Lane>
   );
 }
@@ -94,6 +90,13 @@ export function MobilePeriodsSummary({
   );
 }
 
+function itemInWeek(row:StatusOverviewLineageRow,source:"previous"|"current"|"next"){
+ if(source==="previous")return row.last;
+ if(source==="next")return row.next;
+ if(row.current)return row.current;
+ return row.answerState==="pending" && !row.next ? row.priorCommitment:null;
+}
+
 function LineageRow({
   row,
   editorSlot,
@@ -108,24 +111,33 @@ function LineageRow({
   return (
     <div
       data-testid="overview-lineage-row"
-      className={`${TIMELINE_GRID} mx-3 my-1.5 overflow-hidden rounded-[var(--radius-sm)] border border-[var(--color-border-subtle)] bg-[var(--color-card)] md:m-0 md:rounded-none md:border-0 md:border-b md:items-stretch`}
+      className={`${TIMELINE_GRID} min-w-0 items-stretch border-b border-[var(--color-border-subtle)]`}
     >
       {STATUS_OVERVIEW_COLUMNS.map((column) => {
-        const item = row[column.source];
+        const item = itemInWeek(row,column.source);
         if (!item) return <EmptyLane key={column.key} column={column} />;
         return (
           <Lane
             key={column.key}
             column={column}
-            className="min-w-0 px-3 py-1 block border-t border-[var(--color-border-subtle)] first:border-t-0 md:px-4 md:py-3 md:min-h-24 md:flex-col md:border-t-0 first:md:border-l-0 md:border-l md:border-[var(--color-border-subtle)] md:flex"
+            className="min-w-0 px-3 py-1 block border-t border-[var(--color-border-subtle)] first:border-t-0 md:px-4 md:py-3  md:flex-col md:border-t-0 first:md:border-l-0 md:border-l md:border-[var(--color-border-subtle)] md:flex"
           >
-            <MobileWeekLabel label={column.label} />
             {column.source === "previous" && row.previousParent ? (
               <p className="mb-1 break-words text-xs text-[var(--color-muted-foreground)]">
                 Previously in {row.previousParent}
               </p>
             ) : null}
-            <ReportItemSlot item={item} {...itemHandlers} />
+            <ReportItemSlot
+              item={item}
+              activity={handlers.ownedStages === undefined}
+              occupied={
+                column.source === "next"
+                  ? !!row.current
+                  : !!row.next && row.next.recordId !== item.recordId
+              }
+              published={!!row.last || !!row.priorCommitment}
+              {...itemHandlers}
+            />
           </Lane>
         );
       })}
@@ -145,7 +157,7 @@ export function DesktopPeriodHeader({
 }) {
   return (
     <div
-      className={`${TIMELINE_GRID} max-md:hidden min-[80rem]:sr-only bg-[var(--color-surface-muted)]`}
+      className={`${TIMELINE_GRID} max-md:hidden bg-[var(--color-surface-muted)]`}
     >
       {STATUS_OVERVIEW_COLUMNS.map((column) => (
         <div key={column.key} className={TIMELINE_CELL}>
@@ -178,29 +190,17 @@ export function LineageRowList({
     );
   }
   return (
-    <>
-      <ul className="min-w-0">
-        {rows.map((row, index) => (
-          <li
-            key={row.key}
-            hidden={index >= REPORT_PREVIEW_COUNT && !expanded}
-            inert={index >= REPORT_PREVIEW_COUNT && !expanded}
-          >
-            <LineageRow row={row} editorSlot={editorSlot} {...handlers} />
-          </li>
-        ))}
-      </ul>
-      {rows.some((row) =>
-        STATUS_OVERVIEW_COLUMNS.some((column) => !row[column.source]),
-      ) ? (
-        <p
-          data-testid="overview-mobile-empty-periods"
-          className="mx-3 px-3 py-1 text-xs text-[var(--color-muted-foreground)] md:hidden"
+    <ul className="min-w-0">
+      {rows.map((row, index) => (
+        <li
+          key={row.key}
+          hidden={index >= REPORT_PREVIEW_COUNT && !expanded}
+          inert={index >= REPORT_PREVIEW_COUNT && !expanded}
         >
-          No items in other periods
-        </p>
-      ) : null}
-    </>
+          <LineageRow row={row} editorSlot={editorSlot} {...handlers} />
+        </li>
+      ))}
+    </ul>
   );
 }
 

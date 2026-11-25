@@ -10,6 +10,9 @@ import type {
 
 export interface ActionProps {
   readonly item: StatusOverviewItem;
+  readonly occupied?: boolean;
+  readonly activity?: boolean;
+  readonly published?: boolean;
   readonly onEditItem?:
     ((target: StatusOverviewEditTarget) => void) | undefined;
   /** Commits the inline in-place text edit of one editable item. */

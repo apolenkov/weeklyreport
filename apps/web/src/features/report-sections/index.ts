@@ -49,6 +49,7 @@ export {
   ownedStagesForProject,
 } from "./model/lead-form";
 export type { DraftPatch } from "./model/lead-form/draft/lead-form-draft-patch";
+export { applyDraftPatch } from "./model/lead-form/draft/lead-form-draft-patch";
 export { matchesCreatedRecord } from "./model/lead-form/draft/lead-form-draft-record";
 export type { LeadFormGeneration } from "./model/lead-form/lead-form-generation";
 export { leadFormGenerationOf } from "./model/lead-form/lead-form-generation";
@@ -157,7 +158,12 @@ export {
 } from "./ui/item-edit-draft-store";
 export { ItemInlineEditor } from "./ui/item-inline-editor";
 export { type ItemReplyPort, ItemReplyProvider } from "./ui/item-reply-context";
+export { useItemReplyScope } from "./ui/item-reply-context";
 export { NextWeekSection } from "./ui/next-week/next-week-section";
+export {
+  type ActiveRecordEditor,
+  OverviewRecordContext,
+} from "./ui/overview-record-context";
 export { ParentPicker } from "./ui/parent-picker";
 export { PortfolioOverviewTable } from "./ui/portfolio/portfolio-overview-table";
 export {

@@ -50,11 +50,14 @@ function Button({
   variant = "default",
   size = "default",
   asChild = false,
+  onUnavailable,
+  onClick,
   ...props
 }: Readonly<
   React.ComponentProps<"button"> &
     VariantProps<typeof buttonVariants> & {
       asChild?: boolean;
+      onUnavailable?: () => void;
     }
 >) {
   const Comp = asChild ? Slot.Root : "button";
@@ -66,6 +69,17 @@ function Button({
       data-size={size}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
+      onClick={(event) => {
+        if (
+          onUnavailable &&
+          (props["aria-disabled"] === true || props["aria-disabled"] === "true")
+        ) {
+          event.preventDefault();
+          onUnavailable();
+          return;
+        }
+        onClick?.(event);
+      }}
     />
   );
 }

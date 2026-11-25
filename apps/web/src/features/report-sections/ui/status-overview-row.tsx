@@ -1,23 +1,16 @@
 import type { ReactNode } from "react";
 
 import type { ReportHealthUnit } from "../model/report-health-pulse";
-import type {
-  StatusOverviewModel,
-  StatusOverviewUnit,
-} from "../model/status-overview";
+import type { StatusOverviewUnit } from "../model/status-overview";
 import type { StatusOverviewLineageRow } from "../model/status-overview-lineage";
+import { OverviewUnitRecords } from "./overview-unit-records";
 import {
   type OpenHealthDetail,
   ReportHealthDetail,
 } from "./report-health-pulse";
 import type { ItemHandlers } from "./status-overview-item-handlers";
 import { STATUS_OVERVIEW_DESKTOP_GRID } from "./status-overview-layout";
-import {
-  DesktopPeriodHeader,
-  LineageRowList,
-  MobilePeriodsSummary,
-  ShowMoreButton,
-} from "./status-overview-lineage-row";
+import { LineageRowList, ShowMoreButton } from "./status-overview-lineage-row";
 import { StatusOverviewUnitSummary } from "./status-overview-summary";
 import { StatusOverviewTimelineFooter } from "./status-overview-timeline-footer";
 
@@ -26,12 +19,17 @@ export { STATUS_OVERVIEW_DESKTOP_GRID };
 function PreviousUnavailableNotice({
   column,
 }: {
-  readonly column: StatusOverviewUnit["columns"]["previouslyPlanned"];
+  readonly column: StatusOverviewUnit["columns"]["priorCommitments"];
 }) {
-  if (column.availability !== "unavailable") return null;
+  if (column.items.length > 0) return null;
   return (
-    <p className="px-4 py-2 text-xs text-[var(--color-muted-foreground)]">
-      {column.reason}
+    <p
+      data-overview-lineage-lane="previous"
+      className="px-4 py-2 text-xs text-[var(--color-muted-foreground)]"
+    >
+      {column.availability === "unavailable"
+        ? "Last week’s report isn’t available."
+        : "No update last week."}
     </p>
   );
 }
@@ -44,7 +42,7 @@ interface StatusOverviewUnitRowProps extends ItemHandlers {
   readonly onCloseHealth: () => void;
   readonly unit: StatusOverviewUnit;
   readonly rows: readonly StatusOverviewLineageRow[];
-  readonly periods: StatusOverviewModel["periods"];
+
   readonly expanded: boolean;
   readonly onToggle: () => void;
   readonly panelId: string;
@@ -60,7 +58,6 @@ export function StatusOverviewUnitRow({
   onCloseHealth,
   unit,
   rows,
-  periods,
   expanded,
   onToggle,
   panelId,
@@ -71,10 +68,12 @@ export function StatusOverviewUnitRow({
 }: StatusOverviewUnitRowProps) {
   return (
     <article
+      id={unit.key}
+      tabIndex={-1}
       aria-label={`${unit.kind === "product" ? "Product" : "Activity"} ${unit.name}`}
       className="min-w-0 border-t border-[var(--color-border-subtle)] first:border-t-0"
     >
-      <div id={panelId} className={STATUS_OVERVIEW_DESKTOP_GRID}>
+      <div id={panelId} className="overview-unit">
         <div className="min-w-0 px-4 py-3">
           <StatusOverviewUnitSummary
             unit={unit}
@@ -84,12 +83,10 @@ export function StatusOverviewUnitRow({
             onInspect={onInspect}
             headerAction={headerAction}
           />
+          <OverviewUnitRecords unit={unit} onAddRecord={handlers.onAddRecord} />
         </div>
-        <div className="min-w-0 min-[80rem]:col-span-3">
-          <TimelineHeading
-            periods={periods}
-            previous={unit.columns.previouslyPlanned}
-          />
+        <div className="min-w-0 ">
+          <PreviousUnavailableNotice column={unit.columns.lastWeek} />
           <LineageRowList
             rows={rows}
             expanded={expanded}
@@ -120,21 +117,5 @@ export function StatusOverviewUnitRow({
         />
       ) : null}
     </article>
-  );
-}
-
-function TimelineHeading({
-  periods,
-  previous,
-}: {
-  readonly periods: StatusOverviewModel["periods"];
-  readonly previous: StatusOverviewUnit["columns"]["previouslyPlanned"];
-}) {
-  return (
-    <>
-      <MobilePeriodsSummary periods={periods} />
-      <DesktopPeriodHeader periods={periods} />
-      <PreviousUnavailableNotice column={previous} />
-    </>
   );
 }

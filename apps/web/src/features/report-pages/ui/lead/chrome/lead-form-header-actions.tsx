@@ -44,6 +44,7 @@ interface LeadFormHeaderActionsProps {
   readonly isSubmitted: boolean;
   readonly periodLabel?: string | undefined;
   // False where the page already announces autosave in its own live region.
+  readonly overview?: boolean;
   readonly announceAutosave?: boolean | undefined;
 }
 
@@ -225,6 +226,7 @@ function HeaderActionToolbar({
   completionActions,
   isForeignSlidesDeck,
   isSubmitted,
+  overview,
 }: Omit<LeadFormHeaderActionsProps, "isSlidesMode">) {
   const {
     canRequestReopen,
@@ -257,7 +259,7 @@ function HeaderActionToolbar({
           writeActions={writeActions}
         />
       )}
-      {canEditDraft && (
+      {canEditDraft && !overview && (
         <LeadCompletionActions
           {...completionActions}
           label="Header completion actions"
@@ -287,7 +289,7 @@ export function LeadFormHeaderActions({
             saving={header.completionActions.autosave.isInFlight}
           />
         )}
-        {!isSlidesMode && (
+        {!isSlidesMode && !header.overview && (
           <HeaderStatusBadge
             isSubmitted={header.isSubmitted}
             isReadOnly={header.viewModel.isReadOnly}

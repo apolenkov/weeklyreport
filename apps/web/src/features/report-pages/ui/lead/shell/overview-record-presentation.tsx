@@ -25,6 +25,7 @@ interface RecordActions {
   readonly state: OverviewRecordState | null;
   readonly submit: () => void;
   readonly close: () => void;
+  readonly switchKind?: () => void;
   readonly changeRisk: (value: RiskInput) => void;
   readonly changeDecision: (value: DecisionInput) => void;
 }
@@ -102,20 +103,40 @@ function RecordComposer({
 }) {
   useInlineEditUnloadGuard(view.dirty);
   const common = { view, onSubmit: record.submit, onCancel: record.close };
-  return state.kind === "risk" ? (
-    <StatusOverviewInlineRiskForm
-      {...common}
-      target={{ kind: "risk", parent: state.parent }}
-      value={state.value}
-      onChange={record.changeRisk}
-    />
-  ) : (
-    <StatusOverviewInlineDecisionForm
-      {...common}
-      target={{ kind: "decision", parent: state.parent }}
-      value={state.value}
-      onChange={record.changeDecision}
-    />
+  return (
+    <>
+      {record.switchKind && !state.submission && !state.baseline && (
+        <fieldset className="flex gap-3">
+          <legend>Kind</legend>
+          {(["risk", "decision"] as const).map((kind) => (
+            <label key={kind}>
+              <input
+                type="radio"
+                name="record-kind"
+                checked={state.kind === kind}
+                onChange={record.switchKind}
+              />
+              {kind === "risk" ? "Risk" : "Decision"}
+            </label>
+          ))}
+        </fieldset>
+      )}
+      {state.kind === "risk" ? (
+        <StatusOverviewInlineRiskForm
+          {...common}
+          target={{ kind: "risk", parent: state.parent }}
+          value={state.value}
+          onChange={record.changeRisk}
+        />
+      ) : (
+        <StatusOverviewInlineDecisionForm
+          {...common}
+          target={{ kind: "decision", parent: state.parent }}
+          value={state.value}
+          onChange={record.changeDecision}
+        />
+      )}
+    </>
   );
 }
 

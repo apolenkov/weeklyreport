@@ -19,7 +19,12 @@
     "./components/ui/skeleton": "./src/components/ui/skeleton.tsx",
     "./components/ui/sonner": "./src/components/ui/sonner.tsx",
     "./components/ui/tabs": "./src/components/ui/tabs.tsx",
-    "./components/ui/tooltip": "./src/components/ui/tooltip.tsx"
+    "./components/ui/tooltip": "./src/components/ui/tooltip.tsx",
+    "./components/ui/popover": "./src/components/ui/popover.tsx",
+    "./components/ui/toggle-group": "./src/components/ui/toggle-group.tsx",
+    "./components/ui/collapsible": "./src/components/ui/collapsible.tsx",
+    "./components/ui/growing-textarea": "./src/components/ui/growing-textarea.tsx",
+    "./components/ui/alert-dialog": "./src/components/ui/alert-dialog.tsx"
   },
   "scripts": {
     "typecheck": "tsc6 --noEmit -p tsconfig.json"

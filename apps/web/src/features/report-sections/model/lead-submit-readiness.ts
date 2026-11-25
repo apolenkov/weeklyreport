@@ -77,7 +77,7 @@ function couplingIssues(
     .map((entry) => ({
       id: `risk-stage:${entry.productId}`,
       label: `${entry.productName}: specify stages for committed risks.`,
-      overviewFocus: "report-details",
+      overviewFocus: `product:${entry.productId}`,
     }));
 }
 
@@ -85,11 +85,32 @@ function couplingIssues(
 function unfinishedRecordIssues(
   draftPayload: DraftSaveContent,
 ): LeadSubmitBlockingIssue[] {
-  return unfinishedDraftRecords(draftPayload).map((record) => ({
-    id: `unfinished-${record.kind}:${record.key}`,
-    label: record.label,
-    overviewFocus: "report-details",
-  }));
+  return unfinishedDraftRecords(draftPayload).map((record) => {
+    const parent =
+      record.kind === "risk"
+        ? draftPayload.risks.find(
+            (row, i) => (row.stableId ?? row.id ?? String(i)) === record.key,
+          )
+        : draftPayload.decisions.find(
+            (row, i) => (row.stableId ?? row.id ?? String(i)) === record.key,
+          );
+    const product =
+      parent &&
+      ("projectId" in parent
+        ? parent.projectId
+        : "productId" in parent
+          ? parent.productId
+          : null);
+    return {
+      id: `unfinished-${record.kind}:${record.key}`,
+      label: record.label,
+      overviewFocus: parent?.activityId
+        ? `activity:${parent.activityId}`
+        : product
+          ? `product:${product}`
+          : "report-details",
+    };
+  });
 }
 
 function submissionIssues(

@@ -43,7 +43,8 @@ function unit(
     stages: [],
     linkedProducts: [],
     columns: {
-      previouslyPlanned: { availability: "available", items: previous },
+      lastWeek: { availability: "available", items: previous },
+      priorCommitments: { availability: "available", items: [] },
       currentWeek: { availability: "available", items: current },
       nextWeek: { availability: "available", items: next },
     },
@@ -62,7 +63,7 @@ describe("buildStatusOverviewLineage", () => {
       unit("one", [], [current], [next]),
     ]).get("product:one");
     expect(rows).toHaveLength(1);
-    expect(rows?.[0]).toMatchObject({ current, next, previous: null });
+    expect(rows?.[0]).toMatchObject({ current, next, last: null });
   });
   it("joins by lineage despite changed text and independent source ordering", () => {
     const prior = item("previous", "a");
@@ -71,8 +72,8 @@ describe("buildStatusOverviewLineage", () => {
       unit("one", [prior], [item("current", "b"), current]),
     ]).get("product:one");
     expect(rows).toHaveLength(2);
-    expect(rows?.[0]).toMatchObject({ previous: prior, current, next: null });
-    expect(rows?.[1]?.previous).toBeNull();
+    expect(rows?.[0]).toMatchObject({ last: prior, current, next: null });
+    expect(rows?.[1]?.last).toBeNull();
   });
 
   it("keeps a moved item in one destination group with prior parent context", () => {
@@ -86,7 +87,10 @@ describe("buildStatusOverviewLineage", () => {
     expect(rows.get("product:New product")).toEqual([
       {
         key: "a",
-        previous: prior,
+        stableId: "a",
+        priorCommitment: null,
+        answerState: null,
+        last: prior,
         current: null,
         next,
         previousParent: "Old product",
@@ -100,7 +104,7 @@ describe("buildStatusOverviewLineage", () => {
     ]).get("product:one");
     expect(rows).toHaveLength(2);
     expect(rows?.[0]?.current).toBeNull();
-    expect(rows?.[1]?.previous).toBeNull();
+    expect(rows?.[1]?.last).toBeNull();
   });
 
   it("does not confuse a prior current update with a new next plan", () => {
@@ -111,4 +115,13 @@ describe("buildStatusOverviewLineage", () => {
     expect(rows?.[0]?.next).toBeNull();
     expect(rows?.[1]?.current).toBeNull();
   });
+});
+
+it("preserves both records in a repeated week slot", () => {
+  const first = item("current", "work");
+  const second = { ...first, recordId: "second", text: "Second result" };
+  const rows = buildStatusOverviewLineage([
+    unit("one", [], [first, second]),
+  ]).get("product:one");
+  expect(rows?.map((row) => row.current)).toEqual([first, second]);
 });

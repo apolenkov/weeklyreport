@@ -81,7 +81,7 @@ export function createOverviewPlanState(
 ): OverviewPlanState {
   const column =
     item.source === "previous"
-      ? "previouslyPlanned"
+      ? "priorCommitments"
       : item.source === "current"
         ? "currentWeek"
         : "nextWeek";

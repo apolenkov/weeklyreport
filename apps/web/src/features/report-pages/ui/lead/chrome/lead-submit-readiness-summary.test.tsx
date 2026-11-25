@@ -334,7 +334,8 @@ describe("LeadSubmitReadinessSummary", () => {
           stages: [],
           linkedProducts: [],
           columns: {
-            previouslyPlanned: { availability: "available", items: [] },
+            lastWeek: { availability: "available", items: [] },
+            priorCommitments: { availability: "available", items: [] },
             currentWeek: {
               availability: "available",
               items: [
@@ -374,7 +375,7 @@ describe("LeadSubmitReadinessSummary", () => {
 
     const disclosure = screen.getByRole("button", { name: "+1 more" });
     const progress = screen.getByRole("button", {
-      name: "Status of Third carried work: Continued · not updated this week",
+      name: "Choose outcome: Third carried work. Status: Continued · not updated this week",
       hidden: true,
     });
     expect(disclosure).toHaveAttribute("aria-expanded", "false");

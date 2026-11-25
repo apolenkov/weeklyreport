@@ -10,10 +10,12 @@ import {
 import type { ParentActivityOption } from "../model/record-parent";
 import type { KanbanItem, Product } from "../model/types";
 import type { ItemEditDraftStore } from "./item-edit-draft-store";
+import { OverviewEntryLine } from "./overview-entry-line";
 import { StatusOverviewInlineItemForm } from "./status-overview-inline-item-form";
 import { useItemEditDialog } from "./use-item-edit-dialog";
 
 export interface StatusOverviewInlineItemEditorProps {
+  readonly onDetails?: (() => void) | undefined;
   readonly target: ItemTarget;
   readonly products: readonly Product[];
   readonly activities: readonly ParentActivityOption[];
@@ -97,6 +99,9 @@ export function StatusOverviewInlineItemEditor(
   useCloseRef(props.requestCloseRef, form.requestClose);
   const value = itemValue(form);
   const errors = fieldErrors(form);
+  const Presentation = props.onDetails
+    ? OverviewEntryLine
+    : StatusOverviewInlineItemForm;
   return (
     <div
       role="presentation"
@@ -116,7 +121,8 @@ export function StatusOverviewInlineItemEditor(
         }
       }}
     >
-      <StatusOverviewInlineItemForm
+      <Presentation
+        onDetails={props.onDetails ?? (() => undefined)}
         target={target}
         value={value}
         view={{

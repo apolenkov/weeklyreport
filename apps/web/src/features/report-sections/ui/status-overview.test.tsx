@@ -54,7 +54,8 @@ const model: StatusOverviewModel = {
       stages: [],
       linkedProducts: ["Payments", "Mobile"],
       columns: {
-        previouslyPlanned: { availability: "available", items: [] },
+        lastWeek: { availability: "available", items: [] },
+        priorCommitments: { availability: "available", items: [] },
         currentWeek: {
           availability: "available",
           items: [1, 2, 3, 4, 5].map(overviewItem),
@@ -205,7 +206,7 @@ describe("StatusOverview", () => {
     // The status icon keeps the confirm anchor so the submit-readiness deep
     // link still resolves, and it opens the status menu.
     const status = screen.getByRole("button", {
-      name: "Status of Work item 1: Continued · not updated this week · Unplanned",
+      name: "Choose outcome: Work item 1. Status: Continued · not updated this week · Unplanned",
     });
     expect(status).toHaveAttribute("id", "confirm:current:item-1");
     expect(status).toHaveAttribute(
@@ -792,7 +793,8 @@ describe("StatusOverview", () => {
         {
           ...unit,
           columns: {
-            previouslyPlanned: {
+            lastWeek: { availability: "available", items: [] },
+            priorCommitments: {
               availability: "available",
               items: [
                 item("previous", "shared", "Previous shared"),
@@ -901,7 +903,8 @@ describe("StatusOverview", () => {
         {
           ...unit,
           columns: {
-            previouslyPlanned: {
+            lastWeek: { availability: "available", items: [] },
+            priorCommitments: {
               availability: "available",
               items: [
                 {
@@ -943,7 +946,8 @@ describe("StatusOverview", () => {
         {
           ...unit,
           columns: {
-            previouslyPlanned: {
+            lastWeek: { availability: "available", items: [] },
+            priorCommitments: {
               availability: "available",
               items: [
                 {
@@ -1099,7 +1103,7 @@ describe("StatusOverview", () => {
     );
 
     const status = screen.getByRole("button", {
-      name: "Status of Work item 1: In progress · Unplanned",
+      name: "Choose outcome: Work item 1. Status: In progress · Unplanned",
     });
     expect(status).toHaveAttribute(
       "data-overview-focus",
@@ -1277,7 +1281,8 @@ describe("StatusOverview", () => {
           ...baseUnit,
           columns: {
             ...baseUnit.columns,
-            previouslyPlanned: {
+            lastWeek: { availability: "available", items: [] },
+            priorCommitments: {
               availability: "available",
               items: [
                 {
@@ -1351,7 +1356,7 @@ describe("StatusOverview", () => {
     );
 
     const status = screen.getByRole("button", {
-      name: "Status of Work item 1: In progress · Unplanned",
+      name: "Choose outcome: Work item 1. Status: In progress · Unplanned",
     });
     expect(status).toHaveAttribute(
       "data-overview-focus",
@@ -1362,7 +1367,7 @@ describe("StatusOverview", () => {
     expect(preview).not.toHaveTextContent("Update progress");
     expect(preview).not.toHaveTextContent("Not in prior plan");
     const row = status.closest("article")?.firstElementChild;
-    expect(row).toHaveClass("min-[80rem]:grid-cols-[repeat(4,minmax(0,1fr))]");
+    expect(row).toHaveClass("overview-week-grid");
   });
 
   it("offers one full-report edit action instead of repeating it per row", () => {
@@ -1610,4 +1615,14 @@ describe("StatusOverview", () => {
       screen.queryByRole("button", { name: /Add .* week update/ }),
     ).toBeNull();
   });
+});
+
+it("shows the seven stage names in a single legend above the weeks", () => {
+  render(<StatusOverview model={model} />);
+  expect(
+    within(screen.getByRole("group", { name: "Stage legend" })).getAllByRole(
+      "img",
+    ),
+  ).toHaveLength(7);
+  expect(screen.getByText("How it went · read-only")).toBeVisible();
 });

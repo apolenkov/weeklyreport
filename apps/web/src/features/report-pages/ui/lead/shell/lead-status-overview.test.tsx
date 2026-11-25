@@ -44,7 +44,7 @@ describe("LeadForm Overview", () => {
     );
     await user.click(
       await screen.findByRole("button", {
-        name: /Status of Current work: Continued/,
+        name: "Status not set",
       }),
     );
     expect(screen.getByRole("menu")).toHaveAccessibleDescription(
@@ -57,13 +57,13 @@ describe("LeadForm Overview", () => {
     await user.click(screen.getByRole("menuitem", { name: "In progress" }));
     expect(
       await screen.findByRole("button", {
-        name: "Status of Current work: In progress",
+        name: "Choose outcome: Current work. Status: In progress",
       }),
     ).toBeVisible();
     expect(screen.queryByRole("textbox", { name: /Description/ })).toBeNull();
     await user.click(
       screen.getByRole("button", {
-        name: "Status of Current work: In progress",
+        name: "Choose outcome: Current work. Status: In progress",
       }),
     );
     expect(
@@ -80,7 +80,7 @@ describe("LeadForm Overview", () => {
     );
     await user.click(
       await screen.findByRole("button", {
-        name: "Status of Current work: In progress",
+        name: "Choose outcome: Current work. Status: In progress",
       }),
     );
     await user.click(screen.getByRole("menuitem", { name: "Paused" }));
@@ -92,7 +92,7 @@ describe("LeadForm Overview", () => {
     await user.keyboard("Waiting for access{Enter}");
     expect(
       await screen.findByRole("button", {
-        name: "Status of Current work: Paused",
+        name: "Choose outcome: Current work. Status: Paused",
       }),
     ).toBeVisible();
   });
@@ -106,7 +106,7 @@ describe("LeadForm Overview", () => {
     );
     await user.click(
       await screen.findByRole("button", {
-        name: "Status of Current work: In progress",
+        name: "Choose outcome: Current work. Status: In progress",
       }),
     );
     await user.click(screen.getByRole("menuitem", { name: "Done" }));
@@ -117,7 +117,7 @@ describe("LeadForm Overview", () => {
     );
     expect(
       await screen.findByRole("button", {
-        name: "Status of Current work: Done",
+        name: "Choose outcome: Current work. Status: Done",
       }),
     ).toBeVisible();
     expect(screen.queryByText("Verify production")).toBeNull();
@@ -160,7 +160,7 @@ describe("LeadForm Overview", () => {
     await userEvent.click(action);
     expect(
       screen.getByRole("button", {
-        name: "Status of Current work: Continued · not updated this week",
+        name: "Choose outcome: Current work. Status: Continued · not updated this week",
       }),
     ).toHaveFocus();
   });
@@ -454,7 +454,7 @@ describe("LeadForm Overview", () => {
     const preview = await itemPreview("Next work");
     expect(
       within(preview).getByRole("button", {
-        name: "Status of Next work: Done",
+        name: "Choose outcome: Next work. Status: Done",
       }),
     ).toBeVisible();
     expect(within(preview).queryByText("Development")).toBeNull();
@@ -2375,7 +2375,7 @@ describe("LeadForm Overview", () => {
     );
 
     const status = await screen.findByRole("button", {
-      name: "Status of Current work: Continued · not updated this week",
+      name: "Choose outcome: Current work. Status: Continued · not updated this week",
     });
     // The submit-readiness deep link still resolves to the status icon.
     expect(status).toHaveAttribute(
@@ -2405,7 +2405,7 @@ describe("LeadForm Overview", () => {
     await pollUntil(() =>
       expect(
         screen.queryByRole("button", {
-          name: "Status of Current work: Continued · not updated this week",
+          name: "Choose outcome: Current work. Status: Continued · not updated this week",
         }),
       ).toBeNull(),
     );
@@ -2444,7 +2444,7 @@ describe("LeadForm Overview", () => {
 
     expect(
       await screen.findByRole("button", {
-        name: "Status of Current work: Planned · not updated this week",
+        name: "Choose outcome: Current work. Status: Planned · not updated this week",
       }),
     ).toBeVisible();
     await openItemEditor(user, "Current work");
@@ -2474,7 +2474,7 @@ describe("LeadForm Overview", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Status of Current work: Continued · not updated this week",
+        name: "Choose outcome: Current work. Status: Continued · not updated this week",
       }),
     );
     await user.click(screen.getByRole("menuitem", { name: "In progress" }));
@@ -2483,7 +2483,7 @@ describe("LeadForm Overview", () => {
     // other draft edit); no editor opens and no Confirm button was needed.
     expect(
       await screen.findByRole("button", {
-        name: "Status of Current work: In progress",
+        name: "Choose outcome: Current work. Status: In progress",
       }),
     ).toBeVisible();
     expect(
@@ -2502,7 +2502,7 @@ describe("LeadForm Overview", () => {
 
     await user.click(
       await screen.findByRole("button", {
-        name: "Status of Current work: In progress",
+        name: "Choose outcome: Current work. Status: In progress",
       }),
     );
     await user.click(screen.getByRole("menuitem", { name: "Paused" }));
@@ -2518,19 +2518,19 @@ describe("LeadForm Overview", () => {
     await user.click(screen.getByRole("button", { name: "Cancel" }));
     expect(
       await screen.findByRole("button", {
-        name: "Status of Current work: In progress",
+        name: "Choose outcome: Current work. Status: In progress",
       }),
     ).toBeVisible();
 
     await user.click(
       screen.getByRole("button", {
-        name: "Status of Current work: In progress",
+        name: "Choose outcome: Current work. Status: In progress",
       }),
     );
     await user.click(screen.getByRole("menuitem", { name: "Done" }));
     expect(
       await screen.findByRole("button", {
-        name: "Status of Current work: Done",
+        name: "Choose outcome: Current work. Status: Done",
       }),
     ).toBeVisible();
     expect(
@@ -2554,7 +2554,7 @@ describe("LeadForm Overview", () => {
     // The marker is untouched, so the carried copy and confirm anchor remain.
     expect(
       screen.getByRole("button", {
-        name: "Status of Current work: Continued · not updated this week",
+        name: "Choose outcome: Current work. Status: Continued · not updated this week",
       }),
     ).toBeVisible();
     expect(

@@ -6,14 +6,14 @@ type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
 
 export function useSaveStatus(
   editor: ReadyEditor | null,
-  pendingInput: boolean,
+  unsavedCount: number,
   outcomePending: boolean,
 ): string | undefined {
   const online = useIsOnline();
   const ready = editor && !editor.view.viewModel.isReadOnly;
   return overviewSaveStatus({
     outcomePending,
-    pendingInput,
+    unsavedCount,
     autosaveState: ready ? editor.draft.autosave.state : null,
     online,
   });

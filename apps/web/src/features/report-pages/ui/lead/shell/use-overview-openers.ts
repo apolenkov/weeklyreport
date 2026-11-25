@@ -192,6 +192,7 @@ export function useOverviewEditOpeners({
     target: StatusOverviewEditTarget,
     week: "current" | "next",
     options: {
+      record?: boolean;
       visibleItem?: KanbanItem | undefined;
       promotionTarget?: "current" | undefined;
       focusKey?: string | undefined;
@@ -203,15 +204,16 @@ export function useOverviewEditOpeners({
     if (!item) return;
     rememberFocus(focusKey);
     resetAttempt();
-    setDialog(
-      editDialogState(editor, {
+    setDialog({
+      ...editDialogState(editor, {
         target,
         week,
         item,
         dialogItem: visibleItem ?? item,
         promotionTarget,
       }),
-    );
+      ...(options.record ? { surface: "record" as const } : {}),
+    });
   };
   const moveItem = (
     item: StatusOverviewItem,
@@ -242,6 +244,8 @@ export function useOverviewEditOpeners({
   return {
     editItem: (target: StatusOverviewEditTarget) =>
       openEditItem(target, target.source),
+    editRecord: (target: StatusOverviewEditTarget) =>
+      openEditItem(target, target.source, { record: true }),
     editItemText,
     moveItem,
     confirmItem,
@@ -269,8 +273,9 @@ export function useOverviewCreateOpeners({
     if (!unit || unit.historical) return;
     rememberFocus();
     resetAttempt();
+    const state = createOverviewComposerState(editor, target, null);
     setDialog({
-      ...createOverviewComposerState(editor, target, null),
+      ...state,
       mode: "create",
       contextual: true,
       target,

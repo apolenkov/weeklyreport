@@ -52,6 +52,7 @@ interface LeadFormToolbarControlsProps {
 }
 
 interface LeadOverviewToolbarControlsProps {
+  readonly completion?: ReactNode;
   readonly viewModel: LeadFormLoadedViewModel;
   readonly leadSubmittedAt: LeadSubmittedAt;
   readonly showArchivePeriods: boolean;
@@ -132,6 +133,7 @@ export function LeadFormToolbarControls({
 }
 
 export function LeadOverviewToolbarControls({
+  completion,
   viewModel,
   leadSubmittedAt,
   showArchivePeriods,
@@ -159,6 +161,7 @@ export function LeadOverviewToolbarControls({
               onShowArchivePeriodsChange={onShowArchivePeriodsChange}
             />
           </div>
+          {completion}
           <div className={LEAD_TOOLBAR_CONTROLS_SLOT_CLASS}>
             {canShowLeadReportAssistant(user?.role) && <LeadReportAssistant />}
             <RecordVisibilityToggle

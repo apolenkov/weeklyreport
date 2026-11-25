@@ -49,6 +49,7 @@ interface PlanFacts {
 }
 
 interface ItemProjectionContext {
+  readonly historicalResult?: boolean;
   readonly input: StatusOverviewProjectionSource;
   readonly priorIds: ReadonlySet<string>;
   /** The selected week's record per `stableId`; Current wins over Next. */
@@ -124,9 +125,8 @@ function canRestorePlan(
 function verdictField(
   prior: SectionItem,
   linked: SectionItem | null,
-  input: StatusOverviewProjectionSource,
 ): Pick<StatusOverviewItem, "verdict"> {
-  const verdict = priorVerdictState(prior, linked, input.currentItemsEditable);
+  const verdict = priorVerdictState(prior, linked, true);
   return verdict === null ? {} : { verdict };
 }
 
@@ -149,14 +149,19 @@ function toOverviewItem(
   item: SectionItem,
   source: StatusOverviewItem["source"],
   index: number,
-  { input, priorIds, currentByStableId }: ItemProjectionContext,
+  {
+    input,
+    priorIds,
+    currentByStableId,
+    historicalResult,
+  }: ItemProjectionContext,
 ): StatusOverviewItem {
   const stableId = stableIdentity(item);
   const recordId = item.id ?? null;
   const resolution = item.resolution ?? null;
   const facts = { source, stableId, recordId, resolution };
   const nextStep =
-    source !== "current" && item.type === "current"
+    !historicalResult && source !== "current" && item.type === "current"
       ? (item.nextStepText ?? null)
       : null;
   return {
@@ -175,15 +180,16 @@ function toOverviewItem(
     // A derived Next projection shares its record's one discussion; showing an
     // empty list there would claim the discussion has no messages.
     comments: item.comments ?? [],
-    canResolve: canResolvePlan(facts, input, currentByStableId),
+    canResolve:
+      !historicalResult && canResolvePlan(facts, input, currentByStableId),
     canRestore: canRestorePlan(facts, input),
     workflowStatus: overviewWorkflowStatus(item, nextStep),
     needsConfirmation:
       source === "current" && item.type === "current" && item.carriedOver,
     continuity:
       source === "current" ? priorContinuity(item, input, priorIds) : null,
-    ...(source === "previous" && stableId !== null
-      ? verdictField(item, currentByStableId.get(stableId) ?? null, input)
+    ...(!historicalResult && source === "previous" && stableId !== null
+      ? verdictField(item, currentByStableId.get(stableId) ?? null)
       : {}),
   };
 }
@@ -237,28 +243,36 @@ export function buildStatusOverviewColumns(
     items: readonly SectionItem[],
     source: StatusOverviewItem["source"],
   ) => items.map((item, index) => toOverviewItem(item, source, index, context));
+  const historicalColumn = (
+    results: boolean,
+  ): StatusOverviewUnit["columns"]["lastWeek"] => {
+    if (input.previousPlan.availability === "unavailable")
+      return {
+        availability: "unavailable",
+        reason: input.previousPlan.reason,
+        items: [],
+      };
+    const records = (previous?.items ?? []).filter((item) => {
+      const parent = statusOverviewItemParent(item);
+      return (
+        parent?.kind === kind &&
+        parent.id === id &&
+        (results ? item.type === "current" : isPreviousPlanItem(item))
+      );
+    });
+    return {
+      availability: "available",
+      items: records.map((item, index) =>
+        toOverviewItem(item, "previous", index, {
+          ...context,
+          historicalResult: results,
+        }),
+      ),
+    };
+  };
   return {
-    previouslyPlanned:
-      input.previousPlan.availability === "available"
-        ? {
-            availability: "available",
-            items: project(
-              (previous?.items ?? []).filter((item) => {
-                const parent = statusOverviewItemParent(item);
-                return (
-                  isPreviousPlanItem(item) &&
-                  parent?.kind === kind &&
-                  parent.id === id
-                );
-              }),
-              "previous",
-            ),
-          }
-        : {
-            availability: "unavailable",
-            reason: input.previousPlan.reason,
-            items: [],
-          },
+    lastWeek: historicalColumn(true),
+    priorCommitments: historicalColumn(false),
     currentWeek: {
       availability: "available",
       items: project(itemsForUnit(ordered, "current", kind, id), "current"),
@@ -270,67 +284,7 @@ export function buildStatusOverviewColumns(
   };
 }
 
-type SecondaryAction = "edit" | "move";
-type RecoveryAction = "replan" | "restore";
-
-export interface StatusOverviewActionModel {
-  /** The status menu on the icon; absent on read-only, terminal and derived items. */
-  readonly primary: "status" | null;
-  /** Entries of the quiet overflow disclosure, in display order. */
-  readonly secondary: readonly SecondaryAction[];
-  /** Conditional standalone actions: historical replan, restore. */
-  readonly recovery: readonly RecoveryAction[];
-}
-
-function primaryActionFor(
-  item: StatusOverviewItem,
-  editable: boolean,
-): StatusOverviewActionModel["primary"] {
-  // The linked Next projection renders the Current record's status, so the
-  // status is changed on the Current item, never from the projection.
-  return editable && item.editTarget?.focusNextStep !== true ? "status" : null;
-}
-
-function secondaryActionsFor(
-  item: StatusOverviewItem,
-  editable: boolean,
-): SecondaryAction[] {
-  const target = item.editTarget;
-  if (!editable || target === null || item.resolution != null) return [];
-  const actions: SecondaryAction[] = [];
-  if (target.focusNextStep !== true) actions.push("edit");
-  if (item.workflowStatus !== "done") actions.push("move");
-  return actions;
-}
-
-function recoveryActionsFor(item: StatusOverviewItem): RecoveryAction[] {
-  const actions: RecoveryAction[] = [];
-  // A pending verdict is answered on the rail: one verdict per action, so the
-  // replan icon would offer a second way to answer the same row.
-  if (
-    item.source === "previous" &&
-    item.canResolve &&
-    item.workflowStatus !== "done" &&
-    item.verdict !== "pending"
-  )
-    actions.push("replan");
-  if (item.canRestore) actions.push("restore");
-  return actions;
-}
-
-/**
- * One primary status interaction for editable active items, Edit and week
- * movement inside one secondary overflow, and conditional recovery actions.
- * Previous stays informational; choosing a status also confirms a carried
- * item, so there is no separate confirm action.
- */
-export function statusOverviewItemActions(
-  item: StatusOverviewItem,
-): StatusOverviewActionModel {
-  const editable = item.source !== "previous" && item.editTarget !== null;
-  return {
-    primary: primaryActionFor(item, editable),
-    secondary: secondaryActionsFor(item, editable),
-    recovery: recoveryActionsFor(item),
-  };
-}
+export {
+  type StatusOverviewActionModel,
+  statusOverviewItemActions,
+} from "./status-overview-actions";

@@ -25,245 +25,120 @@ const pending: StatusOverviewItem = {
   verdict: "pending",
 };
 
-const NAMES = {
-  done: "Done — Ship the importer",
-  continue: "Continue — Ship the importer",
-  next: "Next week — Ship the importer",
-  paused: "Paused — Ship the importer",
-} as const;
-
+const outcomeName =
+  "Choose outcome: Ship the importer. Planned last week, no outcome yet";
 function setup(onVerdict = vi.fn().mockResolvedValue(null)) {
   const user = userEvent.setup();
-  render(
-    <StatusOverviewItemPreview
-      item={pending}
-      onVerdict={onVerdict}
-      onPlanItem={vi.fn()}
-    />,
-  );
-  return { user, onVerdict };
+  render(<StatusOverviewItemPreview item={pending} onVerdict={onVerdict} />);
+  const trigger = screen.getByRole("button", { name: outcomeName });
+  async function choose(name: string) {
+    await user.click(trigger);
+    await user.click(screen.getByRole("menuitem", { name }));
+  }
+  return { user, onVerdict, trigger, choose };
 }
 
-describe("verdict rail on a pending Previously planned item", () => {
-  it("offers Done, Continue, Next week and Paused as named icon buttons", () => {
-    setup();
-    for (const name of Object.values(NAMES))
-      expect(screen.getByRole("button", { name })).toBeVisible();
-    // Won't do lives in the overflow menu, not on the rail.
+describe("the frozen plan's outcome menu", () => {
+  it("exposes a single outcome control with five labelled, distinct icons", async () => {
+    const { user, trigger, onVerdict } = setup();
+    expect(screen.getAllByRole("button")).toEqual([trigger]);
+    expect(trigger).toHaveAttribute(
+      "title",
+      "Planned last week — choose what happened",
+    );
+    expect(screen.queryByText("What happened to this plan?")).toBeNull();
+    await user.click(trigger);
+    const options = screen.getAllByRole("menuitem");
+    expect(options.map((option) => option.textContent)).toEqual([
+      "Done",
+      "In progress",
+      "Next week",
+      "Paused…",
+      "Won’t do…",
+    ]);
     expect(
-      screen.queryByRole("button", { name: /Won't do/ }),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.getByRole("button", {
-        name: "More actions for Ship the importer",
-      }),
-    ).toBeVisible();
-  });
-
-  it("labels every rail verdict with visible text", () => {
-    setup();
-    for (const [verdict, name] of Object.entries(NAMES)) {
-      const button = screen.getByRole("button", { name });
-      expect(button).toHaveAttribute("data-verdict", verdict);
-      expect(button).toHaveTextContent(name.split(" — ")[0] ?? "");
-    }
-  });
-
-  it("asks what happened at rest and states the consequence on hover and focus", async () => {
-    const { user, onVerdict } = setup();
-    expect(screen.getByText("What happened to this plan?")).toBeVisible();
-    await user.hover(screen.getByRole("button", { name: NAMES.next }));
-    expect(screen.getByText("Moves it to next week's plan.")).toBeVisible();
-    await user.unhover(screen.getByRole("button", { name: NAMES.next }));
-    expect(screen.getByText("What happened to this plan?")).toBeVisible();
-    await user.tab();
-    expect(
-      screen.getByText("Marks it done in the current week."),
-    ).toBeVisible();
-    expect(
-      screen.getByRole("button", { name: NAMES.done }),
-    ).toHaveAccessibleDescription("Marks it done in the current week.");
+      new Set(options.map((option) => option.querySelector("svg")?.innerHTML))
+        .size,
+    ).toBe(5);
+    for (const option of options)
+      expect(option.className).toContain("var(--touch-target-min)");
     expect(onVerdict).not.toHaveBeenCalled();
   });
-
-  it("tells the verdicts apart by shape, not by colour", () => {
-    setup();
-    const shapes = Object.values(NAMES).map(
-      (name) =>
-        screen.getByRole("button", { name }).querySelector("svg")?.innerHTML,
+  it.each([
+    ["Done", "done"],
+    ["In progress", "continue"],
+    ["Next week", "next"],
+  ])("records %s in one activation", async (label, verdict) => {
+    const { choose, onVerdict } = setup();
+    await choose(label);
+    expect(onVerdict).toHaveBeenCalledExactlyOnceWith(
+      pending,
+      verdict,
+      undefined,
     );
-    expect(new Set(shapes).size).toBe(shapes.length);
   });
-
-  it("offers no replan icon next to the pending rail", () => {
-    setup();
-    expect(screen.queryByRole("button", { name: /Plan this work/ })).toBeNull();
+  it("reaches the second outcome using the keyboard", async () => {
+    const { trigger, user, onVerdict } = setup();
+    trigger.focus();
+    await user.keyboard("{Enter}{ArrowDown}{Enter}");
+    expect(onVerdict).toHaveBeenCalledWith(pending, "continue", undefined);
   });
-
-  it("keeps every button and overflow menu item at the minimum touch target", async () => {
-    const { user } = setup();
-    for (const button of screen.getAllByRole("button"))
-      expect(button.className).toContain("var(--touch-target-min)");
-    await user.click(
-      screen.getByRole("button", {
-        name: "More actions for Ship the importer",
-      }),
-    );
-    const items = await screen.findAllByRole("menuitem");
-    expect(items.length).toBeGreaterThan(0);
-    for (const menuItem of items)
-      expect(menuItem.className).toContain("var(--touch-target-min)");
-  });
-
-  it.each(["done", "continue", "next"] as const)(
-    "records %s in one activation without a reason",
-    async (verdict) => {
-      const { user, onVerdict } = setup();
-      await user.click(screen.getByRole("button", { name: NAMES[verdict] }));
-      expect(onVerdict).toHaveBeenCalledExactlyOnceWith(
+  it.each([
+    ["Paused…", "paused"],
+    ["Won’t do…", "wont_do"],
+  ])(
+    "requires a visible one-line reason for %s and retains it after failure",
+    async (label, verdict) => {
+      const { user, choose, onVerdict } = setup(
+        vi.fn().mockResolvedValue("Save failed."),
+      );
+      await choose(label);
+      const field = screen.getByRole("textbox");
+      await waitFor(() => expect(field).toHaveFocus());
+      await user.click(screen.getByRole("button", { name: "Save" }));
+      expect(onVerdict).not.toHaveBeenCalled();
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Add a one-line reason.",
+      );
+      await user.type(field, "Dependency unavailable{Enter}");
+      expect(await screen.findByText("Save failed.")).toBeVisible();
+      expect(field).toHaveValue("Dependency unavailable");
+      expect(onVerdict).toHaveBeenCalledWith(
         pending,
         verdict,
-        undefined,
+        "Dependency unavailable",
       );
     },
   );
-
-  it("reaches and activates the rail from the keyboard", async () => {
-    const { user, onVerdict } = setup();
-    await user.tab();
-    expect(screen.getByRole("button", { name: NAMES.done })).toHaveFocus();
-    await user.tab();
-    expect(screen.getByRole("button", { name: NAMES.continue })).toHaveFocus();
-    await user.keyboard("{Enter}");
-    expect(onVerdict).toHaveBeenCalledWith(pending, "continue", undefined);
+  it("returns focus after cancelling an empty reason", async () => {
+    const { user, choose, trigger } = setup();
+    await choose("Paused…");
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("textbox")).toBeNull();
+    await waitFor(() => expect(trigger).toHaveFocus());
   });
-
-  it("shows a failed write and keeps the rail so it can be retried", async () => {
-    const { user } = setup(vi.fn().mockResolvedValue("Wait for autosave."));
-    await user.click(screen.getByRole("button", { name: NAMES.done }));
+  it("retains a typed reason after Escape", async () => {
+    const { user, choose, onVerdict } = setup();
+    await choose("Won’t do…");
+    const field = screen.getByRole("textbox");
+    await user.type(field, "Keep this reason{Escape}");
+    expect(field).toHaveValue("Keep this reason");
+    expect(onVerdict).not.toHaveBeenCalled();
+  });
+  it("keeps the menu operable after an unsuccessful answer", async () => {
+    const { choose, trigger } = setup(
+      vi.fn().mockResolvedValue("Wait for autosave."),
+    );
+    await choose("Done");
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Wait for autosave.",
     );
-    expect(screen.getByRole("button", { name: NAMES.done })).toBeEnabled();
+    expect(trigger).toBeEnabled();
   });
-});
-
-describe("verdicts that need a reason", () => {
-  it("asks for a pause reason inline and saves it with Enter", async () => {
-    const { user, onVerdict } = setup();
-    await user.click(screen.getByRole("button", { name: NAMES.paused }));
-    const input = screen.getByRole("textbox", {
-      name: "Paused reason — Ship the importer",
-    });
-    expect(input).toHaveFocus();
-    expect(onVerdict).not.toHaveBeenCalled();
-    await user.type(input, "  Waiting on vendor {Enter}");
-    expect(onVerdict).toHaveBeenCalledExactlyOnceWith(
-      pending,
-      "paused",
-      "  Waiting on vendor ",
-    );
-  });
-
-  it("saves the reason with the Save button too", async () => {
-    const { user, onVerdict } = setup();
-    await user.click(screen.getByRole("button", { name: NAMES.paused }));
-    await user.type(screen.getByRole("textbox"), "Blocked");
-    await user.click(screen.getByRole("button", { name: "Save" }));
-    expect(onVerdict).toHaveBeenCalledWith(pending, "paused", "Blocked");
-  });
-
-  it("does not accept an empty or blank pause reason", async () => {
-    const { user, onVerdict } = setup();
-    await user.click(screen.getByRole("button", { name: NAMES.paused }));
-    await user.click(screen.getByRole("button", { name: "Save" }));
-    await user.type(screen.getByRole("textbox"), "   {Enter}");
-    expect(onVerdict).not.toHaveBeenCalled();
-    expect(screen.getByRole("alert")).toHaveTextContent(
-      "Add a one-line reason",
-    );
-    expect(screen.getByRole("textbox")).toHaveAttribute("aria-invalid", "true");
-  });
-
-  it("cancels with Escape and returns focus to the control that opened it", async () => {
-    const { user, onVerdict } = setup();
-    await user.click(screen.getByRole("button", { name: NAMES.paused }));
-    await user.keyboard("{Escape}");
-    expect(screen.queryByRole("textbox")).toBeNull();
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: NAMES.paused })).toHaveFocus(),
-    );
-    expect(onVerdict).not.toHaveBeenCalled();
-  });
-
-  it("records Won't do from the overflow menu with a reason", async () => {
-    const { user, onVerdict } = setup();
-    await user.click(
-      screen.getByRole("button", {
-        name: "More actions for Ship the importer",
-      }),
-    );
-    await user.click(
-      await screen.findByRole("menuitem", {
-        name: "Won't do — Ship the importer",
-      }),
-    );
-    const input = await screen.findByRole("textbox", {
-      name: "Won't do reason — Ship the importer",
-    });
-    await user.type(input, "Out of scope{Enter}");
-    expect(onVerdict).toHaveBeenCalledExactlyOnceWith(
-      pending,
-      "wont_do",
-      "Out of scope",
-    );
-  });
-
-  it("does not accept Won't do without a reason", async () => {
-    const { user, onVerdict } = setup();
-    await user.click(
-      screen.getByRole("button", {
-        name: "More actions for Ship the importer",
-      }),
-    );
-    await user.click(await screen.findByRole("menuitem"));
-    await user.click(await screen.findByRole("button", { name: "Save" }));
-    expect(onVerdict).not.toHaveBeenCalled();
-    expect(screen.getByRole("alert")).toBeVisible();
-  });
-});
-
-describe("accepted verdict stamp on the frozen Previous row", () => {
-  it.each([
-    ["done", "Verdict: Done"],
-    ["continue", "Verdict: Continue"],
-    ["next", "Verdict: Next week"],
-    ["paused", "Verdict: Paused"],
-    ["wont_do", "Verdict: Won't do"],
-  ] as const)("stamps %s and removes the rail", (verdict, name) => {
-    render(
-      <StatusOverviewItemPreview
-        item={{ ...pending, verdict }}
-        onVerdict={vi.fn()}
-      />,
-    );
-    expect(screen.getByRole("img", { name })).toBeVisible();
-    expect(screen.getByText("Ship the importer")).toBeVisible();
-    expect(screen.queryByRole("button", { name: NAMES.done })).toBeNull();
-  });
-
-  it("shows no rail when verdicts cannot be written", () => {
+  it("shows the unanswered submitted plan without an answer control", () => {
     render(<StatusOverviewItemPreview item={pending} />);
-    expect(screen.queryByRole("button", { name: NAMES.done })).toBeNull();
-  });
-
-  it("never offers verdicts on a Current item", () => {
-    render(
-      <StatusOverviewItemPreview
-        item={{ ...pending, source: "current", verdict: "pending" }}
-        onVerdict={vi.fn()}
-      />,
-    );
-    expect(screen.queryByRole("button", { name: NAMES.done })).toBeNull();
+    expect(screen.getByRole("img", { name: "No outcome" })).toBeVisible();
+    expect(screen.getByText("Not answered")).toBeVisible();
+    expect(screen.queryByRole("button")).toBeNull();
   });
 });

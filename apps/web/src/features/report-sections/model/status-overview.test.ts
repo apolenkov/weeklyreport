@@ -252,7 +252,7 @@ describe("projectStatusOverview", () => {
       },
     });
     expect(
-      result.units[0]?.columns.previouslyPlanned.items[0]?.editTarget,
+      result.units[0]?.columns.priorCommitments.items[0]?.editTarget,
     ).toBeNull();
     expect(result.units[2]?.columns.currentWeek.items[0]?.continuity).toBe(
       "unplanned",
@@ -264,7 +264,7 @@ describe("projectStatusOverview", () => {
     });
     expect(
       result.units.reduce(
-        (count, unit) => count + unit.columns.previouslyPlanned.items.length,
+        (count, unit) => count + unit.columns.priorCommitments.items.length,
         0,
       ),
     ).toBe(result.sourceCounts.previouslyPlanned);
@@ -344,7 +344,7 @@ describe("projectStatusOverview", () => {
       status: "blocked",
     });
     expect(result.units[0]?.status).not.toBe(result.units[1]?.status);
-    expect(result.units[0]?.columns.previouslyPlanned).toEqual({
+    expect(result.units[0]?.columns.priorCommitments).toEqual({
       availability: "unavailable",
       reason: "No previous reporting period",
       items: [],
@@ -497,7 +497,7 @@ describe("projectStatusOverview", () => {
     );
 
     const unit = result.units[0];
-    expect(unit?.columns.previouslyPlanned.items[0]).toMatchObject({
+    expect(unit?.columns.priorCommitments.items[0]).toMatchObject({
       resolution: WON_T_DO_RESOLUTION,
       canResolve: false,
       canRestore: false,
@@ -585,7 +585,7 @@ describe("projectStatusOverview", () => {
       { currentItemsEditable: true },
     );
 
-    expect(result.units[0]?.columns.previouslyPlanned.items).toMatchObject([
+    expect(result.units[0]?.columns.priorCommitments.items).toMatchObject([
       { text: "Linked prior plan", canResolve: false },
       { text: "Unlinked prior plan", canResolve: true },
     ]);
@@ -666,9 +666,7 @@ describe("projectStatusOverview", () => {
     const verdicts = (editable: boolean) =>
       projectStatusOverview(output, {
         currentItemsEditable: editable,
-      }).units[0]?.columns.previouslyPlanned.items.map(
-        (entry) => entry.verdict,
-      );
+      }).units[0]?.columns.priorCommitments.items.map((entry) => entry.verdict);
 
     expect(verdicts(true)).toEqual(["done", "pending", "pending"]);
     expect(verdicts(false)).toEqual(["done", undefined, undefined]);
@@ -902,7 +900,7 @@ describe("projectStatusOverview", () => {
       },
     });
 
-    const previous = result.units[0]?.columns.previouslyPlanned.items.find(
+    const previous = result.units[0]?.columns.priorCommitments.items.find(
       (entry) => entry.text === "Previous period result",
     );
     expect(previous?.source).toBe("previous");

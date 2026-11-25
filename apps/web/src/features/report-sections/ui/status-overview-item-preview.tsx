@@ -1,307 +1,365 @@
-import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
+import { Button } from "@weeklyreport/ui/components/ui/button";
+import { Popover, PopoverAnchor } from "@weeklyreport/ui/components/ui/popover";
+import {
+  Sheet,
+  SheetContent,
+  SheetTitle,
+} from "@weeklyreport/ui/components/ui/sheet";
+import {
+  ArrowRight,
+  Maximize2,
+  MessageSquare,
+  Pencil,
+  Trash2,
+} from "lucide-react";
+import {
+  useContext,
+  useId,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import { toast } from "sonner";
 
-import { shortItemLabel } from "../../../shared/lib/format/short-label";
 import { reviewRecordAnchor } from "../../../shared/ui/feedback/review-record-focus";
-import type {
-  StatusOverviewEditTarget,
-  StatusOverviewItem,
-} from "../model/status-overview";
-import { canDiscussItem } from "../model/status-overview-discussion";
-import { statusOverviewItemActions } from "../model/status-overview-items";
+import { overviewMoveReason } from "../model/overview-move-reason";
 import { ItemCommentsView } from "./item-comments-view";
+import { RecordAction } from "./overview-record-actions";
+import { OverviewRecordContext } from "./overview-record-context";
+import { OverviewRecordPanel } from "./overview-record-panel";
+import { OverviewRecordSurface } from "./overview-record-surface";
+import { StageIcon } from "./overview-stages";
 import {
   type ActionProps,
   weekMoveFocusKey,
 } from "./status-overview-item-actions";
-import { ItemBadges, ResolutionNote } from "./status-overview-item-metadata";
-import { ItemActionRow } from "./status-overview-item-row";
-import { StatusOverviewItemTextEditor } from "./status-overview-item-text-editor";
+import { ResolutionNote } from "./status-overview-item-metadata";
 import { OutcomeAudit } from "./status-overview-outcome-audit";
-import { TrackedWorkComments } from "./status-overview-record-comments";
-import { canSetStages, StageControl } from "./status-overview-stage-control";
 import { StatusControl } from "./status-overview-status-control";
 import { StatusInput } from "./status-overview-status-input";
 import { VerdictRail } from "./status-overview-verdict-controls";
 import { useOverviewStatusInput } from "./use-overview-status-input";
 
-const LONG_UPDATE_LENGTH = 120;
+const idleSubscribe = () => () => undefined;
 
-function isEditableElement(target: EventTarget | null): boolean {
-  return (
-    target instanceof Element &&
-    target.closest("input, textarea, select, [contenteditable]") !== null
+function useRecordLine(props: ActionProps) {
+  const { item, onEditItem } = props;
+  const { active, submitted } = useContext(OverviewRecordContext);
+  const editor =
+    active?.source === item.source && active.id === item.recordId
+      ? active
+      : null;
+  const dirty = useSyncExternalStore(
+    editor?.store.subscribe ?? idleSubscribe,
+    () => editor?.store.isDirty() ?? false,
+    () => false,
   );
-}
-
-function itemVerdict(item: StatusOverviewItem) {
-  return item.source === "previous" ? item.verdict : undefined;
-}
-
-// The rail is replaced by the stamp once a verdict lands: move focus there.
-function focusVerdictStamp(preview: HTMLElement | null): void {
-  requestAnimationFrame(() =>
-    (
-      preview?.querySelector<HTMLElement>("[data-verdict-stamp]") ?? preview
-    )?.focus(),
-  );
-}
-
-/**
- * Alt+ArrowRight moves a focused Current card to Next, Alt+ArrowLeft a Next
- * card to Current; every other combination is a no-op. The card is not a Tab
- * stop, so focus reaches it from inside; typing in the inline editor or a
- * status reason must never move the card.
- */
-function handleWeekMoveKey(
-  event: KeyboardEvent<HTMLDivElement>,
-  item: StatusOverviewItem,
-  onMoveItem: ActionProps["onMoveItem"],
-): void {
-  if (onMoveItem === undefined) return;
-  if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-  if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
-  if (isEditableElement(event.target)) return;
-  if (!statusOverviewItemActions(item).secondary.includes("move")) return;
-  const toNext = item.source === "current";
-  if (event.key !== (toNext ? "ArrowRight" : "ArrowLeft")) return;
-  event.preventDefault();
-  onMoveItem(item, toNext ? "next" : "current", weekMoveFocusKey(item));
-}
-
-function previewTextClassName(expanded: boolean, canCollapse: boolean): string {
-  return `${expanded || !canCollapse ? "block" : "line-clamp-2"} min-w-0 break-words text-sm leading-5`;
-}
-
-function PreviewText({
-  item,
-  expanded,
-  onEditItem,
-  onEditItemText,
-}: {
-  readonly item: StatusOverviewItem;
-  readonly expanded: boolean;
-  readonly onEditItem?:
-    ((target: StatusOverviewEditTarget) => void) | undefined;
-  readonly onEditItemText?: ActionProps["onEditItemText"];
-}) {
-  const canCollapse = item.text.length > LONG_UPDATE_LENGTH;
-  const textClassName = previewTextClassName(expanded, canCollapse);
-  const [editing, setEditing] = useState(false);
-  // Keyboard closes (Enter, Escape) return focus to the title button; a blur
-  // commit leaves focus where the pointer put it.
-  const restoreFocus = useRef(false);
-  const titleRef = useRef<HTMLButtonElement>(null);
-  const editTarget = item.editTarget;
-  const interactive =
-    editTarget !== null &&
-    item.resolution == null &&
-    item.workflowStatus !== "done";
-  // The linked Next projection shows the Current record's next step, not its
-  // description, so its text click keeps opening the canonical editor focused
-  // on that field.
-  const canInlineEdit =
-    interactive &&
-    editTarget.focusNextStep !== true &&
-    onEditItemText !== undefined;
-  const canOpenEditor = interactive && onEditItem !== undefined;
-  const interactiveTitle = canInlineEdit || canOpenEditor;
-  useEffect(() => {
-    if (editing || !restoreFocus.current) return;
-    restoreFocus.current = false;
-    requestAnimationFrame(() => titleRef.current?.focus());
-  }, [editing]);
-  const openEditor = (): void => {
-    if (canInlineEdit) setEditing(true);
-    else if (editTarget !== null) onEditItem?.(editTarget);
+  const [reading, setReading] = useState(false);
+  const [discussion, setDiscussion] = useState(false);
+  const discussionOrigin = useRef<HTMLElement | null>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const commentsId = useId();
+  const editable =
+    !!item.editTarget && (!!onEditItem || !!editor) && !submitted;
+  function openRecord() {
+    if (editable && item.editTarget) onEditItem?.(item.editTarget);
+    else setReading(true);
+  }
+  function openDiscussion() {
+    discussionOrigin.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    setDiscussion(true);
+  }
+  return {
+    editor,
+    submitted,
+    dirty,
+    reading,
+    setReading,
+    discussion,
+    setDiscussion,
+    discussionOrigin,
+    trigger,
+    commentsId,
+    editable,
+    openRecord,
+    openDiscussion,
+    moveReason: overviewMoveReason(item, props.occupied ?? false),
   };
-  const closeEditor = (viaKeyboard: boolean): void => {
-    restoreFocus.current = viaKeyboard;
-    setEditing(false);
-  };
-  return (
-    <div className="min-w-0">
-      {editing && canInlineEdit ? (
-        <StatusOverviewItemTextEditor
-          label={`Edit item text: ${item.text}`}
-          text={item.text}
-          onSave={(text, viaKeyboard) => {
-            onEditItemText(item, text);
-            closeEditor(viaKeyboard);
-          }}
-          onCancel={closeEditor}
-        />
-      ) : interactiveTitle ? (
-        <button
-          ref={titleRef}
-          type="button"
-          aria-label={`Edit item: ${item.text}`}
-          data-overview-focus={`title:${item.source}:${item.stableId ?? item.key}`}
-          onClick={openEditor}
-          className="-mx-1 flex min-h-[var(--touch-target-min)] w-[calc(100%+0.5rem)] items-center rounded-[var(--radius-sm)] px-1 text-left hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
-        >
-          <span className={textClassName}>{item.text}</span>
-        </button>
-      ) : (
-        <div className="flex min-h-[var(--touch-target-min)] items-center">
-          <p className={textClassName}>{item.text}</p>
-        </div>
-      )}
-      <ResolutionNote item={item} />
-    </div>
-  );
 }
+type Line = ReturnType<typeof useRecordLine>;
+type LineProps = ActionProps & { line: Line };
 
-function TextDisclosure({
-  item,
-  expanded,
-  onToggle,
-}: {
-  readonly item: StatusOverviewItem;
-  readonly expanded: boolean;
-  readonly onToggle: () => void;
-}) {
-  if (item.text.length <= LONG_UPDATE_LENGTH) return null;
-  const label = expanded ? "Show less" : "Show full update";
+function RecordTitle({ item, activity, line }: LineProps) {
+  const history = item.source === "previous";
+  const content = (
+    <>
+      <span className="min-w-0 whitespace-pre-wrap [overflow-wrap:anywhere]">
+        {item.text}
+      </span>
+      {!activity &&
+        item.stageNames.map((name) => (
+          <span key={name} title={name} className={history ? "opacity-60" : ""}>
+            <StageIcon name={name} />
+          </span>
+        ))}
+    </>
+  );
+  if (history)
+    return (
+      <span className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+        {content}
+      </span>
+    );
   return (
     <button
       type="button"
-      aria-expanded={expanded}
-      aria-label={`${label}: ${shortItemLabel(item.text)}`}
-      onClick={onToggle}
-      className="min-h-[var(--touch-target-min)] rounded-[var(--radius-sm)] px-1 text-xs text-[var(--color-primary)] underline underline-offset-4 hover:bg-[var(--color-surface-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]"
+      ref={line.trigger}
+      data-overview-focus={`title:${item.source}:${item.stableId ?? item.key}`}
+      aria-label={`${line.editable ? "Edit text" : "View text"}: ${item.text}, ${item.source === "next" ? "Next week" : "This week"}`}
+      aria-expanded={!!line.editor || line.reading}
+      aria-haspopup="dialog"
+      onClick={line.openRecord}
+      data-editable={line.editable}
+      className="overview-record-trigger min-h-11 min-w-0 flex-1 rounded-md text-left focus-visible:ring-2 focus-visible:ring-ring"
     >
-      {label}
+      <span className="flex min-w-0 flex-wrap items-center gap-1">
+        {content}
+      </span>
+      {line.editable && (
+        <Pencil aria-hidden="true" className="overview-pencil size-4" />
+      )}
     </button>
   );
 }
 
-function useItemComments(
-  item: StatusOverviewItem,
-  preview: React.RefObject<HTMLDivElement | null>,
-) {
-  const [openCommentsKey, setOpenCommentsKey] = useState<string | null>(null);
-  const [previousItemKey, setPreviousItemKey] = useState(item.key);
-  if (previousItemKey !== item.key) {
-    setPreviousItemKey(item.key);
-    setOpenCommentsKey(null);
-  }
-  const commentsOpen = openCommentsKey === item.key;
-  const commentsId = useId();
-  const commentButtonRef = useRef<HTMLButtonElement>(null);
-  const closeComments = () => {
-    setOpenCommentsKey(null);
-    commentButtonRef.current?.focus();
-  };
-  useEffect(() => {
-    if (commentsOpen && document.activeElement === commentButtonRef.current) {
-      document
-        .getElementById(commentsId)
-        ?.querySelector<HTMLButtonElement>("button")
-        ?.focus();
-    }
-  }, [commentsOpen, commentsId, preview]);
-  const onCardFocus = (event: React.FocusEvent<HTMLDivElement>) => {
-    if (
-      event.target === event.currentTarget &&
-      item.comments.length > 0 &&
-      canDiscussItem(item)
-    )
-      setOpenCommentsKey(item.key);
-  };
-  const toggleComments = () =>
-    setOpenCommentsKey(commentsOpen ? null : item.key);
-  return {
-    commentsOpen,
-    commentsId,
-    commentButtonRef,
-    closeComments,
-    toggleComments,
-    onCardFocus,
-  };
+function moveShortcut(props: LineProps, event: React.KeyboardEvent) {
+  const { item, line, onMoveItem } = props;
+  if (
+    !event.altKey ||
+    event.ctrlKey ||
+    event.shiftKey ||
+    event.metaKey ||
+    item.source === "previous" ||
+    !onMoveItem
+  )
+    return;
+  const current = item.source === "current";
+  if (
+    event.key !== (current ? "ArrowRight" : "ArrowLeft") ||
+    (event.target instanceof Element &&
+      event.target.closest("input,textarea,[role=dialog]"))
+  )
+    return;
+  event.preventDefault();
+  if (line.moveReason) toast.info(line.moveReason);
+  else onMoveItem(item, current ? "next" : "current", weekMoveFocusKey(item));
 }
 
-function StageLabels(props: ActionProps) {
-  return canSetStages(props) ? (
-    <StageControl {...props} />
-  ) : (
-    <ItemBadges item={props.item} />
+function RecordStatus(props: LineProps) {
+  const { item, line, onSetStatus } = props;
+  const flow = useOverviewStatusInput(item, onSetStatus);
+  if (item.source === "next") return null;
+  if (item.source === "previous" && item.verdict === "pending") {
+    if (!props.onVerdict)
+      return (
+        <span>
+          <span role="img" aria-label="No outcome">
+            ?
+          </span>{" "}
+          Not answered
+        </span>
+      );
+    return (
+      <VerdictRail
+        item={item}
+        onVerdict={props.onVerdict}
+        onDecided={() => line.trigger.current?.focus()}
+      />
+    );
+  }
+  return (
+    <>
+      <StatusControl
+        item={item}
+        onSetStatus={onSetStatus ? flow.choose : undefined}
+        onConfirmItem={props.onConfirmItem}
+        onResolvePlan={props.onResolvePlan}
+        onMoveItem={props.onMoveItem}
+        moveReason={line.moveReason}
+        lockReason={flow.lockReason}
+      />
+      <StatusInput item={item} flow={flow} />
+    </>
+  );
+}
+function RecordLine(props: LineProps) {
+  const { item, line } = props;
+  const history = item.source === "previous";
+  const hasDiscussion = item.comments.length > 0 && !history;
+  return (
+    <PopoverAnchor asChild>
+      <div
+        role="group"
+        tabIndex={-1}
+        data-overview-item-preview=""
+        data-open={!!line.editor || line.reading}
+        aria-label={
+          history && item.verdict === "pending"
+            ? `Planned last week: ${item.text}`
+            : undefined
+        }
+        id={
+          item.recordId && hasDiscussion && !item.editTarget?.focusNextStep
+            ? reviewRecordAnchor("item", item.recordId)
+            : undefined
+        }
+        className="overview-record flex min-w-0 flex-wrap items-center gap-1 rounded-md text-sm data-[open=true]:ring-1 data-[open=true]:ring-ring"
+        onPointerUp={event=>{if(event.target===event.currentTarget && line.editable)line.trigger.current?.click();}}
+        onKeyDown={(event) => moveShortcut(props, event)}
+      >
+        <RecordStatus {...props} />
+        <RecordTitle {...props} />
+        {hasDiscussion && (
+          <button
+            aria-label={`Discussion: ${item.text}, ${item.comments.length} comments`}
+            aria-haspopup="dialog"
+            aria-expanded={line.discussion}
+            onClick={line.openDiscussion}
+            className="flex min-h-11 items-center gap-1"
+          >
+            <MessageSquare className="size-4" />
+            {item.comments.length}
+          </button>
+        )}
+        {line.dirty && (
+          <span className="text-xs text-muted-foreground">Not saved</span>
+        )}
+        {item.needsConfirmation && <span>Needs status</span>}
+        {item.source !== "next" && (
+          <>
+            <ResolutionNote item={item} />
+            <OutcomeAudit item={item} />
+          </>
+        )}
+        {item.canRestore && props.onRestorePlan && (
+          <button onClick={() => props.onRestorePlan?.(item)}>Restore</button>
+        )}
+      </div>
+    </PopoverAnchor>
+  );
+}
+
+function ReadOnlyPanel({ line, item }: LineProps) {
+  const close = () => {
+    line.setReading(false);
+    line.trigger.current?.focus();
+  };
+  const reason = "You do not have permission to edit this record.";
+  return (
+    <OverviewRecordSurface
+      trigger={line.trigger}
+      nested={line.discussion}
+      dirty={false}
+      close={() => line.setReading(false)}
+      cancel={close}
+    >
+      <p className="whitespace-pre-wrap">{item.text}</p>
+      <RecordAction
+        label={`Discussion (${item.comments.length})`}
+        Icon={MessageSquare}
+        act={line.openDiscussion}
+      />
+      {!line.submitted && (
+        <>
+          {(
+            [
+              [
+                item.source === "next"
+                  ? "Move to this week"
+                  : "Move to next week",
+                ArrowRight,
+              ],
+              ["More details", Maximize2],
+              ["Delete", Trash2],
+            ] as const
+          ).map(([label, Icon]) => (
+            <RecordAction
+              key={label}
+              label={label}
+              Icon={Icon}
+              reason={reason}
+              act={() => undefined}
+            />
+          ))}
+          <Button
+            aria-disabled
+            aria-description={reason}
+            title={reason}
+            onUnavailable={() => toast.info(reason)}
+          >
+            Save
+          </Button>
+        </>
+      )}
+      <button onClick={close}>Close</button>
+    </OverviewRecordSurface>
+  );
+}
+function RecordDiscussion({ line, item }: LineProps) {
+  return (
+    <Sheet open onOpenChange={line.setDiscussion}>
+      <SheetContent
+        aria-describedby={undefined}
+        showCloseButton={false}
+        className="p-4"
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          line.discussionOrigin.current?.focus();
+        }}
+      >
+        <SheetTitle>Discussion</SheetTitle>
+        <ItemCommentsView
+          id={line.commentsId}
+          item={item}
+          onClose={() => line.setDiscussion(false)}
+        />
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function RecordPreview(props: ActionProps) {
+  const line = useRecordLine(props);
+  return (
+    <Popover open={!!line.editor || line.reading} modal={false}>
+      <RecordLine {...props} line={line} />
+      {line.editor && (
+        <OverviewRecordPanel
+          item={props.item}
+          editor={line.editor}
+          owned={props.ownedStages ?? []}
+          trigger={line.trigger}
+          discussion={line.discussion}
+          openDiscussion={line.openDiscussion}
+          occupied={props.occupied ?? false}
+          published={props.published ?? false}
+          moveReason={line.moveReason}
+        />
+      )}
+      {line.reading && <ReadOnlyPanel {...props} line={line} />}
+      {line.discussion && <RecordDiscussion {...props} line={line} />}
+    </Popover>
   );
 }
 
 export function StatusOverviewItemPreview(props: ActionProps) {
-  const { item, onSetStatus, onConfirmItem, onVerdict } = props;
-  const [expanded, setExpanded] = useState(false);
-  const preview = useRef<HTMLDivElement>(null);
-  const comments = useItemComments(item, preview);
-  const statusFlow = useOverviewStatusInput(item, onSetStatus);
-  const verdict = itemVerdict(item);
-  const pendingVerdict = verdict === "pending" && onVerdict !== undefined;
-  const decidedVerdict = verdict !== undefined && verdict !== "pending";
-  const verdictStamp = decidedVerdict ? verdict : undefined;
   return (
-    <div
-      ref={preview}
-      id={
-        item.recordId && item.comments.length > 0
-          ? reviewRecordAnchor("item", item.recordId)
-          : undefined
-      }
-      // The card is one focusable group of controls; the group role keeps
-      // the week-move keydown handler on the container lint-legitimate.
-      role="group"
-      tabIndex={-1}
-      data-overview-item-preview
-      onFocus={comments.onCardFocus}
-      onKeyDown={(event) => handleWeekMoveKey(event, item, props.onMoveItem)}
-      className="group/item relative flex min-w-0 items-start gap-1 rounded-[var(--radius-sm)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--color-primary)] [@media(hover:none)]:flex-wrap md:h-full"
-    >
-      <StatusControl
-        item={item}
-        onSetStatus={onSetStatus ? statusFlow.choose : undefined}
-        onConfirmItem={onConfirmItem}
-        onResolvePlan={props.onResolvePlan}
-        lockReason={statusFlow.lockReason}
-      />
-      <div className="min-w-0 flex-1 space-y-1.5">
-        <PreviewText
-          item={item}
-          expanded={expanded}
-          onEditItem={props.onEditItem}
-          onEditItemText={props.onEditItemText}
-        />
-        <StageLabels {...props} />
-        <StatusInput item={item} flow={statusFlow} />
-        {pendingVerdict ? (
-          <VerdictRail
-            item={item}
-            onVerdict={onVerdict}
-            onDecided={() => focusVerdictStamp(preview.current)}
-          />
-        ) : null}
-        <OutcomeAudit item={item} />
-        {!canDiscussItem(item) || decidedVerdict ? (
-          <TrackedWorkComments item={item} />
-        ) : comments.commentsOpen ? (
-          <ItemCommentsView
-            id={comments.commentsId}
-            item={item}
-            onClose={comments.closeComments}
-          />
-        ) : null}
-        <TextDisclosure
-          item={item}
-          expanded={expanded}
-          onToggle={() => setExpanded(!expanded)}
-        />
-      </div>
-      <ItemActionRow
-        actionProps={props}
-        verdictStamp={verdictStamp}
-        commentsOpen={comments.commentsOpen}
-        commentsId={comments.commentsId}
-        commentButtonRef={comments.commentButtonRef}
-        onToggleComments={comments.toggleComments}
-      />
-    </div>
+    <RecordPreview
+      key={props.item.source + ":" + (props.item.stableId ?? props.item.key)}
+      {...props}
+    />
   );
 }

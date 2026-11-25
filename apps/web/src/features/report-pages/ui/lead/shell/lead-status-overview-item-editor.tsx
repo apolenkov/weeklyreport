@@ -16,6 +16,7 @@ import { useStageStartSave } from "./use-stage-start-save";
 type ReadyEditor = Extract<LeadFormEditorHandle, { status: "ready" }>;
 
 interface OverviewComposerState {
+  readonly surface?: "record" | "details";
   readonly generation: string | null;
   readonly stableId: string | null;
   readonly week: "current" | "next";
@@ -95,6 +96,7 @@ export function createOverviewComposerState(
       products: view.products,
       activities: view.activityOptions,
       week: target.source,
+      contextualEntry: createTarget !== null && item === null,
       currentUserName: view.currentUser.name,
       defaultProductId:
         createTarget?.unitKind === "product" ? createTarget.unitId : undefined,

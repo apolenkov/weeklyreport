@@ -43,7 +43,10 @@ function row(
   return {
     key: item.key,
     current: item,
-    previous: null,
+    stableId: null,
+    priorCommitment: null,
+    answerState: null,
+    last: null,
     next: null,
     previousParent: null,
   };
@@ -165,7 +168,10 @@ describe("mobile lineage layout", () => {
                 row(2),
                 {
                   key: "previous:3",
-                  previous,
+                  stableId: null,
+                  priorCommitment: null,
+                  answerState: null,
+                  last: previous,
                   current: null,
                   next: null,
                   previousParent: null,
@@ -243,9 +249,7 @@ describe("mobile lineage layout", () => {
     const current = row(1);
     render(
       <Rows
-        rows={[
-          { ...current, previous: current.current, next: current.current },
-        ]}
+        rows={[{ ...current, last: current.current, next: current.current }]}
       />,
     );
     expect(

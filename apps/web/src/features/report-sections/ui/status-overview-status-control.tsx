@@ -6,8 +6,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@weeklyreport/ui/components/ui/dropdown-menu";
-import { Check } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import { type ReactNode, useId, useRef } from "react";
+import { toast } from "sonner";
 
 import { shortItemLabel } from "../../../shared/lib/format/short-label";
 import { itemStatusToWorkflow, statusInputKind } from "../model/item-status";
@@ -25,8 +26,9 @@ import { ProgressIcon } from "./status-overview-item-icons";
 import { statusOverviewProgressLabel } from "./status-overview-item-metadata";
 
 function statusLabelOf(item: StatusOverviewItem): string {
+  if (item.needsConfirmation) return "Status not set";
   const unplanned = item.continuity === "unplanned" ? " · Unplanned" : "";
-  return `Status of ${item.text}: ${statusOverviewProgressLabel(item)}${unplanned}`;
+  return `Choose outcome: ${item.text}. Status: ${statusOverviewProgressLabel(item)}${unplanned}`;
 }
 
 function StatusMenuItems({
@@ -207,12 +209,40 @@ function ResolvePlanMenuItem({
         }
         className={MENU_ITEM_CLASS}
       >
-        <span className="flex-1">Resolve plan…</span>
+        <span className="flex-1">Won’t do…</span>
       </DropdownMenuItem>
     </>
   );
 }
 
+function WeekMoveOption({
+  item,
+  moveReason,
+  focusKey,
+  onMoveItem,
+}: Pick<ActionProps, "item" | "onMoveItem"> & {
+  focusKey: string;
+  moveReason: string | undefined;
+}) {
+  return (
+    <>
+      {onMoveItem && (
+        <DropdownMenuItem
+          aria-disabled={!!moveReason}
+          title={moveReason}
+          aria-description={moveReason}
+          onSelect={() => {
+            if (moveReason) toast.info(moveReason);
+            else onMoveItem(item, "next", focusKey);
+          }}
+        >
+          <ArrowRight />
+          Move to next week
+        </DropdownMenuItem>
+      )}
+    </>
+  );
+}
 /**
  * The status icon is the one primary interaction: it opens a menu of statuses
  * (a cycling click would pass over statuses that need a reason). Where no
@@ -223,12 +253,15 @@ export function StatusControl({
   onSetStatus,
   onConfirmItem,
   onResolvePlan,
+  onMoveItem,
+  moveReason,
   lockReason = null,
 }: Pick<
   ActionProps,
-  "item" | "onSetStatus" | "onConfirmItem" | "onResolvePlan"
+  "item" | "onSetStatus" | "onConfirmItem" | "onResolvePlan" | "onMoveItem"
 > & {
   /** While set, every choice is inactive and this is shown as the reason. */
+  readonly moveReason?: string | undefined;
   readonly lockReason?: string | null;
 }) {
   const inlineChoice = useRef(false);
@@ -290,6 +323,7 @@ export function StatusControl({
           locked={lockReason !== null}
           reasonIds={reasonIds}
         />
+        <WeekMoveOption {...{ item, moveReason, focusKey, onMoveItem }} />
         <ResolvePlanMenuItem
           item={item}
           locked={lockReason !== null}

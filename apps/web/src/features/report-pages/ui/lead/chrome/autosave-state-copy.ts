@@ -52,7 +52,7 @@ export function autosaveReadinessCopy(
 
 interface OverviewSaveStatusInput {
   readonly outcomePending: boolean;
-  readonly pendingInput: boolean;
+  readonly unsavedCount: number;
   // null when there is no editable draft (read-only or not ready).
   readonly autosaveState: AutosaveState | null;
   readonly online: boolean;
@@ -62,14 +62,18 @@ interface OverviewSaveStatusInput {
 // open-editor copy: the lead must learn the update is paused, not just unsaved.
 export function overviewSaveStatus({
   outcomePending,
-  pendingInput,
+  unsavedCount,
   autosaveState,
   online,
 }: OverviewSaveStatusInput): string | undefined {
-  if (outcomePending) return "Saving plan outcome…";
+  if (outcomePending) return "Saving…";
   if (autosaveState === "saving" && !online) return OFFLINE_SAVING_STATUS;
-  if (pendingInput) return "Unsaved update — save or cancel the open edit";
-  return autosaveState === null
-    ? undefined
-    : autosaveStatusCopy(autosaveState, online);
+  if (autosaveState === "saving") return "Saving…";
+  if (autosaveState === "error") return "Some changes are not saved";
+  if (unsavedCount)
+    return unsavedCount === 1
+      ? "1 unsaved change"
+      : `${unsavedCount} unsaved changes`;
+  if (autosaveState === "pending") return "1 unsaved change";
+  return autosaveState === null ? undefined : "All changes saved";
 }

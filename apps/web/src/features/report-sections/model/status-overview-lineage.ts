@@ -1,94 +1,122 @@
 import type { StatusOverviewItem, StatusOverviewUnit } from "./status-overview";
+import { compareIdentityOrder } from "./status-overview-item-order";
+import type { PriorVerdictState } from "./status-overview-verdict";
 
 export interface StatusOverviewLineageRow {
   readonly key: string;
-  readonly previous: StatusOverviewItem | null;
+  readonly stableId: string | null;
+  readonly last: StatusOverviewItem | null;
   readonly current: StatusOverviewItem | null;
   readonly next: StatusOverviewItem | null;
+  readonly priorCommitment: StatusOverviewItem | null;
+  readonly answerState: PriorVerdictState | null;
   readonly previousParent: string | null;
 }
 
-function emptyRow(key: string): StatusOverviewLineageRow {
-  return {
-    key,
-    previous: null,
-    current: null,
-    next: null,
-    previousParent: null,
-  };
-}
-
-type Source = StatusOverviewItem["source"];
-const SOURCES = ["previous", "current", "next"] as const;
-const COLUMN_BY_SOURCE = {
-  previous: "previouslyPlanned",
+const slots = {
+  last: "lastWeek",
+  priorCommitment: "priorCommitments",
   current: "currentWeek",
   next: "nextWeek",
 } as const;
+type Slot = keyof typeof slots;
 
-interface SourceEntry {
-  readonly source: Source;
-  readonly unit: StatusOverviewUnit;
-  readonly item: StatusOverviewItem;
-}
-
-function entriesForSource(
-  units: readonly StatusOverviewUnit[],
-  source: Source,
-): SourceEntry[] {
-  return units.flatMap((unit) =>
-    unit.columns[COLUMN_BY_SOURCE[source]].items.map((item) => ({
-      source,
-      unit,
-      item,
-    })),
-  );
-}
-
-function targetUnit(
-  entry: SourceEntry,
-  destinations: ReadonlyMap<string, string>,
-): string {
-  if (entry.source !== "previous" || !entry.item.stableId)
-    return entry.unit.key;
-  return destinations.get(entry.item.stableId) ?? entry.unit.key;
-}
-
-// Resolve destination before grouping so a parent change does not split lineage.
 export function buildStatusOverviewLineage(
   units: readonly StatusOverviewUnit[],
 ): ReadonlyMap<string, readonly StatusOverviewLineageRow[]> {
-  const entries = SOURCES.flatMap((source) => entriesForSource(units, source));
-  const destinations = new Map(
-    entries.flatMap(({ source, item, unit }) =>
-      source !== "previous" && item.stableId
-        ? [[item.stableId, unit.key] as const]
-        : [],
-    ),
-  );
-  const rows = new Map<string, Map<string, StatusOverviewLineageRow>>(
-    units.map((unit) => [unit.key, new Map()]),
-  );
-  for (const entry of entries) {
-    const destination = targetUnit(entry, destinations);
-    const group = rows.get(destination);
-    if (!group) continue;
-    const { item, source, unit } = entry;
-    // Missing identity must never match another record merely by its text.
-    const localKey =
-      source !== "previous" && item.recordId
-        ? `${unit.key}:record:${item.recordId}`
-        : `${unit.key}:${item.key}`;
-    const key = item.stableId ?? localKey;
-    const row = group.get(key) ?? emptyRow(key);
-    group.set(key, {
-      ...row,
-      [source]: item,
-      previousParent:
-        source === "previous" && destination !== unit.key
-          ? unit.name
-          : row.previousParent,
-    });
+  const destinations = new Map<string, string>();
+  for (const unit of units) {
+    for (const item of [
+      ...unit.columns.currentWeek.items,
+      ...unit.columns.nextWeek.items,
+    ]) {
+      if (item.stableId && !destinations.has(item.stableId))
+        destinations.set(item.stableId, unit.key);
+    }
   }
-  return new Map([...rows].map(([key, group]) => [key, [...group.values()]]));
+  const groups = new Map(
+    units.map((unit) => [
+      unit.key,
+      new Map<string, StatusOverviewLineageRow[]>(),
+    ]),
+  );
+  for (const slot of Object.keys(slots) as Slot[]) {
+    for (const unit of units)
+      unit.columns[slots[slot]].items.forEach((item) =>
+        appendOccurrence({ slot, unit, item }, { groups, destinations }),
+      );
+  }
+  return new Map(
+    [...groups].map(([key, group]) => [
+      key,
+      [...group.values()].flat().sort(compareIdentityOrder),
+    ]),
+  );
+}
+
+function availableSlot(
+  rows: readonly StatusOverviewLineageRow[],
+  slot: Slot,
+  item: StatusOverviewItem,
+) {
+  const partner =
+    slot === "next" ? "current" : slot === "priorCommitment" ? "last" : null;
+  if (partner && item.recordId) {
+    const related = rows.findIndex(
+      (row) => !row[slot] && row[partner]?.recordId === item.recordId,
+    );
+    if (related !== -1) return related;
+  }
+  const empty = rows.findIndex((row) => !row[slot]);
+  return empty === -1 ? rows.length : empty;
+}
+
+function appendOccurrence(
+  {
+    slot,
+    unit,
+    item,
+  }: { slot: Slot; unit: StatusOverviewUnit; item: StatusOverviewItem },
+  {
+    groups,
+    destinations,
+  }: {
+    groups: Map<string, Map<string, StatusOverviewLineageRow[]>>;
+    destinations: Map<string, string>;
+  },
+) {
+  const historical = slot === "last" || slot === "priorCommitment";
+  const destination =
+    (historical && item.stableId ? destinations.get(item.stableId) : null) ??
+    unit.key;
+  const group = groups.get(destination);
+  if (!group) return;
+  const identity =
+    item.stableId ??
+    `${unit.key}:${historical ? "prior" : "record"}:${item.recordId ?? item.key}`;
+  const matches = group.get(identity) ?? [];
+  const index = availableSlot(matches, slot, item);
+  const row = matches[index] ?? {
+    key: index
+      ? `${identity}:${slot}:${item.recordId ?? item.key}:${index}`
+      : identity,
+    stableId: item.stableId,
+    last: null,
+    current: null,
+    next: null,
+    priorCommitment: null,
+    answerState: null,
+    previousParent: null,
+  };
+  matches[index] = {
+    ...row,
+    [slot]: item,
+    answerState:
+      slot === "priorCommitment" ? (item.verdict ?? null) : row.answerState,
+    previousParent:
+      slot === "last" && unit.key !== destination
+        ? unit.name
+        : row.previousParent,
+  };
+  group.set(identity, matches);
 }

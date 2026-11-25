@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, screen, within } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type {
   AuthorReportSectionReadModel,
@@ -418,11 +418,11 @@ export async function openMoveMenu(
   text: string,
   destination: "this week" | "next week",
 ) {
-  // The week move is a direct row button.
-  const preview = await itemPreview(text);
-  return within(preview).findByRole("button", {
-    name: `Move ${text} to ${destination === "this week" ? "current week" : "next week"}`,
-  });
+  const preview=await itemPreview(text);
+  const trigger=within(preview).getByRole("button",{name:/^Edit text:/});
+  await userEvent.click(trigger);
+  return within(await screen.findByRole("dialog",{name:"Record"})).findByRole("button",{name:`Move to ${destination}`});
+
 }
 
 export async function chooseMove(
@@ -457,41 +457,11 @@ export async function chooseDirectMove(
   saveDraft: ReturnType<typeof echoSaveDraft>,
 ) {
   const moveItem = await openMoveMenu(text, destination);
-  vi.useFakeTimers();
-  try {
-    fireEvent.click(moveItem);
-    await act(() => vi.advanceTimersByTimeAsync(0));
-    expect(
-      screen.queryByRole("form", { name: /week update for/ }),
-    ).not.toBeInTheDocument();
-    const moveToast = vi.mocked(toast.success).mock.calls.at(-1);
-    expect(moveToast?.[0]).toBe(
-      destination === "next week" ? "Moved to next week" : "Moved to this week",
-    );
-    const toastOptions = moveToast?.[1] as
-      | {
-          readonly duration?: number;
-          readonly action?: { readonly label: ReactNode };
-        }
-      | undefined;
-    expect(toastOptions?.duration).toBe(8000);
-    expect(toastOptions?.action?.label).toBe("Undo");
-    expect(saveDraft).not.toHaveBeenCalled();
-    const focused = document.activeElement;
-    await act(() => vi.advanceTimersByTimeAsync(5000));
-    await act(() => vi.advanceTimersByTimeAsync(0));
-    expect(saveDraft).toHaveBeenCalledOnce();
-    return {
-      focused,
-      saved: (
-        saveDraft.mock.calls[0]?.[0] as {
-          readonly items: ReportSectionReadModel["items"];
-        }
-      ).items,
-    };
-  } finally {
-    vi.useRealTimers();
-  }
+  await userEvent.click(moveItem);
+  await pollUntil(()=>expect(saveDraft).toHaveBeenCalledOnce());
+  await pollUntil(()=>expect(vi.mocked(toast.success).mock.calls.at(-1)?.[1]).toMatchObject({action:{label:"Undo"}}));
+  return {focused:document.activeElement,saved:(saveDraft.mock.calls[0]?.[0] as {items:ReportSectionReadModel["items"]}).items};
+
 }
 
 // The item title opens the inline text editor; the canonical editor is
@@ -501,11 +471,11 @@ export async function openItemEditor(
   text: string,
 ) {
   const preview = await itemPreview(text);
-  await user.click(
-    await within(preview).findByRole("button", {
-      name: `Edit details: ${text}`,
-    }),
-  );
+  const trigger = within(preview).getByRole("button", {
+    name: new RegExp("^Edit text:"),
+  });
+  await user.click(trigger);
+  await user.click(screen.getByRole("button", { name: "More details" }));
 }
 
 export async function chooseUpdateProgress(

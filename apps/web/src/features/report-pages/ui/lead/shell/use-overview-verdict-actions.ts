@@ -1,4 +1,7 @@
-"use client";
+import {workSignature} from "./overview-undo";
+import {usePlacementConfirmation} from "./overview-placement-confirmation";
+import type { UndoOffer,OverviewUndoWrite } from "./use-overview-undo";
+("use client");
 
 import type {
   LeadStatusOverviewOutput,
@@ -22,6 +25,13 @@ type ResolveWrite = Extract<
   { kind: "resolve-plan" }
 >;
 
+const verdictMessage: Record<PlanVerdict, string> = {
+  done: "Marked Done in This week.",
+  continue: "Kept in This week as In progress.",
+  next: "Moved to Next week.",
+  paused: "Paused in This week.",
+  wont_do: "Closed as Won’t do. You can restore it until you submit.",
+};
 const FAILED = "The verdict could not be saved. Try again.";
 const WAIT_FOR_UPDATE = "Wait for the current update to finish.";
 const PAUSE_NOT_APPLIED =
@@ -35,6 +45,11 @@ function messageOf(error: unknown): string {
 }
 
 // Every selected-week record for a stableId.
+function focusCurrent(stableId:string){
+  const controls=document.querySelectorAll<HTMLElement>("[data-overview-focus]");
+  [...controls].find(node=>node.dataset.overviewFocus===`title:current:${stableId}`)?.focus();
+}
+
 function recordsFor(editor: ReadyEditor, stableId: string): SectionItem[] {
   return editor.draft.section.items.filter(
     (item) => item.stableId === stableId,
@@ -71,9 +86,19 @@ const hasPatch = (
       ),
   );
 
+function reverseOutcome(stableId:string,week:"current"|"next",verdict:PlanVerdict):UndoOffer["reverse"]{
+ return ready=>{
+   const items=week==="current"?ready.view.viewModel.ownCurrentWeekItems:ready.view.viewModel.ownNextWeekItems;
+   const row=items.find(record=>record.stableId===stableId);
+   if(!row)return null;
+   if(verdict==="wont_do")return {kind:"restore-outcome",recordId:row.id,stableId};
+   return {kind:"week-items",week,items:items.filter(record=>record!==row)};
+ };
+}
+
 // The writes a verdict can need, each waiting for the editor instead of being
 // dropped while a command or an autosave is in flight.
-function useVerdictWrites(editor: ReadyEditor | null) {
+function useVerdictWrites(editor: ReadyEditor | null,guardedWrite?: (change:OverviewUndoWrite)=>Promise<boolean>,announce?:(offer:UndoOffer)=>void) {
   const { until, whenIdle } = useEditorSettle(editor);
 
   // Applies a draft patch once no command is in flight and confirms the draft
@@ -119,7 +144,7 @@ function useVerdictWrites(editor: ReadyEditor | null) {
   const resolveVerdict = async (
     ready: ReadyEditor,
     stableId: string,
-    write: ResolveWrite,
+    write: ResolveWrite,verdict:PlanVerdict,
   ): Promise<string | null> => {
     const settled = await settledForCommand(ready);
     if (typeof settled === "string") return settled;
@@ -127,6 +152,21 @@ function useVerdictWrites(editor: ReadyEditor | null) {
       { ...write.input, commandId: crypto.randomUUID() },
       stableId,
     );
+    if(announce && guardedWrite){
+      const target={kind:"item" as const,stableId};
+      const expected=workSignature(result.section,target);
+      const confirmed=await until(next=>next.draft.receiptScope===ready.draft.receiptScope && workSignature(next.draft.section,target)===expected);
+      if(!confirmed)return NOT_APPLIED;
+      const row=result.section.items.find(record=>record.stableId===stableId && (write.input.source.kind==="prior" || record.id===write.input.source.recordId));
+      if(!row?.id)return NOT_APPLIED;
+      const reverse=reverseOutcome(stableId,row.type,verdict);
+      if(write.thenPatch){
+        const saved=await guardedWrite({section:confirmed.draft.section,target,patch:{kind:"item-patch",itemId:row.id,patch:write.thenPatch},reverse,message:verdictMessage[verdict]});
+        return saved?null:PAUSE_NOT_APPLIED;
+      }
+      announce({target,signature:expected,reverse,message:verdictMessage[verdict],scope:ready.draft.receiptScope});
+      return null;
+    }
     if (!write.thenPatch) return null;
     const created = result.section.items.find(
       (candidate) =>
@@ -151,9 +191,13 @@ function useVerdictWrites(editor: ReadyEditor | null) {
 export function useOverviewVerdictActions(
   editor: ReadyEditor | null,
   output: LeadStatusOverviewOutput,
+  guardedWrite?: (change: OverviewUndoWrite) => Promise<boolean>,
+  announce?:(offer:UndoOffer)=>void,
 ) {
+  const placement=usePlacementConfirmation(editor?.draft.receiptScope??null);
+  const {latest}=useEditorSettle(editor);
   const running = useRef(false);
-  const { patchItem, resolveVerdict, whenIdle } = useVerdictWrites(editor);
+  const { patchItem, resolveVerdict, whenIdle } = useVerdictWrites(editor,guardedWrite,announce);
 
   const recordVerdict = async (
     item: StatusOverviewItem,
@@ -165,7 +209,23 @@ export function useOverviewVerdictActions(
     if (running.current) return WAIT_FOR_UPDATE;
     running.current = true;
     try {
-      const siblings = recordsFor(editor, item.stableId);
+      let ready=latest.current;
+      if(!ready || ready.view.viewModel.isReadOnly || ready.draft.receiptScope!==editor.draft.receiptScope)return FAILED;
+      let siblings=recordsFor(ready,item.stableId);
+      if(guardedWrite && verdict!=="next" && siblings.some(row=>row.type==="next")){
+        const existing=siblings.find(row=>row.type==="current");
+        if(existing){await placement.ask("current");focusCurrent(item.stableId);return "Nothing was moved: This week already has this item.";}
+        const before=JSON.stringify(siblings);
+        if(!await placement.ask("next"))return "Nothing was moved.";
+        ready=latest.current;
+        if(!ready || ready.view.viewModel.isReadOnly || ready.draft.receiptScope!==editor.draft.receiptScope)return FAILED;
+        siblings=recordsFor(ready,item.stableId);
+        if(JSON.stringify(siblings)!==before){
+          if(siblings.some(row=>row.type==="current")){await placement.ask("current");focusCurrent(item.stableId);}
+          return "The target week changed. Choose an outcome again.";
+        }
+      }
+
       const write = planVerdictWrite({
         verdict,
         reason,
@@ -179,9 +239,43 @@ export function useOverviewVerdictActions(
         case "already-recorded":
           return null;
         case "item-patch":
+          if (guardedWrite) {
+            const before = siblings.find((row) => row.id === write.itemId);
+            if (!before) return NOT_APPLIED;
+            const saved = await guardedWrite({
+              section:ready.draft.section,
+              target: { kind: "item", stableId: item.stableId },
+              patch: {
+                kind: "item-patch",
+                itemId: write.itemId,
+                patch: write.patch,
+              },
+              message: verdictMessage[verdict],
+              reverse: (ready) => {
+                const updated = ready.draft.section.items.find(
+                  (row) =>
+                    row.stableId === before.stableId &&
+                    row.type === (write.patch.type ?? before.type),
+                );
+                if (!updated?.id) return null;
+                return {
+                  kind: "item-patch",
+                  itemId: updated.id,
+                  patch: {
+                    type: before.type,
+                    carriedOver: before.carriedOver,
+                    workflowStatus: before.workflowStatus,
+                    nextStepText: before.nextStepText,
+                    pausedReason: before.pausedReason,
+                  },
+                };
+              },
+            });
+            return saved ? null : NOT_APPLIED;
+          }
           return await patchItem(write.itemId, write.patch, NOT_APPLIED);
         case "resolve-plan":
-          return await resolveVerdict(editor, item.stableId, write);
+          return await resolveVerdict(ready, item.stableId, write,verdict);
       }
     } catch (error) {
       return messageOf(error);
@@ -197,7 +291,7 @@ export function useOverviewVerdictActions(
     });
 
   return {
-    onVerdict: recordVerdict,
+    placement,onVerdict: recordVerdict,
     onConfirmAll: confirmAll,
     pendingReviewCount: editor?.view.submitReadiness.pendingReviewCount ?? 0,
   };

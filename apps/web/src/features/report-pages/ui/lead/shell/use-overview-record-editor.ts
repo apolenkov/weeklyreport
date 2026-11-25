@@ -139,6 +139,7 @@ export function useOverviewRecordEditor(
     openCopy: (copy: RetainedRecordCopy, target: StatusOverviewRecordTarget) =>
       open(target, copy),
     submit,
+    switchKind: () => switchRecordKind({ editor, model, state, setState }),
     changeRisk: (value: RiskInput) =>
       setState((current) =>
         current?.kind === "risk" ? { ...current, value } : current,
@@ -149,4 +150,33 @@ export function useOverviewRecordEditor(
       ),
     close: () => setState((current) => closeRecordInput(editor, current)),
   };
+}
+
+function switchRecordKind({
+  editor,
+  model,
+  state,
+  setState,
+}: {
+  editor: ReadyEditor | null;
+  model: StatusOverviewModel;
+  state: OverviewRecordState | null;
+  setState: SetOverviewRecord;
+}) {
+  if (!state || !editor || state.submission || state.baseline) return;
+  const next = createOverviewRecordState(editor, model, {
+    kind: state.kind === "risk" ? "decision" : "risk",
+    unitId: state.parent.id,
+    unitKind: state.parent.kind,
+  });
+  if (next)
+    setState({
+      ...next,
+      value: {
+        ...next.value,
+        text: state.value.text,
+        impact: state.value.impact,
+        stageNames: state.value.stageNames,
+      },
+    } as OverviewRecordState);
 }

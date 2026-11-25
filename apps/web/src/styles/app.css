@@ -251,3 +251,64 @@ body:has([data-slot="dialog-content"][data-state="open"])
   visibility: hidden;
   pointer-events: none;
 }
+
+.overview-table {
+  container: overview / inline-size;
+}
+.overview-week-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+@container overview (width < 1087px) {
+  .overview-week-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .overview-column-headings,
+  .overview-empty-lane,
+  [data-week="previous"]
+    :is([data-overview-lineage-lane], [data-overview-create-lane]):not(
+      [data-overview-lineage-lane="previous"]
+    ),
+  [data-week="current"]
+    :is([data-overview-lineage-lane], [data-overview-create-lane]):not(
+      [data-overview-lineage-lane="current"],
+      [data-overview-create-lane="current"]
+    ),
+  [data-week="next"]
+    :is([data-overview-lineage-lane], [data-overview-create-lane]):not(
+      [data-overview-lineage-lane="next"],
+      [data-overview-create-lane="next"]
+    ) {
+    display: none;
+  }
+  [data-week="previous"] li:has(> .overview-week-grid > .overview-empty-lane[data-overview-lineage-lane="previous"]),
+  [data-week="current"] li:has(> .overview-week-grid > .overview-empty-lane[data-overview-lineage-lane="current"]),
+  [data-week="next"] li:has(> .overview-week-grid > .overview-empty-lane[data-overview-lineage-lane="next"]) {
+    display:none;
+  }
+  .overview-table button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+.overview-record-trigger {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.25rem;
+}
+.overview-pencil {
+  visibility: hidden;
+}
+@media (width > 760px) and (pointer: fine) and (hover: hover) {
+  .overview-record:has([data-editable="true"]):hover {
+    background-color: var(--color-surface-hover);
+  }
+  .overview-record:hover [data-editable="true"] {
+    text-decoration: underline;
+  }
+  .overview-record:hover .overview-pencil {
+    visibility: visible;
+  }
+}

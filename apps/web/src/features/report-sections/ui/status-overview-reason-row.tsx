@@ -1,7 +1,8 @@
+import {OverviewRecordContext} from "./overview-record-context";
 "use client";
 
 import { SAFE_TEXT_MAX_LENGTH, safeText } from "@weeklyreport/shared";
-import { type SubmitEvent, useEffect, useId, useRef, useState } from "react";
+import { type SubmitEvent,useContext, useEffect, useId, useRef, useState } from "react";
 
 const FOCUS_RING =
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]";
@@ -46,7 +47,7 @@ interface ReasonRowProps {
   readonly busy: boolean;
   readonly error: string | null;
   readonly onSubmit: (reason: string) => void;
-  readonly onCancel: () => void;
+  readonly onCancel: (value?: string) => void;
 }
 
 export function ReasonRow({
@@ -67,6 +68,12 @@ export function ReasonRow({
     return () => cancelAnimationFrame(frame);
   }, [busy]);
   const errorId = useId();
+  const {onReasonDraft}=useContext(OverviewRecordContext);
+  useEffect(()=>{
+    if(!reason.trim())return;
+    onReasonDraft?.(errorId,{label:`Unsaved reason: ${reason}`,overviewFocus:input.current?.closest("article")?.id??"report-details"});
+    return ()=>onReasonDraft?.(errorId,null);
+  },[errorId,onReasonDraft,reason]);
   const submit = (event: SubmitEvent) => {
     event.preventDefault();
     if (busy) return;
@@ -87,7 +94,7 @@ export function ReasonRow({
         if (event.key === "Escape" && !busy) {
           event.preventDefault();
           event.stopPropagation();
-          onCancel();
+          onCancel(reason);
         }
       }}
       className="flex min-w-0 flex-col gap-1"
@@ -112,7 +119,7 @@ export function ReasonRow({
           }}
           className={`min-h-[var(--touch-target-min)] min-w-0 basis-full rounded-[var(--radius-sm)] border border-[var(--color-border-strong)] bg-[var(--color-card)] px-2 text-sm ${FOCUS_RING}`}
         />
-        <ReasonActions busy={busy} onCancel={onCancel} />
+        <ReasonActions busy={busy} onCancel={() => onCancel(reason)} />
       </div>
       {message === null ? null : (
         <p

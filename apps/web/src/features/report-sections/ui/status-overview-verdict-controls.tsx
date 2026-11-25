@@ -6,14 +6,13 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@weeklyreport/ui/components/ui/dropdown-menu";
-import { Ellipsis } from "lucide-react";
+import { CircleHelp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import type { StatusOverviewItem } from "../model/status-overview";
 import type { PlanVerdict } from "../model/status-overview-verdict";
 import {
   ICON_BUTTON_CLASS,
-  LABELLED_BUTTON_CLASS,
   MENU_ITEM_CLASS,
 } from "./status-overview-item-actions";
 import type { VerdictHandler } from "./status-overview-item-handlers";
@@ -22,23 +21,12 @@ import { ReasonRow } from "./status-overview-reason-row";
 
 const VERDICT_LABEL: Readonly<Record<PlanVerdict, string>> = {
   done: "Done",
-  continue: "Continue",
+  continue: "In progress",
   next: "Next week",
-  paused: "Paused",
-  wont_do: "Won't do",
+  paused: "Paused…",
+  wont_do: "Won’t do…",
 };
 
-const RAIL_VERDICTS = ["done", "continue", "next", "paused"] as const;
-
-// What each verdict does to the selected week, read before the Lead commits.
-const VERDICT_CONSEQUENCE: Readonly<Record<PlanVerdict, string>> = {
-  done: "Marks it done in the current week.",
-  continue: "Keeps it as work in the current week.",
-  next: "Moves it to next week's plan.",
-  paused: "Pauses it in the current week; asks for a reason.",
-  wont_do: "Closes it as not done; asks for a reason.",
-};
-const RAIL_QUESTION = "What happened to this plan?";
 type ReasonVerdict = "paused" | "wont_do";
 
 const REASON_PROMPT: Readonly<Record<ReasonVerdict, string>> = {
@@ -66,43 +54,6 @@ export function VerdictStamp({ verdict }: { readonly verdict: PlanVerdict }) {
   );
 }
 
-function WontDoMenu({
-  item,
-  disabled,
-  onChoose,
-}: {
-  readonly item: StatusOverviewItem;
-  readonly disabled: boolean;
-  readonly onChoose: () => void;
-}) {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          disabled={disabled}
-          aria-label={`More actions for ${item.text}`}
-          title={`More actions: ${VERDICT_LABEL.wont_do}`}
-          data-verdict="wont_do"
-          className={`${ICON_BUTTON_CLASS} disabled:opacity-50`}
-        >
-          <Ellipsis aria-hidden="true" className="size-4" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start">
-        <DropdownMenuItem
-          aria-label={`${VERDICT_LABEL.wont_do} — ${item.text}`}
-          onSelect={onChoose}
-          className={MENU_ITEM_CLASS}
-        >
-          <VerdictIcon verdict="wont_do" />
-          {VERDICT_LABEL.wont_do}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
 function VerdictButtons({
   item,
   busy,
@@ -114,51 +65,37 @@ function VerdictButtons({
   readonly rail: React.RefObject<HTMLDivElement | null>;
   readonly onChoose: (verdict: PlanVerdict) => void;
 }) {
-  const [hinted, setHinted] = useState<PlanVerdict | null>(null);
-  const clearHint = () => setHinted(null);
   return (
-    <div className="min-w-0">
-      <div
-        ref={rail}
-        role="group"
-        aria-label={`Verdict for ${item.text}`}
-        className="flex flex-wrap items-center gap-x-0.5"
-      >
-        {RAIL_VERDICTS.map((verdict) => (
+    <div ref={rail}>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
           <button
-            key={verdict}
             type="button"
             disabled={busy}
-            aria-label={`${VERDICT_LABEL[verdict]} — ${item.text}`}
-            title={VERDICT_CONSEQUENCE[verdict]}
-            data-verdict={verdict}
-            onClick={() => onChoose(verdict)}
-            onMouseEnter={() => setHinted(verdict)}
-            onMouseLeave={clearHint}
-            onFocus={() => setHinted(verdict)}
-            onBlur={clearHint}
-            className={`${LABELLED_BUTTON_CLASS} disabled:opacity-50`}
+            data-plan-outcome=""
+            aria-label={`Choose outcome: ${item.text}. Planned last week, no outcome yet`}
+            title="Planned last week — choose what happened"
+            className={ICON_BUTTON_CLASS}
           >
-            <VerdictIcon verdict={verdict} />
-            <span>{VERDICT_LABEL[verdict]}</span>
+            <CircleHelp aria-hidden="true" />
           </button>
-        ))}
-        <WontDoMenu
-          item={item}
-          disabled={busy}
-          onChoose={() => onChoose("wont_do")}
-        />
-      </div>
-      <p
-        data-verdict-hint={hinted ?? "rest"}
-        className="text-xs text-[var(--color-muted-foreground)]"
-      >
-        {hinted === null ? RAIL_QUESTION : VERDICT_CONSEQUENCE[hinted]}
-      </p>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent>
+          {(Object.keys(VERDICT_LABEL) as PlanVerdict[]).map((verdict) => (
+            <DropdownMenuItem
+              key={verdict}
+              className={MENU_ITEM_CLASS}
+              onSelect={() => onChoose(verdict)}
+            >
+              <VerdictIcon verdict={verdict} />
+              {VERDICT_LABEL[verdict]}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
-
 function useVerdictFlow(
   item: StatusOverviewItem,
   onVerdict: VerdictHandler,
@@ -173,13 +110,8 @@ function useVerdictFlow(
   // control that opened it instead of dropping to the page.
   useEffect(() => {
     if (asking !== null || cancelled.current === null) return;
-    const opener = cancelled.current;
     cancelled.current = null;
-    rail.current
-      ?.querySelectorAll<HTMLElement>("[data-verdict]")
-      .forEach((button) => {
-        if (button.dataset.verdict === opener) button.focus();
-      });
+    rail.current?.querySelector("button")?.focus();
   }, [asking]);
   const record = async (verdict: PlanVerdict, reason?: string) => {
     setBusy(true);
@@ -195,7 +127,11 @@ function useVerdictFlow(
       setAsking(verdict);
     } else void record(verdict);
   };
-  const cancel = () => {
+  const cancel = (value = "") => {
+    if (value.trim()) {
+      rail.current?.querySelector("input")?.focus();
+      return;
+    }
     cancelled.current = asking;
     setAsking(null);
     setError(null);

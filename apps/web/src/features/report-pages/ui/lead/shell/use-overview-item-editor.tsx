@@ -43,7 +43,8 @@ export function useOverviewItemEditor(
   const promotionAttempt = useRef<string | null>(null);
   const createdFocus = useRef<OverviewCreatedFocus | null>(null);
   const requestCloseRef = useRef<(() => void) | null>(null);
-  const rememberFocus = useOverviewFocusReturn(dialog !== null, createdFocus);
+  const keepOutsideFocus=useRef(false);
+  const rememberFocus = useOverviewFocusReturn(dialog !== null, createdFocus,keepOutsideFocus);
   const focusMoved = useOverviewMovedFocus();
   useOverviewSubmissionDriver({
     editor,
@@ -86,6 +87,10 @@ export function useOverviewItemEditor(
   return {
     dialog,
     requestCloseRef,
+    showDetails: () =>
+      setDialog((current) =>
+        current ? { ...current, surface: "details" } : null,
+      ),
     error: error ?? overviewSaveFailure(editor, dialog),
     recoveryReason,
     ...editOpeners,
@@ -95,6 +100,7 @@ export function useOverviewItemEditor(
     save: (updatedItem: KanbanItem) =>
       saveOverviewItem(saveContext, updatedItem),
     saveAndAddAnother,
+    leave:()=>{if(dialog?.draftStore.isDirty() || dialog?.submission)return;keepOutsideFocus.current=true;setDialog(null);setError(null);},
     close: () => {
       closeOverviewDialog({ editor, dialog, recoveryReason, setDialog });
       startedAttempt.current = null;

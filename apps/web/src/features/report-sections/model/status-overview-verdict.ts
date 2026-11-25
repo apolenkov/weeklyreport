@@ -107,15 +107,13 @@ function priorOutcome(request: PlanVerdictRequest): PlanVerdictWrite {
     : resolvePlan(input);
 }
 
-// A done or paused occurrence returns to planned when the lead continues it;
-// any other status is left as the rollover or the lead wrote it.
 function continuePatch(linked: SectionItem): Partial<SectionItem> {
-  const reopen =
-    linked.workflowStatus === "done" || linked.workflowStatus === "paused";
   return {
     type: "current",
     carriedOver: false,
-    ...(reopen ? { workflowStatus: "planned", pausedReason: null } : {}),
+    ...(linked.workflowStatus === "in_progress"
+      ? {}
+      : { workflowStatus: "in_progress", pausedReason: null }),
   };
 }
 
@@ -127,14 +125,12 @@ function nextPatch(
 ): Partial<SectionItem> | null {
   if (linked.type === "next" || hasOtherPlacement(siblings, linked, "next"))
     return null;
-  return linked.nextStepText?.trim()
-    ? { carriedOver: false }
-    : {
-        ...moveToNextWeekPatch(),
-        workflowStatus: "planned",
-        pausedReason: null,
-        nextStepText: null,
-      };
+  return {
+    ...moveToNextWeekPatch(),
+    workflowStatus: "planned",
+    pausedReason: null,
+    nextStepText: null,
+  };
 }
 
 function linkedPatch(
@@ -177,6 +173,12 @@ function linkedWrite(
     };
   if (linked.id === undefined)
     return { kind: "blocked", reason: "The item is not saved yet." };
+  if (request.verdict === "next" && linked.nextStepText?.trim())
+    return {
+      kind: "blocked",
+      reason:
+        "Its next step is already planned in Next week. Edit the next step instead",
+    };
   if (request.verdict === "wont_do")
     return resolvePlan({
       source: { kind: "current", recordId: linked.id },
